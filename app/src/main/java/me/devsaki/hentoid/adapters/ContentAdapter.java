@@ -301,7 +301,7 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
                 Helper.viewContent(context, content);
             });
         } else {
-            holder.ivSite.setImageResource(R.drawable.ic_stat_hentoid);
+            holder.ivSite.setImageResource(R.drawable.ic_cherry_outline);
         }
 
         // Set source color

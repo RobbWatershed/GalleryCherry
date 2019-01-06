@@ -14,7 +14,7 @@ public class ImportStartNotification implements Notification {
     @Override
     public android.app.Notification onCreateNotification(Context context) {
         return new NotificationCompat.Builder(context, ImportNotificationChannel.ID)
-                .setSmallIcon(R.drawable.ic_stat_hentoid)
+                .setSmallIcon(R.drawable.ic_cherry_outline)
                 .setContentTitle("Importing library")
                 .setContentText("Importing library")
                 .build();

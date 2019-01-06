@@ -21,7 +21,7 @@ public class UpdateProgressNotification implements Notification {
     @Override
     public android.app.Notification onCreateNotification(Context context) {
         return new NotificationCompat.Builder(context, UpdateNotificationChannel.ID)
-                .setSmallIcon(R.drawable.ic_stat_hentoid)
+                .setSmallIcon(R.drawable.ic_cherry_outline)
                 .setContentTitle("Downloading update")
                 .setProgress(100, progress, progress == INDETERMINATE)
                 .build();

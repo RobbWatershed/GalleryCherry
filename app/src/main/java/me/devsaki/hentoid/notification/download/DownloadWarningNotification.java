@@ -22,7 +22,7 @@ public class DownloadWarningNotification implements Notification {
     @Override
     public android.app.Notification onCreateNotification(Context context) {
         return new NotificationCompat.Builder(context, DownloadNotificationChannel.ID)
-                .setSmallIcon(R.drawable.ic_stat_hentoid_warning)
+                .setSmallIcon(R.drawable.ic_cherry_outline_warning)
                 .setContentTitle("Warning : download failed")
                 .setStyle(getBigStyle())
                 .setLocalOnly(true)
