@@ -59,6 +59,7 @@ public class XnxxContent {
             images.add(new ImageFile(order++, s, StatusContent.SAVED));
         }
         if (images.size() > 0) result.setCoverImageUrl(images.get(0).getUrl());
+        result.setQtyPages(images.size());
 
 
         result.populateAuthor();
