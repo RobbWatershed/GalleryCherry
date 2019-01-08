@@ -38,8 +38,7 @@ public class XnxxActivity extends BaseWebActivity {
             String[] parts = url.split("/");
             String page;
             int nameIndex;
-            if (parts[parts.length - 1].length() > 3)
-            {
+            if (parts[parts.length - 1].length() > 3) {
                 nameIndex = parts.length - 1;
                 page = "1";
             } else {
@@ -47,7 +46,7 @@ public class XnxxActivity extends BaseWebActivity {
                 page = parts[parts.length - 1];
             }
 
-            compositeDisposable.add(XnxxGalleryServer.API.getGalleryMetadata(parts[nameIndex-2], parts[nameIndex-1], parts[nameIndex], page)
+            compositeDisposable.add(XnxxGalleryServer.API.getGalleryMetadata(parts[nameIndex - 2], parts[nameIndex - 1], parts[nameIndex], page)
                     .subscribe(
                             metadata -> {
                                 Content content = metadata.toContent();

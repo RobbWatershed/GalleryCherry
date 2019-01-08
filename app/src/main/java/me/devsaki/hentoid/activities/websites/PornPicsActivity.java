@@ -39,11 +39,7 @@ public class PornPicsActivity extends BaseWebActivity {
 
             compositeDisposable.add(PornPicsGalleryServer.API.getGalleryMetadata(parts[parts.length - 1])
                     .subscribe(
-                            metadata -> {
-                                Content content = metadata.toContent();
-                                content.setUrl(url.substring((getStartSite().getUrl() + GALLERY_FILTER).length()));
-                                listener.onResultReady(content, 1);
-                            }, throwable -> {
+                            metadata -> listener.onResultReady(metadata.toContent(), 1), throwable -> {
                                 Timber.e(throwable, "Error parsing content for page %s", url);
                                 listener.onResultFailed("");
                             })
