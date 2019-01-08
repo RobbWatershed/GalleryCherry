@@ -12,7 +12,8 @@ import timber.log.Timber;
  */
 public enum Site {
 
-    XHAMSTER(0, "XHamster", "https://m.xhamster.com/photos/", "xhamster", R.drawable.ic_menu_xhamster, true);
+    XHAMSTER(0, "XHamster", "https://m.xhamster.com/photos/", "xhamster", R.drawable.ic_menu_xhamster, true),
+    XNXX(1, "XNXX", "https://multi.xnxx.com/", "XNXX", R.drawable.ic_menu_xnxx, true);
 
 
     private final int code;

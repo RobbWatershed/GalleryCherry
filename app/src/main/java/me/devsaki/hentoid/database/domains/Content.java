@@ -9,6 +9,7 @@ import java.util.List;
 
 import me.devsaki.hentoid.activities.websites.BaseWebActivity;
 import me.devsaki.hentoid.activities.websites.XhamsterActivity;
+import me.devsaki.hentoid.activities.websites.XnxxActivity;
 import me.devsaki.hentoid.enums.AttributeType;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
@@ -73,6 +74,10 @@ public class Content implements Serializable {
         switch (site) {
             case XHAMSTER:
                 return url.substring(url.lastIndexOf("-") + 1);
+            case XNXX:
+                String[] parts = url.split("/");
+                if (parts.length > 4) return parts[4];
+                else return "";
             default:
                 return "";
         }
@@ -82,6 +87,8 @@ public class Content implements Serializable {
         switch (site) {
             case XHAMSTER:
                 return XhamsterActivity.class;
+            case XNXX:
+                return XnxxActivity.class;
             default:
                 return BaseWebActivity.class;
         }
