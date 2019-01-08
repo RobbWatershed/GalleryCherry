@@ -19,8 +19,8 @@ android {
         // or Perfect Viewer implements Content URI
         //noinspection ExpiringTargetSdkVersion
         targetSdkVersion 23
-        versionCode 02
-        versionName '0.1.1'
+        versionCode 03
+        versionName '0.1.2'
         proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         buildConfigField 'String', 'UPDATE_URL', '"https://github.com/RobbWatershed/GalleryCherry/tree/master/app/"'
     }
