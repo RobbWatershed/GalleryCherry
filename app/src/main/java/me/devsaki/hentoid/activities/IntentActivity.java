@@ -69,10 +69,8 @@ public class IntentActivity extends BaseActivity {
     private static String parsePath(Site site, Uri data) {
         String toParse = data.getPath();
         switch (site) {
-            case XHAMSTER:
-                return toParse;
             default:
-                return null;
+                return toParse;
         }
     }
 }

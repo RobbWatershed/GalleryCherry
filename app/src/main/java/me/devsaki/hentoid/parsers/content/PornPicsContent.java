@@ -15,54 +15,46 @@ import me.devsaki.hentoid.parsers.ParseHelper;
 import me.devsaki.hentoid.util.AttributeMap;
 import pl.droidsonroids.jspoon.annotation.Selector;
 
-public class XnxxContent {
+public class PornPicsContent {
 
-    private static String PORNSTARS_MARKER = "Pornstars : ";
-    private static String TAGS_MARKER = " - Tags : ";
+    private String GALLERY_FOLDER = "/galleries/";
 
-    @Selector(value = "head meta[name='twitter:url']", attr = "content")
+    @Selector(value = "head link[rel='canonical']", attr = "href")
     private String galleryUrl;
-    @Selector(value = "head title")
+    @Selector(".title-h1")
     private String title;
-    @Selector(value = ".descriptionGalleryPage")
-    private String rawMetadata;
-    @Selector(value = ".descriptionGalleryPage a")
+    @Selector(value = ".tags a")
     private List<Element> tags;
-    @Selector(value = ".downloadLink", attr = "href")
+    @Selector(value = ".gallery-info__item a[href*='/?q']")
+    private List<Element> models;
+    @Selector(value = "#tiles .rel-link", attr = "href")
     private List<String> imageLinks;
 
 
     public Content toContent() {
         Content result = new Content();
 
-        result.setSite(Site.XNXX);
-
-        int galleryIndex = title.lastIndexOf("gallery");
-        if (galleryIndex > -1)
-            result.setTitle(title.substring(0, title.lastIndexOf("gallery") - 1));
-        else result.setTitle(title);
+        result.setSite(Site.PORNPICS);
+        int galleryLocation = galleryUrl.indexOf(GALLERY_FOLDER) + GALLERY_FOLDER.length();
+        result.setUrl(galleryUrl.substring(galleryLocation));
+        result.setTitle(title);
 
         AttributeMap attributes = new AttributeMap();
         result.setAttributes(attributes);
 
-        // Models
-        if (rawMetadata != null && rawMetadata.contains(PORNSTARS_MARKER)) {
-            int tagsPosition = rawMetadata.indexOf(TAGS_MARKER);
-
-            String[] stars;
-            if (tagsPosition > -1)
-                stars = rawMetadata.substring(0, tagsPosition).replace(PORNSTARS_MARKER, "").split(",");
-            else
-                stars = rawMetadata.replace(PORNSTARS_MARKER, "").split(",");
-
-            for (String s : stars) {
-                attributes.add(new Attribute(AttributeType.MODEL, s.trim(), "/" + s.trim()));
+        if (models != null && models.size() > 1) {
+            boolean first = true;
+            for (Element e : models) {
+                if (first) {
+                    first = false;
+                    continue;
+                }
+                attributes.add(new Attribute(AttributeType.MODEL, e.childNode(0).childNode(0).toString(), e.attr("href")));
             }
         }
 
-        if (tags != null) {
-            ParseHelper.parseAttributes(attributes, AttributeType.TAG, tags, true);
-        }
+        ParseHelper.parseAttributes(attributes, AttributeType.TAG, tags, true);
+
 
         List<ImageFile> images = new ArrayList<>();
         result.setImageFiles(images);
@@ -73,7 +65,6 @@ public class XnxxContent {
         }
         if (images.size() > 0) result.setCoverImageUrl(images.get(0).getUrl());
         result.setQtyPages(images.size());
-
 
         result.populateAuthor();
         result.setStatus(StatusContent.SAVED);

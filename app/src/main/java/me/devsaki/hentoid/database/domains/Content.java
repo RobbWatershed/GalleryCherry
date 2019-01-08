@@ -8,6 +8,7 @@ import java.util.Comparator;
 import java.util.List;
 
 import me.devsaki.hentoid.activities.websites.BaseWebActivity;
+import me.devsaki.hentoid.activities.websites.PornPicsActivity;
 import me.devsaki.hentoid.activities.websites.XhamsterActivity;
 import me.devsaki.hentoid.activities.websites.XnxxActivity;
 import me.devsaki.hentoid.enums.AttributeType;
@@ -71,13 +72,16 @@ public class Content implements Serializable {
     }
 
     public String getUniqueSiteId() {
+        String[] parts = url.split("/");
+
         switch (site) {
             case XHAMSTER:
                 return url.substring(url.lastIndexOf("-") + 1);
             case XNXX:
-                String[] parts = url.split("/");
                 if (parts.length > 4) return parts[4];
                 else return "";
+            case PORNPICS:
+                return parts[parts.length - 1];
             default:
                 return "";
         }
@@ -89,6 +93,8 @@ public class Content implements Serializable {
                 return XhamsterActivity.class;
             case XNXX:
                 return XnxxActivity.class;
+            case PORNPICS:
+                return PornPicsActivity.class;
             default:
                 return BaseWebActivity.class;
         }
@@ -117,6 +123,9 @@ public class Content implements Serializable {
     public String getGalleryUrl() {
         String galleryConst;
         switch (site) {
+            case PORNPICS:
+                galleryConst = "galleries/";
+                break;
             default:
                 galleryConst = "gallery/";
                 break;
@@ -127,10 +136,8 @@ public class Content implements Serializable {
 
     public String getReaderUrl() {
         switch (site) {
-            case XHAMSTER:
-                return getGalleryUrl();
             default:
-                return null;
+                return getGalleryUrl();
         }
     }
 
