@@ -118,7 +118,7 @@ public class Content implements Serializable {
         String galleryConst;
         switch (site) {
             default:
-                galleryConst = "/gallery/";
+                galleryConst = "gallery/";
                 break;
         }
 
