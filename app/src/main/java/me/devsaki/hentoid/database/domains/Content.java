@@ -8,6 +8,7 @@ import java.util.Comparator;
 import java.util.List;
 
 import me.devsaki.hentoid.activities.websites.BaseWebActivity;
+import me.devsaki.hentoid.activities.websites.JpegworldActivity;
 import me.devsaki.hentoid.activities.websites.PornPicsActivity;
 import me.devsaki.hentoid.activities.websites.XhamsterActivity;
 import me.devsaki.hentoid.activities.websites.XnxxActivity;
@@ -82,6 +83,10 @@ public class Content implements Serializable {
                 else return "";
             case PORNPICS:
                 return parts[parts.length - 1];
+            case JPEGWORLD:
+                int begin = url.lastIndexOf("-") + 1;
+                int end = url.lastIndexOf(".");
+                return url.substring(begin, end - begin);
             default:
                 return "";
         }
@@ -95,6 +100,8 @@ public class Content implements Serializable {
                 return XnxxActivity.class;
             case PORNPICS:
                 return PornPicsActivity.class;
+            case JPEGWORLD:
+                return JpegworldActivity.class;
             default:
                 return BaseWebActivity.class;
         }
@@ -124,6 +131,7 @@ public class Content implements Serializable {
         String galleryConst;
         switch (site) {
             case PORNPICS:
+            case JPEGWORLD:
                 galleryConst = "galleries/";
                 break;
             default:
