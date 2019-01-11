@@ -84,9 +84,7 @@ public class Content implements Serializable {
             case PORNPICS:
                 return parts[parts.length - 1];
             case JPEGWORLD:
-                int begin = url.lastIndexOf("-") + 1;
-                int end = url.lastIndexOf(".");
-                return url.substring(begin, end - begin);
+                return url.substring(url.lastIndexOf("-") + 1, url.lastIndexOf("."));
             default:
                 return "";
         }

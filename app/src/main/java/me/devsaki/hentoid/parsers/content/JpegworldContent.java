@@ -20,11 +20,11 @@ public class JpegworldContent {
 
     @Selector(value = "head link[rel='canonical']", attr = "href")
     private String galleryUrl;
-    @Selector(".gallery-title")
+    @Selector("#gallery-title")
     private String title;
     @Selector(value = ".tags-col a:not(.paysite)")
     private List<Element> tags;
-    @Selector(value = ".gallery-item img", attr = "href")
+    @Selector(value = ".gallery-item img", attr = "src")
     private List<String> imageLinks;
 
 
@@ -46,13 +46,14 @@ public class JpegworldContent {
         result.setImageFiles(images);
 
         int order = 1;
-        StringBuilder hiResLink = new StringBuilder();
         String[] parts;
         for (String s : imageLinks) {
+            StringBuilder hiResLink = new StringBuilder();
             parts = s.split("/");
-            for (int i = 0; i < parts.length; i++)
+            for (int i = 0; i < parts.length; i++) {
                 if (i != parts.length - 2)
                     hiResLink.append(parts[i]).append((i < parts.length - 1) ? "/" : "");
+            }
             images.add(new ImageFile(order++, hiResLink.toString().replace("/thumbs/", "/galleries/"), StatusContent.SAVED));
         }
         if (images.size() > 0) result.setCoverImageUrl(images.get(0).getUrl());
