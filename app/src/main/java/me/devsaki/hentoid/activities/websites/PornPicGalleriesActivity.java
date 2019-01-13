@@ -8,6 +8,7 @@ import android.webkit.WebResourceResponse;
 import android.webkit.WebView;
 
 import me.devsaki.hentoid.database.domains.Content;
+import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.listener.ResultListener;
 import me.devsaki.hentoid.retrofit.GenericServer;
@@ -74,7 +75,20 @@ public class PornPicGalleriesActivity extends BaseWebActivity {
         protected void onGalleryFound(String url) {
             compositeDisposable.add(GenericServer.API.getGalleryMetadata(url)
                     .subscribe(
-                            metadata -> listener.onResultReady(metadata.toContent(), 1), throwable -> {
+                            metadata -> {
+                                Content content = metadata.toContent();
+
+                                if (content.getUrl() != null && content.getUrl().isEmpty()) {
+                                    content.setUrl(url);
+                                    String urlCleaned = url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
+                                    urlCleaned = urlCleaned.substring(0, urlCleaned.lastIndexOf("/"));
+                                    for (ImageFile img : content.getImageFiles()) {
+                                        if (!img.getUrl().startsWith("http")) img.setUrl(urlCleaned + "/" + img.getUrl());
+                                    }
+                                }
+
+                                listener.onResultReady(content, 1);
+                            }, throwable -> {
                                 Timber.e(throwable, "Error parsing content for page %s", url);
                                 listener.onResultFailed("");
                             })

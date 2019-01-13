@@ -23,9 +23,10 @@ public class SmartContent {
     private String title;
     @Selector(value = "a[href*='.jp']", attr = "href")
     private List<String> imageLinks;
+/*
     @Selector(value = "a[href*='.jp']")
     private List<Element> imageLinksElts;
-
+*/
 
     public Content toContent() {
         Content result = new Content();
@@ -39,7 +40,8 @@ public class SmartContent {
         if (galleryUrl.length() > 0) {
             HttpUrl url = HttpUrl.get(galleryUrl);
             result.setUrl(url.encodedPath());
-        }
+        } else result.setUrl("");
+
         result.setTitle(title);
 
         AttributeMap attributes = new AttributeMap();
@@ -49,14 +51,10 @@ public class SmartContent {
         result.setImageFiles(images);
 
         int order = 1;
-        /*
         for (String s : imageLinks) {
             images.add(new ImageFile(order++, s, StatusContent.SAVED));
-        }*/
-        for (Element e : imageLinksElts) {
-            images.add(new ImageFile(order++, e.absUrl("href"), StatusContent.SAVED));
         }
-        if (images.size() > 0) result.setCoverImageUrl(images.get(0).getUrl());
+//        if (images.size() > 0) result.setCoverImageUrl(images.get(0).getUrl());
         result.setQtyPages(images.size());
 
         result.populateAuthor();
