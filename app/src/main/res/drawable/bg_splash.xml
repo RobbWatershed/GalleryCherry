@@ -3,19 +3,13 @@
 
     <item android:drawable="@color/primary" />
 
-        <!--
+    <item>
         <bitmap
             android:layout_height="wrap_content"
             android:alpha="60"
             android:gravity="center"
             android:src="@drawable/ic_cherry_outline"
             android:tileMode="repeat" />
-            -->
-    <item
-        android:layout_height="wrap_content"
-        android:drawable="@drawable/ic_cherry_outline"
-        android:tileMode="repeat"
-        android:gravity="center">
     </item>
     <item>
         <bitmap

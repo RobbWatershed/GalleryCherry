@@ -21,7 +21,7 @@ public class ImportCompleteNotification implements Notification {
     @Override
     public android.app.Notification onCreateNotification(Context context) {
         return new NotificationCompat.Builder(context, ImportNotificationChannel.ID)
-                .setSmallIcon(R.drawable.ic_cherry_outline)
+                .setSmallIcon(R.drawable.ic_cherry_icon)
                 .setContentTitle("Import complete")
                 .setContentText(booksOK + " imported successfuly; " + booksKO +" failed")
                 .build();

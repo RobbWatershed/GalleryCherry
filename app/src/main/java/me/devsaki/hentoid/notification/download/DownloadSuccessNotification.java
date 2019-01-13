@@ -23,7 +23,7 @@ public class DownloadSuccessNotification implements Notification {
     @Override
     public android.app.Notification onCreateNotification(Context context) {
         return new NotificationCompat.Builder(context, DownloadNotificationChannel.ID)
-                .setSmallIcon(R.drawable.ic_cherry_outline)
+                .setSmallIcon(R.drawable.ic_cherry_icon)
                 .setContentTitle(getTitle(context))
                 .setContentIntent(getDefaultIntent(context))
                 .setDeleteIntent(getDeleteIntent(context))

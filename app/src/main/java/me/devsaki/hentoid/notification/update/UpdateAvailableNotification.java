@@ -27,7 +27,7 @@ public class UpdateAvailableNotification implements Notification {
         PendingIntent pendingIntent = PendingIntentCompat.getForegroundService(context, intent);
 
         return new NotificationCompat.Builder(context, UpdateNotificationChannel.ID)
-                .setSmallIcon(R.drawable.ic_cherry_outline)
+                .setSmallIcon(R.drawable.ic_cherry_icon)
                 .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setCategory(NotificationCompat.CATEGORY_MESSAGE)
                 .setVibrate(new long[]{1, 1, 1})

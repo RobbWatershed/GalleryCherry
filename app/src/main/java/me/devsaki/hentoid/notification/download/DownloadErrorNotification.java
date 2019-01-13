@@ -24,7 +24,7 @@ public class DownloadErrorNotification implements Notification {
     @Override
     public android.app.Notification onCreateNotification(Context context) {
         return new NotificationCompat.Builder(context, DownloadNotificationChannel.ID)
-                .setSmallIcon(R.drawable.ic_cherry_outline)
+                .setSmallIcon(R.drawable.ic_cherry_icon)
                 .setContentTitle(context.getString(R.string.download_error))
                 .setContentText(content.getTitle())
                 .setContentIntent(getDefaultIntent(context))

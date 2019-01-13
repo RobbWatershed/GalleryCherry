@@ -26,7 +26,7 @@ public class UpdateInstallNotification implements Notification {
         PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, 0);
 
         return new NotificationCompat.Builder(context, UpdateNotificationChannel.ID)
-                .setSmallIcon(R.drawable.ic_cherry_outline)
+                .setSmallIcon(R.drawable.ic_cherry_icon)
                 .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setCategory(NotificationCompat.CATEGORY_MESSAGE)
                 .setVibrate(new long[]{1, 1, 1})
