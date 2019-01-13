@@ -102,6 +102,8 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
 
     abstract Site getStartSite();
 
+    abstract boolean allowMixedContent();
+
 
     /**
      * Add an content block filter to current site
@@ -240,6 +242,9 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
         webSettings.setUseWideViewPort(true);
         webSettings.setJavaScriptEnabled(true);
         webSettings.setLoadWithOverviewMode(true);
+        if (allowMixedContent() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        }
     }
 
     private void initSwipeLayout() {

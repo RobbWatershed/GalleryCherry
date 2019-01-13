@@ -19,6 +19,11 @@ public class XnxxActivity extends BaseWebActivity {
         return Site.XNXX;
     }
 
+    @Override
+    boolean allowMixedContent() {
+        return false;
+    }
+
 
     @Override
     protected CustomWebViewClient getWebClient() {

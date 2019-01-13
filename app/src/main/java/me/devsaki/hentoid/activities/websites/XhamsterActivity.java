@@ -19,6 +19,11 @@ public class XhamsterActivity extends BaseWebActivity {
         return Site.XHAMSTER;
     }
 
+    @Override
+    boolean allowMixedContent() {
+        return false;
+    }
+
 
     @Override
     protected CustomWebViewClient getWebClient() {

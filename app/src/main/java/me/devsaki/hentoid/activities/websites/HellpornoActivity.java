@@ -19,6 +19,10 @@ public class HellpornoActivity extends BaseWebActivity {
         return Site.HELLPORNO;
     }
 
+    @Override
+    boolean allowMixedContent() {
+        return true;
+    }
 
     @Override
     protected CustomWebViewClient getWebClient() {

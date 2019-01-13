@@ -19,6 +19,11 @@ public class PornPicsActivity extends BaseWebActivity {
         return Site.PORNPICS;
     }
 
+    @Override
+    boolean allowMixedContent() {
+        return false;
+    }
+
 
     @Override
     protected CustomWebViewClient getWebClient() {

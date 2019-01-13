@@ -27,6 +27,11 @@ public class JpegworldActivity extends BaseWebActivity {
         return client;
     }
 
+    @Override
+    boolean allowMixedContent() {
+        return false;
+    }
+
     private class PornPicsWebViewClient extends CustomWebViewClient {
 
         PornPicsWebViewClient(String filteredUrl, Site startSite, ResultListener<Content> listener) {

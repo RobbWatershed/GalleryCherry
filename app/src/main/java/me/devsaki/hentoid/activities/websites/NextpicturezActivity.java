@@ -19,6 +19,10 @@ public class NextpicturezActivity extends BaseWebActivity {
         return Site.NEXTPICTUREZ;
     }
 
+    @Override
+    boolean allowMixedContent() {
+        return false;
+    }
 
     @Override
     protected CustomWebViewClient getWebClient() {
