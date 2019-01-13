@@ -60,9 +60,10 @@ public class HellpornoContent {
         result.setImageFiles(images);
 
         int order = 1;
-        for (String s : imageLinks) {
-            images.add(new ImageFile(order++, s, StatusContent.SAVED));
-        }
+        if (imageLinks != null)
+            for (String s : imageLinks) {
+                images.add(new ImageFile(order++, s, StatusContent.SAVED));
+            }
         if (images.size() > 0) result.setCoverImageUrl(images.get(0).getUrl());
         result.setQtyPages(images.size());
 
