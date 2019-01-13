@@ -457,7 +457,7 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
 
     abstract class CustomWebViewClient extends WebViewClient {
 
-        private String domainName = "";
+        private List<String> domainNames = new ArrayList<>();
         private final String filteredUrl;
         CompositeDisposable compositeDisposable = new CompositeDisposable();
         protected final ByteArrayInputStream nothing = new ByteArrayInputStream("".getBytes());
@@ -479,20 +479,27 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
         }
 
         void restrictTo(String s) {
-            domainName = s;
+            domainNames.add(s);
+        }
+
+        private boolean isHostNotInRestrictedDomains(@NonNull String host) {
+            for (String s : domainNames) {
+                if (host.contains(s)) return false;
+            }
+            return true;
         }
 
         @Override
         public boolean shouldOverrideUrlLoading(WebView view, String url) {
-            String hostStr = Uri.parse(url).getHost();
-            return hostStr != null && !hostStr.contains(domainName);
+            String host = Uri.parse(url).getHost();
+            return host != null && isHostNotInRestrictedDomains(host);
         }
 
         @TargetApi(Build.VERSION_CODES.N)
         @Override
         public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-            String hostStr = Uri.parse(request.getUrl().toString()).getHost();
-            return hostStr != null && !hostStr.contains(domainName);
+            String host = Uri.parse(request.getUrl().toString()).getHost();
+            return host != null && isHostNotInRestrictedDomains(host);
         }
 
         @Override
