@@ -8,6 +8,7 @@ import java.util.Comparator;
 import java.util.List;
 
 import me.devsaki.hentoid.activities.websites.BaseWebActivity;
+import me.devsaki.hentoid.activities.websites.HellpornoActivity;
 import me.devsaki.hentoid.activities.websites.JpegworldActivity;
 import me.devsaki.hentoid.activities.websites.NextpicturezActivity;
 import me.devsaki.hentoid.activities.websites.PornPicsActivity;
@@ -83,6 +84,7 @@ public class Content implements Serializable {
                 if (parts.length > 0) return parts[0];
                 else return "";
             case PORNPICS:
+            case HELLPORNO:
             case NEXTPICTUREZ:
                 return parts[parts.length - 1];
             case JPEGWORLD:
@@ -104,6 +106,8 @@ public class Content implements Serializable {
                 return JpegworldActivity.class;
             case NEXTPICTUREZ:
                 return NextpicturezActivity.class;
+            case HELLPORNO:
+                return HellpornoActivity.class;
             default:
                 return BaseWebActivity.class;
         }
@@ -132,6 +136,9 @@ public class Content implements Serializable {
     public String getGalleryUrl() {
         String galleryConst;
         switch (site) {
+            case HELLPORNO:
+                galleryConst = ""; // Site landpage URL already contains the "/albums/" prefix
+                break;
             case PORNPICS:
             case JPEGWORLD:
                 galleryConst = "galleries/";

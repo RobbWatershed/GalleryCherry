@@ -5,6 +5,7 @@ import me.devsaki.hentoid.activities.AboutActivity;
 import me.devsaki.hentoid.activities.DownloadsActivity;
 import me.devsaki.hentoid.activities.PrefsActivity;
 import me.devsaki.hentoid.activities.QueueActivity;
+import me.devsaki.hentoid.activities.websites.HellpornoActivity;
 import me.devsaki.hentoid.activities.websites.JpegworldActivity;
 import me.devsaki.hentoid.activities.websites.NextpicturezActivity;
 import me.devsaki.hentoid.activities.websites.PornPicsActivity;
@@ -18,6 +19,7 @@ public enum DrawerItem {
     PORNPICS("PORNPICS", R.drawable.ic_menu_pornpics, PornPicsActivity.class),
     JPEGWORLD("JPEGWORLD", R.drawable.ic_menu_jpegworld, JpegworldActivity.class),
     NEXTPICTUREZ("NEXTPICTUREZ", R.drawable.ic_menu_nextpicturez, NextpicturezActivity.class),
+    HELLPORNO("HELLPORNO", R.drawable.ic_menu_hellporno, HellpornoActivity.class),
     HOME("HOME", R.drawable.ic_menu_downloads, DownloadsActivity.class),
     QUEUE("QUEUE", R.drawable.ic_menu_queue, QueueActivity.class),
     PREFS("PREFERENCES", R.drawable.ic_menu_prefs, PrefsActivity.class),

@@ -15,7 +15,7 @@ public class ParseHelper {
      * @param s String brackets have to be removed
      * @return String with removed brackets
      */
-    public static String removeBrackets(String s) {
+    private static String removeBrackets(String s) {
         int bracketPos = s.lastIndexOf("(");
         if (bracketPos > 1 && ' ' == s.charAt(bracketPos - 1)) bracketPos--;
         if (bracketPos > -1) {
@@ -25,14 +25,18 @@ public class ParseHelper {
         return s;
     }
 
+    public static void parseAttribute(AttributeMap map, AttributeType type, Element a, boolean filterCount) {
+        String name = a.text();
+        if (filterCount) name = removeBrackets(name);
+        Attribute attribute = new Attribute(type, name, a.attr("href"));
+
+        map.add(attribute);
+    }
+
     public static void parseAttributes(AttributeMap map, AttributeType type, List<Element> elements, boolean filterCount) {
         if (elements != null)
             for (Element a : elements) {
-                String name = a.text();
-                if (filterCount) name = removeBrackets(name);
-                Attribute attribute = new Attribute(type, name, a.attr("href"));
-
-                map.add(attribute);
+                parseAttribute(map, type, a, filterCount);
             }
     }
 }

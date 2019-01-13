@@ -51,6 +51,10 @@
             android:configChanges="orientation|screenSize"
             android:theme="@style/BrowserTheme" />
         <activity
+            android:name=".activities.websites.HellpornoActivity"
+            android:configChanges="orientation|screenSize"
+            android:theme="@style/BrowserTheme" />
+        <activity
             android:name=".activities.DownloadsActivity"
             android:configChanges="orientation|screenSize"
             android:label="@string/title_activity_downloads"
@@ -162,8 +166,8 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:host="nextpicturez.com"
-                    android:pathPrefix="/photos"
-                    android:scheme="https" />
+                    android:pathPrefix="/gallery"
+                    android:scheme="http" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -172,7 +176,17 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:host="young-whores.net"
-                    android:pathPrefix="/photos"
+                    android:pathPrefix="/gallery"
+                    android:scheme="http" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:host="hellporno.com"
+                    android:pathPrefix="/albums"
                     android:scheme="https" />
             </intent-filter>
         </activity>
