@@ -24,6 +24,7 @@ import android.webkit.WebViewClient;
 
 import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -480,6 +481,10 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
 
         void restrictTo(String s) {
             domainNames.add(s);
+        }
+
+        void restrictTo(String... s) {
+            domainNames.addAll(Arrays.asList(s));
         }
 
         private boolean isHostNotInRestrictedDomains(@NonNull String host) {
