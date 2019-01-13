@@ -9,6 +9,7 @@ import java.util.List;
 
 import me.devsaki.hentoid.activities.websites.BaseWebActivity;
 import me.devsaki.hentoid.activities.websites.JpegworldActivity;
+import me.devsaki.hentoid.activities.websites.NextpicturezActivity;
 import me.devsaki.hentoid.activities.websites.PornPicsActivity;
 import me.devsaki.hentoid.activities.websites.XhamsterActivity;
 import me.devsaki.hentoid.activities.websites.XnxxActivity;
@@ -79,9 +80,10 @@ public class Content implements Serializable {
             case XHAMSTER:
                 return url.substring(url.lastIndexOf("-") + 1);
             case XNXX:
-                if (parts.length > 4) return parts[4];
+                if (parts.length > 0) return parts[0];
                 else return "";
             case PORNPICS:
+            case NEXTPICTUREZ:
                 return parts[parts.length - 1];
             case JPEGWORLD:
                 return url.substring(url.lastIndexOf("-") + 1, url.lastIndexOf("."));
@@ -100,6 +102,8 @@ public class Content implements Serializable {
                 return PornPicsActivity.class;
             case JPEGWORLD:
                 return JpegworldActivity.class;
+            case NEXTPICTUREZ:
+                return NextpicturezActivity.class;
             default:
                 return BaseWebActivity.class;
         }
