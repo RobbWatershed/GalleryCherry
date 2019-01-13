@@ -8,6 +8,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.util.Pair;
@@ -23,6 +24,8 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -45,9 +48,13 @@ import me.devsaki.hentoid.services.ContentQueueManager;
 import me.devsaki.hentoid.util.Consts;
 import me.devsaki.hentoid.util.FileHelper;
 import me.devsaki.hentoid.util.Helper;
+import me.devsaki.hentoid.util.OkHttpClientSingleton;
 import me.devsaki.hentoid.util.PermissionUtil;
 import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.views.ObservableWebView;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.ResponseBody;
 import timber.log.Timber;
 
 /**
@@ -408,7 +415,7 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
      * @param content Currently displayed content
      */
     void processContent(Content content) {
-        if (null == content || null == content.getUrl()) {
+        if (null == content || null == content.getUrl() || 0 == content.getQtyPages()) {
             return;
         }
 
@@ -493,9 +500,12 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
         }
 
         private boolean isHostNotInRestrictedDomains(@NonNull String host) {
+            if (domainNames.isEmpty()) return false;
+
             for (String s : domainNames) {
                 if (host.contains(s)) return false;
             }
+
             return true;
         }
 
@@ -534,6 +544,22 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
             fabRefreshOrStop.setImageResource(R.drawable.ic_action_refresh);
         }
 
+        @Nullable
+        protected InputStream loadAndReplace(String url, String toReplace, String replacement) {
+            try {
+                OkHttpClient loader = OkHttpClientSingleton.getInstance();
+                Request request = new Request.Builder().url(url).get().build();
+                ResponseBody body = loader.newCall(request).execute().body();
+                if (body != null) {
+                    String html = body.string().replace(toReplace, replacement);
+                    return new ByteArrayInputStream(html.getBytes("UTF-8"));
+                }
+            } catch (IOException e) {
+                Timber.e(e, "An exception has occurred while loading the page %s", url);
+            }
+            return null;
+        }
+
         @Override
         public WebResourceResponse shouldInterceptRequest(@NonNull WebView view,
                                                           @NonNull String url) {
@@ -552,7 +578,7 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
             if (isUrlForbidden(url)) {
                 return new WebResourceResponse("text/plain", "utf-8", nothing);
             } else {
-                return super.shouldInterceptRequest(view, request);
+                return super.shouldInterceptRequest(view, url);
             }
         }
     }
