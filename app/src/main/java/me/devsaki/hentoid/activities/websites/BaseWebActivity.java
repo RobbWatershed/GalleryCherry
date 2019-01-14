@@ -8,7 +8,6 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.util.Pair;
@@ -24,8 +23,6 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -48,13 +45,9 @@ import me.devsaki.hentoid.services.ContentQueueManager;
 import me.devsaki.hentoid.util.Consts;
 import me.devsaki.hentoid.util.FileHelper;
 import me.devsaki.hentoid.util.Helper;
-import me.devsaki.hentoid.util.OkHttpClientSingleton;
 import me.devsaki.hentoid.util.PermissionUtil;
 import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.views.ObservableWebView;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.ResponseBody;
 import timber.log.Timber;
 
 /**
@@ -420,6 +413,7 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
         }
 
         addContentToDB(content);
+        Timber.i(">>> Adding to DB content %s @ %s", content.getTitle(), content.getUrl());
 
         // Set Download action button visibility
         StatusContent contentStatus = content.getStatus();
@@ -530,34 +524,19 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
             fabHome.show();
             hideFab(fabDownload);
             hideFab(fabRead);
+        }
 
+        @Override
+        public void onPageFinished(WebView view, String url) {
+            // Running parser here ensures it happens on the final page in case of HTTP redirections
             if (filteredUrl.length() > 0) {
                 Pattern pattern = Pattern.compile(filteredUrl);
                 Matcher matcher = pattern.matcher(url);
                 if (matcher.find()) onGalleryFound(url);
             }
-        }
 
-        @Override
-        public void onPageFinished(WebView view, String url) {
             webViewIsLoading = false;
             fabRefreshOrStop.setImageResource(R.drawable.ic_action_refresh);
-        }
-
-        @Nullable
-        protected InputStream loadAndReplace(String url, String toReplace, String replacement) {
-            try {
-                OkHttpClient loader = OkHttpClientSingleton.getInstance();
-                Request request = new Request.Builder().url(url).get().build();
-                ResponseBody body = loader.newCall(request).execute().body();
-                if (body != null) {
-                    String html = body.string().replace(toReplace, replacement);
-                    return new ByteArrayInputStream(html.getBytes("UTF-8"));
-                }
-            } catch (IOException e) {
-                Timber.e(e, "An exception has occurred while loading the page %s", url);
-            }
-            return null;
         }
 
         @Override

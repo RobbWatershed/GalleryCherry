@@ -1,12 +1,5 @@
 package me.devsaki.hentoid.activities.websites;
 
-import android.annotation.TargetApi;
-import android.os.Build;
-import android.support.annotation.NonNull;
-import android.webkit.WebResourceRequest;
-import android.webkit.WebResourceResponse;
-import android.webkit.WebView;
-
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.enums.Site;
@@ -43,36 +36,9 @@ public class PornPicGalleriesActivity extends BaseWebActivity {
             super(filteredUrl, startSite, listener);
         }
 
-        private WebResourceResponse shouldInterceptRequestCommon(@NonNull WebView view,
-                                                                 @NonNull String url) {
-            if (isUrlForbidden(url)) {
-                return new WebResourceResponse("text/plain", "utf-8", nothing);
-            } else if (url.endsWith("pornpicgalleries.com") || url.endsWith("pornpicgalleries.com/") || url.contains("pornpicgalleries.com/tag/")) {
-                return new WebResourceResponse(
-                        "text/html",
-                        "UTF-8",
-                        loadAndReplace(url, "target=\"_blank\"", "")
-                );
-            } else {
-                return super.shouldInterceptRequest(view, url);
-            }
-        }
-
-        @Override
-        public WebResourceResponse shouldInterceptRequest(@NonNull WebView view,
-                                                          @NonNull String url) {
-            return shouldInterceptRequestCommon(view, url);
-        }
-
-        @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-        @Override
-        public WebResourceResponse shouldInterceptRequest(@NonNull WebView view,
-                                                          @NonNull WebResourceRequest request) {
-            return shouldInterceptRequestCommon(view, request.getUrl().toString());
-        }
-
         @Override
         protected void onGalleryFound(String url) {
+
             compositeDisposable.add(GenericServer.API.getGalleryMetadata(url)
                     .subscribe(
                             metadata -> {
@@ -80,10 +46,15 @@ public class PornPicGalleriesActivity extends BaseWebActivity {
 
                                 if (content.getUrl() != null && content.getUrl().isEmpty()) {
                                     content.setUrl(url);
-                                    String urlCleaned = url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
-                                    urlCleaned = urlCleaned.substring(0, urlCleaned.lastIndexOf("/"));
+                                    String urlHost = url.substring(0, url.indexOf("/", url.indexOf("://") + 3));
+                                    String urlLocation = url.substring(0, url.lastIndexOf("/") + 1);
                                     for (ImageFile img : content.getImageFiles()) {
-                                        if (!img.getUrl().startsWith("http")) img.setUrl(urlCleaned + "/" + img.getUrl());
+                                        if (!img.getUrl().startsWith("http")) {
+                                            if (img.getUrl().startsWith("/"))
+                                                img.setUrl(urlHost + img.getUrl());
+                                            else
+                                                img.setUrl(urlLocation + img.getUrl());
+                                        }
                                     }
                                 }
 
