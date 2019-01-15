@@ -140,8 +140,9 @@ public class Content implements Serializable {
     public String getGalleryUrl() {
         String galleryConst;
         switch (site) {
-            case HELLPORNO:
             case PORNPICGALLERIES:
+                return url; // Specific case - user can go on any site
+            case HELLPORNO:
                 galleryConst = ""; // Site landpage URL already contains the "/albums/" prefix
                 break;
             case PORNPICS:
