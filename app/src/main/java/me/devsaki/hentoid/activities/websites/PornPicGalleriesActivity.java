@@ -21,7 +21,7 @@ public class PornPicGalleriesActivity extends BaseWebActivity {
 
     @Override
     boolean allowMixedContent() {
-        return true;
+        return false;
     }
 
 

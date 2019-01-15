@@ -24,7 +24,8 @@ public class SmartContent {
     private String title;
     @Selector(value = "a[href*='.jp']", attr = "href")
     private List<String> imageLinks;
-    @Selector(value = "img[src*='.jp']")
+    @Selector(value = ":not(a)>img[src*='.jp']")
+    // Alternate images are alone on the page, without links, zishy-style (else we would capture clickable thumbs)
     private List<Element> imageElts;
 
 
@@ -63,9 +64,7 @@ public class SmartContent {
             }
         } else if (imageElts != null && imageElts.size() > 4) {
             for (Element e : imageElts) {
-                // Images are alone on the page, without links, zishy-style (else they would simply be clickable thumbs)
-                if (!e.parent().tagName().equalsIgnoreCase("a"))
-                    images.add(new ImageFile(order++, e.attr("src"), StatusContent.SAVED));
+                images.add(new ImageFile(order++, e.attr("src"), StatusContent.SAVED));
             }
         }
 
