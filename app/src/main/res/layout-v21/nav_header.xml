@@ -14,7 +14,7 @@
         android:layout_height="match_parent"
         android:layout_gravity="center"
         android:elevation="@dimen/drawer_layout_header_elevation"
-        android:src="@drawable/ic_hentoid"
+        android:src="@drawable/ic_cherry"
         tools:ignore="ContentDescription" />
 
 </FrameLayout>

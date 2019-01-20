@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
 
+import me.devsaki.hentoid.BuildConfig;
 import timber.log.Timber;
 
 /**
@@ -176,6 +177,7 @@ public final class Preferences {
         public static final String PREF_HIDE_RECENT = "pref_hide_recent";
         public static final String PREF_ADD_NO_MEDIA_FILE = "pref_add_no_media_file";
         public static final String PREF_CHECK_UPDATE_MANUAL = "pref_check_updates_manual";
+        public static final String PREF_REFRESH_LIBRARY = "pref_refresh_bookshelf";
         public static final String PREF_ANALYTICS_TRACKING = "pref_analytics_tracking";
         static final String PREF_WELCOME_DONE = "pref_welcome_done";
         static final String PREFS_VERSION_KEY = "prefs_version";
@@ -206,7 +208,7 @@ public final class Preferences {
         static final boolean PREF_FIRST_RUN_DEFAULT = true;
         static final boolean PREF_APP_LOCK_VIBRATE_DEFAULT = true;
         static final boolean PREF_ENDLESS_SCROLL_DEFAULT = true;
-        static final boolean PREF_HIDE_RECENT_DEFAULT = true;
+        static final boolean PREF_HIDE_RECENT_DEFAULT = (!BuildConfig.DEBUG); // Debug apps always visible to facilitate video capture
         static final int PREF_FOLDER_NAMING_CONTENT_DEFAULT = Constant.PREF_FOLDER_NAMING_CONTENT_AUTH_TITLE_ID;
         static final int PREF_READ_CONTENT_ACTION = Constant.PREF_READ_CONTENT_DEFAULT;
         static final boolean PREF_CHECK_UPDATES_DEFAULT = true;
@@ -225,6 +227,9 @@ public final class Preferences {
         public static final int PREF_ORDER_CONTENT_LAST_DL_DATE_LAST = 3;
         public static final int PREF_ORDER_CONTENT_RANDOM = 4;
         public static final int PREF_ORDER_CONTENT_LAST_UL_DATE_FIRST = 5;
+        public static final int PREF_ORDER_CONTENT_LEAST_READ = 6;
+        public static final int PREF_ORDER_CONTENT_MOST_READ = 7;
+        public static final int PREF_ORDER_CONTENT_LAST_READ = 8;
         public static final int PREF_ORDER_ATTRIBUTES_ALPHABETIC = 0;
         public static final int PREF_ORDER_ATTRIBUTES_COUNT = 1;
         static final int PREF_FOLDER_NAMING_CONTENT_ID = 0;

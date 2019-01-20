@@ -13,7 +13,7 @@ public class UpdateCheckNotification implements Notification {
     @Override
     public android.app.Notification onCreateNotification(Context context) {
         return new NotificationCompat.Builder(context, UpdateNotificationChannel.ID)
-                .setSmallIcon(R.drawable.ic_stat_hentoid)
+                .setSmallIcon(R.drawable.ic_cherry_icon)
                 .setContentTitle("Checking for updates")
                 .setContentText("Please wait")
                 .setProgress(0, 0, true)

@@ -29,7 +29,8 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
             android:textAppearance="?android:attr/textAppearanceSmall"
-            tools:text="Series: Name" />
+            tools:text="Series: Name"
+            android:visibility="gone"/>
 
         <TextView
             android:id="@+id/tvArtist"
@@ -37,7 +38,8 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
             android:textAppearance="?android:attr/textAppearanceSmall"
-            tools:text="Artist: Name" />
+            tools:text="Artist: Name"
+            android:visibility="gone"/>
 
         <View
             android:layout_width="fill_parent"
@@ -48,7 +50,8 @@
             android:layout_marginRight="10dp"
             android:layout_marginStart="1dp"
             android:layout_marginTop="5dp"
-            android:background="@android:color/holo_red_light" />
+            android:background="@android:color/holo_red_light"
+            android:visibility="gone"/>
 
         <TextView
             android:id="@+id/tvTags"

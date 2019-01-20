@@ -69,23 +69,8 @@ public class IntentActivity extends BaseActivity {
     private static String parsePath(Site site, Uri data) {
         String toParse = data.getPath();
         switch (site) {
-            case HITOMI:
-                return toParse.replace("/galleries", "");
-            case NHENTAI:
-                return toParse.replace("/g", "");
-            case TSUMINO:
-                return toParse.replace("/Book/Info", "");
-            case ASMHENTAI_COMICS:
-                return toParse.replace("/g", "") + "/"; // '/' required
-            case ASMHENTAI:
-                return toParse.replace("/g", "") + "/"; // '/' required
-            case HENTAICAFE:
-                String path = data.toString();
-                return path.contains("/?p=") ? path.replace(Site.HENTAICAFE.getUrl(), "") : toParse;
-            case PURURIN:
-                return toParse.replace("/gallery", "") + "/";
             default:
-                return null;
+                return toParse;
         }
     }
 }

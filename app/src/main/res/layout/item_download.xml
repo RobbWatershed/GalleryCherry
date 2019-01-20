@@ -5,8 +5,6 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginBottom="@dimen/default_cardview_margin"
-    android:layout_marginEnd="@dimen/default_cardview_margin"
-    android:layout_marginRight="@dimen/default_cardview_margin"
     android:clickable="true"
     android:focusable="true"
     android:foreground="?android:attr/selectableItemBackground"
@@ -36,8 +34,24 @@
                 android:layout_alignParentTop="true"
                 android:layout_alignParentLeft="true"
                 android:layout_alignParentStart="true"
+                android:layout_toLeftOf="@id/iconNew"
+                android:layout_toStartOf="@id/iconNew"
                 android:layout_marginBottom="5dp"
                 layout="@layout/include_item_title"
+                />
+
+            <ImageView
+                android:id="@+id/iconNew"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_alignParentTop="true"
+                android:layout_alignParentRight="true"
+                android:layout_alignParentEnd="true"
+                android:adjustViewBounds="true"
+                android:tint="@color/accent"
+                android:padding="8dp"
+                android:src="@drawable/ic_new"
+                tools:ignore="ContentDescription"
                 />
 
             <include
@@ -64,9 +78,9 @@
             android:paddingRight="8dp"
             android:paddingStart="5dp"
             android:paddingTop="8dp"
-            tools:background="@color/card_item_src_normal"
+            tools:background="@color/primary"
             tools:ignore="ContentDescription"
-            tools:src="@drawable/ic_menu_hitomi" />
+            tools:src="@drawable/ic_menu_xhamster" />
 
         <ImageView
             android:id="@+id/ivError"
@@ -76,7 +90,7 @@
             android:layout_toLeftOf="@id/ivFavourite"
             android:layout_toStartOf="@id/ivFavourite"
             android:adjustViewBounds="true"
-            android:background="@color/card_item_src_other"
+            android:background="@color/accent"
             android:clickable="true"
             android:focusable="true"
             android:padding="8dp"
@@ -97,7 +111,7 @@
             android:focusable="true"
             android:padding="8dp"
             android:src="@drawable/ic_fav_empty"
-            android:tint="@color/card_item_src_other"
+            android:tint="@color/accent"
             tools:ignore="ContentDescription"
             />
 
@@ -114,7 +128,7 @@
             android:focusable="true"
             android:padding="8dp"
             android:src="@drawable/ic_action_download"
-            android:tint="@color/card_item_src_other"
+            android:tint="@color/accent"
             tools:ignore="ContentDescription"
             />
     </RelativeLayout>

@@ -1,7 +1,5 @@
 package me.devsaki.hentoid.database.constants;
 
-import me.devsaki.hentoid.enums.AttributeType;
-
 /**
  * Created by DevSaki on 10/05/2015.
  * db Content Table
@@ -11,7 +9,7 @@ public abstract class ContentTable {
     public static final String TABLE_NAME = "content";
 
     public static final String INSERT_STATEMENT = "INSERT OR REPLACE INTO " + TABLE_NAME
-            + " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);";
+            + " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);";
     public static final String LIMIT_BY_PAGE = " LIMIT ?,?";
 
     // COLUMN NAMES
@@ -26,10 +24,12 @@ public abstract class ContentTable {
     public static final String DOWNLOAD_DATE_COLUMN = "download_date";
     static final String STATUS_COLUMN = "status";
     private static final String COVER_IMAGE_URL_COLUMN = "cover_image_url";
-    static final String SITE_COLUMN = "site";
+    public static final String SOURCE_COLUMN = "site";
     public static final String AUTHOR_COLUMN = "author";
     public static final String STORAGE_FOLDER_COLUMN = "storage_folder";
     public static final String FAVOURITE_COLUMN = "favourite";
+    public static final String READS_COLUMN = "reads";
+    public static final String LAST_READ_DATE_COLUMN = "last_read_date";
 
     // COLUMN INDEXES
     public static final int IDX_INTERNALID = 1;
@@ -43,14 +43,19 @@ public abstract class ContentTable {
     public static final int IDX_DLDATE = 9;
     public static final int IDX_STATUSCODE = 10;
     public static final int IDX_COVERURL = 11;
-    public static final int IDX_SITECODE = 12;
+    public static final int IDX_SOURCECODE = 12;
     public static final int IDX_AUTHOR = 13;
     public static final int IDX_STORAGE_FOLDER = 14;
     public static final int IDX_FAVOURITE = 15;
+    public static final int IDX_READS = 16;
+    public static final int IDX_LAST_READ_DATE = 17;
 
     // ORDER
     public static final String ORDER_BY_DATE = " ORDER BY C." + DOWNLOAD_DATE_COLUMN;
     public static final String ORDER_ALPHABETIC = " ORDER BY C." + TITLE_COLUMN;
+    public static final String ORDER_READS_ASC = " ORDER BY C." + READS_COLUMN + ", C." + LAST_READ_DATE_COLUMN;
+    public static final String ORDER_READS_DESC = " ORDER BY C." + READS_COLUMN + " DESC, C." + LAST_READ_DATE_COLUMN + " DESC";
+    public static final String ORDER_READ_DATE = " ORDER BY C." + LAST_READ_DATE_COLUMN + " DESC";
     public static final String ORDER_RANDOM = " ORDER BY ((ABS(" + ID_COLUMN + " * %6) * 1e7) % 1e7)";
 
     // CREATE
@@ -60,8 +65,9 @@ public abstract class ContentTable {
             + " TEXT," + TITLE_COLUMN + " TEXT" + "," + QTY_PAGES_COLUMN + " INTEGER" + ","
             + UPLOAD_DATE_COLUMN + " INTEGER" + "," + DOWNLOAD_DATE_COLUMN + " INTEGER" + ","
             + STATUS_COLUMN + " INTEGER" + "," + COVER_IMAGE_URL_COLUMN + " TEXT"
-            + "," + SITE_COLUMN + " INTEGER, " + AUTHOR_COLUMN + " TEXT, " + STORAGE_FOLDER_COLUMN + " TEXT, "
-            + FAVOURITE_COLUMN + " INTEGER DEFAULT 0 )";
+            + "," + SOURCE_COLUMN + " INTEGER, " + AUTHOR_COLUMN + " TEXT, " + STORAGE_FOLDER_COLUMN + " TEXT, "
+            + FAVOURITE_COLUMN + " INTEGER, " + READS_COLUMN + " INTEGER, " + LAST_READ_DATE_COLUMN + " INTEGER "
+            + " DEFAULT 0 )";
 
     // DELETE
     public static final String DELETE_STATEMENT = "DELETE FROM " + TABLE_NAME + " WHERE " + ID_COLUMN + " = ?";
@@ -79,32 +85,45 @@ public abstract class ContentTable {
 
     public static final String UPDATE_CONTENT_FAVOURITE = "UPDATE " + TABLE_NAME + " SET " + FAVOURITE_COLUMN + " = ? WHERE " + ID_COLUMN + " = ?";
 
+    public static final String UPDATE_CONTENT_READS = "UPDATE " + TABLE_NAME + " SET " + READS_COLUMN + " = ?, " + LAST_READ_DATE_COLUMN + "= ? WHERE " + ID_COLUMN + " = ?";
+
 
     // SELECT
     public static final String SELECT_BY_CONTENT_ID = "SELECT * FROM " + TABLE_NAME + " C WHERE C." + ID_COLUMN + " = ?";
 
-    public static final String SELECT_BY_EXTERNAL_REF = "SELECT * FROM " + TABLE_NAME + " WHERE " + SITE_COLUMN + "= ? AND " + UNIQUE_SITE_ID_COLUMN + " IN (%1) AND " + STATUS_COLUMN + " IN (?,?,?,?,?)";
+    public static final String SELECT_BY_EXTERNAL_REF = "SELECT * FROM " + TABLE_NAME + " WHERE " + SOURCE_COLUMN + "= ? AND " + UNIQUE_SITE_ID_COLUMN + " IN (%1) AND " + STATUS_COLUMN + " IN (?,?,?,?,?)";
 
     public static final String SELECT_NULL_FOLDERS = "SELECT * FROM " + TABLE_NAME + " WHERE " + STORAGE_FOLDER_COLUMN + " is null";
 
-    public static final String SELECT_SOURCES = "SELECT "+SITE_COLUMN+", COUNT(*) FROM " + TABLE_NAME + " WHERE " + STATUS_COLUMN + " IN (?,?,?) GROUP BY 1";
+    public static final String SELECT_SOURCES = "SELECT " + SOURCE_COLUMN + ", COUNT(*) FROM " + TABLE_NAME + " WHERE " + STATUS_COLUMN + " IN (?,?,?) GROUP BY 1";
+
+    public static final String SELECT_BY_STATUS = "SELECT * FROM " + TABLE_NAME + " C WHERE C." + STATUS_COLUMN + " = ?";
 
 
     // SEARCH QUERIES "TOOLBOX"
 
     public static final String SELECT_DOWNLOADS_BASE = "SELECT C.* FROM " + TABLE_NAME + " C WHERE C." + STATUS_COLUMN + " in (?, ?, ?) ";
 
-    public static final String SELECT_DOWNLOADS_SITES = " AND C." + SITE_COLUMN + " in (%1) ";
+    public static final String SELECT_DOWNLOADS_SITES = " AND C." + SOURCE_COLUMN + " in (%1) ";
 
     public static final String SELECT_DOWNLOADS_FAVS = " AND C." + FAVOURITE_COLUMN + " = 1 ";
 
-    public static final String SELECT_DOWNLOADS_TITLE = " lower(C." + TITLE_COLUMN + ") LIKE '%2' ";
 
-    public static final String SELECT_DOWNLOADS_JOINS = " C." + ID_COLUMN
+    private static final String SELECT_DOWNLOADS_TITLE_RAW = " lower(C." + TITLE_COLUMN + ") LIKE '%2' ";
+    public static final String SELECT_DOWNLOADS_TITLE = " AND " + SELECT_DOWNLOADS_TITLE_RAW;
+    public static final String SELECT_DOWNLOADS_TITLE_UNIVERSAL = " AND (" + SELECT_DOWNLOADS_TITLE_RAW;
+
+    public static final String SELECT_DOWNLOADS_JOINS = " AND C." + ID_COLUMN
             + " in (SELECT " + ContentAttributeTable.CONTENT_ID_COLUMN + " FROM (" + "SELECT CA." + ContentAttributeTable.CONTENT_ID_COLUMN + " , COUNT(*) FROM " // TODO replace that IN by an INNER JOIN
             + ContentAttributeTable.TABLE_NAME + " CA INNER JOIN " + AttributeTable.TABLE_NAME
             + " A ON CA." + ContentAttributeTable.ATTRIBUTE_ID_COLUMN + " = A." + AttributeTable.ID_COLUMN + " WHERE ";
 
-    public static final String SELECT_DOWNLOADS_TAGS = "(A." + AttributeTable.ID_COLUMN + " in (%4) AND A."
-            + AttributeTable.TYPE_COLUMN + " = %5) GROUP BY 1 HAVING COUNT(*)=%6";
+    public static final String SELECT_DOWNLOADS_JOINS_UNIVERSAL = " OR C." + ID_COLUMN
+            + " in (SELECT " + ContentAttributeTable.CONTENT_ID_COLUMN + " FROM (" + "SELECT CA." + ContentAttributeTable.CONTENT_ID_COLUMN + " FROM " // TODO replace that IN by an INNER JOIN
+            + ContentAttributeTable.TABLE_NAME + " CA INNER JOIN " + AttributeTable.TABLE_NAME
+            + " A ON CA." + ContentAttributeTable.ATTRIBUTE_ID_COLUMN + " = A." + AttributeTable.ID_COLUMN + " WHERE ";
+
+    public static final String SELECT_DOWNLOADS_TAGS = "(lower(A." + AttributeTable.NAME_COLUMN + ") in (%4) AND A."
+            + AttributeTable.TYPE_COLUMN + " = %5) GROUP BY 1 HAVING COUNT(*)=%6 ))";
+    public static final String SELECT_DOWNLOADS_TAGS_UNIVERSAL = "lower(A." + AttributeTable.NAME_COLUMN + ") LIKE lower('%4') ) ))";
 }

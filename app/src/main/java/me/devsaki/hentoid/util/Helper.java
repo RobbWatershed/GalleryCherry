@@ -1,8 +1,6 @@
 package me.devsaki.hentoid.util;
 
-import android.Manifest;
 import android.annotation.SuppressLint;
-import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Context;
@@ -14,11 +12,11 @@ import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.drawable.Drawable;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.graphics.drawable.DrawableCompat;
 import android.text.Html;
@@ -46,7 +44,6 @@ import me.devsaki.hentoid.enums.AttributeType;
 import me.devsaki.hentoid.enums.Site;
 import timber.log.Timber;
 
-import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 import static android.graphics.Bitmap.Config.ARGB_8888;
 
 /**
@@ -159,23 +156,6 @@ public final class Helper {
         } else {
             Intent intent = new Intent(context, AppLockActivity.class);
             context.startActivity(intent);
-        }
-    }
-
-    @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
-    public static boolean permissionsCheck(Activity activity, int permissionRequestCode,
-                                           boolean request) {
-        if (ActivityCompat.checkSelfPermission(activity,
-                Manifest.permission.READ_EXTERNAL_STORAGE) == PERMISSION_GRANTED) {
-
-            return true;
-        } else {
-            if (request) {
-                ActivityCompat.requestPermissions(activity, new String[]{
-                        Manifest.permission.READ_EXTERNAL_STORAGE}, permissionRequestCode);
-            }
-
-            return false;
         }
     }
 
@@ -328,7 +308,7 @@ public final class Helper {
 
     public static String buildListAsString(List<?> list, String valueDelimiter) {
 
-        StringBuilder str = new StringBuilder("");
+        StringBuilder str = new StringBuilder();
         if (list != null) {
             boolean first = true;
             for (Object o : list) {
@@ -341,18 +321,58 @@ public final class Helper {
         return str.toString();
     }
 
-    public static List<Attribute> extractAttributeByType(List<Attribute> attrs, AttributeType type) {
-        return extractAttributeByType(attrs, new AttributeType[]{type});
+    public static List<Integer> extractAttributeIdsByType(List<Attribute> attrs, AttributeType type) {
+        return extractAttributeIdsByType(attrs, new AttributeType[]{type});
     }
 
-    private static List<Attribute> extractAttributeByType(List<Attribute> attrs, AttributeType[] types) {
-        List<Attribute> result = new ArrayList<>();
+    private static List<Integer> extractAttributeIdsByType(List<Attribute> attrs, AttributeType[] types) {
+        List<Integer> result = new ArrayList<>();
 
         for (Attribute a : attrs) {
             for (AttributeType type : types) {
-                if (a.getType().equals(type)) result.add(a);
+                if (a.getType().equals(type)) result.add(a.getId());
             }
         }
+
+        return result;
+    }
+
+    public static List<Integer> extractAttributesIds(List<Attribute> attrs) {
+        List<Integer> result = new ArrayList<>();
+        for (Attribute attr : attrs) result.add(attr.getId());
+        return result;
+    }
+
+    public static Uri buildSearchUri(List<Attribute> attributes) {
+        AttributeMap metadataMap = new AttributeMap();
+        metadataMap.add(attributes);
+
+        Uri.Builder searchUri = new Uri.Builder()
+                .scheme("search")
+                .authority("hentoid");
+
+        for (AttributeType attrType : metadataMap.keySet()) {
+            List<Attribute> attrs = metadataMap.get(attrType);
+            for (Attribute attr : attrs)
+                searchUri.appendQueryParameter(attrType.name(), attr.getId() + ";" + attr.getName());
+        }
+        return searchUri.build();
+    }
+
+    public static List<Attribute> parseSearchUri(Uri uri) {
+        List<Attribute> result = new ArrayList<>();
+
+        if (uri != null)
+            for (String typeStr : uri.getQueryParameterNames()) {
+                AttributeType type = AttributeType.searchByName(typeStr);
+                if (type != null)
+                    for (String attrStr : uri.getQueryParameters(typeStr)) {
+                        String[] attrParams = attrStr.split(";");
+                        if (2 == attrParams.length) {
+                            result.add(new Attribute(type, attrParams[1], "").setExternalId(Integer.parseInt(attrParams[0])));
+                        }
+                    }
+            }
 
         return result;
     }

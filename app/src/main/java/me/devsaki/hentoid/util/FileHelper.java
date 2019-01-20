@@ -20,12 +20,14 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
 import me.devsaki.hentoid.BuildConfig;
 import me.devsaki.hentoid.HentoidApp;
 import me.devsaki.hentoid.R;
+import me.devsaki.hentoid.database.HentoidDB;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.enums.Site;
 import timber.log.Timber;
@@ -166,7 +168,7 @@ public class FileHelper {
         return FileUtil.getOutputStream(target);
     }
 
-    public static InputStream getInputStream(@NonNull final File target) throws IOException {
+    static InputStream getInputStream(@NonNull final File target) throws IOException {
         return FileUtil.getInputStream(target);
     }
 
@@ -207,7 +209,7 @@ public class FileHelper {
 
     /**
      * Cleans a directory without deleting it.
-     *
+     * <p>
      * Custom substitute for commons.io.FileUtils.cleanDirectory that supports devices without File.toPath
      *
      * @param directory directory to clean
@@ -274,7 +276,10 @@ public class FileHelper {
         return true;
     }
 
-    public static boolean createNoMedia() {
+    /**
+     * Create the ".nomedia" file in the app's root folder
+     */
+    public static void createNoMedia() {
         String settingDir = Preferences.getRootFolderName();
         File noMedia = new File(settingDir, ".nomedia");
 
@@ -283,8 +288,6 @@ public class FileHelper {
         } else {
             Timber.d(".nomedia file already exists.");
         }
-
-        return true;
     }
 
     @WorkerThread
@@ -302,27 +305,15 @@ public class FileHelper {
         }
     }
 
+    /**
+     * Create the download directory of the given content
+     *
+     * @param context Context
+     * @param content Content for which the directory to create
+     * @return Created directory
+     */
     public static File createContentDownloadDir(Context context, Content content) {
-        String siteFolder = content.getSite().getFolder();
-        String folderDir = siteFolder;
-
-        // Format folder name according to preferences
-        int folderNamingPreference = Preferences.getFolderNameFormat();
-
-        if (folderNamingPreference == Preferences.Constant.PREF_FOLDER_NAMING_CONTENT_AUTH_TITLE_ID) {
-            folderDir = folderDir + content.getAuthor().replaceAll(AUTHORIZED_CHARS, "_") + " - ";
-        }
-        if (folderNamingPreference == Preferences.Constant.PREF_FOLDER_NAMING_CONTENT_AUTH_TITLE_ID || folderNamingPreference == Preferences.Constant.PREF_FOLDER_NAMING_CONTENT_TITLE_ID) {
-            folderDir = folderDir + content.getTitle().replaceAll(AUTHORIZED_CHARS, "_") + " - ";
-        }
-        folderDir = folderDir + "[" + content.getUniqueSiteId() + "]";
-
-        // Truncate folder dir to something manageable for Windows
-        // If we are to assume NTFS and Windows, then the fully qualified file, with it's drivename, path, filename, and extension, altogether is limited to 260 characters.
-        int truncLength = Preferences.getFolderTruncationNbChars();
-        if (truncLength > 0) {
-            if (folderDir.length() - siteFolder.length() > truncLength) folderDir = folderDir.substring(0, siteFolder.length() + truncLength - 1);
-        }
+        String folderDir = formatDirPath(content);
 
         String settingDir = Preferences.getRootFolderName();
         if (settingDir.isEmpty()) {
@@ -340,6 +331,36 @@ public class FileHelper {
         }
 
         return file;
+    }
+
+    /**
+     * Format the download directory path of the given content according to current user preferences
+     *
+     * @param content Content to get the path from
+     * @return Canonical download directory path of the given content, according to current user preferences
+     */
+    public static String formatDirPath(Content content) {
+        String siteFolder = content.getSite().getFolder();
+        String result = siteFolder;
+        int folderNamingPreference = Preferences.getFolderNameFormat();
+
+        if (folderNamingPreference == Preferences.Constant.PREF_FOLDER_NAMING_CONTENT_AUTH_TITLE_ID) {
+            result = result + content.getAuthor().replaceAll(AUTHORIZED_CHARS, "_") + " - ";
+        }
+        if (folderNamingPreference == Preferences.Constant.PREF_FOLDER_NAMING_CONTENT_AUTH_TITLE_ID || folderNamingPreference == Preferences.Constant.PREF_FOLDER_NAMING_CONTENT_TITLE_ID) {
+            result = result + content.getTitle().replaceAll(AUTHORIZED_CHARS, "_") + " - ";
+        }
+        result = result + "[" + content.getUniqueSiteId() + "]";
+
+        // Truncate folder dir to something manageable for Windows
+        // If we are to assume NTFS and Windows, then the fully qualified file, with it's drivename, path, filename, and extension, altogether is limited to 260 characters.
+        int truncLength = Preferences.getFolderTruncationNbChars();
+        if (truncLength > 0) {
+            if (result.length() - siteFolder.length() > truncLength)
+                result = result.substring(0, siteFolder.length() + truncLength - 1);
+        }
+
+        return result;
     }
 
     public static File getDefaultDir(Context context, String dir) {
@@ -390,14 +411,36 @@ public class FileHelper {
         // If trying to access a non-downloaded book cover (e.g. viewing the download queue)
         if (content.getStorageFolder().equals("")) return coverUrl;
 
-        File f = new File(Preferences.getRootFolderName(), content.getStorageFolder() + "/thumb." + getExtension(coverUrl));
+        String extension = getExtension(coverUrl);
+        // Some URLs do not link the image itself (e.g Tsumino) => jpg by default
+        // NB : ideal would be to get the content-type of the resource behind coverUrl, but that's too time-consuming
+        if (extension.isEmpty() || extension.contains("/")) extension = "jpg";
+
+        File f = new File(Preferences.getRootFolderName(), content.getStorageFolder() + "/thumb." + extension);
         return f.exists() ? f.getAbsolutePath() : coverUrl;
     }
 
+    /**
+     * Open the given content using the viewer defined in user preferences
+     *
+     * @param context Context
+     * @param content Content to be opened
+     */
     public static void openContent(final Context context, Content content) {
         Timber.d("Opening: %s from: %s", content.getTitle(), content.getStorageFolder());
+
+        HentoidDB db = HentoidDB.getInstance(context);
+        content.increaseReads().setLastReadDate(new Date().getTime());
+        db.updateContentReads(content);
+
         String rootFolderName = Preferences.getRootFolderName();
         File dir = new File(rootFolderName, content.getStorageFolder());
+
+        try {
+            JsonHelper.saveJson(content, dir);
+        } catch (IOException e) {
+            Timber.e(e, "Error while writing to " + dir.getAbsolutePath());
+        }
 
         Timber.d("Opening: " + content.getTitle() + " from: " + dir);
         if (isSAF() && getExtSdCardFolder(new File(rootFolderName)) == null) {
@@ -436,7 +479,13 @@ public class FileHelper {
         }
     }
 
-    private static void openFile(Context context, File aFile) {
+    /**
+     * Open the given file using the device's app(s) of choice
+     *
+     * @param context Context
+     * @param aFile   File to be opened
+     */
+    public static void openFile(Context context, File aFile) {
         Intent myIntent = new Intent(Intent.ACTION_VIEW);
         File file = new File(aFile.getAbsolutePath());
         String extension = MimeTypeMap.getFileExtensionFromUrl(Uri.fromFile(file).toString());
@@ -445,6 +494,12 @@ public class FileHelper {
         context.startActivity(myIntent);
     }
 
+    /**
+     * Open PerfectViewer telling it to display the given image
+     *
+     * @param context    Context
+     * @param firstImage Image to be displayed
+     */
     private static void openPerfectViewer(Context context, File firstImage) {
         try {
             Intent intent = context
@@ -458,8 +513,14 @@ public class FileHelper {
         }
     }
 
-    public static String getExtension(String a) {
-        return a.contains(".") ? a.substring(a.lastIndexOf(".") + 1).toLowerCase(Locale.getDefault()) : "";
+    /**
+     * Returns the extension of the given filename
+     *
+     * @param fileName Filename
+     * @return Extension of the given filename
+     */
+    public static String getExtension(String fileName) {
+        return fileName.contains(".") ? fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase(Locale.getDefault()) : "";
     }
 
     public static void archiveContent(final Context context, Content content) {
@@ -504,7 +565,13 @@ public class FileHelper {
         }
     }
 
-    // TODO doc
+    /**
+     * Save the given binary content in the given file
+     *
+     * @param file          File to save content on
+     * @param binaryContent Content to save
+     * @throws IOException If any IOException occurs
+     */
     public static void saveBinaryInFile(File file, byte[] binaryContent) throws IOException {
         byte buffer[] = new byte[1024];
         int count;
@@ -529,7 +596,7 @@ public class FileHelper {
      * <li>A directory to be deleted does not have to be empty.</li>
      * <li>No exceptions are thrown when a file or directory cannot be deleted.</li>
      * </ul>
-     *
+     * <p>
      * Custom substitute for commons.io.FileUtils.deleteQuietly that works with devices that doesn't support File.toPath
      *
      * @param file file or directory to delete, can be {@code null}
@@ -554,8 +621,20 @@ public class FileHelper {
         }
     }
 
+    public static boolean renameDirectory(File srcDir, File destDir) {
+        try {
+            FileUtils.moveDirectory(srcDir, destDir);
+            return true;
+        } catch (IOException e) {
+            return FileUtil.renameWithSAF(srcDir, destDir.getName());
+        } catch (Exception e) {
+            Timber.e(e);
+        }
+        return false;
+    }
+
     private static class AsyncUnzip extends ZipUtil.ZipTask {
-        final Context context;
+        final Context context; // TODO - omg leak !
         final File dest;
 
         AsyncUnzip(Context context, File dest) {

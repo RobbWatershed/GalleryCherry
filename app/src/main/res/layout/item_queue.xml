@@ -32,7 +32,7 @@
                 android:id="@+id/ivSource"
                 android:layout_width="32dp"
                 android:layout_height="32dp"
-                android:background="@android:color/holo_red_dark"
+                android:background="@color/accent"
                 android:scaleType="fitXY"
                 android:padding="1dp"
                 tools:ignore="ContentDescription"
@@ -46,7 +46,7 @@
                     android:layout_marginLeft="10dp"
                     android:layout_marginRight="10dp"
                     android:textAppearance="?android:attr/textAppearanceMedium"
-                    android:textColor="@android:color/holo_red_dark"
+                    android:textColor="@color/accent"
                     android:textStyle="bold"
                     tools:text="The Best Thing Ever Made" />
 
@@ -91,7 +91,8 @@
                     android:layout_gravity="center_horizontal"
                     android:textAppearance="?android:attr/textAppearanceSmall"
                     android:textColor="@android:color/black"
-                    tools:text="Best Series Ever" />
+                    tools:text="Best Series Ever"
+                    android:visibility="gone"/>
 
                 <TextView
                     android:id="@+id/tvArtist"
@@ -100,7 +101,8 @@
                     android:layout_gravity="center_horizontal"
                     android:textAppearance="?android:attr/textAppearanceSmall"
                     android:textColor="@android:color/black"
-                    tools:text="Best Author Ever" />
+                    tools:text="Best Author Ever"
+                    android:visibility="gone"/>
 
                 <View
                     android:layout_width="fill_parent"
@@ -111,7 +113,8 @@
                     android:layout_marginRight="10dp"
                     android:layout_marginStart="1dp"
                     android:layout_marginTop="5dp"
-                    android:background="@android:color/holo_red_light" />
+                    android:background="@android:color/holo_red_light"
+                    android:visibility="gone"/>
 
                 <TextView
                     android:id="@+id/tvTags"

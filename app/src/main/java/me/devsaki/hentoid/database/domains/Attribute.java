@@ -78,7 +78,7 @@ public class Attribute {
 
     @Override
     public String toString() {
-        return getId().toString();
+        return getName();
     }
 
     public void saveToStream(DataOutputStream output) throws IOException
@@ -109,4 +109,23 @@ public class Attribute {
         return Long.compare(a.getCount(), b.getCount()) * -1; /* Inverted - higher count first */
     };
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Attribute attribute = (Attribute) o;
+
+        if ((externalId != 0 && attribute.externalId != 0) && externalId != attribute.externalId) return false;
+        if (!name.equals(attribute.name)) return false;
+        return type == attribute.type;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = name.hashCode();
+        result = 31 * result + type.hashCode();
+        result = 31 * result + externalId;
+        return result;
+    }
 }

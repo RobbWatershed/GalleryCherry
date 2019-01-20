@@ -31,35 +31,27 @@
             android:label="@string/app_intro"
             android:theme="@style/AppTheme" />
         <activity
-            android:name=".activities.websites.HitomiActivity"
+            android:name=".activities.websites.XhamsterActivity"
             android:configChanges="orientation|screenSize"
             android:theme="@style/BrowserTheme" />
         <activity
-            android:name=".activities.websites.NhentaiActivity"
+            android:name=".activities.websites.XnxxActivity"
             android:configChanges="orientation|screenSize"
             android:theme="@style/BrowserTheme" />
         <activity
-            android:name=".activities.websites.TsuminoActivity"
+            android:name=".activities.websites.PornPicsActivity"
             android:configChanges="orientation|screenSize"
             android:theme="@style/BrowserTheme" />
         <activity
-            android:name=".activities.websites.ASMHentaiActivity"
+            android:name=".activities.websites.JpegworldActivity"
             android:configChanges="orientation|screenSize"
             android:theme="@style/BrowserTheme" />
         <activity
-            android:name=".activities.websites.HentaiCafeActivity"
+            android:name=".activities.websites.NextpicturezActivity"
             android:configChanges="orientation|screenSize"
             android:theme="@style/BrowserTheme" />
         <activity
-            android:name=".activities.websites.PururinActivity"
-            android:configChanges="orientation|screenSize"
-            android:theme="@style/BrowserTheme" />
-        <activity
-            android:name=".activities.websites.PandaActivity"
-            android:configChanges="orientation|screenSize"
-            android:theme="@style/BrowserTheme" />
-        <activity
-            android:name=".activities.websites.EHentaiActivity"
+            android:name=".activities.websites.HellpornoActivity"
             android:configChanges="orientation|screenSize"
             android:theme="@style/BrowserTheme" />
         <activity
@@ -73,25 +65,11 @@
                 android:resource="@xml/searchable" />
         </activity>
         <activity
-            android:name=".activities.MikanSearchActivity"
-            android:configChanges="orientation|screenSize"
-            android:label="@string/title_activity_mikan"
-            android:parentActivityName=".activities.DownloadsActivity"
-            android:theme="@style/AppTheme.Mikan"
-            tools:ignore="UnusedAttribute">
-            <meta-data
-                android:name="android.app.searchable"
-                android:resource="@xml/searchable" />
-            <meta-data
-                android:name="android.support.PARENT_ACTIVITY"
-                android:value=".activities.DownloadsActivity" />
-        </activity>
-        <activity
             android:name=".activities.QueueActivity"
             android:configChanges="orientation|screenSize"
             android:label="@string/title_activity_queue"
             android:parentActivityName=".activities.DownloadsActivity"
-            android:theme="@style/AppTheme.DarkBackground"
+            android:theme="@style/AppTheme.TaupeBackground"
             tools:ignore="UnusedAttribute">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
@@ -119,6 +97,12 @@
                 android:value=".activities.DownloadsActivity" />
         </activity>
         <activity
+            android:name=".activities.SearchActivity"
+            android:label="@string/title_activity_search"
+            android:theme="@style/AppTheme.Search"
+            tools:ignore="UnusedAttribute">
+        </activity>
+        <activity
             android:name=".activities.ImportActivity"
             android:configChanges="orientation|screenSize"
             android:theme="@style/ImportTheme" />
@@ -140,9 +124,28 @@
 
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <!-- Accepts URIs that begin with "https://hitomi.la/galleries" -->
                 <data
-                    android:host="hitomi.la"
+                    android:host="xhamster.com"
+                    android:pathPrefix="/photos"
+                    android:scheme="https" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:host="multi.xnxx.com"
+                    android:pathPrefix="/gallery"
+                    android:scheme="https" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:host="pornpics.com"
                     android:pathPrefix="/galleries"
                     android:scheme="https" />
             </intent-filter>
@@ -151,10 +154,9 @@
 
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <!-- Accepts URIs that begin with "https://nhentai.net/g/" -->
                 <data
-                    android:host="nhentai.net"
-                    android:pathPrefix="/g/"
+                    android:host="jpegworld.com"
+                    android:pathPrefix="/galleries"
                     android:scheme="https" />
             </intent-filter>
             <intent-filter>
@@ -162,10 +164,9 @@
 
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <!-- Accepts URIs that begin with "http://www.tsumino.com/Book/Info" -->
                 <data
-                    android:host="www.tsumino.com"
-                    android:pathPrefix="/Book/Info"
+                    android:host="nextpicturez.com"
+                    android:pathPrefix="/gallery"
                     android:scheme="http" />
             </intent-filter>
             <intent-filter>
@@ -173,10 +174,9 @@
 
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <!-- Accepts URIs that begin with "http://asmhentai.com/g" -->
                 <data
-                    android:host="asmhentai.com"
-                    android:pathPrefix="/g"
+                    android:host="young-whores.net"
+                    android:pathPrefix="/gallery"
                     android:scheme="http" />
             </intent-filter>
             <intent-filter>
@@ -184,54 +184,9 @@
 
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <!-- Accepts URIs that begin with "http://comics.asmhentai.com/g" -->
                 <data
-                    android:host="comics.asmhentai.com"
-                    android:pathPrefix="/g"
-                    android:scheme="http" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <!-- Accepts URIs that begin with "https://hentai.cafe/" -->
-                <data
-                    android:host="hentai.cafe"
-                    android:pathPrefix="/"
-                    android:scheme="https" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <!-- Accepts URIs that begin with "http://pururin.io/" -->
-                <data
-                    android:host="pururin.io"
-                    android:pathPrefix="/"
-                    android:scheme="http" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <!-- Accepts URIs that begin with "https://mangapanda.com/" -->
-                <data
-                    android:host="www.mangapanda.com"
-                    android:pathPrefix="/"
-                    android:scheme="https" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <!-- Accepts URIs that begin with "https://e-hentai.org/" -->
-                <data
-                    android:host="e-hentai.org"
-                    android:pathPrefix="/"
+                    android:host="hellporno.com"
+                    android:pathPrefix="/albums"
                     android:scheme="https" />
             </intent-filter>
         </activity>
@@ -244,6 +199,8 @@
         <service android:name=".services.UpdateCheckService" />
 
         <service android:name=".services.UpdateDownloadService" />
+
+        <service android:name=".services.ImportService" />
 
         <receiver android:name=".receiver.DownloadNotificationDeleteReceiver" />
 

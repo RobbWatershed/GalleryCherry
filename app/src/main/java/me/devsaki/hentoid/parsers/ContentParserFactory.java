@@ -18,25 +18,10 @@ public class ContentParserFactory {
         return (null == content) ? new DummyParser() : getParser(content.getSite());
     }
 
-    public ContentParser getParser(Site site) {
+    private ContentParser getParser(Site site) {
         switch (site) {
-            case ASMHENTAI:
-            case ASMHENTAI_COMICS:
-                return new ASMHentaiParser();
-            case HENTAICAFE:
-                return new HentaiCafeParser();
-            case HITOMI:
-                return new HitomiParser();
-            case NHENTAI:
-                return new NhentaiParser();
-            case TSUMINO:
-                return new TsuminoParser();
-            case PURURIN:
-                return new PururinParser();
-            case EHENTAI:
-                return new EHentaiParser();
-            case PANDA:
-                return new PandaParser();
+            case XHAMSTER:
+                return new XhamsterParser();
             default:
                 return new DummyParser();
         }
