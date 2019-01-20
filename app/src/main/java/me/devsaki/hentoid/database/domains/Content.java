@@ -10,6 +10,7 @@ import java.util.List;
 import me.devsaki.hentoid.activities.websites.BaseWebActivity;
 import me.devsaki.hentoid.activities.websites.HellpornoActivity;
 import me.devsaki.hentoid.activities.websites.JpegworldActivity;
+import me.devsaki.hentoid.activities.websites.Link2GalleriesActivity;
 import me.devsaki.hentoid.activities.websites.NextpicturezActivity;
 import me.devsaki.hentoid.activities.websites.PornPicGalleriesActivity;
 import me.devsaki.hentoid.activities.websites.PornPicsActivity;
@@ -87,6 +88,7 @@ public class Content implements Serializable {
             case PORNPICS:
             case HELLPORNO:
             case PORNPICGALLERIES:
+            case LINK2GALLERIES:
             case NEXTPICTUREZ:
                 return parts[parts.length - 1];
             case JPEGWORLD:
@@ -112,6 +114,8 @@ public class Content implements Serializable {
                 return HellpornoActivity.class;
             case PORNPICGALLERIES:
                 return PornPicGalleriesActivity.class;
+            case LINK2GALLERIES:
+                return Link2GalleriesActivity.class;
             default:
                 return BaseWebActivity.class;
         }
@@ -141,6 +145,7 @@ public class Content implements Serializable {
         String galleryConst;
         switch (site) {
             case PORNPICGALLERIES:
+            case LINK2GALLERIES:
                 return url; // Specific case - user can go on any site
             case HELLPORNO:
                 galleryConst = ""; // Site landpage URL already contains the "/albums/" prefix

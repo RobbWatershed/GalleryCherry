@@ -39,9 +39,6 @@ public class SmartContent {
 
         if (!isGallery()) return result;
 
-
-        result.setSite(Site.PORNPICGALLERIES); // TODO - get the right site
-
         Timber.i("galleryUrl : %s", galleryUrl);
         if (galleryUrl.startsWith("//")) galleryUrl = "http:" + galleryUrl;
         if (galleryUrl.length() > 0) {

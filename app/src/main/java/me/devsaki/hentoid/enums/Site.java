@@ -18,8 +18,8 @@ public enum Site {
     JPEGWORLD(3, "Jpegworld", "https://www.jpegworld.com/", "jpegworld", R.drawable.ic_menu_jpegworld, true),
     NEXTPICTUREZ(4, "Nextpicturez", "http://www.nextpicturez.com/", "nextpicturez", R.drawable.ic_menu_nextpicturez, true),
     HELLPORNO(5, "Hellporno", "https://m.hellporno.com/albums/", "hellporno", R.drawable.ic_menu_hellporno, true),
-    PORNPICGALLERIES(6, "Pornpicgalleries", "http://pornpicgalleries.com/", "pornpicgalleries", R.drawable.ic_menu_about, true);
-    //PORNPICGALLERIES(6, "Pornpicgalleries", "https://www.link2galleries.com/", "pornpicgalleries", R.drawable.ic_menu_about, true);
+    PORNPICGALLERIES(6, "Pornpicgalleries", "http://pornpicgalleries.com/", "pornpicgalleries", R.drawable.ic_menu_ppg, true),
+    LINK2GALLERIES(7, "Link2galleries", "https://www.link2galleries.com/", "link2galleries", R.drawable.ic_menu_l2g, true);
 
 
     private final int code;

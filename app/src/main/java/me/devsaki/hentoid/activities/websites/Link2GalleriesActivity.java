@@ -11,12 +11,12 @@ import timber.log.Timber;
  * Created by Robb on 01/2019
  * Implements PornPicGalleries source
  */
-public class PornPicGalleriesActivity extends BaseWebActivity {
+public class Link2GalleriesActivity extends BaseWebActivity {
 
     private static final String GALLERY_FILTER = ".*";
 
     Site getStartSite() {
-        return Site.PORNPICGALLERIES;
+        return Site.LINK2GALLERIES;
     }
 
     @Override
@@ -44,7 +44,7 @@ public class PornPicGalleriesActivity extends BaseWebActivity {
                             metadata -> {
                                 Content content = metadata.toContent();
 
-                                content.setSite(Site.PORNPICGALLERIES);
+                                content.setSite(Site.LINK2GALLERIES);
 
                                 if (content.getUrl() != null && content.getUrl().isEmpty()) {
                                     content.setUrl(url);
