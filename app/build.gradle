@@ -22,7 +22,7 @@ android {
         versionCode 06
         versionName '0.1.5'
         proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-        buildConfigField 'String', 'UPDATE_URL', '"https://github.com/RobbWatershed/GalleryCherry/tree/master/app/"'
+        buildConfigField 'String', 'UPDATE_URL', '"https://raw.githubusercontent.com/RobbWatershed/GalleryCherry/master/app/"'
     }
     buildTypes {
         debug {
