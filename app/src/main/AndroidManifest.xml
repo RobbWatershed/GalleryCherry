@@ -55,6 +55,14 @@
             android:configChanges="orientation|screenSize"
             android:theme="@style/BrowserTheme" />
         <activity
+            android:name=".activities.websites.PornPicGalleriesActivity"
+            android:configChanges="orientation|screenSize"
+            android:theme="@style/BrowserTheme" />
+        <activity
+            android:name=".activities.websites.Link2GalleriesActivity"
+            android:configChanges="orientation|screenSize"
+            android:theme="@style/BrowserTheme" />
+        <activity
             android:name=".activities.DownloadsActivity"
             android:configChanges="orientation|screenSize"
             android:label="@string/title_activity_downloads"

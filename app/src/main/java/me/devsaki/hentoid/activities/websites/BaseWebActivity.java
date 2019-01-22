@@ -408,11 +408,12 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
      * @param content Currently displayed content
      */
     void processContent(Content content) {
-        if (null == content || null == content.getUrl()) {
+        if (null == content || null == content.getUrl() || 0 == content.getQtyPages()) {
             return;
         }
 
         addContentToDB(content);
+        Timber.i(">>> Adding to DB content %s @ %s", content.getTitle(), content.getUrl());
 
         // Set Download action button visibility
         StatusContent contentStatus = content.getStatus();
@@ -493,9 +494,12 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
         }
 
         private boolean isHostNotInRestrictedDomains(@NonNull String host) {
+            if (domainNames.isEmpty()) return false;
+
             for (String s : domainNames) {
                 if (host.contains(s)) return false;
             }
+
             return true;
         }
 
@@ -520,16 +524,17 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
             fabHome.show();
             hideFab(fabDownload);
             hideFab(fabRead);
+        }
 
+        @Override
+        public void onPageFinished(WebView view, String url) {
+            // Running parser here ensures it happens on the final page in case of HTTP redirections
             if (filteredUrl.length() > 0) {
                 Pattern pattern = Pattern.compile(filteredUrl);
                 Matcher matcher = pattern.matcher(url);
                 if (matcher.find()) onGalleryFound(url);
             }
-        }
 
-        @Override
-        public void onPageFinished(WebView view, String url) {
             webViewIsLoading = false;
             fabRefreshOrStop.setImageResource(R.drawable.ic_action_refresh);
         }
@@ -552,7 +557,7 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
             if (isUrlForbidden(url)) {
                 return new WebResourceResponse("text/plain", "utf-8", nothing);
             } else {
-                return super.shouldInterceptRequest(view, request);
+                return super.shouldInterceptRequest(view, url);
             }
         }
     }

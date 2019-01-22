@@ -10,7 +10,9 @@ import java.util.List;
 import me.devsaki.hentoid.activities.websites.BaseWebActivity;
 import me.devsaki.hentoid.activities.websites.HellpornoActivity;
 import me.devsaki.hentoid.activities.websites.JpegworldActivity;
+import me.devsaki.hentoid.activities.websites.Link2GalleriesActivity;
 import me.devsaki.hentoid.activities.websites.NextpicturezActivity;
+import me.devsaki.hentoid.activities.websites.PornPicGalleriesActivity;
 import me.devsaki.hentoid.activities.websites.PornPicsActivity;
 import me.devsaki.hentoid.activities.websites.XhamsterActivity;
 import me.devsaki.hentoid.activities.websites.XnxxActivity;
@@ -85,6 +87,8 @@ public class Content implements Serializable {
                 else return "";
             case PORNPICS:
             case HELLPORNO:
+            case PORNPICGALLERIES:
+            case LINK2GALLERIES:
             case NEXTPICTUREZ:
                 return parts[parts.length - 1];
             case JPEGWORLD:
@@ -108,6 +112,10 @@ public class Content implements Serializable {
                 return NextpicturezActivity.class;
             case HELLPORNO:
                 return HellpornoActivity.class;
+            case PORNPICGALLERIES:
+                return PornPicGalleriesActivity.class;
+            case LINK2GALLERIES:
+                return Link2GalleriesActivity.class;
             default:
                 return BaseWebActivity.class;
         }
@@ -136,6 +144,9 @@ public class Content implements Serializable {
     public String getGalleryUrl() {
         String galleryConst;
         switch (site) {
+            case PORNPICGALLERIES:
+            case LINK2GALLERIES:
+                return url; // Specific case - user can go on any site
             case HELLPORNO:
                 galleryConst = ""; // Site landpage URL already contains the "/albums/" prefix
                 break;
@@ -192,7 +203,9 @@ public class Content implements Serializable {
     }
 
     public String getCoverImageUrl() {
-        return coverImageUrl;
+        if (coverImageUrl != null && !coverImageUrl.isEmpty()) return coverImageUrl;
+        else if ((imageFiles != null) && (imageFiles.size() > 0)) return imageFiles.get(0).getUrl();
+        else return null;
     }
 
     public Content setCoverImageUrl(String coverImageUrl) {
