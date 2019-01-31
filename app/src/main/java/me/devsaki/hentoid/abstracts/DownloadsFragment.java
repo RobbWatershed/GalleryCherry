@@ -29,6 +29,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
@@ -63,9 +64,8 @@ import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.PermissionUtil;
 import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.util.RandomSeedSingleton;
+import me.devsaki.hentoid.util.ToastUtil;
 import timber.log.Timber;
-
-import static me.devsaki.hentoid.util.Helper.DURATION.LONG;
 
 /**
  * Created by avluis on 08/27/2016. Common elements for use by EndlessFragment and PagerFragment
@@ -351,8 +351,8 @@ public abstract class DownloadsFragment extends BaseFragment implements ContentL
             File storage = new File(Preferences.getRootFolderName());
             if (FileHelper.getExtSdCardFolder(storage) == null) {
                 Timber.d("Where are my files?!");
-                Helper.toast(requireActivity(),
-                        "Could not find library!\nPlease check your storage device.", LONG);
+                ToastUtil.toast(requireActivity(),
+                        "Could not find library!\nPlease check your storage device.", Toast.LENGTH_LONG);
                 setQuery("      ");
 
                 Handler handler = new Handler();
@@ -377,7 +377,7 @@ public abstract class DownloadsFragment extends BaseFragment implements ContentL
             output.flush();
         } catch (NullPointerException npe) {
             Timber.e(npe, "Invalid Stream");
-            Helper.toast(R.string.sd_access_error);
+            ToastUtil.toast(R.string.sd_access_error);
             new AlertDialog.Builder(requireActivity())
                     .setMessage(R.string.sd_access_fatal_error)
                     .setTitle("Error!")
@@ -624,7 +624,7 @@ public abstract class DownloadsFragment extends BaseFragment implements ContentL
             return true;
         } else {
             backButtonPressed = System.currentTimeMillis();
-            Helper.toast(mContext, R.string.press_back_again);
+            ToastUtil.toast(mContext, R.string.press_back_again);
 
             if (llm != null) {
                 llm.scrollToPositionWithOffset(0, 0);
@@ -734,9 +734,8 @@ public abstract class DownloadsFragment extends BaseFragment implements ContentL
                     return true;
                 }
 
-                if (!s.isEmpty()) {
-                    if (!s.equals(query)) submitContentSearchQuery(s, 1000);
-                } else {
+//                    if (!s.equals(query)) submitContentSearchQuery(s, 2000);  Auto-submit disabled
+                if (s.isEmpty()) {
                     clearQuery();
                 }
 
@@ -1022,10 +1021,13 @@ public abstract class DownloadsFragment extends BaseFragment implements ContentL
         }
     }
 
+
     /**
-     * Run a new search in the DB according to active filters
+     * Indicates whether a search query is active (using universal search or advanced search) or not
+     *
+     * @return True if a search query is is active (using universal search or advanced search); false if not (=whole unfiltered library selected)
      */
-    private boolean isSearchMode() {
+    private boolean isSearchQueryActive() {
         return (getQuery().length() > 0 || selectedSearchTags.size() > 0);
     }
 
@@ -1063,10 +1065,6 @@ public abstract class DownloadsFragment extends BaseFragment implements ContentL
         }
         lastSearchParams = currentSearchParams;
 
-        /*
-        if (isSearchMode()) collectionAccessor.searchBooks(getQuery(), selectedSearchTags, currentPage, booksPerPage, bookSortOrder, filterFavourites, this);
-        else collectionAccessor.getRecentBooks(Site.HITOMI, Language.ANY, currentPage, booksPerPage, bookSortOrder, filterFavourites, this);
-        */
         if (!getQuery().isEmpty())
             collectionAccessor.searchBooksUniversal(getQuery(), currentPage, booksPerPage, bookSortOrder, filterFavourites, this); // Universal search
         else if (!selectedSearchTags.isEmpty())
@@ -1120,7 +1118,7 @@ public abstract class DownloadsFragment extends BaseFragment implements ContentL
         Timber.d("Content results have loaded : %s results; %s total selected count, %s total count", results.size(), totalSelectedContent, totalContent);
         isLoading = false;
 
-        if (isSearchMode()) {
+        if (isSearchQueryActive()) {
             if (isNewContentAvailable) {
                 newContentToolTip.setVisibility(View.GONE);
                 isNewContentAvailable = false;
@@ -1128,6 +1126,9 @@ public abstract class DownloadsFragment extends BaseFragment implements ContentL
 
             filterBookCount.setText(String.format(getText(R.string.downloads_filter_book_count).toString(), totalSelectedContent + "", (1 == totalSelectedContent) ? "" : "s"));
             filterBar.setVisibility(View.VISIBLE);
+            if (totalSelectedContent > 0) searchMenu.collapseActionView();
+        } else {
+            filterBar.setVisibility(View.GONE);
         }
 
         // Display new results
