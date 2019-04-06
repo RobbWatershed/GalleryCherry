@@ -1,5 +1,6 @@
 apply plugin: 'com.android.application'
 apply plugin: 'io.fabric'
+apply plugin: 'org.sonarqube'
 
 // apply signing configuration if config file exists
 if (file('signing.gradle').exists()) {
@@ -121,6 +122,17 @@ dependencies {
     // For ViewModel to work
     implementation "android.arch.lifecycle:extensions:1.1.1"
     implementation "android.arch.lifecycle:viewmodel:1.1.1"
+}
+
+sonarqube {
+    properties {
+        property "sonar.projectKey", "RobbWatershed_GalleryCherry"
+        property "sonar.organization", "robbwatershed-github"
+        property "sonar.host.url", "https://sonarcloud.io"
+        property "sonar.language", "java"
+        property "sonar.sources", "src/main/"
+        property "sonar.login", "7bd8f2c4d82122f3261f244bd86403bedceea072"
+    }
 }
 
 apply plugin: 'com.google.gms.google-services'
