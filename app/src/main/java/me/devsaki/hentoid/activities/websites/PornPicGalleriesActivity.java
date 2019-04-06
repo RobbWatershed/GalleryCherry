@@ -33,7 +33,7 @@ public class PornPicGalleriesActivity extends BaseWebActivity {
     private class PornPicsGalleriesWebViewClient extends CustomWebViewClient {
 
         PornPicsGalleriesWebViewClient(String filteredUrl, Site startSite, ResultListener<Content> listener) {
-            super(filteredUrl, startSite, listener);
+            super(filteredUrl, listener);
         }
 
         @Override

@@ -309,15 +309,13 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
     public void onActionFabClick(View view) {
         if (MODE_DL == fabActionMode) processDownload();
         else if (MODE_QUEUE == fabActionMode) goToQueue();
-        else if (MODE_READ == fabActionMode)
-        {
+        else if (MODE_READ == fabActionMode) {
             if (currentContent != null) {
                 currentContent = db.selectContentByUrl(currentContent.getUrl());
                 if (currentContent != null) {
                     if (StatusContent.DOWNLOADED == currentContent.getStatus()
                             || StatusContent.ERROR == currentContent.getStatus()
-                            || StatusContent.MIGRATED == currentContent.getStatus())
-                    {
+                            || StatusContent.MIGRATED == currentContent.getStatus()) {
                         FileHelper.openContent(this, currentContent);
                     } else {
                         fabAction.hide();
@@ -327,17 +325,13 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
         }
     }
 
-    private void changeFabActionMode(int mode)
-    {
+    private void changeFabActionMode(int mode) {
         @DrawableRes int resId = R.drawable.ic_menu_about;
         if (MODE_DL == mode) {
             resId = R.drawable.ic_action_download;
-        }
-        else if (MODE_QUEUE == mode) {
+        } else if (MODE_QUEUE == mode) {
             resId = R.drawable.ic_queued;
-        }
-        else if (MODE_READ == mode)
-        {
+        } else if (MODE_READ == mode) {
             resId = R.drawable.ic_action_play;
         }
         fabActionMode = mode;
@@ -352,7 +346,8 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
     void processDownload() {
         if (null == currentContent) return;
 
-        if (currentContent.getId() > 0) currentContent = db.selectContentById(currentContent.getId());
+        if (currentContent.getId() > 0)
+            currentContent = db.selectContentById(currentContent.getId());
 
         if (currentContent != null && StatusContent.DOWNLOADED == currentContent.getStatus()) {
             ToastUtil.toast(this, R.string.already_downloaded);
@@ -462,13 +457,10 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
     abstract class CustomWebViewClient extends WebViewClient {
 
         private List<String> domainNames = new ArrayList<>();
-        private final String filteredUrl;
         protected final CompositeDisposable compositeDisposable = new CompositeDisposable();
         protected final ByteArrayInputStream nothing = new ByteArrayInputStream("".getBytes());
         protected final ResultListener<Content> listener;
         private final Pattern filteredUrlPattern;
-
-        private String domainName = "";
 
         protected abstract void onGalleryFound(String url);
 

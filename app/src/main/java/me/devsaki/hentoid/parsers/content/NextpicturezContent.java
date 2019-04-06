@@ -31,11 +31,10 @@ public class NextpicturezContent {
         result.setTitle(title);
 
         AttributeMap attributes = new AttributeMap();
-        result.setAttributes(attributes);
+        result.addAttributes(attributes);
 
 
         List<ImageFile> images = new ArrayList<>();
-        result.setImageFiles(images);
 
         int order = 1;
         for (String s : imageLinks) {
@@ -43,9 +42,7 @@ public class NextpicturezContent {
         }
         if (images.size() > 0) result.setCoverImageUrl(images.get(0).getUrl());
         result.setQtyPages(images.size());
-
-        result.populateAuthor();
-        result.setStatus(StatusContent.SAVED);
+        result.addImageFiles(images);
 
         return result;
     }

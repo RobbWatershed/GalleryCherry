@@ -22,8 +22,6 @@ public class ContentParserFactory {
         switch (site) {
             case XHAMSTER:
                 return new XhamsterParser();
-            case FAKKU2:
-                return new FakkuParser();
             default:
                 return new DummyParser();
         }

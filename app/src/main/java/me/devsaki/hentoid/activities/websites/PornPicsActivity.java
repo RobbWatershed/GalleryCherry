@@ -35,7 +35,7 @@ public class PornPicsActivity extends BaseWebActivity {
     private class PornPicsWebViewClient extends CustomWebViewClient {
 
         PornPicsWebViewClient(String filteredUrl, Site startSite, ResultListener<Content> listener) {
-            super(filteredUrl, startSite, listener);
+            super(filteredUrl, listener);
         }
 
         @Override

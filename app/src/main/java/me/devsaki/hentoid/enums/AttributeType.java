@@ -2,7 +2,6 @@ package me.devsaki.hentoid.enums;
 
 import javax.annotation.Nullable;
 
-import io.objectbox.annotation.Entity;
 import io.objectbox.converter.PropertyConverter;
 import me.devsaki.hentoid.R;
 
@@ -23,7 +22,7 @@ public enum AttributeType {
     CIRCLE(7, "Circle", R.drawable.ic_menu_about),
     CHARACTER(8, "Character", R.drawable.ic_attribute_character),
     CATEGORY(9, "Category", R.drawable.ic_menu_about),
-    SOURCE(10, R.drawable.ic_attribute_source), // Attribute displayed on screen and stored elsewhere
+    SOURCE(10, "Source", R.drawable.ic_attribute_source), // Attribute displayed on screen and stored elsewhere
     MODEL(11, "Source", R.drawable.ic_attribute_character);
 
     private final int code;

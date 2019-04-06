@@ -2,11 +2,17 @@ package me.devsaki.hentoid.parsers;
 
 import android.webkit.URLUtil;
 
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
+import javax.annotation.Nullable;
+
 import me.devsaki.hentoid.database.domains.Content;
+import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.util.OkHttpClientSingleton;
 import okhttp3.HttpUrl;
 import okhttp3.Interceptor;
@@ -14,9 +20,10 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.ResponseBody;
 import timber.log.Timber;
-import me.devsaki.hentoid.database.domains.ImageFile;
 
 public abstract class BaseParser implements ContentParser {
+
+    private static final int TIMEOUT = 30000; // 30 seconds
 
     protected abstract List<String> parseImages(Content content) throws Exception;
 

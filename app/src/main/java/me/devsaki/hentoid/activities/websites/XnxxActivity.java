@@ -35,7 +35,7 @@ public class XnxxActivity extends BaseWebActivity {
     private class XnxxWebViewClient extends CustomWebViewClient {
 
         XnxxWebViewClient(String filteredUrl, Site startSite, ResultListener<Content> listener) {
-            super(filteredUrl, startSite, listener);
+            super(filteredUrl, listener);
         }
 
         @Override

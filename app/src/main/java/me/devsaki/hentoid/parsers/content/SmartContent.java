@@ -7,7 +7,6 @@ import java.util.List;
 
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.ImageFile;
-import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.util.AttributeMap;
 import okhttp3.HttpUrl;
@@ -49,10 +48,9 @@ public class SmartContent {
         result.setTitle(title);
 
         AttributeMap attributes = new AttributeMap();
-        result.setAttributes(attributes);
+        result.addAttributes(attributes);
 
         List<ImageFile> images = new ArrayList<>();
-        result.setImageFiles(images);
 
         int order = 1;
         if (imageLinks != null && imageLinks.size() > 4) {
@@ -64,11 +62,8 @@ public class SmartContent {
                 images.add(new ImageFile(order++, e.attr("src"), StatusContent.SAVED));
             }
         }
-
         result.setQtyPages(images.size());
-
-        result.populateAuthor();
-        result.setStatus(StatusContent.SAVED);
+        result.addImageFiles(images);
 
         return result;
     }

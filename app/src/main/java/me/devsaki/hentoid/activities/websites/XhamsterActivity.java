@@ -35,7 +35,7 @@ public class XhamsterActivity extends BaseWebActivity {
     private class XhamsterWebViewClient extends CustomWebViewClient {
 
         XhamsterWebViewClient(String filteredUrl, Site startSite, ResultListener<Content> listener) {
-            super(filteredUrl, startSite, listener);
+            super(filteredUrl, listener);
         }
 
         @Override

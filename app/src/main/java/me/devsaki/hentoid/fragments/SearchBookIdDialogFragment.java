@@ -68,13 +68,7 @@ public class SearchBookIdDialogFragment extends DialogFragment {
 
             // Not possible for Pururin, e-hentai
             List<Site> sites = new ArrayList<>();
-            if (!foundSitesList.contains(Site.HITOMI.getCode())) sites.add(Site.HITOMI);
-            if (!foundSitesList.contains(Site.NHENTAI.getCode())) sites.add(Site.NHENTAI);
-            if (!foundSitesList.contains(Site.ASMHENTAI.getCode())) sites.add(Site.ASMHENTAI);
-            if (!foundSitesList.contains(Site.ASMHENTAI_COMICS.getCode()))
-                sites.add(Site.ASMHENTAI_COMICS);
-            if (!foundSitesList.contains(Site.HENTAICAFE.getCode())) sites.add(Site.HENTAICAFE);
-            if (!foundSitesList.contains(Site.TSUMINO.getCode())) sites.add(Site.TSUMINO);
+//            if (!foundSitesList.contains(Site.TSUMINO.getCode())) sites.add(Site.TSUMINO);
 
             RecyclerView sitesRecycler = view.findViewById(R.id.select_sites);
             sitesRecycler.setLayoutManager(new LinearLayoutManager(this.getContext()));
@@ -87,18 +81,8 @@ public class SearchBookIdDialogFragment extends DialogFragment {
 
     private static String getUrlFromId(Site site, String id) {
         switch (site) {
-            case HITOMI:
-                return site.getUrl() + "/galleries/" + id + ".html";
-            case NHENTAI:
-                return site.getUrl() + "/g/" + id + "/";
-            case ASMHENTAI:
-                return site.getUrl() + "/g/" + id + "/";
-            case ASMHENTAI_COMICS:
-                return site.getUrl() + "/g/" + id + "/";
-            case HENTAICAFE:
-                return site.getUrl() + "/?p=" + id;
-            case TSUMINO:
-                return site.getUrl() + "/Book/Info/" + id + "/";
+//            case TSUMINO:
+//                return site.getUrl() + "/Book/Info/" + id + "/";
             default:
                 return site.getUrl();
         }

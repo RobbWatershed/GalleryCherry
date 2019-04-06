@@ -156,9 +156,6 @@ public class Content implements Serializable {
                 return parts[parts.length - 1];
             case JPEGWORLD:
                 return url.substring(url.lastIndexOf("-") + 1, url.lastIndexOf("."));
-            case FAKKU2:
-                paths = url.split("/");
-                return paths[paths.length - 1];
             default:
                 return "";
         }
@@ -186,8 +183,6 @@ public class Content implements Serializable {
                 return PornPicGalleriesActivity.class;
             case LINK2GALLERIES:
                 return Link2GalleriesActivity.class;
-            case FAKKU2:
-                return FakkuActivity.class;
             default:
                 return BaseWebActivity.class;
         }
@@ -269,9 +264,9 @@ public class Content implements Serializable {
         if (this.attributeMap != null) {
             this.attributes.clear();
             for (AttributeType type : this.attributeMap.keySet()) {
-                for (Attribute attr : this.attributeMap.get(type))
-                {
-                    if (null == attr.getType()) attr.setType(AttributeType.SERIE); // Fix the issue with v1.6.5
+                for (Attribute attr : this.attributeMap.get(type)) {
+                    if (null == attr.getType())
+                        attr.setType(AttributeType.SERIE); // Fix the issue with v1.6.5
                     this.attributes.add(attr.computeLocation(site));
                 }
             }
