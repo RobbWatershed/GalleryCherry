@@ -12,7 +12,6 @@ import android.support.v7.app.AlertDialog;
 import android.support.v7.util.SortedList;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.util.SortedListAdapterCallback;
-import android.util.Pair;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -24,18 +23,25 @@ import com.bumptech.glide.request.RequestOptions;
 
 import java.io.File;
 import java.io.IOException;
+import java.security.InvalidParameterException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 
+import io.reactivex.Single;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.CompositeDisposable;
+import io.reactivex.schedulers.Schedulers;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.abstracts.DownloadsFragment;
 import me.devsaki.hentoid.collection.CollectionAccessor;
-import me.devsaki.hentoid.database.HentoidDB;
+import me.devsaki.hentoid.database.ObjectBoxDB;
 import me.devsaki.hentoid.database.domains.Attribute;
 import me.devsaki.hentoid.database.domains.Content;
+import me.devsaki.hentoid.database.domains.ErrorRecord;
 import me.devsaki.hentoid.database.domains.ImageFile;
+import me.devsaki.hentoid.database.domains.QueueRecord;
 import me.devsaki.hentoid.enums.AttributeType;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.listener.ContentListener;
@@ -46,6 +52,7 @@ import me.devsaki.hentoid.ui.BlinkAnimation;
 import me.devsaki.hentoid.util.FileHelper;
 import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.JsonHelper;
+import me.devsaki.hentoid.util.LogUtil;
 import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.util.ToastUtil;
 import timber.log.Timber;
@@ -65,6 +72,8 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
     private final CollectionAccessor collectionAccessor;
     private final int displayMode;
     private final RequestOptions glideRequestOptions;
+    private final CompositeDisposable compositeDisposable = new CompositeDisposable();
+
     private RecyclerView libraryView; // Kept as reference for querying by Content through ID
     private Runnable onScrollToEndListener;
     private Comparator<Content> sortComparator;
@@ -212,7 +221,7 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
     private void attachSeries(ContentHolder holder, Content content) {
         String templateSeries = context.getResources().getString(R.string.work_series);
         StringBuilder seriesBuilder = new StringBuilder();
-        List<Attribute> seriesAttributes = content.getAttributes().get(AttributeType.SERIE);
+        List<Attribute> seriesAttributes = content.getAttributeMap().get(AttributeType.SERIE);
         if (seriesAttributes == null) {
             holder.tvSeries.setVisibility(View.GONE);
         } else {
@@ -236,9 +245,9 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
         String templateArtist = context.getResources().getString(R.string.work_artist);
         StringBuilder artistsBuilder = new StringBuilder();
         List<Attribute> attributes = new ArrayList<>();
-        List<Attribute> artistAttributes = content.getAttributes().get(AttributeType.ARTIST);
+        List<Attribute> artistAttributes = content.getAttributeMap().get(AttributeType.ARTIST);
         if (artistAttributes != null) attributes.addAll(artistAttributes);
-        List<Attribute> circleAttributes = content.getAttributes().get(AttributeType.CIRCLE);
+        List<Attribute> circleAttributes = content.getAttributeMap().get(AttributeType.CIRCLE);
         if (circleAttributes != null) attributes.addAll(circleAttributes);
 
         if (attributes.isEmpty()) {
@@ -262,7 +271,7 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
     private void attachTags(ContentHolder holder, Content content) {
         String templateTags = context.getResources().getString(R.string.work_tags);
         StringBuilder tagsBuilder = new StringBuilder();
-        List<Attribute> tagsAttributes = content.getAttributes().get(AttributeType.TAG);
+        List<Attribute> tagsAttributes = content.getAttributeMap().get(AttributeType.TAG);
         if (tagsAttributes != null) {
             for (int i = 0; i < tagsAttributes.size(); i++) {
                 Attribute attribute = tagsAttributes.get(i);
@@ -298,7 +307,6 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
             StatusContent status = content.getStatus();
             holder.ivSite.setBackgroundColor(ContextCompat.getColor(context, R.color.primary));
             holder.ivFavourite.setVisibility((DownloadsFragment.MODE_LIBRARY == displayMode) ? View.VISIBLE : View.GONE);
-            holder.ivError.setVisibility((DownloadsFragment.MODE_LIBRARY == displayMode) ? View.VISIBLE : View.GONE);
             holder.ivDownload.setVisibility((DownloadsFragment.MODE_MIKAN == displayMode) ? View.VISIBLE : View.GONE);
 
             if (DownloadsFragment.MODE_LIBRARY == displayMode) {
@@ -309,23 +317,34 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
                     holder.ivFavourite.setImageResource(R.drawable.ic_fav_empty);
                 }
                 holder.ivFavourite.setOnClickListener(v -> {
-                    if (getSelectedItemsCount() >= 1) {
+                    if (getSelectedItemsCount() > 0) {
                         clearSelections();
                         itemSelectListener.onItemClear(0);
                     }
-                    if (content.isFavourite()) {
-                        holder.ivFavourite.setImageResource(R.drawable.ic_fav_empty);
-                    } else {
-                        holder.ivFavourite.setImageResource(R.drawable.ic_fav_full);
-                    }
-                    toggleFavourite(content);
+
+                    compositeDisposable.add(
+                            Single.fromCallable(() -> toggleFavourite(content.getId()))
+                                    .subscribeOn(Schedulers.io())
+                                    .observeOn(AndroidSchedulers.mainThread())
+                                    .subscribe(
+                                            result -> {
+                                                content.setFavourite(result.isFavourite());
+                                                if (result.isFavourite()) {
+                                                    holder.ivFavourite.setImageResource(R.drawable.ic_fav_full);
+                                                } else {
+                                                    holder.ivFavourite.setImageResource(R.drawable.ic_fav_empty);
+                                                }
+                                            },
+                                            Timber::e
+                                    )
+                    );
                 });
 
                 // Error icon
                 if (status == StatusContent.ERROR) {
                     holder.ivError.setVisibility(View.VISIBLE);
                     holder.ivError.setOnClickListener(v -> {
-                        if (getSelectedItemsCount() >= 1) {
+                        if (getSelectedItemsCount() > 0) {
                             clearSelections();
                             itemSelectListener.onItemClear(0);
                         }
@@ -379,8 +398,10 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
                 public void onClick(View v) {
                     if (getSelectedItemsCount() > 0) { // Selection mode is on
                         int itemPos = holder.getLayoutPosition();
-                        toggleSelection(itemPos);
-                        setSelected(isSelectedAt(pos), getSelectedItemsCount());
+                        if (itemPos > -1) {
+                            toggleSelection(itemPos);
+                            setSelected(isSelectedAt(pos), getSelectedItemsCount());
+                        }
                         onLongClick(v);
                     } else {
                         clearSelections();
@@ -404,8 +425,10 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
                 @Override
                 public boolean onLongClick(View v) {
                     int itemPos = holder.getLayoutPosition();
-                    toggleSelection(itemPos);
-                    setSelected(isSelectedAt(pos), getSelectedItemsCount());
+                    if (itemPos > -1) {
+                        toggleSelection(itemPos);
+                        setSelected(isSelectedAt(pos), getSelectedItemsCount());
+                    }
 
                     super.onLongClick(v);
 
@@ -427,9 +450,9 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
             }
         }
 
-        String message = context.getString(R.string.download_again_dialog_message).replace("@clean", images - imgErrors + "").replace("@error", imgErrors + "").replace("@total", images + "");
+        String message = context.getString(R.string.redownload_dialog_message).replace("@clean", images - imgErrors + "").replace("@error", imgErrors + "").replace("@total", images + "");
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
-        builder.setTitle(R.string.download_again_dialog_title)
+        builder.setTitle(R.string.redownload_dialog_title)
                 .setMessage(message)
                 .setPositiveButton(android.R.string.yes,
                         (dialog, which) -> {
@@ -437,28 +460,26 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
                             remove(item);
                         })
                 .setNegativeButton(android.R.string.no, null)
+                .setNeutralButton(R.string.redownload_view_log,
+                        (dialog, which) -> showErrorLog(item))
                 .create().show();
     }
 
     private void downloadContent(Content item) {
-        HentoidDB db = HentoidDB.getInstance(context);
+        ObjectBoxDB db = ObjectBoxDB.getInstance(context);
+
+        if (StatusContent.ONLINE == item.getStatus())
+            for (ImageFile im : item.getImageFiles())
+                db.updateImageFileStatusAndParams(im.setStatus(StatusContent.SAVED));
 
         item.setDownloadDate(new Date().getTime());
+        item.setStatus(StatusContent.DOWNLOADING);
+        db.insertContent(item);
 
-        if (StatusContent.ONLINE == item.getStatus()) {
-            item.setStatus(StatusContent.DOWNLOADING);
-            for (ImageFile im : item.getImageFiles()) im.setStatus(StatusContent.SAVED);
-
-            db.insertContent(item);
-        } else {
-            item.setStatus(StatusContent.DOWNLOADING);
-            db.updateContentStatus(item);
-        }
-
-        List<Pair<Integer, Integer>> queue = db.selectQueue();
+        List<QueueRecord> queue = db.selectQueue();
         int lastIndex = 1;
         if (queue.size() > 0) {
-            lastIndex = queue.get(queue.size() - 1).second + 1;
+            lastIndex = queue.get(queue.size() - 1).rank + 1;
         }
         db.insertQueue(item.getId(), lastIndex);
 
@@ -467,12 +488,33 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
         ToastUtil.toast(context, R.string.add_to_queue);
     }
 
+    private void showErrorLog(final Content content) {
+        List<ErrorRecord> errorLog = content.getErrorLog();
+        List<String> log = new ArrayList<>();
+
+        LogUtil.LogInfo errorLogInfo = new LogUtil.LogInfo();
+        errorLogInfo.logName = "Error";
+        errorLogInfo.fileName = "error_log" + content.getId();
+        errorLogInfo.noDataMessage = "No error detected.";
+
+        log.add("Error log for " + content.getTitle() + " : " + errorLog.size() + " errors");
+        for (ErrorRecord e : errorLog) log.add(e.toString());
+
+        File logFile = LogUtil.writeLog(context, log, errorLogInfo);
+        if (logFile != null) {
+            Snackbar snackbar = Snackbar.make(libraryView, R.string.cleanup_done, Snackbar.LENGTH_LONG);
+            snackbar.setAction("READ LOG", v -> FileHelper.openFile(context, logFile));
+            snackbar.show();
+        }
+    }
+
     private void shareContent(final Content item) {
         String url = item.getGalleryUrl();
 
         Intent intent = new Intent();
         intent.setAction(Intent.ACTION_SEND);
-        intent.setDataAndType(Uri.parse(url), "text/plain");
+        intent.setData(Uri.parse(url));
+        intent.setType("text/plain");
         intent.putExtra(Intent.EXTRA_SUBJECT, item.getTitle());
         intent.putExtra(Intent.EXTRA_TEXT, url);
 
@@ -516,23 +558,29 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
                 .create().show();
     }
 
-    private void toggleFavourite(Content item) {
-        item.setFavourite(!item.isFavourite());
+    private Content toggleFavourite(long contentId) {
+        ObjectBoxDB db = ObjectBoxDB.getInstance(context);
+        Content content = db.selectContentById(contentId);
 
-        // Persist in it DB
-        final HentoidDB db = HentoidDB.getInstance(context);
-        db.updateContentFavourite(item);
+        if (content != null) {
+            content.setFavourite(!content.isFavourite());
 
-        // Persist in it JSON
-        String rootFolderName = Preferences.getRootFolderName();
-        File dir = new File(rootFolderName, item.getStorageFolder());
+            // Persist in it DB
+            db.insertContent(content);
 
-        try {
-            JsonHelper.saveJson(item, dir);
-        } catch (IOException e) {
-            Timber.e(e, "Error while writing to " + dir.getAbsolutePath());
+            // Persist in it JSON
+            String rootFolderName = Preferences.getRootFolderName();
+            File dir = new File(rootFolderName, content.getStorageFolder());
+            try {
+                JsonHelper.saveJson(content.preJSONExport(), dir);
+            } catch (IOException e) {
+                Timber.e(e, "Error while writing to %s", dir.getAbsolutePath());
+            }
+
+            return content;
         }
 
+        throw new InvalidParameterException("ContentId " + contentId + " does not refer to a valid content");
     }
 
     /**
@@ -661,7 +709,7 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
     private void deleteItem(final Content item) {
         remove(item);
 
-        final HentoidDB db = HentoidDB.getInstance(context);
+        ObjectBoxDB db = ObjectBoxDB.getInstance(context);
         AsyncTask.execute(() -> {
             FileHelper.removeContent(item);
             db.deleteContent(item);
@@ -680,7 +728,7 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
         mSortedList.endBatchedUpdates();
         itemSelectListener.onItemClear(0);
 
-        final HentoidDB db = HentoidDB.getInstance(context);
+        ObjectBoxDB db = ObjectBoxDB.getInstance(context);
 
         AsyncTask.execute(() -> {
             for (Content item : contents) {
@@ -730,15 +778,17 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
         mSortedList.endBatchedUpdates();
     }
 
-    // ContentListener implementation
+    // ContentListener implementation -- Mikan mode only
+    // Listener for pages retrieval
     @Override
-    public void onContentReady(List<Content> results, int totalSelectedContent, int totalContent) { // Listener for pages retrieval in Mikan mode
+    public void onContentReady(List<Content> results, long totalSelectedContent, long totalContent) {
         if (1 == results.size()) // 1 content with pages
         {
             downloadContent(results.get(0));
         }
     }
 
+    // Listener for error visual feedback
     @Override
     public void onContentFailed(Content content, String message) {
         Timber.w(message);
@@ -824,5 +874,9 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
         public ContentAdapter build() {
             return new ContentAdapter(this);
         }
+    }
+
+    public void dispose() {
+        compositeDisposable.clear();
     }
 }

@@ -20,19 +20,17 @@ import me.devsaki.hentoid.dirpicker.model.DirList;
  * Directory Adapter
  */
 public class DirAdapter extends RecyclerView.Adapter<DirAdapter.ViewHolder> {
-    private final EventBus bus;
     private final DirList dirList;
 
-    public DirAdapter(DirList dirList, EventBus bus) {
+    public DirAdapter(DirList dirList) {
         this.dirList = dirList;
-        this.bus = bus;
     }
 
     @NonNull
     @Override
     public DirAdapter.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View root = LayoutInflater.from(
-                parent.getContext()).inflate(R.layout.item_dir_picker, parent, false);
+                parent.getContext()).inflate(R.layout.item_picker, parent, false);
         return new ViewHolder(root);
     }
 
@@ -47,19 +45,18 @@ public class DirAdapter extends RecyclerView.Adapter<DirAdapter.ViewHolder> {
         return dirList.size();
     }
 
-    class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
+    class ViewHolder extends RecyclerView.ViewHolder {
         final TextView textView;
 
         ViewHolder(View root) {
             super(root);
 
-            textView = root.findViewById(R.id.dir_name);
-            textView.setOnClickListener(this);
+            textView = root.findViewById(R.id.picker_item_name);
+            textView.setOnClickListener(this::onClick);
         }
 
-        @Override
-        public void onClick(View v) {
-            bus.post(new UpdateDirTreeEvent(dirList.get(getAdapterPosition())));
+        void onClick(View v) {
+            EventBus.getDefault().post(new UpdateDirTreeEvent(dirList.get(getAdapterPosition())));
         }
     }
 }

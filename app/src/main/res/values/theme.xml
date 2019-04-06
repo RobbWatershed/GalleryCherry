@@ -19,9 +19,14 @@
         <item name="android:textColorHint">@color/lightGray</item>
     </style>
 
-    <!-- AppIntro Activity & Slides -->
-    <style name="AppTheme.AppIntro" parent="AppTheme.DarkBackground">
-        <item name="android:background">@color/primary_dark</item>
+    <!-- Backgrounds -->
+    <style name="AppTheme.TaupeBackground" parent="AppTheme">
+        <item name="android:windowBackground">@color/windowBackground</item>
+    </style>
+
+    <style name="AppTheme.TaupeBackgroundNoActionBar" parent="AppTheme.NoActionBar">
+        <item name="android:windowBackground">@color/windowBackground</item>
+        <item name="windowActionModeOverlay">true</item>
     </style>
 
     <!-- Splash Activity -->
@@ -32,10 +37,28 @@
     </style>
 
     <!-- Prefs Activity -->
-    <style name="PrefsTheme" parent="AppTheme">
-        <item name="android:editTextColor">@android:color/black</item>
-        <item name="android:textColorHint">@android:color/black</item>
+    <style name="PrefsThemeDark" parent="AppTheme">
+        <item name="android:windowBackground">@color/windowBackground</item>
+        <item name="android:divider">@color/accent</item>
+        <item name="android:textColor">@color/primary_text_color_selector</item>
+        <item name="android:textColorPrimary">@color/primary_text_color_selector</item>
+        <item name="android:textColorSecondary">@color/secondary_text_color_selector</item>
+        <item name="android:textColorHint">@color/lightGray</item>
+        <item name="alertDialogTheme">@style/PrefsThemeDialog</item>
     </style>
+
+    <style name="PrefsThemeDialog" parent="Theme.AppCompat.Light.Dialog.Alert">
+        <item name="android:windowBackground">@color/windowBackground</item>
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorPrimaryDark">@color/primary_dark</item>
+        <item name="colorAccent">@color/accent</item>
+        <item name="android:textColor">@color/white</item>
+        <item name="android:textColorPrimary">@color/white</item>
+        <item name="android:textColorSecondary">@color/white</item>
+        <item name="android:editTextColor">@color/white</item>
+        <item name="textColorAlertDialogListItem">@color/white</item>
+    </style>
+
 
     <!-- Import Activity -->
     <style name="ImportTheme" parent="AppTheme.NoActionBar">
@@ -61,39 +84,27 @@
         <item name="android:windowIsFloating">false</item>
     </style>
 
-    <!-- Backgrounds -->
-    <style name="AppTheme.TaupeBackground" parent="AppTheme">
-        <item name="android:windowBackground">@color/taupe</item>
-    </style>
-
-    <style name="AppTheme.TaupeBackgroundNoActionBar" parent="AppTheme.NoActionBar">
-        <item name="android:windowBackground">@color/taupe</item>
-        <item name="windowActionModeOverlay">true</item>
-    </style>
-
-    <style name="AppTheme.DarkBackground" parent="AppTheme">
-        <item name="android:windowBackground">@color/primary_dark</item>
-    </style>
-
-    <style name="AppTheme.DarkBackgroundNoActionBar" parent="AppTheme.NoActionBar">
-        <item name="android:windowBackground">@color/primary_dark</item>
-        <item name="windowActionModeOverlay">true</item>
-    </style>
-
     <!-- Downloads -->
     <style name="AppTheme.Downloads" parent="AppTheme.TaupeBackgroundNoActionBar">
         <item name="android:textColorHint">@color/lightGray</item>
         <item name="android:textColorSecondary">@color/lightGray</item>
     </style>
 
+    <style name="DownloadsDialog" parent="Theme.AppCompat.Light.Dialog.Alert">
+        <item name="android:windowBackground">@color/white</item>
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorPrimaryDark">@color/primary_dark</item>
+        <item name="colorAccent">@color/accent</item>
+    </style>
+
     <!-- Mikan -->
-    <style name="AppTheme.Mikan" parent="AppTheme.DarkBackground">
+    <style name="AppTheme.Mikan" parent="AppTheme.TaupeBackground">
         <item name="android:textColorHint">@color/lightGray</item>
         <item name="android:textColorSecondary">@color/lightGray</item>
     </style>
 
     <!-- Toolbar -->
-    <style name="AppTheme.Toolbar" parent="AppTheme.DarkBackground">
+    <style name="AppTheme.Toolbar" parent="AppTheme.TaupeBackground">
         <item name="android:textColorHint">@color/lightGray</item>
         <item name="android:textColorPrimary">@color/lightGray</item>
         <item name="android:textColorSecondary">@color/lightGray</item>
@@ -104,37 +115,21 @@
         <item name="colorPrimary">@color/primary</item>
         <item name="colorPrimaryDark">@color/primary_dark</item>
         <item name="colorAccent">@color/accent</item>
-        <item name="android:windowBackground">@color/taupe</item>
+        <item name="android:windowBackground">@color/windowBackground</item>
     </style>
 
     <style name="BottomSheetDialogTheme" parent="Theme.Design.BottomSheetDialog">
         <item name="colorPrimary">@color/primary</item>
         <item name="colorPrimaryDark">@color/primary_dark</item>
         <item name="colorAccent">@color/accent</item>
-        <item name="bottomSheetStyle">@style/ModalStyle</item>
+        <item name="android:colorBackground">@color/windowBackground</item>
     </style>
 
-    <style name="ModalStyle" parent="Widget.Design.BottomSheet.Modal">
-        <item name="android:background">@color/taupe</item>
+    <style name="PinEntryDialogTheme" parent="Theme.AppCompat.Dialog">
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorPrimaryDark">@color/primary_dark</item>
+        <item name="colorAccent">@color/accent</item>
+        <item name="android:windowBackground">@drawable/bg_pin_dialog</item>
     </style>
 
-    <style name="LargeItem">
-        <item name="android:layout_width">0dp</item>
-        <item name="android:layout_height">48dp</item>
-        <item name="android:gravity">center</item>
-        <item name="android:background">@drawable/bg_card</item>
-    </style>
-
-    <style name="Chip">
-        <item name="android:layout_height">32dp</item>
-        <item name="android:layout_width">wrap_content</item>
-        <item name="android:layout_marginTop">8dp</item>
-        <item name="android:gravity">center</item>
-        <item name="android:background">@drawable/bg_chip</item>
-    </style>
-
-    <style name="Chip.Input">
-        <item name="android:drawableEnd">@drawable/ic_cancel</item>
-        <item name="android:drawablePadding">8dp</item>
-    </style>
 </resources>

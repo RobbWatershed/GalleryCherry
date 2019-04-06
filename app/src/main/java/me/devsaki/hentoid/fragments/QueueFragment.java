@@ -21,6 +21,7 @@ import java.util.List;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.abstracts.BaseFragment;
 import me.devsaki.hentoid.adapters.QueueContentAdapter;
+import me.devsaki.hentoid.database.ObjectBoxDB;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.events.DownloadEvent;
@@ -42,6 +43,7 @@ public class QueueFragment extends BaseFragment {
     private TextView mEmptyText;    // "Empty queue" message panel
     private ImageButton btnStart;   // Start / Resume button
     private ImageButton btnPause;   // Pause button
+    private ImageButton btnStats;   // Error statistics button
     private TextView queueStatus;   // 1st line of text displayed on the right of the queue pause / play button
     private TextView queueInfo;     // 2nd line of text displayed on the right of the queue pause / play button
 
@@ -68,6 +70,12 @@ public class QueueFragment extends BaseFragment {
     }
 
     @Override
+    public void onDestroy() {
+        mAdapter.dispose();
+        super.onDestroy();
+    }
+
+    @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.fragment_queue, container, false);
@@ -78,6 +86,7 @@ public class QueueFragment extends BaseFragment {
 
         btnStart = rootView.findViewById(R.id.btnStart);
         btnPause = rootView.findViewById(R.id.btnPause);
+        btnStats = rootView.findViewById(R.id.btnStats);
         queueStatus = rootView.findViewById(R.id.queueStatus);
         queueInfo = rootView.findViewById(R.id.queueInfo);
 
@@ -88,8 +97,10 @@ public class QueueFragment extends BaseFragment {
         // Both queue control buttons actually just need to send a signal that will be processed accordingly by whom it may concern
         btnStart.setOnClickListener(v -> EventBus.getDefault().post(new DownloadEvent(DownloadEvent.EV_UNPAUSE)));
         btnPause.setOnClickListener(v -> EventBus.getDefault().post(new DownloadEvent(DownloadEvent.EV_PAUSE)));
+        btnStats.setOnClickListener(v -> showStats());
 
-        List<Content> contents = getDB().selectQueueContents();
+        ObjectBoxDB db = ObjectBoxDB.getInstance(context);
+        List<Content> contents = db.selectQueueContents();
         mAdapter = new QueueContentAdapter(context, contents);
         mListView.setAdapter(mAdapter);
 
@@ -105,6 +116,7 @@ public class QueueFragment extends BaseFragment {
     public void onDownloadEvent(DownloadEvent event) {
 
         Timber.d("Event received : %s", event.eventType);
+        btnStats.setVisibility((event.pagesKO > 0) ? View.VISIBLE : View.GONE);
 
         switch (event.eventType) {
             case DownloadEvent.EV_PROGRESS:
@@ -112,7 +124,8 @@ public class QueueFragment extends BaseFragment {
                 break;
             case DownloadEvent.EV_UNPAUSE:
                 ContentQueueManager.getInstance().unpauseQueue();
-                getDB().updateContentStatus(StatusContent.PAUSED, StatusContent.DOWNLOADING);
+                ObjectBoxDB db = ObjectBoxDB.getInstance(context);
+                db.updateContentStatus(StatusContent.PAUSED, StatusContent.DOWNLOADING);
                 ContentQueueManager.getInstance().resumeQueue(context);
                 update(event.eventType);
                 break;
@@ -126,7 +139,8 @@ public class QueueFragment extends BaseFragment {
                 break;
             case DownloadEvent.EV_COMPLETE:
                 mAdapter.removeFromQueue(event.content);
-            default: // EV_COMPLETE, EV_PAUSE, EV_CANCEL events
+                if (0 == mAdapter.getCount()) btnStats.setVisibility(View.GONE);
+            default: // EV_PAUSE, EV_CANCEL events + EV_COMPLETE that doesn't have a break
                 update(event.eventType);
         }
     }
@@ -182,7 +196,8 @@ public class QueueFragment extends BaseFragment {
      * @param eventType Event type that triggered the update, if any (See types described in DownloadEvent); -1 if none
      */
     public void update(int eventType) {
-        boolean isEmpty = (0 == mAdapter.getCount());
+        int bookDiff = (eventType == DownloadEvent.EV_CANCEL) ? 1 : 0; // Cancel event means a book will be removed very soon from the queue
+        boolean isEmpty = (0 == mAdapter.getCount() - bookDiff);
         boolean isPaused = (!isEmpty && (eventType == DownloadEvent.EV_PAUSE || ContentQueueManager.getInstance().isQueuePaused() || !ContentQueueManager.getInstance().isQueueActive()));
         boolean isActive = (!isEmpty && !isPaused);
 
@@ -217,6 +232,7 @@ public class QueueFragment extends BaseFragment {
                 queueInfo.startAnimation(animation);
             } else { // Empty
                 btnStart.setVisibility(View.GONE);
+                btnStats.setVisibility(View.GONE);
                 queueStatus.setText(R.string.queue_empty2);
                 queueInfo.setText(R.string.queue_empty2);
             }
@@ -227,5 +243,10 @@ public class QueueFragment extends BaseFragment {
     public boolean onBackPressed() {
         // Let the activity handle it.
         return true;
+    }
+
+    private void showStats() {
+        if (mAdapter != null && mAdapter.getCount() > 0 && mAdapter.getItem(0) != null)
+            ErrorStatsDialogFragment.invoke(requireActivity().getSupportFragmentManager(), mAdapter.getItem(0).getId());
     }
 }

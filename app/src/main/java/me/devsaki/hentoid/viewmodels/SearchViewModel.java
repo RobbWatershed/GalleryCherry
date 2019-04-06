@@ -9,12 +9,10 @@ import android.support.annotation.NonNull;
 import android.util.SparseIntArray;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
 
 import me.devsaki.hentoid.collection.CollectionAccessor;
-import me.devsaki.hentoid.database.DatabaseCollectionAccessor;
+import me.devsaki.hentoid.database.ObjectBoxCollectionAccessor;
 import me.devsaki.hentoid.database.domains.Attribute;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.enums.AttributeType;
@@ -30,7 +28,6 @@ public class SearchViewModel extends AndroidViewModel {
 
     private final MutableLiveData<List<Attribute>> selectedAttributes = new MutableLiveData<>();
     private final MutableLiveData<AttributeSearchResult> proposedAttributes = new MutableLiveData<>();
-    private final MutableLiveData<AttributeSearchResult> availableAttributes = new MutableLiveData<>();
     private final MutableLiveData<ContentSearchResult> selectedContent = new MutableLiveData<>();
     private final MutableLiveData<SparseIntArray> attributesPerType = new MutableLiveData<>();
 
@@ -48,7 +45,6 @@ public class SearchViewModel extends AndroidViewModel {
 
     private List<AttributeType> category;
 
-
     // === LISTENER HELPERS
     private class AttributesResultListener implements ResultListener<List<Attribute>> {
         private final MutableLiveData<AttributeSearchResult> list;
@@ -58,21 +54,8 @@ public class SearchViewModel extends AndroidViewModel {
         }
 
         @Override
-        public void onResultReady(List<Attribute> results, int totalContent) {
-
-            // Sort items according to prefs
-            Comparator<Attribute> comparator;
-            switch (Preferences.getAttributesSortOrder()) {
-                case Preferences.Constant.PREF_ORDER_ATTRIBUTES_ALPHABETIC:
-                    comparator = Attribute.NAME_COMPARATOR;
-                    break;
-                default:
-                    comparator = Attribute.COUNT_COMPARATOR;
-            }
-            Attribute[] attrs = results.toArray(new Attribute[0]); // Well, yes, since results.sort(comparator) requires API 24...
-            Arrays.sort(attrs, comparator);
-
-            AttributeSearchResult result = new AttributeSearchResult(attrs);
+        public void onResultReady(List<Attribute> results, long totalContent) {
+            AttributeSearchResult result = new AttributeSearchResult(results, totalContent);
             list.postValue(result);
         }
 
@@ -87,7 +70,7 @@ public class SearchViewModel extends AndroidViewModel {
 
     private ContentListener contentResultListener = new ContentListener() {
         @Override
-        public void onContentReady(List<Content> results, int totalSelectedContent, int totalContent) {
+        public void onContentReady(List<Content> results, long totalSelectedContent, long totalContent) {
             ContentSearchResult result = new ContentSearchResult();
             result.totalSelected = totalSelectedContent;
             selectedContent.postValue(result);
@@ -104,7 +87,7 @@ public class SearchViewModel extends AndroidViewModel {
 
     private ResultListener<SparseIntArray> countPerTypeResultListener = new ResultListener<SparseIntArray>() {
         @Override
-        public void onResultReady(SparseIntArray results, int totalContent) {
+        public void onResultReady(SparseIntArray results, long totalContent) {
             // Result has to take into account the number of attributes already selected (hence unavailable)
             List<Attribute> selectedAttrs = selectedAttributes.getValue();
             if (selectedAttrs != null) {
@@ -134,7 +117,7 @@ public class SearchViewModel extends AndroidViewModel {
 
     public void setMode(int mode) {
         Context ctx = getApplication().getApplicationContext();
-        collectionAccessor = new DatabaseCollectionAccessor(ctx);
+        collectionAccessor = new ObjectBoxCollectionAccessor(ctx);
         countAttributesPerType();
     }
 
@@ -173,18 +156,24 @@ public class SearchViewModel extends AndroidViewModel {
 
     public void onCategoryChanged(List<AttributeType> category) {
         this.category = category;
-        getAvailableAttributes();
     }
 
-    public void onCategoryFilterChanged(String query) {
-        if (collectionAccessor.supportsAvailabilityFilter())
-            collectionAccessor.getAttributeMasterData(category, query, selectedAttributes.getValue(), false, new AttributesResultListener(proposedAttributes));
-        else
-            collectionAccessor.getAttributeMasterData(category, query, new AttributesResultListener(proposedAttributes));
+    public void onCategoryFilterChanged(String query, int pageNum, int itemsPerPage) {
+        if (collectionAccessor.supportsAttributesPaging()) {
+            if (collectionAccessor.supportsAvailabilityFilter())
+                collectionAccessor.getPagedAttributeMasterData(category, query, selectedAttributes.getValue(), false, pageNum, itemsPerPage, Preferences.getAttributesSortOrder(), new AttributesResultListener(proposedAttributes));
+            else
+                collectionAccessor.getPagedAttributeMasterData(category, query, pageNum, itemsPerPage, Preferences.getAttributesSortOrder(), new AttributesResultListener(proposedAttributes));
+        } else {
+            if (collectionAccessor.supportsAvailabilityFilter())
+                collectionAccessor.getAttributeMasterData(category, query, selectedAttributes.getValue(), false, Preferences.getAttributesSortOrder(), new AttributesResultListener(proposedAttributes));
+            else
+                collectionAccessor.getAttributeMasterData(category, query, Preferences.getAttributesSortOrder(), new AttributesResultListener(proposedAttributes));
+        }
     }
 
     public void onAttributeSelected(Attribute a) {
-        List<Attribute> selectedAttributesList = requireNonNull(selectedAttributes.getValue());
+        List<Attribute> selectedAttributesList = new ArrayList<>(requireNonNull(selectedAttributes.getValue())); // Create new instance to make ListAdapter.submitList happy
 
         // Direct impact on selectedAttributes
         selectedAttributesList.add(a);
@@ -192,7 +181,6 @@ public class SearchViewModel extends AndroidViewModel {
 
         // Indirect impact on attributesPerType and availableAttributes
         countAttributesPerType();
-        getAvailableAttributes();
         updateSelectionResult();
     }
 
@@ -205,7 +193,7 @@ public class SearchViewModel extends AndroidViewModel {
     }
 
     public void onAttributeUnselected(Attribute a) {
-        List<Attribute> selectedAttributesList = requireNonNull(selectedAttributes.getValue());
+        List<Attribute> selectedAttributesList = new ArrayList<>(requireNonNull(selectedAttributes.getValue())); // Create new instance to make ListAdapter.submitList happy
 
         // Direct impact on selectedAttributes
         selectedAttributesList.remove(a);
@@ -213,17 +201,11 @@ public class SearchViewModel extends AndroidViewModel {
 
         // Indirect impact on attributesPerType and availableAttributes
         countAttributesPerType();
-        getAvailableAttributes();
         updateSelectionResult();
     }
 
     private void countAttributesPerType() {
         collectionAccessor.countAttributesPerType(selectedAttributes.getValue(), countPerTypeResultListener);
-    }
-
-    private void getAvailableAttributes() {
-        if (collectionAccessor.supportsAvailabilityFilter())
-            collectionAccessor.getAvailableAttributes(category, selectedAttributes.getValue(), false, new AttributesResultListener(availableAttributes));
     }
 
     private void updateSelectionResult() {
@@ -232,23 +214,32 @@ public class SearchViewModel extends AndroidViewModel {
 
     // === HELPER RESULT STRUCTURES
     public class AttributeSearchResult {
-        public List<Attribute> attributes;
+        public final List<Attribute> attributes;
+        public final long totalContent;
         public boolean success = true;
         public String message;
 
 
         AttributeSearchResult() {
             this.attributes = new ArrayList<>();
+            this.totalContent = 0;
         }
 
-        AttributeSearchResult(Attribute[] attributes) {
-            this.attributes = Arrays.asList(attributes);
+        AttributeSearchResult(List<Attribute> attributes, long totalContent) {
+            this.attributes = new ArrayList<>(attributes);
+            this.totalContent = totalContent;
         }
     }
 
     public class ContentSearchResult {
-        public int totalSelected;
+        public long totalSelected;
         public boolean success = true;
         public String message;
+    }
+
+    @Override
+    protected void onCleared() {
+        if (collectionAccessor != null) collectionAccessor.dispose();
+        super.onCleared();
     }
 }

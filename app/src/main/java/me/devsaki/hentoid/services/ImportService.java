@@ -6,16 +6,17 @@ import android.content.Intent;
 import android.os.IBinder;
 import android.support.annotation.CheckResult;
 import android.support.annotation.Nullable;
-
-import com.annimon.stream.Stream;
+import android.util.Log;
 
 import org.greenrobot.eventbus.EventBus;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 
-import me.devsaki.hentoid.database.HentoidDB;
+import me.devsaki.hentoid.database.ObjectBoxDB;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
@@ -24,12 +25,12 @@ import me.devsaki.hentoid.notification.import_.ImportCompleteNotification;
 import me.devsaki.hentoid.notification.import_.ImportStartNotification;
 import me.devsaki.hentoid.util.Consts;
 import me.devsaki.hentoid.util.FileHelper;
+import me.devsaki.hentoid.util.JSONParseException;
 import me.devsaki.hentoid.util.JsonHelper;
+import me.devsaki.hentoid.util.LogUtil;
 import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.util.notification.ServiceNotificationManager;
 import timber.log.Timber;
-
-import static com.annimon.stream.Collectors.toList;
 
 /**
  * Service responsible for importing an existing library.
@@ -100,78 +101,99 @@ public class ImportService extends IntentService {
         EventBus.getDefault().postSticky(new ImportEvent(ImportEvent.EV_COMPLETE, booksOK, booksKO, nbBooks, cleanupLogFile));
     }
 
+    private void trace(int priority, List<String> memoryLog, String s, String... t) {
+        s = String.format(s, (Object[]) t);
+        Timber.log(priority, s);
+        if (null != memoryLog) memoryLog.add(s);
+    }
+
+
     /**
      * Import books from known source folders
      *
      * @param cleanup True if the user has asked for a cleanup when calling import from Preferences
      */
     private void startImport(boolean cleanup) {
-        int booksOK = 0;
-        int booksKO = 0;
-        String message;
-        List<String> cleanupLog = cleanup ? new ArrayList<>() : null;
+        int booksOK = 0;                        // Number of books imported
+        int booksKO = 0;                        // Number of folders found with no valid book inside
+        int nbFolders = 0;                      // Number of folders found with no content but subfolders
+        Content content = null;
+        List<String> log = new ArrayList<>();
 
         notificationManager.startForeground(new ImportStartNotification());
+        File rootFolder = new File(Preferences.getRootFolderName());
 
-        List<File> files = Stream.of(Site.values())
-                .map(site -> FileHelper.getSiteDownloadDir(this, site))
-                .map(File::listFiles)
-                .flatMap(Stream::of)
-                .filter(File::isDirectory)
-                .distinct() // Since there are two ASM Hentai sites ("ASM classic" and "ASM comics"), ASM values are duplicated => deduplicate list
-                .collect(toList());
+        // 1st pass : count subfolders of every site folder
+        List<File> files = new ArrayList<>();
+        File[] siteFolders = rootFolder.listFiles(File::isDirectory);
+        if (siteFolders != null) {
+            for (File f : siteFolders) files.addAll(Arrays.asList(f.listFiles(File::isDirectory)));
+        }
 
-        Timber.i("Import books starting : %s books total", files.size());
-        Timber.i("Cleanup %s", (cleanup ? "ENABLED" : "DISABLED"));
+        // 2nd pass : scan every folder for a JSON file or subdirectories
+        trace(Log.DEBUG, log, "Import books starting - initial detected count : %s", files.size() + "");
+        trace(Log.INFO, log, "Cleanup %s", (cleanup ? "ENABLED" : "DISABLED"));
         for (int i = 0; i < files.size(); i++) {
-            File file = files.get(i);
+            File folder = files.get(i);
 
-            Content content = importJson(file);
-            if (content != null) {
-                if (cleanup) {
-                    String canonicalBookDir = FileHelper.formatDirPath(content);
+            try {
+                content = importJson(folder);
+                if (content != null) {
+                    if (cleanup) {
+                        String canonicalBookDir = FileHelper.formatDirPath(content);
 
-                    String[] currentPathParts = file.getAbsolutePath().split("/");
-                    String currentBookDir = "/" + currentPathParts[currentPathParts.length - 2] + "/" + currentPathParts[currentPathParts.length - 1];
+                        String[] currentPathParts = folder.getAbsolutePath().split("/");
+                        String currentBookDir = "/" + currentPathParts[currentPathParts.length - 2] + "/" + currentPathParts[currentPathParts.length - 1];
 
-                    if (!canonicalBookDir.equals(currentBookDir)) {
-                        String settingDir = Preferences.getRootFolderName();
-                        if (settingDir.isEmpty()) {
-                            settingDir = FileHelper.getDefaultDir(this, canonicalBookDir).getAbsolutePath();
+                        if (!canonicalBookDir.equals(currentBookDir)) {
+                            String settingDir = Preferences.getRootFolderName();
+                            if (settingDir.isEmpty()) {
+                                settingDir = FileHelper.getDefaultDir(this, canonicalBookDir).getAbsolutePath();
+                            }
+
+                            if (FileHelper.renameDirectory(folder, new File(settingDir, canonicalBookDir))) {
+                                content.setStorageFolder(canonicalBookDir);
+                                trace(Log.INFO, log, "[Rename OK] Folder %s renamed to %s", currentBookDir, canonicalBookDir);
+                            } else {
+                                trace(Log.WARN, log, "[Rename KO] Could not rename file %s to %s", currentBookDir, canonicalBookDir);
+                            }
                         }
-
-                        if (FileHelper.renameDirectory(file, new File(settingDir, canonicalBookDir))) {
-                            content.setStorageFolder(canonicalBookDir);
-                            message = String.format("[Rename OK] Folder %s renamed to %s", currentBookDir, canonicalBookDir);
-                        } else {
-                            message = String.format("[Rename KO] Could not rename file %s to %s", currentBookDir, canonicalBookDir);
+                    }
+                    ObjectBoxDB.getInstance(this).insertContent(content);
+                    trace(Log.INFO, log, "Import book OK : %s", folder.getAbsolutePath());
+                } else { // JSON not found
+                    File[] subdirs = folder.listFiles(File::isDirectory);
+                    if (subdirs != null && subdirs.length > 0) // Folder doesn't contain books but contains subdirectories
+                    {
+                        files.addAll(Arrays.asList(subdirs));
+                        trace(Log.INFO, log, "Subfolders found in : %s", folder.getAbsolutePath());
+                        nbFolders++;
+                        continue;
+                    } else { // No JSON nor any subdirectory
+                        trace(Log.WARN, log, "Import book KO! (no JSON found) : %s", folder.getAbsolutePath());
+                        // Deletes the folder if cleanup is active
+                        if (cleanup) {
+                            boolean success = FileHelper.removeFile(folder);
+                            trace(Log.INFO, log, "[Remove %s] Folder %s", success ? "OK" : "KO", folder.getAbsolutePath());
                         }
-                        cleanupLog.add(message);
-                        Timber.i(message);
                     }
                 }
-                HentoidDB.getInstance(this).insertContent(content);
-                booksOK++;
-                Timber.d("Import book OK : %s", file.getAbsolutePath());
-            } else {
+
+                if (null == content) booksKO++;
+                else booksOK++;
+            } catch (Exception e) {
+                if (null == content)
+                    content = new Content().setTitle("none").setSite(Site.NONE).setUrl("");
                 booksKO++;
-                Timber.w("Import book KO : %s", file.getAbsolutePath());
-                // Deletes the folder if cleanup is active
-                if (cleanup) {
-                    boolean success = FileHelper.removeFile(file);
-                    message = String.format("[Remove %s] Folder %s", success ? "OK" : "KO", file.getAbsolutePath());
-                    cleanupLog.add(message);
-                    Timber.i(message);
-                }
+                trace(Log.ERROR, log, "Import book ERROR : %s %s", e.getMessage(), folder.getAbsolutePath());
             }
 
-            eventProgress(content, files.size(), booksOK, booksKO);
+            eventProgress(content, files.size() - nbFolders, booksOK, booksKO);
         }
-        Timber.i("Import books complete : %s OK; %s KO", booksOK, booksKO);
+        trace(Log.INFO, log, "Import books complete - %s OK; %s KO; %s final count", booksOK + "", booksKO + "", files.size() - nbFolders + "");
 
         // Write cleanup log in root folder
-        File cleanupLogFile = null;
-        if (cleanup) cleanupLogFile = writeCleanupLog(cleanupLog);
+        File cleanupLogFile = LogUtil.writeLog(this, log, buildLogInfo(cleanup));
 
         eventComplete(files.size(), booksOK, booksKO, cleanupLogFile);
         notificationManager.notify(new ImportCompleteNotification(booksOK, booksKO));
@@ -180,38 +202,17 @@ public class ImportService extends IntentService {
         stopSelf();
     }
 
-    private File writeCleanupLog(List<String> log) {
-        // Create the log
-        StringBuilder logStr = new StringBuilder();
-        logStr.append("Cleanup log : begin").append(System.getProperty("line.separator"));
-        if (log.isEmpty())
-            logStr.append("No activity to report - All folder names are formatted as expected.");
-        else for (String line : log)
-            logStr.append(line).append(System.getProperty("line.separator"));
-        logStr.append("Cleanup log : end");
-
-        // Save it
-        File root;
-        try {
-
-            String settingDir = Preferences.getRootFolderName();
-            if (settingDir.isEmpty()) {
-                root = FileHelper.getDefaultDir(this, "");
-            } else {
-                root = new File(settingDir);
-            }
-            File cleanupLogFile = new File(root, "cleanup_log.txt");
-            FileHelper.saveBinaryInFile(cleanupLogFile, logStr.toString().getBytes());
-            return cleanupLogFile;
-        } catch (Exception e) {
-            Timber.e(e);
-        }
-
-        return null;
+    private LogUtil.LogInfo buildLogInfo(boolean cleanup) {
+        LogUtil.LogInfo logInfo = new LogUtil.LogInfo();
+        logInfo.logName = cleanup ? "Cleanup" : "Import";
+        logInfo.fileName = cleanup ? "cleanup_log" : "import_log";
+        logInfo.noDataMessage = "No content detected.";
+        return logInfo;
     }
 
 
-    private static Content importJson(File folder) {
+    @Nullable
+    private static Content importJson(File folder) throws JSONParseException {
         File json = new File(folder, Consts.JSON_FILE_NAME_V2); // (v2) JSON file format
         if (json.exists()) return importJsonV2(json);
 
@@ -220,13 +221,11 @@ public class ImportService extends IntentService {
         return null;
     }
 
-    @Nullable
     @CheckResult
-    private static Content importJsonV2(File json) {
+    private static Content importJsonV2(File json) throws JSONParseException {
         try {
             Content content = JsonHelper.jsonToObject(json, Content.class);
-
-            if (null == content.getAuthor()) content.populateAuthor();
+            content.postJSONImport();
 
             String fileRoot = Preferences.getRootFolderName();
             content.setStorageFolder(json.getAbsoluteFile().getParent().substring(fileRoot.length()));
@@ -239,7 +238,7 @@ public class ImportService extends IntentService {
             return content;
         } catch (Exception e) {
             Timber.e(e, "Error reading JSON (v2) file");
+            throw new JSONParseException("Error reading JSON (v2) file : " + e.getMessage());
         }
-        return null;
     }
 }

@@ -91,10 +91,6 @@ public final class Preferences {
                 .apply();
     }
 
-    public static boolean getAppLockVibrate() {
-        return sharedPreferences.getBoolean(Key.PREF_APP_LOCK_VIBRATE, Default.PREF_APP_LOCK_VIBRATE_DEFAULT);
-    }
-
     public static boolean getEndlessScroll() {
         return sharedPreferences.getBoolean(Key.PREF_ENDLESS_SCROLL, Default.PREF_ENDLESS_SCROLL_DEFAULT);
     }
@@ -103,17 +99,17 @@ public final class Preferences {
         return sharedPreferences.getBoolean(Key.PREF_HIDE_RECENT, Default.PREF_HIDE_RECENT_DEFAULT);
     }
 
-    public static String getSdStorageUri() {
-        return sharedPreferences.getString(Key.PREF_SD_STORAGE_URI, null);
+    static String getSdStorageUri() {
+        return sharedPreferences.getString(Key.PREF_SD_STORAGE_URI, "");
     }
 
-    public static void setSdStorageUri(String uri) {
+    static void setSdStorageUri(String uri) {
         sharedPreferences.edit()
                 .putString(Key.PREF_SD_STORAGE_URI, uri)
                 .apply();
     }
 
-    public static int getFolderNameFormat() {
+    static int getFolderNameFormat() {
         return Integer.parseInt(
                 sharedPreferences.getString(Key.PREF_FOLDER_NAMING_CONTENT_LISTS,
                         Default.PREF_FOLDER_NAMING_CONTENT_DEFAULT + ""));
@@ -123,13 +119,13 @@ public final class Preferences {
         return sharedPreferences.getString(Key.PREF_SETTINGS_FOLDER, "");
     }
 
-    public static boolean setRootFolderName(String rootFolderName) {
+    static boolean setRootFolderName(String rootFolderName) {
         return sharedPreferences.edit()
                 .putString(Key.PREF_SETTINGS_FOLDER, rootFolderName)
                 .commit();
     }
 
-    public static int getContentReadAction() {
+    static int getContentReadAction() {
         return Integer.parseInt(
                 sharedPreferences.getString(Key.PREF_READ_CONTENT_LISTS,
                         Default.PREF_READ_CONTENT_ACTION + ""));
@@ -167,7 +163,7 @@ public final class Preferences {
                 Default.PREF_DL_THREADS_QUANTITY_DEFAULT + ""));
     }
 
-    public static int getFolderTruncationNbChars() {
+    static int getFolderTruncationNbChars() {
         return Integer.parseInt(sharedPreferences.getString(Key.PREF_FOLDER_TRUNCATION_LISTS,
                 Default.PREF_FOLDER_TRUNCATION_DEFAULT + ""));
     }
@@ -185,7 +181,6 @@ public final class Preferences {
         static final String PREF_ORDER_CONTENT_LISTS = "pref_order_content_lists";
         static final String PREF_ORDER_ATTRIBUTE_LISTS = "pref_order_attribute_lists";
         static final String PREF_FIRST_RUN = "pref_first_run";
-        static final String PREF_APP_LOCK_VIBRATE = "pref_app_lock_vibrate";
         static final String PREF_ENDLESS_SCROLL = "pref_endless_scroll";
         static final String PREF_SD_STORAGE_URI = "pref_sd_storage_uri";
         static final String PREF_FOLDER_NAMING_CONTENT_LISTS = "pref_folder_naming_content_lists";
@@ -203,10 +198,9 @@ public final class Preferences {
     public static final class Default {
         public static final int PREF_QUANTITY_PER_PAGE_DEFAULT = 20;
         public static final int PREF_WEBVIEW_INITIAL_ZOOM_DEFAULT = 20;
-        static final int PREF_ORDER_CONTENT_DEFAULT = Constant.PREF_ORDER_CONTENT_ALPHABETIC;
+        static final int PREF_ORDER_CONTENT_DEFAULT = Constant.PREF_ORDER_CONTENT_TITLE_ALPHA;
         static final int PREF_ORDER_ATTRIBUTES_DEFAULT = Constant.PREF_ORDER_ATTRIBUTES_COUNT;
         static final boolean PREF_FIRST_RUN_DEFAULT = true;
-        static final boolean PREF_APP_LOCK_VIBRATE_DEFAULT = true;
         static final boolean PREF_ENDLESS_SCROLL_DEFAULT = true;
         static final boolean PREF_HIDE_RECENT_DEFAULT = (!BuildConfig.DEBUG); // Debug apps always visible to facilitate video capture
         static final int PREF_FOLDER_NAMING_CONTENT_DEFAULT = Constant.PREF_FOLDER_NAMING_CONTENT_AUTH_TITLE_ID;
@@ -221,9 +215,10 @@ public final class Preferences {
     // IMPORTANT : Any value change must be mirrored in res/values/array_preferences.xml
     public static final class Constant {
         public static final int DOWNLOAD_THREAD_COUNT_AUTO = 0;
-        public static final int PREF_ORDER_CONTENT_ALPHABETIC = 0;
+        public static final int PREF_ORDER_CONTENT_NONE = -1;
+        public static final int PREF_ORDER_CONTENT_TITLE_ALPHA = 0;
         public static final int PREF_ORDER_CONTENT_LAST_DL_DATE_FIRST = 1;
-        public static final int PREF_ORDER_CONTENT_ALPHABETIC_INVERTED = 2;
+        public static final int PREF_ORDER_CONTENT_TITLE_ALPHA_INVERTED = 2;
         public static final int PREF_ORDER_CONTENT_LAST_DL_DATE_LAST = 3;
         public static final int PREF_ORDER_CONTENT_RANDOM = 4;
         public static final int PREF_ORDER_CONTENT_LAST_UL_DATE_FIRST = 5;

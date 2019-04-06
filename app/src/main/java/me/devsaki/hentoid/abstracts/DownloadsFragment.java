@@ -31,12 +31,11 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
 import java.io.File;
-import java.io.IOException;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -47,13 +46,15 @@ import me.devsaki.hentoid.activities.ImportActivity;
 import me.devsaki.hentoid.activities.SearchActivity;
 import me.devsaki.hentoid.adapters.ContentAdapter;
 import me.devsaki.hentoid.collection.CollectionAccessor;
-import me.devsaki.hentoid.database.DatabaseCollectionAccessor;
+import me.devsaki.hentoid.database.ObjectBoxCollectionAccessor;
+import me.devsaki.hentoid.database.ObjectBoxDB;
 import me.devsaki.hentoid.database.domains.Attribute;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.enums.Language;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.events.DownloadEvent;
 import me.devsaki.hentoid.events.ImportEvent;
+import me.devsaki.hentoid.fragments.SearchBookIdDialogFragment;
 import me.devsaki.hentoid.listener.ContentListener;
 import me.devsaki.hentoid.listener.ItemClickListener.ItemSelectListener;
 import me.devsaki.hentoid.services.ContentQueueManager;
@@ -131,8 +132,6 @@ public abstract class DownloadsFragment extends BaseFragment implements ContentL
 
     // ======== UTIL OBJECTS
     private ObjectAnimator animator;
-    // Handler for text searches; needs to be there to be cancelable upon new key press
-    private final Handler searchHandler = new Handler();
 
     // ======== VARIABLES TAKEN FROM PREFERENCES / GLOBAL SETTINGS TO DETECT CHANGES
     // Books per page
@@ -165,9 +164,9 @@ public abstract class DownloadsFragment extends BaseFragment implements ContentL
     // Collection accessor (DB or external, depending on mode)
     private CollectionAccessor collectionAccessor;
     // Total count of book in entire selected/queried collection (Adapter is in charge of updating it)
-    private int mTotalSelectedCount = -1; // -1 = uninitialized (no query done yet)
+    private long mTotalSelectedCount = -1; // -1 = uninitialized (no query done yet)
     // Total count of book in entire collection (Adapter is in charge of updating it)
-    private int mTotalCount = -1; // -1 = uninitialized (no query done yet)
+    private long mTotalCount = -1; // -1 = uninitialized (no query done yet)
     // Used to ignore native calls to onQueryTextChange
     boolean invalidateNextQueryTextChange = false;
     // Used to detect if the library has been refreshed
@@ -290,6 +289,7 @@ public abstract class DownloadsFragment extends BaseFragment implements ContentL
     @Subscribe(sticky = true, threadMode = ThreadMode.MAIN)
     public void onImportEvent(ImportEvent event) {
         if (ImportEvent.EV_COMPLETE == event.eventType) {
+            EventBus.getDefault().removeStickyEvent(event);
             libraryHasBeenRefreshed = true;
             refreshedContentCount = event.booksOK;
         }
@@ -355,8 +355,7 @@ public abstract class DownloadsFragment extends BaseFragment implements ContentL
                         "Could not find library!\nPlease check your storage device.", Toast.LENGTH_LONG);
                 setQuery("      ");
 
-                Handler handler = new Handler();
-                handler.postDelayed(() -> {
+                new Handler().postDelayed(() -> {
                     FragmentActivity activity = requireActivity();
                     activity.finish();
                     Runtime.getRuntime().exit(0);
@@ -367,30 +366,13 @@ public abstract class DownloadsFragment extends BaseFragment implements ContentL
     }
 
     private void checkSDHealth() {
-        File file = new File(Preferences.getRootFolderName(), "test");
-        try (OutputStream output = FileHelper.getOutputStream(file)) {
-            // build
-            byte[] bytes = "test".getBytes();
-            // write
-            output.write(bytes);
-            FileHelper.sync(output);
-            output.flush();
-        } catch (NullPointerException npe) {
-            Timber.e(npe, "Invalid Stream");
+        if (!FileHelper.isWritable(new File(Preferences.getRootFolderName()))) {
             ToastUtil.toast(R.string.sd_access_error);
             new AlertDialog.Builder(requireActivity())
                     .setMessage(R.string.sd_access_fatal_error)
                     .setTitle("Error!")
                     .setPositiveButton(android.R.string.ok, null)
                     .show();
-        } catch (IOException e) {
-            Timber.e(e, "IOException while checking SD Health");
-        } finally {
-            // finished
-            // Ignore
-            if (file.exists()) {
-                Timber.d("Test file removed: %s", FileHelper.removeFile(file));
-            }
         }
     }
 
@@ -417,9 +399,13 @@ public abstract class DownloadsFragment extends BaseFragment implements ContentL
         outState.putInt(CURRENT_PAGE, currentPage);
         outState.putInt(MODE, mode);
 
-        ArrayList<Integer> selectedTagIds = new ArrayList<>();
-        for (Attribute a : selectedSearchTags) selectedTagIds.add(a.getId());
-        outState.putIntegerArrayList(SELECTED_TAGS, selectedTagIds);
+        long[] selectedTagIds = new long[selectedSearchTags.size()];
+        int index = 0;
+        for (Attribute a : selectedSearchTags) {
+            selectedTagIds[index++] = a.getId();
+        }
+        outState.putLongArray(SELECTED_TAGS, selectedTagIds);
+//        outState.putIntegerArrayList(SELECTED_TAGS, selectedTagIds);
     }
 
     @Override
@@ -432,10 +418,12 @@ public abstract class DownloadsFragment extends BaseFragment implements ContentL
             currentPage = state.getInt(CURRENT_PAGE);
             mode = state.getInt(MODE);
 
-            List<Integer> selectedTagIds = state.getIntegerArrayList(SELECTED_TAGS);
+            long[] selectedTagIds = state.getLongArray(SELECTED_TAGS);
+//            List<Integer> selectedTagIds = state.getIntegerArrayList(SELECTED_TAGS);
+            ObjectBoxDB db = ObjectBoxDB.getInstance(requireContext());
             if (selectedTagIds != null) {
-                for (Integer i : selectedTagIds) {
-                    Attribute a = getDB().selectAttributeById(i);
+                for (long i : selectedTagIds) {
+                    Attribute a = db.selectAttributeById(i);
                     if (a != null) {
                         selectedSearchTags.add(a);
                     }
@@ -459,6 +447,7 @@ public abstract class DownloadsFragment extends BaseFragment implements ContentL
     @Override
     public void onDestroy() {
         collectionAccessor.dispose();
+        mAdapter.dispose();
         super.onDestroy();
     }
 
@@ -466,7 +455,7 @@ public abstract class DownloadsFragment extends BaseFragment implements ContentL
     public View onCreateView(@NonNull LayoutInflater inflater, final ViewGroup container,
                              Bundle savedInstanceState) {
         if (this.getArguments() != null) mode = this.getArguments().getInt("mode");
-        collectionAccessor = new DatabaseCollectionAccessor(mContext);
+        collectionAccessor = new ObjectBoxCollectionAccessor(mContext);
 
         View rootView = inflater.inflate(R.layout.fragment_downloads, container, false);
 
@@ -495,10 +484,10 @@ public abstract class DownloadsFragment extends BaseFragment implements ContentL
             case Preferences.Constant.PREF_ORDER_CONTENT_LAST_DL_DATE_LAST:
                 comparator = Content.DLDATE_INV_COMPARATOR;
                 break;
-            case Preferences.Constant.PREF_ORDER_CONTENT_ALPHABETIC:
+            case Preferences.Constant.PREF_ORDER_CONTENT_TITLE_ALPHA:
                 comparator = Content.TITLE_ALPHA_COMPARATOR;
                 break;
-            case Preferences.Constant.PREF_ORDER_CONTENT_ALPHABETIC_INVERTED:
+            case Preferences.Constant.PREF_ORDER_CONTENT_TITLE_ALPHA_INVERTED:
                 comparator = Content.TITLE_ALPHA_INV_COMPARATOR;
                 break;
             case Preferences.Constant.PREF_ORDER_CONTENT_LAST_UL_DATE_FIRST:
@@ -691,7 +680,9 @@ public abstract class DownloadsFragment extends BaseFragment implements ContentL
 
                 // Re-sets the query on screen, since default behaviour removes it right after collapse _and_ expand
                 if (query != null && !query.isEmpty())
-                    searchHandler.postDelayed(() -> {
+                    // Use of handler allows to set the value _after_ the UI has auto-cleared it
+                    // Without that handler the view displays with an empty value
+                    new Handler().postDelayed(() -> {
                         invalidateNextQueryTextChange = true;
                         mainSearchView.setQuery(query, false);
                     }, 100);
@@ -754,10 +745,10 @@ public abstract class DownloadsFragment extends BaseFragment implements ContentL
             case Preferences.Constant.PREF_ORDER_CONTENT_LAST_DL_DATE_LAST:
                 orderMenu.setIcon(R.drawable.ic_menu_sort_by_date);
                 break;
-            case Preferences.Constant.PREF_ORDER_CONTENT_ALPHABETIC:
+            case Preferences.Constant.PREF_ORDER_CONTENT_TITLE_ALPHA:
                 orderMenu.setIcon(R.drawable.ic_menu_sort_alpha);
                 break;
-            case Preferences.Constant.PREF_ORDER_CONTENT_ALPHABETIC_INVERTED:
+            case Preferences.Constant.PREF_ORDER_CONTENT_TITLE_ALPHA_INVERTED:
                 orderMenu.setIcon(R.drawable.ic_menu_sort_za);
                 break;
             case Preferences.Constant.PREF_ORDER_CONTENT_LEAST_READ:
@@ -804,7 +795,7 @@ public abstract class DownloadsFragment extends BaseFragment implements ContentL
         switch (item.getItemId()) {
             case R.id.action_order_AZ:
                 cleanResults();
-                bookSortOrder = Preferences.Constant.PREF_ORDER_CONTENT_ALPHABETIC;
+                bookSortOrder = Preferences.Constant.PREF_ORDER_CONTENT_TITLE_ALPHA;
                 mAdapter.setSortComparator(Content.TITLE_ALPHA_COMPARATOR);
                 orderMenu.setIcon(R.drawable.ic_menu_sort_alpha);
                 searchLibrary(true);
@@ -822,7 +813,7 @@ public abstract class DownloadsFragment extends BaseFragment implements ContentL
                 break;
             case R.id.action_order_ZA:
                 cleanResults();
-                bookSortOrder = Preferences.Constant.PREF_ORDER_CONTENT_ALPHABETIC_INVERTED;
+                bookSortOrder = Preferences.Constant.PREF_ORDER_CONTENT_TITLE_ALPHA_INVERTED;
                 mAdapter.setSortComparator(Content.TITLE_ALPHA_INV_COMPARATOR);
                 orderMenu.setIcon(R.drawable.ic_menu_sort_za);
                 searchLibrary(true);
@@ -910,19 +901,12 @@ public abstract class DownloadsFragment extends BaseFragment implements ContentL
         favsMenu.setIcon(filterFavourites ? R.drawable.ic_fav_full : R.drawable.ic_fav_empty);
     }
 
-    private void submitContentSearchQuery(String s) {
-        submitContentSearchQuery(s, 0);
-    }
-
-    private void submitContentSearchQuery(final String s, long delay) {
+    private void submitContentSearchQuery(final String s) {
         query = s;
         selectedSearchTags.clear(); // If user searches in main toolbar, universal search takes over advanced search
-        searchHandler.removeCallbacksAndMessages(null);
-        searchHandler.postDelayed(() -> {
-            setQuery(s);
-            cleanResults();
-            searchLibrary(true);
-        }, delay);
+        setQuery(s);
+        cleanResults();
+        searchLibrary(true);
     }
 
     private void showReloadToolTip() {
@@ -1075,7 +1059,7 @@ public abstract class DownloadsFragment extends BaseFragment implements ContentL
 
     protected abstract void showToolbar(boolean show);
 
-    protected abstract void displayResults(List<Content> results, int totalSelectedContent);
+    protected abstract void displayResults(List<Content> results, long totalSelectedContent);
 
     /**
      * Indicates if current page is the last page of the library
@@ -1086,16 +1070,13 @@ public abstract class DownloadsFragment extends BaseFragment implements ContentL
         return (currentPage * booksPerPage >= mTotalSelectedCount);
     }
 
-    protected void displayNoResults() {
-        if (!isLoading && !("").equals(query)) {
+    private void displayNoResults() {
+        if (!query.isEmpty()) {
             emptyText.setText(R.string.search_entry_not_found);
-            toggleUI(SHOW_BLANK);
-        } else if (!isLoading) {
-            emptyText.setText((MODE_LIBRARY == mode) ? R.string.downloads_empty_library : R.string.downloads_empty_mikan);
-            toggleUI(SHOW_BLANK);
         } else {
-            Timber.w("Why are we in here?");
+            emptyText.setText((MODE_LIBRARY == mode) ? R.string.downloads_empty_library : R.string.downloads_empty_mikan);
         }
+        toggleUI(SHOW_BLANK);
     }
 
     /**
@@ -1104,9 +1085,14 @@ public abstract class DownloadsFragment extends BaseFragment implements ContentL
      */
     private void updateTitle() {
         if (MODE_LIBRARY == mode) {
-            if (mTotalSelectedCount == mTotalCount)
-                requireActivity().setTitle("(" + mTotalCount + ")");
-            else requireActivity().setTitle("(" + mTotalSelectedCount + "/" + mTotalCount + ")");
+            Activity activity = getActivity();
+            if (activity != null) { // Has to be crash-proof; sometimes there's no activity there...
+                String title;
+                if (mTotalSelectedCount == mTotalCount)
+                    title = "(" + mTotalCount + ")";
+                else title = "(" + mTotalSelectedCount + "/" + mTotalCount + ")";
+                activity.setTitle(title);
+            }
         }
     }
 
@@ -1114,11 +1100,12 @@ public abstract class DownloadsFragment extends BaseFragment implements ContentL
     ContentListener implementation
      */
     @Override
-    public void onContentReady(List<Content> results, int totalSelectedContent, int totalContent) {
+    public void onContentReady(List<Content> results, long totalSelectedContent, long totalContent) {
         Timber.d("Content results have loaded : %s results; %s total selected count, %s total count", results.size(), totalSelectedContent, totalContent);
         isLoading = false;
 
         if (isSearchQueryActive()) {
+            // Disable "New content" popup
             if (isNewContentAvailable) {
                 newContentToolTip.setVisibility(View.GONE);
                 isNewContentAvailable = false;
@@ -1126,13 +1113,27 @@ public abstract class DownloadsFragment extends BaseFragment implements ContentL
 
             filterBookCount.setText(String.format(getText(R.string.downloads_filter_book_count).toString(), totalSelectedContent + "", (1 == totalSelectedContent) ? "" : "s"));
             filterBar.setVisibility(View.VISIBLE);
-            if (totalSelectedContent > 0) searchMenu.collapseActionView();
+            if (totalSelectedContent > 0 && searchMenu != null) searchMenu.collapseActionView();
         } else {
             filterBar.setVisibility(View.GONE);
         }
 
-        // Display new results
-        displayResults(results, totalSelectedContent);
+        if (Helper.isNumeric(query)) // User searches a book ID
+        {
+            // List sites of book ID
+            List<Integer> foundSideCodes = new ArrayList<>();
+            for (Content c : results)
+                if (!foundSideCodes.contains(c.getSite().getCode()))
+                    foundSideCodes.add(c.getSite().getCode());
+
+            SearchBookIdDialogFragment.invoke(requireActivity().getSupportFragmentManager(), query, foundSideCodes);
+        }
+
+        if (0 == totalSelectedContent) {
+            displayNoResults();
+        } else {
+            displayResults(results, totalSelectedContent);
+        }
 
         mTotalSelectedCount = totalSelectedContent;
         mTotalCount = totalContent;

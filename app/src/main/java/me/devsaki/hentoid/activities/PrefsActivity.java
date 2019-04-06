@@ -15,12 +15,11 @@ import org.greenrobot.eventbus.ThreadMode;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.abstracts.BaseActivity;
 import me.devsaki.hentoid.events.ImportEvent;
-import me.devsaki.hentoid.fragments.LibRefreshLauncher;
+import me.devsaki.hentoid.fragments.LibRefreshDialogFragment;
 import me.devsaki.hentoid.services.ImportService;
 import me.devsaki.hentoid.services.UpdateCheckService;
 import me.devsaki.hentoid.services.UpdateDownloadService;
 import me.devsaki.hentoid.util.FileHelper;
-import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.util.ToastUtil;
 
@@ -60,10 +59,9 @@ public class PrefsActivity extends BaseActivity {
 
     @Subscribe(sticky = true, threadMode = ThreadMode.MAIN)
     public void onImportEventComplete(ImportEvent event) {
-        if (ImportEvent.EV_COMPLETE == event.eventType && event.cleanupLogFile != null)
-        {
+        if (ImportEvent.EV_COMPLETE == event.eventType && event.logFile != null) {
             Snackbar snackbar = Snackbar.make(this.findViewById(android.R.id.content), R.string.cleanup_done, Snackbar.LENGTH_LONG);
-            snackbar.setAction("READ LOG", v -> FileHelper.openFile(this, event.cleanupLogFile) );
+            snackbar.setAction("READ LOG", v -> FileHelper.openFile(this, event.logFile));
             snackbar.show();
         }
     }
@@ -85,7 +83,7 @@ public class PrefsActivity extends BaseActivity {
                         .setOnPreferenceChangeListener((preference, newValue) -> onPrefRequiringRestartChanged());
 
                 findPreference(Preferences.Key.PREF_APP_LOCK)
-                        .setOnPreferenceChangeListener((preference, newValue) -> onAppLockPinChanged(newValue));
+                        .setOnPreferenceClickListener(preference -> onAppLockPreferenceClick());
             }
         }
 
@@ -103,7 +101,7 @@ public class PrefsActivity extends BaseActivity {
                     if (ImportService.isRunning()) {
                         ToastUtil.toast("Import is already running");
                     } else {
-                        LibRefreshLauncher.invoke(requireFragmentManager());
+                        LibRefreshDialogFragment.invoke(requireFragmentManager());
                     }
                     return true;
                 default:
@@ -117,12 +115,13 @@ public class PrefsActivity extends BaseActivity {
             args.putString(PreferenceFragmentCompat.ARG_PREFERENCE_ROOT, preferenceScreen.getKey());
 
             MyPreferenceFragment preferenceFragment = new MyPreferenceFragment();
+
             preferenceFragment.setArguments(args);
 
             requireFragmentManager()
                     .beginTransaction()
                     .replace(android.R.id.content, preferenceFragment)
-                    .addToBackStack(null)
+                    .addToBackStack(null) // This triggers a memory leak in LeakCanary but is _not_ a leak : see https://stackoverflow.com/questions/27913009/memory-leak-in-fragmentmanager
                     .commit();
         }
 
@@ -139,13 +138,9 @@ public class PrefsActivity extends BaseActivity {
             return true;
         }
 
-        private boolean onAppLockPinChanged(Object newValue) {
-            String pin = (String) newValue;
-            if (pin.isEmpty()) {
-                ToastUtil.toast(getActivity(), R.string.app_lock_disabled);
-            } else {
-                ToastUtil.toast(getActivity(), R.string.app_lock_enable);
-            }
+        private boolean onAppLockPreferenceClick() {
+            Intent intent = new Intent(requireContext(), PinPreferenceActivity.class);
+            startActivity(intent);
             return true;
         }
     }

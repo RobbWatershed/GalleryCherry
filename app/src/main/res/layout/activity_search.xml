@@ -25,33 +25,31 @@
         android:layout_height="48dp"
         android:background="@color/primary"
         android:gravity="center"
-        android:text="Select a filter"
+        android:text="@string/search_select_a_filter"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/search_toolbar" />
 
-    <com.google.android.flexbox.FlexboxLayout
+    <android.support.v7.widget.RecyclerView
         android:id="@+id/search_tags"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:minHeight="48dp"
+        android:textIsSelectable="false"
+        android:orientation="horizontal"
         android:background="@color/primary"
         android:paddingLeft="8dp"
         android:paddingStart="8dp"
         android:paddingBottom="8dp"
-        app:flexWrap="wrap"
-        app:flexDirection="row"
-        app:alignItems="baseline"
-        app:alignContent="flex_start"
+        android:paddingRight="8dp"
+        android:paddingEnd="8dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/startCaption"
-        tools:ignore="RtlSymmetry"
         android:visibility="gone">
 
         <!-- programmatically added selected metadata here -->
 
-    </com.google.android.flexbox.FlexboxLayout>
+    </android.support.v7.widget.RecyclerView>
 
     <android.support.constraint.Guideline
         android:id="@+id/guidelineMiddle"
@@ -62,7 +60,7 @@
 
     <TextView
         android:id="@+id/textCategoryAny"
-        style="@style/LargeItem"
+        style="@style/SearchCategoryButton"
         android:text="@string/category_any"
         android:layout_marginStart="8dp"
         android:layout_marginLeft="8dp"
@@ -75,7 +73,7 @@
 
     <TextView
         android:id="@+id/textCategoryTag"
-        style="@style/LargeItem"
+        style="@style/SearchCategoryButton"
         android:text="@string/category_tag"
         android:layout_marginStart="4dp"
         android:layout_marginLeft="4dp"
@@ -88,7 +86,7 @@
 
     <TextView
         android:id="@+id/textCategoryModel"
-        style="@style/LargeItem"
+        style="@style/SearchCategoryButton"
         android:text="@string/category_model"
         android:layout_marginStart="8dp"
         android:layout_marginLeft="8dp"
@@ -102,7 +100,7 @@
 
     <TextView
         android:id="@+id/textCategorySource"
-        style="@style/LargeItem"
+        style="@style/SearchCategoryButton"
         android:text="@string/category_source"
         android:layout_marginStart="8dp"
         android:layout_marginLeft="8dp"

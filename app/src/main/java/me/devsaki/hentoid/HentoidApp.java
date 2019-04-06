@@ -3,23 +3,22 @@ package me.devsaki.hentoid;
 import android.app.Application;
 import android.app.NotificationManager;
 import android.content.Context;
+import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.StrictMode;
 
 import com.crashlytics.android.Crashlytics;
-import com.facebook.stetho.Stetho;
 import com.google.android.gms.security.ProviderInstaller;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.squareup.leakcanary.LeakCanary;
 
-import java.util.List;
-
 import io.fabric.sdk.android.Fabric;
+import me.devsaki.hentoid.database.DatabaseMaintenance;
 import me.devsaki.hentoid.database.HentoidDB;
-import me.devsaki.hentoid.database.domains.Content;
-import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.notification.download.DownloadNotificationChannel;
 import me.devsaki.hentoid.notification.update.UpdateNotificationChannel;
+import me.devsaki.hentoid.services.DatabaseMaintenanceService;
 import me.devsaki.hentoid.services.UpdateCheckService;
 import me.devsaki.hentoid.timber.CrashlyticsTree;
 import me.devsaki.hentoid.util.Preferences;
@@ -88,9 +87,11 @@ public class HentoidApp extends Application {
         FirebaseAnalytics.getInstance(this).setAnalyticsCollectionEnabled(!isAnalyticsDisabled);
 
         // Stetho
+/*
         if (BuildConfig.DEBUG) {
             Stetho.initializeWithDefaults(this);
         }
+*/
 
         StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
         StrictMode.setThreadPolicy(policy);
@@ -112,28 +113,13 @@ public class HentoidApp extends Application {
      * Clean up and upgrade database
      */
     private void performDatabaseHousekeeping() {
-        HentoidDB db = HentoidDB.getInstance(this);
-        Timber.d("Content item(s) count: %s", db.countContentEntries());
+        HentoidDB oldDB = HentoidDB.getInstance(this);
 
-        // Set items that were being downloaded in previous session as paused
-        db.updateContentStatus(StatusContent.DOWNLOADING, StatusContent.PAUSED);
+        // Perform technical data updates that need to be done before app launches
+        DatabaseMaintenance.performOldDatabaseUpdate(oldDB);
 
-        // Clear temporary books created from browsing a book page without downloading it
-        List<Content> obsoleteTempContent = db.selectContentByStatus(StatusContent.SAVED);
-        for (Content c : obsoleteTempContent) db.deleteContent(c);
-
-        // Perform technical data updates
-        UpgradeTo(BuildConfig.VERSION_CODE, db);
-    }
-
-    /**
-     * Handles complex DB version updates at startup
-     *
-     * @param versionCode Current app version
-     * @param db          Hentoid DB
-     */
-    @SuppressWarnings("deprecation")
-    private void UpgradeTo(int versionCode, HentoidDB db) {
-        // Nothing here, new app !
+        // Launch a service that will perform non-structural DB housekeeping tasks
+        Intent intent = DatabaseMaintenanceService.makeIntent(this);
+        startService(intent);
     }
 }

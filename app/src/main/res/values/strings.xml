@@ -40,6 +40,7 @@
     <string name="queue_paused">Queue paused</string>
     <string name="queue_preparing">Preparing download</string>
     <string name="queue_dl">Downloading {0}</string>
+    <string name="err_stats_title">Error stats</string>
     <!-- TextViews -->
     <string name="work_untitled" translatable="false">[No data]</string>
     <string name="work_series"><![CDATA[<b>Series:</b> @series@]]></string>
@@ -54,7 +55,7 @@
     <string name="cleanup_folders">Do you want to cleanup your library while refreshing ?\nCleanup removes all empty folders and renames the others according to the current naming and max length preference.</string>
     <string name="action_refresh">Just refresh</string>
     <string name="action_refresh_cleanup">Refresh and cleanup</string>
-    <string name="cleanup_done">Cleanup complete - see details in the log</string>
+    <string name="cleanup_done">Task complete - see details in the log</string>
     <string name="contents_detected">GalleryCherry has recognized an existing library in this location.\nDo you want to import this library?</string>
     <string name="import_dialog">Importing Library</string>
     <string name="add_dialog">Adding files to DB</string>
@@ -70,8 +71,10 @@
     <string name="error_open_perfect_viewer">Error opening Perfect Viewer!\nYou can install it from Google Play.</string>
     <string name="error_open">Error opening image : no image viewer found.</string>
 
-    <string name="download_again_dialog_title">Try downloading again?</string>
-    <string name="download_again_dialog_message">Total images in download: @total\nImages without error: @clean\nImages with error: @error</string>
+    <string name="redownload_dialog_title">Try downloading again?</string>
+    <string name="redownload_dialog_message">Total images in download: @total\nImages without error: @clean\nImages with error: @error</string>
+    <string name="redownload_view_log">View detailed error log</string>
+    <string name="redownload_log_saved">Log saved</string>
     <string name="ask_delete">Are you sure you wish to delete this?</string>
     <string name="ask_delete_multiple">Are you sure you wish to delete the selected items?</string>
     <string name="deleted">\@content deleted.</string>
@@ -96,6 +99,8 @@
     <string name="sd_access_fatal_error">GalleryCherry has detected an SD Card that is reporting errors.\nPlease perform a file check or replace the SD Card.</string>
     <string name="downloads_filter_book_count">%s result%s</string>
     <string name="downloads_filter_clear">CLEAR</string>
+    <string name="search_bookid_label">Search \'%s\' in…</string>
+    <string name="search_bookid_action_search">Search</string>
 
     <string name="reset">Permissions has been reset.\nResetting app.</string>
     <string name="restart_needed">"Changes will be applied after GalleryCherry is restarted"</string>
@@ -114,12 +119,15 @@
     <string name="open_perfect_viewer">Perfect Viewer</string>
     <string name="image_file_not_found">File not found in @dir</string>
     <!-- App Lock -->
-    <string name="app_lock_pin">Type PIN to unlock</string>
+    <string name="app_lock_pin">Enter PIN</string>
     <string name="app_lock_pin_prefs">App Lock PIN</string>
     <string name="app_lock_enable">App Lock Enabled</string>
     <string name="app_lock_disabled">App Lock Disabled</string>
-    <string name="pin_invalid">PIN Invalid!</string>
+    <string name="pin_reset">Pin has been reset</string>
     <string name="pin_ok">PIN OK!</string>
+    <string name="pin_current">Enter Current PIN</string>
+    <string name="pin_new">Enter New PIN</string>
+    <string name="pin_new_confirm">Confirm New PIN</string>
     <!-- About Activity -->
     <string name="about1"><b>GalleryCherry</b> is a XXX galleries archiving app. GalleryCherry is a fork from Hentoid, originally created by <b>Cesar Arasaki</b>.</string>
     <string name="personalDataStatement1"><b>PERSONAL DATA PRIVACY STATEMENT</b>\n\GalleryCherry is a free and open-source software maintained by the GalleryCherry Community (join us on Discord - see link above)</string>
@@ -144,4 +152,8 @@
     <string name="category_source">Source (%1$d)</string>
     <string name="category_model">Model (%1$d)</string>
     <string name="search_button">%1 Result%2 found</string>
+    <string name="search_select_a_filter">Select a filter</string>
+
+    <!-- DB migration -->
+    <string name="migrate_db">Migrating the database</string>
 </resources>

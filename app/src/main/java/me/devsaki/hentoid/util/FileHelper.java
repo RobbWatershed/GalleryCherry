@@ -26,10 +26,15 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
+import javax.annotation.Nonnull;
+
+import io.reactivex.Completable;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.schedulers.Schedulers;
 import me.devsaki.hentoid.BuildConfig;
 import me.devsaki.hentoid.HentoidApp;
 import me.devsaki.hentoid.R;
-import me.devsaki.hentoid.database.HentoidDB;
+import me.devsaki.hentoid.database.ObjectBoxDB;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.enums.Site;
 import timber.log.Timber;
@@ -60,7 +65,7 @@ public class FileHelper {
     }
 
     public static boolean isSAF() {
-        return Preferences.getSdStorageUri() != null && !Preferences.getSdStorageUri().equals("");
+        return !Preferences.getSdStorageUri().isEmpty();
     }
 
     /**
@@ -120,7 +125,54 @@ public class FileHelper {
             }
         }
 
-        return paths.toArray(new String[paths.size()]);
+        return paths.toArray(new String[0]);
+    }
+
+    /**
+     * Check if a file or directory is writable.
+     * Detects write issues on external SD card.
+     *
+     * @param file The file or directory.
+     * @return true if the file or directory is writable.
+     */
+    public static boolean isWritable(@NonNull final File file) {
+
+        if (file.isDirectory()) return isDirectoryWritable(file);
+        else return isFileWritable(file);
+    }
+
+    /**
+     * Check if a directory is writable.
+     * Detects write issues on external SD card.
+     *
+     * @param file The directory.
+     * @return true if the directory is writable.
+     */
+    private static boolean isDirectoryWritable(@NonNull final File file) {
+        File testFile = new File(file, "test.txt");
+
+        boolean hasPermission = false;
+
+        try {
+            hasPermission = FileUtil.makeFile(testFile);
+            if (hasPermission)
+                try (OutputStream output = FileHelper.getOutputStream(testFile)) {
+                    output.write("test".getBytes());
+                    sync(output);
+                    output.flush();
+                } catch (NullPointerException npe) {
+                    Timber.e(npe, "Invalid Stream");
+                    hasPermission = false;
+                } catch (IOException e) {
+                    Timber.e(e, "IOException while checking permissions on %s", file.getAbsolutePath());
+                    hasPermission = false;
+                }
+        } finally {
+            if (testFile.exists()) {
+                removeFile(testFile);
+            }
+        }
+        return hasPermission;
     }
 
     /**
@@ -130,7 +182,7 @@ public class FileHelper {
      * @param file The file.
      * @return true if the file is writable.
      */
-    public static boolean isWritable(@NonNull final File file) {
+    private static boolean isFileWritable(@NonNull final File file) {
         if (!file.canWrite()) return false;
 
         // Ensure that it is indeed writable by opening an output stream
@@ -156,7 +208,7 @@ public class FileHelper {
      * @param stream - OutputStream
      * @return true if all OK.
      */
-    public static boolean sync(@NonNull final OutputStream stream) {
+    static boolean sync(@NonNull final OutputStream stream) {
         return (stream instanceof FileOutputStream) && FileUtil.sync((FileOutputStream) stream);
     }
 
@@ -166,7 +218,7 @@ public class FileHelper {
      * @param target The file.
      * @return FileOutputStream.
      */
-    public static OutputStream getOutputStream(@NonNull final File target) throws IOException {
+    static OutputStream getOutputStream(@NonNull final File target) throws IOException {
         return FileUtil.getOutputStream(target);
     }
 
@@ -178,7 +230,7 @@ public class FileHelper {
      * Create a folder.
      *
      * @param file The folder to be created.
-     * @return true if creation was successful.
+     * @return true if creation was successful or the folder already exists
      */
     public static boolean createDirectory(@NonNull File file) {
         return FileUtil.makeDir(file);
@@ -221,7 +273,7 @@ public class FileHelper {
      */
     private static boolean tryCleanDirectory(@NonNull File directory) throws IOException, SecurityException {
         File[] files = directory.listFiles();
-        if (files == null) throw new IOException("Failed to list contents of " + directory);
+        if (files == null) throw new IOException("Failed to list content of " + directory);
 
         boolean isSuccess = true;
 
@@ -233,12 +285,13 @@ public class FileHelper {
         return isSuccess;
     }
 
-    public static boolean validateFolder(String folder) {
-        return validateFolder(folder, false);
+    public static boolean checkAndSetRootFolder(String folder) {
+        return checkAndSetRootFolder(folder, false);
     }
 
-    public static boolean validateFolder(String folder, boolean notify) {
+    public static boolean checkAndSetRootFolder(String folder, boolean notify) {
         Context context = HentoidApp.getAppContext();
+
         // Validate folder
         File file = new File(folder);
         if (!file.exists() && !file.isDirectory() && !FileUtil.makeDir(file)) {
@@ -300,9 +353,9 @@ public class FileHelper {
             File dir = new File(settingDir, content.getStorageFolder());
 
             if (deleteQuietly(dir) || FileUtil.deleteWithSAF(dir)) {
-                Timber.d("Directory %s removed.", dir);
+                Timber.i("Directory %s removed.", dir);
             } else {
-                Timber.d("Failed to delete directory: %s", dir);
+                Timber.w("Failed to delete directory: %s", dir);
             }
         }
     }
@@ -405,6 +458,29 @@ public class FileHelper {
     }
 
     /**
+     * Recursively search for files of a given type from a base directory
+     *
+     * @param workingDir the base directory
+     * @return list containing all files with matching extension
+     */
+    public static List<File> findFilesRecursively(File workingDir, String extension) {
+        return findFilesRecursively(workingDir, extension, 0);
+    }
+    private static List<File> findFilesRecursively(File workingDir, String extension, int depth) {
+        List<File> files = new ArrayList<>();
+        File[] baseDirs = workingDir.listFiles(pathname -> (pathname.isDirectory() || pathname.getName().toLowerCase().endsWith(extension)));
+
+        for (File entry : baseDirs) {
+            if (entry.isDirectory()) {
+                if (depth < 6) files.addAll(findFilesRecursively(entry, extension, depth + 1)); // Hard recursive limit to avoid catastrophes
+            } else {
+                files.add(entry);
+            }
+        }
+        return files;
+    }
+
+    /**
      * Method is used by onBindViewHolder(), speed is key
      */
     public static String getThumb(Content content) {
@@ -434,7 +510,7 @@ public class FileHelper {
         String rootFolderName = Preferences.getRootFolderName();
         File dir = new File(rootFolderName, content.getStorageFolder());
 
-        Timber.d("Opening: " + content.getTitle() + " from: " + dir);
+        Timber.d("Opening: %s from: %s", content.getTitle(), dir);
         if (isSAF() && getExtSdCardFolder(new File(rootFolderName)) == null) {
             Timber.d("File not found!! Exiting method.");
             ToastUtil.toast(R.string.sd_access_error);
@@ -470,14 +546,25 @@ public class FileHelper {
             }
         }
 
-        HentoidDB db = HentoidDB.getInstance(context);
-        content.increaseReads().setLastReadDate(new Date().getTime());
-        db.updateContentReads(content);
+        // TODO - properly dispose this Completable (for best practices' sake, even though it hasn't triggered any leak so far)
+        Completable.fromRunnable(() -> updateContentReads(context, content.getId(), dir))
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe();
+    }
 
-        try {
-            JsonHelper.saveJson(content, dir);
-        } catch (IOException e) {
-            Timber.e(e, "Error while writing to %s", dir.getAbsolutePath());
+    private static void updateContentReads(Context context, long contentId, File dir) {
+        ObjectBoxDB db = ObjectBoxDB.getInstance(context);
+        Content content = db.selectContentById(contentId);
+        if (content != null) {
+            content.increaseReads().setLastReadDate(new Date().getTime());
+            db.updateContentReads(content);
+
+            try {
+                JsonHelper.saveJson(content.preJSONExport(), dir);
+            } catch (IOException e) {
+                Timber.e(e, "Error while writing to %s", dir.getAbsolutePath());
+            }
         }
     }
 
@@ -512,9 +599,11 @@ public class FileHelper {
             Intent intent = context
                     .getPackageManager()
                     .getLaunchIntentForPackage("com.rookiestudio.perfectviewer");
-            intent.setAction(Intent.ACTION_VIEW);
-            intent.setDataAndType(Uri.fromFile(firstImage), "image/*");
-            context.startActivity(intent);
+            if (intent != null) {
+                intent.setAction(Intent.ACTION_VIEW);
+                intent.setDataAndType(Uri.fromFile(firstImage), "image/*");
+                context.startActivity(intent);
+            }
         } catch (Exception e) {
             ToastUtil.toast(context, R.string.error_open_perfect_viewer);
         }
@@ -566,7 +655,7 @@ public class FileHelper {
             Timber.d("Destination file: %s", dest);
 
             // Convert ArrayList to Array
-            File[] fileArray = fileList.toArray(new File[fileList.size()]);
+            File[] fileArray = fileList.toArray(new File[0]);
             // Compress files
             new AsyncUnzip(context, dest).execute(fileArray, dest);
         }
@@ -661,4 +750,14 @@ public class FileHelper {
             context.startActivity(sendIntent);
         }
     }
+
+    // Please keep that, I need some way to trace actions when working with SD card features - Robb
+    public static void createFileWithMsg(@Nonnull String file, String msg) {
+        try {
+            FileHelper.saveBinaryInFile(new File(getDefaultDir(HentoidApp.getAppContext(), ""), file + ".txt"), (null == msg) ? "NULL".getBytes() : msg.getBytes());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
 }

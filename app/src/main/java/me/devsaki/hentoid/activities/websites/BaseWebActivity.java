@@ -7,10 +7,10 @@ import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.support.annotation.DrawableRes;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.widget.SwipeRefreshLayout;
-import android.util.Pair;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -36,8 +36,10 @@ import me.devsaki.hentoid.HentoidApp;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.abstracts.BaseActivity;
 import me.devsaki.hentoid.activities.DownloadsActivity;
-import me.devsaki.hentoid.database.HentoidDB;
+import me.devsaki.hentoid.activities.QueueActivity;
+import me.devsaki.hentoid.database.ObjectBoxDB;
 import me.devsaki.hentoid.database.domains.Content;
+import me.devsaki.hentoid.database.domains.QueueRecord;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.listener.ResultListener;
@@ -63,19 +65,24 @@ import timber.log.Timber;
  */
 public abstract class BaseWebActivity extends BaseActivity implements ResultListener<Content> {
 
+    protected static final int MODE_DL = 0;
+    protected static final int MODE_QUEUE = 1;
+    protected static final int MODE_READ = 2;
+
     // UI
-    protected ObservableWebView webView;                                              // Associated webview
-    private FloatingActionButton fabRead, fabDownload, fabRefreshOrStop, fabHome;   // Action buttons
+    protected ObservableWebView webView;                                                // Associated webview
+    private FloatingActionButton fabAction, fabRefreshOrStop, fabHome;       // Action buttons
     private SwipeRefreshLayout swipeLayout;
 
     // Content currently viewed
     private Content currentContent;
     // Database
-    private HentoidDB db;
+    private ObjectBoxDB db;
     // Indicates if webView is loading
     private boolean webViewIsLoading;
-    // Indicates if corresponding action buttons are enabled
-    private boolean fabReadEnabled, fabDownloadEnabled;
+    // Indicated which mode the download FAB is in
+    protected int fabActionMode;
+    private boolean fabActionEnabled;
 
     protected CustomWebViewClient webClient;
 
@@ -97,6 +104,11 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
         universalBlockedContent.add("bebi.com");
         universalBlockedContent.add("aftv-serving.bid");
         universalBlockedContent.add("smatoo.net");
+        universalBlockedContent.add("adtng.net");
+        universalBlockedContent.add("adtng.com");
+        universalBlockedContent.add("popads.net");
+        universalBlockedContent.add("adsco.re");
+        universalBlockedContent.add("ads.exosrv.com");
     }
 
     protected abstract CustomWebViewClient getWebClient();
@@ -109,7 +121,7 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
     /**
      * Add an content block filter to current site
      *
-     * @param filter Filter to add to content block system
+     * @param filter Filter to addAll to content block system
      */
     protected void addContentBlockFilter(String[] filter) {
         if (null == localBlockedContent) localBlockedContent = new ArrayList<>();
@@ -122,7 +134,7 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
 
         setContentView(R.layout.activity_base_web);
 
-        db = HentoidDB.getInstance(this);
+        db = ObjectBoxDB.getInstance(this);
 
         if (getStartSite() == null) {
             Timber.w("Site is null!");
@@ -130,13 +142,11 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
             Timber.d("Loading site: %s", getStartSite());
         }
 
-        fabRead = findViewById(R.id.fabRead);
-        fabDownload = findViewById(R.id.fabDownload);
+        fabAction = findViewById(R.id.fabAction);
         fabRefreshOrStop = findViewById(R.id.fabRefreshStop);
         fabHome = findViewById(R.id.fabHome);
 
-        hideFab(fabRead);
-        hideFab(fabDownload);
+        fabActionEnabled = false;
 
         initWebView();
         initSwipeLayout();
@@ -204,16 +214,11 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
                 if (webView.canScrollVertically(1) || t == 0) {
                     fabRefreshOrStop.show();
                     fabHome.show();
-                    if (fabReadEnabled) {
-                        fabRead.show();
-                    } else if (fabDownloadEnabled) {
-                        fabDownload.show();
-                    }
+                    if (fabActionEnabled) fabAction.show();
                 } else {
                     fabRefreshOrStop.hide();
                     fabHome.hide();
-                    fabRead.hide();
-                    fabDownload.hide();
+                    fabAction.hide();
                 }
             }
         });
@@ -297,88 +302,89 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
     }
 
     /**
-     * Listener for Read floating action button : open content when it is already part of the library
+     * Listener for Action floating action button : download content, view queue or read content
      *
      * @param view Calling view (part of the mandatory signature)
      */
-    public void onReadFabClick(View view) {
-        if (currentContent != null) {
-            currentContent = db.selectContentById(currentContent.getId());
+    public void onActionFabClick(View view) {
+        if (MODE_DL == fabActionMode) processDownload();
+        else if (MODE_QUEUE == fabActionMode) goToQueue();
+        else if (MODE_READ == fabActionMode)
+        {
             if (currentContent != null) {
-                if (StatusContent.DOWNLOADED == currentContent.getStatus()
-                        || StatusContent.ERROR == currentContent.getStatus()) {
-                    FileHelper.openContent(this, currentContent);
-                } else {
-                    hideFab(fabRead);
+                currentContent = db.selectContentByUrl(currentContent.getUrl());
+                if (currentContent != null) {
+                    if (StatusContent.DOWNLOADED == currentContent.getStatus()
+                            || StatusContent.ERROR == currentContent.getStatus()
+                            || StatusContent.MIGRATED == currentContent.getStatus())
+                    {
+                        FileHelper.openContent(this, currentContent);
+                    } else {
+                        fabAction.hide();
+                    }
                 }
             }
         }
     }
 
-    /**
-     * Listener for Download floating action button : start content download
-     *
-     * @param view Calling view (part of the mandatory signature)
-     */
-    public void onDownloadFabClick(View view) {
-        processDownload();
+    private void changeFabActionMode(int mode)
+    {
+        @DrawableRes int resId = R.drawable.ic_menu_about;
+        if (MODE_DL == mode) {
+            resId = R.drawable.ic_action_download;
+        }
+        else if (MODE_QUEUE == mode) {
+            resId = R.drawable.ic_queued;
+        }
+        else if (MODE_READ == mode)
+        {
+            resId = R.drawable.ic_action_play;
+        }
+        fabActionMode = mode;
+        fabAction.setImageResource(resId);
+        fabActionEnabled = true;
+        fabAction.show();
     }
 
     /**
      * Add current content (i.e. content of the currently viewed book) to the download queue
      */
     void processDownload() {
-        currentContent = db.selectContentById(currentContent.getId());
+        if (null == currentContent) return;
+
+        if (currentContent.getId() > 0) currentContent = db.selectContentById(currentContent.getId());
+
         if (currentContent != null && StatusContent.DOWNLOADED == currentContent.getStatus()) {
             ToastUtil.toast(this, R.string.already_downloaded);
-            hideFab(fabDownload);
-
+            changeFabActionMode(MODE_READ);
             return;
         }
         ToastUtil.toast(this, R.string.add_to_queue);
 
         currentContent.setDownloadDate(new Date().getTime())
                 .setStatus(StatusContent.DOWNLOADING);
-        db.updateContentStatus(currentContent);
+        db.insertContent(currentContent);
 
-        List<Pair<Integer, Integer>> queue = db.selectQueue();
+        List<QueueRecord> queue = db.selectQueue();
         int lastIndex = 1;
         if (queue.size() > 0) {
-            lastIndex = queue.get(queue.size() - 1).second + 1;
+            lastIndex = queue.get(queue.size() - 1).rank + 1;
         }
         db.insertQueue(currentContent.getId(), lastIndex);
 
         ContentQueueManager.getInstance().resumeQueue(this);
 
-        hideFab(fabDownload);
+        changeFabActionMode(MODE_QUEUE);
     }
 
-    /**
-     * Hide designated Floating Action Button
-     *
-     * @param fab Reference to the floating action button to hide
-     */
-    private void hideFab(FloatingActionButton fab) {
-        fab.hide();
-        if (fab.equals(fabDownload)) {
-            fabDownloadEnabled = false;
-        } else if (fab.equals(fabRead)) {
-            fabReadEnabled = false;
-        }
-    }
-
-    /**
-     * Show designated Floating Action Button
-     *
-     * @param fab Reference to the floating action button to show
-     */
-    private void showFab(FloatingActionButton fab) {
-        fab.show();
-        if (fab.equals(fabDownload)) {
-            fabDownloadEnabled = true;
-        } else if (fab.equals(fabRead)) {
-            fabReadEnabled = true;
-        }
+    private void goToQueue() {
+        Intent intent = new Intent(this, QueueActivity.class);
+        // If FLAG_ACTIVITY_CLEAR_TOP is not set,
+        // it can interfere with Double-Back (press back twice) to exit
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        startActivity(intent);
+        overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
+        finish();
     }
 
     @Override
@@ -413,48 +419,38 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
             return;
         }
 
-        addContentToDB(content);
+        Timber.i("Content URL : %s", content.getUrl());
+        Content contentDB = db.selectContentByUrl(content.getUrl());
         Timber.i(">>> Adding to DB content %s @ %s", content.getTitle(), content.getUrl());
 
-        // Set Download action button visibility
-        StatusContent contentStatus = content.getStatus();
-        if (contentStatus != StatusContent.DOWNLOADED
-                && contentStatus != StatusContent.DOWNLOADING
-                && contentStatus != StatusContent.MIGRATED) {
-            currentContent = content;
-            runOnUiThread(() -> showFab(fabDownload));
-        } else {
-            runOnUiThread(() -> hideFab(fabDownload));
+        boolean isInCollection = (contentDB != null && (
+                contentDB.getStatus().equals(StatusContent.DOWNLOADED)
+                        || contentDB.getStatus().equals(StatusContent.MIGRATED)
+                        || contentDB.getStatus().equals(StatusContent.ERROR)
+        ));
+        boolean isInQueue = (contentDB != null && (
+                contentDB.getStatus().equals(StatusContent.DOWNLOADING)
+                        || contentDB.getStatus().equals(StatusContent.PAUSED)
+        ));
+
+        if (!isInCollection && !isInQueue) {
+            if (null == contentDB) {    // The book has just been detected -> finalize before saving in DB
+                content.setStatus(StatusContent.SAVED);
+                content.populateAuthor();
+                db.insertContent(content);
+            } else {
+                content = contentDB;
+            }
+            changeFabActionMode(MODE_DL);
         }
 
-        // Set Read action button visibility
-        if (contentStatus == StatusContent.DOWNLOADED
-                || contentStatus == StatusContent.MIGRATED
-                || contentStatus == StatusContent.ERROR) {
-            currentContent = content;
-            runOnUiThread(() -> showFab(fabRead));
-        } else {
-            runOnUiThread(() -> hideFab(fabRead));
-        }
+        if (isInCollection) changeFabActionMode(MODE_READ);
+        if (isInQueue) changeFabActionMode(MODE_QUEUE);
+
+        currentContent = content;
     }
 
-    /**
-     * Add designated Content to the Hentoid DB
-     *
-     * @param content Content to be added to the DB
-     */
-    private void addContentToDB(Content content) {
-        Content contentDB = db.selectContentById(content.getUrl().hashCode());
-        if (contentDB != null) {
-            content.setStatus(contentDB.getStatus())
-                    .setImageFiles(contentDB.getImageFiles())
-                    .setStorageFolder(contentDB.getStorageFolder())
-                    .setDownloadDate(contentDB.getDownloadDate());
-        }
-        db.insertContent(content);
-    }
-
-    public void onResultReady(Content results, int totalContent) {
+    public void onResultReady(Content results, long totalContent) {
         processContent(results);
     }
 
@@ -467,18 +463,20 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
 
         private List<String> domainNames = new ArrayList<>();
         private final String filteredUrl;
-        CompositeDisposable compositeDisposable = new CompositeDisposable();
+        protected final CompositeDisposable compositeDisposable = new CompositeDisposable();
         protected final ByteArrayInputStream nothing = new ByteArrayInputStream("".getBytes());
-        final Site startSite;
         protected final ResultListener<Content> listener;
+        private final Pattern filteredUrlPattern;
+
+        private String domainName = "";
 
         protected abstract void onGalleryFound(String url);
 
 
-        CustomWebViewClient(String filteredUrl, Site startSite, ResultListener<Content> listener) {
-            this.filteredUrl = filteredUrl;
-            this.startSite = startSite;
+        CustomWebViewClient(String filteredUrl, ResultListener<Content> listener) {
             this.listener = listener;
+            if (filteredUrl.length() > 0) filteredUrlPattern = Pattern.compile(filteredUrl);
+            else filteredUrlPattern = null;
         }
 
         void destroy() {
@@ -504,6 +502,13 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
             return true;
         }
 
+        private boolean isPageFiltered(String url) {
+            if (null == filteredUrlPattern) return false;
+
+            Matcher matcher = filteredUrlPattern.matcher(url);
+            return matcher.find();
+        }
+
         @Override
         public boolean shouldOverrideUrlLoading(WebView view, String url) {
             String host = Uri.parse(url).getHost();
@@ -523,18 +528,14 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
             fabRefreshOrStop.setImageResource(R.drawable.ic_action_clear);
             fabRefreshOrStop.show();
             fabHome.show();
-            hideFab(fabDownload);
-            hideFab(fabRead);
+            fabAction.hide();
+            fabActionEnabled = false;
         }
 
         @Override
         public void onPageFinished(WebView view, String url) {
             // Running parser here ensures it happens on the final page in case of HTTP redirections
-            if (filteredUrl.length() > 0) {
-                Pattern pattern = Pattern.compile(filteredUrl);
-                Matcher matcher = pattern.matcher(url);
-                if (matcher.find()) onGalleryFound(url);
-            }
+            if (isPageFiltered(url)) onGalleryFound(url);
 
             webViewIsLoading = false;
             fabRefreshOrStop.setImageResource(R.drawable.ic_action_refresh);

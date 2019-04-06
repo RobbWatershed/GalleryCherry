@@ -18,6 +18,7 @@ import android.support.v4.content.ContextCompat;
 import android.support.v4.graphics.drawable.DrawableCompat;
 import android.text.Html;
 import android.text.Spanned;
+import android.util.DisplayMetrics;
 import android.webkit.WebResourceResponse;
 
 import java.io.File;
@@ -25,13 +26,12 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 
 import me.devsaki.hentoid.HentoidApp;
 import me.devsaki.hentoid.R;
-import me.devsaki.hentoid.activities.AppLockActivity;
-import me.devsaki.hentoid.activities.DownloadsActivity;
 import me.devsaki.hentoid.activities.IntroActivity;
 import me.devsaki.hentoid.activities.QueueActivity;
 import me.devsaki.hentoid.database.domains.Attribute;
@@ -60,16 +60,6 @@ public final class Helper {
     public static void viewQueue(final Context context) {
         Intent intent = new Intent(context, QueueActivity.class);
         context.startActivity(intent);
-    }
-
-    public static void launchMainActivity(Context context) {
-        if (Preferences.getAppLockPin().isEmpty()) {
-            Intent intent = new Intent(context, DownloadsActivity.class);
-            context.startActivity(intent);
-        } else {
-            Intent intent = new Intent(context, AppLockActivity.class);
-            context.startActivity(intent);
-        }
     }
 
     // We have asked for permissions, but still denied.
@@ -232,12 +222,12 @@ public final class Helper {
         return str.toString();
     }
 
-    public static List<Integer> extractAttributeIdsByType(List<Attribute> attrs, AttributeType type) {
+    public static List<Long> extractAttributeIdsByType(List<Attribute> attrs, AttributeType type) {
         return extractAttributeIdsByType(attrs, new AttributeType[]{type});
     }
 
-    private static List<Integer> extractAttributeIdsByType(List<Attribute> attrs, AttributeType[] types) {
-        List<Integer> result = new ArrayList<>();
+    private static List<Long> extractAttributeIdsByType(List<Attribute> attrs, AttributeType[] types) {
+        List<Long> result = new ArrayList<>();
 
         for (Attribute a : attrs) {
             for (AttributeType type : types) {
@@ -248,15 +238,9 @@ public final class Helper {
         return result;
     }
 
-    public static List<Integer> extractAttributesIds(List<Attribute> attrs) {
-        List<Integer> result = new ArrayList<>();
-        for (Attribute attr : attrs) result.add(attr.getId());
-        return result;
-    }
-
     public static Uri buildSearchUri(List<Attribute> attributes) {
         AttributeMap metadataMap = new AttributeMap();
-        metadataMap.add(attributes);
+        metadataMap.addAll(attributes);
 
         Uri.Builder searchUri = new Uri.Builder()
                 .scheme("search")
@@ -280,11 +264,62 @@ public final class Helper {
                     for (String attrStr : uri.getQueryParameters(typeStr)) {
                         String[] attrParams = attrStr.split(";");
                         if (2 == attrParams.length) {
-                            result.add(new Attribute(type, attrParams[1], "").setExternalId(Integer.parseInt(attrParams[0])));
+                            result.add(new Attribute(type, attrParams[1]).setId(Long.parseLong(attrParams[0])));
                         }
                     }
             }
 
         return result;
+    }
+
+    public static String decode64(String encodedString) {
+        // Pure Java
+        //byte[] decodedBytes = org.apache.commons.codec.binary.Base64.decodeBase64(encodedString);
+        // Android
+        byte[] decodedBytes = android.util.Base64.decode(encodedString, android.util.Base64.DEFAULT);
+        return new String(decodedBytes);
+    }
+
+    public static int dpToPixel(Context context, int dp) {
+        float scaleFactor =
+                (1.0f / DisplayMetrics.DENSITY_DEFAULT)
+                        * context.getResources().getDisplayMetrics().densityDpi;
+
+        return (int) (dp * scaleFactor);
+    }
+
+
+    public static List<Long> getListFromPrimitiveArray(long[] input) {
+        List<Long> list = new ArrayList<>(input.length);
+        for (long n : input) list.add(n);
+        return list;
+    }
+
+    public static List<Integer> getListFromPrimitiveArray(int[] input) {
+        List<Integer> list = new ArrayList<>(input.length);
+        for (int n : input) list.add(n);
+        return list;
+    }
+
+    public static long[] getPrimitiveLongArrayFromList(List<Long> integers) {
+        long[] ret = new long[integers.size()];
+        Iterator<Long> iterator = integers.iterator();
+        for (int i = 0; i < ret.length; i++) {
+            ret[i] = iterator.next();
+        }
+        return ret;
+    }
+
+    public static int[] getPrimitiveIntArrayFromList(List<Integer> integers) {
+        int[] ret = new int[integers.size()];
+        Iterator<Integer> iterator = integers.iterator();
+        for (int i = 0; i < ret.length; i++) {
+            ret[i] = iterator.next();
+        }
+        return ret;
+    }
+
+    public static boolean isNumeric(String str) {
+        return str.matches("-?\\d+(\\.\\d+)?");  //match a number with optional '-' and decimal.
     }
 }
