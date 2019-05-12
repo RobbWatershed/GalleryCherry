@@ -7,7 +7,6 @@ import android.content.Intent;
 import android.content.UriPermission;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
-import android.content.res.Configuration;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -29,6 +28,7 @@ import android.widget.ImageView;
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -38,13 +38,14 @@ import java.util.List;
 import me.devsaki.hentoid.HentoidApp;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.abstracts.BaseActivity;
+import me.devsaki.hentoid.activities.bundles.ImportActivityBundle;
+import me.devsaki.hentoid.database.ObjectBoxDB;
 import me.devsaki.hentoid.dirpicker.events.OnDirCancelEvent;
 import me.devsaki.hentoid.dirpicker.events.OnDirChosenEvent;
 import me.devsaki.hentoid.dirpicker.events.OnSAFRequestEvent;
 import me.devsaki.hentoid.dirpicker.events.OnTextViewClickedEvent;
 import me.devsaki.hentoid.dirpicker.events.OpFailedEvent;
 import me.devsaki.hentoid.dirpicker.ui.DirChooserFragment;
-import me.devsaki.hentoid.dirpicker.util.Convert;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.events.ImportEvent;
 import me.devsaki.hentoid.notification.import_.ImportNotificationChannel;
@@ -67,18 +68,27 @@ import static android.os.Build.VERSION_CODES.LOLLIPOP;
  */
 public class ImportActivity extends BaseActivity {
 
+    // Instance state keys
     private static final String CURRENT_DIR = "currentDir";
     private static final String PREV_DIR = "prevDir";
-    private String result;
+    private static final String RESTART_ON_EXIT = "restartOnExit";
+    private static final String CALLED_BY_PREFS = "calledByPrefs";
+    private static final String USE_DEFAULT_FOLDER = "useDefaultFolder";
+    private static final String REFRESH_OPTIONS = "refreshOptions";
+
+
     private File currentRootDir;
     private File prevRootDir;
-    private DirChooserFragment dirChooserFragment;
-    private ImageView instImage;
-    private boolean restartFlag;
-    private boolean prefInit;
-    private boolean defaultInit;
-    private boolean isCleanup = false;
-    private boolean isRefresh = false;
+    private DirChooserFragment dirChooserFragment;      // Dialog to pick the target directory
+    private boolean restartOnExit = false;              // True if app has to be restarted when exiting the activity
+    private boolean calledByPrefs = false;              // True if activity has been called by PrefsActivity
+    private boolean useDefaultFolder = false;           // True if activity has been called by IntroActivity and user has selected default storage
+    private boolean isRefresh = false;                  // True if user has asked for a collection refresh
+    private boolean isRename = false;                   // True if user has asked for a collection renaming
+    private boolean isCleanAbsent = false;              // True if user has asked for the cleanup of folders with no JSONs
+    private boolean isCleanNoImages = false;            // True if user has asked for the cleanup of folders with no images
+    private boolean isCleanUnreadable = false;          // True if user has asked for the cleanup of folders with unreadable JSONs
+
 
     private ProgressDialog progressDialog;
 
@@ -92,19 +102,29 @@ public class ImportActivity extends BaseActivity {
         Intent intent = getIntent();
         if (intent != null) {
             if (intent.getAction() != null) {
-                if (intent.getAction().equals(Intent.ACTION_APPLICATION_PREFERENCES)) {
-                    Timber.d("Running from prefs screen.");
-                    prefInit = true;
-                }
-                if (intent.getAction().equals(Intent.ACTION_GET_CONTENT)) {
-                    Timber.d("Importing default directory.");
-                    defaultInit = true;
-                } else {
-                    Timber.d("Intent: %s Action: %s", intent, intent.getAction());
+                switch (intent.getAction()) {
+                    case Intent.ACTION_APPLICATION_PREFERENCES:
+                        Timber.d("Running from prefs screen.");
+                        calledByPrefs = true;
+                        break;
+                    case Intent.ACTION_GET_CONTENT:
+                        Timber.d("Importing default directory.");
+                        useDefaultFolder = true;
+                        break;
+                    default:
+                        Timber.d("Intent: %s Action: %s", intent, intent.getAction());
+                        break;
                 }
             }
-            isRefresh = intent.getBooleanExtra("refresh", false);
-            isCleanup = intent.getBooleanExtra("cleanup", false);
+
+            if (intent.getExtras() != null) {
+                ImportActivityBundle.Parser parser = new ImportActivityBundle.Parser(intent.getExtras());
+                isRefresh = parser.getRefresh();
+                isRename = parser.getRefreshRename();
+                isCleanAbsent = parser.getRefreshCleanAbsent();
+                isCleanNoImages = parser.getRefreshCleanNoImages();
+                isCleanUnreadable = parser.getRefreshCleanUnreadable();
+            }
         }
 
         EventBus.getDefault().register(this);
@@ -113,12 +133,22 @@ public class ImportActivity extends BaseActivity {
     }
 
     private void prepImport(Bundle savedState) {
-        if (savedState == null) {
-            result = ConstsImport.RESULT_EMPTY;
-        } else {
+        if (savedState != null) {
             currentRootDir = (File) savedState.getSerializable(CURRENT_DIR);
             prevRootDir = (File) savedState.getSerializable(PREV_DIR);
-            result = savedState.getString(ConstsImport.RESULT_KEY);
+            restartOnExit = savedState.getBoolean(RESTART_ON_EXIT);
+            calledByPrefs = savedState.getBoolean(CALLED_BY_PREFS);
+            useDefaultFolder = savedState.getBoolean(USE_DEFAULT_FOLDER);
+
+            Bundle bundle = savedState.getBundle(REFRESH_OPTIONS);
+            if (bundle != null) {
+                ImportActivityBundle.Parser parser = new ImportActivityBundle.Parser(bundle);
+                isRefresh = parser.getRefresh();
+                isRename = parser.getRefreshRename();
+                isCleanAbsent = parser.getRefreshCleanAbsent();
+                isCleanNoImages = parser.getRefreshCleanNoImages();
+                isCleanUnreadable = parser.getRefreshCleanUnreadable();
+            }
         }
         checkForDefaultDirectory();
     }
@@ -130,11 +160,12 @@ public class ImportActivity extends BaseActivity {
             Timber.d(settingDir);
 
             File file;
-            if (!settingDir.isEmpty()) {
+            if (!settingDir.isEmpty())
                 file = new File(settingDir);
-            } else {
-                file = new File(Environment.getExternalStorageDirectory() +
-                        "/" + Consts.DEFAULT_LOCAL_DIRECTORY + "/");
+            else {
+                file = getExistingHentoidDirFrom(Environment.getExternalStorageDirectory());
+                if (file.getAbsolutePath().equals(Environment.getExternalStorageDirectory().getAbsolutePath()))
+                    file = new File(Environment.getExternalStorageDirectory(), Consts.DEFAULT_LOCAL_DIRECTORY);
             }
 
             if (file.exists() && file.isDirectory()) {
@@ -149,11 +180,46 @@ public class ImportActivity extends BaseActivity {
         }
     }
 
+    // Try and detect any ".Hentoid" or "Hentoid" folder inside the selected folder
+    private static File getExistingHentoidDirFrom(@NonNull File root) {
+
+        if (!root.exists() || !root.isDirectory()) return root;
+
+        if (root.getName().equalsIgnoreCase(Consts.DEFAULT_LOCAL_DIRECTORY)
+                || root.getName().equalsIgnoreCase(Consts.DEFAULT_LOCAL_DIRECTORY_OLD))
+            return root;
+
+        File[] hentoidDirs = root.listFiles(
+                file -> (file.isDirectory() &&
+                        (
+                                file.getName().equalsIgnoreCase(Consts.DEFAULT_LOCAL_DIRECTORY)
+                                        || file.getName().equalsIgnoreCase(Consts.DEFAULT_LOCAL_DIRECTORY_OLD)
+                        )
+                )
+        );
+
+        if (hentoidDirs.length > 0) return hentoidDirs[0];
+        else return root;
+    }
+
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         outState.putSerializable(CURRENT_DIR, currentRootDir);
         outState.putSerializable(PREV_DIR, prevRootDir);
-        outState.putString(ConstsImport.RESULT_KEY, result);
+        outState.putBoolean(RESTART_ON_EXIT, restartOnExit);
+        outState.putBoolean(CALLED_BY_PREFS, calledByPrefs);
+        outState.putBoolean(USE_DEFAULT_FOLDER, useDefaultFolder);
+
+        ImportActivityBundle.Builder builder = new ImportActivityBundle.Builder();
+
+        builder.setRefresh(isRefresh);
+        builder.setRefreshRename(isRename);
+        builder.setRefreshCleanAbsent(isCleanAbsent);
+        builder.setRefreshCleanNoImages(isCleanNoImages);
+        builder.setRefreshCleanUnreadable(isCleanUnreadable);
+
+        outState.putBundle(REFRESH_OPTIONS, builder.getBundle());
+
         super.onSaveInstanceState(outState);
     }
 
@@ -164,27 +230,14 @@ public class ImportActivity extends BaseActivity {
         if (grantResults.length <= 0) return;
 
         if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            // Permission Granted
-            result = ConstsImport.PERMISSION_GRANTED;
-            Intent returnIntent = new Intent();
-            returnIntent.putExtra(ConstsImport.RESULT_KEY, result);
-            setResult(RESULT_OK, returnIntent);
-            finish();
+            exit(RESULT_OK, ConstsImport.PERMISSION_GRANTED);
         } else if (grantResults[0] == PackageManager.PERMISSION_DENIED) {
             // Permission Denied
             if (ActivityCompat.shouldShowRequestPermissionRationale(this,
                     Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
-                result = ConstsImport.PERMISSION_DENIED;
-                Intent returnIntent = new Intent();
-                returnIntent.putExtra(ConstsImport.RESULT_KEY, result);
-                setResult(RESULT_CANCELED, returnIntent);
-                finish();
+                exit(RESULT_CANCELED, ConstsImport.PERMISSION_DENIED);
             } else {
-                result = ConstsImport.PERMISSION_DENIED_FORCED;
-                Intent returnIntent = new Intent();
-                returnIntent.putExtra(ConstsImport.RESULT_KEY, result);
-                setResult(RESULT_CANCELED, returnIntent);
-                finish();
+                exit(RESULT_CANCELED, ConstsImport.PERMISSION_DENIED_FORCED);
             }
         }
     }
@@ -197,8 +250,7 @@ public class ImportActivity extends BaseActivity {
             downloadDir = currentRootDir = new File(Environment.getExternalStorageDirectory() +
                     "/" + Consts.DEFAULT_LOCAL_DIRECTORY + "/");
         }
-
-        if (defaultInit) {
+        if (useDefaultFolder) {
             prevRootDir = currentRootDir;
             initImport();
         } else {
@@ -210,21 +262,15 @@ public class ImportActivity extends BaseActivity {
 
     @Override
     public void onBackPressed() {
-        // Send result back to activity
-        result = ConstsImport.RESULT_CANCELED;
-        Timber.d(result);
-        Intent returnIntent = new Intent();
-        returnIntent.putExtra(ConstsImport.RESULT_KEY, result);
-        setResult(RESULT_CANCELED, returnIntent);
-        finish();
+        exit(RESULT_CANCELED, ConstsImport.RESULT_CANCELED);
     }
 
     @Override
     protected void onDestroy() {
         EventBus.getDefault().unregister(this);
-
         super.onDestroy();
     }
+
 
     @Subscribe
     public void onDirCancel(OnDirCancelEvent event) {
@@ -237,23 +283,11 @@ public class ImportActivity extends BaseActivity {
         prevRootDir = currentRootDir;
 
         if (!currentRootDir.equals(chosenDir)) {
-            restartFlag = true;
+            restartOnExit = true;
             currentRootDir = chosenDir;
         }
         dirChooserFragment.dismiss();
         initImport();
-    }
-
-    private void initImport() {
-        Timber.d("Clearing SAF");
-        FileHelper.clearUri();
-
-        if (Build.VERSION.SDK_INT >= KITKAT) {
-            revokePermission();
-        }
-
-        Timber.d("Storage Path: %s", currentRootDir);
-        importFolder(currentRootDir);
     }
 
     @Subscribe
@@ -264,7 +298,7 @@ public class ImportActivity extends BaseActivity {
 
     @Subscribe
     public void onManualInput(OnTextViewClickedEvent event) {
-        if (event.getClickType()) {
+        if (event.isLongClick()) {
             Timber.d("Resetting directory back to default.");
             currentRootDir = new File(Environment.getExternalStorageDirectory() +
                     "/" + Consts.DEFAULT_LOCAL_DIRECTORY + "/");
@@ -272,7 +306,7 @@ public class ImportActivity extends BaseActivity {
             pickDownloadDirectory(currentRootDir);
         } else {
             final EditText text = new EditText(this);
-            int paddingPx = Convert.dpToPixel(this, 16);
+            int paddingPx = Helper.dpToPixel(this, 16);
             text.setInputType(InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
             text.setPadding(paddingPx, paddingPx, paddingPx, paddingPx);
             text.setText(currentRootDir.toString());
@@ -289,6 +323,19 @@ public class ImportActivity extends BaseActivity {
                     .setNegativeButton(android.R.string.cancel, null)
                     .show();
         }
+    }
+
+    private void initImport() {
+        Timber.d("Clearing SAF");
+        FileHelper.clearUri();
+
+        if (Build.VERSION.SDK_INT >= KITKAT) {
+            revokePermission();
+        }
+
+        Timber.d("Storage Path: %s", currentRootDir);
+
+        importFolder(getExistingHentoidDirFrom(currentRootDir));
     }
 
     private void processManualInput(@NonNull Editable value) {
@@ -342,7 +389,7 @@ public class ImportActivity extends BaseActivity {
             if (writeableDirs.size() == 1) {
                 // If we get exactly one write-able path returned, attempt to make use of it
                 String sdDir = writeableDirs.get(0) + "/" + Consts.DEFAULT_LOCAL_DIRECTORY + "/";
-                if (FileHelper.validateFolder(sdDir)) {
+                if (!FileHelper.isOnExtSdCard(writeableDirs.get(0)) && FileHelper.checkAndSetRootFolder(sdDir)) { // TODO - dirChooserFragment can't actually browse SD card : to fix later ?
                     Timber.d("Got access to SD Card.");
                     currentRootDir = new File(sdDir);
                     dirChooserFragment.dismiss();
@@ -351,7 +398,7 @@ public class ImportActivity extends BaseActivity {
                     if (Build.VERSION.SDK_INT == KITKAT) {
                         Timber.d("Unable to write to SD Card.");
                         showKitkatRationale();
-                    } else if (Build.VERSION.SDK_INT >= LOLLIPOP) {
+                    } else if (Build.VERSION.SDK_INT >= LOLLIPOP) { // Browse the SD card using the device's SAF dialog
                         PackageManager manager = this.getPackageManager();
                         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
                         List<ResolveInfo> handlers = manager.queryIntentActivities(intent, 0);
@@ -387,38 +434,29 @@ public class ImportActivity extends BaseActivity {
         ToastUtil.toast(R.string.no_sd_support);
     }
 
-    @Override
-    public void onConfigurationChanged(Configuration newConfig) {
-        super.onConfigurationChanged(newConfig);
-
-        attachInstImage();
-    }
-
-    private void attachInstImage() {
+    private void attachInstructionsImage(@NotNull ImageView instructionsImage) {
         // A list of known devices can be used here to present instructions relevant to that device
-        if (instImage != null) {
-            instImage.setImageDrawable(ContextCompat.getDrawable(ImportActivity.this,
-                    R.drawable.bg_sd_instructions));
-        }
+        instructionsImage.setImageDrawable(ContextCompat.getDrawable(this,
+                R.drawable.bg_sd_instructions));
     }
 
     @RequiresApi(api = LOLLIPOP)
     private void requestWritePermission() {
         runOnUiThread(() -> {
-            instImage = new ImageView(ImportActivity.this);
-            attachInstImage();
+            ImageView instructionsImage = new ImageView(this);
+            attachInstructionsImage(instructionsImage);
 
             AlertDialog.Builder builder =
-                    new AlertDialog.Builder(ImportActivity.this)
+                    new AlertDialog.Builder(this)
                             .setTitle("Requesting Write Permissions")
-                            .setView(instImage)
+                            .setView(instructionsImage)
                             .setPositiveButton(android.R.string.ok,
                                     (dialogInterface, i) -> {
                                         dialogInterface.dismiss();
                                         newSAFIntent();
                                     });
             final AlertDialog dialog = builder.create();
-            instImage.setOnClickListener(v -> {
+            instructionsImage.setOnClickListener(v -> {
                 dialog.dismiss();
                 newSAFIntent();
             });
@@ -450,33 +488,53 @@ public class ImportActivity extends BaseActivity {
         }
     }
 
+
+    /*
+        Return from SAF system dialog
+     */
     @RequiresApi(api = KITKAT)
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        if (requestCode == ConstsImport.RQST_STORAGE_PERMISSION && resultCode == RESULT_OK) {
+        // Return from the SD card directory chooser
+        if (requestCode == ConstsImport.RQST_STORAGE_PERMISSION && resultCode == RESULT_OK) { // TODO - what happens when resultCode is _not_ RESULT_OK ?
             // Get Uri from Storage Access Framework
             Uri treeUri = data.getData();
+            if (treeUri != null && treeUri.getPath() != null) {
+                // Persist selected folder URI in shared preferences
+                FileHelper.saveUri(treeUri);
 
-            // Persist URI in shared preference so that you can use it later
-            FileHelper.saveUri(treeUri);
+                // Persist access permissions
+                getContentResolver().takePersistableUriPermission(treeUri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
 
-            // Persist access permissions
-            getContentResolver().takePersistableUriPermission(treeUri,
-                    Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+                dirChooserFragment.dismiss();
 
-            dirChooserFragment.dismiss();
+                if (FileHelper.getExtSdCardPaths().length > 0) {
+                    String[] paths = FileHelper.getExtSdCardPaths();
+                    String[] uriContents = treeUri.getPath().split(":");
+                    String folderName = (uriContents.length > 1) ? uriContents[1] : "";
+                    String folderPath = paths[0] + File.separatorChar + folderName;
+                    // Don't create a .Hentoid subfolder inside the .Hentoid (or Hentoid) folder the user just selected...
+                    if (!folderName.equalsIgnoreCase(Consts.DEFAULT_LOCAL_DIRECTORY) && !folderName.equalsIgnoreCase(Consts.DEFAULT_LOCAL_DIRECTORY_OLD)) {
+                        // Look for a Hentoid folder inside the selected folder
+                        if (!folderPath.endsWith(File.separator)) folderPath += File.separator;
+                        File folder = new File(folderPath);
+                        File targetFolder = getExistingHentoidDirFrom(folder);
 
-            if (FileHelper.getExtSdCardPaths().length > 0) {
-                String[] paths = FileHelper.getExtSdCardPaths();
-                String[] uriContents = treeUri.getPath().split(":");
-                String folderStr = paths[0] + "/" + ((uriContents.length > 1) ? (uriContents[1] + "/") : "") + Consts.DEFAULT_LOCAL_DIRECTORY;
+                        // If not, create one
+                        if (targetFolder.getAbsolutePath().equals(folder.getAbsolutePath()))
+                            targetFolder = new File(targetFolder, Consts.DEFAULT_LOCAL_DIRECTORY);
+                        folderPath = targetFolder.getAbsolutePath();
+                    }
 
-                File folder = new File(folderStr);
-                Timber.d("Directory created successfully: %s", FileHelper.createDirectory(folder));
+                    if (!folderPath.endsWith(File.separator)) folderPath += File.separator;
+                    File folder = new File(folderPath);
 
-                importFolder(folder);
+                    Timber.d("Directory created successfully: %s", FileHelper.createDirectory(folder));
+                    importFolder(folder);
+                }
             }
         }
     }
@@ -494,30 +552,36 @@ public class ImportActivity extends BaseActivity {
     public void onImportEventComplete(ImportEvent event) {
         if (ImportEvent.EV_COMPLETE == event.eventType) {
             if (progressDialog != null) progressDialog.dismiss();
-            cleanUp((event.booksOK > 0) ? ConstsImport.EXISTING_LIBRARY_IMPORTED : ConstsImport.NEW_LIBRARY_CREATED);
+            exit(RESULT_OK, (event.booksOK > 0) ? ConstsImport.EXISTING_LIBRARY_IMPORTED : ConstsImport.NEW_LIBRARY_CREATED);
         }
     }
 
-
-    private void importFolder(File folder) {
-        if (!FileHelper.validateFolder(folder.getAbsolutePath(), true)) {
-            prepImport(null);
-            return;
-        }
-
+    // Count the elements inside each site's download folder (but not its subfolders)
+    //
+    // NB : this method works approximately because it doesn't try to count JSON files
+    // However, findFilesRecursively -the method used by ImportService- is too slow on certain phones
+    // and might cause freezes -> we stick to that approximate method for ImportActivity
+    private boolean hasBooks() {
         List<File> downloadDirs = new ArrayList<>();
         for (Site s : Site.values()) {
             downloadDirs.add(FileHelper.getSiteDownloadDir(this, s));
         }
 
-        List<File> files = new ArrayList<>();
         for (File downloadDir : downloadDirs) {
             File[] contentFiles = downloadDir.listFiles();
-            if (contentFiles != null)
-                files.addAll(Arrays.asList(contentFiles));
+            if (contentFiles != null && contentFiles.length > 0) return true;
         }
 
-        if (files.size() > 0) {
+        return false;
+    }
+
+    private void importFolder(File folder) {
+        if (!FileHelper.checkAndSetRootFolder(folder.getAbsolutePath(), true)) {
+            prepImport(null);
+            return;
+        }
+
+        if (hasBooks()) {
 
             if (isRefresh)
                 runImport(); // Do not ask if the user wants to import if he has asked for a refresh
@@ -535,38 +599,22 @@ public class ImportActivity extends BaseActivity {
                             (dialog12, which) -> {
                                 dialog12.dismiss();
                                 // Prior Library found, but user chose to cancel
-                                restartFlag = false;
+                                restartOnExit = false;
                                 if (prevRootDir != null) {
                                     currentRootDir = prevRootDir;
                                 }
                                 if (currentRootDir != null) {
-                                    FileHelper.validateFolder(currentRootDir.getAbsolutePath());
+                                    FileHelper.checkAndSetRootFolder(currentRootDir.getAbsolutePath());
                                 }
-                                Timber.d("Restart needed: %s", false);
-
-                                result = ConstsImport.EXISTING_LIBRARY_FOUND;
-                                Intent returnIntent = new Intent();
-                                returnIntent.putExtra(ConstsImport.RESULT_KEY, result);
-                                setResult(RESULT_CANCELED, returnIntent);
-                                finish();
+                                exit(RESULT_CANCELED, ConstsImport.EXISTING_LIBRARY_FOUND);
                             })
                     .create()
                     .show();
         } else {
             // New library created - drop and recreate db (in case user is re-importing)
             cleanUpDB();
-            result = ConstsImport.NEW_LIBRARY_CREATED;
 
-            Handler handler = new Handler();
-
-            Timber.d(result);
-
-            handler.postDelayed(() -> {
-                Intent returnIntent = new Intent();
-                returnIntent.putExtra(ConstsImport.RESULT_KEY, result);
-                setResult(RESULT_OK, returnIntent);
-                finish();
-            }, 100);
+            new Handler().postDelayed(() -> exit(RESULT_OK, ConstsImport.NEW_LIBRARY_CREATED), 100);
         }
     }
 
@@ -584,25 +632,34 @@ public class ImportActivity extends BaseActivity {
 
         ImportNotificationChannel.init(this);
         Intent intent = ImportService.makeIntent(this);
-        intent.putExtra("cleanup", isCleanup);
+
+        ImportActivityBundle.Builder builder = new ImportActivityBundle.Builder();
+        builder.setRefresh(isRefresh);
+        builder.setRefreshRename(isRename);
+        builder.setRefreshCleanAbsent(isCleanAbsent);
+        builder.setRefreshCleanNoImages(isCleanNoImages);
+        builder.setRefreshCleanUnreadable(isCleanUnreadable);
+        intent.putExtras(builder.getBundle());
+
         startService(intent);
     }
 
     private void cleanUpDB() {
         Timber.d("Cleaning up DB.");
         Context context = HentoidApp.getAppContext();
-        context.deleteDatabase(Consts.DATABASE_NAME);
+        ObjectBoxDB db = ObjectBoxDB.getInstance(context);
+        db.deleteAllBooks();
     }
 
-    private void cleanUp(String result) {
-        Timber.d("Restart needed: %s", restartFlag);
+    private void exit(int resultCode, String data) {
+        Timber.d("Import activity exit - Data : %s, Restart needed: %s", data, restartOnExit);
 
         Intent returnIntent = new Intent();
-        returnIntent.putExtra(ConstsImport.RESULT_KEY, result);
-        setResult(RESULT_OK, returnIntent);
+        returnIntent.putExtra(ConstsImport.RESULT_KEY, data);
+        setResult(resultCode, returnIntent);
         finish();
 
-        if (restartFlag && prefInit) {
+        if (restartOnExit && calledByPrefs) {
             Helper.doRestart(this);
         }
     }

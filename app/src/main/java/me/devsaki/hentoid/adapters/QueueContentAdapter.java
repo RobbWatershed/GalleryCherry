@@ -2,7 +2,6 @@ package me.devsaki.hentoid.adapters;
 
 import android.content.Context;
 import android.support.annotation.NonNull;
-import android.util.Pair;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -21,10 +20,15 @@ import org.greenrobot.eventbus.EventBus;
 import java.util.ArrayList;
 import java.util.List;
 
+import io.reactivex.Completable;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.CompositeDisposable;
+import io.reactivex.schedulers.Schedulers;
 import me.devsaki.hentoid.R;
-import me.devsaki.hentoid.database.HentoidDB;
+import me.devsaki.hentoid.database.ObjectBoxDB;
 import me.devsaki.hentoid.database.domains.Attribute;
 import me.devsaki.hentoid.database.domains.Content;
+import me.devsaki.hentoid.database.domains.QueueRecord;
 import me.devsaki.hentoid.enums.AttributeType;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.events.DownloadEvent;
@@ -39,6 +43,7 @@ public class QueueContentAdapter extends ArrayAdapter<Content> {
 
     private final Context context;
     private ListView container = null;
+    private final CompositeDisposable compositeDisposable = new CompositeDisposable();
 
     public QueueContentAdapter(Context context, List<Content> contents) {
         super(context, R.layout.item_queue, contents);
@@ -50,7 +55,7 @@ public class QueueContentAdapter extends ArrayAdapter<Content> {
     public View getView(int pos, View view, @NonNull ViewGroup parent) {
         View v = view;
         ViewHolder holder;
-        if (null == container) container = (ListView)parent;
+        if (null == container) container = (ListView) parent;
         // Check if an existing view is being reused, otherwise inflate the view
         if (v == null) {
             holder = new ViewHolder();
@@ -93,8 +98,7 @@ public class QueueContentAdapter extends ArrayAdapter<Content> {
         attachSeries(holder, content);
         attachArtist(holder, content);
         attachTags(holder, content);
-
-        holder.ivSource.setImageResource(content.getSite().getIco());
+        attachSource(holder, content);
     }
 
     /**
@@ -141,7 +145,7 @@ public class QueueContentAdapter extends ArrayAdapter<Content> {
     private void attachSeries(ViewHolder holder, Content content) {
         String templateSeries = context.getString(R.string.work_series);
         StringBuilder series = new StringBuilder();
-        List<Attribute> seriesAttributes = content.getAttributes().get(AttributeType.SERIE);
+        List<Attribute> seriesAttributes = content.getAttributeMap().get(AttributeType.SERIE);
         if (seriesAttributes == null) {
             holder.tvSeries.setVisibility(View.GONE);
         } else {
@@ -171,9 +175,9 @@ public class QueueContentAdapter extends ArrayAdapter<Content> {
         String templateArtist = context.getString(R.string.work_artist);
         StringBuilder artists = new StringBuilder();
         List<Attribute> attributes = new ArrayList<>();
-        List<Attribute> artistAttributes = content.getAttributes().get(AttributeType.ARTIST);
+        List<Attribute> artistAttributes = content.getAttributeMap().get(AttributeType.ARTIST);
         if (artistAttributes != null) attributes.addAll(artistAttributes);
-        List<Attribute> circleAttributes = content.getAttributes().get(AttributeType.CIRCLE);
+        List<Attribute> circleAttributes = content.getAttributeMap().get(AttributeType.CIRCLE);
         if (circleAttributes != null) attributes.addAll(circleAttributes);
 
         boolean first = true;
@@ -200,7 +204,7 @@ public class QueueContentAdapter extends ArrayAdapter<Content> {
     private void attachTags(ViewHolder holder, Content content) {
         String templateTags = context.getString(R.string.work_tags);
         StringBuilder tags = new StringBuilder();
-        List<Attribute> tagsAttributes = content.getAttributes().get(AttributeType.TAG);
+        List<Attribute> tagsAttributes = content.getAttributeMap().get(AttributeType.TAG);
         if (tagsAttributes != null) {
             for (int i = 0; i < tagsAttributes.size(); i++) {
                 Attribute attribute = tagsAttributes.get(i);
@@ -213,6 +217,22 @@ public class QueueContentAdapter extends ArrayAdapter<Content> {
             }
         }
         holder.tvTags.setText(Helper.fromHtml(tags.toString()));
+    }
+
+    /**
+     * Build the source icon layout of the book viewholder using the designated Content properties
+     *
+     * @param holder  Holder to populate
+     * @param content Content to display
+     */
+    private void attachSource(ViewHolder holder, Content content) {
+        if (content.getSite() != null) {
+            int img = content.getSite().getIco();
+            holder.ivSource.setImageResource(img);
+            holder.ivSource.setOnClickListener(v -> Helper.viewContent(context, content));
+        } else {
+            holder.ivSource.setImageResource(R.drawable.ic_stat_hentoid);
+        }
     }
 
     /**
@@ -265,20 +285,18 @@ public class QueueContentAdapter extends ArrayAdapter<Content> {
         }
     }
 
-    public void updateProgress(int index, Content content)
-    {
+    public void updateProgress(int index, Content content) {
         if (null == container) return;
 
         View view = container.getChildAt(index - container.getFirstVisiblePosition());
-        if(view == null) return;
+        if (view == null) return;
 
         updateProgress(view, content);
     }
 
-    private void swap(int firstPosition, int secondPosition)
-    {
-        Content first = getItem(firstPosition<secondPosition?firstPosition:secondPosition);
-        Content second = getItem(firstPosition<secondPosition?secondPosition:firstPosition);
+    private void swap(int firstPosition, int secondPosition) {
+        Content first = getItem(firstPosition < secondPosition ? firstPosition : secondPosition);
+        Content second = getItem(firstPosition < secondPosition ? secondPosition : firstPosition);
 
         remove(first);
         remove(second);
@@ -292,29 +310,29 @@ public class QueueContentAdapter extends ArrayAdapter<Content> {
      *
      * @param contentId ID of Content whose priority has to be raised
      */
-    private void moveUp(int contentId) {
-        HentoidDB db = HentoidDB.getInstance(context);
-        List<Pair<Integer, Integer>> queue = db.selectQueue();
+    private void moveUp(long contentId) {
+        ObjectBoxDB db = ObjectBoxDB.getInstance(context);
+        List<QueueRecord> queue = db.selectQueue();
 
-        int prevItemId = 0;
+        long prevItemId = 0;
         int prevItemQueuePosition = -1;
         int prevItemPosition = -1;
         int loopPosition = 0;
 
         setNotifyOnChange(false); // Prevents every update from calling a screen refresh
 
-        for (Pair<Integer, Integer> p : queue) {
-            if (p.first.equals(contentId) && prevItemId != 0) {
-                db.udpateQueue(p.first, prevItemQueuePosition);
-                db.udpateQueue(prevItemId, p.second);
+        for (QueueRecord p : queue) {
+            if (p.content.getTargetId() == contentId && prevItemId != 0) {
+                db.udpateQueue(p.content.getTargetId(), prevItemQueuePosition);
+                db.udpateQueue(prevItemId, p.rank);
 
                 swap(prevItemPosition, loopPosition);
                 if (0 == prevItemPosition)
                     EventBus.getDefault().post(new DownloadEvent(DownloadEvent.EV_SKIP));
                 break;
             } else {
-                prevItemId = p.first;
-                prevItemQueuePosition = p.second;
+                prevItemId = p.content.getTargetId();
+                prevItemQueuePosition = p.rank;
                 prevItemPosition = loopPosition;
             }
             loopPosition++;
@@ -328,36 +346,41 @@ public class QueueContentAdapter extends ArrayAdapter<Content> {
      *
      * @param contentId ID of Content whose priority has to be raised to the top
      */
-    private void moveTop(int contentId) {
-        HentoidDB db = HentoidDB.getInstance(context);
-        List<Pair<Integer, Integer>> queue = db.selectQueue();
+    private void moveTop(long contentId) {
+        ObjectBoxDB db = ObjectBoxDB.getInstance(context);
+        List<QueueRecord> queue = db.selectQueue();
+        QueueRecord p;
 
-        int topItemId = 0;
+        long topItemId = 0;
         int topItemQueuePosition = -1;
-        int loopPosition = 0;
 
         setNotifyOnChange(false);  // Prevents every update from calling a screen refresh
 
-        for (Pair<Integer, Integer> p : queue) {
-            if (0 == topItemId)
-            {
-                topItemId = p.first;
-                topItemQueuePosition = p.second;
+        for (int i = 0; i < queue.size(); i++) {
+            p = queue.get(i);
+            if (0 == topItemId) {
+                topItemId = p.content.getTargetId();
+                topItemQueuePosition = p.rank;
             }
 
-            if (p.first.equals(contentId)) {
-                db.udpateQueue(p.first, topItemQueuePosition); // Put selected item on top of list
+            if (p.content.getTargetId() == contentId) {
+                // Put selected item on top of list in the DB
+                db.udpateQueue(p.content.getTargetId(), topItemQueuePosition);
 
-                Content c = getItem(loopPosition);
-                remove(c);
-                insert(c, 0);
+                // Update the displayed items
+                if (i < getCount()) { // That should never happen, but we do have rare crashes here, so...
+                    Content c = getItem(i);
+                    remove(c);
+                    insert(c, 0);
+                }
 
+                // Skip download for the 1st item of the adapter
                 EventBus.getDefault().post(new DownloadEvent(DownloadEvent.EV_SKIP));
+
                 break;
             } else {
-                db.udpateQueue(p.first, p.second + 1); // Depriorize every item by 1
+                db.udpateQueue(p.content.getTargetId(), p.rank + 1); // Depriorize every item by 1
             }
-            loopPosition++;
         }
 
         notifyDataSetChanged(); // Final screen refresh once everything had been updated
@@ -368,25 +391,25 @@ public class QueueContentAdapter extends ArrayAdapter<Content> {
      *
      * @param contentId ID of Content whose priority has to be lowered
      */
-    private void moveDown(int contentId) {
-        HentoidDB db = HentoidDB.getInstance(context);
-        List<Pair<Integer, Integer>> queue = db.selectQueue();
+    private void moveDown(long contentId) {
+        ObjectBoxDB db = ObjectBoxDB.getInstance(context);
+        List<QueueRecord> queue = db.selectQueue();
 
-        int itemId = 0;
+        long itemId = 0;
         int itemQueuePosition = -1;
         int itemPosition = -1;
         int loopPosition = 0;
 
         setNotifyOnChange(false);  // Prevents every update from calling a screen refresh
 
-        for (Pair<Integer, Integer> p : queue) {
-            if (p.first.equals(contentId)) {
-                itemId = p.first;
-                itemQueuePosition = p.second;
+        for (QueueRecord p : queue) {
+            if (p.content.getTargetId() == contentId) {
+                itemId = p.content.getTargetId();
+                itemQueuePosition = p.rank;
                 itemPosition = loopPosition;
             } else if (itemId != 0) {
-                db.udpateQueue(p.first, itemQueuePosition);
-                db.udpateQueue(itemId, p.second);
+                db.udpateQueue(p.content.getTargetId(), itemQueuePosition);
+                db.udpateQueue(itemId, p.rank);
 
                 swap(itemPosition, loopPosition);
 
@@ -407,22 +430,35 @@ public class QueueContentAdapter extends ArrayAdapter<Content> {
      * @param content Content whose download has to be canceled
      */
     private void cancel(Content content) {
-        // Remove content altogether from the DB (including queue)
-        HentoidDB db = HentoidDB.getInstance(context);
-        db.deleteContent(content);
-        // Remove the content from the disk
-        FileHelper.removeContent(content);
-        // Remove the content from the in-memory list and the UI
-        super.remove(content);
-
         EventBus.getDefault().post(new DownloadEvent(content, DownloadEvent.EV_CANCEL));
+
+        compositeDisposable.add(
+                Completable.fromRunnable(() -> doCancel(content.getId()))
+                        .subscribeOn(Schedulers.io())
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe(() -> {
+                            // Remove the content from the in-memory list and the UI
+                            super.remove(content);
+                        }));
     }
 
-    public void removeFromQueue(Content content)
-    {
-        HentoidDB db = HentoidDB.getInstance(context);
-        db.deleteQueueById(content.getId());
+    private void doCancel(long contentId) {
+        // Remove content altogether from the DB (including queue)
+        ObjectBoxDB db = ObjectBoxDB.getInstance(context);
+        Content content = db.selectContentById(contentId);
+        if (content != null) {
+            db.deleteQueue(content);
+            db.deleteContent(content);
+            // Remove the content from the disk
+            FileHelper.removeContent(content);
+        }
+    }
 
+    public void removeFromQueue(Content content) {
+        ObjectBoxDB db = ObjectBoxDB.getInstance(context);
+        // Remove content from the queue in the DB
+        db.deleteQueue(content);
+        // Remove the content from the in-memory list and the UI
         super.remove(content);
     }
 
@@ -434,5 +470,9 @@ public class QueueContentAdapter extends ArrayAdapter<Content> {
         TextView tvArtist;
         TextView tvTags;
         ImageView ivSource;
+    }
+
+    public void dispose() {
+        compositeDisposable.clear();
     }
 }

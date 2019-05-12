@@ -15,6 +15,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+import javax.annotation.Nonnull;
+
 import me.devsaki.hentoid.HentoidApp;
 import timber.log.Timber;
 
@@ -53,17 +55,16 @@ class FileUtil {
      * @return The DocumentFile.
      */
     @Nullable
-    private static DocumentFile getDocumentFile(final File file, final boolean isDirectory) {
+    private static DocumentFile getDocumentFile(@Nonnull final File file, final boolean isDirectory) {
         String baseFolder = FileHelper.getExtSdCardFolder(file);
         boolean returnSDRoot = false;
-        if (baseFolder == null) {
-            return null;
-        }
+        if (baseFolder == null) return null;
 
-        String relativePath = null;
+        String relativePath = ""; // Path of the file relative to baseFolder
         try {
             String fullPath = file.getCanonicalPath();
-            if (!baseFolder.equals(fullPath)) {
+
+            if (!baseFolder.equals(fullPath)) { // Selected file _is_ the base folder
                 relativePath = fullPath.substring(baseFolder.length() + 1);
             } else {
                 returnSDRoot = true;
@@ -76,20 +77,20 @@ class FileUtil {
         }
 
         String sdStorageUriStr = Preferences.getSdStorageUri();
+        if (sdStorageUriStr.isEmpty()) return null;
 
-        Uri sdStorageUri;
-        if (sdStorageUriStr != null) {
-            sdStorageUri = Uri.parse(sdStorageUriStr);
+        Uri sdStorageUri = Uri.parse(sdStorageUriStr);
 
-            // Shorten relativePath if part of it is already in sdStorageUri
-            String[] uriContents = sdStorageUri.getPath().split(":");
-            if (uriContents.length > 1) {
-                String relativeUriPath = sdStorageUri.getPath().split(":")[1];
-                if (relativePath.contains(relativeUriPath)) {
-                    relativePath = relativePath.substring(relativeUriPath.length() + 1);
-                }
+        // Shorten relativePath if part of it is already in sdStorageUri
+        String[] uriContents = sdStorageUri.getPath().split(":");
+        if (uriContents.length > 1) {
+            String relativeUriPath = uriContents[1];
+            if (relativePath.equals(relativeUriPath)) {
+                relativePath = "";
+            } else if (relativePath.startsWith(relativeUriPath)) {
+                relativePath = relativePath.substring(relativeUriPath.length() + 1);
             }
-        } else return null;
+        }
 
         return documentFileHelper(sdStorageUri, returnSDRoot, relativePath, isDirectory);
     }
@@ -104,14 +105,14 @@ class FileUtil {
      * @param isDirectory  True if the given elements are supposed to be a directory; false if they are supposed to be a file
      * @return DocumentFile corresponding to the given file.
      */
-    private static DocumentFile documentFileHelper(Uri rootURI, boolean returnRoot,
+    private static DocumentFile documentFileHelper(@Nonnull Uri rootURI, boolean returnRoot,
                                                    String relativePath, boolean isDirectory) {
         // start with root and then parse through document tree.
         Context context = HentoidApp.getAppContext();
         DocumentFile document = DocumentFile.fromTreeUri(context, rootURI);
 
         if (null == document) return null;
-        if (returnRoot) return document;
+        if (returnRoot || null == relativePath || relativePath.isEmpty()) return document;
 
         String[] parts = relativePath.split("/");
         for (int i = 0; i < parts.length; i++) {
@@ -126,12 +127,14 @@ class FileUtil {
 
                 if ((i < parts.length - 1) || isDirectory) {
                     nextDocument = document.createDirectory(parts[i]);
-                    if (null == nextDocument)
+                    if (null == nextDocument) {
                         Timber.e("Failed to create subdirectory %s/%s", document.getName(), parts[i]);
+                    }
                 } else {
                     nextDocument = document.createFile("image", parts[i]);
-                    if (null == nextDocument)
+                    if (null == nextDocument) {
                         Timber.e("Failed to create file %s/image%s", document.getName(), parts[i]);
+                    }
                 }
             }
             document = nextDocument;
@@ -164,11 +167,12 @@ class FileUtil {
                             targetDocument.getUri());
                 }
             }
-            throw new IOException("Error while attempting to get file : " + target.getAbsolutePath());
         } catch (Exception e) {
-            Timber.e(e, "Error while attempting to get file: %s", target.getAbsolutePath());
+            Timber.e(e, "Error [%s] while attempting to get file: %s ", e.getMessage(), target.getAbsolutePath());
             throw new IOException(e);
         }
+
+        throw new IOException("Error while attempting to get file : " + target.getAbsolutePath());
     }
 
     static InputStream getInputStream(@NonNull final File target) throws IOException {
@@ -214,6 +218,7 @@ class FileUtil {
         } catch (IOException e) {
             // Fail silently
         }
+
         // Try with Storage Access Framework.
         if (Build.VERSION.SDK_INT >= LOLLIPOP) {
             DocumentFile document = getDocumentFile(file.getParentFile(), true);
@@ -235,7 +240,7 @@ class FileUtil {
      * Create a folder.
      *
      * @param file The folder to be created.
-     * @return true if creation was successful.
+     * @return true if creation was successful or the folder already exists
      */
     static boolean makeDir(@NonNull final File file) {
         if (file.exists()) {
@@ -281,8 +286,7 @@ class FileUtil {
         return false;
     }
 
-    static boolean renameWithSAF(File srcDir, String newName)
-    {
+    static boolean renameWithSAF(File srcDir, String newName) {
         if (Build.VERSION.SDK_INT >= LOLLIPOP) {
             DocumentFile srcDocument = getDocumentFile(srcDir, true);
             if (srcDocument != null) return srcDocument.renameTo(newName);

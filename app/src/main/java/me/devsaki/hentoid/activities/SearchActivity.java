@@ -6,20 +6,22 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.design.widget.Snackbar;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.util.SparseIntArray;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.TextView;
 
 import java.util.List;
 
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.abstracts.BaseActivity;
+import me.devsaki.hentoid.activities.bundles.SearchActivityBundle;
+import me.devsaki.hentoid.adapters.SelectedAttributeAdapter;
 import me.devsaki.hentoid.database.domains.Attribute;
 import me.devsaki.hentoid.enums.AttributeType;
 import me.devsaki.hentoid.fragments.SearchBottomSheetFragment;
-import me.devsaki.hentoid.util.BundleManager;
 import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.viewmodels.SearchViewModel;
 import timber.log.Timber;
@@ -29,12 +31,6 @@ import static me.devsaki.hentoid.abstracts.DownloadsFragment.MODE_LIBRARY;
 
 /**
  * Created by Robb on 2018/11
- * <p>
- * TODO - use a RecyclerView for the input and choice chips. Implement an adapter for each
- * recyclerview and feed both adapters with the same data list modeling the currently selected
- * filters. Whenever the filter list is modified, notify both adapters independently to update
- * views. This should cleanup selection behavior and delegate managing views to the RecyclerView
- * framework.
  */
 public class SearchActivity extends BaseActivity {
 
@@ -48,7 +44,8 @@ public class SearchActivity extends BaseActivity {
     // Caption that says "Select a filter" on top of screen
     private View startCaption;
     // Container where selected attributed are displayed
-    private ViewGroup searchTags;
+    private SelectedAttributeAdapter selectedAttributeAdapter;
+    private RecyclerView searchTags;
 
     // Mode : show library or show Mikan search
     private int mode;
@@ -60,17 +57,17 @@ public class SearchActivity extends BaseActivity {
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        BundleManager manager = new BundleManager(outState);
-        manager.setUri(Helper.buildSearchUri(viewModel.getSelectedAttributesData().getValue()));
+
+        SearchActivityBundle.Builder builder = new SearchActivityBundle.Builder();
+        builder.setUri(Helper.buildSearchUri(viewModel.getSelectedAttributesData().getValue()));
+        outState.putAll(builder.getBundle());
     }
 
     @Override
     protected void onRestoreInstanceState(Bundle savedInstanceState) {
         super.onRestoreInstanceState(savedInstanceState);
 
-        BundleManager manager = new BundleManager(savedInstanceState);
-        Uri searchUri = manager.getUri();
-
+        Uri searchUri = new SearchActivityBundle.Parser(savedInstanceState).getUri();
         if (searchUri != null) {
             List<Attribute> preSelectedAttributes = Helper.parseSearchUri(searchUri);
             if (preSelectedAttributes != null)
@@ -84,10 +81,11 @@ public class SearchActivity extends BaseActivity {
 
         Intent intent = getIntent();
         List<Attribute> preSelectedAttributes = null;
-        if (intent != null) {
-            BundleManager manager = new BundleManager(intent.getExtras());
-            mode = manager.getMode();
-            Uri searchUri = manager.getUri();
+        if (intent != null && intent.getExtras() != null) {
+
+            SearchActivityBundle.Parser parser = new SearchActivityBundle.Parser(intent.getExtras());
+            mode = parser.getMode();
+            Uri searchUri = parser.getUri();
             if (searchUri != null) preSelectedAttributes = Helper.parseSearchUri(searchUri);
         }
 
@@ -114,6 +112,17 @@ public class SearchActivity extends BaseActivity {
         sourceCategoryText.setOnClickListener(v -> onAttrButtonClick(AttributeType.SOURCE));
 
         searchTags = findViewById(R.id.search_tags);
+        LinearLayoutManager llm = new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false);
+        searchTags.setLayoutManager(llm);
+        selectedAttributeAdapter = new SelectedAttributeAdapter();
+        selectedAttributeAdapter.setOnClickListener(this::onAttributeChosen);
+        selectedAttributeAdapter.registerAdapterDataObserver(new RecyclerView.AdapterDataObserver() { // Auto-Scroll to last added item
+            @Override
+            public void onItemRangeInserted(int positionStart, int itemCount) {
+                llm.smoothScrollToPosition(searchTags, null, selectedAttributeAdapter.getItemCount());
+            }
+        });
+        searchTags.setAdapter(selectedAttributeAdapter);
 
         searchButton = findViewById(R.id.search_fab);
         searchButton.setOnClickListener(v -> validateForm());
@@ -136,7 +145,7 @@ public class SearchActivity extends BaseActivity {
         int count = 0;
         for (AttributeType type : types) count += attrCount.get(type.getCode(), 0);
 
-        button.setText(format("%s (%s)", Helper.capitalizeString(types[0].name()), count ));
+        button.setText(format("%s (%s)", Helper.capitalizeString(types[0].getDisplayName()), count));
         button.setEnabled(count > 0);
     }
 
@@ -149,8 +158,6 @@ public class SearchActivity extends BaseActivity {
      * @param attributes list of currently selected attributes
      */
     private void onSelectedAttributesChanged(List<Attribute> attributes) {
-        searchTags.removeAllViews();
-
         if (attributes.isEmpty()) {
             searchTags.setVisibility(View.GONE);
             startCaption.setVisibility(View.VISIBLE);
@@ -158,22 +165,17 @@ public class SearchActivity extends BaseActivity {
             searchTags.setVisibility(View.VISIBLE);
             startCaption.setVisibility(View.GONE);
 
-            // TODO: 04/12/2018 this should be replaced by a RecyclerViewAdapter
-            for (Attribute a : attributes) {
-                String type = a.getType().name().toLowerCase();
-                String name = a.getName();
-
-                TextView chip = (TextView) getLayoutInflater().inflate(R.layout.item_chip_input, searchTags, false);
-                chip.setText(format("%s: %s", type, name));
-                chip.setOnClickListener(v -> viewModel.onAttributeUnselected(a));
-
-                searchTags.addView(chip);
-            }
+            selectedAttributeAdapter.submitList(attributes);
         }
     }
 
+    private void onAttributeChosen(View button) {
+        Attribute a = (Attribute) button.getTag();
+        if (a != null) viewModel.onAttributeUnselected(a);
+    }
+
     private void onBooksReady(SearchViewModel.ContentSearchResult result) {
-        if (result.success && searchTags.getChildCount() > 0) {
+        if (result.success && selectedAttributeAdapter.getItemCount() > 0) {
             searchButton.setText(getString(R.string.search_button).replace("%1", result.totalSelected + "").replace("%2", 1 == result.totalSelected ? "" : "s"));
             searchButton.setVisibility(View.VISIBLE);
         } else {
@@ -186,10 +188,9 @@ public class SearchActivity extends BaseActivity {
         Uri searchUri = Helper.buildSearchUri(viewModel.getSelectedAttributesData().getValue());
         Timber.d("URI :%s", searchUri);
 
+        SearchActivityBundle.Builder builder = new SearchActivityBundle.Builder().setUri(searchUri);
         Intent returnIntent = new Intent();
-        BundleManager manager = new BundleManager();
-        manager.setUri(searchUri);
-        returnIntent.putExtras(manager.getBundle());
+        returnIntent.putExtras(builder.getBundle());
 
         setResult(Activity.RESULT_OK, returnIntent);
         finish();

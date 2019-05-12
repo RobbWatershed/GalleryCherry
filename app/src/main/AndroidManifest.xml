@@ -8,6 +8,8 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Required to run keep-alive service when targeting API 28 or higher -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
 
     <application
         android:name=".HentoidApp"
@@ -15,7 +17,8 @@
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="false"
-        tools:replace="android:allowBackup, android:supportsRtl">
+        android:extractNativeLibs="true"
+        tools:replace="android:allowBackup, android:supportsRtl, android:extractNativeLibs">
         <activity
             android:name=".activities.SplashActivity"
             android:noHistory="true"
@@ -29,7 +32,7 @@
         <activity
             android:name=".activities.IntroActivity"
             android:label="@string/app_intro"
-            android:theme="@style/AppTheme" />
+            android:theme="@style/AppTheme.TaupeBackground" />
         <activity
             android:name=".activities.websites.XhamsterActivity"
             android:configChanges="orientation|screenSize"
@@ -63,6 +66,10 @@
             android:configChanges="orientation|screenSize"
             android:theme="@style/BrowserTheme" />
         <activity
+            android:name=".activities.websites.FakkuActivity"
+            android:configChanges="orientation|screenSize"
+            android:theme="@style/BrowserTheme" />
+        <activity
             android:name=".activities.DownloadsActivity"
             android:configChanges="orientation|screenSize"
             android:label="@string/title_activity_downloads"
@@ -88,7 +95,7 @@
             android:configChanges="orientation|screenSize"
             android:label="@string/title_activity_preferences"
             android:parentActivityName=".activities.DownloadsActivity"
-            android:theme="@style/PrefsTheme"
+            android:theme="@style/PrefsThemeDark"
             tools:ignore="UnusedAttribute">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
@@ -115,10 +122,16 @@
             android:configChanges="orientation|screenSize"
             android:theme="@style/ImportTheme" />
         <activity
-            android:name=".activities.AppLockActivity"
-            android:launchMode="singleTask"
-            android:theme="@style/AppTheme.DarkBackgroundNoActionBar"
-            android:windowSoftInputMode="stateAlwaysVisible" />
+            android:name=".activities.UnlockActivity"
+            android:noHistory="true"
+            android:resizeableActivity="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/AppTheme.TaupeBackgroundNoActionBar" />
+        <activity
+            android:name=".activities.PinPreferenceActivity"
+            android:resizeableActivity="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/AppTheme.Search" />
         <activity
             android:name=".activities.IntentActivity"
             android:theme="@style/BrowserTheme">
@@ -199,6 +212,15 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".activities.ImageViewerActivity"
+            android:label="Image Viewer"
+            android:theme="@style/AppTheme.NoActionBar.viewer">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".activities.DownloadsActivity" />
+        </activity>
+
         <service
             android:name=".services.ContentDownloadService"
             android:enabled="true"
@@ -209,6 +231,10 @@
         <service android:name=".services.UpdateDownloadService" />
 
         <service android:name=".services.ImportService" />
+
+        <service android:name=".services.DatabaseMaintenanceService" />
+
+        <service android:name=".services.DatabaseMigrationService" />
 
         <receiver android:name=".receiver.DownloadNotificationDeleteReceiver" />
 

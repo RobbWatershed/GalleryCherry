@@ -7,6 +7,7 @@ import me.devsaki.hentoid.activities.PrefsActivity;
 import me.devsaki.hentoid.activities.QueueActivity;
 import me.devsaki.hentoid.activities.websites.HellpornoActivity;
 import me.devsaki.hentoid.activities.websites.JpegworldActivity;
+import me.devsaki.hentoid.activities.websites.FakkuActivity;
 import me.devsaki.hentoid.activities.websites.Link2GalleriesActivity;
 import me.devsaki.hentoid.activities.websites.NextpicturezActivity;
 import me.devsaki.hentoid.activities.websites.PornPicGalleriesActivity;

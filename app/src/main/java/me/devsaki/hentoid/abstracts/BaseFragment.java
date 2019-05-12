@@ -1,16 +1,11 @@
 package me.devsaki.hentoid.abstracts;
 
-import android.content.Context;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 
-import com.squareup.leakcanary.LeakCanary;
-
 import org.greenrobot.eventbus.EventBus;
 
-import me.devsaki.hentoid.HentoidApp;
-import me.devsaki.hentoid.database.HentoidDB;
 import me.devsaki.hentoid.events.DownloadEvent;
 
 /**
@@ -20,23 +15,13 @@ import me.devsaki.hentoid.events.DownloadEvent;
  */
 public abstract class BaseFragment extends Fragment {
 
-    private HentoidDB db;
-
     private BackInterface backInterface;
 
     public abstract boolean onBackPressed();
 
-
-    protected HentoidDB getDB() {
-        return db;
-    }
-
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        Context context = HentoidApp.getAppContext();
-        db = HentoidDB.getInstance(context);
 
         if (!(getActivity() instanceof BackInterface)) {
             throw new ClassCastException(
@@ -72,7 +57,7 @@ public abstract class BaseFragment extends Fragment {
     public void onDestroyView() {
         super.onDestroyView();
 
-        LeakCanary.installedRefWatcher().watch(this);
+//        LeakCanary.installedRefWatcher().watch(this);
     }
 
     // Implementations must annotate method with:

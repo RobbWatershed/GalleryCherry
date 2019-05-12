@@ -39,14 +39,19 @@ public class EndlessFragment extends DownloadsFragment {
     }
 
     @Override
-    protected void displayResults(List<Content> results, int totalSelectedContent) {
+    protected void displayResults(List<Content> results, long totalSelectedContent) {
         if (isPageLoading) {
-            mAdapter.add(results);
+            mAdapter.addAll(results);
             isPageLoading = false;
         } else {
             mAdapter.replaceAll(results);
         }
         toggleUI(SHOW_RESULT);
+    }
+
+    @Override
+    protected boolean forceSearchFromPageOne() {
+        return !isPageLoading;
     }
 
     private void onLoadMore() {

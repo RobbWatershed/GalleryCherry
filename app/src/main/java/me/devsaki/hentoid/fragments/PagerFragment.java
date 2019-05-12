@@ -10,7 +10,6 @@ import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.abstracts.DownloadsFragment;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.ui.CarouselDecorator;
-import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.ToastUtil;
 import timber.log.Timber;
 
@@ -43,13 +42,18 @@ public class PagerFragment extends DownloadsFragment {
         attachPageSelector();
     }
 
+    @Override
+    protected boolean forceSearchFromPageOne() {
+        return false;
+    }
+
     private void attachPrevious(View rootView) {
         ImageButton btnPrevious = rootView.findViewById(R.id.btnPrevious);
         btnPrevious.setOnClickListener(v -> {
             if (currentPage > 1 && !isLoading) {
                 currentPage--;
                 pager.setCurrentPage(currentPage); // Cleaner when displayed on bottom bar _before_ the update starts
-                searchLibrary(true);
+                searchLibrary();
             } else if (booksPerPage > 0 && !isLoading) {
                 ToastUtil.toast(mContext, R.string.not_previous_page);
             } else {
@@ -67,7 +71,7 @@ public class PagerFragment extends DownloadsFragment {
                 if (!isLastPage() && !isLoading) {
                     currentPage++;
                     pager.setCurrentPage(currentPage); // Cleaner when displayed on bottom bar _before_ the update starts
-                    searchLibrary(true);
+                    searchLibrary();
                 } else if (isLastPage()) {
                     ToastUtil.toast(mContext, R.string.not_next_page);
                 }
@@ -82,25 +86,22 @@ public class PagerFragment extends DownloadsFragment {
     private void onPageChange(int page) {
         if (page != currentPage) {
             currentPage = page;
-            searchLibrary(true);
+            searchLibrary();
         }
     }
 
     @Override
     protected void showToolbar(boolean show) {
-        pagerToolbar.setVisibility(show?View.VISIBLE:View.GONE);
+        pagerToolbar.setVisibility(show ? View.VISIBLE : View.GONE);
     }
 
     @Override
-    protected void displayResults(List<Content> results, int totalSelectedContent) {
-        if (0 == results.size()) {
-            Timber.d("Result: Nothing to match.");
-            displayNoResults();
-        } else {
-            mAdapter.replaceAll(results);
-            toggleUI(SHOW_RESULT);
-        }
-        pager.setPageCount((int)Math.ceil(totalSelectedContent *1.0/booksPerPage));
+    protected void displayResults(List<Content> results, long totalSelectedContent) {
+        mAdapter.replaceAll(results);
+        toggleUI(SHOW_RESULT);
+
+        pager.setPageCount((int) Math.ceil(totalSelectedContent * 1.0 / booksPerPage));
         pager.setCurrentPage(currentPage);
+        mListView.scrollToPosition(0);
     }
 }

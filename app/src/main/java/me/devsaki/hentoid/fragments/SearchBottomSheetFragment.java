@@ -11,6 +11,7 @@ import android.support.annotation.Nullable;
 import android.support.design.widget.BottomSheetDialogFragment;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.FragmentManager;
+import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.SearchView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -19,6 +20,8 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.annimon.stream.Stream;
+import com.google.android.flexbox.FlexWrap;
+import com.google.android.flexbox.FlexboxLayoutManager;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -26,17 +29,17 @@ import java.util.List;
 import java.util.Objects;
 
 import me.devsaki.hentoid.R;
+import me.devsaki.hentoid.activities.bundles.SearchActivityBundle;
+import me.devsaki.hentoid.adapters.AvailableAttributeAdapter;
 import me.devsaki.hentoid.database.domains.Attribute;
 import me.devsaki.hentoid.enums.AttributeType;
 import me.devsaki.hentoid.ui.BlinkAnimation;
-import me.devsaki.hentoid.util.BundleManager;
 import me.devsaki.hentoid.util.Debouncer;
 import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.IllegalTags;
 import me.devsaki.hentoid.viewmodels.SearchViewModel;
 import timber.log.Timber;
 
-import static com.annimon.stream.Collectors.toList;
 import static java.lang.String.format;
 import static me.devsaki.hentoid.abstracts.DownloadsFragment.MODE_MIKAN;
 
@@ -54,14 +57,20 @@ public class SearchBottomSheetFragment extends BottomSheetDialogFragment {
      */
     private final Debouncer<String> searchMasterDataDebouncer = new Debouncer<>(1000, this::searchMasterData);
 
+
     // Panel that displays the "waiting for metadata info" visuals
     private View tagWaitPanel;
     // Image that displays metadata search message (e.g. loading up / too many results / no result)
     private TextView tagWaitMessage;
     // Search bar
     private SearchView tagSearchView;
-    // Container where all available attributes are loaded
-    private ViewGroup attributeMosaic;
+    // Container where all proposed attributes are loaded
+    private AvailableAttributeAdapter attributeAdapter;
+
+    private boolean clearOnSuccess; // Flag to clear the adapter on content reception
+
+    private int currentPage;
+    private long mTotalSelectedCount;
 
     // Mode : show library or show Mikan search
     private int mode;
@@ -72,20 +81,21 @@ public class SearchBottomSheetFragment extends BottomSheetDialogFragment {
     // ViewModel of the current activity
     private SearchViewModel viewModel;
 
+    private boolean isInitiated = false; // https://stackoverflow.com/a/50474911
+
 
     // ======== CONSTANTS
-    protected static final int MAX_ATTRIBUTES_DISPLAYED = 40;
+    private final static int ATTRS_PER_PAGE = 40;
 
 
     public static void show(FragmentManager fragmentManager, int mode, AttributeType[] types) {
-        Bundle bundle = new Bundle();
-        BundleManager manager = new BundleManager(bundle);
+        SearchActivityBundle.Builder builder = new SearchActivityBundle.Builder();
 
-        manager.setMode(mode);
-        manager.setAttributeTypes(types);
+        builder.setMode(mode);
+        builder.setAttributeTypes(types);
 
         SearchBottomSheetFragment searchBottomSheetFragment = new SearchBottomSheetFragment();
-        searchBottomSheetFragment.setArguments(bundle);
+        searchBottomSheetFragment.setArguments(builder.getBundle());
         searchBottomSheetFragment.setStyle(STYLE_NORMAL, R.style.BottomSheetDialogTheme);
         searchBottomSheetFragment.show(fragmentManager, null);
     }
@@ -96,9 +106,10 @@ public class SearchBottomSheetFragment extends BottomSheetDialogFragment {
 
         Bundle bundle = getArguments();
         if (bundle != null) {
-            BundleManager manager = new BundleManager(bundle);
-            mode = manager.getMode();
-            selectedAttributeTypes = manager.getAttributeTypes();
+            SearchActivityBundle.Parser parser = new SearchActivityBundle.Parser(bundle);
+            mode = parser.getMode();
+            selectedAttributeTypes = parser.getAttributeTypes();
+            currentPage = 1;
 
             if (-1 == mode || selectedAttributeTypes.isEmpty()) {
                 throw new RuntimeException("Initialization failed");
@@ -125,7 +136,15 @@ public class SearchBottomSheetFragment extends BottomSheetDialogFragment {
 
         tagWaitPanel = view.findViewById(R.id.tag_wait_panel);
         tagWaitMessage = view.findViewById(R.id.tag_wait_description);
-        attributeMosaic = view.findViewById(R.id.tag_suggestion);
+        RecyclerView attributeMosaic = view.findViewById(R.id.tag_suggestion);
+        FlexboxLayoutManager layoutManager = new FlexboxLayoutManager(this.getContext());
+//        layoutManager.setAlignContent(AlignContent.FLEX_START); <-- not possible
+        layoutManager.setFlexWrap(FlexWrap.WRAP);
+        attributeMosaic.setLayoutManager(layoutManager);
+        attributeAdapter = new AvailableAttributeAdapter();
+        attributeAdapter.setOnScrollToEndListener(this::loadMore);
+        attributeAdapter.setOnClickListener(this::onAttributeChosen);
+        attributeMosaic.setAdapter(attributeAdapter);
 
         tagSearchView = view.findViewById(R.id.tag_filter);
         tagSearchView.setSearchableInfo(getSearchableInfo(requireActivity())); // Associate searchable configuration with the SearchView
@@ -162,11 +181,14 @@ public class SearchBottomSheetFragment extends BottomSheetDialogFragment {
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        searchMasterData("");
-        // Update attribute mosaic buttons state according to available metadata
-//        viewModel.getAvailableAttributes(selectedAttributeTypes);
-//        viewModel.getAvailableAttributesData().observe(this, this::updateAttributeMosaic);
         viewModel.getProposedAttributesData().observe(this, this::onAttributesReady);
+        searchMasterData("");
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        isInitiated = true;
     }
 
     @Override
@@ -183,46 +205,52 @@ public class SearchBottomSheetFragment extends BottomSheetDialogFragment {
      *               %s%)
      */
     private void searchMasterData(final String filter) {
-        tagWaitMessage.startAnimation(new BlinkAnimation(750, 20));
-        tagWaitMessage.setText(R.string.downloads_loading);
+        currentPage = 1;
+        searchMasterData(filter, true, true);
+    }
 
-        tagWaitPanel.setVisibility(View.VISIBLE);
+    private void loadMoreMasterData(final String filter) {
+        searchMasterData(filter, false, false);
+    }
 
-        viewModel.onCategoryFilterChanged(filter);
+    private void searchMasterData(final String filter, boolean displayLoadingImage, boolean clearOnSuccess) {
+        if (displayLoadingImage) {
+            tagWaitMessage.startAnimation(new BlinkAnimation(750, 20));
+            tagWaitMessage.setText(R.string.downloads_loading);
+            tagWaitPanel.setVisibility(View.VISIBLE);
+        }
+        this.clearOnSuccess = clearOnSuccess;
+
+        viewModel.onCategoryFilterChanged(filter, currentPage, ATTRS_PER_PAGE);
     }
 
     private void onAttributesReady(SearchViewModel.AttributeSearchResult results) {
+        if (!isInitiated) return;
+
         if (!results.success) {
             onAttributesFailed(results.message);
             return;
         }
 
-        attributeMosaic.removeAllViews();
         tagWaitMessage.clearAnimation();
 
         List<Attribute> selectedAttributes = viewModel.getSelectedAttributesData().getValue();
+        selectedAttributes = (null == selectedAttributes) ?
+                Collections.emptyList()
+                : Stream.of(selectedAttributes).filter(a -> selectedAttributeTypes.contains(a.getType())).toList();
 
-        // Remove unavailable and selected attributes
-        List<Attribute> finalSelectedAttributes = (selectedAttributes == null) ? Collections.emptyList() : selectedAttributes;
-        List<Attribute> attributes = Stream.of(results.attributes)
-                .filter(value -> value.getCount() > 0)
-                .filter(value -> !finalSelectedAttributes.contains(value))
-                .collect(toList());
+        // Remove selected attributes from the result set
+        results.attributes.removeAll(selectedAttributes);
 
-        String searchQuery = tagSearchView.getQuery().toString();
-        if (attributes.isEmpty()) {
+        mTotalSelectedCount = results.totalContent - selectedAttributes.size();
+        if (clearOnSuccess) attributeAdapter.clear();
+        if (0 == mTotalSelectedCount) {
+            String searchQuery = tagSearchView.getQuery().toString();
             if (searchQuery.isEmpty()) this.dismiss();
             else tagWaitMessage.setText(R.string.masterdata_no_result);
-        } else if (attributes.size() > MAX_ATTRIBUTES_DISPLAYED) {
-            String errMsg = (searchQuery.isEmpty()) ? getString(R.string.masterdata_too_many_results_noquery) : getString(R.string.masterdata_too_many_results_query);
-            tagWaitMessage.setText(errMsg.replace("%1", searchQuery));
         } else {
             tagWaitPanel.setVisibility(View.GONE);
-
-            // Display buttons
-            for (Attribute attr : attributes) {
-                addChoiceChip(attributeMosaic, attr);
-            }
+            attributeAdapter.add(results.attributes);
         }
     }
 
@@ -231,23 +259,12 @@ public class SearchBottomSheetFragment extends BottomSheetDialogFragment {
         Snackbar bar = Snackbar.make(Objects.requireNonNull(getView()), message, Snackbar.LENGTH_SHORT);
         // Set retry button if Mikan mode on
         if (MODE_MIKAN == mode) {
-            bar.setAction("RETRY", v -> viewModel.onCategoryFilterChanged(tagSearchView.getQuery().toString()));
+            bar.setAction("RETRY", v -> viewModel.onCategoryFilterChanged(tagSearchView.getQuery().toString(), currentPage, ATTRS_PER_PAGE));
             bar.setDuration(Snackbar.LENGTH_LONG);
         }
         bar.show();
 
         tagWaitPanel.setVisibility(View.GONE);
-    }
-
-    private void addChoiceChip(ViewGroup parent, Attribute attribute) {
-        String label = formatAttributeLabel(attribute);
-
-        TextView chip = (TextView) getLayoutInflater().inflate(R.layout.item_chip_choice, parent, false);
-        chip.setText(label);
-        chip.setTag(attribute);
-        chip.setOnClickListener(this::onAttributeChosen);
-
-        parent.addView(chip);
     }
 
     /**
@@ -265,10 +282,6 @@ public class SearchBottomSheetFragment extends BottomSheetDialogFragment {
         }
     }
 
-    private String formatAttributeLabel(Attribute attribute) {
-        return format("%s %s", attribute.getName(), attribute.getCount() > 0 ? "(" + attribute.getCount() + ")" : "");
-    }
-
     /**
      * Utility method
      *
@@ -278,5 +291,17 @@ public class SearchBottomSheetFragment extends BottomSheetDialogFragment {
         final SearchManager searchManager = (SearchManager) activity.getSystemService(Context.SEARCH_SERVICE);
         if (searchManager == null) throw new RuntimeException();
         return searchManager.getSearchableInfo(activity.getComponentName());
+    }
+
+    protected boolean isLastPage() {
+        return (currentPage * ATTRS_PER_PAGE >= mTotalSelectedCount);
+    }
+
+    private void loadMore() {
+        if (!isLastPage()) { // NB : A "page" is a group of loaded attributes. Last page is reached when scrolling reaches the very end of the list
+            Timber.d("Load more data now~");
+            currentPage++;
+            loadMoreMasterData(tagSearchView.getQuery().toString());
+        }
     }
 }

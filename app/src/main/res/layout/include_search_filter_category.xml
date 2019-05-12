@@ -50,26 +50,13 @@
 
     </LinearLayout>
 
-    <com.bskim.maxheightscrollview.widgets.MaxHeightScrollView
-        xmlns:app="http://schemas.android.com/apk/res-auto"
+    <me.devsaki.hentoid.views.MaxHeightRecyclerView
+        android:id="@+id/tag_suggestion"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:textIsSelectable="false"
         app:maxHeight="200dp"
-        android:fadeScrollbars="false"
-        android:scrollbars="vertical">
-
-        <com.google.android.flexbox.FlexboxLayout
-            android:id="@+id/tag_suggestion"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:alignContent="flex_start"
-            app:flexWrap="wrap">
-
-            <!-- programmatically added metadata here -->
-
-        </com.google.android.flexbox.FlexboxLayout>
-
-    </com.bskim.maxheightscrollview.widgets.MaxHeightScrollView>
+        />
 
     <android.support.v7.widget.SearchView
         android:id="@+id/tag_filter"

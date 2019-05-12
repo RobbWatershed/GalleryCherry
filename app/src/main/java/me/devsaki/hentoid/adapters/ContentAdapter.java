@@ -2,8 +2,6 @@ package me.devsaki.hentoid.adapters;
 
 import android.content.Context;
 import android.content.Intent;
-import android.net.Uri;
-import android.os.AsyncTask;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.design.widget.Snackbar;
@@ -12,7 +10,6 @@ import android.support.v7.app.AlertDialog;
 import android.support.v7.util.SortedList;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.util.SortedListAdapterCallback;
-import android.util.Pair;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -21,37 +18,49 @@ import com.annimon.stream.function.IntConsumer;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.RequestManager;
 import com.bumptech.glide.request.RequestOptions;
+import com.crashlytics.android.Crashlytics;
 
 import java.io.File;
 import java.io.IOException;
+import java.security.InvalidParameterException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 
+import io.reactivex.Observable;
+import io.reactivex.Single;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.CompositeDisposable;
+import io.reactivex.schedulers.Schedulers;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.abstracts.DownloadsFragment;
 import me.devsaki.hentoid.collection.CollectionAccessor;
-import me.devsaki.hentoid.database.HentoidDB;
+import me.devsaki.hentoid.database.ObjectBoxDB;
 import me.devsaki.hentoid.database.domains.Attribute;
 import me.devsaki.hentoid.database.domains.Content;
+import me.devsaki.hentoid.database.domains.ErrorRecord;
 import me.devsaki.hentoid.database.domains.ImageFile;
+import me.devsaki.hentoid.database.domains.QueueRecord;
 import me.devsaki.hentoid.enums.AttributeType;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.listener.ContentListener;
-import me.devsaki.hentoid.listener.ItemClickListener;
-import me.devsaki.hentoid.listener.ItemClickListener.ItemSelectListener;
+import me.devsaki.hentoid.listener.ContentClickListener;
+import me.devsaki.hentoid.listener.ContentClickListener.ItemSelectListener;
 import me.devsaki.hentoid.services.ContentQueueManager;
 import me.devsaki.hentoid.ui.BlinkAnimation;
+import me.devsaki.hentoid.util.ContentNotRemovedException;
 import me.devsaki.hentoid.util.FileHelper;
 import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.JsonHelper;
+import me.devsaki.hentoid.util.LogUtil;
 import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.util.ToastUtil;
 import timber.log.Timber;
 
 /**
  * Created by avluis on 04/23/2016. RecyclerView based Content Adapter
+ * TODO - Consider replacing with https://github.com/davideas/FlexibleAdapter
  */
 public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implements ContentListener {
 
@@ -61,10 +70,11 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
     private final Context context;
     private final ItemSelectListener itemSelectListener;
     private final IntConsumer onContentRemovedListener;
-    private final Runnable onContentsClearedListener;
     private final CollectionAccessor collectionAccessor;
     private final int displayMode;
     private final RequestOptions glideRequestOptions;
+    private final CompositeDisposable compositeDisposable = new CompositeDisposable();
+
     private RecyclerView libraryView; // Kept as reference for querying by Content through ID
     private Runnable onScrollToEndListener;
     private Comparator<Content> sortComparator;
@@ -73,7 +83,6 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
         context = builder.context;
         itemSelectListener = builder.itemSelectListener;
         onContentRemovedListener = builder.onContentRemovedListener;
-        onContentsClearedListener = builder.onContentsClearedListener;
         collectionAccessor = builder.collectionAccessor;
         sortComparator = builder.sortComparator;
         displayMode = builder.displayMode;
@@ -144,17 +153,19 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
         libraryView = recyclerView;
     }
 
+    /**
+     * Initializes the {@link ContentHolder} that contains the books
+     */
     @Override
     public void onBindViewHolder(@NonNull ContentHolder holder, final int pos) {
         Content content = mSortedList.get(pos);
 
-        // Initializes the ViewHolder that contains the books
         updateLayoutVisibility(holder, content, pos);
         attachTitle(holder, content);
         attachSeries(holder, content);
         attachArtist(holder, content);
         attachTags(holder, content);
-        attachButtons(holder, content, pos);
+        attachButtons(holder, content);
         attachOnClickListeners(holder, content, pos);
     }
 
@@ -191,6 +202,11 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
                     .apply(glideRequestOptions)
                     .into(holder.ivCover);
         }
+
+        if (content.isBeingDeleted()) {
+            BlinkAnimation animation = new BlinkAnimation(500, 250);
+            holder.fullLayout.startAnimation(animation);
+        }
     }
 
     private void attachTitle(ContentHolder holder, Content content) {
@@ -212,7 +228,7 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
     private void attachSeries(ContentHolder holder, Content content) {
         String templateSeries = context.getResources().getString(R.string.work_series);
         StringBuilder seriesBuilder = new StringBuilder();
-        List<Attribute> seriesAttributes = content.getAttributes().get(AttributeType.SERIE);
+        List<Attribute> seriesAttributes = content.getAttributeMap().get(AttributeType.SERIE);
         if (seriesAttributes == null) {
             holder.tvSeries.setVisibility(View.GONE);
         } else {
@@ -236,9 +252,9 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
         String templateArtist = context.getResources().getString(R.string.work_artist);
         StringBuilder artistsBuilder = new StringBuilder();
         List<Attribute> attributes = new ArrayList<>();
-        List<Attribute> artistAttributes = content.getAttributes().get(AttributeType.ARTIST);
+        List<Attribute> artistAttributes = content.getAttributeMap().get(AttributeType.ARTIST);
         if (artistAttributes != null) attributes.addAll(artistAttributes);
-        List<Attribute> circleAttributes = content.getAttributes().get(AttributeType.CIRCLE);
+        List<Attribute> circleAttributes = content.getAttributeMap().get(AttributeType.CIRCLE);
         if (circleAttributes != null) attributes.addAll(circleAttributes);
 
         if (attributes.isEmpty()) {
@@ -262,7 +278,7 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
     private void attachTags(ContentHolder holder, Content content) {
         String templateTags = context.getResources().getString(R.string.work_tags);
         StringBuilder tagsBuilder = new StringBuilder();
-        List<Attribute> tagsAttributes = content.getAttributes().get(AttributeType.TAG);
+        List<Attribute> tagsAttributes = content.getAttributeMap().get(AttributeType.TAG);
         if (tagsAttributes != null) {
             for (int i = 0; i < tagsAttributes.size(); i++) {
                 Attribute attribute = tagsAttributes.get(i);
@@ -277,7 +293,7 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
         holder.tvTags.setText(Helper.fromHtml(tagsBuilder.toString()));
     }
 
-    private void attachButtons(ContentHolder holder, final Content content, int pos) {
+    private void attachButtons(ContentHolder holder, final Content content) {
         // Set source icon
         if (content.getSite() != null) {
             int img = content.getSite().getIco();
@@ -298,7 +314,6 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
             StatusContent status = content.getStatus();
             holder.ivSite.setBackgroundColor(ContextCompat.getColor(context, R.color.primary));
             holder.ivFavourite.setVisibility((DownloadsFragment.MODE_LIBRARY == displayMode) ? View.VISIBLE : View.GONE);
-            holder.ivError.setVisibility((DownloadsFragment.MODE_LIBRARY == displayMode) ? View.VISIBLE : View.GONE);
             holder.ivDownload.setVisibility((DownloadsFragment.MODE_MIKAN == displayMode) ? View.VISIBLE : View.GONE);
 
             if (DownloadsFragment.MODE_LIBRARY == displayMode) {
@@ -309,23 +324,34 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
                     holder.ivFavourite.setImageResource(R.drawable.ic_fav_empty);
                 }
                 holder.ivFavourite.setOnClickListener(v -> {
-                    if (getSelectedItemsCount() >= 1) {
+                    if (getSelectedItemsCount() > 0) {
                         clearSelections();
                         itemSelectListener.onItemClear(0);
                     }
-                    if (content.isFavourite()) {
-                        holder.ivFavourite.setImageResource(R.drawable.ic_fav_empty);
-                    } else {
-                        holder.ivFavourite.setImageResource(R.drawable.ic_fav_full);
-                    }
-                    toggleFavourite(content);
+
+                    compositeDisposable.add(
+                            Single.fromCallable(() -> toggleFavourite(content.getId()))
+                                    .subscribeOn(Schedulers.io())
+                                    .observeOn(AndroidSchedulers.mainThread())
+                                    .subscribe(
+                                            result -> {
+                                                content.setFavourite(result.isFavourite());
+                                                if (result.isFavourite()) {
+                                                    holder.ivFavourite.setImageResource(R.drawable.ic_fav_full);
+                                                } else {
+                                                    holder.ivFavourite.setImageResource(R.drawable.ic_fav_empty);
+                                                }
+                                            },
+                                            Timber::e
+                                    )
+                    );
                 });
 
                 // Error icon
                 if (status == StatusContent.ERROR) {
                     holder.ivError.setVisibility(View.VISIBLE);
                     holder.ivError.setOnClickListener(v -> {
-                        if (getSelectedItemsCount() >= 1) {
+                        if (getSelectedItemsCount() > 0) {
                             clearSelections();
                             itemSelectListener.onItemClear(0);
                         }
@@ -360,7 +386,7 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
     }
 
     private void tryDownloadPages(Content content) {
-        ContentHolder holder = holderByContent(content);
+        ContentHolder holder = getHolderByContent(content);
         if (holder != null) {
             holder.ivDownload.startAnimation(new BlinkAnimation(500, 100));
             holder.ivDownload.setOnClickListener(w -> Helper.viewQueue(context));
@@ -371,16 +397,17 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
     private void attachOnClickListeners(final ContentHolder holder, Content content, int pos) {
 
         // Simple click = open book (library mode only)
-        // TODO : implement preview gallery for Mikan mode
         if (DownloadsFragment.MODE_LIBRARY == displayMode) {
-            holder.itemView.setOnClickListener(new ItemClickListener(context, content, pos, itemSelectListener) {
+            holder.itemView.setOnClickListener(new ContentClickListener(context, content, pos, itemSelectListener) {
 
                 @Override
                 public void onClick(View v) {
                     if (getSelectedItemsCount() > 0) { // Selection mode is on
                         int itemPos = holder.getLayoutPosition();
-                        toggleSelection(itemPos);
-                        setSelected(isSelectedAt(pos), getSelectedItemsCount());
+                        if (itemPos > -1) {
+                            toggleSelection(itemPos);
+                            setSelected(isSelectedAt(pos), getSelectedItemsCount());
+                        }
                         onLongClick(v);
                     } else {
                         clearSelections();
@@ -399,13 +426,18 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
 
         // Long click = select item (library mode only)
         if (DownloadsFragment.MODE_LIBRARY == displayMode) {
-            holder.itemView.setOnLongClickListener(new ItemClickListener(context, content, pos, itemSelectListener) {
+            holder.itemView.setOnLongClickListener(new ContentClickListener(context, content, pos, itemSelectListener) {
 
                 @Override
                 public boolean onLongClick(View v) {
                     int itemPos = holder.getLayoutPosition();
-                    toggleSelection(itemPos);
-                    setSelected(isSelectedAt(pos), getSelectedItemsCount());
+                    if (itemPos > -1) {
+                        Content c = getItemAt(itemPos);
+                        if (c != null && !c.isBeingDeleted()) {
+                            toggleSelection(itemPos);
+                            setSelected(isSelectedAt(pos), getSelectedItemsCount());
+                        }
+                    }
 
                     super.onLongClick(v);
 
@@ -419,46 +451,47 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
         int images;
         int imgErrors = 0;
 
-        images = item.getImageFiles().size();
+        if (item.getImageFiles() != null) {
+            images = item.getImageFiles().size();
 
-        for (ImageFile imgFile : item.getImageFiles()) {
-            if (imgFile.getStatus() == StatusContent.ERROR) {
-                imgErrors++;
+            for (ImageFile imgFile : item.getImageFiles()) {
+                if (imgFile.getStatus() == StatusContent.ERROR) {
+                    imgErrors++;
+                }
             }
-        }
 
-        String message = context.getString(R.string.download_again_dialog_message).replace("@clean", images - imgErrors + "").replace("@error", imgErrors + "").replace("@total", images + "");
-        AlertDialog.Builder builder = new AlertDialog.Builder(context);
-        builder.setTitle(R.string.download_again_dialog_title)
-                .setMessage(message)
-                .setPositiveButton(android.R.string.yes,
-                        (dialog, which) -> {
-                            downloadContent(item);
-                            remove(item);
-                        })
-                .setNegativeButton(android.R.string.no, null)
-                .create().show();
+            String message = context.getString(R.string.redownload_dialog_message).replace("@clean", images - imgErrors + "").replace("@error", imgErrors + "").replace("@total", images + "");
+            AlertDialog.Builder builder = new AlertDialog.Builder(context);
+            builder.setTitle(R.string.redownload_dialog_title)
+                    .setMessage(message)
+                    .setPositiveButton(android.R.string.yes,
+                            (dialog, which) -> {
+                                downloadContent(item);
+                                remove(item);
+                            })
+                    .setNegativeButton(android.R.string.no, null)
+                    .setNeutralButton(R.string.redownload_view_log,
+                            (dialog, which) -> showErrorLog(item))
+                    .create().show();
+        }
     }
 
     private void downloadContent(Content item) {
-        HentoidDB db = HentoidDB.getInstance(context);
+        ObjectBoxDB db = ObjectBoxDB.getInstance(context);
+
+        if (StatusContent.ONLINE == item.getStatus())
+            if (item.getImageFiles() != null)
+                for (ImageFile im : item.getImageFiles())
+                    db.updateImageFileStatusAndParams(im.setStatus(StatusContent.SAVED));
 
         item.setDownloadDate(new Date().getTime());
+        item.setStatus(StatusContent.DOWNLOADING);
+        db.insertContent(item);
 
-        if (StatusContent.ONLINE == item.getStatus()) {
-            item.setStatus(StatusContent.DOWNLOADING);
-            for (ImageFile im : item.getImageFiles()) im.setStatus(StatusContent.SAVED);
-
-            db.insertContent(item);
-        } else {
-            item.setStatus(StatusContent.DOWNLOADING);
-            db.updateContentStatus(item);
-        }
-
-        List<Pair<Integer, Integer>> queue = db.selectQueue();
+        List<QueueRecord> queue = db.selectQueue();
         int lastIndex = 1;
         if (queue.size() > 0) {
-            lastIndex = queue.get(queue.size() - 1).second + 1;
+            lastIndex = queue.get(queue.size() - 1).rank + 1;
         }
         db.insertQueue(item.getId(), lastIndex);
 
@@ -467,12 +500,34 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
         ToastUtil.toast(context, R.string.add_to_queue);
     }
 
+    private void showErrorLog(final Content content) {
+        List<ErrorRecord> errorLog = content.getErrorLog();
+        List<String> log = new ArrayList<>();
+
+        LogUtil.LogInfo errorLogInfo = new LogUtil.LogInfo();
+        errorLogInfo.logName = "Error";
+        errorLogInfo.fileName = "error_log" + content.getId();
+        errorLogInfo.noDataMessage = "No error detected.";
+
+        if (errorLog != null) {
+            log.add("Error log for " + content.getTitle() + " : " + errorLog.size() + " errors");
+            for (ErrorRecord e : errorLog) log.add(e.toString());
+        }
+
+        File logFile = LogUtil.writeLog(context, log, errorLogInfo);
+        if (logFile != null) {
+            Snackbar snackbar = Snackbar.make(libraryView, R.string.cleanup_done, Snackbar.LENGTH_LONG);
+            snackbar.setAction("READ LOG", v -> FileHelper.openFile(context, logFile));
+            snackbar.show();
+        }
+    }
+
     private void shareContent(final Content item) {
         String url = item.getGalleryUrl();
 
         Intent intent = new Intent();
         intent.setAction(Intent.ACTION_SEND);
-        intent.setDataAndType(Uri.parse(url), "text/plain");
+        intent.setType("text/plain");
         intent.putExtra(Intent.EXTRA_SUBJECT, item.getTitle());
         intent.putExtra(Intent.EXTRA_TEXT, url);
 
@@ -484,14 +539,11 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
         FileHelper.archiveContent(context, item);
     }
 
-    private void deleteContent(final Content item) {
+    private void askDeleteItem(final Content item) {
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
         builder.setMessage(R.string.ask_delete)
                 .setPositiveButton(android.R.string.yes,
-                        (dialog, which) -> {
-                            clearSelections();
-                            deleteItem(item);
-                        })
+                        (dialog, which) -> deleteItem(item))
                 .setNegativeButton(android.R.string.no,
                         (dialog, which) -> {
                             clearSelections();
@@ -500,7 +552,7 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
                 .create().show();
     }
 
-    private void deleteContents(final List<Content> items) {
+    private void askDeleteItems(final List<Content> items) {
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
         builder.setMessage(R.string.ask_delete_multiple)
                 .setPositiveButton(android.R.string.yes,
@@ -516,23 +568,30 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
                 .create().show();
     }
 
-    private void toggleFavourite(Content item) {
-        item.setFavourite(!item.isFavourite());
+    private Content toggleFavourite(long contentId) {
+        ObjectBoxDB db = ObjectBoxDB.getInstance(context);
+        Content content = db.selectContentById(contentId);
 
-        // Persist in it DB
-        final HentoidDB db = HentoidDB.getInstance(context);
-        db.updateContentFavourite(item);
+        if (content != null) {
+            if (!content.isBeingDeleted()) {
+                content.setFavourite(!content.isFavourite());
 
-        // Persist in it JSON
-        String rootFolderName = Preferences.getRootFolderName();
-        File dir = new File(rootFolderName, item.getStorageFolder());
+                // Persist in it DB
+                db.insertContent(content);
 
-        try {
-            JsonHelper.saveJson(item, dir);
-        } catch (IOException e) {
-            Timber.e(e, "Error while writing to " + dir.getAbsolutePath());
+                // Persist in it JSON
+                String rootFolderName = Preferences.getRootFolderName();
+                File dir = new File(rootFolderName, content.getStorageFolder());
+                try {
+                    JsonHelper.saveJson(content.preJSONExport(), dir);
+                } catch (IOException e) {
+                    Timber.e(e, "Error while writing to %s", dir.getAbsolutePath());
+                }
+            }
+            return content;
         }
 
+        throw new InvalidParameterException("ContentId " + contentId + " does not refer to a valid content");
     }
 
     /**
@@ -542,7 +601,7 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
      * @param content content that has been downloaded
      */
     public void switchStateToDownloaded(Content content) {
-        ContentHolder holder = holderByContent(content);
+        ContentHolder holder = getHolderByContent(content);
 
         if (holder != null) {
             holder.ivDownload.setImageResource(R.drawable.ic_action_play);
@@ -552,7 +611,7 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
     }
 
     @Nullable
-    private ContentHolder holderByContent(Content content) {
+    private ContentHolder getHolderByContent(Content content) {
         return (ContentHolder) libraryView.findViewHolderForItemId(content.getId());
     }
 
@@ -608,7 +667,7 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
                 items = getSelectedContents();
 
                 if (!items.isEmpty()) {
-                    deleteContent(items.get(0));
+                    askDeleteItem(items.get(0));
                 } else {
                     itemSelectListener.onItemClear(0);
                     Timber.d("Nothing to delete!!");
@@ -620,7 +679,7 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
                 items = getSelectedContents();
 
                 if (!items.isEmpty()) {
-                    deleteContents(items);
+                    askDeleteItems(items);
                 } else {
                     itemSelectListener.onItemClear(0);
                     Timber.d("No items to delete!!");
@@ -659,93 +718,110 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
     }
 
     private void deleteItem(final Content item) {
-        remove(item);
-
-        final HentoidDB db = HentoidDB.getInstance(context);
-        AsyncTask.execute(() -> {
-            FileHelper.removeContent(item);
-            db.deleteContent(item);
-            Timber.d("Removed item: %s from db and file system.", item.getTitle());
-        });
-
-        ToastUtil.toast(context, context.getString(R.string.deleted).replace("@content", item.getTitle()));
+        List<Content> list = new ArrayList<>();
+        list.add(item);
+        deleteItems(list);
     }
 
     private void deleteItems(final List<Content> contents) {
-        mSortedList.beginBatchedUpdates();
-        for (Content content : contents) {
-            mSortedList.remove(content);
+        // Logging -- TODO remove when "no content found" issue is resolved
+        StringBuilder sb = new StringBuilder();
+        for (Content c : contents) sb.append(c.getId()).append(",");
+        Crashlytics.log("deleteItems " + sb.toString());
+
+        for (Content c : contents) {
+            // Flag it to make it unselectable
+            c.setIsBeingDeleted(true);
+            ObjectBoxDB db = ObjectBoxDB.getInstance(context);
+            db.insertContent(c);
+
+            ContentHolder holder = getHolderByContent(c);
+            if (holder != null) notifyItemChanged(holder.getAdapterPosition());
         }
-        onContentRemovedListener.accept(contents.size());
-        mSortedList.endBatchedUpdates();
-        itemSelectListener.onItemClear(0);
 
-        final HentoidDB db = HentoidDB.getInstance(context);
+        compositeDisposable.add(
+                Observable.fromIterable(contents)
+                        .subscribeOn(Schedulers.io())
+                        .flatMap(s -> Observable.fromCallable(() -> deleteContent(s)))
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe(
+                                this::remove,
+                                this::onContentRemoveFail,
+                                () -> ToastUtil.toast(context, "Selected items have been deleted.")
+                        )
+        );
+    }
 
-        AsyncTask.execute(() -> {
-            for (Content item : contents) {
-                FileHelper.removeContent(item);
-                db.deleteContent(item);
-                Timber.d("Removed item: %s from db and file system.", item.getTitle());
+    private Content deleteContent(final Content content) throws ContentNotRemovedException {
+        // Check if given content still exists in DB
+        ObjectBoxDB db = ObjectBoxDB.getInstance(context);
+        Content theContent = db.selectContentById(content.getId());
+
+        if (theContent != null) {
+            FileHelper.removeContent(content);
+            db.deleteContent(content);
+            Timber.d("Removed item: %s from db and file system.", content.getTitle());
+            return content;
+        }
+        throw new ContentNotRemovedException(content, "ContentId " + content.getId() + " does not refer to a valid content");
+    }
+
+    private void onContentRemoveFail(Throwable t) {
+        Timber.e(t);
+        if (t instanceof ContentNotRemovedException) {
+            ContentNotRemovedException e = (ContentNotRemovedException) t;
+            Snackbar snackbar = Snackbar.make(libraryView, "Content removal failed", Snackbar.LENGTH_LONG);
+            if (e.getContent() != null) {
+                // Unflag the item
+                e.getContent().setIsBeingDeleted(true);
+                ObjectBoxDB db = ObjectBoxDB.getInstance(context);
+                db.insertContent(e.getContent());
+
+                ContentHolder holder = getHolderByContent(e.getContent());
+                if (holder != null) notifyItemChanged(holder.getAdapterPosition());
+                snackbar.setAction("RETRY", v -> deleteItem(e.getContent()));
             }
-        });
-
-        ToastUtil.toast(context, "Selected items have been deleted.");
+            snackbar.show();
+        }
     }
 
     private void remove(Content content) {
         mSortedList.remove(content);
-        if (0 == mSortedList.size()) {
-            if (onContentsClearedListener != null)
-                onContentsClearedListener.run();
-        } else {
-            if (onContentRemovedListener != null)
-                onContentRemovedListener.accept(1);
-        }
-        if (itemSelectListener != null) itemSelectListener.onItemClear(0);
-    }
 
-    public void removeAll() {
-        replaceAll(new ArrayList<>());
-        onContentsClearedListener.run();
+        if (onContentRemovedListener != null) onContentRemovedListener.accept(1);
+        if (itemSelectListener != null) itemSelectListener.onItemClear(0);
     }
 
     public void replaceAll(List<Content> contents) {
         mSortedList.beginBatchedUpdates();
-        for (int i = mSortedList.size() - 1; i >= 0; i--) {
-            final Content content = mSortedList.get(i);
-            if (!contents.contains(content)) {
-                mSortedList.remove(content);
-            } else {
-                contents.remove(content);
-            }
-        }
-        mSortedList.addAll(contents);
+        mSortedList.replaceAll(contents);
         mSortedList.endBatchedUpdates();
     }
 
-    public void add(List<Content> contents) {
+    public void addAll(List<Content> contents) {
         mSortedList.beginBatchedUpdates();
         mSortedList.addAll(contents);
         mSortedList.endBatchedUpdates();
     }
 
-    // ContentListener implementation
+    // ContentListener implementation -- Mikan mode only
+    // Listener for pages retrieval (Mikan mode only)
     @Override
-    public void onContentReady(List<Content> results, int totalSelectedContent, int totalContent) { // Listener for pages retrieval in Mikan mode
+    public void onContentReady(List<Content> results, long totalSelectedContent, long totalContent) {
         if (1 == results.size()) // 1 content with pages
         {
             downloadContent(results.get(0));
         }
     }
 
+    // Listener for error visual feedback (Mikan mode only)
     @Override
     public void onContentFailed(Content content, String message) {
         Timber.w(message);
         Snackbar snackbar = Snackbar.make(libraryView, message, Snackbar.LENGTH_LONG);
 
         if (content != null) {
-            ContentHolder holder = holderByContent(content);
+            ContentHolder holder = getHolderByContent(content);
             if (holder != null) {
                 holder.ivDownload.clearAnimation();
                 holder.ivDownload.setOnClickListener(v -> tryDownloadPages(content));
@@ -781,7 +857,6 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
         private Context context;
         private ItemSelectListener itemSelectListener;
         private IntConsumer onContentRemovedListener;
-        private Runnable onContentsClearedListener;
         private CollectionAccessor collectionAccessor;
         private Comparator<Content> sortComparator;
         private int displayMode;
@@ -816,13 +891,12 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
             return this;
         }
 
-        public Builder setOnContentsClearedListener(Runnable onContentsClearedListener) {
-            this.onContentsClearedListener = onContentsClearedListener;
-            return this;
-        }
-
         public ContentAdapter build() {
             return new ContentAdapter(this);
         }
+    }
+
+    public void dispose() {
+        compositeDisposable.clear();
     }
 }

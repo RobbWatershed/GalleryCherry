@@ -16,6 +16,7 @@ import okhttp3.Request;
 /**
  * Manages a single instance of OkHttpClient per timeout delay
  */
+@SuppressWarnings("squid:S3077") // https://stackoverflow.com/questions/11639746/what-is-the-point-of-making-the-singleton-instance-volatile-while-using-double-l
 public class OkHttpClientSingleton {
 
     private static volatile Map<String, OkHttpClient> instance = new Hashtable<>();
@@ -57,8 +58,7 @@ public class OkHttpClientSingleton {
     private static okhttp3.Response onIntercept(Interceptor.Chain chain) throws IOException {
         Request request = chain.request()
                 .newBuilder()
-                .header("User-Agent", Consts.USER_AGENT)
-//                .header("Data-type", "application/json")
+                .header("User-Agent", Consts.USER_AGENT_NEUTRAL)
                 .build();
         return chain.proceed(request);
     }

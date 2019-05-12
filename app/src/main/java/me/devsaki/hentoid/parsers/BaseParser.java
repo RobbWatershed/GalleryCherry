@@ -2,16 +2,12 @@ package me.devsaki.hentoid.parsers;
 
 import android.webkit.URLUtil;
 
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
-import javax.annotation.Nullable;
-
 import me.devsaki.hentoid.database.domains.Content;
+import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.util.OkHttpClientSingleton;
 import okhttp3.HttpUrl;
 import okhttp3.Interceptor;
@@ -21,8 +17,6 @@ import okhttp3.ResponseBody;
 import timber.log.Timber;
 
 public abstract class BaseParser implements ContentParser {
-
-    private static final int TIMEOUT = 30000; // 30 seconds
 
     protected abstract List<String> parseImages(Content content) throws Exception;
 
@@ -47,24 +41,19 @@ public abstract class BaseParser implements ContentParser {
 
     public List<String> parseImageList(Content content) {
         String readerUrl = content.getReaderUrl();
-        List<String> imgUrls = Collections.emptyList();
+        List<ImageFile> images = Collections.emptyList();
 
         if (!URLUtil.isValidUrl(readerUrl)) {
-            Timber.e("Invalid gallery URL : %s", readerUrl);
-            return imgUrls;
+            throw new Exception("Invalid gallery URL : " + readerUrl);
         }
         Timber.d("Gallery URL: %s", readerUrl);
 
-        try {
-            imgUrls = parseImages(content);
-        } catch (IOException e) {
-            Timber.e(e, "I/O Error while attempting to connect to: %s", readerUrl);
-        } catch (Exception e) {
-            Timber.e(e, "Unexpected Error while attempting to connect to: %s", readerUrl);
-        }
-        Timber.d("%s", imgUrls);
+        List<String> imgUrls = parseImages(content);
+        images = ParseHelper.urlsToImageFiles(imgUrls);
 
-        return imgUrls;
+        Timber.d("%s", images);
+
+        return images;
     }
 
 }

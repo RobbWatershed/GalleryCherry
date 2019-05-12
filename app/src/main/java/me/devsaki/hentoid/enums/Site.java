@@ -1,7 +1,6 @@
 package me.devsaki.hentoid.enums;
 
-import javax.annotation.Nullable;
-
+import io.objectbox.converter.PropertyConverter;
 import me.devsaki.hentoid.R;
 import timber.log.Timber;
 
@@ -28,18 +27,28 @@ public enum Site {
     private final String url;
     private final int ico;
     private final boolean allowParallelDownloads;
+    private final boolean canKnowHentoidAgent;
+    private final boolean hasImageProcessing;
 
-    Site(int code, String description, String url, String uniqueKeyword, int ico, boolean allowParallelDownloads) {
+    Site(int code,
+         String description,
+         String url,
+         String uniqueKeyword,
+         int ico,
+         boolean allowParallelDownloads,
+         boolean canKnowHentoidAgent,
+         boolean hasImageProcessing) {
         this.code = code;
         this.description = description;
         this.url = url;
         this.uniqueKeyword = uniqueKeyword;
         this.ico = ico;
         this.allowParallelDownloads = allowParallelDownloads;
+        this.canKnowHentoidAgent = canKnowHentoidAgent;
+        this.hasImageProcessing = hasImageProcessing;
     }
 
-    @Nullable
-    public static Site searchByCode(int code) {
+    public static Site searchByCode(long code) {
         if (code == -1) {
             Timber.w("Invalid site code!");
         }
@@ -47,12 +56,11 @@ public enum Site {
             if (s.getCode() == code)
                 return s;
         }
-        return null;
+        return Site.NONE;
     }
 
-    @Nullable
     public static Site searchByUrl(String url) {
-        if (null == url || 0 == url.length()) {
+        if (null == url || url.isEmpty()) {
             Timber.w("Invalid url");
             return null;
         }
@@ -60,7 +68,7 @@ public enum Site {
             if (url.contains(s.getUniqueKeyword()))
                 return s;
         }
-        return null;
+        return Site.NONE;
     }
 
     public int getCode() {
@@ -87,7 +95,35 @@ public enum Site {
         return allowParallelDownloads;
     }
 
+    public boolean canKnowHentoidAgent() {
+        return canKnowHentoidAgent;
+    }
+
+    public boolean hasImageProcessing() {
+        return hasImageProcessing;
+    }
+
     public String getFolder() {
         return '/' + description + '/';
+    }
+
+    public static class SiteConverter implements PropertyConverter<Site, Long> {
+        @Override
+        public Site convertToEntityProperty(Long databaseValue) {
+            if (databaseValue == null) {
+                return Site.NONE;
+            }
+            for (Site site : Site.values()) {
+                if (site.getCode() == databaseValue) {
+                    return site;
+                }
+            }
+            return Site.NONE;
+        }
+
+        @Override
+        public Long convertToDatabaseValue(Site entityProperty) {
+            return entityProperty == null ? null : (long) entityProperty.getCode();
+        }
     }
 }

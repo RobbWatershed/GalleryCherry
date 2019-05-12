@@ -19,25 +19,23 @@ import me.devsaki.hentoid.dirpicker.model.DirList;
  * Created by avluis on 06/12/2016.
  * Directory Adapter
  */
-public class DirAdapter extends RecyclerView.Adapter<DirAdapter.ViewHolder> {
-    private final EventBus bus;
+public class DirAdapter extends RecyclerView.Adapter<DirAdapter.DirAdapterViewHolder> {
     private final DirList dirList;
 
-    public DirAdapter(DirList dirList, EventBus bus) {
+    public DirAdapter(DirList dirList) {
         this.dirList = dirList;
-        this.bus = bus;
     }
 
     @NonNull
     @Override
-    public DirAdapter.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+    public DirAdapterViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View root = LayoutInflater.from(
-                parent.getContext()).inflate(R.layout.item_dir_picker, parent, false);
-        return new ViewHolder(root);
+                parent.getContext()).inflate(R.layout.item_picker, parent, false);
+        return new DirAdapterViewHolder(root);
     }
 
     @Override
-    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+    public void onBindViewHolder(@NonNull DirAdapterViewHolder holder, int position) {
         File file = dirList.get(position);
         holder.textView.setText(file.getName());
     }
@@ -47,19 +45,18 @@ public class DirAdapter extends RecyclerView.Adapter<DirAdapter.ViewHolder> {
         return dirList.size();
     }
 
-    class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
+    class DirAdapterViewHolder extends RecyclerView.ViewHolder {
         final TextView textView;
 
-        ViewHolder(View root) {
+        DirAdapterViewHolder(View root) {
             super(root);
 
-            textView = root.findViewById(R.id.dir_name);
-            textView.setOnClickListener(this);
+            textView = root.findViewById(R.id.picker_item_name);
+            textView.setOnClickListener(this::onClick);
         }
 
-        @Override
-        public void onClick(View v) {
-            bus.post(new UpdateDirTreeEvent(dirList.get(getAdapterPosition())));
+        void onClick(View v) {
+            EventBus.getDefault().post(new UpdateDirTreeEvent(dirList.get(getAdapterPosition())));
         }
     }
 }

@@ -3,6 +3,7 @@ package me.devsaki.hentoid.retrofit;
 import io.reactivex.Single;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.parsers.content.HellpornoContent;
+import me.devsaki.hentoid.util.OkHttpClientSingleton;
 import pl.droidsonroids.retrofit2.JspoonConverterFactory;
 import retrofit2.Retrofit;
 import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
@@ -13,6 +14,7 @@ public class HellpornoGalleryServer {
 
     public static final Api API = new Retrofit.Builder()
             .baseUrl("https://hellporno.com/") // Parse desktop site (not mobile site) because it contains tag information
+            .client(OkHttpClientSingleton.getInstance())
             .addCallAdapterFactory(RxJava2CallAdapterFactory.createAsync())
             .addConverterFactory(JspoonConverterFactory.create())
             .build()

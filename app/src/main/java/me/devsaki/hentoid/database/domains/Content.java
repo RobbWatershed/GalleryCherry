@@ -1,14 +1,19 @@
 package me.devsaki.hentoid.database.domains;
 
+import android.support.annotation.Nullable;
+
 import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 
 import java.io.Serializable;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
+import me.devsaki.hentoid.activities.websites.ASMHentaiActivity;
 import me.devsaki.hentoid.activities.websites.BaseWebActivity;
 import me.devsaki.hentoid.activities.websites.HellpornoActivity;
+import me.devsaki.hentoid.activities.websites.FakkuActivity;
 import me.devsaki.hentoid.activities.websites.JpegworldActivity;
 import me.devsaki.hentoid.activities.websites.Link2GalleriesActivity;
 import me.devsaki.hentoid.activities.websites.NextpicturezActivity;
@@ -20,21 +25,27 @@ import me.devsaki.hentoid.enums.AttributeType;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.util.AttributeMap;
+import me.devsaki.hentoid.util.Preferences;
 
 /**
  * Created by DevSaki on 09/05/2015.
  * Content builder
  */
+@Entity
 public class Content implements Serializable {
 
+    @Id
+    private long id;
     @Expose
     private String url;
+    @Expose(serialize = false, deserialize = false)
+    private String uniqueSiteId; // Has to be queryable in DB, hence has to be a field
     @Expose
     private String title;
     @Expose
     private String author;
-    @Expose
-    private AttributeMap attributes;
+    @Expose(serialize = false, deserialize = false)
+    private ToMany<Attribute> attributes;
     @Expose
     private String coverImageUrl;
     @Expose
@@ -44,10 +55,13 @@ public class Content implements Serializable {
     @Expose
     private long downloadDate;
     @Expose
+    @Convert(converter = StatusContent.StatusContentConverter.class, dbType = Integer.class)
     private StatusContent status;
+    @Expose(serialize = false, deserialize = false)
+    @Backlink(to = "content")
+    private ToMany<ImageFile> imageFiles;
     @Expose
-    private List<ImageFile> imageFiles;
-    @Expose
+    @Convert(converter = Site.SiteConverter.class, dbType = Long.class)
     private Site site;
     private String storageFolder; // Not exposed because it will vary according to book location -> valued at import
     @Expose
@@ -56,27 +70,77 @@ public class Content implements Serializable {
     private long reads = 0;
     @Expose
     private long lastReadDate;
-    // Runtime attributes; no need to expose them
+    // Temporary during SAVED state only; no need to expose them for JSON persistence
+    @Expose(serialize = false, deserialize = false)
+    private String downloadParams;
+    // Temporary during ERROR state only; no need to expose them for JSON persistence
+    @Expose(serialize = false, deserialize = false)
+    @Backlink(to = "content")
+    private ToMany<ErrorRecord> errorLog;
+    @Expose(serialize = false, deserialize = false)
+    private int lastReadPageIndex = 0;
+    @Expose(serialize = false, deserialize = false)
+    private boolean isBeingDeleted = false;
+
+    // Runtime attributes; no need to expose them nor to persist them
+    @Transient
     private double percent;
+    @Transient
     private int queryOrder;
+    @Transient
     private boolean selected = false;
 
+    // Kept for retro-compatibility with contentV2.json Hentoid files
+    @Transient
+    @Expose
+    @SerializedName("attributes")
+    private AttributeMap attributeMap;
+    @Transient
+    @Expose
+    @SerializedName("imageFiles")
+    private ArrayList<ImageFile> imageList;
 
-    public AttributeMap getAttributes() {
-        if (null == attributes) attributes = new AttributeMap();
-        return attributes;
+
+    public ToMany<Attribute> getAttributes() {
+        return this.attributes;
     }
 
-    public Content setAttributes(AttributeMap attributes) {
+    public void setAttributes(ToMany<Attribute> attributes) {
         this.attributes = attributes;
+    }
+
+    public AttributeMap getAttributeMap() {
+        AttributeMap result = new AttributeMap();
+        for (Attribute a : attributes) {
+            a.computeUrl(this.getSite());
+            result.add(a);
+        }
+        return result;
+    }
+
+    public Content addAttributes(AttributeMap attributes) {
+        if (attributes != null) {
+            for (AttributeType type : attributes.keySet()) {
+                this.attributes.addAll(attributes.get(type));
+            }
+        }
         return this;
     }
 
-    public int getId() {
-        return url.hashCode();
+    public long getId() {
+        return this.id;
+    }
+
+    public Content setId(long id) {
+        this.id = id;
+        return this;
     }
 
     public String getUniqueSiteId() {
+        return this.uniqueSiteId;
+    }
+
+    private String computeUniqueSiteId() {
         String[] parts = url.split("/");
 
         switch (site) {
@@ -99,6 +163,10 @@ public class Content implements Serializable {
     }
 
     public Class<?> getWebActivityClass() {
+        return getWebActivityClass(this.site);
+    }
+
+    public static Class<?> getWebActivityClass(Site site) {
         switch (site) {
             case XHAMSTER:
                 return XhamsterActivity.class;
@@ -116,6 +184,8 @@ public class Content implements Serializable {
                 return PornPicGalleriesActivity.class;
             case LINK2GALLERIES:
                 return Link2GalleriesActivity.class;
+            case FAKKU2:
+                return FakkuActivity.class;
             default:
                 return BaseWebActivity.class;
         }
@@ -123,7 +193,7 @@ public class Content implements Serializable {
 
     public String getCategory() {
         if (attributes != null) {
-            List<Attribute> attributesList = attributes.get(AttributeType.CATEGORY);
+            List<Attribute> attributesList = getAttributeMap().get(AttributeType.CATEGORY);
             if (attributesList != null && attributesList.size() > 0) {
                 return attributesList.get(0).getName();
             }
@@ -138,6 +208,7 @@ public class Content implements Serializable {
 
     public Content setUrl(String url) {
         this.url = url;
+        this.uniqueSiteId = computeUniqueSiteId();
         return this;
     }
 
@@ -171,15 +242,44 @@ public class Content implements Serializable {
 
     public Content populateAuthor() {
         String author = "";
-        if (getAttributes().containsKey(AttributeType.ARTIST) && attributes.get(AttributeType.ARTIST).size() > 0)
-            author = attributes.get(AttributeType.ARTIST).get(0).getName();
+        AttributeMap attrMap = getAttributeMap();
+        if (attrMap.containsKey(AttributeType.ARTIST) && attrMap.get(AttributeType.ARTIST).size() > 0)
+            author = attrMap.get(AttributeType.ARTIST).get(0).getName();
         if (null == author || author.equals("")) // Try and get Circle
         {
-            if (attributes.containsKey(AttributeType.CIRCLE) && attributes.get(AttributeType.CIRCLE).size() > 0)
-                author = attributes.get(AttributeType.CIRCLE).get(0).getName();
+            if (attrMap.containsKey(AttributeType.CIRCLE) && attrMap.get(AttributeType.CIRCLE).size() > 0)
+                author = attrMap.get(AttributeType.CIRCLE).get(0).getName();
         }
         if (null == author) author = "";
         setAuthor(author);
+        return this;
+    }
+
+    public Content preJSONExport() { // TODO - this is shabby
+        this.attributeMap = getAttributeMap();
+        this.imageList = new ArrayList<>(imageFiles);
+        return this;
+    }
+
+    public Content postJSONImport() {   // TODO - this is shabby
+        if (null == site) site = Site.NONE;
+
+        if (this.attributeMap != null) {
+            this.attributes.clear();
+            for (AttributeType type : this.attributeMap.keySet()) {
+                for (Attribute attr : this.attributeMap.get(type)) {
+                    if (null == attr.getType())
+                        attr.setType(AttributeType.SERIE); // Fix the issue with v1.6.5
+                    this.attributes.add(attr.computeLocation(site));
+                }
+            }
+        }
+        if (this.imageList != null) {
+            this.imageFiles.clear();
+            this.imageFiles.addAll(this.imageList);
+        }
+        this.populateAuthor();
+        this.uniqueSiteId = computeUniqueSiteId();
         return this;
     }
 
@@ -222,7 +322,7 @@ public class Content implements Serializable {
         return this;
     }
 
-    public long getUploadDate() {
+    long getUploadDate() {
         return uploadDate;
     }
 
@@ -231,7 +331,7 @@ public class Content implements Serializable {
         return this;
     }
 
-    public long getDownloadDate() {
+    long getDownloadDate() {
         return downloadDate;
     }
 
@@ -249,23 +349,30 @@ public class Content implements Serializable {
         return this;
     }
 
-    public List<ImageFile> getImageFiles() {
-        if (null == imageFiles) imageFiles = Collections.emptyList();
+    @Nullable
+    public ToMany<ImageFile> getImageFiles() {
         return imageFiles;
     }
 
-    public Content setImageFiles(List<ImageFile> imageFiles) {
-        this.imageFiles = imageFiles;
+    public Content addImageFiles(List<ImageFile> imageFiles) {
+        if (imageFiles != null) {
+            this.imageFiles.clear();
+            this.imageFiles.addAll(imageFiles);
+        }
         return this;
+    }
+
+    @Nullable
+    public ToMany<ErrorRecord> getErrorLog() {
+        return errorLog;
     }
 
     public double getPercent() {
         return percent;
     }
 
-    public Content setPercent(double percent) {
+    public void setPercent(double percent) {
         this.percent = percent;
-        return this;
     }
 
     public Site getSite() {
@@ -336,6 +443,31 @@ public class Content implements Serializable {
         return this;
     }
 
+    public String getDownloadParams() {
+        return (null == downloadParams) ? "" : downloadParams;
+    }
+
+    public Content setDownloadParams(String params) {
+        downloadParams = params;
+        return this;
+    }
+
+    public int getLastReadPageIndex() {
+        return lastReadPageIndex;
+    }
+
+    public void setLastReadPageIndex(int index) {
+        this.lastReadPageIndex = index;
+    }
+
+    public boolean isBeingDeleted() {
+        return isBeingDeleted;
+    }
+
+    public void setIsBeingDeleted(boolean isBeingDeleted) {
+        this.isBeingDeleted = isBeingDeleted;
+    }
+
 
     @Override
     public boolean equals(Object o) {
@@ -354,15 +486,40 @@ public class Content implements Serializable {
         return result;
     }
 
-    public static final Comparator<Content> TITLE_ALPHA_COMPARATOR = (a, b) -> a.getTitle().compareTo(b.getTitle());
+    public static Comparator<Content> getComparator(int compareMethod) {
+        switch (compareMethod) {
+            case Preferences.Constant.ORDER_CONTENT_TITLE_ALPHA:
+                return TITLE_ALPHA_COMPARATOR;
+            case Preferences.Constant.ORDER_CONTENT_LAST_DL_DATE_FIRST:
+                return DLDATE_COMPARATOR;
+            case Preferences.Constant.ORDER_CONTENT_TITLE_ALPHA_INVERTED:
+                return TITLE_ALPHA_INV_COMPARATOR;
+            case Preferences.Constant.ORDER_CONTENT_LAST_DL_DATE_LAST:
+                return DLDATE_INV_COMPARATOR;
+            case Preferences.Constant.ORDER_CONTENT_RANDOM:
+                return QUERY_ORDER_COMPARATOR;
+            case Preferences.Constant.ORDER_CONTENT_LAST_UL_DATE_FIRST:
+                return ULDATE_COMPARATOR;
+            case Preferences.Constant.ORDER_CONTENT_LEAST_READ:
+                return READS_ORDER_COMPARATOR;
+            case Preferences.Constant.ORDER_CONTENT_MOST_READ:
+                return READS_ORDER_INV_COMPARATOR;
+            case Preferences.Constant.ORDER_CONTENT_LAST_READ:
+                return READ_DATE_INV_COMPARATOR;
+            default:
+                return QUERY_ORDER_COMPARATOR;
+        }
+    }
 
-    public static final Comparator<Content> DLDATE_COMPARATOR = (a, b) -> Long.compare(a.getDownloadDate(), b.getDownloadDate()) * -1; // Inverted - last download date first
+    private static final Comparator<Content> TITLE_ALPHA_COMPARATOR = (a, b) -> a.getTitle().compareTo(b.getTitle());
 
-    public static final Comparator<Content> ULDATE_COMPARATOR = (a, b) -> Long.compare(a.getUploadDate(), b.getUploadDate()) * -1; // Inverted - last upload date first
+    private static final Comparator<Content> DLDATE_COMPARATOR = (a, b) -> Long.compare(a.getDownloadDate(), b.getDownloadDate()) * -1; // Inverted - last download date first
 
-    public static final Comparator<Content> TITLE_ALPHA_INV_COMPARATOR = (a, b) -> a.getTitle().compareTo(b.getTitle()) * -1;
+    private static final Comparator<Content> ULDATE_COMPARATOR = (a, b) -> Long.compare(a.getUploadDate(), b.getUploadDate()) * -1; // Inverted - last upload date first
 
-    public static final Comparator<Content> DLDATE_INV_COMPARATOR = (a, b) -> Long.compare(a.getDownloadDate(), b.getDownloadDate());
+    private static final Comparator<Content> TITLE_ALPHA_INV_COMPARATOR = (a, b) -> a.getTitle().compareTo(b.getTitle()) * -1;
+
+    private static final Comparator<Content> DLDATE_INV_COMPARATOR = (a, b) -> Long.compare(a.getDownloadDate(), b.getDownloadDate());
 
     public static final Comparator<Content> READS_ORDER_COMPARATOR = (a, b) -> {
         int comp = Long.compare(a.getReads(), b.getReads());
@@ -376,5 +533,5 @@ public class Content implements Serializable {
 
     public static final Comparator<Content> READ_DATE_INV_COMPARATOR = (a, b) -> Long.compare(a.getLastReadDate(), b.getLastReadDate()) * -1;
 
-    public static final Comparator<Content> QUERY_ORDER_COMPARATOR = (a, b) -> Integer.compare(a.getQueryOrder(), b.getQueryOrder());
+    private static final Comparator<Content> QUERY_ORDER_COMPARATOR = (a, b) -> Integer.compare(a.getQueryOrder(), b.getQueryOrder());
 }

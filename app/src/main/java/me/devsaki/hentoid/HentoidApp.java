@@ -1,25 +1,23 @@
 package me.devsaki.hentoid;
 
+import android.annotation.SuppressLint;
 import android.app.Application;
 import android.app.NotificationManager;
 import android.content.Context;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.StrictMode;
 
 import com.crashlytics.android.Crashlytics;
-import com.facebook.stetho.Stetho;
 import com.google.android.gms.security.ProviderInstaller;
 import com.google.firebase.analytics.FirebaseAnalytics;
-import com.squareup.leakcanary.LeakCanary;
-
-import java.util.List;
 
 import io.fabric.sdk.android.Fabric;
+import me.devsaki.hentoid.database.DatabaseMaintenance;
 import me.devsaki.hentoid.database.HentoidDB;
-import me.devsaki.hentoid.database.domains.Content;
-import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.notification.download.DownloadNotificationChannel;
 import me.devsaki.hentoid.notification.update.UpdateNotificationChannel;
+import me.devsaki.hentoid.services.DatabaseMaintenanceService;
 import me.devsaki.hentoid.services.UpdateCheckService;
 import me.devsaki.hentoid.timber.CrashlyticsTree;
 import me.devsaki.hentoid.util.Preferences;
@@ -33,7 +31,8 @@ import timber.log.Timber;
 public class HentoidApp extends Application {
 
     private static boolean beginImport;
-    private static HentoidApp instance;
+    @SuppressLint("StaticFieldLeak") // A context leak happening at app level isn't _really_ a leak, right ? ;-)
+    private static Context instance;
 
     public static Context getAppContext() {
         return instance;
@@ -67,6 +66,7 @@ public class HentoidApp extends Application {
             Timber.e(e, "Google Play ProviderInstaller exception");
         }
 
+/*
         // LeakCanary
         if (LeakCanary.isInAnalyzerProcess(this)) {
             // This process is dedicated to LeakCanary for heap analysis.
@@ -74,13 +74,14 @@ public class HentoidApp extends Application {
             return;
         }
         LeakCanary.install(this);
+*/
 
         // Timber
         if (BuildConfig.DEBUG) Timber.plant(new Timber.DebugTree());
         Timber.plant(new CrashlyticsTree());
 
         // Prefs
-        instance = this;
+        instance = this.getApplicationContext();
         Preferences.init(this);
 
         // Firebase
@@ -88,9 +89,11 @@ public class HentoidApp extends Application {
         FirebaseAnalytics.getInstance(this).setAnalyticsCollectionEnabled(!isAnalyticsDisabled);
 
         // Stetho
+/*
         if (BuildConfig.DEBUG) {
             Stetho.initializeWithDefaults(this);
         }
+*/
 
         StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
         StrictMode.setThreadPolicy(policy);
@@ -112,19 +115,7 @@ public class HentoidApp extends Application {
      * Clean up and upgrade database
      */
     private void performDatabaseHousekeeping() {
-        HentoidDB db = HentoidDB.getInstance(this);
-        Timber.d("Content item(s) count: %s", db.countContentEntries());
-
-        // Set items that were being downloaded in previous session as paused
-        db.updateContentStatus(StatusContent.DOWNLOADING, StatusContent.PAUSED);
-
-        // Clear temporary books created from browsing a book page without downloading it
-        List<Content> obsoleteTempContent = db.selectContentByStatus(StatusContent.SAVED);
-        for (Content c : obsoleteTempContent) db.deleteContent(c);
-
-        // Perform technical data updates
-        UpgradeTo(BuildConfig.VERSION_CODE, db);
-    }
+        HentoidDB oldDB = HentoidDB.getInstance(this);
 
     /**
      * Handles complex DB version updates at startup
