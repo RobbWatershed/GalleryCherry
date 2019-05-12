@@ -62,6 +62,8 @@ public class XnxxContent {
         if (tags != null) {
             ParseHelper.parseAttributes(attributes, AttributeType.TAG, tags, true, Site.XNXX);
         }
+        result.addAttributes(attributes);
+
 
         result.addAttributes(attributes);
 
@@ -75,10 +77,7 @@ public class XnxxContent {
         if (images.size() > 0) result.setCoverImageUrl(images.get(0).getUrl());
         result.addImageFiles(images);
         result.setQtyPages(images.size());
-
-
-        result.populateAuthor();
-        result.setStatus(StatusContent.SAVED);
+        result.addImageFiles(images);
 
         return result;
     }

@@ -56,7 +56,6 @@ public class XhamsterContent {
 
         result.addAttributes(attributes);
 
-
         result.populateAuthor();
         result.setStatus(StatusContent.SAVED);
 

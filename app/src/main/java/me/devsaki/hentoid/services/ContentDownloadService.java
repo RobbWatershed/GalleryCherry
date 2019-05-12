@@ -2,10 +2,6 @@ package me.devsaki.hentoid.services;
 
 import android.app.IntentService;
 import android.content.Intent;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
-import android.graphics.Rect;
 import android.util.SparseIntArray;
 
 import com.android.volley.AuthFailureError;
@@ -22,7 +18,6 @@ import com.google.gson.reflect.TypeToken;
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Type;
@@ -34,9 +29,6 @@ import java.util.Map;
 
 import javax.annotation.Nullable;
 
-import me.devsaki.fakku.FakkuDecode;
-import me.devsaki.fakku.PageInfo;
-import me.devsaki.fakku.PointTranslation;
 import me.devsaki.hentoid.HentoidApp;
 import me.devsaki.hentoid.database.ObjectBoxDB;
 import me.devsaki.hentoid.database.domains.Content;
@@ -441,36 +433,7 @@ public class ContentDownloadService extends IntentService {
     }
 
     private static byte[] processImage(String downloadParamsStr, byte[] binaryContent) throws InvalidParameterException {
-        Type type = new TypeToken<Map<String, String>>() {
-        }.getType();
-        Map<String, String> downloadParams = new Gson().fromJson(downloadParamsStr, type);
-
-        if (!downloadParams.containsKey("pageInfo")) {
-            throw new InvalidParameterException("No pageInfo");
-        }
-
-//        byte[] imgData = Base64.decode(binaryContent, Base64.DEFAULT);
-        Bitmap sourcePicture = BitmapFactory.decodeByteArray(binaryContent, 0, binaryContent.length);
-
-        PageInfo page = new Gson().fromJson(downloadParams.get("pageInfo"), PageInfo.class);
-        Bitmap.Config conf = Bitmap.Config.ARGB_8888;
-        Bitmap destPicture = Bitmap.createBitmap(page.width, page.height, conf);
-        Canvas destCanvas = new Canvas(destPicture);
-
-        FakkuDecode.getTranslations(page);
-
-        if (page.translations.isEmpty())
-            throw new InvalidParameterException("No translation found");
-
-        for (PointTranslation t : page.translations) {
-            Rect sourceRect = new Rect(t.sourceX, t.sourceY, t.sourceX + FakkuDecode.TILE_EDGE_LENGTH, t.sourceY + FakkuDecode.TILE_EDGE_LENGTH);
-            Rect destRect = new Rect(t.destX, t.destY, t.destX + FakkuDecode.TILE_EDGE_LENGTH, t.destY + FakkuDecode.TILE_EDGE_LENGTH);
-
-            destCanvas.drawBitmap(sourcePicture, sourceRect, destRect, null);
-        }
-        ByteArrayOutputStream out = new ByteArrayOutputStream(1024);
-        destPicture.compress(Bitmap.CompressFormat.PNG, 100, out); // Fakku is _always_ PNG
-        return out.toByteArray();
+        return binaryContent;
     }
 
     /**

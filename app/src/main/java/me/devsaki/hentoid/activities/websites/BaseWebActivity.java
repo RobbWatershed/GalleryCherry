@@ -470,8 +470,6 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
         protected final ResultListener<Content> listener;
         private final Pattern filteredUrlPattern;
 
-        private String domainName = "";
-
         protected abstract void onGalleryFound(String url);
 
 

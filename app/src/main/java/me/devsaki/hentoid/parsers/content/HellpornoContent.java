@@ -54,7 +54,6 @@ public class HellpornoContent {
             Element e = models.get(models.size() - 1);
             attributes.add(new Attribute(AttributeType.MODEL, e.text(), e.attr("href"), Site.HELLPORNO));
         }
-
         result.addAttributes(attributes);
 
 
@@ -67,9 +66,7 @@ public class HellpornoContent {
         if (images.size() > 0) result.setCoverImageUrl(images.get(0).getUrl());
         result.addImageFiles(images);
         result.setQtyPages(images.size());
-
-        result.populateAuthor();
-        result.setStatus(StatusContent.SAVED);
+        result.addImageFiles(images);
 
         return result;
     }

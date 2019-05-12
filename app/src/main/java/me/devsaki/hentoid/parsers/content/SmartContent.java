@@ -62,12 +62,8 @@ public class SmartContent {
                 images.add(new ImageFile(order++, e.attr("src"), StatusContent.SAVED));
             }
         }
-
-        result.addImageFiles(images);
         result.setQtyPages(images.size());
-
-        result.populateAuthor();
-        result.setStatus(StatusContent.SAVED);
+        result.addImageFiles(images);
 
         return result;
     }

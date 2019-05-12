@@ -10,6 +10,8 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
+import javax.annotation.Nullable;
+
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.util.OkHttpClientSingleton;
@@ -22,9 +24,9 @@ import timber.log.Timber;
 
 public abstract class BaseParser implements ContentParser {
 
-    protected abstract List<String> parseImages(Content content) throws Exception;
-
     private static final int TIMEOUT = 30000; // 30 seconds
+
+    protected abstract List<String> parseImages(Content content) throws Exception;
 
     @Nullable
     Document getOnlineDocument(HttpUrl url) throws IOException {

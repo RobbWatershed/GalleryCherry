@@ -42,7 +42,6 @@ public class JpegworldContent {
 
         result.addAttributes(attributes);
 
-
         List<ImageFile> images = new ArrayList<>();
 
         int order = 1;
@@ -59,9 +58,7 @@ public class JpegworldContent {
         if (images.size() > 0) result.setCoverImageUrl(images.get(0).getUrl());
         result.addImageFiles(images);
         result.setQtyPages(images.size());
-
-        result.populateAuthor();
-        result.setStatus(StatusContent.SAVED);
+        result.addImageFiles(images);
 
         return result;
     }
