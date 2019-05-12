@@ -10,8 +10,6 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
-import javax.annotation.Nullable;
-
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.util.OkHttpClientSingleton;
