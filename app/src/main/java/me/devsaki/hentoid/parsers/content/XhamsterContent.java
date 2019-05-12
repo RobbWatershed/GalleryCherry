@@ -51,9 +51,11 @@ public class XhamsterContent {
         }
 
         AttributeMap attributes = new AttributeMap();
-        result.setAttributes(attributes);
 
-        ParseHelper.parseAttributes(attributes, AttributeType.TAG, tags, true);
+        ParseHelper.parseAttributes(attributes, AttributeType.TAG, tags, true, Site.XHAMSTER);
+
+        result.addAttributes(attributes);
+
 
         result.populateAuthor();
         result.setStatus(StatusContent.SAVED);

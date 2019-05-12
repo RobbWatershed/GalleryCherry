@@ -1,6 +1,10 @@
 package me.devsaki.hentoid.parsers;
 
+import android.support.annotation.Nullable;
 import android.webkit.URLUtil;
+
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -19,6 +23,8 @@ import timber.log.Timber;
 public abstract class BaseParser implements ContentParser {
 
     protected abstract List<String> parseImages(Content content) throws Exception;
+
+    private static final int TIMEOUT = 30000; // 30 seconds
 
     @Nullable
     Document getOnlineDocument(HttpUrl url) throws IOException {
@@ -39,7 +45,7 @@ public abstract class BaseParser implements ContentParser {
         return null;
     }
 
-    public List<String> parseImageList(Content content) {
+    public List<ImageFile> parseImageList(Content content) throws Exception {
         String readerUrl = content.getReaderUrl();
         List<ImageFile> images = Collections.emptyList();
 

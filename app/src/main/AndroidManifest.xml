@@ -66,10 +66,6 @@
             android:configChanges="orientation|screenSize"
             android:theme="@style/BrowserTheme" />
         <activity
-            android:name=".activities.websites.FakkuActivity"
-            android:configChanges="orientation|screenSize"
-            android:theme="@style/BrowserTheme" />
-        <activity
             android:name=".activities.DownloadsActivity"
             android:configChanges="orientation|screenSize"
             android:label="@string/title_activity_downloads"

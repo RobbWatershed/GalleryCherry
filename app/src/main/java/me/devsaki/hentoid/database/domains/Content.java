@@ -10,10 +10,14 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-import me.devsaki.hentoid.activities.websites.ASMHentaiActivity;
+import io.objectbox.annotation.Backlink;
+import io.objectbox.annotation.Convert;
+import io.objectbox.annotation.Entity;
+import io.objectbox.annotation.Id;
+import io.objectbox.annotation.Transient;
+import io.objectbox.relation.ToMany;
 import me.devsaki.hentoid.activities.websites.BaseWebActivity;
 import me.devsaki.hentoid.activities.websites.HellpornoActivity;
-import me.devsaki.hentoid.activities.websites.FakkuActivity;
 import me.devsaki.hentoid.activities.websites.JpegworldActivity;
 import me.devsaki.hentoid.activities.websites.Link2GalleriesActivity;
 import me.devsaki.hentoid.activities.websites.NextpicturezActivity;
@@ -184,8 +188,6 @@ public class Content implements Serializable {
                 return PornPicGalleriesActivity.class;
             case LINK2GALLERIES:
                 return Link2GalleriesActivity.class;
-            case FAKKU2:
-                return FakkuActivity.class;
             default:
                 return BaseWebActivity.class;
         }

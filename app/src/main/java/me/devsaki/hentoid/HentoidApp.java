@@ -4,7 +4,7 @@ import android.annotation.SuppressLint;
 import android.app.Application;
 import android.app.NotificationManager;
 import android.content.Context;
-import android.os.Build;
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.StrictMode;
 
@@ -31,7 +31,8 @@ import timber.log.Timber;
 public class HentoidApp extends Application {
 
     private static boolean beginImport;
-    @SuppressLint("StaticFieldLeak") // A context leak happening at app level isn't _really_ a leak, right ? ;-)
+    @SuppressLint("StaticFieldLeak")
+    // A context leak happening at app level isn't _really_ a leak, right ? ;-)
     private static Context instance;
 
     public static Context getAppContext() {
@@ -117,14 +118,11 @@ public class HentoidApp extends Application {
     private void performDatabaseHousekeeping() {
         HentoidDB oldDB = HentoidDB.getInstance(this);
 
-    /**
-     * Handles complex DB version updates at startup
-     *
-     * @param versionCode Current app version
-     * @param db          Hentoid DB
-     */
-    @SuppressWarnings("deprecation")
-    private void UpgradeTo(int versionCode, HentoidDB db) {
-        // Nothing here, new app !
+        // Perform technical data updates that need to be done before app launches
+        DatabaseMaintenance.performOldDatabaseUpdate(oldDB);
+
+        // Launch a service that will perform non-structural DB housekeeping tasks
+        Intent intent = DatabaseMaintenanceService.makeIntent(this);
+        startService(intent);
     }
 }

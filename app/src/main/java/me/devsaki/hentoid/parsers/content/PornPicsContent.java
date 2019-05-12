@@ -40,7 +40,6 @@ public class PornPicsContent {
         result.setTitle(title);
 
         AttributeMap attributes = new AttributeMap();
-        result.setAttributes(attributes);
 
         if (models != null && models.size() > 1) {
             boolean first = true;
@@ -49,21 +48,22 @@ public class PornPicsContent {
                     first = false;
                     continue;
                 }
-                attributes.add(new Attribute(AttributeType.MODEL, e.childNode(0).childNode(0).toString(), e.attr("href")));
+                attributes.add(new Attribute(AttributeType.MODEL, e.childNode(0).childNode(0).toString(), e.attr("href"), Site.PORNPICS));
             }
         }
 
-        ParseHelper.parseAttributes(attributes, AttributeType.TAG, tags, true);
+        ParseHelper.parseAttributes(attributes, AttributeType.TAG, tags, true, Site.PORNPICS);
+        result.addAttributes(attributes);
 
 
         List<ImageFile> images = new ArrayList<>();
-        result.setImageFiles(images);
 
         int order = 1;
         for (String s : imageLinks) {
             images.add(new ImageFile(order++, s, StatusContent.SAVED));
         }
         if (images.size() > 0) result.setCoverImageUrl(images.get(0).getUrl());
+        result.addImageFiles(images);
         result.setQtyPages(images.size());
 
         result.populateAuthor();

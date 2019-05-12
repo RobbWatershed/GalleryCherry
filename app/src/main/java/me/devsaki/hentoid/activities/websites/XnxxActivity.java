@@ -27,15 +27,15 @@ public class XnxxActivity extends BaseWebActivity {
 
     @Override
     protected CustomWebViewClient getWebClient() {
-        CustomWebViewClient client = new XnxxWebViewClient(GALLERY_FILTER, getStartSite(), this);
+        CustomWebViewClient client = new XnxxWebViewClient(GALLERY_FILTER, this);
         client.restrictTo(DOMAIN_FILTER);
         return client;
     }
 
     private class XnxxWebViewClient extends CustomWebViewClient {
 
-        XnxxWebViewClient(String filteredUrl, Site startSite, ResultListener<Content> listener) {
-            super(filteredUrl, startSite, listener);
+        XnxxWebViewClient(String filteredUrl, ResultListener<Content> listener) {
+            super(filteredUrl, listener);
         }
 
         @Override

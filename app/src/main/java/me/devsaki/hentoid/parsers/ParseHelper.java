@@ -40,10 +40,10 @@ public class ParseHelper {
         map.add(attribute);
     }
 
-    public static void parseAttributes(AttributeMap map, AttributeType type, List<Element> elements, boolean filterCount) {
+    public static void parseAttributes(AttributeMap map, AttributeType type, List<Element> elements, boolean filterCount, Site site) {
         if (elements != null)
             for (Element a : elements) {
-                parseAttribute(map, type, a, filterCount);
+                parseAttribute(map, type, a, filterCount, site);
             }
     }
 

@@ -40,31 +40,32 @@ public class HellpornoContent {
         result.setTitle(title);
 
         AttributeMap attributes = new AttributeMap();
-        result.setAttributes(attributes);
 
         if (tags != null) {
             boolean first = true;
             for (Element a : tags) {
-                if (!first) ParseHelper.parseAttribute(attributes, AttributeType.TAG, a, true);
+                if (!first)
+                    ParseHelper.parseAttribute(attributes, AttributeType.TAG, a, true, Site.HELLPORNO);
                 if (first) first = false;
             }
         }
 
         if (models != null) {
             Element e = models.get(models.size() - 1);
-            attributes.add(new Attribute(AttributeType.MODEL, e.text(), e.attr("href")));
+            attributes.add(new Attribute(AttributeType.MODEL, e.text(), e.attr("href"), Site.HELLPORNO));
         }
+
+        result.addAttributes(attributes);
 
 
         List<ImageFile> images = new ArrayList<>();
-        result.setImageFiles(images);
-
         int order = 1;
         if (imageLinks != null)
             for (String s : imageLinks) {
                 images.add(new ImageFile(order++, s, StatusContent.SAVED));
             }
         if (images.size() > 0) result.setCoverImageUrl(images.get(0).getUrl());
+        result.addImageFiles(images);
         result.setQtyPages(images.size());
 
         result.populateAuthor();

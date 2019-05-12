@@ -231,7 +231,7 @@ public class QueueContentAdapter extends ArrayAdapter<Content> {
             holder.ivSource.setImageResource(img);
             holder.ivSource.setOnClickListener(v -> Helper.viewContent(context, content));
         } else {
-            holder.ivSource.setImageResource(R.drawable.ic_stat_hentoid);
+            holder.ivSource.setImageResource(R.drawable.ic_cherry);
         }
     }
 

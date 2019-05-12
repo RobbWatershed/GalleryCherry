@@ -62,6 +62,7 @@ public class SearchBookIdDialogFragment extends DialogFragment {
 
             // Not possible for Pururin, e-hentai
             List<Site> sites = new ArrayList<>();
+            /*
             if (!foundSitesList.contains(Site.HITOMI.getCode())) sites.add(Site.HITOMI);
             if (!foundSitesList.contains(Site.NHENTAI.getCode())) sites.add(Site.NHENTAI);
             if (!foundSitesList.contains(Site.ASMHENTAI.getCode())) sites.add(Site.ASMHENTAI);
@@ -69,6 +70,7 @@ public class SearchBookIdDialogFragment extends DialogFragment {
                 sites.add(Site.ASMHENTAI_COMICS);
             if (!foundSitesList.contains(Site.HENTAICAFE.getCode())) sites.add(Site.HENTAICAFE);
             if (!foundSitesList.contains(Site.TSUMINO.getCode())) sites.add(Site.TSUMINO);
+            */
 
             SiteAdapter siteAdapter = new SiteAdapter();
             siteAdapter.setOnClickListener(this::onItemSelected);
@@ -81,6 +83,7 @@ public class SearchBookIdDialogFragment extends DialogFragment {
 
     private static String getUrlFromId(Site site, String id) {
         switch (site) {
+            /*
             case HITOMI:
                 return site.getUrl() + "/galleries/" + id + ".html";
             case NHENTAI:
@@ -93,6 +96,7 @@ public class SearchBookIdDialogFragment extends DialogFragment {
                 return site.getUrl() + "/?p=" + id;
             case TSUMINO:
                 return site.getUrl() + "/Book/Info/" + id + "/";
+                */
             default:
                 return site.getUrl();
         }

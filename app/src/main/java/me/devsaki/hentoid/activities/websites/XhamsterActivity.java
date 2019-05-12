@@ -27,15 +27,15 @@ public class XhamsterActivity extends BaseWebActivity {
 
     @Override
     protected CustomWebViewClient getWebClient() {
-        CustomWebViewClient client = new XhamsterWebViewClient(GALLERY_FILTER, getStartSite(), this);
+        CustomWebViewClient client = new XhamsterWebViewClient(GALLERY_FILTER, this);
         client.restrictTo(DOMAIN_FILTER);
         return client;
     }
 
     private class XhamsterWebViewClient extends CustomWebViewClient {
 
-        XhamsterWebViewClient(String filteredUrl, Site startSite, ResultListener<Content> listener) {
-            super(filteredUrl, startSite, listener);
+        XhamsterWebViewClient(String filteredUrl, ResultListener<Content> listener) {
+            super(filteredUrl, listener);
         }
 
         @Override

@@ -27,13 +27,13 @@ public class Link2GalleriesActivity extends BaseWebActivity {
 
     @Override
     protected CustomWebViewClient getWebClient() {
-        return new PornPicsGalleriesWebViewClient(GALLERY_FILTER, getStartSite(), this);
+        return new PornPicsGalleriesWebViewClient(GALLERY_FILTER, this);
     }
 
     private class PornPicsGalleriesWebViewClient extends CustomWebViewClient {
 
-        PornPicsGalleriesWebViewClient(String filteredUrl, Site startSite, ResultListener<Content> listener) {
-            super(filteredUrl, startSite, listener);
+        PornPicsGalleriesWebViewClient(String filteredUrl, ResultListener<Content> listener) {
+            super(filteredUrl, listener);
         }
 
         @Override

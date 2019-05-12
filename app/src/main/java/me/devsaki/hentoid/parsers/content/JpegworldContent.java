@@ -37,13 +37,13 @@ public class JpegworldContent {
         result.setTitle(title);
 
         AttributeMap attributes = new AttributeMap();
-        result.setAttributes(attributes);
 
-        ParseHelper.parseAttributes(attributes, AttributeType.TAG, tags, true);
+        ParseHelper.parseAttributes(attributes, AttributeType.TAG, tags, true, Site.JPEGWORLD);
+
+        result.addAttributes(attributes);
 
 
         List<ImageFile> images = new ArrayList<>();
-        result.setImageFiles(images);
 
         int order = 1;
         String[] parts;
@@ -57,6 +57,7 @@ public class JpegworldContent {
             images.add(new ImageFile(order++, hiResLink.toString().replace("/thumbs/", "/galleries/"), StatusContent.SAVED));
         }
         if (images.size() > 0) result.setCoverImageUrl(images.get(0).getUrl());
+        result.addImageFiles(images);
         result.setQtyPages(images.size());
 
         result.populateAuthor();

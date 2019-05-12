@@ -31,17 +31,17 @@ public class NextpicturezContent {
         result.setTitle(title);
 
         AttributeMap attributes = new AttributeMap();
-        result.setAttributes(attributes);
+        result.addAttributes(attributes);
 
 
         List<ImageFile> images = new ArrayList<>();
-        result.setImageFiles(images);
 
         int order = 1;
         for (String s : imageLinks) {
             images.add(new ImageFile(order++, galleryUrl + s, StatusContent.SAVED));
         }
         if (images.size() > 0) result.setCoverImageUrl(images.get(0).getUrl());
+        result.addImageFiles(images);
         result.setQtyPages(images.size());
 
         result.populateAuthor();

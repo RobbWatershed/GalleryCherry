@@ -48,12 +48,10 @@ public class DatabaseMaintenance {
         Timber.i("Upgrading Pururin image hosts : start");
         contents = db.selectContentWithOldPururinHost();
         Timber.i("Upgrading Pururin image hosts : %s books detected", contents.size());
-        for (Content c : contents)
-        {
-            c.setCoverImageUrl(c.getCoverImageUrl().replace("api.pururin.io/images/","cdn.pururin.io/assets/images/data/"));
-            for (ImageFile i : c.getImageFiles())
-            {
-                db.updateImageFileUrl( i.setUrl(i.getUrl().replace("api.pururin.io/images/","cdn.pururin.io/assets/images/data/")) );
+        for (Content c : contents) {
+            c.setCoverImageUrl(c.getCoverImageUrl().replace("api.pururin.io/images/", "cdn.pururin.io/assets/images/data/"));
+            for (ImageFile i : c.getImageFiles()) {
+                db.updateImageFileUrl(i.setUrl(i.getUrl().replace("api.pururin.io/images/", "cdn.pururin.io/assets/images/data/")));
             }
             db.insertContent(c);
         }
@@ -65,16 +63,6 @@ public class DatabaseMaintenance {
      */
     @SuppressWarnings("deprecation")
     public static void performOldDatabaseUpdate(HentoidDB db) {
-        // Update all "storage_folder" fields in CONTENT table (mandatory) (since versionCode 44 / v1.2.2)
-        List<Content> contents = db.selectContentEmptyFolder();
-        if (contents != null && contents.size() > 0) {
-            for (int i = 0; i < contents.size(); i++) {
-                Content content = contents.get(i);
-                content.setStorageFolder("/" + content.getSite().getDescription() + "/" + content.getOldUniqueSiteId()); // This line must use deprecated code, as it migrates it to newest version
-                db.updateContentStorageFolder(content);
-            }
-        }
-
         // Migrate the old download queue (books in DOWNLOADING or PAUSED status) in the queue table (since versionCode 60 / v1.3.7)
         // Gets books that should be in the queue but aren't
         List<Integer> contentToMigrate = db.selectContentsForQueueMigration();

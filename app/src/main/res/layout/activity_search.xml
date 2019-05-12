@@ -100,7 +100,7 @@
 
     <TextView
         android:id="@+id/textCategorySource"
-        style="@style/LargeItem"
+        style="@style/SearchCategoryButton"
         android:text="@string/category_source"
         android:layout_marginStart="8dp"
         android:layout_marginLeft="8dp"

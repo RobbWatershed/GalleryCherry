@@ -43,7 +43,6 @@ public class XnxxContent {
         else result.setTitle(title);
 
         AttributeMap attributes = new AttributeMap();
-        result.setAttributes(attributes);
 
         // Models
         if (rawMetadata != null && rawMetadata.contains(PORNSTARS_MARKER)) {
@@ -56,22 +55,25 @@ public class XnxxContent {
                 stars = rawMetadata.replace(PORNSTARS_MARKER, "").split(",");
 
             for (String s : stars) {
-                attributes.add(new Attribute(AttributeType.MODEL, s.trim(), "/" + s.trim()));
+                attributes.add(new Attribute(AttributeType.MODEL, s.trim(), "/" + s.trim(), Site.XNXX));
             }
         }
 
         if (tags != null) {
-            ParseHelper.parseAttributes(attributes, AttributeType.TAG, tags, true);
+            ParseHelper.parseAttributes(attributes, AttributeType.TAG, tags, true, Site.XNXX);
         }
 
+        result.addAttributes(attributes);
+
+
         List<ImageFile> images = new ArrayList<>();
-        result.setImageFiles(images);
 
         int order = 1;
         for (String s : imageLinks) {
             images.add(new ImageFile(order++, s, StatusContent.SAVED));
         }
         if (images.size() > 0) result.setCoverImageUrl(images.get(0).getUrl());
+        result.addImageFiles(images);
         result.setQtyPages(images.size());
 
 

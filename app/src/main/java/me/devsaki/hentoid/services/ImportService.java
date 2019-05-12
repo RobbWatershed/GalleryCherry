@@ -12,7 +12,7 @@ import org.greenrobot.eventbus.EventBus;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Date;
+import java.util.Arrays;
 import java.util.List;
 
 import me.devsaki.hentoid.activities.bundles.ImportActivityBundle;

@@ -22,7 +22,7 @@ public class JpegworldActivity extends BaseWebActivity {
 
     @Override
     protected CustomWebViewClient getWebClient() {
-        CustomWebViewClient client = new PornPicsWebViewClient(GALLERY_FILTER, getStartSite(), this);
+        CustomWebViewClient client = new PornPicsWebViewClient(GALLERY_FILTER, this);
         client.restrictTo(DOMAIN_FILTER);
         return client;
     }
@@ -34,8 +34,8 @@ public class JpegworldActivity extends BaseWebActivity {
 
     private class PornPicsWebViewClient extends CustomWebViewClient {
 
-        PornPicsWebViewClient(String filteredUrl, Site startSite, ResultListener<Content> listener) {
-            super(filteredUrl, startSite, listener);
+        PornPicsWebViewClient(String filteredUrl, ResultListener<Content> listener) {
+            super(filteredUrl, listener);
         }
 
         @Override
