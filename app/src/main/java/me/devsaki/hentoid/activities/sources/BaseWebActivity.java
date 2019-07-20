@@ -30,7 +30,6 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -516,7 +515,7 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
     class CustomWebViewClient extends WebViewClient {
 
         private final Jspoon jspoon = Jspoon.create();
-        protected final CompositeDisposable compositeDisposable = new CompositeDisposable();
+        final CompositeDisposable compositeDisposable = new CompositeDisposable();
         private final ByteArrayInputStream nothing = new ByteArrayInputStream("".getBytes());
         protected final ResultListener<Content> listener;
         private final Pattern filteredUrlPattern;
@@ -593,6 +592,10 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
         public void onPageFinished(WebView view, String url) {
             isPageLoading = false;
             setFabIcon(fabRefreshOrStop, R.drawable.ic_action_refresh);
+
+            isHtmlLoaded = false;
+            // Specific to Cherry : due to redirections, the correct page URLs are those visible from onPageFinished
+            if (isPageFiltered(url)) parseResponse(url, null);
         }
 
         @Override
@@ -601,10 +604,6 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
             if (isUrlForbidden(url)) {
                 return new WebResourceResponse("text/plain", "utf-8", nothing);
             } else {
-                if (!isPageLoading) {
-                    isHtmlLoaded = false;
-                    if (isPageFiltered(url)) return parseResponse(url, null);
-                }
                 return super.shouldInterceptRequest(view, url);
             }
         }
@@ -641,10 +640,10 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
 
                 // Response body bytestream needs to be duplicated
                 // because Jsoup closes it, which makes it unavailable for the WebView to use
-                List<InputStream> is = Helper.duplicateInputStream(response.body().byteStream(), 2);
+                // List<InputStream> is = Helper.duplicateInputStream(response.body().byteStream(), 2);
 
                 compositeDisposable.add(
-                        Single.fromCallable(() -> htmlAdapter.fromInputStream(is.get(0), new URL(urlStr)).toContent(urlStr))
+                        Single.fromCallable(() -> htmlAdapter.fromInputStream(response.body().byteStream(), new URL(urlStr)).toContent(urlStr))
                                 .subscribeOn(Schedulers.computation())
                                 .observeOn(AndroidSchedulers.mainThread())
                                 .subscribe(
@@ -656,7 +655,7 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
                                         })
                 );
 
-                return HttpHelper.okHttpResponseToWebResourceResponse(response, is.get(1));
+                //return HttpHelper.okHttpResponseToWebResourceResponse(response, is.get(1));
             } catch (MalformedURLException e) {
                 Timber.e(e, "Malformed URL : %s", urlStr);
             } catch (IOException e) {
@@ -686,7 +685,7 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
          *
          * @return True if current webpage is being loaded; false if not
          */
-        public boolean isLoading() {
+        boolean isLoading() {
             return isPageLoading;
         }
     }
