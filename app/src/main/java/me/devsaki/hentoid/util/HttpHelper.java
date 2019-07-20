@@ -1,6 +1,5 @@
 package me.devsaki.hentoid.util;
 
-import android.os.Build;
 import android.util.Pair;
 import android.webkit.WebResourceResponse;
 
@@ -11,7 +10,6 @@ import org.jsoup.nodes.Document;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.security.InvalidParameterException;
 import java.util.List;
 
 import javax.annotation.Nullable;
@@ -77,7 +75,7 @@ public class HttpHelper {
 
         if (contentTypeValue != null) {
             if (contentTypeValue.indexOf("charset=") > 0) {
-                final String[] contentTypeAndEncoding = contentTypeValue.split("; ");
+                final String[] contentTypeAndEncoding = contentTypeValue.replace("; ", ";").split(";");
                 final String contentType = contentTypeAndEncoding[0];
                 final String charset = contentTypeAndEncoding[1].split("=")[1];
                 return new WebResourceResponse(contentType, charset, is);
