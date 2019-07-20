@@ -1,13 +1,19 @@
 package me.devsaki.hentoid.activities.sources;
 
+import android.util.Pair;
+import android.webkit.CookieManager;
 import android.webkit.WebResourceResponse;
 
 import androidx.annotation.NonNull;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import javax.annotation.Nullable;
 
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.schedulers.Schedulers;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.listener.ResultListener;
@@ -55,10 +61,17 @@ public class XhamsterActivity extends BaseWebActivity {
                 id = galleryUrlParts[galleryUrlParts.length - 1];
             }
 
+            List<Pair<String, String>> headersList = new ArrayList<>();
+            String cookie = CookieManager.getInstance().getCookie(urlStr);
+            if (cookie != null) headersList.add(new Pair<>("cookie", cookie));
+
             compositeDisposable.add(XhamsterGalleryServer.API.getGalleryMetadata(id, page)
+                    .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(
-                            metadata -> listener.onResultReady(metadata.toContent(urlStr), 1), throwable -> {
+                            metadata -> processContent(metadata.toContent(urlStr), headersList),
+                            throwable -> {
                                 Timber.e(throwable, "Error parsing content for page %s", urlStr);
+                                isHtmlLoaded = true;
                                 listener.onResultFailed("");
                             })
             );

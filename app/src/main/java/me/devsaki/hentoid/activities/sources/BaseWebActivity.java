@@ -523,7 +523,7 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
 
         private List<String> domainNames = new ArrayList<>();
         private boolean isPageLoading = false;
-        private boolean isHtmlLoaded = false;
+        protected boolean isHtmlLoaded = false;
 
         @SuppressWarnings("unchecked")
         CustomWebViewClient(String filteredUrl, ResultListener<Content> listener) {
@@ -626,7 +626,6 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
 
         protected WebResourceResponse parseResponse(@NonNull String urlStr, @Nullable Map<String, String> headers) {
             List<Pair<String, String>> headersList = new ArrayList<>();
-
             if (headers != null)
                 for (String key : headers.keySet())
                     headersList.add(new Pair<>(key, headers.get(key)));
@@ -664,7 +663,7 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
             return null;
         }
 
-        private void processContent(@Nonnull Content content, @Nonnull List<Pair<String, String>> headersList) {
+        void processContent(@Nonnull Content content, @Nonnull List<Pair<String, String>> headersList) {
             if (content.getStatus() != null && content.getStatus().equals(StatusContent.IGNORED))
                 return;
 

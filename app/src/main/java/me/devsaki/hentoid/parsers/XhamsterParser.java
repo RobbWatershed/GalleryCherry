@@ -42,8 +42,9 @@ public class XhamsterParser extends BaseParser {
             if (doc != null) {
                 // JSON response is wrapped between [ ... ]'s
                 String body = doc.body().childNode(0).toString()
+                        .trim()
                         .replace("\n[", "")
-                        .replace("}}]}]", "}}]}");
+                        .replace("}]}]", "}]}");
 
                 XhamsterGalleryContent galleryContent = gson.fromJson(body, XhamsterGalleryContent.class);
                 result.addAll(galleryContent.toImageUrlList());
