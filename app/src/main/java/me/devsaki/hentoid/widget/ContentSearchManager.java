@@ -122,7 +122,7 @@ public class ContentSearchManager {
         else if (!tags.isEmpty())
             accessor.searchBooksPaged("", tags, currentPage, booksPerPage, contentSortOrder, filterFavourites, listener); // Advanced search
         else
-            accessor.getRecentBooksPaged(Site.HITOMI, Language.ANY, currentPage, booksPerPage, contentSortOrder, filterFavourites, listener); // Default search (display recent)
+            accessor.getRecentBooksPaged(Site.XHAMSTER, Language.ANY, currentPage, booksPerPage, contentSortOrder, filterFavourites, listener); // Default search (display recent)
         // TODO : do something about these ridiculous default 1st arguments
     }
 
@@ -132,7 +132,7 @@ public class ContentSearchManager {
         else if (!tags.isEmpty())
             accessor.searchBookIdsPaged("", tags, currentPage, booksPerPage, contentSortOrder, filterFavourites, listener); // Advanced search
         else
-            accessor.getRecentBookIdsPaged(Site.HITOMI, Language.ANY, currentPage, booksPerPage, contentSortOrder, filterFavourites, listener); // Default search (display recent)
+            accessor.getRecentBookIdsPaged(Site.XHAMSTER, Language.ANY, currentPage, booksPerPage, contentSortOrder, filterFavourites, listener); // Default search (display recent)
         // TODO : do something about these ridiculous default 1st arguments
     }
 

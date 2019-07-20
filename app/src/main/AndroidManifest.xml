@@ -34,39 +34,35 @@
             android:label="@string/app_intro"
             android:theme="@style/AppTheme" />
         <activity
-            android:name=".activities.sources.HitomiActivity"
+            android:name=".activities.sources.XhamsterActivity"
             android:configChanges="orientation|screenSize"
             android:theme="@style/BrowserTheme" />
         <activity
-            android:name=".activities.websites.XhamsterActivity"
+            android:name=".activities.sources.XnxxActivity"
             android:configChanges="orientation|screenSize"
             android:theme="@style/BrowserTheme" />
         <activity
-            android:name=".activities.websites.XnxxActivity"
+            android:name=".activities.sources.PornPicsActivity"
             android:configChanges="orientation|screenSize"
             android:theme="@style/BrowserTheme" />
         <activity
-            android:name=".activities.websites.PornPicsActivity"
+            android:name=".activities.sources.JpegworldActivity"
             android:configChanges="orientation|screenSize"
             android:theme="@style/BrowserTheme" />
         <activity
-            android:name=".activities.websites.JpegworldActivity"
+            android:name=".activities.sources.NextpicturezActivity"
             android:configChanges="orientation|screenSize"
             android:theme="@style/BrowserTheme" />
         <activity
-            android:name=".activities.websites.NextpicturezActivity"
+            android:name=".activities.sources.HellpornoActivity"
             android:configChanges="orientation|screenSize"
             android:theme="@style/BrowserTheme" />
         <activity
-            android:name=".activities.websites.HellpornoActivity"
+            android:name=".activities.sources.PornPicGalleriesActivity"
             android:configChanges="orientation|screenSize"
             android:theme="@style/BrowserTheme" />
         <activity
-            android:name=".activities.websites.PornPicGalleriesActivity"
-            android:configChanges="orientation|screenSize"
-            android:theme="@style/BrowserTheme" />
-        <activity
-            android:name=".activities.websites.Link2GalleriesActivity"
+            android:name=".activities.sources.Link2GalleriesActivity"
             android:configChanges="orientation|screenSize"
             android:theme="@style/BrowserTheme" />
         <activity

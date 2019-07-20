@@ -1,9 +1,14 @@
 package me.devsaki.hentoid.parsers;
 
-import android.support.annotation.Nullable;
 import android.webkit.URLUtil;
 
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+
+import java.io.IOException;
 import java.util.List;
+
+import javax.annotation.Nullable;
 
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.ImageFile;

@@ -1,4 +1,4 @@
-package me.devsaki.hentoid.activities.websites;
+package me.devsaki.hentoid.activities.sources;
 
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.ImageFile;
@@ -11,12 +11,12 @@ import timber.log.Timber;
  * Created by Robb on 01/2019
  * Implements PornPicGalleries source
  */
-public class Link2GalleriesActivity extends BaseWebActivity {
+public class PornPicGalleriesActivity extends BaseWebActivity {
 
     private static final String GALLERY_FILTER = ".*";
 
     Site getStartSite() {
-        return Site.LINK2GALLERIES;
+        return Site.PORNPICGALLERIES;
     }
 
     @Override
@@ -44,7 +44,7 @@ public class Link2GalleriesActivity extends BaseWebActivity {
                             metadata -> {
                                 Content content = metadata.toContent();
 
-                                content.setSite(Site.LINK2GALLERIES);
+                                content.setSite(Site.PORNPICGALLERIES);
 
                                 if (content.getUrl() != null && content.getUrl().isEmpty()) {
                                     content.setUrl(url);

@@ -6,14 +6,14 @@ import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.activities.AboutActivity;
 import me.devsaki.hentoid.activities.PrefsActivity;
 import me.devsaki.hentoid.activities.QueueActivity;
-import me.devsaki.hentoid.activities.websites.HellpornoActivity;
-import me.devsaki.hentoid.activities.websites.JpegworldActivity;
-import me.devsaki.hentoid.activities.websites.Link2GalleriesActivity;
-import me.devsaki.hentoid.activities.websites.NextpicturezActivity;
-import me.devsaki.hentoid.activities.websites.PornPicGalleriesActivity;
-import me.devsaki.hentoid.activities.websites.PornPicsActivity;
-import me.devsaki.hentoid.activities.websites.XhamsterActivity;
-import me.devsaki.hentoid.activities.websites.XnxxActivity;
+import me.devsaki.hentoid.activities.sources.HellpornoActivity;
+import me.devsaki.hentoid.activities.sources.JpegworldActivity;
+import me.devsaki.hentoid.activities.sources.Link2GalleriesActivity;
+import me.devsaki.hentoid.activities.sources.NextpicturezActivity;
+import me.devsaki.hentoid.activities.sources.PornPicGalleriesActivity;
+import me.devsaki.hentoid.activities.sources.PornPicsActivity;
+import me.devsaki.hentoid.activities.sources.XhamsterActivity;
+import me.devsaki.hentoid.activities.sources.XnxxActivity;
 
 public enum DrawerItem {
 
@@ -25,7 +25,6 @@ public enum DrawerItem {
     HELLPORNO("HELLPORNO", R.drawable.ic_menu_hellporno, HellpornoActivity.class),
     PPG("PORNPICGALLERIES", R.drawable.ic_menu_ppg, PornPicGalleriesActivity.class),
     LINK2GALLERIES("LINK2GALLERIES", R.drawable.ic_menu_l2g, Link2GalleriesActivity.class),
-    HOME("HOME", R.drawable.ic_menu_downloads, DownloadsActivity.class),
     QUEUE("QUEUE", R.drawable.ic_menu_queue, QueueActivity.class),
     PREFS("PREFERENCES", R.drawable.ic_menu_prefs, PrefsActivity.class),
     ABOUT("ABOUT", R.drawable.ic_menu_about, AboutActivity.class);

@@ -46,7 +46,7 @@
             android:layout_gravity="center"
             android:paddingLeft="16dp"
             android:paddingRight="16dp"
-            android:src="@drawable/ic_hentoid"
+            android:src="@drawable/ic_cherry"
             tools:ignore="ContentDescription" />
     </LinearLayout>
 

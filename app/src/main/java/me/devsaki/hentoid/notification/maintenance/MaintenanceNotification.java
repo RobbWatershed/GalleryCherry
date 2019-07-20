@@ -21,7 +21,7 @@ public class MaintenanceNotification implements Notification {
     @Override
     public android.app.Notification onCreateNotification(Context context) {
         return new NotificationCompat.Builder(context, MaintenanceNotificationChannel.ID)
-                .setSmallIcon(R.drawable.ic_stat_hentoid)
+                .setSmallIcon(R.drawable.ic_cherry_icon)
                 .setContentTitle(context.getString(R.string.maintenance))
                 .setContentText(title)
                 .setColor(ContextCompat.getColor(context, R.color.secondary))
