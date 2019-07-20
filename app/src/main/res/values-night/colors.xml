@@ -17,4 +17,10 @@
     <color name="card_selected">@color/taupe_elevated_2</color>
     <color name="card_pressed">@color/taupe_elevated_3</color>
     <color name="card_tags">@color/white_opacity_66</color>
+
+    <color name="taupe">#350010</color>
+    <color name="taupe_elevated_1">#480016</color>
+    <color name="taupe_elevated_2">#5c001c</color>
+    <color name="taupe_elevated_3">#700022</color>
+    <color name="taupe_elevated_4">#830027</color>
 </resources>

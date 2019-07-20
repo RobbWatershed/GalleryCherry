@@ -19,9 +19,9 @@
     <color name="card_tags">@color/light_gray</color>
 
     <!-- App palette -->
-    <color name="dark_red">#d81b60</color>
-    <color name="very_dark_red">#a00037</color>
-    <color name="super_dark_red">#2b0000</color>
+    <color name="dark_red">#700022</color>
+    <color name="very_dark_red">#5c001c</color>
+    <color name="super_dark_red">#480016</color>
     <color name="taupe">#ff5c8d</color>
     <color name="taupe_elevated_1">#ff709b</color>
     <color name="taupe_elevated_2">#ff83a8</color>
