@@ -513,7 +513,7 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
      * Analyze loaded HTML to display download button
      * Override blocked content with empty content
      */
-    abstract class CustomWebViewClient extends WebViewClient {
+    class CustomWebViewClient extends WebViewClient {
 
         private final Jspoon jspoon = Jspoon.create();
         protected final CompositeDisposable compositeDisposable = new CompositeDisposable();
@@ -525,8 +525,6 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
         private List<String> domainNames = new ArrayList<>();
         private boolean isPageLoading = false;
         private boolean isHtmlLoaded = false;
-
-        protected abstract void onGalleryFound(String url);
 
         @SuppressWarnings("unchecked")
         CustomWebViewClient(String filteredUrl, ResultListener<Content> listener) {
@@ -670,6 +668,8 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
         private void processContent(@Nonnull Content content, @Nonnull List<Pair<String, String>> headersList) {
             if (content.getStatus() != null && content.getStatus().equals(StatusContent.IGNORED))
                 return;
+
+            content.setSite(getStartSite()); // useful for smart content parser who doesn't know that
 
             // Save cookies for future calls during download
             Map<String, String> params = new HashMap<>();

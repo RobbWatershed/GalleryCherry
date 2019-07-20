@@ -1,5 +1,7 @@
 package me.devsaki.hentoid.parsers.content;
 
+import androidx.annotation.NonNull;
+
 import org.jsoup.nodes.Element;
 
 import java.util.ArrayList;
@@ -15,11 +17,11 @@ import me.devsaki.hentoid.parsers.ParseHelper;
 import me.devsaki.hentoid.util.AttributeMap;
 import pl.droidsonroids.jspoon.annotation.Selector;
 
-public class PornPicsContent {
+public class PornPicsContent implements ContentParser {
 
     private String GALLERY_FOLDER = "/galleries/";
 
-    @Selector(value = "head link[rel='canonical']", attr = "href")
+    @Selector(value = "head link[rel='canonical']", attr = "href", defValue = "")
     private String galleryUrl;
     @Selector(".title-h1")
     private String title;
@@ -31,12 +33,14 @@ public class PornPicsContent {
     private List<String> imageLinks;
 
 
-    public Content toContent() {
+    public Content toContent(@NonNull String url) {
         Content result = new Content();
 
         result.setSite(Site.PORNPICS);
-        int galleryLocation = galleryUrl.indexOf(GALLERY_FOLDER) + GALLERY_FOLDER.length();
-        result.setUrl(galleryUrl.substring(galleryLocation));
+
+        String theUrl = galleryUrl.isEmpty() ? url : galleryUrl;
+        int galleryLocation = theUrl.indexOf(GALLERY_FOLDER) + GALLERY_FOLDER.length();
+        result.setUrl(theUrl.substring(galleryLocation));
         result.setTitle(title);
 
         AttributeMap attributes = new AttributeMap();

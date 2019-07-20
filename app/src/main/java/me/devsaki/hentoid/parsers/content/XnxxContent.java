@@ -1,5 +1,7 @@
 package me.devsaki.hentoid.parsers.content;
 
+import androidx.annotation.NonNull;
+
 import org.jsoup.nodes.Element;
 
 import java.util.ArrayList;
@@ -15,12 +17,12 @@ import me.devsaki.hentoid.parsers.ParseHelper;
 import me.devsaki.hentoid.util.AttributeMap;
 import pl.droidsonroids.jspoon.annotation.Selector;
 
-public class XnxxContent {
+public class XnxxContent implements ContentParser {
 
     private static String PORNSTARS_MARKER = "Pornstars : ";
     private static String TAGS_MARKER = " - Tags : ";
 
-    @Selector(value = "head meta[name='twitter:url']", attr = "content")
+    @Selector(value = "head meta[name='twitter:url']", attr = "content", defValue = "")
     private String galleryUrl;
     @Selector(value = "head title")
     private String title;
@@ -32,7 +34,7 @@ public class XnxxContent {
     private List<String> imageLinks;
 
 
-    public Content toContent() {
+    public Content toContent(@NonNull String url) {
         Content result = new Content();
 
         result.setSite(Site.XNXX);
@@ -41,6 +43,9 @@ public class XnxxContent {
         if (galleryIndex > -1)
             result.setTitle(title.substring(0, title.lastIndexOf("gallery") - 1));
         else result.setTitle(title);
+
+        String theUrl = galleryUrl.isEmpty() ? url : galleryUrl;
+        result.setUrl(theUrl);
 
         AttributeMap attributes = new AttributeMap();
 

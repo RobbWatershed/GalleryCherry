@@ -1,5 +1,7 @@
 package me.devsaki.hentoid.parsers.content;
 
+import androidx.annotation.NonNull;
+
 import org.jsoup.nodes.Element;
 
 import java.util.List;
@@ -15,11 +17,11 @@ import me.devsaki.hentoid.util.AttributeMap;
 import pl.droidsonroids.jspoon.annotation.Selector;
 import timber.log.Timber;
 
-public class XhamsterContent {
+public class XhamsterContent implements ContentParser {
 
     private String GALLERY_FOLDER = "/photos/gallery/";
 
-    @Selector(value = "head meta[name='twitter:url']", attr = "content")
+    @Selector(value = "head meta[name='twitter:url']", attr = "content", defValue = "")
     private String galleryUrl;
     @Selector(value = "img.thumb", attr = "src")
     private List<String> thumbs;
@@ -31,12 +33,14 @@ public class XhamsterContent {
     private List<Element> tags;
 
 
-    public Content toContent() {
+    public Content toContent(@NonNull String url) {
         Content result = new Content();
 
         result.setSite(Site.XHAMSTER);
-        int galleryLocation = galleryUrl.indexOf(GALLERY_FOLDER) + GALLERY_FOLDER.length();
-        result.setUrl(galleryUrl.substring(galleryLocation));
+
+        String theUrl = galleryUrl.isEmpty() ? url : galleryUrl;
+        int galleryLocation = theUrl.indexOf(GALLERY_FOLDER) + GALLERY_FOLDER.length();
+        result.setUrl(theUrl.substring(galleryLocation));
         result.setCoverImageUrl(thumbs.isEmpty() ? "" : thumbs.get(0));
         result.setTitle(title);
 

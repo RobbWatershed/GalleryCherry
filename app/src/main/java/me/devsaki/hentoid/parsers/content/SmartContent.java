@@ -1,5 +1,7 @@
 package me.devsaki.hentoid.parsers.content;
 
+import androidx.annotation.NonNull;
+
 import org.jsoup.nodes.Element;
 
 import java.util.ArrayList;
@@ -13,7 +15,7 @@ import okhttp3.HttpUrl;
 import pl.droidsonroids.jspoon.annotation.Selector;
 import timber.log.Timber;
 
-public class SmartContent {
+public class SmartContent implements ContentParser {
 
     @Selector(":root")
     private Element root;
@@ -33,16 +35,18 @@ public class SmartContent {
         return null != imageElts && imageElts.size() > 4;
     }
 
-    public Content toContent() {
+    public Content toContent(@NonNull String url) {
         Content result = new Content();
 
         if (!isGallery()) return result;
 
-        Timber.i("galleryUrl : %s", galleryUrl);
-        if (galleryUrl.startsWith("//")) galleryUrl = "http:" + galleryUrl;
-        if (galleryUrl.length() > 0) {
-            HttpUrl url = HttpUrl.get(galleryUrl);
-            result.setUrl(url.encodedPath());
+        String theUrl = galleryUrl.isEmpty() ? url : galleryUrl;
+
+        Timber.i("galleryUrl : %s", theUrl);
+        if (theUrl.startsWith("//")) theUrl = "http:" + theUrl;
+        if (theUrl.length() > 0) {
+            HttpUrl httpUrl = HttpUrl.get(theUrl);
+            result.setUrl(httpUrl.encodedPath());
         } else result.setUrl("");
 
         result.setTitle(title);
@@ -52,14 +56,30 @@ public class SmartContent {
 
         List<ImageFile> images = new ArrayList<>();
 
+        String urlHost = url.substring(0, url.indexOf("/", url.indexOf("://") + 3));
+        String urlLocation = url.substring(0, url.lastIndexOf("/") + 1);
+
         int order = 1;
         if (imageLinks != null && imageLinks.size() > 4) {
             for (String s : imageLinks) {
+                if (!s.startsWith("http")) {
+                    if (s.startsWith("/"))
+                        s = urlHost + s;
+                    else
+                        s = urlLocation + s;
+                }
                 images.add(new ImageFile(order++, s, StatusContent.SAVED));
             }
         } else if (imageElts != null && imageElts.size() > 4) {
             for (Element e : imageElts) {
-                images.add(new ImageFile(order++, e.attr("src"), StatusContent.SAVED));
+                String s = e.attr("src");
+                if (!s.startsWith("http")) {
+                    if (s.startsWith("/"))
+                        s = urlHost + s;
+                    else
+                        s = urlLocation + s;
+                }
+                images.add(new ImageFile(order++, s, StatusContent.SAVED));
             }
         }
         result.setQtyPages(images.size());
