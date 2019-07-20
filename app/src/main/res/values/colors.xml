@@ -8,7 +8,7 @@
     <color name="on_secondary">@color/white_opacity_87</color>
     <color name="surface">@color/white</color>
     <color name="on_surface">@color/medium_gray</color>
-    <color name="window_background">@color/taupe_elevated_2</color>
+    <color name="window_background">@color/taupe</color>
     <color name="on_background">@color/white_opacity_87</color>
     <color name="ripple">@color/light_red</color>
 
@@ -19,14 +19,14 @@
     <color name="card_tags">@color/light_gray</color>
 
     <!-- App palette -->
-    <color name="dark_red">#700022</color>
-    <color name="very_dark_red">#5c001c</color>
-    <color name="super_dark_red">#480016</color>
-    <color name="taupe">#ff5c8d</color>
-    <color name="taupe_elevated_1">#ff709b</color>
-    <color name="taupe_elevated_2">#ff83a8</color>
-    <color name="taupe_elevated_3">#ff97b6</color>
-    <color name="taupe_elevated_4">#ffaac4</color>
+    <color name="dark_red">#aa0033</color>
+    <color name="very_dark_red">#97002d</color>
+    <color name="super_dark_red">#830027</color>
+    <color name="taupe">#ff3572</color>
+    <color name="taupe_elevated_1">#ff487f</color>
+    <color name="taupe_elevated_2">#ff5c8d</color>
+    <color name="taupe_elevated_3">#ff709b</color>
+    <color name="taupe_elevated_4">#ff83a8</color>
     <color name="accent_red">#ff80ab</color>
     <color name="light_red">#ffb2dd</color>
     <color name="very_dark_pink">#6d0721</color>
