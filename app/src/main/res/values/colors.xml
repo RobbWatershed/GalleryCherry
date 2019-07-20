@@ -23,10 +23,10 @@
     <color name="very_dark_red">#a00037</color>
     <color name="super_dark_red">#2b0000</color>
     <color name="taupe">#ff5c8d</color>
-    <color name="taupe_elevated_1">#4b2222</color>
-    <color name="taupe_elevated_2">#592828</color> <!-- Original taupe from v1.7 theme -->
-    <color name="taupe_elevated_3">#672e2e</color>
-    <color name="taupe_elevated_4">#743434</color>
+    <color name="taupe_elevated_1">#ff709b</color>
+    <color name="taupe_elevated_2">#ff83a8</color> <!-- Original taupe from v1.7 theme -->
+    <color name="taupe_elevated_3">#ff97b6</color>
+    <color name="taupe_elevated_4">#ffaac4</color>
     <color name="accent_red">#ff80ab</color>
     <color name="light_red">#ffb2dd</color>
     <color name="very_dark_pink">#6d0721</color>
