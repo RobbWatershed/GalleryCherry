@@ -9,6 +9,7 @@ import java.util.List;
 
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.ImageFile;
+import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.util.AttributeMap;
 import okhttp3.HttpUrl;
@@ -38,7 +39,8 @@ public class SmartContent implements ContentParser {
     public Content toContent(@NonNull String url) {
         Content result = new Content();
 
-        if (!isGallery()) return result;
+        result.setSite(Site.NONE); // Temp but needed for the rest of the operations; will be overwritten
+        if (!isGallery()) return result.setStatus(StatusContent.IGNORED);
 
         String theUrl = galleryUrl.isEmpty() ? url : galleryUrl;
 
