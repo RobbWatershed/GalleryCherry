@@ -219,6 +219,10 @@ public class ObjectBoxDB {
         return result;
     }
 
+    long selectMaxQueueOrder() {
+        return store.boxFor(QueueRecord.class).query().build().property(QueueRecord_.rank).max();
+    }
+
     public void insertQueue(long id, int order) {
         store.boxFor(QueueRecord.class).put(new QueueRecord(id, order));
     }
@@ -332,7 +336,7 @@ public class ObjectBoxDB {
             for (AttributeType attrType : metadataMap.keySet()) {
                 if (!attrType.equals(AttributeType.SOURCE)) { // Not a "real" attribute in database
                     List<Attribute> attrs = metadataMap.get(attrType);
-                    if (attrs.size() > 0) {
+                    if (attrs != null && attrs.size() > 0) {
                         query.in(Content_.id, getFilteredContent(attrs, false));
                     }
                 }
@@ -379,8 +383,10 @@ public class ObjectBoxDB {
         Collections.shuffle(order, new Random(RandomSeedSingleton.getInstance().getSeed()));
 
         int maxPage;
-        if (booksPerPage < 0) maxPage = order.size();
-        else maxPage = Math.min(start + booksPerPage, order.size());
+        if (booksPerPage < 0) {
+            start = 0;
+            maxPage = order.size();
+        } else maxPage = Math.min(start + booksPerPage, order.size());
 
         List<Content> result = new ArrayList<>();
         for (int i = start; i < maxPage; i++) {
@@ -389,19 +395,55 @@ public class ObjectBoxDB {
         return result;
     }
 
+    private static long[] shuffleRandomSortId(Query<Content> query, int start, int booksPerPage) {
+        LazyList<Content> lazyList = query.findLazy();
+        List<Integer> order = new ArrayList<>();
+        for (int i = 0; i < lazyList.size(); i++) order.add(i);
+        Collections.shuffle(order, new Random(RandomSeedSingleton.getInstance().getSeed()));
+
+        int maxPage;
+        if (booksPerPage < 0) {
+            start = 0;
+            maxPage = order.size();
+        } else maxPage = Math.min(start + booksPerPage, order.size());
+
+        List<Long> result = new ArrayList<>();
+        for (int i = start; i < maxPage; i++) {
+            result.add(lazyList.get(order.get(i)).getId());
+        }
+        return Helper.getPrimitiveLongArrayFromList(result);
+    }
+
     List<Content> selectContentSearch(String title, int page, int booksPerPage, List<Attribute> tags, boolean filterFavourites, int orderStyle) {
+        List<Content> result;
         int start = (page - 1) * booksPerPage;
         Query<Content> query = queryContentSearchContent(title, tags, filterFavourites, orderStyle);
 
         if (orderStyle != Preferences.Constant.ORDER_CONTENT_RANDOM) {
-            if (booksPerPage < 0) return query.find();
-            else return query.find(start, booksPerPage);
+            if (booksPerPage < 0) result = query.find();
+            else result = query.find(start, booksPerPage);
         } else {
-            return shuffleRandomSort(query, start, booksPerPage);
+            result = shuffleRandomSort(query, start, booksPerPage);
         }
+        return setQueryIndexes(result, page, booksPerPage);
+    }
+
+    long[] selectContentSearchId(String title, int page, int booksPerPage, List<Attribute> tags, boolean filterFavourites, int orderStyle) {
+        long[] result;
+        int start = (page - 1) * booksPerPage;
+        Query<Content> query = queryContentSearchContent(title, tags, filterFavourites, orderStyle);
+
+        if (orderStyle != Preferences.Constant.ORDER_CONTENT_RANDOM) {
+            if (booksPerPage < 0) result = query.findIds();
+            else result = query.findIds(start, booksPerPage);
+        } else {
+            result = shuffleRandomSortId(query, start, booksPerPage);
+        }
+        return result;
     }
 
     List<Content> selectContentUniversal(String queryStr, int page, int booksPerPage, boolean filterFavourites, int orderStyle) {
+        List<Content> result;
         int start = (page - 1) * booksPerPage;
         // Due to objectBox limitations (see https://github.com/objectbox/objectbox-java/issues/497 and https://github.com/objectbox/objectbox-java/issues/533)
         // querying Content and attributes have to be done separately
@@ -409,11 +451,35 @@ public class ObjectBoxDB {
         Query<Content> query = queryContentUniversalContent(queryStr, filterFavourites, contentAttrSubQuery.findIds(), orderStyle);
 
         if (orderStyle != Preferences.Constant.ORDER_CONTENT_RANDOM) {
-            if (booksPerPage < 0) return query.find();
-            else return query.find(start, booksPerPage);
+            if (booksPerPage < 0) result = query.find();
+            else result = query.find(start, booksPerPage);
         } else {
-            return shuffleRandomSort(query, start, booksPerPage);
+            result = shuffleRandomSort(query, start, booksPerPage);
         }
+        return setQueryIndexes(result, page, booksPerPage);
+    }
+
+    long[] selectContentUniversalId(String queryStr, int page, int booksPerPage, boolean filterFavourites, int orderStyle) {
+        long[] result;
+        int start = (page - 1) * booksPerPage;
+        // Due to objectBox limitations (see https://github.com/objectbox/objectbox-java/issues/497 and https://github.com/objectbox/objectbox-java/issues/533)
+        // querying Content and attributes have to be done separately
+        Query<Content> contentAttrSubQuery = queryContentUniversalAttributes(queryStr, filterFavourites);
+        Query<Content> query = queryContentUniversalContent(queryStr, filterFavourites, contentAttrSubQuery.findIds(), orderStyle);
+
+        if (orderStyle != Preferences.Constant.ORDER_CONTENT_RANDOM) {
+            if (booksPerPage < 0) result = query.findIds();
+            else result = query.findIds(start, booksPerPage);
+        } else {
+            result = shuffleRandomSortId(query, start, booksPerPage);
+        }
+        return result;
+    }
+
+    private List<Content> setQueryIndexes(List<Content> content, int page, int booksPerPage) {
+        for (int i = 0; i < content.size(); i++)
+            content.get(i).setQueryOrder((page - 1) * booksPerPage + i);
+        return content;
     }
 
     long countContentUniversal(String queryStr, boolean filterFavourites) {
@@ -486,7 +552,7 @@ public class ObjectBoxDB {
             for (AttributeType attrType : metadataMap.keySet()) {
                 if (!attrType.equals(AttributeType.SOURCE)) { // Not a "real" attribute in database
                     List<Attribute> attrs = metadataMap.get(attrType);
-                    if (attrs.size() > 0) {
+                    if (attrs != null && !attrs.isEmpty()) {
                         query.in(Content_.id, getFilteredContent(attrs, false));
                     }
                 }
@@ -525,7 +591,8 @@ public class ObjectBoxDB {
         return queryAvailableAttributes(type, filter, filteredContent).count();
     }
 
-    @SuppressWarnings("squid:S2184") // In our case, limit() argument has to be human-readable -> no issue concerning its type staying in the int range
+    @SuppressWarnings("squid:S2184")
+        // In our case, limit() argument has to be human-readable -> no issue concerning its type staying in the int range
     List<Attribute> selectAvailableAttributes(AttributeType type, List<Attribute> attributeFilter, String filter, boolean filterFavourites, int sortOrder, int page, int itemsPerPage) {
         long[] filteredContent = getFilteredContent(attributeFilter, filterFavourites);
         List<Long> filteredContentAsList = Helper.getListFromPrimitiveArray(filteredContent);
@@ -648,5 +715,15 @@ public class ObjectBoxDB {
     public void deleteErrorRecords(long contentId) {
         List<ErrorRecord> records = selectErrorRecordByContentId(contentId);
         store.boxFor(ErrorRecord.class).remove(records);
+    }
+
+    public void insertImageFile(ImageFile img) {
+        if (img.getId() > 0) store.boxFor(ImageFile.class).put(img);
+    }
+
+    @Nullable
+    public ImageFile selectImageFile(long id) {
+        if (id > 0) return store.boxFor(ImageFile.class).get(id);
+        else return null;
     }
 }

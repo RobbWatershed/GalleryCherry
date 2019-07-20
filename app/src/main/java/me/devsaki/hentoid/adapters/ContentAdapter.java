@@ -2,26 +2,27 @@ package me.devsaki.hentoid.adapters;
 
 import android.content.Context;
 import android.content.Intent;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.design.widget.Snackbar;
-import android.support.v4.content.ContextCompat;
-import android.support.v7.app.AlertDialog;
-import android.support.v7.util.SortedList;
-import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.util.SortedListAdapterCallback;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
+import androidx.core.content.ContextCompat;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.recyclerview.widget.SortedList;
+import androidx.recyclerview.widget.SortedListAdapterCallback;
+
+import com.annimon.stream.function.Consumer;
 import com.annimon.stream.function.IntConsumer;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.RequestManager;
 import com.bumptech.glide.request.RequestOptions;
 import com.crashlytics.android.Crashlytics;
+import com.google.android.material.snackbar.Snackbar;
 
 import java.io.File;
-import java.io.IOException;
 import java.security.InvalidParameterException;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -44,17 +45,15 @@ import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.database.domains.QueueRecord;
 import me.devsaki.hentoid.enums.AttributeType;
 import me.devsaki.hentoid.enums.StatusContent;
-import me.devsaki.hentoid.listener.ContentListener;
 import me.devsaki.hentoid.listener.ContentClickListener;
 import me.devsaki.hentoid.listener.ContentClickListener.ItemSelectListener;
+import me.devsaki.hentoid.listener.PagedResultListener;
 import me.devsaki.hentoid.services.ContentQueueManager;
 import me.devsaki.hentoid.ui.BlinkAnimation;
 import me.devsaki.hentoid.util.ContentNotRemovedException;
 import me.devsaki.hentoid.util.FileHelper;
 import me.devsaki.hentoid.util.Helper;
-import me.devsaki.hentoid.util.JsonHelper;
 import me.devsaki.hentoid.util.LogUtil;
-import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.util.ToastUtil;
 import timber.log.Timber;
 
@@ -62,7 +61,7 @@ import timber.log.Timber;
  * Created by avluis on 04/23/2016. RecyclerView based Content Adapter
  * TODO - Consider replacing with https://github.com/davideas/FlexibleAdapter
  */
-public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implements ContentListener {
+public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implements PagedResultListener<Content> {
 
     private static final int VISIBLE_THRESHOLD = 10;
 
@@ -74,6 +73,7 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
     private final int displayMode;
     private final RequestOptions glideRequestOptions;
     private final CompositeDisposable compositeDisposable = new CompositeDisposable();
+    private final Consumer<Content> openBookAction;
 
     private RecyclerView libraryView; // Kept as reference for querying by Content through ID
     private Runnable onScrollToEndListener;
@@ -86,6 +86,7 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
         collectionAccessor = builder.collectionAccessor;
         sortComparator = builder.sortComparator;
         displayMode = builder.displayMode;
+        openBookAction = builder.openBookAction;
         glideRequestOptions = new RequestOptions()
                 .centerInside()
                 .error(R.drawable.ic_placeholder);
@@ -330,7 +331,7 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
                     }
 
                     compositeDisposable.add(
-                            Single.fromCallable(() -> toggleFavourite(content.getId()))
+                            Single.fromCallable(() -> toggleFavourite(context, content.getId()))
                                     .subscribeOn(Schedulers.io())
                                     .observeOn(AndroidSchedulers.mainThread())
                                     .subscribe(
@@ -376,7 +377,7 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
                 // "In library" icon
                 else if (status == StatusContent.DOWNLOADED || status == StatusContent.MIGRATED || status == StatusContent.ERROR) {
                     holder.ivDownload.setImageResource(R.drawable.ic_action_play);
-                    holder.ivDownload.setOnClickListener(v -> FileHelper.openContent(context, content));
+                    holder.ivDownload.setOnClickListener(v -> openBookAction.accept(content));
                 }
             }
 
@@ -385,6 +386,7 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
         }
     }
 
+    // Mikan mode only
     private void tryDownloadPages(Content content) {
         ContentHolder holder = getHolderByContent(content);
         if (holder != null) {
@@ -398,7 +400,7 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
 
         // Simple click = open book (library mode only)
         if (DownloadsFragment.MODE_LIBRARY == displayMode) {
-            holder.itemView.setOnClickListener(new ContentClickListener(context, content, pos, itemSelectListener) {
+            holder.itemView.setOnClickListener(new ContentClickListener(content, pos, itemSelectListener) {
 
                 @Override
                 public void onClick(View v) {
@@ -412,13 +414,7 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
                     } else {
                         clearSelections();
                         setSelected(false, 0);
-
-                        super.onClick(v);
-
-                        if (sortComparator.equals(Content.READ_DATE_INV_COMPARATOR)
-                                || sortComparator.equals(Content.READS_ORDER_COMPARATOR)
-                                || sortComparator.equals(Content.READS_ORDER_INV_COMPARATOR))
-                            mSortedList.recalculatePositionOfItemAt(pos); // Reading the book has an effect on its position
+                        openBookAction.accept(content);
                     }
                 }
             });
@@ -426,7 +422,7 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
 
         // Long click = select item (library mode only)
         if (DownloadsFragment.MODE_LIBRARY == displayMode) {
-            holder.itemView.setOnLongClickListener(new ContentClickListener(context, content, pos, itemSelectListener) {
+            holder.itemView.setOnLongClickListener(new ContentClickListener(content, pos, itemSelectListener) {
 
                 @Override
                 public boolean onLongClick(View v) {
@@ -479,10 +475,9 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
     private void downloadContent(Content item) {
         ObjectBoxDB db = ObjectBoxDB.getInstance(context);
 
-        if (StatusContent.ONLINE == item.getStatus())
-            if (item.getImageFiles() != null)
-                for (ImageFile im : item.getImageFiles())
-                    db.updateImageFileStatusAndParams(im.setStatus(StatusContent.SAVED));
+        if (StatusContent.ONLINE == item.getStatus() && item.getImageFiles() != null)
+            for (ImageFile im : item.getImageFiles())
+                db.updateImageFileStatusAndParams(im.setStatus(StatusContent.SAVED));
 
         item.setDownloadDate(new Date().getTime());
         item.setStatus(StatusContent.DOWNLOADING);
@@ -510,7 +505,7 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
         errorLogInfo.noDataMessage = "No error detected.";
 
         if (errorLog != null) {
-            log.add("Error log for " + content.getTitle() + " : " + errorLog.size() + " errors");
+            log.add("Error log for " + content.getTitle() + " [" + content.getUniqueSiteId() + "@" + content.getSite().getDescription() + "] : " + errorLog.size() + " errors");
             for (ErrorRecord e : errorLog) log.add(e.toString());
         }
 
@@ -568,7 +563,7 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
                 .create().show();
     }
 
-    private Content toggleFavourite(long contentId) {
+    private static Content toggleFavourite(Context context, long contentId) {
         ObjectBoxDB db = ObjectBoxDB.getInstance(context);
         Content content = db.selectContentById(contentId);
 
@@ -580,13 +575,8 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
                 db.insertContent(content);
 
                 // Persist in it JSON
-                String rootFolderName = Preferences.getRootFolderName();
-                File dir = new File(rootFolderName, content.getStorageFolder());
-                try {
-                    JsonHelper.saveJson(content.preJSONExport(), dir);
-                } catch (IOException e) {
-                    Timber.e(e, "Error while writing to %s", dir.getAbsolutePath());
-                }
+                if (!content.getJsonUri().isEmpty()) FileHelper.updateJson(context, content);
+                else FileHelper.createJson(content);
             }
             return content;
         }
@@ -606,13 +596,19 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
         if (holder != null) {
             holder.ivDownload.setImageResource(R.drawable.ic_action_play);
             holder.ivDownload.clearAnimation();
-            holder.ivDownload.setOnClickListener(v -> FileHelper.openContent(context, content));
+            holder.ivDownload.setOnClickListener(v -> openBookAction.accept(content));
         }
     }
 
     @Nullable
     private ContentHolder getHolderByContent(Content content) {
         return (ContentHolder) libraryView.findViewHolderForItemId(content.getId());
+    }
+
+    public int getContentPosition(Content content) {
+        ContentHolder holder = getHolderByContent(content);
+        if (holder != null) return holder.getLayoutPosition();
+        else return -1;
     }
 
     @Override
@@ -804,10 +800,10 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
         mSortedList.endBatchedUpdates();
     }
 
-    // ContentListener implementation -- Mikan mode only
+    // PagedResultListener implementation -- Mikan mode only
     // Listener for pages retrieval (Mikan mode only)
     @Override
-    public void onContentReady(List<Content> results, long totalSelectedContent, long totalContent) {
+    public void onPagedResultReady(List<Content> results, long totalSelectedContent, long totalContent) {
         if (1 == results.size()) // 1 content with pages
         {
             downloadContent(results.get(0));
@@ -816,7 +812,7 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
 
     // Listener for error visual feedback (Mikan mode only)
     @Override
-    public void onContentFailed(Content content, String message) {
+    public void onPagedResultFailed(Content content, String message) {
         Timber.w(message);
         Snackbar snackbar = Snackbar.make(libraryView, message, Snackbar.LENGTH_LONG);
 
@@ -860,6 +856,7 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
         private CollectionAccessor collectionAccessor;
         private Comparator<Content> sortComparator;
         private int displayMode;
+        private Consumer<Content> openBookAction;
 
         public Builder setContext(Context context) {
             this.context = context;
@@ -888,6 +885,11 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
 
         public Builder setOnContentRemovedListener(IntConsumer onContentRemovedListener) {
             this.onContentRemovedListener = onContentRemovedListener;
+            return this;
+        }
+
+        public Builder setOpenBookAction(Consumer<Content> action) {
+            this.openBookAction = action;
             return this;
         }
 

@@ -13,17 +13,18 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.provider.DocumentsContract;
-import android.support.annotation.NonNull;
-import android.support.annotation.RequiresApi;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.app.FragmentTransaction;
-import android.support.v4.content.ContextCompat;
-import android.support.v7.app.AlertDialog;
 import android.text.Editable;
 import android.text.InputType;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.ImageView;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
+import androidx.appcompat.app.AlertDialog;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.fragment.app.FragmentTransaction;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
@@ -491,6 +492,9 @@ public class ImportActivity extends BaseActivity {
 
     /*
         Return from SAF system dialog
+
+        NB : Right now, this method _assumes_ the selected folder is on the first SD card
+        => Even if SAF actually selects internal phone memory or another SD card / an external USB storage device, it won't be processed properly
      */
     @RequiresApi(api = KITKAT)
     @Override
@@ -503,6 +507,8 @@ public class ImportActivity extends BaseActivity {
             Uri treeUri = data.getData();
             if (treeUri != null && treeUri.getPath() != null) {
                 // Persist selected folder URI in shared preferences
+                // NB : calling saveUri populates the preference used by FileHelper.isSAF, which indicates the library storage is on an SD card / an external USB storage device
+                // => this should be managed if SAF dialog is used to select folders on the internal phone memory
                 FileHelper.saveUri(treeUri);
 
                 // Persist access permissions
@@ -564,7 +570,7 @@ public class ImportActivity extends BaseActivity {
     private boolean hasBooks() {
         List<File> downloadDirs = new ArrayList<>();
         for (Site s : Site.values()) {
-            downloadDirs.add(FileHelper.getSiteDownloadDir(this, s));
+            downloadDirs.add(FileHelper.getOrCreateSiteDownloadDir(this, s));
         }
 
         for (File downloadDir : downloadDirs) {

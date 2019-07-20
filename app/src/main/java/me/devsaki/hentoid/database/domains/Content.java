@@ -1,6 +1,6 @@
 package me.devsaki.hentoid.database.domains;
 
-import android.support.annotation.Nullable;
+import androidx.annotation.Nullable;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
@@ -29,7 +29,6 @@ import me.devsaki.hentoid.enums.AttributeType;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.util.AttributeMap;
-import me.devsaki.hentoid.util.Preferences;
 
 /**
  * Created by DevSaki on 09/05/2015.
@@ -74,6 +73,8 @@ public class Content implements Serializable {
     private long reads = 0;
     @Expose
     private long lastReadDate;
+    @Expose
+    private int lastReadPageIndex = 0;
     // Temporary during SAVED state only; no need to expose them for JSON persistence
     @Expose(serialize = false, deserialize = false)
     private String downloadParams;
@@ -81,20 +82,28 @@ public class Content implements Serializable {
     @Expose(serialize = false, deserialize = false)
     @Backlink(to = "content")
     private ToMany<ErrorRecord> errorLog;
-    @Expose(serialize = false, deserialize = false)
-    private int lastReadPageIndex = 0;
+    // Needs to be in the DB to keep the information when deletion takes a long time and user navigates
+    // No need to save that into JSON
     @Expose(serialize = false, deserialize = false)
     private boolean isBeingDeleted = false;
+    // Needs to be in the DB to optimize I/O
+    // No need to save that into the JSON file itself, obviously
+    @Expose(serialize = false, deserialize = false)
+    private String jsonUri;
 
-    // Runtime attributes; no need to expose them nor to persist them
+    // Runtime attributes; no need to expose them for JSON persistence nor to persist them to DB
     @Transient
     private double percent;
     @Transient
     private int queryOrder;
     @Transient
+    private boolean isFirst;
+    @Transient
+    private boolean isLast;
+    @Transient
     private boolean selected = false;
 
-    // Kept for retro-compatibility with contentV2.json Hentoid files
+    // Attributes kept for retro-compatibility with contentV2.json Hentoid files
     @Transient
     @Expose
     @SerializedName("attributes")
@@ -243,17 +252,17 @@ public class Content implements Serializable {
     }
 
     public Content populateAuthor() {
-        String author = "";
+        String authorStr = "";
         AttributeMap attrMap = getAttributeMap();
         if (attrMap.containsKey(AttributeType.ARTIST) && attrMap.get(AttributeType.ARTIST).size() > 0)
-            author = attrMap.get(AttributeType.ARTIST).get(0).getName();
-        if (null == author || author.equals("")) // Try and get Circle
+            authorStr = attrMap.get(AttributeType.ARTIST).get(0).getName();
+        if (null == authorStr || authorStr.equals("")) // Try and get Circle
         {
             if (attrMap.containsKey(AttributeType.CIRCLE) && attrMap.get(AttributeType.CIRCLE).size() > 0)
-                author = attrMap.get(AttributeType.CIRCLE).get(0).getName();
+                authorStr = attrMap.get(AttributeType.CIRCLE).get(0).getName();
         }
-        if (null == author) author = "";
-        setAuthor(author);
+        if (null == authorStr) authorStr = "";
+        setAuthor(authorStr);
         return this;
     }
 
@@ -404,13 +413,29 @@ public class Content implements Serializable {
         return this;
     }
 
-    private int getQueryOrder() {
+    public int getQueryOrder() {
         return queryOrder;
     }
 
     public Content setQueryOrder(int order) {
         queryOrder = order;
         return this;
+    }
+
+    public boolean isLast() {
+        return isLast;
+    }
+
+    public void setLast(boolean last) {
+        this.isLast = last;
+    }
+
+    public boolean isFirst() {
+        return isFirst;
+    }
+
+    public void setFirst(boolean first) {
+        this.isFirst = first;
     }
 
     public boolean isSelected() {
@@ -420,7 +445,6 @@ public class Content implements Serializable {
     public void setSelected(boolean selected) {
         this.selected = selected;
     }
-
 
     public long getReads() {
         return reads;
@@ -470,6 +494,14 @@ public class Content implements Serializable {
         this.isBeingDeleted = isBeingDeleted;
     }
 
+    public String getJsonUri() {
+        return (null == jsonUri) ? "" : jsonUri;
+    }
+
+    public void setJsonUri(String jsonUri) {
+        this.jsonUri = jsonUri;
+    }
+
 
     @Override
     public boolean equals(Object o) {
@@ -488,52 +520,9 @@ public class Content implements Serializable {
         return result;
     }
 
-    public static Comparator<Content> getComparator(int compareMethod) {
-        switch (compareMethod) {
-            case Preferences.Constant.ORDER_CONTENT_TITLE_ALPHA:
-                return TITLE_ALPHA_COMPARATOR;
-            case Preferences.Constant.ORDER_CONTENT_LAST_DL_DATE_FIRST:
-                return DLDATE_COMPARATOR;
-            case Preferences.Constant.ORDER_CONTENT_TITLE_ALPHA_INVERTED:
-                return TITLE_ALPHA_INV_COMPARATOR;
-            case Preferences.Constant.ORDER_CONTENT_LAST_DL_DATE_LAST:
-                return DLDATE_INV_COMPARATOR;
-            case Preferences.Constant.ORDER_CONTENT_RANDOM:
-                return QUERY_ORDER_COMPARATOR;
-            case Preferences.Constant.ORDER_CONTENT_LAST_UL_DATE_FIRST:
-                return ULDATE_COMPARATOR;
-            case Preferences.Constant.ORDER_CONTENT_LEAST_READ:
-                return READS_ORDER_COMPARATOR;
-            case Preferences.Constant.ORDER_CONTENT_MOST_READ:
-                return READS_ORDER_INV_COMPARATOR;
-            case Preferences.Constant.ORDER_CONTENT_LAST_READ:
-                return READ_DATE_INV_COMPARATOR;
-            default:
-                return QUERY_ORDER_COMPARATOR;
-        }
+    public static Comparator<Content> getComparator() {
+        return QUERY_ORDER_COMPARATOR;
     }
-
-    private static final Comparator<Content> TITLE_ALPHA_COMPARATOR = (a, b) -> a.getTitle().compareTo(b.getTitle());
-
-    private static final Comparator<Content> DLDATE_COMPARATOR = (a, b) -> Long.compare(a.getDownloadDate(), b.getDownloadDate()) * -1; // Inverted - last download date first
-
-    private static final Comparator<Content> ULDATE_COMPARATOR = (a, b) -> Long.compare(a.getUploadDate(), b.getUploadDate()) * -1; // Inverted - last upload date first
-
-    private static final Comparator<Content> TITLE_ALPHA_INV_COMPARATOR = (a, b) -> a.getTitle().compareTo(b.getTitle()) * -1;
-
-    private static final Comparator<Content> DLDATE_INV_COMPARATOR = (a, b) -> Long.compare(a.getDownloadDate(), b.getDownloadDate());
-
-    public static final Comparator<Content> READS_ORDER_COMPARATOR = (a, b) -> {
-        int comp = Long.compare(a.getReads(), b.getReads());
-        return (0 == comp) ? Long.compare(a.getLastReadDate(), b.getLastReadDate()) : comp;
-    };
-
-    public static final Comparator<Content> READS_ORDER_INV_COMPARATOR = (a, b) -> {
-        int comp = Long.compare(a.getReads(), b.getReads()) * -1;
-        return (0 == comp) ? Long.compare(a.getLastReadDate(), b.getLastReadDate()) * -1 : comp;
-    };
-
-    public static final Comparator<Content> READ_DATE_INV_COMPARATOR = (a, b) -> Long.compare(a.getLastReadDate(), b.getLastReadDate()) * -1;
 
     private static final Comparator<Content> QUERY_ORDER_COMPARATOR = (a, b) -> Integer.compare(a.getQueryOrder(), b.getQueryOrder());
 }

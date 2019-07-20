@@ -1,9 +1,8 @@
 <resources>
-
     <style name="TextButton">
         <item name="android:padding">16dp</item>
         <item name="android:textAllCaps">true</item>
-        <item name="android:textColor">@color/white</item>
+        <item name="android:textColor">@color/white_opacity_87</item>
         <item name="android:textStyle">bold</item>
         <item name="android:foreground">?attr/selectableItemBackground</item>
         <item name="android:clickable">true</item>
@@ -67,6 +66,13 @@
         <item name="android:textSize">32sp</item>
         <item name="android:textColor">@android:color/white</item>
         <item name="android:gravity">center</item>
+    </style>
+
+    <style name="TextShadow">
+        <item name="android:shadowColor">@color/black</item>
+        <item name="android:shadowDx">1</item>
+        <item name="android:shadowDy">1</item>
+        <item name="android:shadowRadius">1</item>
     </style>
 
 </resources>

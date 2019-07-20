@@ -33,7 +33,10 @@ import timber.log.Timber;
 /**
  * Created by DevSaki on 10/05/2015.
  * db maintenance class
+ *
+ * @deprecated Replaced by ObjectBoxDB; class is kept for data migration purposes
  */
+@Deprecated
 public class HentoidDB extends SQLiteOpenHelper {
 
     private static final int DATABASE_VERSION = 8;

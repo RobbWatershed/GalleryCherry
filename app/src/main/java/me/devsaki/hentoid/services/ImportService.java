@@ -4,9 +4,10 @@ import android.app.IntentService;
 import android.content.Context;
 import android.content.Intent;
 import android.os.IBinder;
-import android.support.annotation.CheckResult;
-import android.support.annotation.Nullable;
 import android.util.Log;
+
+import androidx.annotation.CheckResult;
+import androidx.annotation.Nullable;
 
 import org.greenrobot.eventbus.EventBus;
 
@@ -84,6 +85,8 @@ public class ImportService extends IntentService {
 
     @Override
     protected void onHandleIntent(@Nullable Intent intent) {
+        notificationManager.startForeground(new ImportStartNotification());
+
         // True if the user has asked for a cleanup when calling import from Preferences
         boolean doRename = false;
         boolean doCleanAbsent = false;
@@ -130,7 +133,6 @@ public class ImportService extends IntentService {
         Content content = null;
         List<String> log = new ArrayList<>();
 
-        notificationManager.startForeground(new ImportStartNotification());
         File rootFolder = new File(Preferences.getRootFolderName());
 
         // 1st pass : count subfolders of every site folder
@@ -192,6 +194,7 @@ public class ImportService extends IntentService {
                             }
                         }
                     }
+                    // TODO : Populate images when data is loaded from old JSONs (DoujinBuilder object)
                     ObjectBoxDB.getInstance(this).insertContent(content);
                     trace(Log.INFO, log, "Import book OK : %s", folder.getAbsolutePath());
                 } else { // JSON not found

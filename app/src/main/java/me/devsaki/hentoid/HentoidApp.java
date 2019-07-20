@@ -8,6 +8,8 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.StrictMode;
 
+import androidx.appcompat.app.AppCompatDelegate;
+
 import com.crashlytics.android.Crashlytics;
 import com.google.android.gms.security.ProviderInstaller;
 import com.google.firebase.analytics.FirebaseAnalytics;
@@ -16,6 +18,7 @@ import io.fabric.sdk.android.Fabric;
 import me.devsaki.hentoid.database.DatabaseMaintenance;
 import me.devsaki.hentoid.database.HentoidDB;
 import me.devsaki.hentoid.notification.download.DownloadNotificationChannel;
+import me.devsaki.hentoid.notification.maintenance.MaintenanceNotificationChannel;
 import me.devsaki.hentoid.notification.update.UpdateNotificationChannel;
 import me.devsaki.hentoid.services.DatabaseMaintenanceService;
 import me.devsaki.hentoid.services.UpdateCheckService;
@@ -105,16 +108,23 @@ public class HentoidApp extends Application {
         // Init notifications
         UpdateNotificationChannel.init(this);
         DownloadNotificationChannel.init(this);
+        MaintenanceNotificationChannel.init(this);
         startService(UpdateCheckService.makeIntent(this, false));
 
         // Clears all previous notifications
         NotificationManager manager = (NotificationManager) instance.getSystemService(Context.NOTIFICATION_SERVICE);
         if (manager != null) manager.cancelAll();
+
+        // Set Night mode
+        int darkMode = Preferences.getDarkMode();
+        AppCompatDelegate.setDefaultNightMode(darkModeFromPrefs(darkMode));
+        FirebaseAnalytics.getInstance(this).setUserProperty("night_mode", Integer.toString(darkMode));
     }
 
     /**
      * Clean up and upgrade database
      */
+    @SuppressWarnings("deprecation")
     private void performDatabaseHousekeeping() {
         HentoidDB oldDB = HentoidDB.getInstance(this);
 
@@ -124,5 +134,18 @@ public class HentoidApp extends Application {
         // Launch a service that will perform non-structural DB housekeeping tasks
         Intent intent = DatabaseMaintenanceService.makeIntent(this);
         startService(intent);
+    }
+
+    public static int darkModeFromPrefs(int prefsMode) {
+        switch (prefsMode) {
+            case Preferences.Constant.DARK_MODE_ON:
+                return AppCompatDelegate.MODE_NIGHT_YES;
+            case Preferences.Constant.DARK_MODE_OFF:
+                return AppCompatDelegate.MODE_NIGHT_NO;
+            case Preferences.Constant.DARK_MODE_BATTERY:
+                return AppCompatDelegate.MODE_NIGHT_AUTO_BATTERY;
+            default:
+                return AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM;
+        }
     }
 }

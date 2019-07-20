@@ -1,8 +1,9 @@
 package me.devsaki.hentoid.enums;
 
+import androidx.appcompat.app.AppCompatActivity;
+
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.activities.AboutActivity;
-import me.devsaki.hentoid.activities.DownloadsActivity;
 import me.devsaki.hentoid.activities.PrefsActivity;
 import me.devsaki.hentoid.activities.QueueActivity;
 import me.devsaki.hentoid.activities.websites.HellpornoActivity;
@@ -31,9 +32,9 @@ public enum DrawerItem {
 
     public final String label;
     public final int icon;
-    public final Class activityClass;
+    public final Class<? extends AppCompatActivity> activityClass;
 
-    DrawerItem(String label, int icon, Class activityClass) {
+    DrawerItem(String label, int icon, Class<? extends AppCompatActivity> activityClass) {
         this.label = label;
         this.icon = icon;
         this.activityClass = activityClass;
