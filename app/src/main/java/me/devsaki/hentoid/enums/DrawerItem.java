@@ -22,7 +22,7 @@ public enum DrawerItem {
     PORNPICS("PORNPICS", R.drawable.ic_menu_pornpics, PornPicsActivity.class),
     JPEGWORLD("JPEGWORLD", R.drawable.ic_menu_jpegworld, JpegworldActivity.class),
     NEXTPICTUREZ("NEXTPICTUREZ", R.drawable.ic_menu_nextpicturez, NextpicturezActivity.class),
-    HELLPORNO("HELLPORNO", R.drawable.ic_menu_hellporno, HellpornoActivity.class),
+//    HELLPORNO("HELLPORNO", R.drawable.ic_menu_hellporno, HellpornoActivity.class), until source is fixed
     PPG("PORNPICGALLERIES", R.drawable.ic_menu_ppg, PornPicGalleriesActivity.class),
     LINK2GALLERIES("LINK2GALLERIES", R.drawable.ic_menu_l2g, Link2GalleriesActivity.class),
     QUEUE("QUEUE", R.drawable.ic_menu_queue, QueueActivity.class),
