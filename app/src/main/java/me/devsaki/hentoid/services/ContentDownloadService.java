@@ -49,6 +49,7 @@ import me.devsaki.hentoid.notification.download.DownloadWarningNotification;
 import me.devsaki.hentoid.parsers.ContentParserFactory;
 import me.devsaki.hentoid.parsers.ImageListParser;
 import me.devsaki.hentoid.util.FileHelper;
+import me.devsaki.hentoid.util.HttpHelper;
 import me.devsaki.hentoid.util.JsonHelper;
 import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.util.notification.NotificationManager;
@@ -244,7 +245,8 @@ public class ContentDownloadService extends IntentService {
      */
     private void watchProgress(Content content) {
         boolean isDone;
-        int pagesOK, pagesKO;
+        int pagesOK;
+        int pagesKO;
         List<ImageFile> images = content.getImageFiles();
         ContentQueueManager contentQueueManager = ContentQueueManager.getInstance();
 
@@ -404,10 +406,10 @@ public class ContentDownloadService extends IntentService {
             }.getType();
             Map<String, String> downloadParams = new Gson().fromJson(downloadParamsStr, type);
 
-            if (downloadParams.containsKey("cookie"))
-                headers.put("cookie", downloadParams.get("cookie"));
-            if (downloadParams.containsKey("referer"))
-                headers.put("referer", downloadParams.get("referer"));
+            if (downloadParams.containsKey(HttpHelper.HEADER_COOKIE_KEY))
+                headers.put(HttpHelper.HEADER_COOKIE_KEY, downloadParams.get(HttpHelper.HEADER_COOKIE_KEY));
+            if (downloadParams.containsKey(HttpHelper.HEADER_REFERER_KEY))
+                headers.put(HttpHelper.HEADER_REFERER_KEY, downloadParams.get(HttpHelper.HEADER_REFERER_KEY));
         }
 
         return new InputStreamVolleyRequest(
@@ -554,7 +556,7 @@ public class ContentDownloadService extends IntentService {
         }
     }
 
-    public void logErrorRecord(long contentId, ErrorType type, String url, String contentPart, String description) {
+    private void logErrorRecord(long contentId, ErrorType type, String url, String contentPart, String description) {
         ErrorRecord record = new ErrorRecord(contentId, type, url, contentPart, description);
         if (contentId > 0) db.insertErrorRecord(record);
     }

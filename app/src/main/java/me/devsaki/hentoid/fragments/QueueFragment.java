@@ -145,12 +145,12 @@ public class QueueFragment extends BaseFragment {
      */
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onPrepDownloadEvent(DownloadPreparationEvent event) {
-        if (!dlPreparationProgressBar.isShown() && !event.IsCompleted() && !isPaused && !isEmpty) {
+        if (!dlPreparationProgressBar.isShown() && !event.isCompleted() && !isPaused && !isEmpty) {
             dlPreparationProgressBar.setTotal(event.total);
             dlPreparationProgressBar.setVisibility(View.VISIBLE);
             queueInfo.setText(R.string.queue_preparing);
             isPreparingDownload = true;
-        } else if (dlPreparationProgressBar.isShown() && event.IsCompleted()) {
+        } else if (dlPreparationProgressBar.isShown() && event.isCompleted()) {
             dlPreparationProgressBar.setVisibility(View.GONE);
         }
 
@@ -194,7 +194,7 @@ public class QueueFragment extends BaseFragment {
         queueStatus.setText(MessageFormat.format(requireActivity().getString(R.string.queue_dl), bookTitle));
     }
 
-    public void update() {
+    private void update() {
         update(-1);
     }
 
@@ -203,7 +203,7 @@ public class QueueFragment extends BaseFragment {
      *
      * @param eventType Event type that triggered the update, if any (See types described in DownloadEvent); -1 if none
      */
-    public void update(int eventType) {
+    private void update(int eventType) {
         int bookDiff = (eventType == DownloadEvent.EV_CANCEL) ? 1 : 0; // Cancel event means a book will be removed very soon from the queue
         isEmpty = (0 == mAdapter.getCount() - bookDiff);
         isPaused = (!isEmpty && (eventType == DownloadEvent.EV_PAUSE || ContentQueueManager.getInstance().isQueuePaused() || !ContentQueueManager.getInstance().isQueueActive()));

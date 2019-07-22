@@ -6,6 +6,7 @@ import android.app.Activity;
 import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.Resources;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
@@ -24,7 +25,6 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.StringRes;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.SearchView;
 import androidx.fragment.app.FragmentActivity;
@@ -88,12 +88,12 @@ public abstract class DownloadsFragment extends BaseFragment implements PagedRes
 
     // ======== CONSTANTS
 
-    protected static final int SHOW_LOADING = 1;
-    protected static final int SHOW_BLANK = 2;
+    private static final int SHOW_LOADING = 1;
+    private static final int SHOW_BLANK = 2;
     protected static final int SHOW_RESULT = 3;
 
-    public final static int MODE_LIBRARY = 0;
-    public final static int MODE_MIKAN = 1;
+    public static final int MODE_LIBRARY = 0;
+    public static final int MODE_MIKAN = 1;
 
 
     // Save state constants
@@ -242,17 +242,13 @@ public abstract class DownloadsFragment extends BaseFragment implements PagedRes
 
                     return true;
                 case R.id.action_delete:
+                case R.id.action_delete_sweep:
                     mAdapter.purgeSelectedItems();
                     mode.finish();
 
                     return true;
                 case R.id.action_archive:
                     mAdapter.archiveSelectedItems();
-                    mode.finish();
-
-                    return true;
-                case R.id.action_delete_sweep:
-                    mAdapter.purgeSelectedItems();
                     mode.finish();
 
                     return true;
@@ -327,11 +323,9 @@ public abstract class DownloadsFragment extends BaseFragment implements PagedRes
 
     private void openBook(Content content) {
         // The list order might change when viewing books when certain sort orders are activated
-        int contentSortOrder = Preferences.getContentSortOrder();
-        plannedRefresh = (Preferences.Constant.ORDER_CONTENT_LAST_READ == contentSortOrder
-                || Preferences.Constant.ORDER_CONTENT_LEAST_READ == contentSortOrder
-                || Preferences.Constant.ORDER_CONTENT_MOST_READ == contentSortOrder);
-
+        // "unread" status might also change
+        // => plan a refresh next time DownloadsFragment is called
+        plannedRefresh = true;
         Bundle bundle = new Bundle();
         searchManager.saveToBundle(bundle);
         int pageOffset = 0;
@@ -367,11 +361,11 @@ public abstract class DownloadsFragment extends BaseFragment implements PagedRes
             checkStorage();
         }
 
-        int booksPerPage = Preferences.getContentPageQuantity();
+        int settingsBooksPerPage = Preferences.getContentPageQuantity();
 
-        if (this.booksPerPage != booksPerPage) {
+        if (this.booksPerPage != settingsBooksPerPage) {
             Timber.d("booksPerPage updated.");
-            this.booksPerPage = booksPerPage;
+            this.booksPerPage = settingsBooksPerPage;
             setQuery("");
             shouldUpdate = true;
         }
@@ -825,7 +819,6 @@ public abstract class DownloadsFragment extends BaseFragment implements PagedRes
                 mListView.setVisibility(View.GONE);
                 emptyText.setVisibility(View.GONE);
                 loadingText.setVisibility(View.VISIBLE);
-                //showToolbar(false);
                 startLoadingTextAnimation();
                 break;
             case SHOW_BLANK:
@@ -978,11 +971,10 @@ public abstract class DownloadsFragment extends BaseFragment implements PagedRes
                 isNewContentAvailable = false;
             }
 
-            @StringRes int textRes = totalSelectedContent > 1 ?
-                    R.string.downloads_filter_book_count_plural :
-                    R.string.downloads_filter_book_count;
+            Resources res = getResources();
+            String textRes = res.getQuantityString(R.plurals.downloads_filter_book_count_plural, (int)totalSelectedContent, (int)totalSelectedContent);
 
-            filterBookCount.setText(getString(textRes, totalSelectedContent));
+            filterBookCount.setText(textRes);
             filterBar.setVisibility(View.VISIBLE);
             if (totalSelectedContent > 0 && searchMenu != null) searchMenu.collapseActionView();
         } else {

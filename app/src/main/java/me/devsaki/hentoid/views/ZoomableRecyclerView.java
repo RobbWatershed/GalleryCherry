@@ -167,7 +167,7 @@ public class ZoomableRecyclerView extends RecyclerView {
         animatorSet.addListener(new Animator.AnimatorListener() {
             @Override
             public void onAnimationStart(Animator animation) {
-
+                // No need to define any behaviour here
             }
 
             @Override
@@ -179,12 +179,12 @@ public class ZoomableRecyclerView extends RecyclerView {
 
             @Override
             public void onAnimationCancel(Animator animation) {
-
+                // No need to define any behaviour here
             }
 
             @Override
             public void onAnimationRepeat(Animator animation) {
-
+                // No need to define any behaviour here
             }
         });
     }
@@ -322,81 +322,101 @@ public class ZoomableRecyclerView extends RecyclerView {
 
             switch (action) {
                 case MotionEvent.ACTION_DOWN: {
-                    scrollPointerId = ev.getPointerId(0);
-                    downX = Math.round(ev.getX() + 0.5f);
-                    downY = Math.round(ev.getY() + 0.5f);
+                    motionActionDownLocal(ev);
                 }
                 break;
                 case MotionEvent.ACTION_POINTER_DOWN: {
-                    scrollPointerId = ev.getPointerId(actionIndex);
-                    downX = Math.round(ev.getX(actionIndex) + 0.5f);
-                    downY = Math.round(ev.getY(actionIndex) + 0.5f);
+                    motionActionPointerDown(ev, actionIndex);
                 }
                 break;
                 case MotionEvent.ACTION_MOVE: {
-                    if (isDoubleTapping && isQuickScaling) {
-                        return true;
-                    }
-
-                    int index = ev.findPointerIndex(scrollPointerId);
-                    if (index < 0) {
-                        return false;
-                    }
-
-                    int x = Math.round(ev.getX(index) + 0.5f);
-                    int y = Math.round(ev.getY(index) + 0.5f);
-                    int dx = (canMoveHorizontally()) ? x - downX : 0;
-                    int dy = (canMoveVertically()) ? y - downY : 0;
-
-                    if (!isZoomDragging && currentScale > 1f) {
-                        boolean startScroll = false;
-
-                        if (Math.abs(dx) > touchSlop) {
-                            if (dx < 0) {
-                                dx += touchSlop;
-                            } else {
-                                dx -= touchSlop;
-                            }
-                            startScroll = true;
-                        }
-                        if (Math.abs(dy) > touchSlop) {
-                            if (dy < 0) {
-                                dy += touchSlop;
-                            } else {
-                                dy -= touchSlop;
-                            }
-                            startScroll = true;
-                        }
-
-                        if (startScroll) {
-                            isZoomDragging = true;
-                        }
-                    }
-
-                    if (isZoomDragging) {
-                        zoomScrollBy(dx, dy);
-                    }
+                    return motionActionMoveLocal(ev);
                 }
-                break;
                 case MotionEvent.ACTION_UP: {
-                    if (isDoubleTapping && !isQuickScaling) {
-                        listener.onDoubleTapConfirmed(ev);
-                    }
-                    isZoomDragging = false;
-                    isDoubleTapping = false;
-                    isQuickScaling = false;
+                    motionActionUpLocal(ev);
                     break;
                 }
                 case MotionEvent.ACTION_CANCEL: {
-                    isZoomDragging = false;
-                    isDoubleTapping = false;
-                    isQuickScaling = false;
+                    motionActionCancel();
                 }
                 break;
                 default:
                     // Nothing to process as default
             }
             return super.onTouchEvent(ev);
+        }
+
+        private void motionActionDownLocal(MotionEvent ev) {
+            scrollPointerId = ev.getPointerId(0);
+            downX = Math.round(ev.getX() + 0.5f);
+            downY = Math.round(ev.getY() + 0.5f);
+        }
+
+        private void motionActionPointerDown(MotionEvent ev, int actionIndex){
+            scrollPointerId = ev.getPointerId(actionIndex);
+            downX = Math.round(ev.getX(actionIndex) + 0.5f);
+            downY = Math.round(ev.getY(actionIndex) + 0.5f);
+        }
+
+        private boolean motionActionMoveLocal(MotionEvent ev) {
+            if (isDoubleTapping && isQuickScaling) {
+                return true;
+            }
+
+            int index = ev.findPointerIndex(scrollPointerId);
+            if (index < 0) {
+                return false;
+            }
+
+            int x = Math.round(ev.getX(index) + 0.5f);
+            int y = Math.round(ev.getY(index) + 0.5f);
+            int dx = (canMoveHorizontally()) ? x - downX : 0;
+            int dy = (canMoveVertically()) ? y - downY : 0;
+
+            if (!isZoomDragging && currentScale > 1f) {
+                boolean startScroll = false;
+
+                if (Math.abs(dx) > touchSlop) {
+                    if (dx < 0) {
+                        dx += touchSlop;
+                    } else {
+                        dx -= touchSlop;
+                    }
+                    startScroll = true;
+                }
+                if (Math.abs(dy) > touchSlop) {
+                    if (dy < 0) {
+                        dy += touchSlop;
+                    } else {
+                        dy -= touchSlop;
+                    }
+                    startScroll = true;
+                }
+
+                if (startScroll) {
+                    isZoomDragging = true;
+                }
+            }
+
+            if (isZoomDragging) {
+                zoomScrollBy(dx, dy);
+            }
+            return super.onTouchEvent(ev);
+        }
+
+        private void motionActionUpLocal(MotionEvent ev) {
+            if (isDoubleTapping && !isQuickScaling) {
+                listener.onDoubleTapConfirmed(ev);
+            }
+            isZoomDragging = false;
+            isDoubleTapping = false;
+            isQuickScaling = false;
+        }
+
+        private void motionActionCancel() {
+            isZoomDragging = false;
+            isDoubleTapping = false;
+            isQuickScaling = false;
         }
     }
 }

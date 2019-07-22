@@ -16,7 +16,7 @@ public class DatabaseMaintenance {
      * Clean up and upgrade database
      * NB : Heavy operations; must be performed in the background to avoid ANR at startup
      */
-    @SuppressWarnings("deprecation")
+    @SuppressWarnings({"deprecation", "squid:CallToDeprecatedMethod"})
     public static void performDatabaseHousekeeping(Context context) {
         ObjectBoxDB db = ObjectBoxDB.getInstance(context);
 
@@ -43,7 +43,7 @@ public class DatabaseMaintenance {
         List<Content> contents = db.selectContentByStatus(StatusContent.PAUSED);
         List<Content> queueContents = db.selectQueueContents();
         contents.removeAll(queueContents);
-        if (contents.size() > 0) {
+        if (!contents.isEmpty()) {
             int queueMaxPos = (int) db.selectMaxQueueOrder();
             for (Content c : contents) db.insertQueue(c.getId(), ++queueMaxPos);
         }
@@ -74,17 +74,17 @@ public class DatabaseMaintenance {
     /**
      * Handles complex DB version updates at startup
      */
-    @SuppressWarnings("deprecation")
+    @SuppressWarnings({"deprecation", "squid:CallToDeprecatedMethod"})
     public static void performOldDatabaseUpdate(HentoidDB db) {
         // Migrate the old download queue (books in DOWNLOADING or PAUSED status) in the queue table (since versionCode 60 / v1.3.7)
         // Gets books that should be in the queue but aren't
         List<Integer> contentToMigrate = db.selectContentsForQueueMigration();
 
-        if (contentToMigrate.size() > 0) {
+        if (!contentToMigrate.isEmpty()) {
             // Gets last index of the queue
             List<Pair<Integer, Integer>> queue = db.selectQueue();
             int lastIndex = 1;
-            if (queue.size() > 0) {
+            if (!queue.isEmpty()) {
                 lastIndex = queue.get(queue.size() - 1).second + 1;
             }
 
@@ -94,7 +94,7 @@ public class DatabaseMaintenance {
         }
     }
 
-    @SuppressWarnings("deprecation")
+    @SuppressWarnings({"deprecation", "squid:CallToDeprecatedMethod"})
     public static boolean hasToMigrate(Context context) {
         HentoidDB oldDb = HentoidDB.getInstance(context);
         return (oldDb.countContentEntries() > 0);

@@ -25,7 +25,7 @@ public class ParseHelper {
      * @return String with removed brackets
      */
     private static String removeBrackets(String s) {
-        int bracketPos = s.lastIndexOf("(");
+        int bracketPos = s.lastIndexOf('(');
         if (bracketPos > 1 && ' ' == s.charAt(bracketPos - 1)) bracketPos--;
         if (bracketPos > -1) {
             return s.substring(0, bracketPos);
@@ -67,7 +67,7 @@ public class ParseHelper {
         return result;
     }
 
-    public static void signalProgress(int current, int max) {
+    static void signalProgress(int current, int max) {
         EventBus.getDefault().post(new DownloadPreparationEvent(current, max));
     }
 }

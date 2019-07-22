@@ -53,7 +53,7 @@ import static android.os.Environment.getExternalStorageState;
  */
 public class FileHelper {
     // Note that many devices will report true (there are no guarantees of this being 'external')
-    public static final boolean isSDPresent = getExternalStorageState().equals(MEDIA_MOUNTED);
+    public static final boolean isSdPresent = getExternalStorageState().equals(MEDIA_MOUNTED);
 
     private static final String AUTHORIZED_CHARS = "[^a-zA-Z0-9.-]";
 
@@ -423,18 +423,16 @@ public class FileHelper {
         // If we are to assume NTFS and Windows, then the fully qualified file, with it's drivename, path, filename, and extension, altogether is limited to 260 characters.
         int truncLength = Preferences.getFolderTruncationNbChars();
         int titleLength = result.length() - siteFolder.length();
-        if (truncLength > 0) {
-            if (titleLength + suffix.length() > truncLength)
-                result = result.substring(0, siteFolder.length() + truncLength - suffix.length() - 1);
-        }
+        if ((truncLength > 0) && ((titleLength + suffix.length()) > truncLength))
+            result = result.substring(0, siteFolder.length() + truncLength - suffix.length() - 1);
+
         result += suffix;
 
         return result;
     }
 
     @SuppressWarnings("squid:S2676") // Math.abs is used for formatting purposes only
-    private static String formatBookId(Content content)
-    {
+    private static String formatBookId(Content content) {
         String id = content.getUniqueSiteId();
         // For certain sources (8muses, fakku), unique IDs are strings that may be very long
         // => shorten them by using their hashCode
@@ -520,7 +518,7 @@ public class FileHelper {
         // NB : ideal would be to get the content-type of the resource behind coverUrl, but that's too time-consuming
         if (extension.isEmpty() || extension.contains("/")) extension = "jpg";
 
-        File f = new File(Preferences.getRootFolderName(), content.getStorageFolder() + "/thumb." + extension);
+        File f = new File(Preferences.getRootFolderName(), content.getStorageFolder() + File.separator + "thumb." + extension);
         return f.exists() ? f.getAbsolutePath() : coverUrl;
     }
 
@@ -565,7 +563,8 @@ public class FileHelper {
         openHentoidViewer(context, content, searchParams);
     }
 
-    public static void updateContentReads(@Nonnull Context context, long contentId) {
+    @Nullable
+    public static Content updateContentReads(@Nonnull Context context, long contentId) {
         ObjectBoxDB db = ObjectBoxDB.getInstance(context);
         Content content = db.selectContentById(contentId);
         if (content != null) {
@@ -574,7 +573,10 @@ public class FileHelper {
 
             if (!content.getJsonUri().isEmpty()) FileHelper.updateJson(context, content);
             else FileHelper.createJson(content);
+
+            return content;
         }
+        return null;
     }
 
     /**
@@ -619,11 +621,11 @@ public class FileHelper {
      * @return Extension of the given filename
      */
     public static String getExtension(String fileName) {
-        return fileName.contains(".") ? fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase(Locale.getDefault()) : "";
+        return fileName.contains(".") ? fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase(Locale.getDefault()) : "";
     }
 
     public static String getFileNameWithoutExtension(String fileName) {
-        return fileName.contains(".") ? fileName.substring(0, fileName.lastIndexOf(".")) : fileName;
+        return fileName.contains(".") ? fileName.substring(0, fileName.lastIndexOf('.')) : fileName;
     }
 
     public static void archiveContent(final Context context, Content content) {

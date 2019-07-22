@@ -103,6 +103,7 @@
     <string name="queue_empty">Why am I empty?</string>
     <string name="downloads_empty_library">Go ahead, download something.</string>
     <string name="downloads_empty_mikan">Uh oh… how come there\'s nothing there ?!</string>
+    <string name="mikan_unsupported">Not implemented with Mikan</string>
     <string name="downloads_loading">Loading up~</string>
     <string name="masterdata_no_result">No result found :(</string>
     <string name="masterdata_too_many_results_query">Too many results for « %1 »\nPlease be more specific</string>
@@ -114,6 +115,10 @@
     <string name="sd_access_fatal_error">GalleryCherry has detected an SD Card that is reporting errors.\nPlease perform a file check or replace the SD Card.</string>
     <string name="downloads_filter_book_count">%d result</string>
     <string name="downloads_filter_book_count_plural">%d results</string>
+    <plurals name="downloads_filter_book_count_plural">
+        <item quantity="one">@string/downloads_filter_book_count</item>
+        <item quantity="other">@string/downloads_filter_book_count_plural</item>
+    </plurals>
     <string name="downloads_filter_clear">CLEAR</string>
     <string name="search_bookid_label">Search \'%s\' in…</string>
     <string name="search_bookid_action_search">Search</string>

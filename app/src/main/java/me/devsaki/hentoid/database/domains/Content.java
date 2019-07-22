@@ -9,6 +9,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 import io.objectbox.annotation.Backlink;
 import io.objectbox.annotation.Convert;
@@ -205,7 +206,7 @@ public class Content implements Serializable {
     public String getCategory() {
         if (attributes != null) {
             List<Attribute> attributesList = getAttributeMap().get(AttributeType.CATEGORY);
-            if (attributesList != null && attributesList.size() > 0) {
+            if (attributesList != null && !attributesList.isEmpty()) {
                 return attributesList.get(0).getName();
             }
         }
@@ -254,13 +255,13 @@ public class Content implements Serializable {
     public Content populateAuthor() {
         String authorStr = "";
         AttributeMap attrMap = getAttributeMap();
-        if (attrMap.containsKey(AttributeType.ARTIST) && attrMap.get(AttributeType.ARTIST).size() > 0)
+        if (attrMap.containsKey(AttributeType.ARTIST) && !attrMap.get(AttributeType.ARTIST).isEmpty())
             authorStr = attrMap.get(AttributeType.ARTIST).get(0).getName();
-        if (null == authorStr || authorStr.equals("")) // Try and get Circle
-        {
-            if (attrMap.containsKey(AttributeType.CIRCLE) && attrMap.get(AttributeType.CIRCLE).size() > 0)
-                authorStr = attrMap.get(AttributeType.CIRCLE).get(0).getName();
-        }
+        if ((null == authorStr || authorStr.equals(""))
+             && attrMap.containsKey(AttributeType.CIRCLE)
+             && !attrMap.get(AttributeType.CIRCLE).isEmpty()) // Try and get Circle
+            authorStr = attrMap.get(AttributeType.CIRCLE).get(0).getName();
+
         if (null == authorStr) authorStr = "";
         setAuthor(authorStr);
         return this;
@@ -413,7 +414,7 @@ public class Content implements Serializable {
         return this;
     }
 
-    public int getQueryOrder() {
+    private int getQueryOrder() {
         return queryOrder;
     }
 
@@ -505,12 +506,13 @@ public class Content implements Serializable {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (!(o instanceof Content)) {
+            return false;
+        }
 
         Content content = (Content) o;
 
-        return (url != null ? url.equals(content.url) : content.url == null) && site == content.site;
+        return this == o || (Objects.equals(content.url, url) && Objects.equals(content.site, site));
     }
 
     @Override

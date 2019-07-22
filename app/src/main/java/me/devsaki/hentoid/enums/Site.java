@@ -1,5 +1,7 @@
 package me.devsaki.hentoid.enums;
 
+import java.io.File;
+
 import io.objectbox.converter.PropertyConverter;
 import me.devsaki.hentoid.R;
 import timber.log.Timber;
@@ -80,7 +82,7 @@ public enum Site {
         return description;
     }
 
-    public String getUniqueKeyword() {
+    private String getUniqueKeyword() {
         return uniqueKeyword;
     }
 
@@ -105,7 +107,7 @@ public enum Site {
     }
 
     public String getFolder() {
-        return '/' + description + '/';
+        return File.separator + description + File.separator;
     }
 
     public static class SiteConverter implements PropertyConverter<Site, Long> {

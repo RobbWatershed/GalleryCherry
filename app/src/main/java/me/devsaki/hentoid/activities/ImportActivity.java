@@ -249,7 +249,7 @@ public class ImportActivity extends BaseActivity {
         if (FileHelper.isOnExtSdCard(dir) && !FileHelper.isWritable(dir)) {
             Timber.d("Inaccessible: moving back to default directory.");
             downloadDir = currentRootDir = new File(Environment.getExternalStorageDirectory() +
-                    "/" + Consts.DEFAULT_LOCAL_DIRECTORY + "/");
+                    File.separator + Consts.DEFAULT_LOCAL_DIRECTORY + File.separator);
         }
         if (useDefaultFolder) {
             prevRootDir = currentRootDir;
@@ -302,7 +302,7 @@ public class ImportActivity extends BaseActivity {
         if (event.isLongClick()) {
             Timber.d("Resetting directory back to default.");
             currentRootDir = new File(Environment.getExternalStorageDirectory() +
-                    "/" + Consts.DEFAULT_LOCAL_DIRECTORY + "/");
+                    File.separator + Consts.DEFAULT_LOCAL_DIRECTORY + File.separator);
             dirChooserFragment.dismiss();
             pickDownloadDirectory(currentRootDir);
         } else {
@@ -389,7 +389,7 @@ public class ImportActivity extends BaseActivity {
         } else {
             if (writeableDirs.size() == 1) {
                 // If we get exactly one write-able path returned, attempt to make use of it
-                String sdDir = writeableDirs.get(0) + "/" + Consts.DEFAULT_LOCAL_DIRECTORY + "/";
+                String sdDir = writeableDirs.get(0) + File.separator + Consts.DEFAULT_LOCAL_DIRECTORY + File.separator;
                 if (!FileHelper.isOnExtSdCard(writeableDirs.get(0)) && FileHelper.checkAndSetRootFolder(sdDir)) { // TODO - dirChooserFragment can't actually browse SD card : to fix later ?
                     Timber.d("Got access to SD Card.");
                     currentRootDir = new File(sdDir);
@@ -403,7 +403,7 @@ public class ImportActivity extends BaseActivity {
                         PackageManager manager = this.getPackageManager();
                         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
                         List<ResolveInfo> handlers = manager.queryIntentActivities(intent, 0);
-                        if (handlers != null && handlers.size() > 0) {
+                        if (handlers != null && !handlers.isEmpty()) {
                             Timber.d("Device should be able to handle the SAF request");
                             ToastUtil.toast("Attempting SAF");
                             requestWritePermission();
@@ -482,7 +482,7 @@ public class ImportActivity extends BaseActivity {
             getContentResolver().releasePersistableUriPermission(p.getUri(),
                     Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
         }
-        if (getContentResolver().getPersistedUriPermissions().size() == 0) {
+        if (getContentResolver().getPersistedUriPermissions().isEmpty()) {
             Timber.d("Permissions revoked successfully.");
         } else {
             Timber.d("Permissions failed to be revoked.");

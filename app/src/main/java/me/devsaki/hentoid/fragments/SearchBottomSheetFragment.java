@@ -52,7 +52,7 @@ import static me.devsaki.hentoid.abstracts.DownloadsFragment.MODE_MIKAN;
 
 /**
  * TODO: look into recyclerview.extensions.ListAdapter for a RecyclerView.Adapter that can issue
- * appropriate notify commands based on list diff
+ *  appropriate notify commands based on list diff
  */
 public class SearchBottomSheetFragment extends BottomSheetDialogFragment {
 
@@ -92,7 +92,7 @@ public class SearchBottomSheetFragment extends BottomSheetDialogFragment {
 
 
     // ======== CONSTANTS
-    private final static int ATTRS_PER_PAGE = 40;
+    private static final int ATTRS_PER_PAGE = 40;
 
 
     public static void show(FragmentManager fragmentManager, int mode, AttributeType[] types) {
@@ -175,7 +175,7 @@ public class SearchBottomSheetFragment extends BottomSheetDialogFragment {
                 if (MODE_MIKAN == mode && mainAttr.equals(AttributeType.TAG) && IllegalTags.isIllegal(s)) {
                     Snackbar.make(view, R.string.masterdata_illegal_tag, Snackbar.LENGTH_LONG).show();
                     searchMasterDataDebouncer.clear();
-                } else /*if (!s.isEmpty())*/ {
+                } else {
                     searchMasterDataDebouncer.submit(s);
                 }
 
