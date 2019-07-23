@@ -45,7 +45,7 @@ public class XnxxContent implements ContentParser {
         else result.setTitle(title);
 
         String theUrl = galleryUrl.isEmpty() ? url : galleryUrl;
-        result.setUrl(theUrl);
+        result.setUrl(theUrl.replace(Site.XNXX.getUrl(),"").replace("gallery/",""));
 
         AttributeMap attributes = new AttributeMap();
 
