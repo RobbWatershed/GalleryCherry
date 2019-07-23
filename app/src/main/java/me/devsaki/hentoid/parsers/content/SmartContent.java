@@ -46,9 +46,9 @@ public class SmartContent implements ContentParser {
 
         Timber.i("galleryUrl : %s", theUrl);
         if (theUrl.startsWith("//")) theUrl = "http:" + theUrl;
-        if (theUrl.length() > 0) {
+        if (!theUrl.isEmpty()) {
             HttpUrl httpUrl = HttpUrl.get(theUrl);
-            result.setUrl(httpUrl.encodedPath());
+            result.setUrl(httpUrl.scheme() + "://" + httpUrl.host() + httpUrl.encodedPath());
         } else result.setUrl("");
 
         result.setTitle(title);
