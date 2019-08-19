@@ -598,7 +598,7 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
 
             isHtmlLoaded = false;
             // Specific to Cherry : due to redirections, the correct page URLs are those visible from onPageFinished
-            if (isPageFiltered(url)) parseResponse(url, null);
+//            if (isPageFiltered(url)) parseResponse(url, null);
         }
 
         @Override

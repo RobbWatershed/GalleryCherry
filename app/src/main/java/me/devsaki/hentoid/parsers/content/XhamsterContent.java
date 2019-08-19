@@ -41,7 +41,8 @@ public class XhamsterContent implements ContentParser {
         String theUrl = galleryUrl.isEmpty() ? url : galleryUrl;
         int galleryLocation = theUrl.indexOf(GALLERY_FOLDER) + GALLERY_FOLDER.length();
         result.setUrl(theUrl.substring(galleryLocation));
-        result.setCoverImageUrl(thumbs.isEmpty() ? "" : thumbs.get(0));
+        if (thumbs != null)
+            result.setCoverImageUrl(thumbs.isEmpty() ? "" : thumbs.get(0));
         result.setTitle(title);
 
         Pattern pattern = Pattern.compile(".* - (\\d+) .* - .*"); // e.g. "Big bewbs - 50 Pics - xHamster.com"

@@ -1,24 +1,6 @@
 package me.devsaki.hentoid.activities.sources;
 
-import android.util.Pair;
-import android.webkit.CookieManager;
-import android.webkit.WebResourceResponse;
-
-import androidx.annotation.NonNull;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
-import javax.annotation.Nullable;
-
-import io.reactivex.android.schedulers.AndroidSchedulers;
-import io.reactivex.schedulers.Schedulers;
-import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.enums.Site;
-import me.devsaki.hentoid.listener.ResultListener;
-import me.devsaki.hentoid.retrofit.XhamsterGalleryServer;
-import timber.log.Timber;
 
 public class XhamsterActivity extends BaseWebActivity {
 
@@ -34,6 +16,13 @@ public class XhamsterActivity extends BaseWebActivity {
         return false;
     }
 
+    @Override
+    protected CustomWebViewClient getWebClient() {
+        CustomWebViewClient client = new CustomWebViewClient(GALLERY_FILTER, this);
+        client.restrictTo(DOMAIN_FILTER);
+        return client;
+    }
+/*
 
     @Override
     protected CustomWebViewClient getWebClient() {
@@ -78,4 +67,5 @@ public class XhamsterActivity extends BaseWebActivity {
             return null;
         }
     }
+    */
 }
