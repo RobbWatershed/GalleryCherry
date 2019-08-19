@@ -41,14 +41,7 @@
             tools:text="Artist: Name"
             android:visibility="gone"/>
 
-        <View
-            android:layout_width="fill_parent"
-            android:layout_height="1dp"
-            android:layout_marginStart="1dp"
-            android:layout_marginTop="5dp"
-            android:layout_marginEnd="10dp"
-            android:layout_marginBottom="5dp"
-            android:background="?colorPrimary"
+        <View style="@style/Divider"
             android:visibility="gone"/>
 
         <TextView

@@ -60,7 +60,7 @@ public class ImagePagerFragment extends Fragment implements GoToPageDialogFragme
     private ZoomableFrame zoomFrame;
 
     private ImageViewerViewModel viewModel;
-    private SharedPreferences.OnSharedPreferenceChangeListener listener = this::onSharedPreferenceChanged;
+    private final SharedPreferences.OnSharedPreferenceChangeListener listener = this::onSharedPreferenceChanged;
     private final RequestOptions glideRequestOptions = new RequestOptions().centerInside();
 
     private int imageIndex = -1;
@@ -137,6 +137,7 @@ public class ImagePagerFragment extends Fragment implements GoToPageDialogFragme
         super.onSaveInstanceState(outState);
         outState.putInt(KEY_HUD_VISIBLE, controlsOverlay.getVisibility());
         outState.putBoolean(KEY_GALLERY_SHOWN, hasGalleryBeenShown);
+        viewModel.setStartingIndex(imageIndex); // Memorize the current page
         viewModel.onSaveState(outState);
     }
 
@@ -194,12 +195,16 @@ public class ImagePagerFragment extends Fragment implements GoToPageDialogFragme
         });
         recyclerView.setLongTapListener(ev -> false);
 
-        OnZoneTapListener onZoneTapListener = new OnZoneTapListener(recyclerView)
+        OnZoneTapListener onHorizontalZoneTapListener = new OnZoneTapListener(recyclerView)
                 .setOnLeftZoneTapListener(this::onLeftTap)
                 .setOnRightZoneTapListener(this::onRightTap)
                 .setOnMiddleZoneTapListener(this::onMiddleTap);
-        recyclerView.setTapListener(onZoneTapListener);     // For paper roll mode (vertical)
-        adapter.setItemTouchListener(onZoneTapListener);    // For independent images mode (horizontal)
+
+        OnZoneTapListener onVerticalZoneTapListener = new OnZoneTapListener(recyclerView)
+                .setOnMiddleZoneTapListener(this::onMiddleTap);
+
+        recyclerView.setTapListener(onVerticalZoneTapListener);       // For paper roll mode (vertical)
+        adapter.setItemTouchListener(onHorizontalZoneTapListener);    // For independent images mode (horizontal)
 
         adapter.setRecyclerView(recyclerView);
 
@@ -386,6 +391,7 @@ public class ImagePagerFragment extends Fragment implements GoToPageDialogFragme
 
         maxPosition = images.size() - 1;
         seekBar.setMax(maxPosition);
+        updatePageDisplay();
     }
 
     /**
@@ -581,7 +587,7 @@ public class ImagePagerFragment extends Fragment implements GoToPageDialogFragme
         else zoomFrame.disable();
 
         llm.setOrientation(getOrientation());
-        pageSnapWidget.setPageSnapEnabled(Preferences.Constant.PREF_VIEWER_ORIENTATION_VERTICAL != Preferences.getViewerOrientation());
+        pageSnapWidget.setPageSnapEnabled(Preferences.Constant.PREF_VIEWER_ORIENTATION_HORIZONTAL == Preferences.getViewerOrientation());
     }
 
     /**

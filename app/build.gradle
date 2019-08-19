@@ -19,7 +19,7 @@ android {
         //noinspection ExpiringTargetSdkVersion
         targetSdkVersion 28
         versionCode 78
-        versionName '1.2.2'
+        versionName '1.2.5'
 
         def includeObjectBoxBrowser = System.getenv("INCLUDE_OBJECTBOX_BROWSER")?:"false"
 

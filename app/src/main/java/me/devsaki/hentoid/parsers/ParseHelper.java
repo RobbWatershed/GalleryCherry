@@ -34,19 +34,17 @@ public class ParseHelper {
         return s;
     }
 
-    public static void parseAttribute(AttributeMap map, AttributeType type, Element a, boolean filterCount, Site site) {
-        String name = a.text();
-        if (filterCount) name = removeBrackets(name);
-        Attribute attribute = new Attribute(type, name, a.attr("href"), site);
-
-        map.add(attribute);
-    }
-
     public static void parseAttributes(AttributeMap map, AttributeType type, List<Element> elements, boolean filterCount, Site site) {
         if (elements != null)
-            for (Element a : elements) {
-                parseAttribute(map, type, a, filterCount, site);
-            }
+            for (Element a : elements) parseAttribute(map, type, a, filterCount, site);
+    }
+
+    public static void parseAttribute(AttributeMap map, AttributeType type, Element element, boolean filterCount, Site site) {
+        String name = element.text();
+        if (filterCount) name = removeBrackets(name);
+        Attribute attribute = new Attribute(type, name, element.attr("href"), site);
+
+        map.add(attribute);
     }
 
     static ImageFile urlToImageFile(@Nonnull String imgUrl, int order) {

@@ -105,15 +105,22 @@ public class HentoidApp extends Application {
         // DB housekeeping
         performDatabaseHousekeeping();
 
-        // Init notifications
+        // Init notification channels
         UpdateNotificationChannel.init(this);
         DownloadNotificationChannel.init(this);
         MaintenanceNotificationChannel.init(this);
-        startService(UpdateCheckService.makeIntent(this, false));
 
         // Clears all previous notifications
         NotificationManager manager = (NotificationManager) instance.getSystemService(Context.NOTIFICATION_SERVICE);
         if (manager != null) manager.cancelAll();
+
+        // Run app update checks
+        Intent intent = UpdateCheckService.makeIntent(this, false);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(intent);
+        } else {
+            startService(intent);
+        }
 
         // Set Night mode
         int darkMode = Preferences.getDarkMode();
@@ -133,7 +140,11 @@ public class HentoidApp extends Application {
 
         // Launch a service that will perform non-structural DB housekeeping tasks
         Intent intent = DatabaseMaintenanceService.makeIntent(this);
-        startService(intent);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(intent);
+        } else {
+            startService(intent);
+        }
     }
 
     public static int darkModeFromPrefs(int prefsMode) {

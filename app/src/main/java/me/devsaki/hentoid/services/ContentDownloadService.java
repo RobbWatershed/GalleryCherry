@@ -79,15 +79,16 @@ public class ContentDownloadService extends IntentService {
     @Override
     public void onCreate() {
         super.onCreate();
-        db = ObjectBoxDB.getInstance(this);
-
-        notificationManager = new ServiceNotificationManager(this, 0);
+        notificationManager = new ServiceNotificationManager(this, 1);
         notificationManager.cancel();
+        notificationManager.startForeground(new DownloadProgressNotification("Starting download", 0, 0));
 
-        warningNotificationManager = new NotificationManager(this, 1);
+        warningNotificationManager = new NotificationManager(this, 2);
         warningNotificationManager.cancel();
 
         EventBus.getDefault().register(this);
+
+        db = ObjectBoxDB.getInstance(this);
 
         Timber.d("Download service created");
     }
@@ -103,7 +104,6 @@ public class ContentDownloadService extends IntentService {
     @Override
     protected void onHandleIntent(Intent intent) {
         Timber.d("New intent processed");
-        notificationManager.startForeground(new DownloadProgressNotification("Starting download", 0, 0));
 
         Content content = downloadFirstInQueue();
         if (content != null) watchProgress(content);

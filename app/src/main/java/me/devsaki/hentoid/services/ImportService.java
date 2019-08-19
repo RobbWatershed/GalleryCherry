@@ -7,6 +7,7 @@ import android.os.IBinder;
 import android.util.Log;
 
 import androidx.annotation.CheckResult;
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import org.greenrobot.eventbus.EventBus;
@@ -50,7 +51,7 @@ public class ImportService extends IntentService {
         super(ImportService.class.getName());
     }
 
-    public static Intent makeIntent(Context context) {
+    public static Intent makeIntent(@NonNull Context context) {
         return new Intent(context, ImportService.class);
     }
 
@@ -65,6 +66,7 @@ public class ImportService extends IntentService {
         running = true;
         notificationManager = new ServiceNotificationManager(this, NOTIFICATION_ID);
         notificationManager.cancel();
+        notificationManager.startForeground(new ImportStartNotification());
 
         Timber.w("Service created");
     }
@@ -72,6 +74,7 @@ public class ImportService extends IntentService {
     @Override
     public void onDestroy() {
         running = false;
+        notificationManager.cancel();
         Timber.w("Service destroyed");
 
         super.onDestroy();
@@ -85,8 +88,6 @@ public class ImportService extends IntentService {
 
     @Override
     protected void onHandleIntent(@Nullable Intent intent) {
-        notificationManager.startForeground(new ImportStartNotification());
-
         // True if the user has asked for a cleanup when calling import from Preferences
         boolean doRename = false;
         boolean doCleanAbsent = false;

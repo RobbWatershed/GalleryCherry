@@ -12,6 +12,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.SystemClock;
 import android.view.ActionMode;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -322,10 +323,7 @@ public abstract class DownloadsFragment extends BaseFragment implements PagedRes
     }
 
     private void openBook(Content content) {
-        // The list order might change when viewing books when certain sort orders are activated
-        // "unread" status might also change
-        // => plan a refresh next time DownloadsFragment is called
-        plannedRefresh = true;
+        // TODO : plan an individual refresh of displayed books according to their new DB value (esp. read/unread)
         Bundle bundle = new Bundle();
         searchManager.saveToBundle(bundle);
         int pageOffset = 0;
@@ -558,6 +556,7 @@ public abstract class DownloadsFragment extends BaseFragment implements PagedRes
 
         filterClearButton.setOnClickListener(v -> {
             setQuery("");
+            mainSearchView.setQuery("", false);
             searchManager.clearSelectedSearchTags();
             filterBar.setVisibility(View.GONE);
             searchLibrary();
@@ -578,10 +577,10 @@ public abstract class DownloadsFragment extends BaseFragment implements PagedRes
         }
 
         // If none of the above, user is asking to leave => use double-tap
-        if (MODE_MIKAN == mode || backButtonPressed + 2000 > System.currentTimeMillis()) {
+        if (MODE_MIKAN == mode || backButtonPressed + 2000 > SystemClock.elapsedRealtime()) {
             return true;
         } else {
-            backButtonPressed = System.currentTimeMillis();
+            backButtonPressed = SystemClock.elapsedRealtime();
             ToastUtil.toast(mContext, R.string.press_back_again);
 
             if (llm != null) {
