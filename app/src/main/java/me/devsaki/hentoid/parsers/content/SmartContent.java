@@ -27,25 +27,56 @@ public class SmartContent implements ContentParser {
     @Selector("head title")
     private String title;
     @Selector(value = "a[href*='.jp']", attr = "href")
-    private List<String> imageLinks;
-    @Selector(value = ":not(a)>img[src*='.jp']")
+    private List<String> imageLinksJpg;
+    @Selector(value = "a[href*='.png']", attr = "href")
+    private List<String> imageLinksPng;
     // Alternate images are alone on the page, without links, zishy-style (else we would capture clickable thumbs)
-    private List<Element> imageElts;
+    @Selector(value = ":not(a)>img[src*='.jp']")
+    private List<Element> imageEltsJpg;
+    @Selector(value = ":not(a)>img[src*='.png']")
+    private List<Element> imageEltsPng;
 
+    private List<String> imageLinks = new ArrayList<>();
+    private List<String> imageElts = new ArrayList<>();
+
+
+    // Remove duplicates in found images and stored them to an unified container
+    private void processImages() {
+        if (null != imageLinksJpg)
+            imageLinks.addAll(Stream.of(imageLinksJpg).distinct().toList());
+        if (null != imageLinksPng)
+            imageLinks.addAll(Stream.of(imageLinksPng).distinct().toList());
+
+        if (null != imageEltsJpg)
+            imageElts.addAll(Stream.of(imageEltsJpg).map(e -> e.attr("src")).distinct().toList());
+        if (null != imageEltsPng)
+            imageElts.addAll(Stream.of(imageEltsPng).map(e -> e.attr("src")).distinct().toList());
+    }
 
     private boolean isGallery() {
-        if (null != imageLinks && imageLinks.size() > 4) return true;
-        return null != imageElts && imageElts.size() > 4;
+        return (imageLinks.size() > 4 || imageElts.size() > 4);
+    }
+
+    private void addLinksToImages(List<String> links, List<ImageFile> images, String url) {
+        int order = 1;
+        String urlHost = url.substring(0, url.indexOf("/", url.indexOf("://") + 3));
+        String urlLocation = url.substring(0, url.lastIndexOf("/") + 1);
+
+        for (String s : links) {
+            if (!s.startsWith("http")) {
+                if (s.startsWith("/"))
+                    s = urlHost + s;
+                else
+                    s = urlLocation + s;
+            }
+            images.add(new ImageFile(order++, s, StatusContent.SAVED));
+        }
     }
 
     public Content toContent(@NonNull String url) {
         Content result = new Content();
 
-        // Remove duplicates in found images
-        if (null != imageLinks)
-            imageLinks = Stream.of(imageLinks).distinct().toList();
-        if (null != imageElts)
-            imageElts = Stream.of(imageElts).distinct().toList();
+        processImages();
 
         result.setSite(Site.NONE); // Temp but needed for the rest of the operations; will be overwritten
         if (!isGallery()) return result.setStatus(StatusContent.IGNORED);
@@ -66,32 +97,9 @@ public class SmartContent implements ContentParser {
 
         List<ImageFile> images = new ArrayList<>();
 
-        String urlHost = url.substring(0, url.indexOf("/", url.indexOf("://") + 3));
-        String urlLocation = url.substring(0, url.lastIndexOf("/") + 1);
+        if (imageLinks.size() > 4) addLinksToImages(imageLinks, images, url);
+        else if (imageElts.size() > 4) addLinksToImages(imageElts, images, url);
 
-        int order = 1;
-        if (imageLinks != null && imageLinks.size() > 4) {
-            for (String s : imageLinks) {
-                if (!s.startsWith("http")) {
-                    if (s.startsWith("/"))
-                        s = urlHost + s;
-                    else
-                        s = urlLocation + s;
-                }
-                images.add(new ImageFile(order++, s, StatusContent.SAVED));
-            }
-        } else if (imageElts != null && imageElts.size() > 4) {
-            for (Element e : imageElts) {
-                String s = e.attr("src");
-                if (!s.startsWith("http")) {
-                    if (s.startsWith("/"))
-                        s = urlHost + s;
-                    else
-                        s = urlLocation + s;
-                }
-                images.add(new ImageFile(order++, s, StatusContent.SAVED));
-            }
-        }
         result.setQtyPages(images.size());
         result.addImageFiles(images);
 
