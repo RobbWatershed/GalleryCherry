@@ -2,6 +2,8 @@ package me.devsaki.hentoid.parsers.content;
 
 import androidx.annotation.NonNull;
 
+import com.annimon.stream.Stream;
+
 import org.jsoup.nodes.Element;
 
 import java.util.ArrayList;
@@ -38,6 +40,12 @@ public class SmartContent implements ContentParser {
 
     public Content toContent(@NonNull String url) {
         Content result = new Content();
+
+        // Remove duplicates in found images
+        if (null != imageLinks)
+            imageLinks = Stream.of(imageLinks).distinct().toList();
+        if (null != imageElts)
+            imageElts = Stream.of(imageElts).distinct().toList();
 
         result.setSite(Site.NONE); // Temp but needed for the rest of the operations; will be overwritten
         if (!isGallery()) return result.setStatus(StatusContent.IGNORED);
