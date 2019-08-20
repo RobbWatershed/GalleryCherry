@@ -79,7 +79,6 @@ public class SmartContent implements ContentParser {
         processImages();
 
         result.setSite(Site.NONE); // Temp but needed for the rest of the operations; will be overwritten
-        if (!isGallery()) return result.setStatus(StatusContent.IGNORED);
 
         String theUrl = galleryUrl.isEmpty() ? url : galleryUrl;
 
@@ -89,6 +88,8 @@ public class SmartContent implements ContentParser {
             HttpUrl httpUrl = HttpUrl.get(theUrl);
             result.setUrl(httpUrl.scheme() + "://" + httpUrl.host() + httpUrl.encodedPath());
         } else result.setUrl("");
+
+        if (!isGallery()) return result.setStatus(StatusContent.IGNORED);
 
         result.setTitle(title);
 
