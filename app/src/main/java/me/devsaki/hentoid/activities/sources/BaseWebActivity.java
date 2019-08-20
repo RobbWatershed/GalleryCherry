@@ -83,9 +83,9 @@ import timber.log.Timber;
  * The source itself should contain every method it needs to function.
  * <p>
  * todo issue:
- *  {@link #checkPermissions()} causes the app to reset unexpectedly. If permission is integral to
- *  this activity's function, it is recommended to request for this permission and show rationale if
- *  permission request is denied
+ * {@link #checkPermissions()} causes the app to reset unexpectedly. If permission is integral to
+ * this activity's function, it is recommended to request for this permission and show rationale if
+ * permission request is denied
  */
 public abstract class BaseWebActivity extends BaseActivity implements ResultListener<Content> {
 
@@ -344,7 +344,7 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
         if (MODE_DL == fabActionMode) processDownload();
         else if (MODE_QUEUE == fabActionMode) goToQueue();
         else if (MODE_READ == fabActionMode && currentContent != null) {
-            currentContent = db.selectContentByUrl(currentContent.getUrl());
+            currentContent = db.selectContentBySourceAndUrl(currentContent.getSite(), currentContent.getUrl());
             if (currentContent != null) {
                 if (StatusContent.DOWNLOADED == currentContent.getStatus()
                         || StatusContent.ERROR == currentContent.getStatus()
@@ -448,8 +448,8 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
             return;
         }
 
-        Timber.i("Content URL : %s", content.getUrl());
-        Content contentDB = db.selectContentByUrl(content.getUrl());
+        Timber.i("Content Site, URL : %s, %s", content.getSite().getCode(), content.getUrl());
+        Content contentDB = db.selectContentBySourceAndUrl(content.getSite(), content.getUrl());
         Timber.i(">>> Adding to DB content %s @ %s", content.getTitle(), content.getUrl());
 
         boolean isInCollection = (contentDB != null && (
@@ -501,7 +501,8 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
 
         private List<String> domainNames = new ArrayList<>();
         private boolean isPageLoading = false;
-        protected boolean isHtmlLoaded = false;
+        boolean isHtmlLoaded = false;
+
 
         @SuppressWarnings("unchecked")
         CustomWebViewClient(String filteredUrl, ResultListener<Content> listener) {
@@ -594,6 +595,7 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
         @Override
         public void onPageFinished(WebView view, String url) {
             isPageLoading = false;
+            isHtmlLoaded = false; // Reset for the next page
             setFabIcon(fabRefreshOrStop, R.drawable.ic_action_refresh);
 
             isHtmlLoaded = false;
@@ -620,10 +622,8 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
             if (isUrlForbidden(url)) {
                 return new WebResourceResponse("text/plain", "utf-8", nothing);
             } else {
-                if (!isPageLoading) {
-                    isHtmlLoaded = false;
-                    if (isPageFiltered(url)) return parseResponse(url, request.getRequestHeaders());
-                }
+                if (!isPageLoading && isPageFiltered(url))
+                    return parseResponse(url, request.getRequestHeaders());
                 return super.shouldInterceptRequest(view, url);
             }
         }
@@ -681,7 +681,8 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
             // Save cookies for future calls during download
             Map<String, String> params = new HashMap<>();
             for (Pair<String, String> p : headersList)
-                if (p.first.equals(HttpHelper.HEADER_COOKIE_KEY)) params.put(HttpHelper.HEADER_COOKIE_KEY, p.second);
+                if (p.first.equals(HttpHelper.HEADER_COOKIE_KEY))
+                    params.put(HttpHelper.HEADER_COOKIE_KEY, p.second);
 
             content.setDownloadParams(JsonHelper.serializeToJson(params));
             isHtmlLoaded = true;

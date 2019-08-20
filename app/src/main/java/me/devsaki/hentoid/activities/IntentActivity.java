@@ -3,6 +3,7 @@ package me.devsaki.hentoid.activities;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+
 import androidx.annotation.Nullable;
 
 import me.devsaki.hentoid.abstracts.BaseActivity;
