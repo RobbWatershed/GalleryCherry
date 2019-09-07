@@ -406,8 +406,7 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
 
         if (null == currentContent) return;
 
-        // TODO - make this cleaner without using Site.REDDIT
-        if (StatusContent.DOWNLOADED == currentContent.getStatus() && !currentContent.getSite().equals(Site.REDDIT)) {
+        if (StatusContent.DOWNLOADED == currentContent.getStatus() && !currentContent.getSite().isDanbooru()) {
             ToastUtil.toast(this, R.string.already_downloaded);
             changeFabActionMode(MODE_READ);
             return;
@@ -487,8 +486,7 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
         ));
 
         // Reddit has a single book that allows incremental downloads
-        // TODO - make that more clean without using Site.REDDIT
-        if (isInCollection && getStartSite().equals(Site.REDDIT)) isInCollection = false;
+        if (isInCollection && getStartSite().isDanbooru()) isInCollection = false;
 
         if (!isInCollection && !isInQueue) {
             if (null == contentDB) {    // The book has just been detected -> finalize before saving in DB

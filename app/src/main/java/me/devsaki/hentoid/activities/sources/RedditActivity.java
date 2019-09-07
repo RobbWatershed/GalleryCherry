@@ -9,7 +9,6 @@ import javax.annotation.Nonnull;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.enums.Site;
-import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.listener.ResultListener;
 
 public class RedditActivity extends BaseWebActivity {
@@ -44,14 +43,13 @@ public class RedditActivity extends BaseWebActivity {
         void processContent(@Nonnull Content content, @Nonnull List<Pair<String, String>> headersList) {
             // Get the reddit book
             Content redditBook = db.selectContentBySourceAndUrl(Site.REDDIT, content.getUrl());
-            if (redditBook != null)
-            {
+            if (redditBook != null) {
                 // Remove the images that are already contained in the Reddit book
                 List<ImageFile> newImages = content.getImageFiles();
                 List<ImageFile> existingImages = redditBook.getImageFiles();
                 if (newImages != null && existingImages != null) {
                     newImages.removeAll(redditBook.getImageFiles());
-                    redditBook.addImageFiles(newImages);
+                    redditBook.setImageFiles(newImages);
                 }
                 content = redditBook;
             }
