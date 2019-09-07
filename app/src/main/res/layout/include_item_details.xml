@@ -27,7 +27,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
             android:textAppearance="?android:attr/textAppearanceSmall"
-            android:textColor="?colorOnSurface"
+            android:textColor="@color/card_tags"
             tools:text="Series: Name"
             android:visibility="gone"/>
 
@@ -37,7 +37,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
             android:textAppearance="?android:attr/textAppearanceSmall"
-            android:textColor="?colorOnSurface"
+            android:textColor="@color/card_tags"
             tools:text="Artist: Name"
             android:visibility="gone"/>
 
