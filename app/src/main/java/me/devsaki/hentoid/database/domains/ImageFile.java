@@ -3,6 +3,7 @@ package me.devsaki.hentoid.database.domains;
 import com.google.gson.annotations.Expose;
 
 import java.util.Locale;
+import java.util.Objects;
 
 import io.objectbox.annotation.Convert;
 import io.objectbox.annotation.Entity;
@@ -140,5 +141,21 @@ public class ImageFile {
 
     public void setMimeType(String mimeType) {
         this.mimeType = mimeType;
+    }
+
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        ImageFile imageFile = (ImageFile) o;
+
+        return Objects.equals(url, imageFile.url);
+    }
+
+    @Override
+    public int hashCode() {
+        return url != null ? url.hashCode() : 0;
     }
 }

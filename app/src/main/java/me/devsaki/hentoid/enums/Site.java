@@ -21,6 +21,7 @@ public enum Site {
     HELLPORNO(5, "Hellporno", "https://hellporno.com/albums/", "hellporno", R.drawable.ic_menu_hellporno, true, true, false),
     PORNPICGALLERIES(6, "Pornpicgalleries", "http://pornpicgalleries.com/", "pornpicgalleries", R.drawable.ic_menu_ppg, true, true, false),
     LINK2GALLERIES(7, "Link2galleries", "https://www.link2galleries.com/", "link2galleries", R.drawable.ic_menu_l2g, true, true, false),
+    REDDIT(8, "Reddit", "https://www.reddit.com/r/nsfw/", "reddit", R.drawable.ic_social_reddit, true, true, false),
     NONE(98, "none", "", "none", R.drawable.ic_menu_about, true, true, false); // Fallback site
 
 

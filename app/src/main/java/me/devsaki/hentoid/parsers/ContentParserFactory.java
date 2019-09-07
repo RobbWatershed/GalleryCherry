@@ -36,6 +36,9 @@ public class ContentParserFactory {
                 return XhamsterContent.class;
             case XNXX:
                 return XnxxContent.class;
+            case REDDIT:
+            case LINK2GALLERIES:
+            case PORNPICGALLERIES:
             default:
                 return SmartContent.class;
         }

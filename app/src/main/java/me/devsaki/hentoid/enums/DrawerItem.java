@@ -12,6 +12,7 @@ import me.devsaki.hentoid.activities.sources.Link2GalleriesActivity;
 import me.devsaki.hentoid.activities.sources.NextpicturezActivity;
 import me.devsaki.hentoid.activities.sources.PornPicGalleriesActivity;
 import me.devsaki.hentoid.activities.sources.PornPicsActivity;
+import me.devsaki.hentoid.activities.sources.RedditActivity;
 import me.devsaki.hentoid.activities.sources.XhamsterActivity;
 import me.devsaki.hentoid.activities.sources.XnxxActivity;
 
@@ -25,6 +26,7 @@ public enum DrawerItem {
     HELLPORNO("HELLPORNO", R.drawable.ic_menu_hellporno, HellpornoActivity.class),
     PPG("PORNPICGALLERIES", R.drawable.ic_menu_ppg, PornPicGalleriesActivity.class),
     LINK2GALLERIES("LINK2GALLERIES", R.drawable.ic_menu_l2g, Link2GalleriesActivity.class),
+    REDDIT("REDDIT", R.drawable.ic_social_reddit, RedditActivity.class),
     QUEUE("QUEUE", R.drawable.ic_menu_queue, QueueActivity.class),
     PREFS("PREFERENCES", R.drawable.ic_menu_prefs, PrefsActivity.class),
     ABOUT("ABOUT", R.drawable.ic_menu_about, AboutActivity.class);

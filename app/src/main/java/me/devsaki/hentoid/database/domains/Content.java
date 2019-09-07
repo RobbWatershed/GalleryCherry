@@ -24,6 +24,7 @@ import me.devsaki.hentoid.activities.sources.Link2GalleriesActivity;
 import me.devsaki.hentoid.activities.sources.NextpicturezActivity;
 import me.devsaki.hentoid.activities.sources.PornPicGalleriesActivity;
 import me.devsaki.hentoid.activities.sources.PornPicsActivity;
+import me.devsaki.hentoid.activities.sources.RedditActivity;
 import me.devsaki.hentoid.activities.sources.XhamsterActivity;
 import me.devsaki.hentoid.activities.sources.XnxxActivity;
 import me.devsaki.hentoid.enums.AttributeType;
@@ -171,6 +172,8 @@ public class Content implements Serializable {
                 return parts[parts.length - 1];
             case JPEGWORLD:
                 return url.substring(url.lastIndexOf("-") + 1, url.lastIndexOf("."));
+            case REDDIT:
+                return "reddit"; // One single book
             default:
                 return "";
         }
@@ -198,6 +201,8 @@ public class Content implements Serializable {
                 return PornPicGalleriesActivity.class;
             case LINK2GALLERIES:
                 return Link2GalleriesActivity.class;
+            case REDDIT:
+                return RedditActivity.class;
             default:
                 return BaseWebActivity.class;
         }
@@ -229,7 +234,8 @@ public class Content implements Serializable {
         switch (site) {
             case PORNPICGALLERIES:
             case LINK2GALLERIES:
-                return url; // Specific case - user can go on any site
+            case REDDIT: // N/A
+                return url; // Specific case - user can go on any site (smart parser)
             case HELLPORNO:
                 galleryConst = ""; // Site landpage URL already contains the "/albums/" prefix
                 break;
