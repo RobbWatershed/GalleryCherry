@@ -13,16 +13,16 @@ import timber.log.Timber;
  */
 public enum Site {
 
-    XHAMSTER(0, "XHamster", "https://m.xhamster.com/photos/", "xhamster", R.drawable.ic_menu_xhamster, true, true, false),
-    XNXX(1, "XNXX", "https://multi.xnxx.com/", "XNXX", R.drawable.ic_menu_xnxx, true, true, false),
-    PORNPICS(2, "Pornpics", "https://www.pornpics.com/", "pornpics", R.drawable.ic_menu_pornpics, true, true, false),
-    JPEGWORLD(3, "Jpegworld", "https://www.jpegworld.com/", "jpegworld", R.drawable.ic_menu_jpegworld, true, true, false),
-    NEXTPICTUREZ(4, "Nextpicturez", "http://www.nextpicturez.com/", "nextpicturez", R.drawable.ic_menu_nextpicturez, true, true, false),
-    HELLPORNO(5, "Hellporno", "https://hellporno.com/albums/", "hellporno", R.drawable.ic_menu_hellporno, true, true, false),
-    PORNPICGALLERIES(6, "Pornpicgalleries", "http://pornpicgalleries.com/", "pornpicgalleries", R.drawable.ic_menu_ppg, true, true, false),
-    LINK2GALLERIES(7, "Link2galleries", "https://www.link2galleries.com/", "link2galleries", R.drawable.ic_menu_l2g, true, true, false),
+    XHAMSTER(0, "XHamster", "https://m.xhamster.com/photos/", "xhamster", R.drawable.ic_menu_xhamster, true, true, false, false),
+    XNXX(1, "XNXX", "https://multi.xnxx.com/", "XNXX", R.drawable.ic_menu_xnxx, true, true, false, false),
+    PORNPICS(2, "Pornpics", "https://www.pornpics.com/", "pornpics", R.drawable.ic_menu_pornpics, true, true, false, false),
+    JPEGWORLD(3, "Jpegworld", "https://www.jpegworld.com/", "jpegworld", R.drawable.ic_menu_jpegworld, true, true, false, false),
+    NEXTPICTUREZ(4, "Nextpicturez", "http://www.nextpicturez.com/", "nextpicturez", R.drawable.ic_menu_nextpicturez, true, true, false, false),
+    HELLPORNO(5, "Hellporno", "https://hellporno.com/albums/", "hellporno", R.drawable.ic_menu_hellporno, true, true, false, false),
+    PORNPICGALLERIES(6, "Pornpicgalleries", "http://pornpicgalleries.com/", "pornpicgalleries", R.drawable.ic_menu_ppg, true, true, false, false),
+    LINK2GALLERIES(7, "Link2galleries", "https://www.link2galleries.com/", "link2galleries", R.drawable.ic_menu_l2g, true, true, false, false),
     REDDIT(8, "Reddit", "https://www.reddit.com/r/nsfw/", "reddit", R.drawable.ic_social_reddit, true, true, false),
-    NONE(98, "none", "", "none", R.drawable.ic_menu_about, true, true, false); // Fallback site
+    NONE(98, "none", "", "none", R.drawable.ic_menu_about, true, true, false, false); // Fallback site
 
 
     private final int code;
@@ -33,6 +33,7 @@ public enum Site {
     private final boolean allowParallelDownloads;
     private final boolean canKnowHentoidAgent;
     private final boolean hasImageProcessing;
+    private final boolean hasBackupURLs;
 
     Site(int code,
          String description,
@@ -41,7 +42,8 @@ public enum Site {
          int ico,
          boolean allowParallelDownloads,
          boolean canKnowHentoidAgent,
-         boolean hasImageProcessing) {
+         boolean hasImageProcessing,
+         boolean hasBackupURLs) {
         this.code = code;
         this.description = description;
         this.url = url;
@@ -50,6 +52,7 @@ public enum Site {
         this.allowParallelDownloads = allowParallelDownloads;
         this.canKnowHentoidAgent = canKnowHentoidAgent;
         this.hasImageProcessing = hasImageProcessing;
+        this.hasBackupURLs = hasBackupURLs;
     }
 
     public static Site searchByCode(long code) {
@@ -105,6 +108,10 @@ public enum Site {
 
     public boolean hasImageProcessing() {
         return hasImageProcessing;
+    }
+
+    public boolean hasBackupURLs() {
+        return hasBackupURLs;
     }
 
     public String getFolder() {

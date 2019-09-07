@@ -45,9 +45,8 @@ public class NextpicturezContent implements ContentParser {
             images.add(new ImageFile(order++, theUrl + s, StatusContent.SAVED));
         }
         if (images.size() > 0) result.setCoverImageUrl(images.get(0).getUrl());
-        result.addImageFiles(images);
+        result.setImageFiles(images);
         result.setQtyPages(images.size());
-        result.addImageFiles(images);
 
         return result;
     }

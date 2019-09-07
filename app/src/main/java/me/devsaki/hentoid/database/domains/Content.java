@@ -2,6 +2,7 @@ package me.devsaki.hentoid.database.domains;
 
 import androidx.annotation.Nullable;
 
+import com.annimon.stream.Stream;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 
@@ -58,7 +59,7 @@ public class Content implements Serializable {
     @Expose
     private long uploadDate;
     @Expose
-    private long downloadDate;
+    private long downloadDate = 0;
     @Expose
     @Convert(converter = StatusContent.StatusContentConverter.class, dbType = Integer.class)
     private StatusContent status;
@@ -95,15 +96,17 @@ public class Content implements Serializable {
 
     // Runtime attributes; no need to expose them for JSON persistence nor to persist them to DB
     @Transient
-    private double percent;
+    private double percent;     // % progress to display the progress bar on the queue screen
     @Transient
-    private int queryOrder;
+    private int queryOrder;     // Order of current content in the DB query that creates it
     @Transient
-    private boolean isFirst;
+    private boolean isFirst;    // True if current content is the first of its set in the DB query
     @Transient
-    private boolean isLast;
+    private boolean isLast;     // True if current content is the last of its set in the DB query
     @Transient
-    private boolean selected = false;
+    private boolean selected = false; // True if current content is selected (library view)
+    @Transient
+    private int numberDownloadRetries = 0;  // Current number of download retries current content has gone through
 
     // Attributes kept for retro-compatibility with contentV2.json Hentoid files
     @Transient
@@ -264,8 +267,8 @@ public class Content implements Serializable {
         if (attrMap.containsKey(AttributeType.ARTIST) && !attrMap.get(AttributeType.ARTIST).isEmpty())
             authorStr = attrMap.get(AttributeType.ARTIST).get(0).getName();
         if ((null == authorStr || authorStr.equals(""))
-             && attrMap.containsKey(AttributeType.CIRCLE)
-             && !attrMap.get(AttributeType.CIRCLE).isEmpty()) // Try and get Circle
+                && attrMap.containsKey(AttributeType.CIRCLE)
+                && !attrMap.get(AttributeType.CIRCLE).isEmpty()) // Try and get Circle
             authorStr = attrMap.get(AttributeType.CIRCLE).get(0).getName();
 
         if (null == authorStr) authorStr = "";
@@ -349,7 +352,7 @@ public class Content implements Serializable {
         return this;
     }
 
-    long getDownloadDate() {
+    public long getDownloadDate() {
         return downloadDate;
     }
 
@@ -372,7 +375,7 @@ public class Content implements Serializable {
         return imageFiles;
     }
 
-    public Content addImageFiles(List<ImageFile> imageFiles) {
+    public Content setImageFiles(List<ImageFile> imageFiles) {
         if (imageFiles != null) {
             this.imageFiles.clear();
             this.imageFiles.addAll(imageFiles);
@@ -391,6 +394,13 @@ public class Content implements Serializable {
 
     public void setPercent(double percent) {
         this.percent = percent;
+    }
+
+    public void computePercent() {
+        if (imageFiles != null && 0 == percent) {
+            long progress = Stream.of(imageFiles).filter(i -> i.getStatus() == StatusContent.DOWNLOADED || i.getStatus() == StatusContent.ERROR).count();
+            percent = progress * 100.0 / qtyPages;
+        }
     }
 
     public Site getSite() {
@@ -507,6 +517,14 @@ public class Content implements Serializable {
 
     public void setJsonUri(String jsonUri) {
         this.jsonUri = jsonUri;
+    }
+
+    public int getNumberDownloadRetries() {
+        return numberDownloadRetries;
+    }
+
+    public void increaseNumberDownloadRetries() {
+        this.numberDownloadRetries++;
     }
 
 

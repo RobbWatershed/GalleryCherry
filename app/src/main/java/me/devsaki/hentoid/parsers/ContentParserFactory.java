@@ -44,11 +44,7 @@ public class ContentParserFactory {
         }
     }
 
-    public ImageListParser getImageListParser(Content content) {
-        return (null == content) ? new DummyParser() : getImageListParser(content.getSite());
-    }
-
-    private ImageListParser getImageListParser(Site site) {
+    public ImageListParser getImageListParser(Site site) {
         switch (site) {
             case XHAMSTER:
                 return new XhamsterParser();

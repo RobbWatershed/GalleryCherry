@@ -1,6 +1,7 @@
 package me.devsaki.hentoid.adapters;
 
 import android.content.Context;
+import android.graphics.PorterDuff;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -11,6 +12,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.RequestOptions;
@@ -30,9 +32,9 @@ import me.devsaki.hentoid.database.domains.Attribute;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.QueueRecord;
 import me.devsaki.hentoid.enums.AttributeType;
-import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.events.DownloadEvent;
-import me.devsaki.hentoid.util.FileHelper;
+import me.devsaki.hentoid.services.ContentQueueManager;
+import me.devsaki.hentoid.util.ContentHelper;
 import me.devsaki.hentoid.util.Helper;
 
 /**
@@ -62,6 +64,7 @@ public class QueueContentAdapter extends ArrayAdapter<Content> {
             LayoutInflater inflater = LayoutInflater.from(context);
             v = inflater.inflate(R.layout.item_queue, parent, false);
 
+            holder.progressBar = v.findViewById(R.id.pbDownload);
             holder.tvTitle = v.findViewById(R.id.tvTitle);
             holder.ivCover = v.findViewById(R.id.ivCover);
             holder.tvSeries = v.findViewById(R.id.tvSeries);
@@ -80,7 +83,7 @@ public class QueueContentAdapter extends ArrayAdapter<Content> {
         if (content != null) {
             populateLayout(holder, content);
             attachButtons(v, content, (0 == pos), (getCount() - 1 == pos), getCount());
-            updateProgress(v, content);
+            updateProgress(holder.progressBar, content, 0 == pos, false);
         }
         // Return the completed view to render on screen
         return v;
@@ -123,7 +126,7 @@ public class QueueContentAdapter extends ArrayAdapter<Content> {
      * @param content Content to display
      */
     private void attachCover(ViewHolder holder, Content content) {
-        String coverFile = FileHelper.getThumb(content);
+        String coverFile = ContentHelper.getThumb(content);
         Glide.with(context.getApplicationContext()).clear(holder.ivCover);
 
         RequestOptions myOptions = new RequestOptions()
@@ -158,7 +161,7 @@ public class QueueContentAdapter extends ArrayAdapter<Content> {
             }
             holder.tvSeries.setVisibility(View.VISIBLE);
         }
-        holder.tvSeries.setText(Helper.fromHtml(templateSeries.replace("@series@", series)));
+        holder.tvSeries.setText(templateSeries.replace("@series@", series));
 
         if (seriesAttributes == null) {
             holder.tvSeries.setVisibility(View.GONE);
@@ -188,7 +191,7 @@ public class QueueContentAdapter extends ArrayAdapter<Content> {
                 artists.append(attribute.getName());
             }
         }
-        holder.tvArtist.setText(Helper.fromHtml(templateArtist.replace("@artist@", artists)));
+        holder.tvArtist.setText(templateArtist.replace("@artist@", artists));
 
         if (attributes.isEmpty()) {
             holder.tvArtist.setVisibility(View.GONE);
@@ -202,21 +205,20 @@ public class QueueContentAdapter extends ArrayAdapter<Content> {
      * @param content Content to display
      */
     private void attachTags(ViewHolder holder, Content content) {
-        String templateTags = context.getString(R.string.work_tags);
         StringBuilder tags = new StringBuilder();
         List<Attribute> tagsAttributes = content.getAttributeMap().get(AttributeType.TAG);
         if (tagsAttributes != null) {
             for (int i = 0; i < tagsAttributes.size(); i++) {
                 Attribute attribute = tagsAttributes.get(i);
                 if (attribute.getName() != null) {
-                    tags.append(templateTags.replace("@tag@", attribute.getName()));
+                    tags.append(attribute.getName());
                     if (i != tagsAttributes.size() - 1) {
                         tags.append(", ");
                     }
                 }
             }
         }
-        holder.tvTags.setText(Helper.fromHtml(tags.toString()));
+        holder.tvTags.setText(tags.toString());
     }
 
     /**
@@ -229,7 +231,7 @@ public class QueueContentAdapter extends ArrayAdapter<Content> {
         if (content.getSite() != null) {
             int img = content.getSite().getIco();
             holder.ivSource.setImageResource(img);
-            holder.ivSource.setOnClickListener(v -> Helper.viewContent(context, content));
+            holder.ivSource.setOnClickListener(v -> ContentHelper.viewContent(context, content));
         } else {
             holder.ivSource.setImageResource(R.drawable.ic_cherry);
         }
@@ -263,35 +265,38 @@ public class QueueContentAdapter extends ArrayAdapter<Content> {
         btnCancel.setOnClickListener(v -> cancel(content));
     }
 
-    /**
-     * Update progress bar according to progress and status of designated Content
-     *
-     * @param view    Progress bar to use
-     * @param content Content whose progress is to be displayed
-     */
-    private void updateProgress(View view, Content content) {
-        ProgressBar pb = view.findViewById(R.id.pbDownload);
-
-        if (content.getStatus() != StatusContent.PAUSED) {
+    private void updateProgress(@NonNull ProgressBar pb, @NonNull Content content, boolean isFirst, boolean isPausedEvent) {
+        boolean isQueueReady = ContentQueueManager.getInstance().isQueueActive() && !ContentQueueManager.getInstance().isQueuePaused() && !isPausedEvent;
+        content.computePercent();
+        if ((isFirst && isQueueReady) || content.getPercent() > 0) {
             pb.setVisibility(View.VISIBLE);
             if (content.getPercent() > 0) {
                 pb.setIndeterminate(false);
                 pb.setProgress((int) content.getPercent());
+
+                int color;
+                if (isFirst && isQueueReady)
+                    color = ContextCompat.getColor(context, R.color.secondary);
+                else color = ContextCompat.getColor(context, R.color.medium_gray);
+                pb.getProgressDrawable().setColorFilter(color, PorterDuff.Mode.MULTIPLY);
             } else {
                 pb.setIndeterminate(true);
             }
         } else {
-            pb.setVisibility(View.INVISIBLE);
+            pb.setVisibility(View.GONE);
         }
     }
 
-    public void updateProgress(int index, Content content) {
+    public void updateProgress(int index, boolean isPausedevent) {
         if (null == container) return;
 
         View view = container.getChildAt(index - container.getFirstVisiblePosition());
         if (view == null) return;
 
-        updateProgress(view, content);
+        Content content = getItem(index);
+        if (null == content) return;
+
+        updateProgress(view.findViewById(R.id.pbDownload), content, 0 == index, isPausedevent);
     }
 
     private void swap(int firstPosition, int secondPosition) {
@@ -447,7 +452,7 @@ public class QueueContentAdapter extends ArrayAdapter<Content> {
             db.deleteQueue(content);
             db.deleteContent(content);
             // Remove the content from the disk
-            FileHelper.removeContent(content);
+            ContentHelper.removeContent(content);
         }
     }
 
@@ -461,6 +466,7 @@ public class QueueContentAdapter extends ArrayAdapter<Content> {
 
     // View lookup cache
     private static class ViewHolder {
+        ProgressBar progressBar;
         TextView tvTitle;
         ImageView ivCover;
         TextView tvSeries;
