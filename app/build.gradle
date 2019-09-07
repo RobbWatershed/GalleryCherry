@@ -18,8 +18,8 @@ android {
         minSdkVersion 19
         //noinspection ExpiringTargetSdkVersion
         targetSdkVersion 28
-        versionCode 78
-        versionName '1.2.5'
+        versionCode 130 // is updated automatically by BitRise; only used when building locally
+        versionName '1.8.5'
 
         def includeObjectBoxBrowser = System.getenv("INCLUDE_OBJECTBOX_BROWSER")?:"false"
 
@@ -67,7 +67,7 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
 
     // Firebase
-    implementation 'com.google.firebase:firebase-core:17.0.0'
+    implementation 'com.google.firebase:firebase-core:17.1.0'
 
     // Crashlytics
     implementation 'com.crashlytics.sdk.android:crashlytics:2.10.1'

@@ -22,8 +22,7 @@ import timber.log.Timber;
 
 public abstract class BaseParser implements ImageListParser {
 
-    private int currentStep;
-    private int maxSteps;
+    private final ParseProgress progress = new ParseProgress();
 
     private static final int TIMEOUT = 30000; // 30 seconds
 
@@ -64,17 +63,19 @@ public abstract class BaseParser implements ImageListParser {
         return images;
     }
 
+    public ImageFile parseBackupUrl(String url, int order) {
+        return null;
+    }
+
     void progressStart(int maxSteps) {
-        currentStep = 0;
-        this.maxSteps = maxSteps;
-        ParseHelper.signalProgress(currentStep, maxSteps);
+        progress.progressStart(maxSteps);
     }
 
     void progressPlus() {
-        ParseHelper.signalProgress(++currentStep, maxSteps);
+        progress.progressPlus();
     }
 
     void progressComplete() {
-        ParseHelper.signalProgress(maxSteps, maxSteps);
+        progress.progressComplete();
     }
 }
