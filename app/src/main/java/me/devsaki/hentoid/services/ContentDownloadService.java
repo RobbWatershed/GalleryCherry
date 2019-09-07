@@ -385,7 +385,7 @@ public class ContentDownloadService extends IntentService {
 
             boolean hasError = false;
             // Less pages than initially detected - More than 10% difference in number of pages
-            if (nbImages < content.getQtyPages() && Math.abs(nbImages - content.getQtyPages()) > content.getQtyPages() * 0.1) {
+            if (!content.getSite().isDanbooru() && nbImages < content.getQtyPages() && Math.abs(nbImages - content.getQtyPages()) > content.getQtyPages() * 0.1) {
                 String errorMsg = String.format("The number of images found (%s) does not match the book's number of pages (%s)", nbImages, content.getQtyPages());
                 logErrorRecord(content.getId(), ErrorType.PARSING, content.getGalleryUrl(), "pages", errorMsg);
                 hasError = true;
