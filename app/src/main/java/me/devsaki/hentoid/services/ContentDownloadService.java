@@ -2,10 +2,6 @@ package me.devsaki.hentoid.services;
 
 import android.app.IntentService;
 import android.content.Intent;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
-import android.graphics.Rect;
 import android.os.IBinder;
 import android.os.SystemClock;
 import android.util.SparseIntArray;
@@ -26,7 +22,6 @@ import com.crashlytics.android.Crashlytics;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
-import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 
@@ -45,6 +40,10 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import io.reactivex.Single;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.CompositeDisposable;
+import io.reactivex.schedulers.Schedulers;
 import me.devsaki.hentoid.HentoidApp;
 import me.devsaki.hentoid.database.ObjectBoxDB;
 import me.devsaki.hentoid.database.domains.Content;
@@ -490,7 +489,7 @@ public class ContentDownloadService extends IntentService {
     private List<ImageFile> fetchImageURLs(Content content) throws Exception {
         List<ImageFile> imgs;
         // Use ImageListParser to query the source
-        ImageListParser parser = ContentParserFactory.getInstance().getImageListParser(content);
+        ImageListParser parser = ContentParserFactory.getInstance().getImageListParser(content.getSite());
         imgs = parser.parseImageList(content);
 
         if (imgs.isEmpty())

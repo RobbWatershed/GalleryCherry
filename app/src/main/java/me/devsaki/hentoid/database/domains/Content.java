@@ -19,7 +19,6 @@ import io.objectbox.annotation.Id;
 import io.objectbox.annotation.Transient;
 import io.objectbox.relation.ToMany;
 import me.devsaki.hentoid.activities.sources.BaseWebActivity;
-import me.devsaki.hentoid.activities.sources.DoujinsActivity;
 import me.devsaki.hentoid.activities.sources.HellpornoActivity;
 import me.devsaki.hentoid.activities.sources.JpegworldActivity;
 import me.devsaki.hentoid.activities.sources.Link2GalleriesActivity;
@@ -175,11 +174,6 @@ public class Content implements Serializable {
                 return parts[parts.length - 1];
             case JPEGWORLD:
                 return url.substring(url.lastIndexOf("-") + 1, url.lastIndexOf("."));
-            case DOUJINS:
-                // ID is the last numeric part of the URL
-                // e.g. lewd-title-ch-1-3-42116 -> 42116 is the ID
-                int lastIndex = url.lastIndexOf('-');
-                return url.substring(lastIndex + 1);
             default:
                 return "";
         }
@@ -207,8 +201,6 @@ public class Content implements Serializable {
                 return PornPicGalleriesActivity.class;
             case LINK2GALLERIES:
                 return Link2GalleriesActivity.class;
-            case DOUJINS:
-                return DoujinsActivity.class;
             default:
                 return BaseWebActivity.class;
         }
@@ -259,7 +251,6 @@ public class Content implements Serializable {
     public String getReaderUrl() {
         switch (site) {
             default:
-            case DOUJINS:
                 return getGalleryUrl();
         }
     }
@@ -399,8 +390,7 @@ public class Content implements Serializable {
         this.percent = percent;
     }
 
-    public void computePercent()
-    {
+    public void computePercent() {
         if (imageFiles != null && 0 == percent) {
             long progress = Stream.of(imageFiles).filter(i -> i.getStatus() == StatusContent.DOWNLOADED || i.getStatus() == StatusContent.ERROR).count();
             percent = progress * 100.0 / qtyPages;
@@ -530,7 +520,6 @@ public class Content implements Serializable {
     public void increaseNumberDownloadRetries() {
         this.numberDownloadRetries++;
     }
-
 
 
     @Override

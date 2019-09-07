@@ -30,6 +30,7 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -706,7 +707,8 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
                 if (useSingleOkHttpRequest()) {
                     // Response body bytestream needs to be duplicated
                     // because Jsoup closes it, which makes it unavailable for the WebView to use
-                    // List<InputStream> is = Helper.duplicateInputStream(response.body().byteStream(), 2);parserStream = is.get(0);
+                    List<InputStream> is = Helper.duplicateInputStream(response.body().byteStream(), 2);
+                    parserStream = is.get(0);
                     result = HttpHelper.okHttpResponseToWebResourceResponse(response, is.get(1));
                 } else {
                     parserStream = response.body().byteStream();
@@ -726,7 +728,7 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
                                         })
                 );
 
-                //return result;
+                return result;
             } catch (MalformedURLException e) {
                 Timber.e(e, "Malformed URL : %s", urlStr);
             } catch (IOException e) {
