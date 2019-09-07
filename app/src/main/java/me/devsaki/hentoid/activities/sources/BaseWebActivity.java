@@ -58,6 +58,7 @@ import me.devsaki.hentoid.activities.QueueActivity;
 import me.devsaki.hentoid.activities.bundles.BaseWebActivityBundle;
 import me.devsaki.hentoid.database.ObjectBoxDB;
 import me.devsaki.hentoid.database.domains.Content;
+import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.database.domains.QueueRecord;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
@@ -486,7 +487,7 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
         ));
 
         // Reddit has a single book that allows incremental downloads
-        if (isInCollection && getStartSite().isDanbooru()) isInCollection = false;
+        if (isInCollection && content.getSite().isDanbooru()) isInCollection = false;
 
         if (!isInCollection && !isInQueue) {
             if (null == contentDB) {    // The book has just been detected -> finalize before saving in DB
@@ -494,7 +495,18 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
                 content.populateAuthor();
                 db.insertContent(content);
             } else {
-                content = contentDB;
+                // Add new pages to current content and save them
+                if (content.getSite().isDanbooru()) {
+                    // Remove the images that are already contained in the Reddit book
+                    List<ImageFile> newImages = content.getImageFiles();
+                    List<ImageFile> existingImages = contentDB.getImageFiles();
+                    if (newImages != null && existingImages != null) {
+                        newImages.removeAll(existingImages);
+                        existingImages.addAll(newImages);
+                        contentDB.setImageFiles(existingImages);
+                        db.insertContent(contentDB);
+                    }
+                } else content = contentDB;
             }
             changeFabActionMode(MODE_DL);
         }
