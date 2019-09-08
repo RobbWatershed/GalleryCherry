@@ -43,6 +43,8 @@ public class PornPicsContent implements ContentParser {
         result.setUrl(theUrl.substring(galleryLocation));
         result.setTitle(title);
 
+        if (null == imageLinks || imageLinks.isEmpty()) return result.setStatus(StatusContent.IGNORED);
+
         AttributeMap attributes = new AttributeMap();
 
         if (models != null && models.size() > 1) {
