@@ -140,7 +140,7 @@
     </plurals>
     <string name="downloads_filter_clear">CLEAR</string>
     <string name="search_bookid_label">Search \'%s\' in…</string>
-    <string name="landing_history_title">Choose subreddit</string>
+    <string name="landing_history_title">Type or select subreddit</string>
 
     <string name="reset">Permissions has been reset.\nResetting app.</string>
     <string name="restart_needed">"Changes will be applied after GalleryCherry is restarted"</string>
