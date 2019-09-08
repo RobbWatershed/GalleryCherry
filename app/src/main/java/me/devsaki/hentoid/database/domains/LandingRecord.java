@@ -27,5 +27,5 @@ public class LandingRecord { // TODO serialize to JSON to keep between reinstall
         this.url = url;
     }
 
-    public static final Comparator<LandingRecord> DATE_COMPARATOR = (a, b) -> Long.compare(a.lastAccessDate, b.lastAccessDate);
+    public static final Comparator<LandingRecord> DATE_COMPARATOR_DESC = (a, b) -> -1 * Long.compare(a.lastAccessDate, b.lastAccessDate);
 }

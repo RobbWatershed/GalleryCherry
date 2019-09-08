@@ -25,12 +25,12 @@
         android:layout_height="wrap_content"
         android:background="@color/white_opacity_66"
         android:layout_marginTop="12dp"
-        android:ems="12"
+        android:ems="10"
         android:inputType="textUri"
         android:text=""
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/landing_history_title"
-        />
+        android:importantForAutofill="no" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/landing_history_list"

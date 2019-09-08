@@ -735,7 +735,7 @@ public class ObjectBoxDB {
     }
 
     public void insertLandingRecord(LandingRecord record) {
-        if (record.id > 0) store.boxFor(LandingRecord.class).put(record);
+        store.boxFor(LandingRecord.class).put(record);
     }
 
     @Nullable
@@ -746,7 +746,7 @@ public class ObjectBoxDB {
 
     @Nullable
     public List<LandingRecord> selectLandingRecords(@NonNull Site s) {
-        return store.boxFor(LandingRecord.class).query().equal(LandingRecord_.site, s.getCode()).sort(LandingRecord.DATE_COMPARATOR).build().find();
+        return store.boxFor(LandingRecord.class).query().equal(LandingRecord_.site, s.getCode()).sort(LandingRecord.DATE_COMPARATOR_DESC).build().find();
     }
 
     public void deleteAllLandingRecords()

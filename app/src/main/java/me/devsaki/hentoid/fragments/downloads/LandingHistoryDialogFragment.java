@@ -40,6 +40,8 @@ public class LandingHistoryDialogFragment extends DialogFragment {
     private static final String SITE = "SITE";
     private static final String LANDING_HISTORY = "LANDING_HISTORY";
 
+    private static final String DEFAULT_URL = "/r/nsfw"; // TODO make this generic
+
     private Site site;
     private FlexibleAdapter<TextItemFlex> adapter;
     private EditText input;
@@ -85,6 +87,9 @@ public class LandingHistoryDialogFragment extends DialogFragment {
                     .map(TextItemFlex::new)
                     .toList();
 
+            // Add default page if empty
+            if (items.isEmpty()) items.add(new TextItemFlex(DEFAULT_URL));
+
             adapter = new FlexibleAdapter<>(null);
             adapter.setMode(SelectableAdapter.Mode.SINGLE);
             adapter.addListener((FlexibleAdapter.OnItemClickListener) this::onItemClick);
@@ -97,6 +102,7 @@ public class LandingHistoryDialogFragment extends DialogFragment {
             okBtn.setOnClickListener(this::onOkClick);
 
             input = requireViewById(view, R.id.landing_history_input);
+            input.setText(DEFAULT_URL);
         }
     }
 
@@ -118,23 +124,26 @@ public class LandingHistoryDialogFragment extends DialogFragment {
         return true;
     }
 
-    private void recordUrlInDb(@NonNull String url)
-    {
+    private void recordUrlInDb(@NonNull String relativeUrl) {
         if (null == getActivity()) return;
 
         ObjectBoxDB db = ObjectBoxDB.getInstance(getActivity());
-        LandingRecord record = db.selectLandingRecord(site, url);
-        if (null == record) record = new LandingRecord(site, url);
+        LandingRecord record = db.selectLandingRecord(site, relativeUrl);
+        if (null == record) record = new LandingRecord(site, relativeUrl);
         record.lastAccessDate = new Date().getTime();
         db.insertLandingRecord(record);
     }
 
-    private void launchWebActivity(@NonNull String url) {
+    private void launchWebActivity(@NonNull String relativeUrl) {
         if (null == getActivity()) return;
+
+        String completeUrl = site.getUrl();
+        if (!completeUrl.endsWith("/") && !relativeUrl.startsWith("/")) completeUrl += "/";
+        completeUrl += relativeUrl;
 
         Content content = new Content();
         content.setSite(Site.REDDIT);
-        content.setUrl(url);
+        content.setUrl(completeUrl);
         ContentHelper.viewContent(getActivity(), content, true);
         this.dismiss();
     }

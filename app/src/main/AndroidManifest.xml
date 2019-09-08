@@ -73,6 +73,10 @@
             android:configChanges="orientation|screenSize"
             android:theme="@style/BrowserTheme" />
         <activity
+            android:name=".activities.sources.RedditLaunchActivity"
+            android:configChanges="orientation|screenSize"
+            android:theme="@style/AppTheme" />
+        <activity
             android:name=".activities.DownloadsActivity"
             android:configChanges="orientation|screenSize"
             android:label="@string/title_activity_downloads"
