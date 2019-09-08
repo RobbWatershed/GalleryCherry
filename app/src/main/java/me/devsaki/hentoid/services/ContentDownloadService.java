@@ -218,7 +218,6 @@ public class ContentDownloadService extends IntentService {
             images = new ArrayList<>();
         else
             images = new ArrayList<>(images); // Safe copy of the original list
-
         for (ImageFile img : images) if (img.getStatus().equals(StatusContent.ERROR)) nbErrors++;
 
         if (images.isEmpty()

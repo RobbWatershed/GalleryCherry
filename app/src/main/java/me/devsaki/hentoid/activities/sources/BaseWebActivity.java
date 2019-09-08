@@ -472,9 +472,7 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
             return;
         }
 
-        Timber.i("Content Site, URL : %s, %s", content.getSite().getCode(), content.getUrl());
         Content contentDB = db.selectContentBySourceAndUrl(content.getSite(), content.getUrl());
-        Timber.i(">>> Adding to DB content %s @ %s", content.getTitle(), content.getUrl());
 
         boolean isInCollection = (contentDB != null && (
                 contentDB.getStatus().equals(StatusContent.DOWNLOADED)
@@ -506,7 +504,8 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
                         contentDB.setImageFiles(existingImages);
                         db.insertContent(contentDB);
                     }
-                } else content = contentDB;
+                }
+                content = contentDB;
             }
             changeFabActionMode(MODE_DL);
         }
@@ -531,7 +530,7 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
      */
     class CustomWebViewClient extends WebViewClient {
 
-        protected final CompositeDisposable compositeDisposable = new CompositeDisposable();
+        final CompositeDisposable compositeDisposable = new CompositeDisposable();
         private final ByteArrayInputStream nothing = new ByteArrayInputStream("".getBytes());
         protected final ResultListener<Content> listener;
         private final Pattern filteredUrlPattern;
@@ -700,7 +699,7 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
             }
         }
 
-        protected WebResourceResponse parseResponse(@NonNull String urlStr, @Nullable Map<String, String> headers) {
+        WebResourceResponse parseResponse(@NonNull String urlStr, @Nullable Map<String, String> headers) {
 // Timber.i(">> parseResponse %s", urlStr);
             List<Pair<String, String>> headersList = new ArrayList<>();
             if (headers != null)
