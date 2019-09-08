@@ -1,11 +1,11 @@
 package me.devsaki.hentoid.fragments.downloads;
 
-import android.content.Intent;
+import android.content.Context;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.TextView;
+import android.widget.EditText;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -13,14 +13,23 @@ import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.annimon.stream.Stream;
+
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
+import eu.davidea.flexibleadapter.FlexibleAdapter;
+import eu.davidea.flexibleadapter.SelectableAdapter;
 import me.devsaki.hentoid.R;
-import me.devsaki.hentoid.activities.bundles.BaseWebActivityBundle;
-import me.devsaki.hentoid.adapters.SiteAdapter;
+import me.devsaki.hentoid.database.ObjectBoxDB;
 import me.devsaki.hentoid.database.domains.Content;
+import me.devsaki.hentoid.database.domains.LandingRecord;
 import me.devsaki.hentoid.enums.Site;
+import me.devsaki.hentoid.util.ContentHelper;
+import me.devsaki.hentoid.viewholders.TextItemFlex;
+
+import static androidx.core.view.ViewCompat.requireViewById;
 
 /**
  * Created by Robb on 09/2019
@@ -28,15 +37,25 @@ import me.devsaki.hentoid.enums.Site;
  */
 public class LandingHistoryDialogFragment extends DialogFragment {
 
-    private static final String ID = "ID";
-    private static final String FOUND_SITES = "FOUND_SITES";
+    private static final String SITE = "SITE";
+    private static final String LANDING_HISTORY = "LANDING_HISTORY";
 
-    private String bookId;
+    private Site site;
+    private FlexibleAdapter<TextItemFlex> adapter;
+    private EditText input;
 
-    public static void invoke(FragmentManager fragmentManager, String id, ArrayList<Integer> siteCodes) {
+
+    public static void invoke(FragmentManager fragmentManager, Site site, Context context) {
+        ObjectBoxDB db = ObjectBoxDB.getInstance(context);
+        List<LandingRecord> landingHistory = db.selectLandingRecords(site);
+
+        ArrayList<String> urlHistory = new ArrayList<>();
+        if (landingHistory != null)
+            for (LandingRecord r : landingHistory) urlHistory.add(r.url);
+
         Bundle args = new Bundle();
-        args.putString(ID, id);
-        args.putIntegerArrayList(FOUND_SITES, siteCodes);
+        args.putStringArrayList(LANDING_HISTORY, urlHistory);
+        args.putLong(SITE, site.getCode());
 
         LandingHistoryDialogFragment fragment = new LandingHistoryDialogFragment();
         fragment.setArguments(args);
@@ -47,7 +66,7 @@ public class LandingHistoryDialogFragment extends DialogFragment {
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedState) {
-        return inflater.inflate(R.layout.dialog_search_bookid, container, false);
+        return inflater.inflate(R.layout.dialog_landing_history, container, false);
     }
 
     @Override
@@ -55,49 +74,68 @@ public class LandingHistoryDialogFragment extends DialogFragment {
         super.onViewCreated(view, savedInstanceState);
 
         if (getArguments() != null) {
-            bookId = getArguments().getString(ID, "");
-            ArrayList<Integer> foundSitesList = getArguments().getIntegerArrayList(FOUND_SITES);
+            long siteCode = getArguments().getLong(SITE);
+            site = Site.searchByCode(siteCode);
 
-            TextView title = view.findViewById(R.id.search_bookid_title);
-            title.setText(getString(R.string.search_bookid_label, bookId));
+            List<String> foundSitesList = getArguments().getStringArrayList(LANDING_HISTORY);
+            if (null == foundSitesList)
+                throw new IllegalArgumentException("Landing history not found");
 
-            // Not possible for Pururin, e-hentai
-            List<Site> sites = new ArrayList<>();
-            if (foundSitesList != null) {
-//            if (!foundSitesList.contains(Site.TSUMINO.getCode())) sites.add(Site.TSUMINO);
-            }
+            List<TextItemFlex> items = Stream.of(foundSitesList)
+                    .map(TextItemFlex::new)
+                    .toList();
 
-            SiteAdapter siteAdapter = new SiteAdapter();
-            siteAdapter.setOnClickListener(this::onItemSelected);
-            siteAdapter.add(sites);
+            adapter = new FlexibleAdapter<>(null);
+            adapter.setMode(SelectableAdapter.Mode.SINGLE);
+            adapter.addListener((FlexibleAdapter.OnItemClickListener) this::onItemClick);
+            adapter.addItems(0, items);
 
-            RecyclerView sitesRecycler = view.findViewById(R.id.select_sites);
-            sitesRecycler.setAdapter(siteAdapter);
+            RecyclerView recyclerView = requireViewById(view, R.id.landing_history_list);
+            recyclerView.setAdapter(adapter);
+
+            View okBtn = requireViewById(view, R.id.landing_history_ok);
+            okBtn.setOnClickListener(this::onOkClick);
+
+            input = requireViewById(view, R.id.landing_history_input);
         }
     }
 
-    private static String getUrlFromId(Site site, String id) {
-        switch (site) {
-//            case TSUMINO:
-//                return site.getUrl() + "/Book/Info/" + id + "/";
-            default:
-                return site.getUrl();
-        }
+    private void onOkClick(View view) {
+        String url = input.getText().toString().trim();
+        // Remove spaces added around /'s by dumb phone keyboards
+        url = url.replace(" /", "/").replace("/ ", "/");
+
+        recordUrlInDb(url);
+        launchWebActivity(url);
     }
 
-    private void onItemSelected(View view) {
-        Site s = (Site) view.getTag();
+    private boolean onItemClick(View view, int position) {
+        TextItemFlex item = adapter.getItem(position);
+        if (null == item) return false;
 
-        if (s != null) {
-            Intent intent = new Intent(requireContext(), Content.getWebActivityClass(s));
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        recordUrlInDb(item.getCaption());
+        launchWebActivity(item.getCaption());
+        return true;
+    }
 
-            BaseWebActivityBundle.Builder builder = new BaseWebActivityBundle.Builder();
-            builder.setUrl(getUrlFromId(s, bookId));
-            intent.putExtras(builder.getBundle());
+    private void recordUrlInDb(@NonNull String url)
+    {
+        if (null == getActivity()) return;
 
-            requireContext().startActivity(intent);
-            this.dismiss();
-        }
+        ObjectBoxDB db = ObjectBoxDB.getInstance(getActivity());
+        LandingRecord record = db.selectLandingRecord(site, url);
+        if (null == record) record = new LandingRecord(site, url);
+        record.lastAccessDate = new Date().getTime();
+        db.insertLandingRecord(record);
+    }
+
+    private void launchWebActivity(@NonNull String url) {
+        if (null == getActivity()) return;
+
+        Content content = new Content();
+        content.setSite(Site.REDDIT);
+        content.setUrl(url);
+        ContentHelper.viewContent(getActivity(), content, true);
+        this.dismiss();
     }
 }

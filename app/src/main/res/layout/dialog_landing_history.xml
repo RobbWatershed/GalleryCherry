@@ -19,16 +19,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <TextView
-        android:id="@+id/landing_history_subtitle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/landing_history_subtitle"
-        android:textSize="@dimen/text_subtitle_1"
-        android:textStyle="bold"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/landing_history_title" />
-
     <EditText
         android:id="@+id/landing_history_input"
         android:layout_width="wrap_content"
@@ -39,7 +29,7 @@
         android:inputType="textUri"
         android:text=""
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/landing_history_subtitle"
+        app:layout_constraintTop_toBottomOf="@id/landing_history_title"
         />
 
     <androidx.recyclerview.widget.RecyclerView
@@ -62,16 +52,17 @@
         android:id="@+id/landing_history_ok"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
         android:background="?colorSecondary"
+        android:layout_marginStart="8dp"
         android:minWidth="0dp"
         android:minHeight="0dp"
-        android:paddingStart="24dp"
-        android:paddingTop="8dp"
-        android:paddingEnd="24dp"
-        android:paddingBottom="8dp"
+        android:paddingStart="16dp"
+        android:paddingTop="2dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="2dp"
         android:text="@android:string/ok"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/landing_history_list" />
+        app:layout_constraintStart_toEndOf="@id/landing_history_input"
+        app:layout_constraintTop_toTopOf="@id/landing_history_input"
+        app:layout_constraintBottom_toBottomOf="@id/landing_history_input"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

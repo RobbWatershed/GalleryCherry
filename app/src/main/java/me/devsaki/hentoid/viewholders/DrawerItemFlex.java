@@ -62,7 +62,7 @@ public class DrawerItemFlex extends AbstractFlexibleItem<DrawerItemFlex.DrawerIt
 
         DrawerItemViewHolder(View view, FlexibleAdapter adapter) {
             super(view, adapter);
-            title = view.findViewById(R.id.drawer_item_txt);
+            title = view.findViewById(R.id.item_txt);
             icon = view.findViewById(R.id.drawer_item_icon);
         }
 

@@ -3,6 +3,8 @@ package me.devsaki.hentoid.database;
 import android.content.Context;
 import android.util.SparseIntArray;
 
+import androidx.annotation.NonNull;
+
 import com.annimon.stream.Collectors;
 import com.annimon.stream.Stream;
 
@@ -737,13 +739,13 @@ public class ObjectBoxDB {
     }
 
     @Nullable
-    public LandingRecord selectLandingRecord(long id) {
-        if (id > 0) return store.boxFor(LandingRecord.class).get(id);
+    public LandingRecord selectLandingRecord(@NonNull Site site, @NonNull String url) {
+        if (!url.isEmpty()) return store.boxFor(LandingRecord.class).query().equal(LandingRecord_.url, url).equal(LandingRecord_.site, site.getCode()).build().findFirst();
         else return null;
     }
 
     @Nullable
-    public List<LandingRecord> selectLandingRecords(Site s) {
+    public List<LandingRecord> selectLandingRecords(@NonNull Site s) {
         return store.boxFor(LandingRecord.class).query().equal(LandingRecord_.site, s.getCode()).sort(LandingRecord.DATE_COMPARATOR).build().find();
     }
 

@@ -22,10 +22,9 @@ public class LandingRecord { // TODO serialize to JSON to keep between reinstall
     public LandingRecord() {
     }
 
-    public LandingRecord(Site site, String url, long accessDate) {
+    public LandingRecord(Site site, String url) {
         this.site = site;
         this.url = url;
-        this.lastAccessDate = accessDate;
     }
 
     public static final Comparator<LandingRecord> DATE_COMPARATOR = (a, b) -> Long.compare(a.lastAccessDate, b.lastAccessDate);
