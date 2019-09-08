@@ -144,6 +144,9 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
         universalBlockedContent.add("/nutaku/");
         universalBlockedContent.add("trafficjunky");
         universalBlockedContent.add("traffichaus");
+        universalBlockedContent.add("google-analytics.com");
+        universalBlockedContent.add("mc.yandex.ru");
+        universalBlockedContent.add("mc.webvisor.org");
     }
 
     protected abstract CustomWebViewClient getWebClient();
@@ -569,7 +572,7 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
         }
 
         private void hideActionFab() {
-// Timber.i(">> FAB HIDE");
+//Timber.i(">> FAB HIDE");
             fabAction.hide();
             fabActionEnabled = false;
         }
@@ -660,17 +663,18 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
             fabRefreshOrStop.show();
             fabHome.show();
             isPageLoading = true;
-// Timber.i(">> onPageStarted %s", url);
+//Timber.i(">> onPageStarted %s", url);
             if (!isHtmlLoaded) hideActionFab();
         }
 
         @Override
         public void onPageFinished(WebView view, String url) {
             isPageLoading = false;
-            isHtmlLoaded = false; // Reset for the next page
             setFabIcon(fabRefreshOrStop, R.drawable.ic_action_refresh);
             // Specific to Cherry : due to redirections, the correct page URLs are those visible from onPageFinished
-//            if (isPageFiltered(url)) parseResponse(url, null);
+//Timber.i(">> onPageFinished %s %s", isHtmlLoaded, url);
+            if (isPageFiltered(url) && !isHtmlLoaded) parseResponse(url, null);
+            isHtmlLoaded = false; // Reset for the next page
         }
 
         @Override
@@ -699,18 +703,19 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
         private WebResourceResponse shouldInterceptRequestInternal(@NonNull WebView view,
                                                                    @NonNull String url,
                                                                    @Nullable Map<String, String> headers) {
+Timber.i(">> SIR 0 %s %s", isPageLoading, url);
             if (isUrlForbidden(url)) {
                 return new WebResourceResponse("text/plain", "utf-8", nothing);
             } else {
-// Timber.i(">> SIR 1 %s %s", isPageLoading, url);
+//Timber.i(">> SIR 1 %s %s", isPageLoading, url);
                 if (/*!isPageLoading &&*/ isPageFiltered(url)) return parseResponse(url, headers);
-// Timber.i(">> SIR 2 %s %s", isPageLoading, url);
+//Timber.i(">> SIR 2 %s %s", isPageLoading, url);
                 return null;
             }
         }
 
         WebResourceResponse parseResponse(@NonNull String urlStr, @Nullable Map<String, String> headers) {
-// Timber.i(">> parseResponse %s", urlStr);
+//Timber.i(">> parseResponse %s", urlStr);
             List<Pair<String, String>> headersList = new ArrayList<>();
             if (headers != null)
                 for (String key : headers.keySet())
@@ -762,10 +767,10 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
         }
 
         void processContent(@Nonnull Content content, @Nonnull List<Pair<String, String>> headersList) {
-// Timber.i(">> processContent 1");
+//Timber.i(">> processContent 1");
             if (content.getStatus() != null && content.getStatus().equals(StatusContent.IGNORED))
                 return;
-// Timber.i(">> processContent 2");
+//Timber.i(">> processContent 2");
 
             content.setSite(getStartSite()); // useful for smart content parser who doesn't know that
 
