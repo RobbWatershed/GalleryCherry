@@ -147,6 +147,7 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
         universalBlockedContent.add("google-analytics.com");
         universalBlockedContent.add("mc.yandex.ru");
         universalBlockedContent.add("mc.webvisor.org");
+        universalBlockedContent.add("scorecardresearch.com");
     }
 
     protected abstract CustomWebViewClient getWebClient();
@@ -703,7 +704,7 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
         private WebResourceResponse shouldInterceptRequestInternal(@NonNull WebView view,
                                                                    @NonNull String url,
                                                                    @Nullable Map<String, String> headers) {
-Timber.i(">> SIR 0 %s %s", isPageLoading, url);
+//Timber.i(">> SIR 0 %s %s", isPageLoading, url);
             if (isUrlForbidden(url)) {
                 return new WebResourceResponse("text/plain", "utf-8", nothing);
             } else {
