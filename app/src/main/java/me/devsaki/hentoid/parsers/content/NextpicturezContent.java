@@ -34,6 +34,8 @@ public class NextpicturezContent implements ContentParser {
         result.setUrl(theUrl.substring(galleryLocation));
         result.setTitle(title);
 
+        if (null == imageLinks || imageLinks.isEmpty()) return result.setStatus(StatusContent.IGNORED);
+
         AttributeMap attributes = new AttributeMap();
         result.addAttributes(attributes);
 
