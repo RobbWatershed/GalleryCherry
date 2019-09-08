@@ -511,6 +511,7 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
 
                         existingImages.addAll(newImages);
                         contentDB.setImageFiles(existingImages);
+                        contentDB.setQtyPages(existingImages.size());
                         db.insertContent(contentDB);
                     }
                 }
