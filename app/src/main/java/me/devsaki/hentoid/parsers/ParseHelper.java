@@ -5,7 +5,6 @@ import org.jsoup.nodes.Element;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 import javax.annotation.Nonnull;
 
@@ -47,11 +46,11 @@ public class ParseHelper {
         map.add(attribute);
     }
 
-    static ImageFile urlToImageFile(@Nonnull String imgUrl, int order) {
+    private static ImageFile urlToImageFile(@Nonnull String imgUrl, int order) {
         ImageFile result = new ImageFile();
 
-        String name = String.format(Locale.US, "%03d", order);
-        result.setName(name).setOrder(order).setUrl(imgUrl).setStatus(StatusContent.ONLINE);
+        result.setOrder(order).setUrl(imgUrl).setStatus(StatusContent.ONLINE);
+        result.computeNameFromOrder();
 
         return result;
     }

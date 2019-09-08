@@ -2,6 +2,7 @@ package me.devsaki.hentoid.database.domains;
 
 import com.google.gson.annotations.Expose;
 
+import java.util.Comparator;
 import java.util.Locale;
 import java.util.Objects;
 
@@ -61,7 +62,7 @@ public class ImageFile {
 
     public ImageFile(int order, String url, StatusContent status) {
         this.order = order;
-        this.name = String.format(Locale.US, "%03d", order);
+        computeNameFromOrder();
         this.url = url;
         this.status = status;
         this.favourite = false;
@@ -100,6 +101,11 @@ public class ImageFile {
     public ImageFile setName(String name) {
         this.name = name;
         return this;
+    }
+
+    public void computeNameFromOrder()
+    {
+        name = String.format(Locale.US, "%03d", order);
     }
 
     public StatusContent getStatus() {
@@ -160,6 +166,8 @@ public class ImageFile {
         this.mimeType = mimeType;
     }
 
+
+    public static final Comparator<ImageFile> ORDER_COMPARATOR = (a, b) -> a.getOrder().compareTo(b.getOrder());
 
     @Override
     public boolean equals(Object o) {

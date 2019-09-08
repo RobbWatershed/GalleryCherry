@@ -26,6 +26,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
+import com.annimon.stream.Stream;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import java.io.ByteArrayInputStream;
@@ -493,13 +494,21 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
                 content.populateAuthor();
                 db.insertContent(content);
             } else {
-                // Add new pages to current content and save them
+                // Add new pages to current content with a proper index, and save them
                 if (content.getSite().isDanbooru()) {
-                    // Remove the images that are already contained in the Reddit book
+                    // Remove the images that are already contained in the central booru book
                     List<ImageFile> newImages = content.getImageFiles();
                     List<ImageFile> existingImages = contentDB.getImageFiles();
                     if (newImages != null && existingImages != null) {
                         newImages.removeAll(existingImages);
+                        // Reindex new images according to their future position in the existing album
+                        int maxOrder = Stream.of(existingImages).max(ImageFile.ORDER_COMPARATOR).mapToInt(ImageFile::getOrder).getAsInt();
+                        for (ImageFile img : newImages)
+                        {
+                            img.setOrder(++maxOrder);
+                            img.computeNameFromOrder();
+                        }
+
                         existingImages.addAll(newImages);
                         contentDB.setImageFiles(existingImages);
                         db.insertContent(contentDB);
