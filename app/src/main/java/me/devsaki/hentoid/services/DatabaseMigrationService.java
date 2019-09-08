@@ -96,6 +96,7 @@ public class DatabaseMigrationService extends IntentService {
         ObjectBoxDB db = ObjectBoxDB.getInstance(context);
         db.deleteAllBooks();
         db.deleteAllQueue();
+        db.deleteAllLandingRecords();
     }
 
     /**

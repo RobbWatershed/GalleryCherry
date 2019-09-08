@@ -31,6 +31,8 @@ import me.devsaki.hentoid.database.domains.ErrorRecord;
 import me.devsaki.hentoid.database.domains.ErrorRecord_;
 import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.database.domains.ImageFile_;
+import me.devsaki.hentoid.database.domains.LandingRecord;
+import me.devsaki.hentoid.database.domains.LandingRecord_;
 import me.devsaki.hentoid.database.domains.MyObjectBox;
 import me.devsaki.hentoid.database.domains.QueueRecord;
 import me.devsaki.hentoid.database.domains.QueueRecord_;
@@ -324,8 +326,8 @@ public class ObjectBoxDB {
 
         boolean hasTitleFilter = (title != null && title.length() > 0);
         boolean hasSiteFilter = metadataMap.containsKey(AttributeType.SOURCE)
-                                && (metadataMap.get(AttributeType.SOURCE) != null)
-                                && !(metadataMap.get(AttributeType.SOURCE).isEmpty());
+                && (metadataMap.get(AttributeType.SOURCE) != null)
+                && !(metadataMap.get(AttributeType.SOURCE).isEmpty());
         boolean hasTagFilter = metadataMap.keySet().size() > (hasSiteFilter ? 1 : 0);
 
         QueryBuilder<Content> query = store.boxFor(Content.class).query();
@@ -728,5 +730,25 @@ public class ObjectBoxDB {
     public ImageFile selectImageFile(long id) {
         if (id > 0) return store.boxFor(ImageFile.class).get(id);
         else return null;
+    }
+
+    public void insertLandingRecord(LandingRecord record) {
+        if (record.id > 0) store.boxFor(LandingRecord.class).put(record);
+    }
+
+    @Nullable
+    public LandingRecord selectLandingRecord(long id) {
+        if (id > 0) return store.boxFor(LandingRecord.class).get(id);
+        else return null;
+    }
+
+    @Nullable
+    public List<LandingRecord> selectLandingRecords(Site s) {
+        return store.boxFor(LandingRecord.class).query().equal(LandingRecord_.site, s.getCode()).sort(LandingRecord.DATE_COMPARATOR).build().find();
+    }
+
+    public void deleteAllLandingRecords()
+    {
+        store.boxFor(LandingRecord.class).removeAll();
     }
 }
