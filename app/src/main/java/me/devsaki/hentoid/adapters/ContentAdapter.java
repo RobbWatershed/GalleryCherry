@@ -2,14 +2,13 @@ package me.devsaki.hentoid.adapters;
 
 import android.content.Context;
 import android.content.Intent;
-import android.os.SystemClock;
+import android.os.Build;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.recyclerview.widget.SortedList;
 import androidx.recyclerview.widget.SortedListAdapterCallback;
@@ -34,6 +33,7 @@ import io.reactivex.Single;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.schedulers.Schedulers;
+import me.devsaki.hentoid.HentoidApp;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.abstracts.DownloadsFragment;
 import me.devsaki.hentoid.activities.QueueActivity;
@@ -145,12 +145,11 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
     @NonNull
     @Override
     public ContentHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        long clicks = SystemClock.elapsedRealtime();
+//        long clicks = SystemClock.elapsedRealtime();
         LayoutInflater inflater = LayoutInflater.from(parent.getContext());
         View view = inflater.inflate(R.layout.item_download, parent, false);
-        ContentHolder holder = new ContentHolder(view);
-        Timber.i(">CreateViewHolder %ss", (SystemClock.elapsedRealtime() - clicks) / 1000.0);
-        return holder;
+//        Timber.i(">CreateViewHolder %ss", (SystemClock.elapsedRealtime() - clicks) / 1000.0);
+        return new ContentHolder(view);
     }
 
     @Override
@@ -163,24 +162,33 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
      */
     @Override
     public void onBindViewHolder(@NonNull ContentHolder holder, final int pos) {
-        long clicks = SystemClock.elapsedRealtime();
+//        long clicks = SystemClock.elapsedRealtime();
         Content content = mSortedList.get(pos);
 
         updateLayoutVisibility(holder, content, pos);
+        attachCover(holder, content);
         attachTitle(holder, content);
         attachSeries(holder, content);
         attachArtist(holder, content);
         attachTags(holder, content);
         attachButtons(holder, content);
+        attachSource(holder, content);
         attachOnClickListeners(holder, content, pos);
-        Timber.i(">BindViewHolder[%s] %ss", pos, (SystemClock.elapsedRealtime() - clicks) / 1000.0);
+        holder.ivNew.setVisibility((0 == content.getReads()) ? View.VISIBLE : View.GONE);
+//        Timber.i(">BindViewHolder[%s] %ss", pos, (SystemClock.elapsedRealtime() - clicks) / 1000.0);
     }
 
     @Override
     public void onViewRecycled(@NonNull ContentHolder holder) {
         RequestManager requestManager = Glide.with(context.getApplicationContext());
-        requestManager.clear(holder.ivCover2);
         requestManager.clear(holder.ivCover);
+    }
+
+    private void attachCover(ContentHolder holder, Content content) {
+        Glide.with(context.getApplicationContext())
+                .load(ContentHelper.getThumb(content))
+                .apply(glideRequestOptions)
+                .into(holder.ivCover);
     }
 
     private void updateLayoutVisibility(ContentHolder holder, Content content, int pos) {
@@ -193,26 +201,18 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
         if (holder.itemView.isSelected()) {
             Timber.d("Position: %s %s is a selected item currently in view.", pos, content.getTitle());
 
-            holder.fullLayout.setVisibility(View.GONE);
-            holder.miniLayout.setVisibility(View.VISIBLE);
-
-            Glide.with(context.getApplicationContext())
-                    .load(ContentHelper.getThumb(content))
-                    .apply(glideRequestOptions)
-                    .into(holder.ivCover2);
+            holder.ivError.setEnabled(false);
+            holder.ivFavourite.setEnabled(false);
+            holder.ivSite.setEnabled(false);
         } else {
-            holder.fullLayout.setVisibility(View.VISIBLE);
-            holder.miniLayout.setVisibility(View.GONE);
-
-            Glide.with(context.getApplicationContext())
-                    .load(ContentHelper.getThumb(content))
-                    .apply(glideRequestOptions)
-                    .into(holder.ivCover);
+            holder.ivError.setEnabled(true);
+            holder.ivFavourite.setEnabled(true);
+            holder.ivSite.setEnabled(true);
         }
 
         if (content.isBeingDeleted()) {
             BlinkAnimation animation = new BlinkAnimation(500, 250);
-            holder.fullLayout.startAnimation(animation);
+            holder.baseLayout.startAnimation(animation);
         }
     }
 
@@ -223,22 +223,16 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
         } else {
             title = content.getTitle();
         }
-
         holder.tvTitle.setText(title);
-        if (holder.itemView.isSelected()) {
-            holder.tvTitle2.setText(title);
-        }
-
-        holder.ivNew.setVisibility((0 == content.getReads()) ? View.VISIBLE : View.GONE);
     }
 
     private void attachSeries(ContentHolder holder, Content content) {
         String templateSeries = context.getResources().getString(R.string.work_series);
-        StringBuilder seriesBuilder = new StringBuilder();
         List<Attribute> seriesAttributes = content.getAttributeMap().get(AttributeType.SERIE);
         if (seriesAttributes == null) {
-            holder.tvSeries.setVisibility(View.GONE);
+            holder.tvSeries.setText(templateSeries.replace("@series@", context.getResources().getString(R.string.work_untitled)));
         } else {
+            StringBuilder seriesBuilder = new StringBuilder();
             for (int i = 0; i < seriesAttributes.size(); i++) {
                 Attribute attribute = seriesAttributes.get(i);
                 seriesBuilder.append(attribute.getName());
@@ -246,61 +240,51 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
                     seriesBuilder.append(", ");
                 }
             }
-            holder.tvSeries.setVisibility(View.VISIBLE);
-        }
-        holder.tvSeries.setText(templateSeries.replace("@series@", seriesBuilder.toString()));
-
-        if (seriesAttributes == null) {
-            holder.tvSeries.setVisibility(View.GONE);
+            holder.tvSeries.setText(templateSeries.replace("@series@", seriesBuilder));
         }
     }
 
     private void attachArtist(ContentHolder holder, Content content) {
         String templateArtist = context.getResources().getString(R.string.work_artist);
-        StringBuilder artistsBuilder = new StringBuilder();
         List<Attribute> attributes = new ArrayList<>();
+
         List<Attribute> artistAttributes = content.getAttributeMap().get(AttributeType.ARTIST);
-        if (artistAttributes != null) attributes.addAll(artistAttributes);
+        if (artistAttributes != null)
+            attributes.addAll(artistAttributes);
         List<Attribute> circleAttributes = content.getAttributeMap().get(AttributeType.CIRCLE);
-        if (circleAttributes != null) attributes.addAll(circleAttributes);
+        if (circleAttributes != null)
+            attributes.addAll(circleAttributes);
 
         if (attributes.isEmpty()) {
-            holder.tvArtist.setVisibility(View.GONE);
+            holder.tvArtist.setText(templateArtist.replace("@artist@", context.getResources().getString(R.string.work_untitled)));
         } else {
-            boolean first = true;
+            List<String> allArtists = new ArrayList<>();
             for (Attribute attribute : attributes) {
-                if (first) first = false;
-                else artistsBuilder.append(", ");
-                artistsBuilder.append(attribute.getName());
+                allArtists.add(attribute.getName());
             }
-            holder.tvArtist.setVisibility(View.VISIBLE);
-        }
-        holder.tvArtist.setText(templateArtist.replace("@artist@", artistsBuilder.toString()));
-
-        if (attributes.isEmpty()) {
-            holder.tvArtist.setVisibility(View.GONE);
+            String artists = android.text.TextUtils.join(",", allArtists);
+            holder.tvArtist.setText(templateArtist.replace("@artist@", artists));
         }
     }
 
     private void attachTags(ContentHolder holder, Content content) {
-        StringBuilder tagsBuilder = new StringBuilder();
         List<Attribute> tagsAttributes = content.getAttributeMap().get(AttributeType.TAG);
-        if (tagsAttributes != null) {
-            for (int i = 0; i < tagsAttributes.size(); i++) {
-                Attribute attribute = tagsAttributes.get(i);
-                if (attribute.getName() != null) {
-                    tagsBuilder.append(attribute.getName());
-                    if (i != tagsAttributes.size() - 1) {
-                        tagsBuilder.append(", ");
-                    }
-                }
+        if (tagsAttributes == null) {
+            holder.tvTags.setText(context.getResources().getString(R.string.work_untitled));
+        } else {
+            List<String> allTags = new ArrayList<>();
+            for (Attribute attribute : tagsAttributes) {
+                allTags.add(attribute.getName());
             }
+            if (Build.VERSION.SDK_INT >= 24) {
+                allTags.sort(null);
+            }
+            String tags = android.text.TextUtils.join(", ", allTags);
+            holder.tvTags.setText(tags);
         }
-        holder.tvTags.setText(tagsBuilder.toString());
     }
 
-    private void attachButtons(ContentHolder holder, final Content content) {
-        // Set source icon
+    private void attachSource(ContentHolder holder, Content content) {
         if (content.getSite() != null) {
             int img = content.getSite().getIco();
             holder.ivSite.setImageResource(img);
@@ -314,48 +298,50 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
         } else {
             holder.ivSite.setImageResource(R.drawable.ic_cherry_icon);
         }
+    }
 
-        // Set source color
-        if (content.getStatus() != null) {
-            StatusContent status = content.getStatus();
-            holder.ivSite.setBackgroundColor(ContextCompat.getColor(context, R.color.primary));
-            holder.ivFavourite.setVisibility((DownloadsFragment.MODE_LIBRARY == displayMode) ? View.VISIBLE : View.GONE);
-            holder.ivDownload.setVisibility((DownloadsFragment.MODE_MIKAN == displayMode) ? View.VISIBLE : View.GONE);
+    private void attachButtons(ContentHolder holder, final Content content) {
 
-            if (DownloadsFragment.MODE_LIBRARY == displayMode) {
-                // Favourite toggle
-                if (content.isFavourite()) {
-                    holder.ivFavourite.setImageResource(R.drawable.ic_fav_full);
-                } else {
-                    holder.ivFavourite.setImageResource(R.drawable.ic_fav_empty);
+        //Set exclusive icons
+        holder.ivFavourite.setVisibility((DownloadsFragment.MODE_LIBRARY == displayMode) ? View.VISIBLE : View.GONE);
+        holder.ivDownload.setVisibility((DownloadsFragment.MODE_MIKAN == displayMode) ? View.VISIBLE : View.GONE);
+
+        //Set buttons
+        if (DownloadsFragment.MODE_LIBRARY == displayMode) {
+            // Favourite toggle
+            if (content.isFavourite()) {
+                holder.ivFavourite.setImageResource(R.drawable.ic_fav_full);
+            } else {
+                holder.ivFavourite.setImageResource(R.drawable.ic_fav_empty);
+            }
+            holder.ivFavourite.setOnClickListener(v -> {
+                if (getSelectedItemsCount() > 0) {
+                    clearSelections();
+                    itemSelectListener.onItemClear(0);
                 }
-                holder.ivFavourite.setOnClickListener(v -> {
-                    if (getSelectedItemsCount() > 0) {
-                        clearSelections();
-                        itemSelectListener.onItemClear(0);
-                    }
 
-                    compositeDisposable.add(
-                            Single.fromCallable(() -> toggleFavourite(context, content.getId()))
-                                    .subscribeOn(Schedulers.io())
-                                    .observeOn(AndroidSchedulers.mainThread())
-                                    .subscribe(
-                                            result -> {
-                                                content.setFavourite(result.isFavourite());
-                                                if (result.isFavourite()) {
-                                                    holder.ivFavourite.setImageResource(R.drawable.ic_fav_full);
-                                                } else {
-                                                    holder.ivFavourite.setImageResource(R.drawable.ic_fav_empty);
-                                                }
-                                            },
-                                            Timber::e
-                                    )
-                    );
-                });
+                compositeDisposable.add(
+                        Single.fromCallable(() -> toggleFavourite(context, content.getId()))
+                                .subscribeOn(Schedulers.io())
+                                .observeOn(AndroidSchedulers.mainThread())
+                                .subscribe(
+                                        result -> {
+                                            content.setFavourite(result.isFavourite());
+                                            if (result.isFavourite()) {
+                                                holder.ivFavourite.setImageResource(R.drawable.ic_fav_full);
+                                            } else {
+                                                holder.ivFavourite.setImageResource(R.drawable.ic_fav_empty);
+                                            }
+                                        },
+                                        Timber::e
+                                )
+                );
+            });
 
-                // Error icon
+            // Error icon
+            if (content.getStatus() != null) {
+                StatusContent status = content.getStatus();
                 if (status == StatusContent.ERROR) {
-                    holder.ivError.setVisibility(View.VISIBLE);
                     holder.ivError.setOnClickListener(v -> {
                         if (getSelectedItemsCount() > 0) {
                             clearSelections();
@@ -363,11 +349,14 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
                         }
                         downloadAgain(content);
                     });
+                    holder.ivError.setVisibility(View.VISIBLE);
                 } else {
                     holder.ivError.setVisibility(View.GONE);
                 }
-            } else { // Mikan mode
-
+            }
+        } else { // Mikan mode
+            if (content.getStatus() != null) {
+                StatusContent status = content.getStatus();
                 // "Available online" icon
                 if (status == StatusContent.ONLINE) {
                     holder.ivDownload.setImageResource(R.drawable.ic_action_download);
@@ -385,9 +374,6 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
                     holder.ivDownload.setOnClickListener(v -> openBookAction.accept(content));
                 }
             }
-
-        } else {
-            holder.ivSite.setVisibility(View.GONE);
         }
     }
 
@@ -727,10 +713,6 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
     }
 
     private void deleteItems(final List<Content> contents) {
-        // Logging -- TODO remove when "no content found" issue is resolved
-        StringBuilder sb = new StringBuilder();
-        for (Content c : contents) sb.append(c.getId()).append(",");
-
         for (Content c : contents) {
             // Flag it to make it unselectable
             c.setIsBeingDeleted(true);
@@ -755,17 +737,22 @@ public class ContentAdapter extends RecyclerView.Adapter<ContentHolder> implemen
     }
 
     private Content deleteContent(final Content content) throws ContentNotRemovedException {
-        // Check if given content still exists in DB
-        ObjectBoxDB db = ObjectBoxDB.getInstance(context);
-        Content theContent = db.selectContentById(content.getId());
+        try {
+            // Check if given content still exists in DB
+            ObjectBoxDB db = ObjectBoxDB.getInstance(HentoidApp.getAppContext());
+            Content theContent = db.selectContentById(content.getId());
 
-        if (theContent != null) {
-            ContentHelper.removeContent(content);
-            db.deleteContent(content);
-            Timber.d("Removed item: %s from db and file system.", content.getTitle());
-            return content;
+            if (theContent != null) {
+                ContentHelper.removeContent(content);
+                db.deleteContent(content);
+                Timber.d("Removed item: %s from db and file system.", content.getTitle());
+                return content;
+            }
+            throw new ContentNotRemovedException(content, "ContentId " + content.getId() + " does not refer to a valid content");
+        } catch (Exception e) {
+            Timber.e(e, "Error when trying to delete %s", content.getId());
+            throw new ContentNotRemovedException(content, "Error when trying to delete " + content.getId() + " : " + e.getMessage());
         }
-        throw new ContentNotRemovedException(content, "ContentId " + content.getId() + " does not refer to a valid content");
     }
 
     private void onContentRemoveFail(Throwable t) {

@@ -2,6 +2,7 @@ package me.devsaki.hentoid.services;
 
 import android.app.IntentService;
 import android.content.Intent;
+import android.os.Build;
 import android.os.IBinder;
 import android.os.SystemClock;
 import android.util.SparseIntArray;
@@ -65,7 +66,9 @@ import me.devsaki.hentoid.util.FileHelper;
 import me.devsaki.hentoid.util.HttpHelper;
 import me.devsaki.hentoid.util.JsonHelper;
 import me.devsaki.hentoid.util.Preferences;
+import me.devsaki.hentoid.util.exception.EmptyResultException;
 import me.devsaki.hentoid.util.exception.LimitReachedException;
+import me.devsaki.hentoid.util.exception.PreparationInterruptedException;
 import me.devsaki.hentoid.util.notification.NotificationManager;
 import me.devsaki.hentoid.util.notification.ServiceNotificationManager;
 import timber.log.Timber;
@@ -95,6 +98,26 @@ public class ContentDownloadService extends IntentService {
         super(ContentDownloadService.class.getName());
     }
 
+    // Fix attempt for #349 : https://stackoverflow.com/questions/55894636/android-9-pie-context-startforegroundservice-did-not-then-call-service-star?rq=1
+    private void prepareAndStartForeground() {
+        Intent intent = new Intent(Intent.ACTION_SYNC, null, this, ContentDownloadService.class);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            this.startForegroundService(intent);
+        } else {
+            this.startService(intent);
+        }
+        notifyStart();
+    }
+
+    private void notifyStart() {
+        notificationManager = new ServiceNotificationManager(this, 1);
+        notificationManager.cancel();
+        notificationManager.startForeground(new DownloadProgressNotification("Starting download", 0, 0));
+
+        warningNotificationManager = new NotificationManager(this, 2);
+        warningNotificationManager.cancel();
+    }
 
     // Only called once when processing multiple downloads; will be only called
     // if the entire queue is paused (=service destroyed), then resumed (service re-created)
@@ -102,12 +125,8 @@ public class ContentDownloadService extends IntentService {
     public void onCreate() {
         creationTicks = SystemClock.elapsedRealtime();
         super.onCreate();
-        notificationManager = new ServiceNotificationManager(this, 1);
-        notificationManager.cancel();
-        notificationManager.startForeground(new DownloadProgressNotification("Starting download", 0, 0));
 
-        warningNotificationManager = new NotificationManager(this, 2);
-        warningNotificationManager.cancel();
+        notifyStart();
 
         EventBus.getDefault().register(this);
 
@@ -137,7 +156,12 @@ public class ContentDownloadService extends IntentService {
     @Override
     protected void onHandleIntent(Intent intent) {
         Timber.d("New intent processed");
-        notificationManager.startForeground(new DownloadProgressNotification("Starting download", 0, 0));
+
+        // TODO remove when issue #349 fixed
+        double ticks = (SystemClock.elapsedRealtime() - creationTicks) / 1000.0;
+        Crashlytics.log("New intent processed at (s) " + String.format(Locale.US, "%.2f", ticks));
+
+        notifyStart();
 
         Content content = downloadFirstInQueue();
         if (content != null) watchProgress(content);
@@ -154,8 +178,12 @@ public class ContentDownloadService extends IntentService {
 
     @Override
     public boolean onUnbind(Intent intent) {
-        if (notificationManager != null)
-            notificationManager.startForeground(new DownloadProgressNotification("Starting download", 0, 0)); // <- show notification again
+
+        // TODO remove when issue #349 fixed
+        double ticks = (SystemClock.elapsedRealtime() - creationTicks) / 1000.0;
+        Crashlytics.log("Unbind at (s) " + String.format(Locale.US, "%.2f", ticks));
+
+        prepareAndStartForeground(); // <- show notification again
         return true;
     }
 
@@ -249,6 +277,13 @@ public class ContentDownloadService extends IntentService {
             } catch (LimitReachedException lre) {
                 Timber.w(lre, "The bandwidth limit has been reached while parsing %s. Aborting download.", content.getTitle());
                 logErrorRecord(content.getId(), ErrorType.SITE_LIMIT, content.getUrl(), "Image list", lre.getMessage());
+                hasError = true;
+            } catch (PreparationInterruptedException ie) {
+                Timber.i(ie, "Preparation of %s interrupted", content.getTitle());
+                // not an error
+            } catch (EmptyResultException ere) {
+                Timber.w(ere, "No images have been found while parsing %s. Aborting download.", content.getTitle());
+                logErrorRecord(content.getId(), ErrorType.PARSING, content.getUrl(), "Image list", "No images have been found");
                 hasError = true;
             } catch (Exception e) {
                 Timber.w(e, "An exception has occurred while parsing %s. Aborting download.", content.getTitle());
@@ -491,8 +526,7 @@ public class ContentDownloadService extends IntentService {
         ImageListParser parser = ContentParserFactory.getInstance().getImageListParser(content.getSite());
         imgs = parser.parseImageList(content);
 
-        if (imgs.isEmpty())
-            throw new Exception("An empty image list has been found while parsing " + content.getGalleryUrl());
+        if (imgs.isEmpty()) throw new EmptyResultException();
 
         for (ImageFile img : imgs) img.setStatus(StatusContent.SAVED);
         return imgs;

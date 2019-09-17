@@ -1,9 +1,10 @@
 package me.devsaki.hentoid.adapters;
 
-import androidx.recyclerview.widget.RecyclerView;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
+
+import androidx.recyclerview.widget.RecyclerView;
 
 import me.devsaki.hentoid.R;
 
@@ -15,13 +16,10 @@ import me.devsaki.hentoid.R;
  */
 class ContentHolder extends RecyclerView.ViewHolder {
 
-    final View fullLayout;
-    final View miniLayout;
+    final View baseLayout;
     final TextView tvTitle;
-    final TextView tvTitle2;
-    final ImageView ivNew;
+    final View ivNew;
     final ImageView ivCover;
-    final ImageView ivCover2;
     final TextView tvSeries;
     final TextView tvArtist;
     final TextView tvTags;
@@ -32,14 +30,10 @@ class ContentHolder extends RecyclerView.ViewHolder {
 
     ContentHolder(final View itemView) {
         super(itemView);
-
-        fullLayout = itemView.findViewById(R.id.item);
-        miniLayout = itemView.findViewById(R.id.item_minimal);
+        baseLayout = itemView.findViewById(R.id.item);
         tvTitle = itemView.findViewById(R.id.tvTitle);
-        ivNew = itemView.findViewById(R.id.iconNew);
-        tvTitle2 = itemView.findViewById(R.id.tvTitle2);
+        ivNew = itemView.findViewById(R.id.lineNew);
         ivCover = itemView.findViewById(R.id.ivCover);
-        ivCover2 = itemView.findViewById(R.id.ivCover2);
         tvSeries = itemView.findViewById(R.id.tvSeries);
         tvArtist = itemView.findViewById(R.id.tvArtist);
         tvTags = itemView.findViewById(R.id.tvTags);

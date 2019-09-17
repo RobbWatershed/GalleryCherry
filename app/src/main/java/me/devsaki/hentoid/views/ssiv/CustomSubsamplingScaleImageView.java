@@ -477,11 +477,6 @@ public class CustomSubsamplingScaleImageView extends View {
      * @param state         State to be restored. Nullable.
      */
     public final void setImage(@NonNull ImageSource imageSource, ImageSource previewSource, ImageViewState state) {
-        //noinspection ConstantConditions
-        if (imageSource == null) {
-            throw new NullPointerException("imageSource must not be null");
-        }
-
         reset(true);
         if (state != null) {
             restoreState(state);
@@ -611,8 +606,8 @@ public class CustomSubsamplingScaleImageView extends View {
             public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
                 if (panEnabled && readySent && vTranslate != null && e1 != null && e2 != null && (Math.abs(e1.getX() - e2.getX()) > 50 || Math.abs(e1.getY() - e2.getY()) > 50) && (Math.abs(velocityX) > 500 || Math.abs(velocityY) > 500) && !isZooming) {
                     PointF vTranslateEnd = new PointF(vTranslate.x + (velocityX * 0.25f), vTranslate.y + (velocityY * 0.25f));
-                    float sCenterXEnd = ((getWidthInternal() / 2) - vTranslateEnd.x) / scale;
-                    float sCenterYEnd = ((getHeightInternal() / 2) - vTranslateEnd.y) / scale;
+                    float sCenterXEnd = ((getWidthInternal() / 2f) - vTranslateEnd.x) / scale;
+                    float sCenterYEnd = ((getHeightInternal() / 2f) - vTranslateEnd.y) / scale;
                     new AnimationBuilder(new PointF(sCenterXEnd, sCenterYEnd)).withEasing(EASE_OUT_QUAD).withPanLimited(false).withOrigin(ORIGIN_FLING).start();
                     return true;
                 }
@@ -641,6 +636,9 @@ public class CustomSubsamplingScaleImageView extends View {
                         isZooming = true;
                         quickScaleLastDistance = -1F;
                         quickScaleSCenter = viewToSourceCoord(vCenterStart);
+                        if (null == quickScaleSCenter)
+                            throw new IllegalStateException("vTranslate is null; aborting");
+
                         quickScaleVStart = new PointF(e.getX(), e.getY());
                         quickScaleVLastPoint = new PointF(quickScaleSCenter.x, quickScaleSCenter.y);
                         quickScaleMoved = false;
@@ -648,7 +646,11 @@ public class CustomSubsamplingScaleImageView extends View {
                         return false;
                     } else {
                         // Start double tap zoom animation.
-                        doubleTapZoom(viewToSourceCoord(new PointF(e.getX(), e.getY())), new PointF(e.getX(), e.getY()));
+                        PointF sCenter = viewToSourceCoord(new PointF(e.getX(), e.getY()));
+                        if (null == sCenter)
+                            throw new IllegalStateException("vTranslate is null; aborting");
+
+                        doubleTapZoom(sCenter, new PointF(e.getX(), e.getY()));
                         return true;
                     }
                 }
@@ -698,9 +700,9 @@ public class CustomSubsamplingScaleImageView extends View {
                 width = sWidth();
                 height = sHeight();
             } else if (resizeHeight) {
-                height = (int) ((((double) sHeight() / (double) sWidth()) * width));
+                height = (int) (((double) sHeight() / (double) sWidth()) * width);
             } else if (resizeWidth) {
-                width = (int) ((((double) sWidth() / (double) sHeight()) * height));
+                width = (int) (((double) sWidth() / (double) sHeight()) * height);
             }
         }
         width = Math.max(width, getSuggestedMinimumWidth());
@@ -843,12 +845,12 @@ public class CustomSubsamplingScaleImageView extends View {
                                 }
                             } else if (sRequestedCenter != null) {
                                 // With a center specified from code, zoom around that point.
-                                vTranslate.x = (getWidthInternal() / 2) - (scale * sRequestedCenter.x);
-                                vTranslate.y = (getHeightInternal() / 2) - (scale * sRequestedCenter.y);
+                                vTranslate.x = (getWidthInternal() / 2f) - (scale * sRequestedCenter.x);
+                                vTranslate.y = (getHeightInternal() / 2f) - (scale * sRequestedCenter.y);
                             } else {
                                 // With no requested center, scale around the image center.
-                                vTranslate.x = (getWidthInternal() / 2) - (scale * (sWidth() / 2));
-                                vTranslate.y = (getHeightInternal() / 2) - (scale * (sHeight() / 2));
+                                vTranslate.x = (getWidthInternal() / 2f) - (scale * (sWidth() / 2f));
+                                vTranslate.y = (getHeightInternal() / 2f) - (scale * (sHeight() / 2f));
                             }
 
                             fitToBounds(true);
@@ -894,12 +896,12 @@ public class CustomSubsamplingScaleImageView extends View {
                                 }
                             } else if (sRequestedCenter != null) {
                                 // With a center specified from code, zoom around that point.
-                                vTranslate.x = (getWidthInternal() / 2) - (scale * sRequestedCenter.x);
-                                vTranslate.y = (getHeightInternal() / 2) - (scale * sRequestedCenter.y);
+                                vTranslate.x = (getWidthInternal() / 2f) - (scale * sRequestedCenter.x);
+                                vTranslate.y = (getHeightInternal() / 2f) - (scale * sRequestedCenter.y);
                             } else {
                                 // With no requested center, scale around the image center.
-                                vTranslate.x = (getWidthInternal() / 2) - (scale * (sWidth() / 2));
-                                vTranslate.y = (getHeightInternal() / 2) - (scale * (sHeight() / 2));
+                                vTranslate.x = (getWidthInternal() / 2f) - (scale * (sWidth() / 2f));
+                                vTranslate.y = (getHeightInternal() / 2f) - (scale * (sHeight() / 2f));
                             }
                         }
 
@@ -1017,8 +1019,8 @@ public class CustomSubsamplingScaleImageView extends View {
                 sCenter.y = sRequestedCenter.y;
             } else {
                 // With no requested center, scale around the image center.
-                sCenter.x = sWidth() / 2;
-                sCenter.y = sHeight() / 2;
+                sCenter.x = sWidth() / 2f;
+                sCenter.y = sHeight() / 2f;
             }
         }
         float doubleTapZoomScale = Math.min(maxScale, CustomSubsamplingScaleImageView.this.doubleTapZoomScale);
@@ -1147,10 +1149,10 @@ public class CustomSubsamplingScaleImageView extends View {
                                 canvas.drawRect(tile.vRect, debugLinePaint);
                             }
                         } else if (tile.loading && debug) {
-                            canvas.drawText("LOADING", tile.vRect.left + px(5), tile.vRect.top + px(35), debugTextPaint);
+                            canvas.drawText("LOADING", (float) tile.vRect.left + px(5), (float) tile.vRect.top + px(35), debugTextPaint);
                         }
                         if (tile.visible && debug) {
-                            canvas.drawText("ISS " + tile.sampleSize + " RECT " + tile.sRect.top + "," + tile.sRect.left + "," + tile.sRect.bottom + "," + tile.sRect.right, tile.vRect.left + px(5), tile.vRect.top + px(15), debugTextPaint);
+                            canvas.drawText("ISS " + tile.sampleSize + " RECT " + tile.sRect.top + "," + tile.sRect.left + "," + tile.sRect.bottom + "," + tile.sRect.right, (float) tile.vRect.left + px(5), (float) tile.vRect.top + px(15), debugTextPaint);
                         }
                     }
                 }
@@ -1196,22 +1198,25 @@ public class CustomSubsamplingScaleImageView extends View {
             canvas.drawText("Scale: " + String.format(Locale.ENGLISH, "%.2f", scale) + " (" + String.format(Locale.ENGLISH, "%.2f", minScale()) + " - " + String.format(Locale.ENGLISH, "%.2f", maxScale) + ")", px(5), px(15), debugTextPaint);
             canvas.drawText("Translate: " + String.format(Locale.ENGLISH, "%.2f", vTranslate.x) + ":" + String.format(Locale.ENGLISH, "%.2f", vTranslate.y), px(5), px(30), debugTextPaint);
             PointF center = getCenter();
-            //noinspection ConstantConditions
-            canvas.drawText("Source center: " + String.format(Locale.ENGLISH, "%.2f", center.x) + ":" + String.format(Locale.ENGLISH, "%.2f", center.y), px(5), px(45), debugTextPaint);
+            if (null != center)
+                canvas.drawText("Source center: " + String.format(Locale.ENGLISH, "%.2f", center.x) + ":" + String.format(Locale.ENGLISH, "%.2f", center.y), px(5), px(45), debugTextPaint);
             if (anim != null) {
                 PointF vCenterStart = sourceToViewCoord(anim.sCenterStart);
                 PointF vCenterEndRequested = sourceToViewCoord(anim.sCenterEndRequested);
                 PointF vCenterEnd = sourceToViewCoord(anim.sCenterEnd);
-                //noinspection ConstantConditions
-                canvas.drawCircle(vCenterStart.x, vCenterStart.y, px(10), debugLinePaint);
-                debugLinePaint.setColor(Color.RED);
-                //noinspection ConstantConditions
-                canvas.drawCircle(vCenterEndRequested.x, vCenterEndRequested.y, px(20), debugLinePaint);
-                debugLinePaint.setColor(Color.BLUE);
-                //noinspection ConstantConditions
-                canvas.drawCircle(vCenterEnd.x, vCenterEnd.y, px(25), debugLinePaint);
-                debugLinePaint.setColor(Color.CYAN);
-                canvas.drawCircle(getWidthInternal() / 2, getHeightInternal() / 2, px(30), debugLinePaint);
+                if (vCenterStart != null) {
+                    canvas.drawCircle(vCenterStart.x, vCenterStart.y, px(10), debugLinePaint);
+                    debugLinePaint.setColor(Color.RED);
+                }
+                if (vCenterEndRequested != null) {
+                    canvas.drawCircle(vCenterEndRequested.x, vCenterEndRequested.y, px(20), debugLinePaint);
+                    debugLinePaint.setColor(Color.BLUE);
+                }
+                if (vCenterEnd != null) {
+                    canvas.drawCircle(vCenterEnd.x, vCenterEnd.y, px(25), debugLinePaint);
+                    debugLinePaint.setColor(Color.CYAN);
+                }
+                canvas.drawCircle(getWidthInternal() / 2f, getHeightInternal() / 2f, px(30), debugLinePaint);
             }
             if (vCenterStart != null) {
                 debugLinePaint.setColor(Color.RED);
@@ -1434,8 +1439,8 @@ public class CustomSubsamplingScaleImageView extends View {
             if (vTranslate == null) {
                 vTranslate = new PointF();
             }
-            vTranslate.x = (getWidthInternal() / 2) - (scale * sPendingCenter.x);
-            vTranslate.y = (getHeightInternal() / 2) - (scale * sPendingCenter.y);
+            vTranslate.x = (getWidthInternal() / 2f) - (scale * sPendingCenter.x);
+            vTranslate.y = (getHeightInternal() / 2f) - (scale * sPendingCenter.y);
             sPendingCenter = null;
             pendingScale = null;
             fitToBounds(true);
@@ -1505,8 +1510,8 @@ public class CustomSubsamplingScaleImageView extends View {
         float scaleHeight = scale * sHeight();
 
         if (panLimit == PAN_LIMIT_CENTER && isReady()) {
-            vTranslate.x = Math.max(vTranslate.x, getWidthInternal() / 2 - scaleWidth);
-            vTranslate.y = Math.max(vTranslate.y, getHeightInternal() / 2 - scaleHeight);
+            vTranslate.x = Math.max(vTranslate.x, getWidthInternal() / 2f - scaleWidth);
+            vTranslate.y = Math.max(vTranslate.y, getHeightInternal() / 2f - scaleHeight);
         } else if (center) {
             vTranslate.x = Math.max(vTranslate.x, getWidthInternal() - scaleWidth);
             vTranslate.y = Math.max(vTranslate.y, getHeightInternal() - scaleHeight);
@@ -1559,7 +1564,7 @@ public class CustomSubsamplingScaleImageView extends View {
         scale = satTemp.scale;
         vTranslate.set(satTemp.vTranslate);
         if (init && minimumScaleType != SCALE_TYPE_START) {
-            vTranslate.set(vTranslateForSCenter(sWidth() / 2, sHeight() / 2, scale));
+            vTranslate.set(vTranslateForSCenter(sWidth() / 2f, sHeight() / 2f, scale));
         }
     }
 
@@ -1923,14 +1928,12 @@ public class CustomSubsamplingScaleImageView extends View {
             try {
                 String[] columns = {MediaStore.Images.Media.ORIENTATION};
                 cursor = context.getContentResolver().query(Uri.parse(sourceUri), columns, null, null, null);
-                if (cursor != null) {
-                    if (cursor.moveToFirst()) {
-                        int orientation = cursor.getInt(0);
-                        if (VALID_ORIENTATIONS.contains(orientation) && orientation != ORIENTATION_USE_EXIF) {
-                            exifOrientation = orientation;
-                        } else {
-                            Timber.w(TAG, "Unsupported orientation: %s", orientation);
-                        }
+                if (cursor != null && cursor.moveToFirst()) {
+                    int orientation = cursor.getInt(0);
+                    if (VALID_ORIENTATIONS.contains(orientation) && orientation != ORIENTATION_USE_EXIF) {
+                        exifOrientation = orientation;
+                    } else {
+                        Timber.w(TAG, "Unsupported orientation: %s", orientation);
                     }
                 }
             } catch (Exception e) {
@@ -2469,10 +2472,6 @@ public class CustomSubsamplingScaleImageView extends View {
      * @param regionDecoderClass The {@link ImageRegionDecoder} implementation to use.
      */
     public final void setRegionDecoderClass(@NonNull Class<? extends ImageRegionDecoder> regionDecoderClass) {
-        //noinspection ConstantConditions
-        if (regionDecoderClass == null) {
-            throw new IllegalArgumentException("Decoder class cannot be set to null");
-        }
         this.regionDecoderFactory = new CompatDecoderFactory<>(regionDecoderClass);
     }
 
@@ -2484,10 +2483,6 @@ public class CustomSubsamplingScaleImageView extends View {
      *                             instances.
      */
     public final void setRegionDecoderFactory(@NonNull DecoderFactory<? extends ImageRegionDecoder> regionDecoderFactory) {
-        //noinspection ConstantConditions
-        if (regionDecoderFactory == null) {
-            throw new IllegalArgumentException("Decoder factory cannot be set to null");
-        }
         this.regionDecoderFactory = regionDecoderFactory;
     }
 
@@ -2499,10 +2494,6 @@ public class CustomSubsamplingScaleImageView extends View {
      * @param bitmapDecoderClass The {@link ImageDecoder} implementation to use.
      */
     public final void setBitmapDecoderClass(@NonNull Class<? extends ImageDecoder> bitmapDecoderClass) {
-        //noinspection ConstantConditions
-        if (bitmapDecoderClass == null) {
-            throw new IllegalArgumentException("Decoder class cannot be set to null");
-        }
         this.bitmapDecoderFactory = new CompatDecoderFactory<>(bitmapDecoderClass);
     }
 
@@ -2513,10 +2504,6 @@ public class CustomSubsamplingScaleImageView extends View {
      * @param bitmapDecoderFactory The {@link DecoderFactory} implementation that produces {@link ImageDecoder} instances.
      */
     public final void setBitmapDecoderFactory(@NonNull DecoderFactory<? extends ImageDecoder> bitmapDecoderFactory) {
-        //noinspection ConstantConditions
-        if (bitmapDecoderFactory == null) {
-            throw new IllegalArgumentException("Decoder factory cannot be set to null");
-        }
         this.bitmapDecoderFactory = bitmapDecoderFactory;
     }
 
@@ -2536,10 +2523,10 @@ public class CustomSubsamplingScaleImageView extends View {
         float scaleHeight = scale * sHeight();
 
         if (panLimit == PAN_LIMIT_CENTER) {
-            vTarget.top = Math.max(0, -(vTranslate.y - (getHeightInternal() / 2)));
-            vTarget.left = Math.max(0, -(vTranslate.x - (getWidthInternal() / 2)));
-            vTarget.bottom = Math.max(0, vTranslate.y - ((getHeightInternal() / 2) - scaleHeight));
-            vTarget.right = Math.max(0, vTranslate.x - ((getWidthInternal() / 2) - scaleWidth));
+            vTarget.top = Math.max(0, -(vTranslate.y - (getHeightInternal() / 2f)));
+            vTarget.left = Math.max(0, -(vTranslate.x - (getWidthInternal() / 2f)));
+            vTarget.bottom = Math.max(0, vTranslate.y - ((getHeightInternal() / 2f) - scaleHeight));
+            vTarget.right = Math.max(0, vTranslate.x - ((getWidthInternal() / 2f) - scaleWidth));
         } else if (panLimit == PAN_LIMIT_OUTSIDE) {
             vTarget.top = Math.max(0, -(vTranslate.y - getHeightInternal()));
             vTarget.left = Math.max(0, -(vTranslate.x - getWidthInternal()));
@@ -2712,7 +2699,7 @@ public class CustomSubsamplingScaleImageView extends View {
         this.anim = null;
         this.pendingScale = limitedScale(0);
         if (isReady()) {
-            this.sPendingCenter = new PointF(sWidth() / 2, sHeight() / 2);
+            this.sPendingCenter = new PointF(sWidth() / 2f, sHeight() / 2f);
         } else {
             this.sPendingCenter = new PointF(0, 0);
         }
@@ -2736,7 +2723,7 @@ public class CustomSubsamplingScaleImageView extends View {
      * next draw. This is triggered at the same time as {@link OnImageEventListener#onReady()} but
      * allows a subclass to receive this event without using a listener.
      */
-    @SuppressWarnings("EmptyMethod")
+    @SuppressWarnings({"EmptyMethod", "squid:S1186"})
     protected void onReady() {
 
     }
@@ -2754,7 +2741,7 @@ public class CustomSubsamplingScaleImageView extends View {
     /**
      * Called once when the full size image or its base layer tiles have been loaded.
      */
-    @SuppressWarnings("EmptyMethod")
+    @SuppressWarnings({"EmptyMethod", "squid:S1186"})
     protected void onImageLoaded() {
 
     }
@@ -2807,9 +2794,9 @@ public class CustomSubsamplingScaleImageView extends View {
      */
     @Nullable
     public final ImageViewState getState() {
-        if (vTranslate != null && sWidth > 0 && sHeight > 0) {
-            //noinspection ConstantConditions
-            return new ImageViewState(getScale(), getCenter(), getOrientation());
+        PointF center = getCenter();
+        if (vTranslate != null && sWidth > 0 && sHeight > 0 && center != null) {
+            return new ImageViewState(getScale(), center, getOrientation());
         }
         return null;
     }
@@ -2868,8 +2855,8 @@ public class CustomSubsamplingScaleImageView extends View {
     public final void setPanEnabled(boolean panEnabled) {
         this.panEnabled = panEnabled;
         if (!panEnabled && vTranslate != null) {
-            vTranslate.x = (getWidthInternal() / 2) - (scale * (sWidth() / 2));
-            vTranslate.y = (getHeightInternal() / 2) - (scale * (sHeight() / 2));
+            vTranslate.x = (getWidthInternal() / 2f) - (scale * (sWidth() / 2f));
+            vTranslate.y = (getHeightInternal() / 2f) - (scale * (sHeight() / 2f));
             if (isReady()) {
                 refreshRequiredTiles(true);
                 invalidate();
@@ -2957,10 +2944,6 @@ public class CustomSubsamplingScaleImageView extends View {
      * @param executor an {@link Executor} for image loading.
      */
     public void setExecutor(@NonNull Executor executor) {
-        //noinspection ConstantConditions
-        if (executor == null) {
-            throw new NullPointerException("Executor must not be null");
-        }
         this.executor = executor;
     }
 
@@ -3268,7 +3251,7 @@ public class CustomSubsamplingScaleImageView extends View {
      * these events are triggered if the activity is paused, the image is swapped, or in other cases
      * where the view's internal state gets wiped or draw events stop.
      */
-    @SuppressWarnings("EmptyMethod")
+    @SuppressWarnings({"EmptyMethod", "squid:S1186"})
     public interface OnAnimationEventListener {
 
         /**
@@ -3291,6 +3274,7 @@ public class CustomSubsamplingScaleImageView extends View {
     /**
      * Default implementation of {@link OnAnimationEventListener} for extension. This does nothing in any method.
      */
+    @SuppressWarnings({"EmptyMethod", "squid:S1186"})
     public static class DefaultOnAnimationEventListener implements OnAnimationEventListener {
 
         @Override
@@ -3310,7 +3294,7 @@ public class CustomSubsamplingScaleImageView extends View {
     /**
      * An event listener, allowing subclasses and activities to be notified of significant events.
      */
-    @SuppressWarnings("EmptyMethod")
+    @SuppressWarnings({"EmptyMethod", "squid:S1186"})
     public interface OnImageEventListener {
 
         /**
@@ -3369,6 +3353,7 @@ public class CustomSubsamplingScaleImageView extends View {
     /**
      * Default implementation of {@link OnImageEventListener} for extension. This does nothing in any method.
      */
+    @SuppressWarnings({"EmptyMethod", "squid:S1186"})
     public static class DefaultOnImageEventListener implements OnImageEventListener {
 
         @Override
@@ -3403,7 +3388,7 @@ public class CustomSubsamplingScaleImageView extends View {
      * this listener will be called on the UI thread and may be called very frequently - your
      * implementation should return quickly.
      */
-    @SuppressWarnings("EmptyMethod")
+    @SuppressWarnings({"EmptyMethod", "squid:S1186"})
     public interface OnStateChangedListener {
 
         /**
@@ -3428,6 +3413,7 @@ public class CustomSubsamplingScaleImageView extends View {
     /**
      * Default implementation of {@link OnStateChangedListener}. This does nothing in any method.
      */
+    @SuppressWarnings({"EmptyMethod", "squid:S1186"})
     public static class DefaultOnStateChangedListener implements OnStateChangedListener {
 
         @Override

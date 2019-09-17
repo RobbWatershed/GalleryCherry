@@ -2,7 +2,10 @@ package me.devsaki.hentoid.activities.sources;
 
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
+import android.content.Context;
 import android.content.Intent;
+import android.content.res.Configuration;
+import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.Matrix;
 import android.net.Uri;
@@ -237,9 +240,25 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
         HentoidApp.reset(this);
     }
 
+    // Fix for a crash on 5.1.1
+    // https://stackoverflow.com/questions/41025200/android-view-inflateexception-error-inflating-class-android-webkit-webview
+    // As fallback solution _only_ since it breaks other stuff in the webview (choice in SELECT tags for instance)
+    public static Context getFixedContext(Context context) {
+        return context.createConfigurationContext(new Configuration());
+    }
+
     @SuppressLint("SetJavaScriptEnabled")
     private void initWebView() {
-        webView = findViewById(R.id.wbMain);
+
+        try {
+            webView = new ObservableWebView(this);
+        }
+        catch (Resources.NotFoundException e) {
+            // Some older devices can crash when instantiating a WebView, due to a Resources$NotFoundException
+            // Creating with the application Context fixes this, but is not generally recommended for view creation
+            webView = new ObservableWebView(getFixedContext(this));
+        }
+
         webView.setHapticFeedbackEnabled(false);
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
@@ -299,9 +318,14 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
         webSettings.setUseWideViewPort(true);
         webSettings.setJavaScriptEnabled(true);
         webSettings.setLoadWithOverviewMode(true);
+
         if (allowMixedContent() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         }
+
+        ViewGroup.LayoutParams layoutParams = new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+        SwipeRefreshLayout refreshLayout = findViewById(R.id.swipe_container);
+        if (refreshLayout != null) refreshLayout.addView(webView, layoutParams);
     }
 
     private int getChromeVersion() {
@@ -419,8 +443,7 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
         }
         ToastUtil.toast(this, R.string.add_to_queue);
 
-        currentContent.setDownloadDate(new Date().getTime())
-                .setStatus(StatusContent.DOWNLOADING);
+        currentContent.setStatus(StatusContent.DOWNLOADING);
         db.insertContent(currentContent);
 
         List<QueueRecord> queue = db.selectQueue();
