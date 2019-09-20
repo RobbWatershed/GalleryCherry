@@ -13,6 +13,7 @@
     <!-- Required to install update packages when targeting API 25 or higher -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
 
+
     <application
         android:name=".HentoidApp"
         android:allowBackup="false"
@@ -140,13 +141,21 @@
             android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
-            android:name=".activities.IntentActivity"
+            android:name=".activities.OauthIntentActivity"
             android:theme="@style/BrowserTheme">
             <intent-filter>
-                <action android:name="android.intent.action.SEND" />
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.BROWSABLE" />
                 <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeType="text/plain" />
+
+                <data android:host="github.com"
+                    android:scheme="https"
+                    android:pathPrefix="/RobbWatershed" />
             </intent-filter>
+        </activity>
+        <activity
+            android:name=".activities.IntentActivity"
+            android:theme="@style/BrowserTheme">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 

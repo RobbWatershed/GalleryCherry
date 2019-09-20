@@ -23,11 +23,10 @@ import eu.davidea.flexibleadapter.FlexibleAdapter;
 import eu.davidea.flexibleadapter.SelectableAdapter;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.database.ObjectBoxDB;
-import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.LandingRecord;
 import me.devsaki.hentoid.enums.Site;
-import me.devsaki.hentoid.util.ContentHelper;
 import me.devsaki.hentoid.viewholders.TextItemFlex;
+import timber.log.Timber;
 
 import static androidx.core.view.ViewCompat.requireViewById;
 
@@ -42,6 +41,7 @@ public class LandingHistoryDialogFragment extends DialogFragment {
 
     private static final String DEFAULT_URL = "/r/nsfw"; // TODO make this generic
 
+    private Parent callbackActivity;
     private Site site;
     private FlexibleAdapter<TextItemFlex> adapter;
     private EditText input;
@@ -68,6 +68,12 @@ public class LandingHistoryDialogFragment extends DialogFragment {
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedState) {
+        try {
+            callbackActivity = (Parent) getActivity();
+        } catch (ClassCastException e) {
+            Timber.e(e, "Calling Activity doesn't implement the Parent interface");
+        }
+
         return inflater.inflate(R.layout.dialog_landing_history, container, false);
     }
 
@@ -141,10 +147,11 @@ public class LandingHistoryDialogFragment extends DialogFragment {
         if (!completeUrl.endsWith("/") && !relativeUrl.startsWith("/")) completeUrl += "/";
         completeUrl += relativeUrl;
 
-        Content content = new Content();
-        content.setSite(Site.REDDIT);
-        content.setUrl(completeUrl);
-        ContentHelper.viewContent(getActivity(), content, true);
+        callbackActivity.goToUrl(completeUrl);
         this.dismiss();
+    }
+
+    public interface Parent {
+        void goToUrl(String url);
     }
 }
