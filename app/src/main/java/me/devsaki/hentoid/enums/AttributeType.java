@@ -23,7 +23,7 @@ public enum AttributeType {
     CHARACTER(8, "Character", R.drawable.ic_attribute_character),
     CATEGORY(9, "Category", R.drawable.ic_menu_about),
     SOURCE(10, "Source", R.drawable.ic_attribute_source), // Attribute displayed on screen and stored elsewhere
-    MODEL(11, "Source", R.drawable.ic_attribute_character);
+    MODEL(11, "Model", R.drawable.ic_attribute_character);
 
     private final int code;
     private final String displayName;
