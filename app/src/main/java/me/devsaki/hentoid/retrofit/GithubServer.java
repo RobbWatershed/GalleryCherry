@@ -12,7 +12,7 @@ import retrofit2.http.GET;
 
 public class GithubServer {
 
-    private static final String GITHUB_BASE_URL = "https://api.github.com/repos/avluis/Hentoid/";
+    private static final String GITHUB_BASE_URL = "https://api.github.com/repos/RobbWatershed/GalleryCherry/";
 
     public static final Api API = new Retrofit.Builder()
             .baseUrl(GITHUB_BASE_URL)
