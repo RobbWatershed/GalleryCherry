@@ -8,7 +8,7 @@ import me.devsaki.hentoid.util.Preferences;
 public class RedditActivity extends BaseWebActivity {
 
     private static final String DOMAIN_FILTER = "reddit.com";
-    private static final String GALLERY_FILTER = "/user/.+/saved"; // regular posts : /r/*/comments/*/*/
+    private static final String GALLERY_FILTER = ""; // regular posts : //"https://gateway.reddit.com/desktopapi/v1/postcomments"; => XML received when browsing posts
 
     Site getStartSite() {
         return Site.REDDIT;
@@ -31,7 +31,7 @@ public class RedditActivity extends BaseWebActivity {
         super.onPause();
 
         if (!Preferences.getRecentVisibility()) {
-            getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE,WindowManager.LayoutParams.FLAG_SECURE);
+            getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
         }
     }
 
