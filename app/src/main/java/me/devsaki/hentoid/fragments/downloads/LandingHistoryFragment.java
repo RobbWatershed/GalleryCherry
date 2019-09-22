@@ -22,10 +22,11 @@ import eu.davidea.flexibleadapter.SelectableAdapter;
 import me.devsaki.hentoid.HentoidApp;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.database.ObjectBoxDB;
+import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.LandingRecord;
 import me.devsaki.hentoid.enums.Site;
+import me.devsaki.hentoid.util.ContentHelper;
 import me.devsaki.hentoid.viewholders.TextItemFlex;
-import timber.log.Timber;
 
 import static androidx.core.view.ViewCompat.requireViewById;
 
@@ -41,7 +42,7 @@ public class LandingHistoryFragment extends Fragment {
 
     private Site site;
 
-    private Parent callbackActivity;
+    //    private Parent callbackActivity;
     private FlexibleAdapter<TextItemFlex> adapter;
     private EditText input;
 
@@ -69,11 +70,13 @@ public class LandingHistoryFragment extends Fragment {
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedState) {
+        /*
         try {
             callbackActivity = (Parent) getActivity();
         } catch (ClassCastException e) {
             Timber.e(e, "Calling Activity doesn't implement the Parent interface");
         }
+         */
 
         return inflater.inflate(R.layout.fragment_landing_history, container, false);
     }
@@ -150,10 +153,15 @@ public class LandingHistoryFragment extends Fragment {
         if (!completeUrl.endsWith("/") && !relativeUrl.startsWith("/")) completeUrl += "/";
         completeUrl += relativeUrl;
 
-        callbackActivity.goToUrl(completeUrl);
+        Content content = new Content();
+        content.setSite(Site.REDDIT);
+        content.setUrl(completeUrl);
+        ContentHelper.viewContent(requireContext(), content, true);
     }
 
+    /*
     public interface Parent {
         void goToUrl(String url);
     }
+     */
 }

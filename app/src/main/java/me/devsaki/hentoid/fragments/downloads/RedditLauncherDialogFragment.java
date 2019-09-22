@@ -8,14 +8,18 @@ import android.view.ViewGroup;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.DialogFragment;
+import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.viewpager.widget.ViewPager;
 
 import com.google.android.material.tabs.TabLayout;
 
+import org.threeten.bp.Instant;
+
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.adapters.RedditTabsAdapter;
 import me.devsaki.hentoid.enums.Site;
+import me.devsaki.hentoid.util.OauthManager;
 
 import static androidx.core.view.ViewCompat.requireViewById;
 
@@ -47,9 +51,16 @@ public class RedditLauncherDialogFragment extends DialogFragment {
         ViewPager viewPager = requireViewById(view, R.id.reddit_launcher_pager);
         TabLayout tabs = requireViewById(view, R.id.reddit_launcher_tabs);
 
+        Fragment redditDownloadFragment;
+        OauthManager.OauthSession session = OauthManager.getInstance().getSessionBySite(Site.REDDIT);
+        if (session != null && session.getExpiry().isAfter(Instant.now()))
+            redditDownloadFragment = RedditAuthDownloadFragment.newInstance();
+        else
+            redditDownloadFragment = RedditNoAuthDownloadFragment.newInstance();
+
         RedditTabsAdapter redditTabsAdapter = new RedditTabsAdapter(getChildFragmentManager());
         redditTabsAdapter.addTabFragment(LandingHistoryFragment.newInstance(Site.REDDIT, DEFAULT_URL), "Browse");
-        redditTabsAdapter.addTabFragment(RedditDownloadFragment.newInstance(), "Download");
+        redditTabsAdapter.addTabFragment(redditDownloadFragment, "Download");
         viewPager.setAdapter(redditTabsAdapter);
 
         tabs.setupWithViewPager(viewPager);

@@ -2,8 +2,12 @@ package me.devsaki.hentoid.util;
 
 import androidx.annotation.Nullable;
 
+import org.threeten.bp.Instant;
+
 import java.util.HashMap;
 import java.util.Map;
+
+import me.devsaki.hentoid.enums.Site;
 
 /**
  * Created by Robb on 2019/09
@@ -12,7 +16,7 @@ import java.util.Map;
 public class OauthManager {
     private static OauthManager mInstance;   // Instance of the singleton
 
-    private final Map<String, OauthSession> activeSessions;
+    private final Map<Site, OauthSession> activeSessions;
 
     private OauthManager() {
         activeSessions = new HashMap<>();
@@ -26,9 +30,9 @@ public class OauthManager {
     }
 
 
-    public OauthSession addSession(String domain) {
+    public OauthSession addSession(Site site) {
         OauthSession session = new OauthSession();
-        activeSessions.put(domain, session);
+        activeSessions.put(site, session);
         return session;
     }
 
@@ -41,8 +45,8 @@ public class OauthManager {
     }
 
     @Nullable
-    public OauthSession getSessionByDomain(String domain) {
-        return activeSessions.get(domain);
+    public OauthSession getSessionBySite(Site site) {
+        return activeSessions.get(site);
     }
 
     public class OauthSession {
@@ -50,12 +54,12 @@ public class OauthManager {
         private String clientId = "";
         private String state = "";
         private String accessToken = "";
+        private String refreshToken = "";
+        private Instant expiry;
 
         private String targetUrl = "";
 
-        public String getState() {
-            return state;
-        }
+        public String getState() { return state; }
 
         public void setState(String state) {
             this.state = state;
@@ -91,6 +95,22 @@ public class OauthManager {
 
         public void setTargetUrl(String targetUrl) {
             this.targetUrl = targetUrl;
+        }
+
+        public Instant getExpiry() {
+            return expiry;
+        }
+
+        public void setExpiry(Instant expiry) {
+            this.expiry = expiry;
+        }
+
+        public String getRefreshToken() {
+            return refreshToken;
+        }
+
+        public void setRefreshToken(String refreshToken) {
+            this.refreshToken = refreshToken;
         }
     }
 }

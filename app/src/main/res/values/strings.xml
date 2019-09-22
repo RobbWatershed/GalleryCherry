@@ -147,6 +147,12 @@
     <string name="landing_history_title">Type or select subreddit</string>
     <string name="reddit_navigate">Navigate</string>
     <string name="reddit_dl">Download</string>
+    <string name="reddit_noauth">You are not authenticated !</string>
+    <string name="reddit_noauth_explanation">You need to authenticate to Reddit to be able to downloads images in your saved posts.</string>
+    <string name="reddit_noauth_action">AUTHENTICATE</string>
+    <string name="reddit_auth">You are authenticated</string>
+    <string name="reddit_auth_img_count">%s new items to download</string>
+    <string name="reddit_auth_action">DOWNLOAD</string>
 
     <string name="reset">Permissions has been reset.\nResetting app.</string>
     <string name="restart_needed">"Changes will be applied after GalleryCherry is restarted"</string>

@@ -27,11 +27,9 @@ public class Oauth2AccessToken {
         return tokenType;
     }
 
-    public long getExpiresIn() {
+    public long getExpiryDelaySeconds() {
         return expiresIn;
     }
-
-    public Instant getExpiry() { return Instant.ofEpochSecond( expiresIn ); }
 
     public String getRefreshToken() {
         return refreshToken;

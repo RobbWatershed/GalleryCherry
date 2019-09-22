@@ -1,20 +1,21 @@
 package me.devsaki.hentoid.activities;
 
+import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
-import android.os.Bundle;
 import android.util.Base64;
 
-import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
+
+import org.threeten.bp.Instant;
 
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.CompositeDisposable;
 import me.devsaki.hentoid.abstracts.BaseActivity;
-import me.devsaki.hentoid.database.domains.Content;
-import me.devsaki.hentoid.enums.Site;
+import me.devsaki.hentoid.activities.sources.RedditLaunchActivity;
 import me.devsaki.hentoid.model.Oauth2AccessToken;
 import me.devsaki.hentoid.retrofit.RedditApiServer;
-import me.devsaki.hentoid.util.ContentHelper;
 import me.devsaki.hentoid.util.OauthManager;
 import timber.log.Timber;
 
@@ -61,7 +62,7 @@ public class OauthIntentActivity extends BaseActivity {
             if (session != null) {
                 String code = data.getQueryParameter("code");
                 getAccessToken(session, code);
-            }
+            } else Timber.e("Session has not been initialized");
         }
     }
 
@@ -78,18 +79,23 @@ public class OauthIntentActivity extends BaseActivity {
 
     private void onCheckSuccess(Oauth2AccessToken token, OauthManager.OauthSession session) {
         Timber.i("OAuth response received");
-        session.setAccessToken(token.getAccessToken()); // TODO handle refresh token and expiry
+        session.setAccessToken(token.getAccessToken());
+        session.setRefreshToken(token.getRefreshToken());
+        session.setExpiry(Instant.now().plusSeconds(token.getExpiryDelaySeconds()));
 
-        Content content = new Content();
-        content.setSite(Site.REDDIT);
-        content.setUrl(session.getTargetUrl());
-        ContentHelper.viewContent(this, content, true);
+        launchRedditActivity();
 
         finish();
     }
 
     private void onCheckError(Throwable t) {
         Timber.e(t, "Error fetching OAuth response");
+    }
+
+    private void launchRedditActivity() {
+        Intent intent = new Intent(this, RedditLaunchActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP); // TODO test if back goes back to downloadsActivity
+        ContextCompat.startActivity(this, intent, null);
     }
 
 }
