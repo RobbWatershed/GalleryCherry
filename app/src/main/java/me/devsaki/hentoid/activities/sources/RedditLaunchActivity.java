@@ -4,7 +4,8 @@ import android.os.Bundle;
 
 import me.devsaki.hentoid.abstracts.BaseActivity;
 import me.devsaki.hentoid.enums.Site;
-import me.devsaki.hentoid.fragments.downloads.LandingHistoryDialogFragment;
+import me.devsaki.hentoid.fragments.downloads.LandingHistoryFragment;
+import me.devsaki.hentoid.fragments.downloads.RedditLauncherDialogFragment;
 import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.OauthManager;
 
@@ -12,7 +13,7 @@ import me.devsaki.hentoid.util.OauthManager;
  * Created by Robb on 09/2019
  * Landing page history launcher for Reddit
  */
-public class RedditLaunchActivity extends BaseActivity implements LandingHistoryDialogFragment.Parent {
+public class RedditLaunchActivity extends BaseActivity implements LandingHistoryFragment.Parent {
 
     private static final String AUTH_URL =
             "https://www.reddit.com/api/v1/authorize.compact?client_id=%s"
@@ -33,7 +34,7 @@ public class RedditLaunchActivity extends BaseActivity implements LandingHistory
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        LandingHistoryDialogFragment.invoke(getSupportFragmentManager(), Site.REDDIT, this);
+        RedditLauncherDialogFragment.invoke(getSupportFragmentManager());
     }
 
     @Override

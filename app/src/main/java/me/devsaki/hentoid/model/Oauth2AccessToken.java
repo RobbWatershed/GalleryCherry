@@ -2,6 +2,8 @@ package me.devsaki.hentoid.model;
 
 import com.google.gson.annotations.SerializedName;
 
+import org.threeten.bp.Instant;
+
 public class Oauth2AccessToken {
 
     @SerializedName("access_token")
@@ -28,6 +30,8 @@ public class Oauth2AccessToken {
     public long getExpiresIn() {
         return expiresIn;
     }
+
+    public Instant getExpiry() { return Instant.ofEpochSecond( expiresIn ); }
 
     public String getRefreshToken() {
         return refreshToken;

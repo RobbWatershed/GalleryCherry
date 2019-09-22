@@ -1,6 +1,5 @@
 package me.devsaki.hentoid.fragments.downloads;
 
-import android.content.Context;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -9,8 +8,7 @@ import android.widget.EditText;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.fragment.app.DialogFragment;
-import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.annimon.stream.Stream;
@@ -21,6 +19,7 @@ import java.util.List;
 
 import eu.davidea.flexibleadapter.FlexibleAdapter;
 import eu.davidea.flexibleadapter.SelectableAdapter;
+import me.devsaki.hentoid.HentoidApp;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.database.ObjectBoxDB;
 import me.devsaki.hentoid.database.domains.LandingRecord;
@@ -34,21 +33,23 @@ import static androidx.core.view.ViewCompat.requireViewById;
  * Created by Robb on 09/2019
  * Launcher dialog for landing page history
  */
-public class LandingHistoryDialogFragment extends DialogFragment {
+public class LandingHistoryFragment extends Fragment {
 
     private static final String SITE = "SITE";
     private static final String LANDING_HISTORY = "LANDING_HISTORY";
+    private static final String DEFAULT_URL = "DEFAULT_URL";
 
-    private static final String DEFAULT_URL = "/r/nsfw"; // TODO make this generic
+    private Site site;
 
     private Parent callbackActivity;
-    private Site site;
     private FlexibleAdapter<TextItemFlex> adapter;
     private EditText input;
 
 
-    public static void invoke(FragmentManager fragmentManager, Site site, Context context) {
-        ObjectBoxDB db = ObjectBoxDB.getInstance(context);
+    static LandingHistoryFragment newInstance(Site site, String defaultUrl) {
+        LandingHistoryFragment f = new LandingHistoryFragment();
+
+        ObjectBoxDB db = ObjectBoxDB.getInstance(HentoidApp.getAppContext());
         List<LandingRecord> landingHistory = db.selectLandingRecords(site);
 
         ArrayList<String> urlHistory = new ArrayList<>();
@@ -58,11 +59,11 @@ public class LandingHistoryDialogFragment extends DialogFragment {
         Bundle args = new Bundle();
         args.putStringArrayList(LANDING_HISTORY, urlHistory);
         args.putLong(SITE, site.getCode());
+        args.putString(DEFAULT_URL, defaultUrl);
 
-        LandingHistoryDialogFragment fragment = new LandingHistoryDialogFragment();
-        fragment.setArguments(args);
-        fragment.setStyle(DialogFragment.STYLE_NO_FRAME, R.style.Dialog);
-        fragment.show(fragmentManager, null);
+        f.setArguments(args);
+
+        return f;
     }
 
     @Nullable
@@ -74,7 +75,7 @@ public class LandingHistoryDialogFragment extends DialogFragment {
             Timber.e(e, "Calling Activity doesn't implement the Parent interface");
         }
 
-        return inflater.inflate(R.layout.dialog_landing_history, container, false);
+        return inflater.inflate(R.layout.fragment_landing_history, container, false);
     }
 
     @Override
@@ -82,6 +83,8 @@ public class LandingHistoryDialogFragment extends DialogFragment {
         super.onViewCreated(view, savedInstanceState);
 
         if (getArguments() != null) {
+            String defaultUrl = getArguments().getString(DEFAULT_URL);
+
             long siteCode = getArguments().getLong(SITE);
             site = Site.searchByCode(siteCode);
 
@@ -94,7 +97,7 @@ public class LandingHistoryDialogFragment extends DialogFragment {
                     .toList();
 
             // Add default page if empty
-            if (items.isEmpty()) items.add(new TextItemFlex(DEFAULT_URL));
+            if (items.isEmpty()) items.add(new TextItemFlex(defaultUrl));
 
             adapter = new FlexibleAdapter<>(null);
             adapter.setMode(SelectableAdapter.Mode.SINGLE);
@@ -108,7 +111,7 @@ public class LandingHistoryDialogFragment extends DialogFragment {
             okBtn.setOnClickListener(this::onOkClick);
 
             input = requireViewById(view, R.id.landing_history_input);
-            input.setText(DEFAULT_URL);
+            input.setText(defaultUrl);
         }
     }
 
@@ -148,7 +151,6 @@ public class LandingHistoryDialogFragment extends DialogFragment {
         completeUrl += relativeUrl;
 
         callbackActivity.goToUrl(completeUrl);
-        this.dismiss();
     }
 
     public interface Parent {

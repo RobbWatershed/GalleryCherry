@@ -15,6 +15,7 @@ import androidx.appcompat.app.AppCompatDelegate;
 import com.crashlytics.android.Crashlytics;
 import com.google.android.gms.security.ProviderInstaller;
 import com.google.firebase.analytics.FirebaseAnalytics;
+import com.jakewharton.threetenabp.AndroidThreeTen;
 
 import io.fabric.sdk.android.Fabric;
 import me.devsaki.hentoid.activities.IntroActivity;
@@ -74,6 +75,9 @@ public class HentoidApp extends Application {
         } catch (Exception e) {
             Timber.e(e, "Google Play ProviderInstaller exception");
         }
+
+        // Init datetime
+        AndroidThreeTen.init(this);
 
 /*
         // LeakCanary

@@ -145,6 +145,8 @@
     <string name="book_series">"Series: Name"</string>
     <string name="book_tags">""tag1, tag2, tag3, etc.</string>
     <string name="landing_history_title">Type or select subreddit</string>
+    <string name="reddit_navigate">Navigate</string>
+    <string name="reddit_dl">Download</string>
 
     <string name="reset">Permissions has been reset.\nResetting app.</string>
     <string name="restart_needed">"Changes will be applied after GalleryCherry is restarted"</string>
