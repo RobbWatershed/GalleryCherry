@@ -30,7 +30,7 @@ public class RedditNoAuthDownloadFragment extends Fragment {
 
     private static final String REDIRECT_URI = "https://github.com/RobbWatershed/GalleryCherry";
 
-    private static final String SCOPE = "history";
+    private static final String SCOPE = "history identity";
 
 
     static RedditNoAuthDownloadFragment newInstance() {

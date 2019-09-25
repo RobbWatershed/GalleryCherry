@@ -55,7 +55,7 @@ public class ParseHelper {
         return result;
     }
 
-    static List<ImageFile> urlsToImageFiles(@Nonnull List<String> imgUrls) {
+    public static List<ImageFile> urlsToImageFiles(@Nonnull List<String> imgUrls) {
         List<ImageFile> result = new ArrayList<>();
 
         int order = 1;

@@ -58,6 +58,7 @@ public class OauthManager {
         private Instant expiry;
 
         private String targetUrl = "";
+        private String userName = "";
 
         public String getState() { return state; }
 
@@ -111,6 +112,14 @@ public class OauthManager {
 
         public void setRefreshToken(String refreshToken) {
             this.refreshToken = refreshToken;
+        }
+
+        public String getUserName() {
+            return userName;
+        }
+
+        public void setUserName(String userName) {
+            this.userName = userName;
         }
     }
 }

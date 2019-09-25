@@ -40,7 +40,6 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -252,8 +251,7 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
 
         try {
             webView = new ObservableWebView(this);
-        }
-        catch (Resources.NotFoundException e) {
+        } catch (Resources.NotFoundException e) {
             // Some older devices can crash when instantiating a WebView, due to a Resources$NotFoundException
             // Creating with the application Context fixes this, but is not generally recommended for view creation
             webView = new ObservableWebView(getFixedContext(this));
@@ -512,7 +510,7 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
                         || contentDB.getStatus().equals(StatusContent.PAUSED)
         ));
 
-        // Reddit has a single book that allows incremental downloads
+        // Danbooru sites have a single book that allows incremental downloads
         if (isInCollection && content.getSite().isDanbooru()) isInCollection = false;
 
         if (!isInCollection && !isInQueue) {
@@ -523,19 +521,20 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
             } else {
                 // Add new pages to current content with a proper index, and save them
                 if (content.getSite().isDanbooru()) {
-                    // Remove the images that are already contained in the central booru book
+                    // Ignore the images that are already contained in the central booru book
                     List<ImageFile> newImages = content.getImageFiles();
                     List<ImageFile> existingImages = contentDB.getImageFiles();
                     if (newImages != null && existingImages != null) {
                         newImages.removeAll(existingImages);
                         // Reindex new images according to their future position in the existing album
                         int maxOrder = Stream.of(existingImages).max(ImageFile.ORDER_COMPARATOR).mapToInt(ImageFile::getOrder).getAsInt();
-                        for (ImageFile img : newImages)
-                        {
+                        for (ImageFile img : newImages) {
                             img.setOrder(++maxOrder);
                             img.computeNameFromOrder();
                         }
 
+                        // Save new images to DB
+                        // TODO is that the right place to do that ?
                         existingImages.addAll(newImages);
                         contentDB.setImageFiles(existingImages);
                         contentDB.setQtyPages(existingImages.size());
