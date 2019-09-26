@@ -54,22 +54,6 @@ public class RedditActivity extends BaseWebActivity {
         return client;
     }
 
-    @Override
-    protected void onPause() {
-        super.onPause();
-
-        if (!Preferences.getRecentVisibility()) {
-            getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
-        }
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-
-        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
-    }
-
     private void showLoadingDialog() {
         ProgressBar bar = new ProgressBar(this);
         bar.setIndeterminate(true);
