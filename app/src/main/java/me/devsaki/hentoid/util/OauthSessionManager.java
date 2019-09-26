@@ -13,18 +13,18 @@ import me.devsaki.hentoid.enums.Site;
  * Created by Robb on 2019/09
  * Manager class for Oauth2.0 authentication flow
  */
-public class OauthManager {
-    private static OauthManager mInstance;   // Instance of the singleton
+public class OauthSessionManager {
+    private static OauthSessionManager mInstance;   // Instance of the singleton
 
     private final Map<Site, OauthSession> activeSessions;
 
-    private OauthManager() {
+    private OauthSessionManager() {
         activeSessions = new HashMap<>();
     }
 
-    public static synchronized OauthManager getInstance() {
+    public static synchronized OauthSessionManager getInstance() {
         if (mInstance == null) {
-            mInstance = new OauthManager();
+            mInstance = new OauthSessionManager();
         }
         return mInstance;
     }

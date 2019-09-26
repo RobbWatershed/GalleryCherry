@@ -19,7 +19,7 @@ import org.threeten.bp.Instant;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.adapters.RedditTabsAdapter;
 import me.devsaki.hentoid.enums.Site;
-import me.devsaki.hentoid.util.OauthManager;
+import me.devsaki.hentoid.util.OauthSessionManager;
 
 import static androidx.core.view.ViewCompat.requireViewById;
 
@@ -52,7 +52,7 @@ public class RedditLauncherDialogFragment extends DialogFragment {
         TabLayout tabs = requireViewById(view, R.id.reddit_launcher_tabs);
 
         Fragment redditDownloadFragment;
-        OauthManager.OauthSession session = OauthManager.getInstance().getSessionBySite(Site.REDDIT);
+        OauthSessionManager.OauthSession session = OauthSessionManager.getInstance().getSessionBySite(Site.REDDIT);
         if (session != null && session.getExpiry().isAfter(Instant.now()))
             redditDownloadFragment = RedditAuthDownloadFragment.newInstance();
         else

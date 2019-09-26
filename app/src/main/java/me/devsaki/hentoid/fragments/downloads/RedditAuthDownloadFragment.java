@@ -30,7 +30,7 @@ import me.devsaki.hentoid.retrofit.RedditOAuthApiServer;
 import me.devsaki.hentoid.services.ContentQueueManager;
 import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.HttpHelper;
-import me.devsaki.hentoid.util.OauthManager;
+import me.devsaki.hentoid.util.OauthSessionManager;
 import timber.log.Timber;
 
 import static androidx.core.view.ViewCompat.requireViewById;
@@ -77,7 +77,7 @@ public class RedditAuthDownloadFragment extends Fragment {
         button.setOnClickListener(v -> onDownloadClick());
 
         // Load saved items
-        OauthManager.OauthSession session = OauthManager.getInstance().getSessionBySite(Site.REDDIT);
+        OauthSessionManager.OauthSession session = OauthSessionManager.getInstance().getSessionBySite(Site.REDDIT);
         if (session != null) {
             compositeDisposable.add(
                     RedditOAuthApiServer.API.getUserSavedPosts(session.getUserName(), "bearer " + session.getAccessToken())
@@ -93,7 +93,7 @@ public class RedditAuthDownloadFragment extends Fragment {
         return Helper.isImageExtensionSupported(extension);
     }
 
-    private void onSavedItemsSuccess(List<String> savedUrls) {
+    private void onSavedItemsSuccess(List<String> savedUrls) { // TODO don't display placeholder when load is not complete - use a "loading..." image
         if (savedUrls.isEmpty()) {
             imgCount.setText(R.string.reddit_auth_noimg);
             return;

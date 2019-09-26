@@ -10,9 +10,10 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
 import me.devsaki.hentoid.R;
+import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.enums.Site;
-import me.devsaki.hentoid.util.Helper;
-import me.devsaki.hentoid.util.OauthManager;
+import me.devsaki.hentoid.util.ContentHelper;
+import me.devsaki.hentoid.util.OauthSessionManager;
 
 import static androidx.core.view.ViewCompat.requireViewById;
 
@@ -58,12 +59,17 @@ public class RedditNoAuthDownloadFragment extends Fragment {
 
     private void onNoAuthClick()
     {
-        OauthManager.OauthSession session = OauthManager.getInstance().addSession(Site.REDDIT);
+        OauthSessionManager.OauthSession session = OauthSessionManager.getInstance().addSession(Site.REDDIT);
         session.setState(Double.toString(Math.random()));
         session.setClientId(CLIENT_ID);
         session.setRedirectUri(REDIRECT_URI);
 
         String authUrl = String.format(AUTH_URL, CLIENT_ID, session.getState(), REDIRECT_URI, SCOPE);
-        Helper.openUrl(requireActivity(), authUrl); // TODO try opening that with Hentoid browser
+        //Helper.openUrl(requireActivity(), authUrl); // TODO try opening that with Hentoid browser
+
+        Content content = new Content();
+        content.setSite(Site.REDDIT);
+        content.setUrl(authUrl);
+        ContentHelper.viewContent(requireContext(), content, true);
     }
 }

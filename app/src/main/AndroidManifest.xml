@@ -141,19 +141,6 @@
             android:screenOrientation="portrait"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
-            android:name=".activities.OauthIntentActivity"
-            android:theme="@style/BrowserTheme">
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <category android:name="android.intent.category.DEFAULT" />
-
-                <data android:host="github.com"
-                    android:scheme="https"
-                    android:pathPrefix="/RobbWatershed" />
-            </intent-filter>
-        </activity>
-        <activity
             android:name=".activities.IntentActivity"
             android:theme="@style/BrowserTheme">
             <intent-filter>
