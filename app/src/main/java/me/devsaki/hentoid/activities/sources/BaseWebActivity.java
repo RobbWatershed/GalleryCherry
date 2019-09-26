@@ -15,6 +15,7 @@ import android.util.Pair;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.webkit.CookieManager;
 import android.webkit.WebBackForwardList;
 import android.webkit.WebChromeClient;
@@ -198,6 +199,10 @@ public abstract class BaseWebActivity extends BaseActivity implements ResultList
             intentUrl = parser.getUrl();
         }
         webView.loadUrl(0 == intentUrl.length() ? getStartSite().getUrl() : intentUrl);
+
+        if (!Preferences.getRecentVisibility()) {
+            getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE,WindowManager.LayoutParams.FLAG_SECURE);
+        }
     }
 
     @Override
