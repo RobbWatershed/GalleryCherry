@@ -22,6 +22,7 @@ public enum Site {
     PORNPICGALLERIES(6, "Pornpicgalleries", "http://pornpicgalleries.com/", "pornpicgalleries", R.drawable.ic_menu_ppg, true, true, false, false, false),
     LINK2GALLERIES(7, "Link2galleries", "https://www.link2galleries.com/", "link2galleries", R.drawable.ic_menu_l2g, true, true, false, false, false),
     REDDIT(8, "Reddit", "https://www.reddit.com/", "reddit", R.drawable.ic_social_reddit, true, true, false, false, true),
+    JJGIRLS(9, "JJGirls", "https://jjgirls.com/mobile/", "jjgirls", R.drawable.ic_menu_jjgirls, true, true, false, false, false),
     NONE(98, "none", "", "none", R.drawable.ic_menu_about, true, true, false, false, false); // Fallback site
 
 
