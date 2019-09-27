@@ -46,7 +46,7 @@ public class ParseHelper {
         map.add(attribute);
     }
 
-    private static ImageFile urlToImageFile(@Nonnull String imgUrl, int order) {
+    static ImageFile urlToImageFile(@Nonnull String imgUrl, int order) {
         ImageFile result = new ImageFile();
 
         result.setOrder(order).setUrl(imgUrl).setStatus(StatusContent.ONLINE);
