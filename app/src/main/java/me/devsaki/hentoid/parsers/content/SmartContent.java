@@ -26,13 +26,17 @@ public class SmartContent implements ContentParser {
     private String galleryUrl;
     @Selector("head title")
     private String title;
-    @Selector(value = "a[href*='.jp']", attr = "href")
+    @Selector(value = "a[href*='.jpg']", attr = "href")
     private List<String> imageLinksJpg;
+    @Selector(value = "a[href*='.jpeg']", attr = "href")
+    private List<String> imageLinksJpeg;
     @Selector(value = "a[href*='.png']", attr = "href")
     private List<String> imageLinksPng;
     // Alternate images are alone on the page, without links, zishy-style (else we would capture clickable thumbs)
-    @Selector(value = ":not(a)>img[src*='.jp']")
+    @Selector(value = ":not(a)>img[src*='.jpg']")
     private List<Element> imageEltsJpg;
+    @Selector(value = ":not(a)>img[src*='.jpeg']")
+    private List<Element> imageEltsJpeg;
     @Selector(value = ":not(a)>img[src*='.png']")
     private List<Element> imageEltsPng;
 
@@ -44,11 +48,15 @@ public class SmartContent implements ContentParser {
     private void processImages() {
         if (null != imageLinksJpg)
             imageLinks.addAll(Stream.of(imageLinksJpg).distinct().toList());
+        if (null != imageLinksJpeg)
+            imageLinks.addAll(Stream.of(imageLinksJpeg).distinct().toList());
         if (null != imageLinksPng)
             imageLinks.addAll(Stream.of(imageLinksPng).distinct().toList());
 
         if (null != imageEltsJpg)
             imageElts.addAll(Stream.of(imageEltsJpg).map(e -> e.attr("src")).distinct().toList());
+        if (null != imageEltsJpeg)
+            imageElts.addAll(Stream.of(imageEltsJpeg).map(e -> e.attr("src")).distinct().toList());
         if (null != imageEltsPng)
             imageElts.addAll(Stream.of(imageEltsPng).map(e -> e.attr("src")).distinct().toList());
     }
