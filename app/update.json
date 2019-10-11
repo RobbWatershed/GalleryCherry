@@ -1,4 +1,6 @@
 {
-  "updateURL": "https://github.com/avluis/Hentoid/releases/download/v1.5.2/hentoid15269.apk",
-  "versionCode": "69"
+  "updateURL": "https://github.com/RobbWatershed/GalleryCherry/releases/download/1.1.1/cherry_11109.apk",
+  "versionCode": "9",
+  "updateURL.debug": "https://cdn.discordapp.com/attachments/528851212406358017/603112905008873472/cherry12277-debug.apk",
+  "versionCode.debug": "77"
 }

@@ -1,9 +1,9 @@
 package me.devsaki.hentoid.abstracts;
 
-import android.support.v7.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatActivity;
 
 import me.devsaki.hentoid.R;
-import me.devsaki.hentoid.util.Helper;
+import me.devsaki.hentoid.util.ToastUtil;
 
 /**
  * Created by avluis on 04/13/2016.
@@ -22,6 +22,6 @@ public abstract class BaseActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
 
-        Helper.cancelToast();
+        ToastUtil.cancelToast();
     }
 }

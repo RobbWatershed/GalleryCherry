@@ -1,0 +1,25 @@
+package me.devsaki.hentoid.activities.sources;
+
+import me.devsaki.hentoid.enums.Site;
+
+public class XhamsterActivity extends BaseWebActivity {
+
+    private static final String DOMAIN_FILTER = "xhamster.com";
+    private static final String GALLERY_FILTER = "/gallery/";
+
+    Site getStartSite() {
+        return Site.XHAMSTER;
+    }
+
+    @Override
+    boolean allowMixedContent() {
+        return false;
+    }
+
+    @Override
+    protected CustomWebViewClient getWebClient() {
+        CustomWebViewClient client = new CustomWebViewClient(GALLERY_FILTER, this);
+        client.restrictTo(DOMAIN_FILTER);
+        return client;
+    }
+}

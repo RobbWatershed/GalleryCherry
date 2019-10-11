@@ -1,7 +1,14 @@
 package me.devsaki.hentoid.parsers;
 
-import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.enums.Site;
+import me.devsaki.hentoid.parsers.content.HellpornoContent;
+import me.devsaki.hentoid.parsers.content.JjgirlsContent;
+import me.devsaki.hentoid.parsers.content.JpegworldContent;
+import me.devsaki.hentoid.parsers.content.NextpicturezContent;
+import me.devsaki.hentoid.parsers.content.PornPicsContent;
+import me.devsaki.hentoid.parsers.content.SmartContent;
+import me.devsaki.hentoid.parsers.content.XhamsterContent;
+import me.devsaki.hentoid.parsers.content.XnxxContent;
 
 public class ContentParserFactory {
 
@@ -14,29 +21,35 @@ public class ContentParserFactory {
         return mInstance;
     }
 
-    public ContentParser getParser(Content content) {
-        return (null == content) ? new DummyParser() : getParser(content.getSite());
+
+    public Class getContentParserClass(Site site) {
+        switch (site) {
+            case HELLPORNO:
+                return HellpornoContent.class;
+            case JPEGWORLD:
+                return JpegworldContent.class;
+            case NEXTPICTUREZ:
+                return NextpicturezContent.class;
+            case PORNPICS:
+                return PornPicsContent.class;
+            case XHAMSTER:
+                return XhamsterContent.class;
+            case XNXX:
+                return XnxxContent.class;
+            case JJGIRLS:
+                return JjgirlsContent.class;
+            case REDDIT:
+            case LINK2GALLERIES:
+            case PORNPICGALLERIES:
+            default:
+                return SmartContent.class;
+        }
     }
 
-    public ContentParser getParser(Site site) {
+    public ImageListParser getImageListParser(Site site) {
         switch (site) {
-            case ASMHENTAI:
-            case ASMHENTAI_COMICS:
-                return new ASMHentaiParser();
-            case HENTAICAFE:
-                return new HentaiCafeParser();
-            case HITOMI:
-                return new HitomiParser();
-            case NHENTAI:
-                return new NhentaiParser();
-            case TSUMINO:
-                return new TsuminoParser();
-            case PURURIN:
-                return new PururinParser();
-            case EHENTAI:
-                return new EHentaiParser();
-            case PANDA:
-                return new PandaParser();
+            case XHAMSTER:
+                return new XhamsterParser();
             default:
                 return new DummyParser();
         }

@@ -3,12 +3,13 @@ package me.devsaki.hentoid.activities;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.annotation.Nullable;
+
+import androidx.annotation.Nullable;
 
 import me.devsaki.hentoid.abstracts.BaseActivity;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.enums.Site;
-import me.devsaki.hentoid.util.Helper;
+import me.devsaki.hentoid.util.ContentHelper;
 import timber.log.Timber;
 
 import static android.content.Intent.ACTION_SEND;
@@ -62,30 +63,17 @@ public class IntentActivity extends BaseActivity {
         Content content = new Content();
         content.setSite(site);
         content.setUrl(parsedPath);
-        Helper.viewContent(this, content);
+        ContentHelper.viewContent(this, content, true);
     }
 
     @Nullable
     private static String parsePath(Site site, Uri data) {
         String toParse = data.getPath();
+        if (null == toParse) return null;
+
         switch (site) {
-            case HITOMI:
-                return toParse.replace("/galleries", "");
-            case NHENTAI:
-                return toParse.replace("/g", "");
-            case TSUMINO:
-                return toParse.replace("/Book/Info", "");
-            case ASMHENTAI_COMICS:
-                return toParse.replace("/g", "") + "/"; // '/' required
-            case ASMHENTAI:
-                return toParse.replace("/g", "") + "/"; // '/' required
-            case HENTAICAFE:
-                String path = data.toString();
-                return path.contains("/?p=") ? path.replace(Site.HENTAICAFE.getUrl(), "") : toParse;
-            case PURURIN:
-                return toParse.replace("/gallery", "") + "/";
             default:
-                return null;
+                return toParse;
         }
     }
 }

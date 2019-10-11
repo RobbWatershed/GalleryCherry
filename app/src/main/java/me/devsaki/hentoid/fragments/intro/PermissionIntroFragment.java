@@ -7,31 +7,32 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.design.widget.Snackbar;
-import android.support.v4.app.Fragment;
-import android.support.v4.content.ContextCompat;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
+import androidx.fragment.app.Fragment;
+
 import com.github.paolorotolo.appintro.ISlidePolicy;
+import com.google.android.material.snackbar.Snackbar;
 
 import me.devsaki.hentoid.BuildConfig;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.activities.IntroActivity;
 
-import static android.support.design.widget.Snackbar.LENGTH_LONG;
+import static com.google.android.material.snackbar.BaseTransientBottomBar.LENGTH_LONG;
 
 public class PermissionIntroFragment extends Fragment implements ISlidePolicy {
 
-    public static final int PERMISSION_REQUEST_CODE = 0;
+    private static final int PERMISSION_REQUEST_CODE = 0;
 
     private IntroActivity parentActivity;
 
     @Override
-    public void onAttach(Context context) {
+    public void onAttach(@NonNull Context context) {
         super.onAttach(context);
         if (context instanceof IntroActivity) {
             parentActivity = (IntroActivity) context;

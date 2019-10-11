@@ -4,8 +4,9 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
-import android.support.annotation.NonNull;
-import android.support.v4.app.NotificationCompat;
+
+import androidx.annotation.NonNull;
+import androidx.core.app.NotificationCompat;
 
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.services.UpdateDownloadService;
@@ -29,7 +30,7 @@ public class UpdateFailedNotification implements Notification {
         PendingIntent pendingIntent = PendingIntentCompat.getForegroundService(context, intent);
 
         return new NotificationCompat.Builder(context, UpdateNotificationChannel.ID)
-                .setSmallIcon(R.drawable.ic_stat_hentoid)
+                .setSmallIcon(R.drawable.ic_cherry_icon)
                 .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setCategory(NotificationCompat.CATEGORY_MESSAGE)
                 .setVibrate(new long[]{1, 1, 1})

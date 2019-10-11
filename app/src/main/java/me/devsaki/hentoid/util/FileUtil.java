@@ -3,17 +3,22 @@ package me.devsaki.hentoid.util;
 import android.content.Context;
 import android.net.Uri;
 import android.os.Build;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.v4.provider.DocumentFile;
+import android.webkit.MimeTypeMap;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.documentfile.provider.DocumentFile;
 
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+
+import javax.annotation.Nonnull;
 
 import me.devsaki.hentoid.HentoidApp;
 import timber.log.Timber;
@@ -26,6 +31,10 @@ import static android.os.Build.VERSION_CODES.LOLLIPOP;
  */
 class FileUtil {
 
+
+    private FileUtil() {
+        throw new IllegalStateException("Utility class");
+    }
 
     /**
      * Method ensures file creation from stream.
@@ -46,24 +55,43 @@ class FileUtil {
 
     /**
      * Get the DocumentFile corresponding to the given file.
-     * If the file does not exist, it is created.
+     * If the file does not exist, null is returned.
      *
      * @param file        The file.
-     * @param isDirectory flag indicating if the file should be a directory.
+     * @param isDirectory flag indicating if the given file should be a directory.
      * @return The DocumentFile.
      */
     @Nullable
-    private static DocumentFile getDocumentFile(final File file, final boolean isDirectory) {
+    static DocumentFile getDocumentFile(@Nonnull final File file, final boolean isDirectory) {
+        return getOrCreateDocumentFile(file, isDirectory, false);
+    }
+
+    @Nullable
+    private static DocumentFile getOrCreateDocumentFile(@Nonnull final File file, boolean isDirectory) {
+        return getOrCreateDocumentFile(file, isDirectory, true);
+    }
+
+    /**
+     * Get the DocumentFile corresponding to the given file.
+     * If the file does not exist, null is returned.
+     *
+     * @param file        The file.
+     * @param isDirectory flag indicating if the given file should be a directory.
+     * @return The DocumentFile.
+     */
+    @Nullable
+    private static DocumentFile getOrCreateDocumentFile(@Nonnull final File file, boolean isDirectory, boolean canCreate) {
         String baseFolder = FileHelper.getExtSdCardFolder(file);
         boolean returnSDRoot = false;
-        if (baseFolder == null) {
-            return null;
-        }
 
-        String relativePath = null;
+        // File is from phone memory
+        if (baseFolder == null) return DocumentFile.fromFile(file);
+
+        String relativePath = ""; // Path of the file relative to baseFolder
         try {
             String fullPath = file.getCanonicalPath();
-            if (!baseFolder.equals(fullPath)) {
+
+            if (!baseFolder.equals(fullPath)) { // Selected file _is_ the base folder
                 relativePath = fullPath.substring(baseFolder.length() + 1);
             } else {
                 returnSDRoot = true;
@@ -76,44 +104,47 @@ class FileUtil {
         }
 
         String sdStorageUriStr = Preferences.getSdStorageUri();
+        if (sdStorageUriStr.isEmpty()) return null;
 
-        Uri sdStorageUri;
-        if (sdStorageUriStr != null) {
-            sdStorageUri = Uri.parse(sdStorageUriStr);
+        Uri sdStorageUri = Uri.parse(sdStorageUriStr);
 
-            // Shorten relativePath if part of it is already in sdStorageUri
-            String[] uriContents = sdStorageUri.getPath().split(":");
-            if (uriContents.length > 1) {
-                String relativeUriPath = sdStorageUri.getPath().split(":")[1];
-                if (relativePath.contains(relativeUriPath)) {
-                    relativePath = relativePath.substring(relativeUriPath.length() + 1);
-                }
+        // Shorten relativePath if part of it is already in sdStorageUri
+        String[] uriContents = sdStorageUri.getPath().split(":");
+        if (uriContents.length > 1) {
+            String relativeUriPath = uriContents[1];
+            if (relativePath.equals(relativeUriPath)) {
+                relativePath = "";
+            } else if (relativePath.startsWith(relativeUriPath)) {
+                relativePath = relativePath.substring(relativeUriPath.length() + 1);
             }
-        } else return null;
+        }
 
-        return documentFileHelper(sdStorageUri, returnSDRoot, relativePath, isDirectory);
+        return getOrCreateFromComponents(sdStorageUri, returnSDRoot, relativePath, isDirectory, canCreate);
     }
 
     /**
-     * Get the DocumentFile corresponding to the given file.
-     * If the file does not exist, it is created.
+     * Get the DocumentFile corresponding to the given elements.
+     * If it does not exist, it is created.
      *
      * @param rootURI      Uri representing root
      * @param returnRoot   True if method has just to return the DocumentFile representing the given root
      * @param relativePath Relative path to the Document to be found/created (relative to given root)
-     * @param isDirectory  True if document is supposed to be a directory; false if document is supposed to be a file
+     * @param isDirectory  True if the given elements are supposed to be a directory; false if they are supposed to be a file
+     * @param canCreate    Behaviour when not found : True => creates a new file/folder / False => returns null
      * @return DocumentFile corresponding to the given file.
      */
-    private static DocumentFile documentFileHelper(Uri rootURI, boolean returnRoot,
-                                                   String relativePath, boolean isDirectory) {
+    @Nullable
+    private static DocumentFile getOrCreateFromComponents(@Nonnull Uri rootURI, boolean returnRoot,
+                                                          String relativePath, boolean isDirectory,
+                                                          boolean canCreate) {
         // start with root and then parse through document tree.
         Context context = HentoidApp.getAppContext();
         DocumentFile document = DocumentFile.fromTreeUri(context, rootURI);
 
         if (null == document) return null;
-        if (returnRoot) return document;
+        if (returnRoot || null == relativePath || relativePath.isEmpty()) return document;
 
-        String[] parts = relativePath.split("/");
+        String[] parts = relativePath.split(File.separator);
         for (int i = 0; i < parts.length; i++) {
             DocumentFile nextDocument = document.findFile(parts[i]);
             // The folder might exist in its capitalized version (might happen with legacy installs from the FakkuDroid era)
@@ -122,16 +153,22 @@ class FileUtil {
 
             // The folder definitely doesn't exist at all
             if (null == nextDocument) {
-                Timber.d("Document %s - part #%s : '%s' not found; creating", document.getName(), String.valueOf(i), parts[i]);
+                if (canCreate) {
+                    Timber.d("Document %s - part #%s : '%s' not found; creating", document.getName(), String.valueOf(i), parts[i]);
 
-                if ((i < parts.length - 1) || isDirectory) {
-                    nextDocument = document.createDirectory(parts[i]);
-                    if (null == nextDocument)
-                        Timber.e("Failed to create subdirectory %s/%s", document.getName(), parts[i]);
+                    if ((i < parts.length - 1) || isDirectory) {
+                        nextDocument = document.createDirectory(parts[i]);
+                        if (null == nextDocument) {
+                            Timber.e("Failed to create subdirectory %s/%s", document.getName(), parts[i]);
+                        }
+                    } else {
+                        nextDocument = document.createFile("image", parts[i]);
+                        if (null == nextDocument) {
+                            Timber.e("Failed to create file %s/image%s", document.getName(), parts[i]);
+                        }
+                    }
                 } else {
-                    nextDocument = document.createFile("image", parts[i]);
-                    if (null == nextDocument)
-                        Timber.e("Failed to create file %s/image%s", document.getName(), parts[i]);
+                    return null;
                 }
             }
             document = nextDocument;
@@ -151,37 +188,42 @@ class FileUtil {
         try {
             return FileUtils.openOutputStream(target);
         } catch (IOException e) {
-            Timber.d(e, "Could not open file"); // TODO do something for not displaying that exception on logcat, since it is "expected"
+            Timber.d("Could not open file (expected)");
         }
-
         try {
             if (Build.VERSION.SDK_INT >= LOLLIPOP) {
                 // Storage Access Framework
-                DocumentFile targetDocument = getDocumentFile(target, false);
+                DocumentFile targetDocument = getOrCreateDocumentFile(target, false);
                 if (targetDocument != null) {
                     Context context = HentoidApp.getAppContext();
                     return context.getContentResolver().openOutputStream(
                             targetDocument.getUri());
                 }
             }
-            throw new IOException("Error while attempting to get file : " + target.getAbsolutePath());
         } catch (Exception e) {
-            Timber.e(e, "Error while attempting to get file: %s", target.getAbsolutePath());
+            Timber.e(e, "Error [%s] while attempting to get file: %s ", e.getMessage(), target.getAbsolutePath());
             throw new IOException(e);
         }
+
+        throw new IOException("Error while attempting to get file : " + target.getAbsolutePath());
+    }
+
+    static OutputStream getOutputStream(@NonNull final DocumentFile target) throws FileNotFoundException {
+        Context context = HentoidApp.getAppContext();
+        return context.getContentResolver().openOutputStream(target.getUri());
     }
 
     static InputStream getInputStream(@NonNull final File target) throws IOException {
         try {
             return FileUtils.openInputStream(target);
         } catch (IOException e) {
-            Timber.d(e, "Could not open file"); // TODO do something for not displaying that exception on logcat, since it is "expected"
+            Timber.d("Could not open file (expected)");
         }
 
         try {
             if (Build.VERSION.SDK_INT >= LOLLIPOP) {
                 // Storage Access Framework
-                DocumentFile targetDocument = getDocumentFile(target, false);
+                DocumentFile targetDocument = getOrCreateDocumentFile(target, false);
                 if (targetDocument != null) {
                     Context context = HentoidApp.getAppContext();
                     return context.getContentResolver().openInputStream(
@@ -200,9 +242,10 @@ class FileUtil {
      * Create a file.
      *
      * @param file The file to be created.
+     * @param forceWrite Force writing operation even if an existing file is found (useful for I/O tests)
      * @return true if creation was successful.
      */
-    static boolean makeFile(@NonNull final File file) {
+    static boolean makeFile(@NonNull final File file, boolean forceWrite) {
         if (file.exists()) {
             // nothing to create.
             return !file.isDirectory();
@@ -214,14 +257,24 @@ class FileUtil {
         } catch (IOException e) {
             // Fail silently
         }
+
         // Try with Storage Access Framework.
         if (Build.VERSION.SDK_INT >= LOLLIPOP) {
-            DocumentFile document = getDocumentFile(file.getParentFile(), true);
-            // getDocumentFile implicitly creates the directory.
+            DocumentFile folder = getOrCreateDocumentFile(file.getParentFile(), true);
+            // getOrCreateDocumentFile implicitly creates the directory.
             try {
-                if (document != null) {
-                    return document.createFile(
-                            MimeTypes.getMimeType(file), file.getName()) != null;
+                if (folder != null) {
+                    DocumentFile existingFile = folder.findFile(file.getName());
+                    if (null == existingFile || forceWrite) {
+                        // If file exists (force write), delete it
+                        if (existingFile != null && !existingFile.delete()) return false;
+
+                        // Creating a new file
+                        String mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(FileHelper.getExtension(file.getName()));
+                        if (null == mimeType) mimeType = "application/octet-stream";
+
+                        return folder.createFile(mimeType, file.getName()) != null;
+                    } else return true; // File already exists
                 }
             } catch (Exception e) {
                 return false;
@@ -235,7 +288,7 @@ class FileUtil {
      * Create a folder.
      *
      * @param file The folder to be created.
-     * @return true if creation was successful.
+     * @return true if creation was successful or the folder already exists
      */
     static boolean makeDir(@NonNull final File file) {
         if (file.exists()) {
@@ -250,8 +303,8 @@ class FileUtil {
 
         // Try with Storage Access Framework.
         if (Build.VERSION.SDK_INT >= LOLLIPOP) {
-            DocumentFile document = getDocumentFile(file, true);
-            // getDocumentFile implicitly creates the directory.
+            DocumentFile document = getOrCreateDocumentFile(file, true);
+            // getOrCreateDocumentFile implicitly creates the directory.
             if (document != null) {
                 return document.exists();
             }
@@ -272,12 +325,20 @@ class FileUtil {
 
     static boolean deleteWithSAF(File file) {
         if (Build.VERSION.SDK_INT >= LOLLIPOP) {
-            DocumentFile document = getDocumentFile(file, true);
+            DocumentFile document = getOrCreateDocumentFile(file, true);
             if (document != null) {
                 return document.delete();
             }
         }
 
+        return false;
+    }
+
+    static boolean renameWithSAF(File srcDir, String newName) {
+        if (Build.VERSION.SDK_INT >= LOLLIPOP) {
+            DocumentFile srcDocument = getOrCreateDocumentFile(srcDir, true);
+            if (srcDocument != null) return srcDocument.renameTo(newName);
+        }
         return false;
     }
 }

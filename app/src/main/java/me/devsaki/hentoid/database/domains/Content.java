@@ -1,21 +1,34 @@
 package me.devsaki.hentoid.database.domains;
 
+import androidx.annotation.Nullable;
+
+import com.annimon.stream.Stream;
 import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
 
 import java.io.Serializable;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
-import me.devsaki.hentoid.activities.websites.ASMHentaiActivity;
-import me.devsaki.hentoid.activities.websites.BaseWebActivity;
-import me.devsaki.hentoid.activities.websites.EHentaiActivity;
-import me.devsaki.hentoid.activities.websites.HentaiCafeActivity;
-import me.devsaki.hentoid.activities.websites.HitomiActivity;
-import me.devsaki.hentoid.activities.websites.NhentaiActivity;
-import me.devsaki.hentoid.activities.websites.PandaActivity;
-import me.devsaki.hentoid.activities.websites.PururinActivity;
-import me.devsaki.hentoid.activities.websites.TsuminoActivity;
+import io.objectbox.annotation.Backlink;
+import io.objectbox.annotation.Convert;
+import io.objectbox.annotation.Entity;
+import io.objectbox.annotation.Id;
+import io.objectbox.annotation.Transient;
+import io.objectbox.relation.ToMany;
+import me.devsaki.hentoid.activities.sources.BaseWebActivity;
+import me.devsaki.hentoid.activities.sources.HellpornoActivity;
+import me.devsaki.hentoid.activities.sources.JjgirlsActivity;
+import me.devsaki.hentoid.activities.sources.JpegworldActivity;
+import me.devsaki.hentoid.activities.sources.Link2GalleriesActivity;
+import me.devsaki.hentoid.activities.sources.NextpicturezActivity;
+import me.devsaki.hentoid.activities.sources.PornPicGalleriesActivity;
+import me.devsaki.hentoid.activities.sources.PornPicsActivity;
+import me.devsaki.hentoid.activities.sources.RedditActivity;
+import me.devsaki.hentoid.activities.sources.XhamsterActivity;
+import me.devsaki.hentoid.activities.sources.XnxxActivity;
 import me.devsaki.hentoid.enums.AttributeType;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
@@ -25,16 +38,21 @@ import me.devsaki.hentoid.util.AttributeMap;
  * Created by DevSaki on 09/05/2015.
  * Content builder
  */
+@Entity
 public class Content implements Serializable {
 
+    @Id
+    private long id;
     @Expose
     private String url;
+    @Expose(serialize = false, deserialize = false)
+    private String uniqueSiteId; // Has to be queryable in DB, hence has to be a field
     @Expose
     private String title;
     @Expose
     private String author;
-    @Expose
-    private AttributeMap attributes;
+    @Expose(serialize = false, deserialize = false)
+    private ToMany<Attribute> attributes;
     @Expose
     private String coverImageUrl;
     @Expose
@@ -42,123 +60,167 @@ public class Content implements Serializable {
     @Expose
     private long uploadDate;
     @Expose
-    private long downloadDate;
+    private long downloadDate = 0;
     @Expose
+    @Convert(converter = StatusContent.StatusContentConverter.class, dbType = Integer.class)
     private StatusContent status;
+    @Expose(serialize = false, deserialize = false)
+    @Backlink(to = "content")
+    private ToMany<ImageFile> imageFiles;
     @Expose
-    private List<ImageFile> imageFiles;
-    @Expose
+    @Convert(converter = Site.SiteConverter.class, dbType = Long.class)
     private Site site;
     private String storageFolder; // Not exposed because it will vary according to book location -> valued at import
     @Expose
     private boolean favourite;
-    // Runtime attributes; no need to expose them
-    private double percent;
-    private int queryOrder;
-    private boolean selected = false;
+    @Expose
+    private long reads = 0;
+    @Expose
+    private long lastReadDate;
+    @Expose
+    private int lastReadPageIndex = 0;
+    // Temporary during SAVED state only; no need to expose them for JSON persistence
+    @Expose(serialize = false, deserialize = false)
+    private String downloadParams;
+    // Temporary during ERROR state only; no need to expose them for JSON persistence
+    @Expose(serialize = false, deserialize = false)
+    @Backlink(to = "content")
+    private ToMany<ErrorRecord> errorLog;
+    // Needs to be in the DB to keep the information when deletion takes a long time and user navigates
+    // No need to save that into JSON
+    @Expose(serialize = false, deserialize = false)
+    private boolean isBeingDeleted = false;
+    // Needs to be in the DB to optimize I/O
+    // No need to save that into the JSON file itself, obviously
+    @Expose(serialize = false, deserialize = false)
+    private String jsonUri;
+
+    // Runtime attributes; no need to expose them for JSON persistence nor to persist them to DB
+    @Transient
+    private double percent;     // % progress to display the progress bar on the queue screen
+    @Transient
+    private int queryOrder;     // Order of current content in the DB query that creates it
+    @Transient
+    private boolean isFirst;    // True if current content is the first of its set in the DB query
+    @Transient
+    private boolean isLast;     // True if current content is the last of its set in the DB query
+    @Transient
+    private boolean selected = false; // True if current content is selected (library view)
+    @Transient
+    private int numberDownloadRetries = 0;  // Current number of download retries current content has gone through
+
+    // Attributes kept for retro-compatibility with contentV2.json Hentoid files
+    @Transient
+    @Expose
+    @SerializedName("attributes")
+    private AttributeMap attributeMap;
+    @Transient
+    @Expose
+    @SerializedName("imageFiles")
+    private ArrayList<ImageFile> imageList;
 
 
-    public AttributeMap getAttributes() {
-        if (null == attributes) attributes = new AttributeMap();
-        return attributes;
+    public ToMany<Attribute> getAttributes() {
+        return this.attributes;
     }
 
-    public Content setAttributes(AttributeMap attributes) {
+    public void setAttributes(ToMany<Attribute> attributes) {
         this.attributes = attributes;
+    }
+
+    public AttributeMap getAttributeMap() {
+        AttributeMap result = new AttributeMap();
+        for (Attribute a : attributes) {
+            a.computeUrl(this.getSite());
+            result.add(a);
+        }
+        return result;
+    }
+
+    public Content addAttributes(AttributeMap attributes) {
+        if (attributes != null) {
+            for (AttributeType type : attributes.keySet()) {
+                this.attributes.addAll(attributes.get(type));
+            }
+        }
         return this;
     }
 
-    public int getId() {
-        return url.hashCode();
+    public long getId() {
+        return this.id;
+    }
+
+    public Content setId(long id) {
+        this.id = id;
+        return this;
     }
 
     public String getUniqueSiteId() {
-        String[] paths;
+        return this.uniqueSiteId;
+    }
+
+    private String computeUniqueSiteId() {
+        String[] parts = url.split("/");
 
         switch (site) {
-            case FAKKU:
-                return url.substring(url.lastIndexOf("/") + 1);
-            case EHENTAI:
-            case PURURIN:
-                paths = url.split("/");
-                return paths[1];
-            case HITOMI:
-                paths = url.split("/");
-                return paths[1].replace(".html", "");
-            case ASMHENTAI:
-            case ASMHENTAI_COMICS:
-            case NHENTAI:
-            case PANDA:
-            case TSUMINO:
-                return url.replace("/", "");
-            case HENTAICAFE:
-                return url.replace("/?p=", "");
+            case XHAMSTER:
+                return url.substring(url.lastIndexOf("-") + 1);
+            case XNXX:
+                if (parts.length > 0) return parts[0];
+                else return "";
+            case PORNPICS:
+            case HELLPORNO:
+            case PORNPICGALLERIES:
+            case LINK2GALLERIES:
+            case NEXTPICTUREZ:
+                return parts[parts.length - 1];
+            case JPEGWORLD:
+                return url.substring(url.lastIndexOf("-") + 1, url.lastIndexOf("."));
+            case REDDIT:
+                return "reddit"; // One single book
+            case JJGIRLS:
+                return parts[parts.length - 2] + "/" + parts[parts.length - 1];
             default:
                 return "";
         }
     }
 
-    // Used for upgrade purposes
-    @Deprecated
-    public String getOldUniqueSiteId() {
-        String[] paths;
-        switch (site) {
-            case FAKKU:
-                return url.substring(url.lastIndexOf("/") + 1);
-            case PURURIN:
-                paths = url.split("/");
-                return paths[2].replace(".html", "") + "-" + paths[1];
-            case HITOMI:
-                paths = url.split("/");
-                return paths[1].replace(".html", "") + "-" +
-                        title.replaceAll("[^a-zA-Z0-9.-]", "_");
-            case ASMHENTAI:
-            case ASMHENTAI_COMICS:
-            case NHENTAI:
-            case PANDA:
-            case EHENTAI:
-            case TSUMINO:
-                return url.replace("/", "") + "-" + site.getDescription();
-            case HENTAICAFE:
-                return url.replace("/?p=", "") + "-" + site.getDescription();
-            default:
-                return null;
-        }
+    public Class<?> getWebActivityClass() {
+        return getWebActivityClass(this.site);
     }
 
-    public Class<?> getWebActivityClass() {
+    public static Class<?> getWebActivityClass(Site site) {
         switch (site) {
-            case HITOMI:
-                return HitomiActivity.class;
-            case NHENTAI:
-                return NhentaiActivity.class;
-            case ASMHENTAI:
-            case ASMHENTAI_COMICS:
-                return ASMHentaiActivity.class;
-            case HENTAICAFE:
-                return HentaiCafeActivity.class;
-            case TSUMINO:
-                return TsuminoActivity.class;
-            case PURURIN:
-                return PururinActivity.class;
-            case EHENTAI:
-                return EHentaiActivity.class;
-            case PANDA:
-                return PandaActivity.class;
+            case XHAMSTER:
+                return XhamsterActivity.class;
+            case XNXX:
+                return XnxxActivity.class;
+            case PORNPICS:
+                return PornPicsActivity.class;
+            case JPEGWORLD:
+                return JpegworldActivity.class;
+            case NEXTPICTUREZ:
+                return NextpicturezActivity.class;
+            case HELLPORNO:
+                return HellpornoActivity.class;
+            case PORNPICGALLERIES:
+                return PornPicGalleriesActivity.class;
+            case LINK2GALLERIES:
+                return Link2GalleriesActivity.class;
+            case REDDIT:
+                return RedditActivity.class;
+            case JJGIRLS:
+                return JjgirlsActivity.class;
             default:
-                return BaseWebActivity.class; // Fallback for FAKKU
+                return BaseWebActivity.class;
         }
     }
 
     public String getCategory() {
-        if (site == Site.FAKKU) {
-            return url.substring(1, url.lastIndexOf("/"));
-        } else {
-            if (attributes != null) {
-                List<Attribute> attributesList = attributes.get(AttributeType.CATEGORY);
-                if (attributesList != null && attributesList.size() > 0) {
-                    return attributesList.get(0).getName();
-                }
+        if (attributes != null) {
+            List<Attribute> attributesList = getAttributeMap().get(AttributeType.CATEGORY);
+            if (attributesList != null && !attributesList.isEmpty()) {
+                return attributesList.get(0).getName();
             }
         }
 
@@ -171,32 +233,28 @@ public class Content implements Serializable {
 
     public Content setUrl(String url) {
         this.url = url;
+        this.uniqueSiteId = computeUniqueSiteId();
         return this;
     }
 
     public String getGalleryUrl() {
         String galleryConst;
         switch (site) {
-            case PURURIN:
-                galleryConst = "/gallery";
+            case PORNPICGALLERIES:
+            case LINK2GALLERIES:
+            case REDDIT: // N/A
+            case JJGIRLS:
+                return url; // Specific case - user can go on any site (smart parser)
+            case HELLPORNO:
+                galleryConst = ""; // Site landpage URL already contains the "/albums/" prefix
                 break;
-            case HITOMI:
-                galleryConst = "/galleries";
+            case PORNPICS:
+            case JPEGWORLD:
+                galleryConst = "galleries/";
                 break;
-            case ASMHENTAI:
-            case ASMHENTAI_COMICS:
-            case EHENTAI:           // Won't work because of the temporary key
-            case NHENTAI:
-                galleryConst = "/g";
-                break;
-            case TSUMINO:
-                galleryConst = "/Book/Info";
-                break;
-            case HENTAICAFE:
-            case PANDA:
             default:
-                galleryConst = "";
-                break; // Includes FAKKU & Hentai Cafe
+                galleryConst = "gallery/";
+                break;
         }
 
         return site.getUrl() + galleryConst + url;
@@ -204,38 +262,51 @@ public class Content implements Serializable {
 
     public String getReaderUrl() {
         switch (site) {
-            case HITOMI:
-                return site.getUrl() + "/reader" + url;
-            case NHENTAI:
-                return getGalleryUrl() + "1/";
-            case TSUMINO:
-                return site.getUrl() + "/Read/View" + url;
-            case ASMHENTAI:
-                return site.getUrl() + "/gallery" + url + "1/";
-            case ASMHENTAI_COMICS:
-                return site.getUrl() + "/gallery" + url;
-            case EHENTAI:               // Won't work anyway because of the temporary key
-            case HENTAICAFE:
-            case PANDA:
-                return getGalleryUrl();
-            case PURURIN:
-                return site.getUrl() + "/read/" + url.substring(1).replace("/","/01/");
             default:
-                return null;
+                return getGalleryUrl();
         }
     }
 
     public Content populateAuthor() {
-        String author = "";
-        if (getAttributes().containsKey(AttributeType.ARTIST) && attributes.get(AttributeType.ARTIST).size() > 0)
-            author = attributes.get(AttributeType.ARTIST).get(0).getName();
-        if (null == author || author.equals("")) // Try and get Circle
-        {
-            if (attributes.containsKey(AttributeType.CIRCLE) && attributes.get(AttributeType.CIRCLE).size() > 0)
-                author = attributes.get(AttributeType.CIRCLE).get(0).getName();
+        String authorStr = "";
+        AttributeMap attrMap = getAttributeMap();
+        if (attrMap.containsKey(AttributeType.ARTIST) && !attrMap.get(AttributeType.ARTIST).isEmpty())
+            authorStr = attrMap.get(AttributeType.ARTIST).get(0).getName();
+        if ((null == authorStr || authorStr.equals(""))
+                && attrMap.containsKey(AttributeType.CIRCLE)
+                && !attrMap.get(AttributeType.CIRCLE).isEmpty()) // Try and get Circle
+            authorStr = attrMap.get(AttributeType.CIRCLE).get(0).getName();
+
+        if (null == authorStr) authorStr = "";
+        setAuthor(authorStr);
+        return this;
+    }
+
+    public Content preJSONExport() { // TODO - this is shabby
+        this.attributeMap = getAttributeMap();
+        this.imageList = new ArrayList<>(imageFiles);
+        return this;
+    }
+
+    public Content postJSONImport() {   // TODO - this is shabby
+        if (null == site) site = Site.NONE;
+
+        if (this.attributeMap != null) {
+            this.attributes.clear();
+            for (AttributeType type : this.attributeMap.keySet()) {
+                for (Attribute attr : this.attributeMap.get(type)) {
+                    if (null == attr.getType())
+                        attr.setType(AttributeType.SERIE); // Fix the issue with v1.6.5
+                    this.attributes.add(attr.computeLocation(site));
+                }
+            }
         }
-        if (null == author) author = "";
-        setAuthor(author);
+        if (this.imageList != null) {
+            this.imageFiles.clear();
+            this.imageFiles.addAll(this.imageList);
+        }
+        this.populateAuthor();
+        this.uniqueSiteId = computeUniqueSiteId();
         return this;
     }
 
@@ -259,7 +330,9 @@ public class Content implements Serializable {
     }
 
     public String getCoverImageUrl() {
-        return coverImageUrl;
+        if (coverImageUrl != null && !coverImageUrl.isEmpty()) return coverImageUrl;
+        else if ((imageFiles != null) && (imageFiles.size() > 0)) return imageFiles.get(0).getUrl();
+        else return null;
     }
 
     public Content setCoverImageUrl(String coverImageUrl) {
@@ -276,7 +349,7 @@ public class Content implements Serializable {
         return this;
     }
 
-    public long getUploadDate() {
+    long getUploadDate() {
         return uploadDate;
     }
 
@@ -303,23 +376,37 @@ public class Content implements Serializable {
         return this;
     }
 
-    public List<ImageFile> getImageFiles() {
-        if (null == imageFiles) imageFiles = Collections.emptyList();
+    @Nullable
+    public ToMany<ImageFile> getImageFiles() {
         return imageFiles;
     }
 
     public Content setImageFiles(List<ImageFile> imageFiles) {
-        this.imageFiles = imageFiles;
+        if (imageFiles != null && !imageFiles.equals(this.imageFiles)) {
+            this.imageFiles.clear();
+            this.imageFiles.addAll(imageFiles);
+        }
         return this;
+    }
+
+    @Nullable
+    public ToMany<ErrorRecord> getErrorLog() {
+        return errorLog;
     }
 
     public double getPercent() {
         return percent;
     }
 
-    public Content setPercent(double percent) {
+    public void setPercent(double percent) {
         this.percent = percent;
-        return this;
+    }
+
+    public void computePercent() {
+        if (imageFiles != null && 0 == percent) {
+            long progress = Stream.of(imageFiles).filter(i -> i.getStatus() == StatusContent.DOWNLOADED || i.getStatus() == StatusContent.ERROR).count();
+            percent = progress * 100.0 / qtyPages;
+        }
     }
 
     public Site getSite() {
@@ -358,19 +445,104 @@ public class Content implements Serializable {
         return this;
     }
 
-    public boolean isSelected() { return selected; }
+    public boolean isLast() {
+        return isLast;
+    }
 
-    public void setSelected(boolean selected) { this.selected = selected; }
+    public void setLast(boolean last) {
+        this.isLast = last;
+    }
+
+    public boolean isFirst() {
+        return isFirst;
+    }
+
+    public void setFirst(boolean first) {
+        this.isFirst = first;
+    }
+
+    public boolean isSelected() {
+        return selected;
+    }
+
+    public void setSelected(boolean selected) {
+        this.selected = selected;
+    }
+
+    public long getReads() {
+        return reads;
+    }
+
+    public Content increaseReads() {
+        this.reads++;
+        return this;
+    }
+
+    public Content setReads(long reads) {
+        this.reads = reads;
+        return this;
+    }
+
+    public long getLastReadDate() {
+        return (0 == lastReadDate) ? downloadDate : lastReadDate;
+    }
+
+    public Content setLastReadDate(long lastReadDate) {
+        this.lastReadDate = lastReadDate;
+        return this;
+    }
+
+    public String getDownloadParams() {
+        return (null == downloadParams) ? "" : downloadParams;
+    }
+
+    public Content setDownloadParams(String params) {
+        downloadParams = params;
+        return this;
+    }
+
+    public int getLastReadPageIndex() {
+        return lastReadPageIndex;
+    }
+
+    public void setLastReadPageIndex(int index) {
+        this.lastReadPageIndex = index;
+    }
+
+    public boolean isBeingDeleted() {
+        return isBeingDeleted;
+    }
+
+    public void setIsBeingDeleted(boolean isBeingDeleted) {
+        this.isBeingDeleted = isBeingDeleted;
+    }
+
+    public String getJsonUri() {
+        return (null == jsonUri) ? "" : jsonUri;
+    }
+
+    public void setJsonUri(String jsonUri) {
+        this.jsonUri = jsonUri;
+    }
+
+    public int getNumberDownloadRetries() {
+        return numberDownloadRetries;
+    }
+
+    public void increaseNumberDownloadRetries() {
+        this.numberDownloadRetries++;
+    }
 
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (!(o instanceof Content)) {
+            return false;
+        }
 
         Content content = (Content) o;
 
-        return (url != null ? url.equals(content.url) : content.url == null) && site == content.site;
+        return this == o || (Objects.equals(content.url, url) && Objects.equals(content.site, site));
     }
 
     @Override
@@ -380,19 +552,9 @@ public class Content implements Serializable {
         return result;
     }
 
-    public static final Comparator<Content> TITLE_ALPHA_COMPARATOR = (a, b) -> a.getTitle().compareTo(b.getTitle());
+    public static Comparator<Content> getComparator() {
+        return QUERY_ORDER_COMPARATOR;
+    }
 
-    public static final Comparator<Content> DLDATE_COMPARATOR = (a, b) -> {
-        return Long.compare(a.getDownloadDate(), b.getDownloadDate()) * -1; /* Inverted - last download date first */
-    };
-
-    public static final Comparator<Content> ULDATE_COMPARATOR = (a, b) -> {
-        return Long.compare(a.getUploadDate(), b.getUploadDate()) * -1; /* Inverted - last upload date first */
-    };
-
-    public static final Comparator<Content> TITLE_ALPHA_INV_COMPARATOR = (a, b) -> a.getTitle().compareTo(b.getTitle()) * -1;
-
-    public static final Comparator<Content> DLDATE_INV_COMPARATOR = (a, b) -> Long.compare(a.getDownloadDate(), b.getDownloadDate());
-
-    public static final Comparator<Content> QUERY_ORDER_COMPARATOR = (a, b) -> Integer.compare(a.getQueryOrder(), b.getQueryOrder());
+    private static final Comparator<Content> QUERY_ORDER_COMPARATOR = (a, b) -> Integer.compare(a.getQueryOrder(), b.getQueryOrder());
 }

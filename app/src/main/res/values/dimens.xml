@@ -1,4 +1,19 @@
 <resources>
+    <!-- Text Sizes -->
+    <dimen name="text_header_1">96sp</dimen>
+    <dimen name="text_header_2">60sp</dimen>
+    <dimen name="text_header_3">48sp</dimen>
+    <dimen name="text_header_4">34sp</dimen>
+    <dimen name="text_header_5">24sp</dimen>
+    <dimen name="text_header_6">20sp</dimen>
+    <dimen name="text_subtitle_1">16sp</dimen>
+    <dimen name="text_subtitle_2">14sp</dimen>
+    <dimen name="text_body_1">16sp</dimen>
+    <dimen name="text_body_2">14sp</dimen>
+    <dimen name="text_button">14sp</dimen>
+    <dimen name="caption">12sp</dimen>
+    <dimen name="overline">10sp</dimen>
+
     <!-- navigation drawer -->
     <dimen name="drawer_layout_width">320dp</dimen>
     <dimen name="drawer_item_padding_start">24dp</dimen>
@@ -15,8 +30,6 @@
     <dimen name="toolbar_layout_elevation">6dp</dimen>
 
     <!-- browser -->
-    <dimen name="activity_base_web_padding">6dp</dimen>
-
     <dimen name="download_fab_margin">8dp</dimen>
 
     <dimen name="refresh_fab_margin_bottom">0dp</dimen>
@@ -42,4 +55,7 @@
     <dimen name="default_cardview_margin">8dp</dimen>
     <dimen name="list_item_spacing">16dp</dimen>
     <dimen name="list_item_spacing_half">8dp</dimen>
+
+    <!-- image viewer -->
+    <dimen name="tap_zone_width">64dp</dimen>
 </resources>

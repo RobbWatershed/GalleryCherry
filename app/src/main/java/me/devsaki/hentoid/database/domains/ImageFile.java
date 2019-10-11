@@ -2,16 +2,26 @@ package me.devsaki.hentoid.database.domains;
 
 import com.google.gson.annotations.Expose;
 
+import java.util.Comparator;
 import java.util.Locale;
+import java.util.Objects;
 
+import io.objectbox.annotation.Convert;
+import io.objectbox.annotation.Entity;
+import io.objectbox.annotation.Id;
+import io.objectbox.annotation.Transient;
+import io.objectbox.relation.ToOne;
 import me.devsaki.hentoid.enums.StatusContent;
 
 /**
  * Created by DevSaki on 10/05/2015.
  * Image File builder
  */
+@Entity
 public class ImageFile {
 
+    @Id
+    private long id;
     @Expose
     private Integer order;
     @Expose
@@ -19,22 +29,51 @@ public class ImageFile {
     @Expose
     private String name;
     @Expose
+    private boolean favourite = false;
+    @Expose
+    @Convert(converter = StatusContent.StatusContentConverter.class, dbType = Integer.class)
     private StatusContent status;
+    public ToOne<Content> content;
 
 
-    public ImageFile() {};
+    // Temporary attributes during SAVED state only; no need to expose them for JSON persistence
+    @Expose(serialize = false, deserialize = false)
+    private String downloadParams;
 
-    public ImageFile(int order, String url, StatusContent status)
-    {
-        this.order = order;
-        this.name = String.format(Locale.US, "%03d", order);
-        this.url = url;
-        this.status = status;
+
+    // Runtime attributes; no need to expose them nor to persist them
+
+    // Display order of the image in the image viewer
+    @Transient
+    private int displayOrder;
+    // Absolute storage path of the image
+    @Transient
+    private String absolutePath;
+    // Has the image been read from a backup URL ?
+    @Transient
+    private boolean isBackup = false;
+    // Inferred MIME-type of the image
+    @Transient
+    private String mimeType; // TODO : make it persistent ?
+
+
+    public ImageFile() {
     }
 
+    public ImageFile(int order, String url, StatusContent status) {
+        this.order = order;
+        computeNameFromOrder();
+        this.url = url;
+        this.status = status;
+        this.favourite = false;
+    }
 
-    public Integer getId() {
-        return url.hashCode();
+    public long getId() {
+        return this.id;
+    }
+
+    public void setId(long id) {
+        this.id = id;
     }
 
     public Integer getOrder() {
@@ -64,6 +103,11 @@ public class ImageFile {
         return this;
     }
 
+    public void computeNameFromOrder()
+    {
+        name = String.format(Locale.US, "%03d", order);
+    }
+
     public StatusContent getStatus() {
         return status;
     }
@@ -71,5 +115,72 @@ public class ImageFile {
     public ImageFile setStatus(StatusContent status) {
         this.status = status;
         return this;
+    }
+
+    public String getDownloadParams() {
+        return (null == downloadParams) ? "" : downloadParams;
+    }
+
+    public ImageFile setDownloadParams(String params) {
+        downloadParams = params;
+        return this;
+    }
+
+    public boolean isFavourite() {
+        return favourite;
+    }
+
+    public void setFavourite(boolean favourite) {
+        this.favourite = favourite;
+    }
+
+    public String getAbsolutePath() {
+        return absolutePath;
+    }
+
+    public void setAbsolutePath(String absolutePath) {
+        this.absolutePath = absolutePath;
+    }
+
+    public int getDisplayOrder() {
+        return displayOrder;
+    }
+
+    public void setDisplayOrder(int displayOrder) {
+        this.displayOrder = displayOrder;
+    }
+
+    public boolean isBackup() {
+        return isBackup;
+    }
+
+    public void setBackup(boolean backup) {
+        isBackup = backup;
+    }
+
+    public String getMimeType() {
+        return (null == mimeType) ? "" : mimeType;
+    }
+
+    public void setMimeType(String mimeType) {
+        this.mimeType = mimeType;
+    }
+
+
+    public static final Comparator<ImageFile> ORDER_COMPARATOR = (a, b) -> a.getOrder().compareTo(b.getOrder());
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        ImageFile imageFile = (ImageFile) o;
+
+        return Objects.equals(url, imageFile.url);
+    }
+
+    @Override
+    public int hashCode() {
+        return url != null ? url.hashCode() : 0;
     }
 }

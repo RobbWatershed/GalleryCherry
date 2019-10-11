@@ -1,7 +1,8 @@
 package me.devsaki.hentoid.enums;
 
-import javax.annotation.Nullable;
+import java.io.File;
 
+import io.objectbox.converter.PropertyConverter;
 import me.devsaki.hentoid.R;
 import timber.log.Timber;
 
@@ -12,17 +13,17 @@ import timber.log.Timber;
  */
 public enum Site {
 
-    // TODO : https://hentai2read.com/
-    FAKKU(0, "Fakku", "https://www.fakku.net", "fakku", R.drawable.ic_menu_fakku, true),
-    PURURIN(1, "Pururin", "https://pururin.io", "pururin", R.drawable.ic_menu_pururin, true),
-    HITOMI(2, "hitomi", "https://hitomi.la", "hitomi", R.drawable.ic_menu_hitomi, true),
-    NHENTAI(3, "nhentai", "https://nhentai.net", "nhentai", R.drawable.ic_menu_nhentai, true),
-    TSUMINO(4, "tsumino", "https://www.tsumino.com", "tsumino", R.drawable.ic_menu_tsumino, true),
-    HENTAICAFE(5, "hentaicafe", "https://hentai.cafe", "hentai.cafe", R.drawable.ic_menu_hentaicafe, true),
-    ASMHENTAI(6, "asmhentai", "https://asmhentai.com", "/asmhentai", R.drawable.ic_menu_asmhentai, true),
-    ASMHENTAI_COMICS(7, "asmhentai", "https://comics.asmhentai.com", "comics.asmhentai", R.drawable.ic_menu_asmcomics, true),
-    EHENTAI(8, "e-hentai", "https://e-hentai.org", "e-hentai", R.drawable.ic_menu_ehentai, true),
-    PANDA(99, "panda", "https://www.mangapanda.com", "mangapanda", R.drawable.ic_menu_panda, true); // Safe-for-work/wife/gf option
+    XHAMSTER(0, "XHamster", "https://m.xhamster.com/photos/", "xhamster", R.drawable.ic_menu_xhamster, true, true, false, false, false),
+    XNXX(1, "XNXX", "https://multi.xnxx.com/", "XNXX", R.drawable.ic_menu_xnxx, true, true, false, false, false),
+    PORNPICS(2, "Pornpics", "https://www.pornpics.com/", "pornpics", R.drawable.ic_menu_pornpics, true, true, false, false, false),
+    JPEGWORLD(3, "Jpegworld", "https://www.jpegworld.com/", "jpegworld", R.drawable.ic_menu_jpegworld, true, true, false, false, false),
+    NEXTPICTUREZ(4, "Nextpicturez", "http://www.nextpicturez.com/", "nextpicturez", R.drawable.ic_menu_nextpicturez, true, true, false, false, false),
+    HELLPORNO(5, "Hellporno", "https://hellporno.com/albums/", "hellporno", R.drawable.ic_menu_hellporno, true, true, false, false, false),
+    PORNPICGALLERIES(6, "Pornpicgalleries", "http://pornpicgalleries.com/", "pornpicgalleries", R.drawable.ic_menu_ppg, true, true, false, false, false),
+    LINK2GALLERIES(7, "Link2galleries", "https://www.link2galleries.com/", "link2galleries", R.drawable.ic_menu_l2g, true, true, false, false, false),
+    REDDIT(8, "Reddit", "https://www.reddit.com/", "reddit", R.drawable.ic_social_reddit, true, true, false, false, true),
+    JJGIRLS(9, "JJGirls", "https://jjgirls.com/mobile/", "jjgirls", R.drawable.ic_menu_jjgirls, true, true, false, true, false),
+    NONE(98, "none", "", "none", R.drawable.ic_menu_about, true, true, false, false, false); // Fallback site
 
 
     private final int code;
@@ -31,18 +32,34 @@ public enum Site {
     private final String url;
     private final int ico;
     private final boolean allowParallelDownloads;
+    private final boolean canKnowHentoidAgent;
+    private final boolean hasImageProcessing;
+    private final boolean hasBackupURLs;
+    private final boolean isDanbooru;
 
-    Site(int code, String description, String url, String uniqueKeyword, int ico, boolean allowParallelDownloads) {
+    Site(int code,
+         String description,
+         String url,
+         String uniqueKeyword,
+         int ico,
+         boolean allowParallelDownloads,
+         boolean canKnowHentoidAgent,
+         boolean hasImageProcessing,
+         boolean hasBackupURLs,
+         boolean isDanbooru) {
         this.code = code;
         this.description = description;
         this.url = url;
         this.uniqueKeyword = uniqueKeyword;
         this.ico = ico;
         this.allowParallelDownloads = allowParallelDownloads;
+        this.canKnowHentoidAgent = canKnowHentoidAgent;
+        this.hasImageProcessing = hasImageProcessing;
+        this.hasBackupURLs = hasBackupURLs;
+        this.isDanbooru = isDanbooru;
     }
 
-    @Nullable
-    public static Site searchByCode(int code) {
+    public static Site searchByCode(long code) {
         if (code == -1) {
             Timber.w("Invalid site code!");
         }
@@ -50,12 +67,11 @@ public enum Site {
             if (s.getCode() == code)
                 return s;
         }
-        return null;
+        return Site.NONE;
     }
 
-    @Nullable
     public static Site searchByUrl(String url) {
-        if (null == url || 0 == url.length()) {
+        if (null == url || url.isEmpty()) {
             Timber.w("Invalid url");
             return null;
         }
@@ -63,7 +79,7 @@ public enum Site {
             if (url.contains(s.getUniqueKeyword()))
                 return s;
         }
-        return null;
+        return Site.NONE;
     }
 
     public int getCode() {
@@ -74,7 +90,7 @@ public enum Site {
         return description;
     }
 
-    public String getUniqueKeyword() {
+    private String getUniqueKeyword() {
         return uniqueKeyword;
     }
 
@@ -90,11 +106,43 @@ public enum Site {
         return allowParallelDownloads;
     }
 
+    public boolean canKnowHentoidAgent() {
+        return canKnowHentoidAgent;
+    }
+
+    public boolean hasImageProcessing() {
+        return hasImageProcessing;
+    }
+
+    public boolean hasBackupURLs() {
+        return hasBackupURLs;
+    }
+
+    public boolean isDanbooru() {
+        return isDanbooru;
+    }
+
     public String getFolder() {
-        if (this == FAKKU) {
-            return "/Downloads/";
-        } else {
-            return '/' + description + '/';
+        return File.separator + description + File.separator;
+    }
+
+    public static class SiteConverter implements PropertyConverter<Site, Long> {
+        @Override
+        public Site convertToEntityProperty(Long databaseValue) {
+            if (databaseValue == null) {
+                return Site.NONE;
+            }
+            for (Site site : Site.values()) {
+                if (site.getCode() == databaseValue) {
+                    return site;
+                }
+            }
+            return Site.NONE;
+        }
+
+        @Override
+        public Long convertToDatabaseValue(Site entityProperty) {
+            return entityProperty == null ? null : (long) entityProperty.getCode();
         }
     }
 }

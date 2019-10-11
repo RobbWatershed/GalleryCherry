@@ -2,10 +2,6 @@
 <resources>
     <!-- Downloads List -->
     <string name="pref_downloads_category">Downloads List</string>
-    <string name="pref_hide_recent_title">Hide From Recent Apps</string>
-    <string name="pref_hide_recent_summary_off">App preview in Recent Apps enabled.</string>
-    <string name="pref_hide_recent_summary_on">Disable if you need to take a screen shot.\nApp preview in Recent Apps disabled.</string>
-    <string name="pref_hide_recent_default" translatable="false">true</string>
     <string name="pref_endless_scroll_title">Endless Scroll</string>
     <string name="pref_endless_scroll_summary_off">Enable endless scrolling in download list.\nDisables paging.</string>
     <string name="pref_endless_scroll_summary_on">Scroll away to your heart\'s content.</string>
@@ -20,9 +16,8 @@
     <string name="pref_dl_threads_quantity_default" translatable="false">0</string>
     <!-- Library -->
     <string name="pref_library_category">Library</string>
-    <string name="pref_read_content_title">Read Content Action</string>
-    <string name="pref_read_content_summary">Image reader to open by default:\n%s</string>
-    <string name="pref_read_content_default" translatable="false">0</string>
+    <string name="pref_refresh_library_title">Refresh library</string>
+    <string name="pref_refresh_library_summary">Manually refresh library contents</string>
     <string name="pref_folder_naming_content_title">Folder names</string>
     <string name="pref_folder_naming_content_summary">Book folder naming convention:\n%s</string>
     <string name="pref_folder_naming_content_default" translatable="false">2</string>
@@ -33,27 +28,20 @@
     <string name="pref_attributes_list_order_default" translatable="false">1</string>
     <string name="pref_attributes_list_order_summary">%s</string>
     <string name="pref_select_folder_title">Select Downloads Folder</string>
-    <string name="pref_select_folder_summary">Select where Hentoid will store your downloads.</string>
+    <string name="pref_select_folder_summary">Select where GalleryCherry will store your downloads.</string>
     <string name="pref_add_no_media_file_title">Hide Downloaded Images</string>
     <string name="pref_add_no_media_file_summary">Prevents downloaded images from showing up in gallery apps.</string>
     <!-- Browser -->
     <string name="pref_webview_category">Browser</string>
     <string name="pref_webview_override_overview_title">Disable Page Overview</string>
     <string name="pref_webview_override_overview_summary_off">Disables page overview and allows you to set your preferred initial zoom level below.</string>
-    <string name="pref_webview_override_overview_summary_on">Tweak the setting below to set your initial zoom level.\nNote: Only affects Hitomi.</string>
+    <string name="pref_webview_override_overview_summary_on">Tweak the setting below to set your initial zoom level.</string>
     <string name="pref_webview_override_overview_default" translatable="false">false</string>
     <string name="pref_webview_initial_zoom_title">Initial Zoom Level</string>
     <string name="pref_webview_initial_zoom_summary">Zoom level of browser page on initial page load.\nCurrently: %s%%</string>
     <string name="pref_webview_initial_zoom_default" translatable="false">20</string>
     <!-- .nomedia -->
     <string name="nomedia_file_created">.nomedia file created.</string>
-    <!-- App Lock -->
-    <string name="pref_applock_category">App Lock</string>
-    <string name="pref_app_lock_title">Application Lock PIN</string>
-    <string name="pref_app_lock_summary">Set a PIN password to open the app.\nLeave empty if you don\'t want to be asked.</string>
-    <string name="pref_app_lock_vibrate_title">Unlock Feedback</string>
-    <string name="pref_app_lock_vibrate_summary">Enable haptic feedback on app lock screen.</string>
-    <string name="pref_app_lock_vibrate_default" translatable="false">true</string>
     <!-- Updates -->
     <string name="pref_updates_category">Updates</string>
     <string name="pref_check_updates_manual_title">Manual Update Check</string>
@@ -64,12 +52,29 @@
     <string name="pref_check_updates_default" translatable="false">true</string>
     <!-- Misc -->
     <string name="pref_misc_category">Misc</string>
-    <string name="pref_analytics_tracking_title">Google Analytics</string>
-    <string name="pref_analytics_tracking_summary_off">Analytics Tracking is currently enabled.\nThanks for helping us improve Hentoid!</string>
-    <string name="pref_analytics_tracking_summary_on">Tap to enable Analytics Tracking.\nHelp us improve the app by tracking crashes &amp; exceptions.</string>
-    <string name="pref_analytics_tracking_default" translatable="false">false</string>
-    <string name="pref_use_sfw_title">Use safe-for-work/wife/gf source</string>
-    <string name="pref_use_sfw_summary_off">Going full hentai</string>
-    <string name="pref_use_sfw_summary_on">A non-hentai source is available</string>
-    <string name="pref_use_sfw_default" translatable="false">false</string>
+    <string name="pref_dark_mode_title">Dark mode</string>
+    <string name="pref_dark_mode_summary">Set the display theme</string>
+    <string name="pref_dark_mode_default" translatable="false">0</string>
+    <string name="pref_app_preview_title">App preview on Recent Apps</string>
+    <string name="pref_app_preview_summary_off">App preview in Recent Apps disabled.\nEnable if you need to take a screen shot.</string>
+    <string name="pref_app_preview_summary_on">App preview in Recent Apps enabled.</string>
+    <string name="pref_app_preview_default" translatable="false">false</string>
+    <string name="pref_analytics_preference_title">Google Analytics</string>
+    <string name="pref_analytics_preference_summary_off">Analytics Tracking is currently disabled.\nEnabling it will help us improve the app by tracking crashes &amp; exceptions.</string>
+    <string name="pref_analytics_preference_summary_on">Analytics Tracking is currently enabled.\nThanks for helping us improve GalleryCherry!</string>
+    <string name="pref_analytics_preference_default" translatable="false">true</string>
+    <!-- Advanced -->
+    <string name="advanced_screen_title">Advanced settings</string>
+    <!-- Download retries -->
+    <string name="download_retries_screen_title">Automated download retries</string>
+    <string name="download_retries_active_title">Retries activated</string>
+    <string name="pref_dl_retries_active_default" translatable="false">false</string>
+    <string name="pref_dl_retries_on">Failed downloads will auto-retry</string>
+    <string name="pref_dl_retries_off">Failed downloads will stay in error state</string>
+    <string name="pref_dl_retries_number_title">Number of retries before aborting</string>
+    <string name="pref_dl_retries_number_summary">%s</string>
+    <string name="pref_dl_retries_number_default" translatable="false">3</string>
+    <string name="pref_dl_retries_mem_limit_title">Mem usage threshold before aborting</string>
+    <string name="pref_dl_retries_mem_limit_summary">%s</string>
+    <string name="pref_dl_retries_mem_limit_default" translatable="false">0</string>
 </resources>

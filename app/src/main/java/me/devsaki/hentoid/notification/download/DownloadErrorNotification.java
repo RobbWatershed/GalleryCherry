@@ -3,8 +3,9 @@ package me.devsaki.hentoid.notification.download;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
-import android.support.annotation.NonNull;
-import android.support.v4.app.NotificationCompat;
+
+import androidx.annotation.NonNull;
+import androidx.core.app.NotificationCompat;
 
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.activities.DownloadsActivity;
@@ -24,7 +25,7 @@ public class DownloadErrorNotification implements Notification {
     @Override
     public android.app.Notification onCreateNotification(Context context) {
         return new NotificationCompat.Builder(context, DownloadNotificationChannel.ID)
-                .setSmallIcon(R.drawable.ic_stat_hentoid)
+                .setSmallIcon(R.drawable.ic_cherry_icon)
                 .setContentTitle(context.getString(R.string.download_error))
                 .setContentText(content.getTitle())
                 .setContentIntent(getDefaultIntent(context))

@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:gravity="center"
+    android:padding="16dp"
+    android:clipToPadding="false"
+    >
+
+    <TextView
+        android:id="@+id/landing_history_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/landing_history_title"
+        android:textSize="@dimen/text_header_6"
+        android:textStyle="bold"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <EditText
+        android:id="@+id/landing_history_input"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@color/white_opacity_66"
+        android:layout_marginTop="12dp"
+        android:ems="10"
+        android:inputType="textUri"
+        android:text=""
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/landing_history_title"
+        android:importantForAutofill="no" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/landing_history_list"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:background="?colorSecondary"
+        android:fadeScrollbars="false"
+        android:overScrollMode="never"
+        android:scrollbars="vertical"
+        android:textIsSelectable="false"
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/landing_history_input"
+        tools:listitem="@layout/item_text" />
+
+    <TextView
+        android:id="@+id/landing_history_ok"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="?colorSecondary"
+        android:layout_marginStart="8dp"
+        android:minWidth="0dp"
+        android:minHeight="0dp"
+        android:paddingStart="16dp"
+        android:paddingTop="2dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="2dp"
+        android:text="@android:string/ok"
+        app:layout_constraintStart_toEndOf="@id/landing_history_input"
+        app:layout_constraintTop_toTopOf="@id/landing_history_input"
+        app:layout_constraintBottom_toBottomOf="@id/landing_history_input"/>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

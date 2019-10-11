@@ -3,15 +3,16 @@ package me.devsaki.hentoid.parsers;
 import java.util.List;
 
 import me.devsaki.hentoid.database.domains.Content;
+import me.devsaki.hentoid.database.domains.ImageFile;
 
-public class DummyParser implements ContentParser {
+public class DummyParser implements ImageListParser {
     @Override
-    public Content parseContent(String urlString) {
-        return null;
+    public List<ImageFile> parseImageList(Content content) {
+        return content.getImageFiles();
     }
 
     @Override
-    public List<String> parseImageList(Content content) {
-        return null;
+    public ImageFile parseBackupUrl(String url, int order) {
+        return ParseHelper.urlToImageFile(url, order);
     }
 }

@@ -1,9 +1,6 @@
 package me.devsaki.hentoid.util;
 
-import android.Manifest;
-import android.annotation.SuppressLint;
-import android.annotation.TargetApi;
-import android.app.Activity;
+import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -14,179 +11,38 @@ import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.drawable.Drawable;
-import android.os.AsyncTask;
+import android.net.Uri;
 import android.os.Build;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
-import android.support.v4.graphics.drawable.DrawableCompat;
-import android.text.Html;
-import android.text.Spanned;
-import android.webkit.WebResourceResponse;
+import android.util.DisplayMetrics;
 import android.widget.Toast;
 
-import java.io.File;
-import java.io.FileInputStream;
+import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
+import androidx.core.graphics.drawable.DrawableCompat;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
-import java.util.Locale;
 
-import me.devsaki.hentoid.HentoidApp;
+import javax.annotation.Nonnull;
+
 import me.devsaki.hentoid.R;
-import me.devsaki.hentoid.activities.AppLockActivity;
-import me.devsaki.hentoid.activities.DownloadsActivity;
-import me.devsaki.hentoid.activities.IntroActivity;
-import me.devsaki.hentoid.activities.QueueActivity;
-import me.devsaki.hentoid.database.domains.Attribute;
-import me.devsaki.hentoid.database.domains.Content;
-import me.devsaki.hentoid.enums.AttributeType;
-import me.devsaki.hentoid.enums.Site;
 import timber.log.Timber;
 
-import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 import static android.graphics.Bitmap.Config.ARGB_8888;
 
 /**
  * Created by avluis on 06/05/2016.
- * Utility class
- * <p/>
- * TODO: Add additional image viewers.
+ * Generic utility class
  */
 public final class Helper {
-    private static Toast toast;
 
-    public static void viewContent(final Context context, Content content) {
-        Intent intent = new Intent(context, content.getWebActivityClass());
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        intent.putExtra(Consts.INTENT_URL, content.getGalleryUrl());
-        context.startActivity(intent);
-    }
-
-    public static void viewQueue(final Context context) {
-        Intent intent = new Intent(context, QueueActivity.class);
-        context.startActivity(intent);
-    }
-
-    public static void cancelToast() {
-        if (toast != null) {
-            toast.cancel();
-            toast = null;
-        }
-    }
-
-    // For use whenever Toast messages could stack (e.g., repeated calls to Toast.makeText())
-    public static void toast(String text) {
-        Context context = HentoidApp.getAppContext();
-        if (context != null) {
-            toast(context, text);
-        }
-    }
-
-    public static void toast(int resource) {
-        Context context = HentoidApp.getAppContext();
-        if (context != null) {
-            toast(context, context.getResources().getString(resource));
-        }
-    }
-
-    public static void toast(Context context, String text) {
-        toast(context, text, DURATION.SHORT);
-    }
-
-    public static void toast(Context context, int resource) {
-        toast(context, resource, DURATION.SHORT);
-    }
-
-    public static void toast(Context context, String text, DURATION duration) {
-        toast(context, text, -1, duration);
-    }
-
-    public static void toast(Context context, int resource, DURATION duration) {
-        toast(context, null, resource, duration);
-    }
-
-    @SuppressLint("ShowToast")
-    private static void toast(@NonNull Context context, @Nullable String text, int res,
-                              DURATION duration) {
-        String message = null;
-        if (text != null) {
-            message = text;
-        } else if (res != -1) {
-            message = context.getString(res);
-        } else {
-            Throwable noResource = new Throwable("You must provide a String or Resource ID!");
-            try {
-                throw noResource;
-            } catch (Throwable throwable) {
-                throwable.printStackTrace();
-            }
-        }
-
-        int time;
-        switch (duration) {
-            case LONG:
-                time = Toast.LENGTH_LONG;
-                break;
-            case SHORT:
-            default:
-                time = Toast.LENGTH_SHORT;
-                break;
-        }
-
-        try {
-            toast.getView().isShown();
-            toast.setText(message);
-        } catch (Exception e) {
-            Timber.d("toast is null, creating one instead;");
-            toast = Toast.makeText(context, message, time);
-        }
-
-        toast.show();
-    }
-
-    @SafeVarargs
-    public static <T> void executeAsyncTask(AsyncTask<T, ?, ?> task, T... params) {
-        task.execute(params);
-    }
-
-    public static void launchMainActivity(Context context) {
-        if (Preferences.getAppLockPin().isEmpty()) {
-            Intent intent = new Intent(context, DownloadsActivity.class);
-            context.startActivity(intent);
-        } else {
-            Intent intent = new Intent(context, AppLockActivity.class);
-            context.startActivity(intent);
-        }
-    }
-
-    @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
-    public static boolean permissionsCheck(Activity activity, int permissionRequestCode,
-                                           boolean request) {
-        if (ActivityCompat.checkSelfPermission(activity,
-                Manifest.permission.READ_EXTERNAL_STORAGE) == PERMISSION_GRANTED) {
-
-            return true;
-        } else {
-            if (request) {
-                ActivityCompat.requestPermissions(activity, new String[]{
-                        Manifest.permission.READ_EXTERNAL_STORAGE}, permissionRequestCode);
-            }
-
-            return false;
-        }
-    }
-
-    // We have asked for permissions, but still denied.
-    public static void reset(Context context, Activity activity) {
-        Helper.toast(R.string.reset);
-        Preferences.setIsFirstRun(true);
-        Intent intent = new Intent(activity, IntroActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        context.startActivity(intent);
-        activity.finish();
+    private Helper() {
+        throw new IllegalStateException("Utility class");
     }
 
     public static void doRestart(@NonNull Context context) {
@@ -214,17 +70,7 @@ public final class Helper {
         }
     }
 
-    public static String getActivityName(Context context, int attribute) {
-        String activityName = context.getString(attribute);
-        if (!activityName.isEmpty()) {
-            return activityName;
-        } else {
-            activityName = context.getString(R.string.app_name);
-        }
-        return activityName;
-    }
-
-    public static Bitmap getBitmapFromVectorDrawable(Context context, int drawableId) {
+    static Bitmap getBitmapFromVectorDrawable(Context context, int drawableId) {
         Drawable d = ContextCompat.getDrawable(context, drawableId);
 
         if (d != null && Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
@@ -253,64 +99,22 @@ public final class Helper {
         return b;
     }
 
-    public static WebResourceResponse getWebResourceResponseFromAsset(Site site, String filename,
-                                                                      TYPE type) {
-        Context context = HentoidApp.getAppContext();
-        String pathPrefix = site.getDescription().toLowerCase(Locale.US) + "/";
-        String file = pathPrefix + filename;
-        try {
-            File asset = new File(context.getExternalCacheDir() + "/" + file);
-            FileInputStream stream = new FileInputStream(asset);
-            return Helper.getUtf8EncodedWebResourceResponse(stream, type);
-        } catch (IOException e) {
-            return null;
-        }
-    }
-
-    private static WebResourceResponse getUtf8EncodedWebResourceResponse(InputStream open,
-                                                                         TYPE type) {
-        switch (type) {
-            case JS:
-                return new WebResourceResponse("text/js", "UTF-8", open);
-            case CSS:
-                return new WebResourceResponse("text/css", "UTF-8", open);
-            case HTML:
-                return new WebResourceResponse("text/html", "UTF-8", open);
-            case PLAIN:
-            default:
-                return new WebResourceResponse("text/plain", "UTF-8", open);
-        }
-    }
-
-    public static Spanned fromHtml(String source) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            return Html.fromHtml(source, Html.FROM_HTML_MODE_LEGACY, null, null);
-        } else {
-            //noinspection deprecation
-            return Html.fromHtml(source);
-        }
-    }
-
-    public enum DURATION {SHORT, LONG}
-
-    public enum TYPE {JS, CSS, HTML, PLAIN}
-
     public static String capitalizeString(String s) {
-        if (s == null || s.length() == 0) return s;
+        if (s == null || s.isEmpty()) return s;
         else if (s.length() == 1) return s.toUpperCase();
         else return s.substring(0, 1).toUpperCase() + s.toLowerCase().substring(1);
     }
 
     /**
-     * Transforms the given string to format with a given length
+     * Transforms the given int to format with a given length
      * - If the given length is shorter than the actual length of the string, it will be truncated
-     * - If the given length is longer than the actual length of the string, it will be right/left-padded with a given character
+     * - If the given length is longer than the actual length of the string, it will be left-padded with the character 0
      *
      * @param value  String to transform
      * @param length Target length of the final string
      * @return Reprocessed string of given length, according to rules documented in the method description
      */
-    public static String compensateStringLength(int value, int length) {
+    public static String formatIntAsStr(int value, int length) {
         String result = String.valueOf(value);
 
         if (result.length() > length) {
@@ -326,9 +130,9 @@ public final class Helper {
         return buildListAsString(list, "");
     }
 
-    public static String buildListAsString(List<?> list, String valueDelimiter) {
+    private static String buildListAsString(List<?> list, String valueDelimiter) {
 
-        StringBuilder str = new StringBuilder("");
+        StringBuilder str = new StringBuilder();
         if (list != null) {
             boolean first = true;
             for (Object o : list) {
@@ -341,19 +145,91 @@ public final class Helper {
         return str.toString();
     }
 
-    public static List<Attribute> extractAttributeByType(List<Attribute> attrs, AttributeType type) {
-        return extractAttributeByType(attrs, new AttributeType[]{type});
+    public static String decode64(String encodedString) {
+        // Pure Java
+        //byte[] decodedBytes = org.apache.commons.codec.binary.Base64.decodeBase64(encodedString);
+        // Android
+        byte[] decodedBytes = android.util.Base64.decode(encodedString, android.util.Base64.DEFAULT);
+        return new String(decodedBytes);
     }
 
-    private static List<Attribute> extractAttributeByType(List<Attribute> attrs, AttributeType[] types) {
-        List<Attribute> result = new ArrayList<>();
+    public static int dpToPixel(Context context, int dp) {
+        float scaleFactor =
+                (1.0f / DisplayMetrics.DENSITY_DEFAULT)
+                        * context.getResources().getDisplayMetrics().densityDpi;
 
-        for (Attribute a : attrs) {
-            for (AttributeType type : types) {
-                if (a.getType().equals(type)) result.add(a);
-            }
+        return (int) (dp * scaleFactor);
+    }
+
+
+    public static List<Long> getListFromPrimitiveArray(long[] input) {
+        List<Long> list = new ArrayList<>(input.length);
+        for (long n : input) list.add(n);
+        return list;
+    }
+
+    public static List<Integer> getListFromPrimitiveArray(int[] input) {
+        List<Integer> list = new ArrayList<>(input.length);
+        for (int n : input) list.add(n);
+        return list;
+    }
+
+    public static long[] getPrimitiveLongArrayFromList(List<Long> integers) {
+        long[] ret = new long[integers.size()];
+        Iterator<Long> iterator = integers.iterator();
+        for (int i = 0; i < ret.length; i++) {
+            ret[i] = iterator.next();
         }
+        return ret;
+    }
+
+    public static boolean isNumeric(String str) {
+        return str.matches("-?\\d+(\\.\\d+)?");  //match a number with optional '-' and decimal.
+    }
+
+    /**
+     * Open the given url using the device's app(s) of choice
+     *
+     * @param context Context
+     * @param url     Url to be opened
+     */
+    public static void openUrl(Context context, String url) {
+        Intent myIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+        try {
+            context.startActivity(myIntent);
+        } catch (ActivityNotFoundException e) {
+            Timber.e(e, "Activity not found to open %s", url);
+            ToastUtil.toast(context, R.string.error_open, Toast.LENGTH_LONG);
+        }
+    }
+
+    public static float coerceIn(float value, float min, float max) {
+        if (value < min) return min;
+        else if (value > max) return max;
+        else return value;
+    }
+
+    public static List<InputStream> duplicateInputStream(@Nonnull InputStream stream, int numberDuplicates) throws IOException {
+        List<InputStream> result = new ArrayList<>();
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+        byte[] buffer = new byte[1024];
+        int len;
+        while ((len = stream.read(buffer)) > -1) baos.write(buffer, 0, len);
+        baos.flush();
+
+        for (int i = 0; i < numberDuplicates; i++)
+            result.add(new ByteArrayInputStream(baos.toByteArray()));
 
         return result;
+    }
+
+    public static boolean isImageExtensionSupported(String extension)
+    {
+        return extension.equalsIgnoreCase("jpg")
+                || extension.equalsIgnoreCase("jpeg")
+                || extension.equalsIgnoreCase("gif")
+                || extension.equalsIgnoreCase("png");
     }
 }

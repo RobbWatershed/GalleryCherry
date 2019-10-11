@@ -1,26 +1,30 @@
 package me.devsaki.hentoid.activities;
 
-import android.content.Intent;
-import android.net.Uri;
 import android.os.Bundle;
-import android.support.annotation.IdRes;
-import android.support.annotation.StringRes;
-import android.support.v7.app.AlertDialog;
 import android.view.View;
-import android.webkit.WebView;
-import android.widget.Button;
 import android.widget.TextView;
+
+import androidx.annotation.IdRes;
+
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
 
 import me.devsaki.hentoid.BuildConfig;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.abstracts.BaseActivity;
-
-import static android.content.Intent.ACTION_VIEW;
+import me.devsaki.hentoid.events.UpdateEvent;
+import me.devsaki.hentoid.fragments.about.ChangelogFragment;
+import me.devsaki.hentoid.fragments.about.LicensesFragment;
+import me.devsaki.hentoid.util.Consts;
+import me.devsaki.hentoid.util.Helper;
 
 /**
  * Created by wightwulf1944 on 03/21/18.
  */
 public class AboutActivity extends BaseActivity {
+
+    private TextView btnChangelog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -28,37 +32,51 @@ public class AboutActivity extends BaseActivity {
 
         setContentView(R.layout.activity_about);
 
-        bindTextViewLink(R.id.iv_app_logo, R.string.about_github_wiki_url);
-        bindTextViewLink(R.id.tv_github, R.string.about_github_url);
-        bindTextViewLink(R.id.tv_community, R.string.about_community_url);
-        bindTextViewLink(R.id.tv_discord, R.string.about_discord_url);
-        bindTextViewLink(R.id.tv_reddit, R.string.about_reddit_url);
+        bindTextViewLink(R.id.iv_app_logo, Consts.URL_GITHUB_WIKI);
+        bindTextViewLink(R.id.tv_github, Consts.URL_GITHUB);
+        bindTextViewLink(R.id.tv_discord, Consts.URL_DISCORD);
 
         TextView tvVersionName = findViewById(R.id.tv_version_name);
-        tvVersionName.setText(String.format("Hentoid ver: %s", BuildConfig.VERSION_NAME));
+        tvVersionName.setText(String.format("GalleryCherry ver: %s (%s)", BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE));
 
-        WebView webView = new WebView(this);
-        webView.loadUrl("file:///android_asset/licenses.html");
-        webView.setInitialScale(95);
+        btnChangelog = findViewById(R.id.about_changelog_button);
+        btnChangelog.setOnClickListener(v -> showChangelogFragment());
 
-        AlertDialog licensesDialog = new AlertDialog.Builder(this)
-                .setTitle("Licenses")
-                .setView(webView)
-                .setPositiveButton(android.R.string.ok, null)
-                .create();
+        View btnLicenses = findViewById(R.id.about_licenses_button);
+        btnLicenses.setOnClickListener(v -> showLicenseFragment());
 
-        // TODO: dialog should not show large content or a no-op button
-        // replace with activity instead
-        Button btnLicenses = findViewById(R.id.btn_about_licenses);
-        btnLicenses.setOnClickListener(view -> licensesDialog.show());
+        if (!EventBus.getDefault().isRegistered(this)) EventBus.getDefault().register(this);
     }
 
-    private void bindTextViewLink(@IdRes int tvId, @StringRes int linkId) {
-        String url = getString(linkId);
-        Uri uri = Uri.parse(url);
-        Intent intent = new Intent(ACTION_VIEW, uri);
-
+    private void bindTextViewLink(@IdRes int tvId, String url) {
         View linkableView = findViewById(tvId);
-        linkableView.setOnClickListener(v -> startActivity(intent));
+        linkableView.setOnClickListener(v -> Helper.openUrl(this, url));
+    }
+
+    private void showLicenseFragment() {
+        getSupportFragmentManager()
+                .beginTransaction()
+                .add(android.R.id.content, new LicensesFragment())
+                .addToBackStack(null) // This triggers a memory leak in LeakCanary but is _not_ a leak : see https://stackoverflow.com/questions/27913009/memory-leak-in-fragmentmanager
+                .commit();
+    }
+
+    private void showChangelogFragment() {
+        getSupportFragmentManager()
+                .beginTransaction()
+                .add(android.R.id.content, new ChangelogFragment())
+                .addToBackStack(null) // This triggers a memory leak in LeakCanary but is _not_ a leak : see https://stackoverflow.com/questions/27913009/memory-leak-in-fragmentmanager
+                .commit();
+    }
+
+    @Subscribe(sticky = true, threadMode = ThreadMode.MAIN)
+    public void onUpdateEvent(UpdateEvent event) {
+        if (event.hasNewVersion) btnChangelog.setText(R.string.view_changelog_flagged);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (EventBus.getDefault().isRegistered(this)) EventBus.getDefault().unregister(this);
     }
 }
