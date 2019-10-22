@@ -23,7 +23,7 @@ public class PornPicsContent implements ContentParser {
 
     @Selector(value = "head link[rel='canonical']", attr = "href", defValue = "")
     private String galleryUrl;
-    @Selector(".title-h1")
+    @Selector(".title-section h1")
     private String title;
     @Selector(value = ".tags a")
     private List<Element> tags;
