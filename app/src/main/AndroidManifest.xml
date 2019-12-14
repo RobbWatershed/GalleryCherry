@@ -26,7 +26,7 @@
         <activity
             android:name=".activities.SplashActivity"
             android:noHistory="true"
-            android:theme="@style/AppTheme.NoActionBar.Splash">
+            android:theme="@style/Theme.Base.Splash">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -36,43 +36,43 @@
         <activity
             android:name=".activities.IntroActivity"
             android:label="@string/app_intro"
-            android:theme="@style/AppTheme" />
+            android:theme="@style/Theme.Base" />
         <activity
             android:name=".activities.sources.XhamsterActivity"
             android:configChanges="orientation|screenSize"
-            android:theme="@style/BrowserTheme" />
+            android:theme="@style/Theme.Base.Browser" />
         <activity
             android:name=".activities.sources.XnxxActivity"
             android:configChanges="orientation|screenSize"
-            android:theme="@style/BrowserTheme" />
+            android:theme="@style/Theme.Base.Browser" />
         <activity
             android:name=".activities.sources.PornPicsActivity"
             android:configChanges="orientation|screenSize"
-            android:theme="@style/BrowserTheme" />
+            android:theme="@style/Theme.Base.Browser" />
         <activity
             android:name=".activities.sources.JpegworldActivity"
             android:configChanges="orientation|screenSize"
-            android:theme="@style/BrowserTheme" />
+            android:theme="@style/Theme.Base.Browser" />
         <activity
             android:name=".activities.sources.NextpicturezActivity"
             android:configChanges="orientation|screenSize"
-            android:theme="@style/BrowserTheme" />
+            android:theme="@style/Theme.Base.Browser" />
         <activity
             android:name=".activities.sources.HellpornoActivity"
             android:configChanges="orientation|screenSize"
-            android:theme="@style/BrowserTheme" />
+            android:theme="@style/Theme.Base.Browser" />
         <activity
             android:name=".activities.sources.PornPicGalleriesActivity"
             android:configChanges="orientation|screenSize"
-            android:theme="@style/BrowserTheme" />
+            android:theme="@style/Theme.Base.Browser" />
         <activity
             android:name=".activities.sources.Link2GalleriesActivity"
             android:configChanges="orientation|screenSize"
-            android:theme="@style/BrowserTheme" />
+            android:theme="@style/Theme.Base.Browser" />
         <activity
             android:name=".activities.sources.RedditActivity"
             android:configChanges="orientation|screenSize"
-            android:theme="@style/BrowserTheme" />
+            android:theme="@style/Theme.Base.Browser" />
         <activity
             android:name=".activities.sources.RedditLaunchActivity"
             android:configChanges="orientation|screenSize"
@@ -80,13 +80,13 @@
         <activity
             android:name=".activities.sources.JjgirlsActivity"
             android:configChanges="orientation|screenSize"
-            android:theme="@style/BrowserTheme" />
+            android:theme="@style/Theme.Base.Browser" />
         <activity
-            android:name=".activities.DownloadsActivity"
+            android:name=".activities.LibraryActivity"
             android:configChanges="orientation|screenSize"
             android:label="@string/title_activity_downloads"
             android:launchMode="singleTop"
-            android:theme="@style/AppTheme.NoActionBar.Overlay">
+            android:theme="@style/Theme.Base">
             <meta-data
                 android:name="android.app.searchable"
                 android:resource="@xml/searchable" />
@@ -95,58 +95,64 @@
             android:name=".activities.QueueActivity"
             android:configChanges="orientation|screenSize"
             android:label="@string/title_activity_queue"
-            android:parentActivityName=".activities.DownloadsActivity"
-            android:theme="@style/AppTheme"
+            android:parentActivityName=".activities.LibraryActivity"
+            android:theme="@style/Theme.Base"
             tools:ignore="UnusedAttribute">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
-                android:value=".activities.DownloadsActivity" />
+                android:value=".activities.LibraryActivity" />
         </activity>
         <activity
             android:name=".activities.PrefsActivity"
             android:configChanges="orientation|screenSize"
             android:label="@string/title_activity_preferences"
-            android:parentActivityName=".activities.DownloadsActivity"
-            android:theme="@style/PrefsTheme"
+            android:parentActivityName=".activities.LibraryActivity"
+            android:theme="@style/Theme.Base.Prefs"
             tools:ignore="UnusedAttribute">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
-                android:value=".activities.DownloadsActivity" />
+                android:value=".activities.LibraryActivity" />
         </activity>
         <activity
             android:name=".activities.AboutActivity"
             android:label="@string/title_activity_about"
-            android:parentActivityName=".activities.DownloadsActivity"
-            android:theme="@style/AppTheme"
+            android:parentActivityName=".activities.LibraryActivity"
+            android:theme="@style/Theme.Base"
             tools:ignore="UnusedAttribute">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
-                android:value=".activities.DownloadsActivity" />
+                android:value=".activities.LibraryActivity" />
+        </activity>
+        <activity
+            android:name=".activities.DrawerEditActivity"
+            android:label="@string/title_activity_drawer_edit"
+            android:theme="@style/Theme.Base"
+            tools:ignore="UnusedAttribute">
         </activity>
         <activity
             android:name=".activities.SearchActivity"
             android:label="@string/title_activity_search"
-            android:theme="@style/AppTheme.NoActionBar"
+            android:theme="@style/Theme.Base"
             tools:ignore="UnusedAttribute">
         </activity>
         <activity
             android:name=".activities.ImportActivity"
             android:configChanges="orientation|screenSize"
-            android:theme="@style/ImportTheme" />
+            android:theme="@style/Theme.Base.Import" />
         <activity
             android:name=".activities.UnlockActivity"
             android:noHistory="true"
             android:resizeableActivity="false"
             android:screenOrientation="portrait"
-            android:theme="@style/AppTheme.NoActionBar" />
+            android:theme="@style/Theme.Base" />
         <activity
             android:name=".activities.PinPreferenceActivity"
             android:resizeableActivity="false"
             android:screenOrientation="portrait"
-            android:theme="@style/AppTheme.NoActionBar" />
+            android:theme="@style/Theme.Base" />
         <activity
             android:name=".activities.IntentActivity"
-            android:theme="@style/BrowserTheme">
+            android:theme="@style/Theme.Base.Browser">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
@@ -227,15 +233,25 @@
                     android:pathPattern="/..*/..*/..*/"
                     android:scheme="https" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:host="luscious.net"
+                    android:pathPattern="..*/..*"
+                    android:scheme="https" />
+            </intent-filter>
         </activity>
 
         <activity
             android:name=".activities.ImageViewerActivity"
             android:label="Image Viewer"
-            android:theme="@style/AppTheme.NoActionBar.Monochrome">
+            android:theme="@style/Theme.Base.Monochrome">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
-                android:value=".activities.DownloadsActivity" />
+                android:value=".activities.LibraryActivity" />
         </activity>
 
         <service

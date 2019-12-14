@@ -22,22 +22,16 @@ public class ImageFile {
 
     @Id
     private long id;
-    @Expose
     private Integer order;
-    @Expose
     private String url;
-    @Expose
     private String name;
-    @Expose
     private boolean favourite = false;
-    @Expose
     @Convert(converter = StatusContent.StatusContentConverter.class, dbType = Integer.class)
     private StatusContent status;
     public ToOne<Content> content;
 
 
     // Temporary attributes during SAVED state only; no need to expose them for JSON persistence
-    @Expose(serialize = false, deserialize = false)
     private String downloadParams;
 
 
@@ -60,9 +54,12 @@ public class ImageFile {
     public ImageFile() {
     }
 
-    public ImageFile(int order, String url, StatusContent status) {
+    public ImageFile(int order, String url, StatusContent status, int maxPages) {
         this.order = order;
-        computeNameFromOrder();
+
+        int nbMaxDigits = (int) (Math.floor(Math.log10(maxPages)) + 1);
+        this.name = String.format(Locale.US, "%0" + nbMaxDigits + "d", order);
+
         this.url = url;
         this.status = status;
         this.favourite = false;

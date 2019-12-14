@@ -26,26 +26,25 @@ public class LibRefreshDialogFragment extends DialogFragment {
 
     public static void invoke(FragmentManager fragmentManager) {
         LibRefreshDialogFragment fragment = new LibRefreshDialogFragment();
-        fragment.setStyle(DialogFragment.STYLE_NO_FRAME, R.style.Dialog);
         fragment.show(fragmentManager, null);
     }
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedState) {
-        return inflater.inflate(R.layout.dialog_refresh, container, false);
+        return inflater.inflate(R.layout.dialog_prefs_refresh, container, false);
     }
 
     @Override
-    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
+    public void onViewCreated(@NonNull View rootView, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(rootView, savedInstanceState);
 
-        CheckBox renameChk = requireViewById(view, R.id.refresh_options_rename);
-        CheckBox cleanAbsentChk = requireViewById(view, R.id.refresh_options_remove_1);
-        CheckBox cleanNoImagesChk = requireViewById(view, R.id.refresh_options_remove_2);
-        CheckBox cleanUnreadableChk = requireViewById(view, R.id.refresh_options_remove_3);
+        CheckBox renameChk = requireViewById(rootView, R.id.refresh_options_rename);
+        CheckBox cleanAbsentChk = requireViewById(rootView, R.id.refresh_options_remove_1);
+        CheckBox cleanNoImagesChk = requireViewById(rootView, R.id.refresh_options_remove_2);
+        CheckBox cleanUnreadableChk = requireViewById(rootView, R.id.refresh_options_remove_3);
 
-        View okBtn = requireViewById(view, R.id.refresh_ok);
+        View okBtn = requireViewById(rootView, R.id.refresh_ok);
         okBtn.setOnClickListener(v -> launchRefreshImport(renameChk.isChecked(), cleanAbsentChk.isChecked(), cleanNoImagesChk.isChecked(), cleanUnreadableChk.isChecked()));
     }
 

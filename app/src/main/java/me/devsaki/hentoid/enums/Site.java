@@ -60,14 +60,19 @@ public enum Site {
     }
 
     public static Site searchByCode(long code) {
-        if (code == -1) {
-            Timber.w("Invalid site code!");
-        }
-        for (Site s : Site.values()) {
-            if (s.getCode() == code)
-                return s;
-        }
-        return Site.NONE;
+        for (Site s : values())
+            if (s.getCode() == code) return s;
+
+        return NONE;
+    }
+
+    // Same as ValueOf with a fallback to NONE
+    // (vital for forward compatibility)
+    public static Site searchByName(String name) {
+        for (Site s : values())
+            if (s.name().equalsIgnoreCase(name)) return s;
+
+        return NONE;
     }
 
     public static Site searchByUrl(String url) {
