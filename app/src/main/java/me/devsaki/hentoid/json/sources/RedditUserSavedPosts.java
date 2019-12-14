@@ -1,28 +1,27 @@
-package me.devsaki.hentoid.model;
+package me.devsaki.hentoid.json.sources;
 
-import com.google.gson.annotations.SerializedName;
+import com.squareup.moshi.Json;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class RedditUserSavedPosts {
 
-    @SerializedName("data")
+    @Json(name = "data")
     private SavedPostsDataContainer container;
 
 
     class SavedPostsDataContainer {
-        @SerializedName("children")
+        @Json(name = "children")
         List<SavedPostsDataRoot> roots;
     }
 
     class SavedPostsDataRoot {
-        @SerializedName("data")
+        @Json(name = "data")
         SavedPostsData post;
     }
 
     class SavedPostsData {
-        @SerializedName("url")
         String url;
     }
 

@@ -31,10 +31,8 @@ public class SourcesIntroFragment extends Fragment {
         List<SiteFlex> items = new ArrayList<>();
         for (Site s : Site.values())
             // We don't want to show these
-            if (s != Site.FAKKU                     // Old Fakku; kept for retrocompatibility
-                    && s != Site.ASMHENTAI_COMICS   // Does not work directly
-                    && s != Site.PANDA              // Dropped; kept for retrocompatibility
-                    && s != Site.NONE               // Technical fallback
+            if (
+                    s != Site.NONE               // Technical fallback
             ) items.add(new SiteFlex(s, true, false));
 
         siteAdapter = new FlexibleAdapter<>(items, null, true);

@@ -26,6 +26,11 @@ public class LusciousActivity extends BaseWebActivity {
     }
 
     @Override
+    boolean allowMixedContent() {
+        return false;
+    }
+
+    @Override
     protected CustomWebViewClient getWebClient() {
         CustomWebViewClient client = new LusciousWebClient(GALLERY_FILTER, this);
         client.restrictTo(DOMAIN_FILTER);

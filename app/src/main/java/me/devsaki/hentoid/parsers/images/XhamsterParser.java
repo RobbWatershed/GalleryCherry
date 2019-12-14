@@ -1,6 +1,4 @@
-package me.devsaki.hentoid.parsers;
-
-import com.google.gson.Gson;
+package me.devsaki.hentoid.parsers.images;
 
 import org.jsoup.nodes.Document;
 
@@ -9,9 +7,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import me.devsaki.hentoid.database.domains.Content;
-import me.devsaki.hentoid.parsers.content.XhamsterGalleryContent;
-import me.devsaki.hentoid.parsers.content.XhamsterGalleryQuery;
+import me.devsaki.hentoid.json.sources.XhamsterGalleryContent;
+import me.devsaki.hentoid.json.sources.XhamsterGalleryQuery;
 import me.devsaki.hentoid.util.Consts;
+import me.devsaki.hentoid.util.JsonHelper;
 import okhttp3.HttpUrl;
 import okhttp3.Interceptor;
 import okhttp3.Request;
@@ -26,8 +25,6 @@ public class XhamsterParser extends BaseParser {
     protected List<String> parseImages(Content content) throws IOException {
         List<String> result = new ArrayList<>();
 
-        Gson gson = new Gson();
-
         for (int i = 0; i < Math.ceil(content.getQtyPages() / 16.0); i++) {
             XhamsterGalleryQuery query = new XhamsterGalleryQuery(content.getUniqueSiteId(), i + 1);
 
@@ -35,7 +32,7 @@ public class XhamsterParser extends BaseParser {
                     .scheme("https")
                     .host("xhamster.com")
                     .addPathSegment("x-api")
-                    .addQueryParameter("r", "[" + gson.toJson(query) + "]") // Not a 100% JSON-compliant format
+                    .addQueryParameter("r", "[" + JsonHelper.serializeToJson(query, XhamsterGalleryQuery.class) + "]") // Not a 100% JSON-compliant format
                     .build();
 
             Document doc = getOnlineDocument(url, XhamsterParser::onIntercept);
@@ -45,7 +42,7 @@ public class XhamsterParser extends BaseParser {
                         .replace("\n[", "")
                         .replace("}]}]", "}]}");
 
-                XhamsterGalleryContent galleryContent = gson.fromJson(body, XhamsterGalleryContent.class);
+                XhamsterGalleryContent galleryContent = JsonHelper.jsonToObject(body, XhamsterGalleryContent.class);
                 result.addAll(galleryContent.toImageUrlList());
             }
         }

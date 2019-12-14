@@ -27,7 +27,6 @@ class AboutActivity : AppCompatActivity(R.layout.activity_about) {
         appLogo.setOnClickListener { startBrowserActivity(Consts.URL_GITHUB_WIKI) }
         githubText.setOnClickListener { startBrowserActivity(Consts.URL_GITHUB) }
         discordText.setOnClickListener { startBrowserActivity(Consts.URL_DISCORD) }
-        redditText.setOnClickListener { startBrowserActivity(Consts.URL_REDDIT) }
 
         tv_version_name.text = getString(R.string.about_app_version, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE)
         tv_chrome_version_name.text = getString(R.string.about_chrome_version, Helper.getChromeVersion(this))

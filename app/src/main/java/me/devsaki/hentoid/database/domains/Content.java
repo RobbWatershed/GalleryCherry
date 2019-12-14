@@ -160,11 +160,15 @@ public class Content implements Serializable {
             case LUSCIOUS:
                 // ID is the last numeric part of the URL
                 // e.g. /albums/lewd_title_ch_1_3_42116/ -> 42116 is the ID
-                lastIndex = url.lastIndexOf('_');
+                int lastIndex = url.lastIndexOf('_');
                 return url.substring(lastIndex + 1, url.length() - 1);
             default:
                 return "";
         }
+    }
+
+    public void populateUniqueSiteId() {
+        this.uniqueSiteId = computeUniqueSiteId();
     }
 
     public Class<?> getWebActivityClass() {
@@ -217,7 +221,7 @@ public class Content implements Serializable {
 
     public Content setUrl(String url) {
         this.url = url;
-        populateUniqueSiteId();
+        computeUniqueSiteId();
         return this;
     }
 

@@ -10,7 +10,7 @@ class ImportCompleteNotification(private val booksOK: Int, private val booksKO: 
 
     override fun onCreateNotification(context: Context): android.app.Notification =
         NotificationCompat.Builder(context, ImportNotificationChannel.ID)
-            .setSmallIcon(R.drawable.ic_stat_hentoid)
+            .setSmallIcon(R.drawable.ic_cherry_icon)
             .setContentTitle("Import complete")
             .setContentText("$booksOK imported successfuly; $booksKO failed")
             .build()

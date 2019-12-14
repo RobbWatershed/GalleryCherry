@@ -9,17 +9,10 @@ import me.devsaki.hentoid.parsers.content.PornPicsContent;
 import me.devsaki.hentoid.parsers.content.SmartContent;
 import me.devsaki.hentoid.parsers.content.XhamsterContent;
 import me.devsaki.hentoid.parsers.content.XnxxContent;
-import me.devsaki.hentoid.parsers.images.ASMHentaiParser;
 import me.devsaki.hentoid.parsers.images.DummyParser;
-import me.devsaki.hentoid.parsers.images.EHentaiParser;
-import me.devsaki.hentoid.parsers.images.FakkuParser;
-import me.devsaki.hentoid.parsers.images.HentaiCafeParser;
-import me.devsaki.hentoid.parsers.images.HitomiParser;
 import me.devsaki.hentoid.parsers.images.ImageListParser;
 import me.devsaki.hentoid.parsers.images.LusciousParser;
-import me.devsaki.hentoid.parsers.images.NexusParser;
-import me.devsaki.hentoid.parsers.images.PururinParser;
-import me.devsaki.hentoid.parsers.images.TsuminoParser;
+import me.devsaki.hentoid.parsers.images.XhamsterParser;
 
 public class ContentParserFactory {
 
@@ -61,6 +54,8 @@ public class ContentParserFactory {
         switch (site) {
             case XHAMSTER:
                 return new XhamsterParser();
+            case LUSCIOUS:
+                return new LusciousParser();
             default:
                 return new DummyParser();
         }

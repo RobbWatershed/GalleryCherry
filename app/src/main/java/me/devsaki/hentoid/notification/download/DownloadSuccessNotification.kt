@@ -14,7 +14,7 @@ class DownloadSuccessNotification(private val completeCount: Int) : Notification
 
     override fun onCreateNotification(context: Context): android.app.Notification =
         NotificationCompat.Builder(context, DownloadNotificationChannel.ID)
-            .setSmallIcon(R.drawable.ic_stat_hentoid)
+            .setSmallIcon(R.drawable.ic_cherry_icon)
             .setContentTitle(getTitle(context))
             .setContentIntent(getDefaultIntent(context))
             .setDeleteIntent(getDeleteIntent(context))

@@ -46,7 +46,7 @@
                 android:layout_height="@dimen/about_ic_icons_height"
                 android:cropToPadding="true"
                 android:src="@drawable/ic_social_github"
-                app:layout_constraintBottom_toTopOf="@id/tv_github"
+                app:layout_constraintBottom_toTopOf="@id/discordIcon"
                 app:layout_constraintStart_toEndOf="@id/appLogo"
                 app:layout_constraintTop_toTopOf="parent"
                 tools:ignore="ContentDescription" />
@@ -63,15 +63,15 @@
                 app:layout_constraintTop_toTopOf="@id/githubIcon"
                 tools:layout_editor_absoluteY="5dp" />
 
-        <ImageView
-            android:id="@+id/discordIcon"
-            android:layout_width="@dimen/about_ic_icons_width"
-            android:layout_height="@dimen/about_ic_icons_height"
-            android:cropToPadding="true"
-            app:layout_constraintStart_toEndOf="@id/iv_app_logo"
-            app:layout_constraintTop_toBottomOf="@id/githubIcon"
-            android:src="@drawable/ic_social_discord"
-            tools:ignore="ContentDescription" />
+            <ImageView
+                android:id="@+id/discordIcon"
+                android:layout_width="@dimen/about_ic_icons_width"
+                android:layout_height="@dimen/about_ic_icons_height"
+                android:cropToPadding="true"
+                android:src="@drawable/ic_social_discord"
+                app:layout_constraintStart_toEndOf="@id/appLogo"
+                app:layout_constraintTop_toBottomOf="@id/githubIcon"
+                tools:ignore="ContentDescription" />
 
             <TextView
                 android:id="@+id/discordText"
@@ -84,45 +84,34 @@
                 app:layout_constraintStart_toEndOf="@id/discordIcon"
                 app:layout_constraintTop_toTopOf="@id/discordIcon" />
 
-        <TextView
-            android:id="@+id/tv_version_name"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:textSize="@dimen/about_textSize"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/iv_app_logo"
-            tools:text="GalleryCherry X.X.X (bbb)" />
-
             <TextView
                 android:id="@+id/changelogButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
                 android:layout_marginTop="8dp"
                 android:text="@string/view_changelog"
                 android:textColor="?attr/colorSecondary"
                 android:textSize="@dimen/about_textSize"
                 android:textStyle="bold"
-                android:layout_marginStart="8dp"
-            app:layout_constraintStart_toEndOf="@id/appLogo"
+                app:layout_constraintStart_toEndOf="@id/appLogo"
                 app:layout_constraintTop_toBottomOf="@id/discordIcon" />
 
-        <TextView
-            android:id="@+id/tv_version_name"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:textSize="@dimen/about_textSize"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/iv_app_logo"
-            tools:text="Hentoid X.X.X (bbb)" />
+            <TextView
+                android:id="@+id/tv_version_name"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:textSize="@dimen/about_textSize"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/appLogo"
+                tools:text="GalleryCherry X.X.X (bbb)" />
 
             <TextView
                 android:id="@+id/tv_chrome_version_name"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp"
                 android:textSize="@dimen/about_textSize"
                 app:layout_constraintEnd_toEndOf="parent"
@@ -130,38 +119,27 @@
                 app:layout_constraintTop_toBottomOf="@id/tv_version_name"
                 tools:text="Chrome version XX" />
 
-        <TextView
-            android:id="@+id/aboutText1"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="@string/about1"
-            android:textSize="@dimen/about_textSize"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tv_chrome_version_name" />
+            <TextView
+                android:id="@+id/aboutText1"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/about1"
+                android:textSize="@dimen/about_textSize"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tv_chrome_version_name" />
 
-        <TextView
-            android:id="@+id/aboutText2"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="@string/about2"
-            android:textSize="@dimen/about_textSize"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/aboutText1" />
-
-        <TextView
-            android:id="@+id/personalDataStatement1"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="@string/personalDataStatement1"
-            android:textSize="@dimen/about_textSize"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/aboutText2" />
+            <TextView
+                android:id="@+id/personalDataStatement1"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/personalDataStatement1"
+                android:textSize="@dimen/about_textSize"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/aboutText1" />
 
             <TextView
                 android:id="@+id/personalDataStatement2"
@@ -204,5 +182,5 @@
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 
-</ScrollView>
+    </ScrollView>
 </androidx.constraintlayout.widget.ConstraintLayout>

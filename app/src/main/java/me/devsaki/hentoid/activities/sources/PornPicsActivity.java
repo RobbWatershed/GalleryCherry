@@ -5,7 +5,7 @@ import me.devsaki.hentoid.enums.Site;
 public class PornPicsActivity extends BaseWebActivity {
 
     private static final String DOMAIN_FILTER = "pornpics.com";
-    private static final String GALLERY_FILTER = "/galleries/[\\w-]+/$";
+    private static final String GALLERY_FILTER[] = {"/galleries/[\\w-]+/$"};
 
     Site getStartSite() {
         return Site.PORNPICS;

@@ -11,7 +11,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import org.greenrobot.eventbus.EventBus;
-import org.threeten.bp.Instant;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -25,6 +24,7 @@ import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.events.ImportEvent;
+import me.devsaki.hentoid.json.JsonContent;
 import me.devsaki.hentoid.notification.import_.ImportCompleteNotification;
 import me.devsaki.hentoid.notification.import_.ImportStartNotification;
 import me.devsaki.hentoid.util.Consts;

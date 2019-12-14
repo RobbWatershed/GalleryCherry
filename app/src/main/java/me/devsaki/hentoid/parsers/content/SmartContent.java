@@ -77,7 +77,7 @@ public class SmartContent implements ContentParser {
                 else
                     s = urlLocation + s;
             }
-            images.add(new ImageFile(order++, s, StatusContent.SAVED));
+            images.add(new ImageFile(order++, s, StatusContent.SAVED, links.size()));
         }
     }
 

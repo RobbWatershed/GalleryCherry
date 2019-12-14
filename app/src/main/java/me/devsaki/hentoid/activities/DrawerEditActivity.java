@@ -57,10 +57,7 @@ public class DrawerEditActivity extends AppCompatActivity {
         // Then add the others
         for (Site s : Site.values())
             // We don't want to show these
-            if (s != Site.FAKKU                     // Old Fakku; kept for retrocompatibility
-                    && s != Site.ASMHENTAI_COMICS   // Does not work directly
-                    && s != Site.PANDA              // Dropped; kept for retrocompatibility
-                    && s != Site.NONE               // Technical fallback
+            if (s != Site.NONE               // Technical fallback
                     && !activeSites.contains(s)
             )
                 items.add(new SiteFlex(s));

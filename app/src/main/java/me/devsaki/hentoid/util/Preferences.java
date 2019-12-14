@@ -440,8 +440,8 @@ public final class Preferences {
         static final int PREF_DL_RETRIES_MEM_LIMIT = 100;
         static final boolean PREF_DL_HITOMI_WEBP = true;
         static final boolean PREF_CHECK_UPDATES_DEFAULT = true;
-        // Default menu in v1.9.x
-        static final Site[] DEFAULT_SITES = new Site[]{Site.NHENTAI, Site.HENTAICAFE, Site.HITOMI, Site.ASMHENTAI, Site.TSUMINO, Site.PURURIN, Site.EHENTAI, Site.FAKKU2, Site.NEXUS, Site.MUSES, Site.DOUJINS};
+        // Default menu in v1.3.x
+        static final Site[] DEFAULT_SITES = new Site[]{Site.XHAMSTER, Site.XNXX, Site.PORNPICS, Site.JPEGWORLD, Site.NEXTPICTUREZ, Site.HELLPORNO, Site.PORNPICGALLERIES, Site.LINK2GALLERIES, Site.REDDIT, Site.JJGIRLS};
         static final String ACTIVE_SITES = TextUtils.join(",", Stream.of(DEFAULT_SITES).map(Site::getCode).toList());
     }
 

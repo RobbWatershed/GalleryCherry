@@ -203,7 +203,7 @@ public class ContentHolder extends RecyclerView.ViewHolder {
             ivSite.setImageResource(img);
             ivSite.setOnClickListener(v -> onSourceClicked());
         } else {
-            ivSite.setImageResource(R.drawable.ic_stat_hentoid);
+            ivSite.setImageResource(R.drawable.ic_cherry);
         }
 
         // Favourite icon

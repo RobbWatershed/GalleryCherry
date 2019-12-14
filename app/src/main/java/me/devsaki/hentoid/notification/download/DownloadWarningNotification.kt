@@ -13,7 +13,7 @@ class DownloadWarningNotification(
 
     override fun onCreateNotification(context: Context): android.app.Notification =
         NotificationCompat.Builder(context, DownloadNotificationChannel.ID)
-            .setSmallIcon(R.drawable.ic_stat_hentoid_warning)
+            .setSmallIcon(R.drawable.ic_cherry_icon_warning)
             .setContentTitle("Warning : download failed")
             .setStyle(getBigStyle())
             .setLocalOnly(true)
@@ -21,6 +21,6 @@ class DownloadWarningNotification(
 
     private fun getBigStyle(): NotificationCompat.BigTextStyle {
         return NotificationCompat.BigTextStyle()
-            .bigText("Cannot download $title : unable to create folder $absolutePath. Please check your Hentoid folder and retry downloading using the (!) button.")
+            .bigText("Cannot download $title : unable to create folder $absolutePath. Please check your GalleryCherry folder and retry downloading using the (!) button.")
     }
 }

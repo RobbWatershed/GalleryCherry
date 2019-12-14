@@ -11,7 +11,7 @@ class MaintenanceNotification(private val title: String) : Notification {
 
     override fun onCreateNotification(context: Context): android.app.Notification =
         NotificationCompat.Builder(context, MaintenanceNotificationChannel.ID)
-            .setSmallIcon(R.drawable.ic_stat_hentoid)
+            .setSmallIcon(R.drawable.ic_cherry)
             .setContentTitle(context.getString(R.string.maintenance))
             .setContentText(title)
             .setColor(ContextCompat.getColor(context, R.color.secondary))

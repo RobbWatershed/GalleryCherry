@@ -12,13 +12,13 @@ import javax.annotation.Nullable;
 
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.ImageFile;
+import me.devsaki.hentoid.parsers.ParseHelper;
 import me.devsaki.hentoid.util.OkHttpClientSingleton;
 import okhttp3.HttpUrl;
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.ResponseBody;
-import me.devsaki.hentoid.parsers.ParseHelper;
 import timber.log.Timber;
 
 public abstract class BaseParser implements ImageListParser {

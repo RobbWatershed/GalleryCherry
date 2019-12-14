@@ -5,7 +5,6 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.util.Base64;
-import android.view.WindowManager;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.widget.ProgressBar;
@@ -17,15 +16,12 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import org.threeten.bp.Instant;
 
 import me.devsaki.hentoid.R;
-import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.enums.Site;
-import me.devsaki.hentoid.listener.ResultListener;
-import me.devsaki.hentoid.model.Oauth2AccessToken;
-import me.devsaki.hentoid.model.RedditUser;
+import me.devsaki.hentoid.json.oauth2.Oauth2AccessToken;
+import me.devsaki.hentoid.json.sources.RedditUser;
 import me.devsaki.hentoid.retrofit.RedditOAuthApiServer;
 import me.devsaki.hentoid.retrofit.RedditPublicApiServer;
 import me.devsaki.hentoid.util.OauthSessionManager;
-import me.devsaki.hentoid.util.Preferences;
 import timber.log.Timber;
 
 import static io.reactivex.android.schedulers.AndroidSchedulers.mainThread;
@@ -33,7 +29,7 @@ import static io.reactivex.android.schedulers.AndroidSchedulers.mainThread;
 public class RedditActivity extends BaseWebActivity {
 
     private static final String DOMAIN_FILTER = "reddit.com";
-    private static final String GALLERY_FILTER = ""; // regular posts : //"https://gateway.reddit.com/desktopapi/v1/postcomments"; => XML received when browsing posts
+    private static final String[] GALLERY_FILTER = {""}; // regular posts : //"https://gateway.reddit.com/desktopapi/v1/postcomments"; => XML received when browsing posts
 
     private static final String OAUTH_REDIRECT_URL = "https://github.com/RobbWatershed/GalleryCherry";
 
@@ -75,7 +71,7 @@ public class RedditActivity extends BaseWebActivity {
 
 
     private class RedditWebViewClient extends CustomWebViewClient {
-        RedditWebViewClient(String filteredUrl, ResultListener<Content> listener) {
+        RedditWebViewClient(String[] filteredUrl, WebContentListener listener) {
             super(filteredUrl, listener);
         }
 

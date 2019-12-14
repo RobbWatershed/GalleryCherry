@@ -1,5 +1,6 @@
 package me.devsaki.hentoid.fragments.downloads;
 
+import android.content.Context;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -47,10 +48,10 @@ public class LandingHistoryFragment extends Fragment {
     private EditText input;
 
 
-    static LandingHistoryFragment newInstance(Site site, String defaultUrl) {
+    static LandingHistoryFragment newInstance(Context context, Site site, String defaultUrl) {
         LandingHistoryFragment f = new LandingHistoryFragment();
 
-        ObjectBoxDB db = ObjectBoxDB.getInstance(HentoidApp.getAppContext());
+        ObjectBoxDB db = ObjectBoxDB.getInstance(context);
         List<LandingRecord> landingHistory = db.selectLandingRecords(site);
 
         ArrayList<String> urlHistory = new ArrayList<>();

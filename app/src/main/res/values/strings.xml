@@ -96,7 +96,7 @@
     <string name="disabled">DISABLED</string>
 
     <!-- Import / Kitkat folder dialog -->
-    <string name="kitkat_dialog_title">Choose Hentoid folder</string>
+    <string name="kitkat_dialog_title">Choose GalleryCherry folder</string>
     <string name="kitkat_dialog_dir">$dir $default\n[$freeUsage MB free ($freePc%)]</string>
     <string name="kitkat_dialog_public">This is a public folder - your downloads will stay there even after uninstalling the app</string>
     <string name="kitkat_dialog_private">WARNING : This is a private folder - your downloads will be deleted after uninstalling the app !\nYou\'ll need to use ADB to download them to your computer.</string>
@@ -190,7 +190,7 @@
     <string name="alert_orange">Be aware that downloads may fail on this site.\n%s</string>
     <string name="alert_red">The download button is currently broken for this site.\n%s</string>
     <string name="alert_black">This site is currently unavailable for real. The app has nothing to do about it. Please try again later.</string>
-    <string name="alert_wip">The Hentoid dev team is working on a fix. You will be notified by the app when a new version is ready.</string>
+    <string name="alert_wip">The GalleryCherry dev team is working on a fix. You will be notified by the app when a new version is ready.</string>
     <string name="alert_fix_available">A fix is available on the latest version of the app. Please update.</string>
 
     <!-- Image Viewer -->
@@ -216,10 +216,10 @@
     <string name="personalDataStatement2">GalleryCherry collects the following personal data and sends them to Google for processing through the firebase library :\n  - Session ID\n  - IP address</string>
     <string name="personalDataStatement3">The abovementioned data is removed from Firebase live and backup system within 180 days (see https://firebase.google.com/support/privacy/ for more details)\n\nNo other personal data is collected nor sent to any other party.</string>
     <string name="about_github" translatable="false"><u>GitHub</u></string>
-    <string name="about_github_wiki_url" translatable="false">https://github.com/AVnetWS/Hentoid/wiki</string>
+    <string name="about_github_wiki_url" translatable="false">https://github.com/RobbWatershed/GalleryCherry/wiki</string>
     <string name="about_discord" translatable="false"><u>Discord</u></string>
     <string name="about_licenses">Display Licenses</string>
-    <string name="about_app_version">Hentoid ver: %1$s (%2$d)</string>
+    <string name="about_app_version">GalleryCherry ver: %1$s (%2$d)</string>
     <string name="about_chrome_version">Chrome v%1$o</string>
 
     <!-- Web viewer -->

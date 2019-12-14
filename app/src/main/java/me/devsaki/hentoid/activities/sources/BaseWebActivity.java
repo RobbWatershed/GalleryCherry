@@ -833,10 +833,9 @@ public abstract class BaseWebActivity extends AppCompatActivity implements WebCo
         @Override
         public void onPageFinished(WebView view, String url) {
             isPageLoading = false;
-            setFabIcon(fabRefreshOrStop, R.drawable.ic_action_refresh);
             // Specific to Cherry : due to redirections, the correct page URLs are those visible from onPageFinished
 //Timber.i(">> onPageFinished %s %s", isHtmlLoaded, url);
-            if (isPageFiltered(url) && !isHtmlLoaded) parseResponse(url, null);
+            if (isPageFiltered(url) && !isHtmlLoaded) parseResponse(url, null, true, false);
             isHtmlLoaded = false; // Reset for the next page
             refreshStopMenu.setIcon(R.drawable.ic_action_refresh);
             refreshNavigationMenu();

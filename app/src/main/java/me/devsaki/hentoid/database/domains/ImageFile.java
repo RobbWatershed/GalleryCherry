@@ -1,7 +1,5 @@
 package me.devsaki.hentoid.database.domains;
 
-import com.google.gson.annotations.Expose;
-
 import java.util.Comparator;
 import java.util.Locale;
 import java.util.Objects;
@@ -100,8 +98,7 @@ public class ImageFile {
         return this;
     }
 
-    public void computeNameFromOrder()
-    {
+    public void computeNameFromOrder() {
         name = String.format(Locale.US, "%03d", order);
     }
 
