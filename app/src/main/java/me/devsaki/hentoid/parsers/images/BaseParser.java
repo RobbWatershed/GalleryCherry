@@ -56,6 +56,8 @@ public abstract class BaseParser implements ImageListParser {
 
         Timber.d("Gallery URL: %s", readerUrl);
 
+        content.populateUniqueSiteId();
+
         List<String> imgUrls = parseImages(content);
         List<ImageFile> images = ParseHelper.urlsToImageFiles(imgUrls);
 

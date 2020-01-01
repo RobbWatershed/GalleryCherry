@@ -986,6 +986,8 @@ public abstract class BaseWebActivity extends AppCompatActivity implements WebCo
                     params.put(HttpHelper.HEADER_COOKIE_KEY, p.second);
 
             content.setDownloadParams(JsonHelper.serializeToJson(params, JsonHelper.MAP_STRINGS));
+            content.populateAuthor();
+            content.populateUniqueSiteId();
             isHtmlLoaded = true;
 
             listener.onResultReady(content, quickDownload);

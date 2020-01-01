@@ -70,9 +70,6 @@ public class XnxxContent implements ContentParser {
         result.addAttributes(attributes);
 
 
-        result.addAttributes(attributes);
-
-
         List<ImageFile> images = new ArrayList<>();
 
         int order = 1;
