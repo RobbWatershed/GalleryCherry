@@ -82,6 +82,10 @@
             android:configChanges="orientation|screenSize"
             android:theme="@style/Theme.Base.Browser" />
         <activity
+            android:name=".activities.sources.LusciousActivity"
+            android:configChanges="orientation|screenSize"
+            android:theme="@style/Theme.Base.Browser" />
+        <activity
             android:name=".activities.LibraryActivity"
             android:configChanges="orientation|screenSize"
             android:label="@string/title_activity_downloads"

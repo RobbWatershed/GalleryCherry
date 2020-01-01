@@ -495,6 +495,7 @@ public class ContentDownloadService extends IntentService {
      */
     private List<ImageFile> fetchImageURLs(Content content) throws Exception {
         List<ImageFile> imgs;
+        content.populateUniqueSiteId();
         // Use ImageListParser to query the source
         ImageListParser parser = ContentParserFactory.getInstance().getImageListParser(content.getSite());
         imgs = parser.parseImageList(content);

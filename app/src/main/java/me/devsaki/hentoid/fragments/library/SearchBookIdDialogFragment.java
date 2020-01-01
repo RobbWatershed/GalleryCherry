@@ -79,10 +79,8 @@ public class SearchBookIdDialogFragment extends DialogFragment {
 
     private static String getUrlFromId(Site site, String id) {
         switch (site) {
-//            case TSUMINO:
-//                return site.getUrl() + "/Book/Info/" + id + "/";
             case LUSCIOUS:
-                return site.getUrl().replace("manga", "albums") + id + "/";
+                return site.getUrl().replace("porn", "albums") + id + "/";
             default:
                 return site.getUrl();
         }
