@@ -16,7 +16,7 @@
         android:src="@drawable/ic_info"
         app:layout_constraintBottom_toBottomOf="@id/drawer_item_txt"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@id/item_txt"
+        app:layout_constraintTop_toTopOf="@id/drawer_item_txt"
         tools:ignore="ContentDescription" />
 
     <ImageView
@@ -34,7 +34,7 @@
         tools:visibility="visible" />
 
     <TextView
-        android:id="@+id/item_txt"
+        android:id="@+id/drawer_item_txt"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
