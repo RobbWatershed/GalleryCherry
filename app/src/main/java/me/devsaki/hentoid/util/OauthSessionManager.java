@@ -1,13 +1,19 @@
 package me.devsaki.hentoid.util;
 
+import android.content.Context;
+
 import androidx.annotation.Nullable;
 
 import org.threeten.bp.Instant;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.Map;
 
 import me.devsaki.hentoid.enums.Site;
+import timber.log.Timber;
 
 /**
  * Created by Robb on 2019/09
@@ -31,7 +37,7 @@ public class OauthSessionManager {
 
 
     public OauthSession addSession(Site site) {
-        OauthSession session = new OauthSession();
+        OauthSession session = new OauthSession(site.name());
         activeSessions.put(site, session);
         return session;
     }
@@ -49,7 +55,48 @@ public class OauthSessionManager {
         return activeSessions.get(site);
     }
 
-    public class OauthSession {
+    private File getSessionFile(Context context, String host) {
+        File dir = context.getFilesDir();
+        return new File(dir, host + ".json");
+    }
+
+    /**
+     * Save the Oauth session to the app's internal storage
+     * @param context Context to be used
+     * @param session Session to be saved
+     */
+    public void saveSession(Context context, OauthSession session) {
+        File file = getSessionFile(context, session.getHost());
+        try (OutputStream output = FileHelper.getOutputStream(file)) {
+            if (output != null) JsonHelper.updateJson(session, OauthSession.class, output);
+            else Timber.w("JSON file creation failed for %s", file.getPath());
+        } catch (IOException e) {
+            Timber.e(e);
+        }
+    }
+
+    /**
+     * Get the Oauth session from the app's internal storage
+     * @param context Context to be used
+     * @param host Host the session belongs to
+     * @return Oauth session from the given host; null if no such session exists
+     */
+    @Nullable
+    public OauthSession loadSession(Context context, String host) {
+        File file = getSessionFile(context, host);
+        if (!file.exists()) return null;
+
+        try {
+            return JsonHelper.jsonToObject(file, OauthSession.class);
+        } catch (IOException e) {
+            Timber.e(e);
+        }
+        return null;
+    }
+
+    public static class OauthSession {
+        private final String host;
+
         private String redirectUri = "";
         private String clientId = "";
         private String state = "";
@@ -60,7 +107,18 @@ public class OauthSessionManager {
         private String targetUrl = "";
         private String userName = "";
 
-        public String getState() { return state; }
+
+        OauthSession(String host) {
+            this.host = host;
+        }
+
+        String getHost() {
+            return host;
+        }
+
+        public String getState() {
+            return state;
+        }
 
         public void setState(String state) {
             this.state = state;
