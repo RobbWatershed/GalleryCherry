@@ -34,7 +34,6 @@ public class RedditLauncherDialogFragment extends DialogFragment {
 
     public static void invoke(FragmentManager fragmentManager) {
         RedditLauncherDialogFragment fragment = new RedditLauncherDialogFragment();
-        fragment.setStyle(DialogFragment.STYLE_NO_FRAME, R.style.Dialog);
         fragment.show(fragmentManager, null);
     }
 
@@ -59,7 +58,7 @@ public class RedditLauncherDialogFragment extends DialogFragment {
             redditDownloadFragment = RedditNoAuthDownloadFragment.newInstance();
 
         RedditTabsAdapter redditTabsAdapter = new RedditTabsAdapter(getChildFragmentManager());
-        redditTabsAdapter.addTabFragment(LandingHistoryFragment.newInstance(Site.REDDIT, DEFAULT_URL), "Browse");
+        redditTabsAdapter.addTabFragment(LandingHistoryFragment.newInstance(requireActivity(), Site.REDDIT, DEFAULT_URL), "Browse");
         redditTabsAdapter.addTabFragment(redditDownloadFragment, "Download");
         viewPager.setAdapter(redditTabsAdapter);
 

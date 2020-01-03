@@ -5,7 +5,7 @@ import me.devsaki.hentoid.enums.Site;
 public class XnxxActivity extends BaseWebActivity {
 
     private static final String DOMAIN_FILTER = "xnxx.com";
-    private static final String GALLERY_FILTER = "gallery/";
+    private static final String[] GALLERY_FILTER = {"gallery/"};
 
     Site getStartSite() {
         return Site.XNXX;

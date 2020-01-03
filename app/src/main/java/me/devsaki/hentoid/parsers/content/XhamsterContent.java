@@ -25,7 +25,7 @@ public class XhamsterContent implements ContentParser {
     private String galleryUrl;
     @Selector(value = "img.thumb", attr = "src")
     private List<String> thumbs;
-    @Selector("h1.page-title")
+    @Selector(value = ".page-title h1", defValue = "")
     private String title;
     @Selector("head title")
     private String headTitle;
@@ -61,7 +61,6 @@ public class XhamsterContent implements ContentParser {
 
         result.addAttributes(attributes);
 
-        result.populateAuthor();
         result.setStatus(StatusContent.SAVED);
 
         return result;

@@ -1,6 +1,5 @@
 package me.devsaki.hentoid;
 
-import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.Application;
 import android.app.NotificationManager;
@@ -39,11 +38,10 @@ import timber.log.Timber;
 public class HentoidApp extends Application {
 
     private static boolean beginImport;
-    @SuppressLint("StaticFieldLeak")
-    // A context leak happening at app level isn't _really_ a leak, right ? ;-)
-    private static Context instance;
 
-    public static Context getAppContext() {
+    private static Application instance;
+
+    public static Application getInstance() {
         return instance;
     }
 
@@ -65,6 +63,7 @@ public class HentoidApp extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+        instance = this;
 
         Fabric.with(this, new Crashlytics());
 
@@ -94,20 +93,16 @@ public class HentoidApp extends Application {
         Timber.plant(new CrashlyticsTree());
 
         // Prefs
-        instance = this.getApplicationContext();
         Preferences.init(this);
         Preferences.performHousekeeping();
+
+        // Init version number on first run
+        if (0 == Preferences.getLastKnownAppVersionCode())
+            Preferences.setLastKnownAppVersionCode(BuildConfig.VERSION_CODE);
 
         // Firebase
         boolean isAnalyticsEnabled = Preferences.isAnalyticsEnabled();
         FirebaseAnalytics.getInstance(this).setAnalyticsCollectionEnabled(isAnalyticsEnabled);
-
-        // Stetho
-/*
-        if (BuildConfig.DEBUG) {
-            Stetho.initializeWithDefaults(this);
-        }
-*/
 
         StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
         StrictMode.setThreadPolicy(policy);
@@ -121,15 +116,17 @@ public class HentoidApp extends Application {
         MaintenanceNotificationChannel.init(this);
 
         // Clears all previous notifications
-        NotificationManager manager = (NotificationManager) instance.getSystemService(Context.NOTIFICATION_SERVICE);
+        NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         if (manager != null) manager.cancelAll();
 
         // Run app update checks
-        Intent intent = UpdateCheckService.makeIntent(this, false);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(intent);
-        } else {
-            startService(intent);
+        if (Preferences.isAutomaticUpdateEnabled()) {
+            Intent intent = UpdateCheckService.makeIntent(this, false);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(intent);
+            } else {
+                startService(intent);
+            }
         }
 
         // Set Night mode

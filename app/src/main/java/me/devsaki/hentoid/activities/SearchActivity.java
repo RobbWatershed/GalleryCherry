@@ -9,17 +9,15 @@ import android.view.View;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.lifecycle.ViewModelProviders;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.material.snackbar.Snackbar;
-
 import java.util.List;
 
 import me.devsaki.hentoid.R;
-import me.devsaki.hentoid.abstracts.BaseActivity;
 import me.devsaki.hentoid.activities.bundles.SearchActivityBundle;
 import me.devsaki.hentoid.adapters.SelectedAttributeAdapter;
 import me.devsaki.hentoid.database.domains.Attribute;
@@ -29,14 +27,12 @@ import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.viewmodels.SearchViewModel;
 import timber.log.Timber;
 
-import static com.google.android.material.snackbar.BaseTransientBottomBar.LENGTH_LONG;
 import static java.lang.String.format;
-import static me.devsaki.hentoid.abstracts.DownloadsFragment.MODE_LIBRARY;
 
 /**
  * Created by Robb on 2018/11
  */
-public class SearchActivity extends BaseActivity {
+public class SearchActivity extends AppCompatActivity {
 
     private TextView tagCategoryText;
     private TextView modelCategoryText;
@@ -50,9 +46,6 @@ public class SearchActivity extends BaseActivity {
     // Container where selected attributed are displayed
     private SelectedAttributeAdapter selectedAttributeAdapter;
     private RecyclerView searchTags;
-
-    // Mode : show library or show Mikan search
-    private int mode;
 
     // ViewModel of this activity
     private SearchViewModel viewModel;
@@ -88,7 +81,6 @@ public class SearchActivity extends BaseActivity {
         if (intent != null && intent.getExtras() != null) {
 
             SearchActivityBundle.Parser parser = new SearchActivityBundle.Parser(intent.getExtras());
-            mode = parser.getMode();
             Uri searchUri = parser.getUri();
             if (searchUri != null)
                 preSelectedAttributes = SearchActivityBundle.Parser.parseSearchUri(searchUri);
@@ -105,7 +97,7 @@ public class SearchActivity extends BaseActivity {
         TextView anyCategoryText = findViewById(R.id.textCategoryAny);
         anyCategoryText.setOnClickListener(v -> onAttrButtonClick(AttributeType.TAG, AttributeType.ARTIST,
                 AttributeType.CIRCLE, AttributeType.SERIE, AttributeType.CHARACTER, AttributeType.LANGUAGE)); // Everything but source !
-        anyCategoryText.setEnabled(MODE_LIBRARY == mode); // Unsupported by Mikan
+        anyCategoryText.setEnabled(true);
 
         tagCategoryText = findViewById(R.id.textCategoryTag);
         tagCategoryText.setOnClickListener(v -> onAttrButtonClick(AttributeType.TAG));
@@ -133,11 +125,11 @@ public class SearchActivity extends BaseActivity {
         searchButton.setOnClickListener(v -> validateForm());
 
         viewModel = ViewModelProviders.of(this).get(SearchViewModel.class);
-        viewModel.setMode(mode);
         viewModel.getAttributesCountData().observe(this, this::onQueryUpdated);
         viewModel.getSelectedAttributesData().observe(this, this::onSelectedAttributesChanged);
-        viewModel.getSelectedContentData().observe(this, this::onBooksReady);
+        viewModel.getSelectedContentCount().observe(this, this::onBooksCounted);
         if (preSelectedAttributes != null) viewModel.setSelectedAttributes(preSelectedAttributes);
+        else viewModel.emptyStart();
     }
 
     private void onQueryUpdated(SparseIntArray attrCount) {
@@ -156,7 +148,7 @@ public class SearchActivity extends BaseActivity {
 
 
     private void onAttrButtonClick(AttributeType... attributeTypes) {
-        SearchBottomSheetFragment.show(getSupportFragmentManager(), mode, attributeTypes);
+        SearchBottomSheetFragment.show(getSupportFragmentManager(), attributeTypes);
     }
 
     /**
@@ -179,13 +171,12 @@ public class SearchActivity extends BaseActivity {
         if (a != null) viewModel.onAttributeUnselected(a);
     }
 
-    private void onBooksReady(SearchViewModel.ContentSearchResult result) {
-        if (result.success && selectedAttributeAdapter.getItemCount() > 0) {
-            searchButton.setText(getString(R.string.search_button).replace("%1", result.totalSelected + "").replace("%2", 1 == result.totalSelected ? "" : "s"));
+    private void onBooksCounted(int count) {
+        if (count > 0) {
+            searchButton.setText(getString(R.string.search_button).replace("%1", count + "").replace("%2", 1 == count ? "" : "s"));
             searchButton.setVisibility(View.VISIBLE);
         } else {
             searchButton.setVisibility(View.GONE);
-            Snackbar.make(startCaption, result.message, LENGTH_LONG);
         }
     }
 

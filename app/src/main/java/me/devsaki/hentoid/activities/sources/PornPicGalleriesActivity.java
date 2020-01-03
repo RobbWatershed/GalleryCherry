@@ -4,7 +4,7 @@ import me.devsaki.hentoid.enums.Site;
 
 public class PornPicGalleriesActivity extends BaseWebActivity {
 
-    private static final String GALLERY_FILTER = ".*";
+    private static final String[] GALLERY_FILTER = {".*"};
 
     Site getStartSite() {
         return Site.PORNPICGALLERIES;

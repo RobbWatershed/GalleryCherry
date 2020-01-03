@@ -23,7 +23,8 @@ public enum Site {
     LINK2GALLERIES(7, "Link2galleries", "https://www.link2galleries.com/", "link2galleries", R.drawable.ic_menu_l2g, true, true, false, false, false),
     REDDIT(8, "Reddit", "https://www.reddit.com/", "reddit", R.drawable.ic_social_reddit, true, true, false, false, true),
     JJGIRLS(9, "JJGirls", "https://jjgirls.com/mobile/", "jjgirls", R.drawable.ic_menu_jjgirls, true, true, false, true, false),
-    NONE(98, "none", "", "none", R.drawable.ic_menu_about, true, true, false, false, false); // Fallback site
+    LUSCIOUS(10, "luscious.net", "https://members.luscious.net/porn/", "luscious", R.drawable.ic_menu_luscious, true, false, false, false, false),
+    NONE(98, "none", "", "none", R.drawable.ic_info, true, true, false, false, false); // Fallback site
 
 
     private final int code;
@@ -60,14 +61,19 @@ public enum Site {
     }
 
     public static Site searchByCode(long code) {
-        if (code == -1) {
-            Timber.w("Invalid site code!");
-        }
-        for (Site s : Site.values()) {
-            if (s.getCode() == code)
-                return s;
-        }
-        return Site.NONE;
+        for (Site s : values())
+            if (s.getCode() == code) return s;
+
+        return NONE;
+    }
+
+    // Same as ValueOf with a fallback to NONE
+    // (vital for forward compatibility)
+    public static Site searchByName(String name) {
+        for (Site s : values())
+            if (s.name().equalsIgnoreCase(name)) return s;
+
+        return NONE;
     }
 
     public static Site searchByUrl(String url) {

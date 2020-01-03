@@ -1,12 +1,12 @@
 package me.devsaki.hentoid.retrofit;
 
 import io.reactivex.Single;
-import me.devsaki.hentoid.model.RedditUser;
-import me.devsaki.hentoid.model.RedditUserSavedPosts;
+import me.devsaki.hentoid.json.sources.RedditUser;
+import me.devsaki.hentoid.json.sources.RedditUserSavedPosts;
 import me.devsaki.hentoid.util.OkHttpClientSingleton;
 import retrofit2.Retrofit;
 import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
-import retrofit2.converter.gson.GsonConverterFactory;
+import retrofit2.converter.moshi.MoshiConverterFactory;
 import retrofit2.http.GET;
 import retrofit2.http.Header;
 import retrofit2.http.Path;
@@ -19,7 +19,7 @@ public class RedditOAuthApiServer {
             .baseUrl(REDDIT_API_URL)
             .client(OkHttpClientSingleton.getInstance())
             .addCallAdapterFactory(RxJava2CallAdapterFactory.createAsync())
-            .addConverterFactory(GsonConverterFactory.create())
+            .addConverterFactory(MoshiConverterFactory.create())
             .build()
             .create(Api.class);
 

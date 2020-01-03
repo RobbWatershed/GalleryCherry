@@ -41,7 +41,7 @@ public class JjgirlsContent extends SmartContent {
                         altUri.appendPath(pathSegments.get(i));
 
                 downloadParams.put("backupUrl", altUri.build().toString());
-                String downloadParamsStr = JsonHelper.serializeToJson(downloadParams);
+                String downloadParamsStr = JsonHelper.serializeToJson(downloadParams, JsonHelper.MAP_STRINGS);
                 img.setDownloadParams(downloadParamsStr);
             }
         }

@@ -5,7 +5,7 @@ import me.devsaki.hentoid.enums.Site;
 public class NextpicturezActivity extends BaseWebActivity {
 
     private static final String[] DOMAIN_FILTERS = {"nextpicturez.com", "young-whores.net"};
-    private static final String GALLERY_FILTER = "/gallery/";
+    private static final String[] GALLERY_FILTER = {"/gallery/"};
 
     Site getStartSite() {
         return Site.NEXTPICTUREZ;

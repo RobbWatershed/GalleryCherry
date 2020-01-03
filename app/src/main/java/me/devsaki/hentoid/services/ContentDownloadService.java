@@ -5,6 +5,10 @@ import android.content.Intent;
 import android.os.Build;
 import android.os.IBinder;
 import android.os.SystemClock;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Rect;
 import android.util.SparseIntArray;
 import android.webkit.MimeTypeMap;
 
@@ -19,23 +23,19 @@ import com.android.volley.Request;
 import com.android.volley.ServerError;
 import com.android.volley.TimeoutError;
 import com.android.volley.VolleyError;
-import com.crashlytics.android.Crashlytics;
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
+import org.threeten.bp.Instant;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Type;
 import java.security.InvalidParameterException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 import javax.annotation.Nonnull;
@@ -46,6 +46,7 @@ import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.schedulers.Schedulers;
 import me.devsaki.hentoid.HentoidApp;
+import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.database.ObjectBoxDB;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.ErrorRecord;
@@ -55,12 +56,13 @@ import me.devsaki.hentoid.enums.ErrorType;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.events.DownloadEvent;
+import me.devsaki.hentoid.json.JsonContent;
 import me.devsaki.hentoid.notification.download.DownloadErrorNotification;
 import me.devsaki.hentoid.notification.download.DownloadProgressNotification;
 import me.devsaki.hentoid.notification.download.DownloadSuccessNotification;
 import me.devsaki.hentoid.notification.download.DownloadWarningNotification;
 import me.devsaki.hentoid.parsers.ContentParserFactory;
-import me.devsaki.hentoid.parsers.ImageListParser;
+import me.devsaki.hentoid.parsers.images.ImageListParser;
 import me.devsaki.hentoid.util.ContentHelper;
 import me.devsaki.hentoid.util.FileHelper;
 import me.devsaki.hentoid.util.Helper;
@@ -92,30 +94,15 @@ public class ContentDownloadService extends IntentService {
     private RequestQueueManager<Object> requestQueueManager = null;
     protected final CompositeDisposable compositeDisposable = new CompositeDisposable();
 
-    // TODO remove when issue #349 fixed
-    private long creationTicks;
-
 
     public ContentDownloadService() {
         super(ContentDownloadService.class.getName());
     }
 
-    // Fix attempt for #349 : https://stackoverflow.com/questions/55894636/android-9-pie-context-startforegroundservice-did-not-then-call-service-star?rq=1
-    private void prepareAndStartForeground() {
-        Intent intent = new Intent(Intent.ACTION_SYNC, null, this, ContentDownloadService.class);
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            this.startForegroundService(intent);
-        } else {
-            this.startService(intent);
-        }
-        notifyStart();
-    }
-
     private void notifyStart() {
         notificationManager = new ServiceNotificationManager(this, 1);
         notificationManager.cancel();
-        notificationManager.startForeground(new DownloadProgressNotification("Starting download", 0, 0));
+        notificationManager.startForeground(new DownloadProgressNotification(this.getResources().getString(R.string.starting_download), 0, 0));
 
         warningNotificationManager = new NotificationManager(this, 2);
         warningNotificationManager.cancel();
@@ -125,7 +112,6 @@ public class ContentDownloadService extends IntentService {
     // if the entire queue is paused (=service destroyed), then resumed (service re-created)
     @Override
     public void onCreate() {
-        creationTicks = SystemClock.elapsedRealtime();
         super.onCreate();
 
         notifyStart();
@@ -135,10 +121,6 @@ public class ContentDownloadService extends IntentService {
         db = ObjectBoxDB.getInstance(this);
 
         Timber.d("Download service created");
-
-        // TODO remove when issue #349 fixed
-        double lifespan = (SystemClock.elapsedRealtime() - creationTicks) / 1000.0;
-        Crashlytics.log("Download service creation time (s) : " + String.format(Locale.US, "%.2f", lifespan));
     }
 
     @Override
@@ -148,66 +130,48 @@ public class ContentDownloadService extends IntentService {
 
         Timber.d("Download service destroyed");
 
-        // TODO remove when issue #349 fixed
-        double lifespan = (SystemClock.elapsedRealtime() - creationTicks) / 1000.0;
-        Crashlytics.log("Download service lifespan (s) : " + String.format(Locale.US, "%.2f", lifespan));
-
         super.onDestroy();
     }
 
     @Override
     protected void onHandleIntent(Intent intent) {
         Timber.d("New intent processed");
+        iterateQueue();
+    }
 
-        // TODO remove when issue #349 fixed
-        double ticks = (SystemClock.elapsedRealtime() - creationTicks) / 1000.0;
-        Crashlytics.log("New intent processed at (s) " + String.format(Locale.US, "%.2f", ticks));
+    private void iterateQueue() {
+        // Process these here to avoid initializing notifications for downloads that will never start
+        if (ContentQueueManager.getInstance().isQueuePaused()) {
+            Timber.w("Queue is paused. Aborting download.");
+            return;
+        }
 
         notifyStart();
 
         Content content = downloadFirstInQueue();
         if (content != null) watchProgress(content);
-    }
-
-    // The following 3 overrides are there to attempt fixing https://stackoverflow.com/questions/55894636/android-9-pie-context-startforegroundservice-did-not-then-call-service-star
-
-    @androidx.annotation.Nullable
-    @Override
-    public IBinder onBind(Intent intent) {
-        stopForeground(true); // <- remove notification
-        return null;
-    }
-
-    @Override
-    public boolean onUnbind(Intent intent) {
-
-        // TODO remove when issue #349 fixed
-        double ticks = (SystemClock.elapsedRealtime() - creationTicks) / 1000.0;
-        Crashlytics.log("Unbind at (s) " + String.format(Locale.US, "%.2f", ticks));
-
-        prepareAndStartForeground(); // <- show notification again
-        return true;
-    }
-
-    @Override
-    public void onRebind(Intent intent) {
-        stopForeground(true); // <- remove notification
+        else notificationManager.cancel();
     }
 
     /**
      * Start the download of the 1st book of the download queue
+     * <p>
+     * NB : This method is not only called the 1st time the queue is awakened,
+     * but also after every book has finished downloading
      *
-     * @return 1st book of the download queue
+     * @return 1st book of the download queue; null if no book is available to download
      */
     @Nullable
     private Content downloadFirstInQueue() {
-        // Check if queue is already paused
+        // Check if queue has been paused
         if (ContentQueueManager.getInstance().isQueuePaused()) {
             Timber.w("Queue is paused. Aborting download.");
             return null;
         }
 
-        // Works on first item of queue
+        // Work on first item of queue
+
+        // Check if there is a first item to process
         List<QueueRecord> queue = db.selectQueue();
         if (queue.isEmpty()) {
             Timber.w("Queue is empty. Aborting download.");
@@ -221,6 +185,7 @@ public class ContentDownloadService extends IntentService {
             db.deleteQueue(0);
             content = new Content().setId(queue.get(0).content.getTargetId()); // Must supply content ID to the event for the UI to update properly
             EventBus.getDefault().post(new DownloadEvent(content, DownloadEvent.EV_COMPLETE, 0, 0, 0));
+            notificationManager.notify(new DownloadErrorNotification());
             return null;
         }
 
@@ -228,6 +193,7 @@ public class ContentDownloadService extends IntentService {
             Timber.w("Content is already downloaded. Aborting download.");
             db.deleteQueue(0);
             EventBus.getDefault().post(new DownloadEvent(content, DownloadEvent.EV_COMPLETE, 0, 0, 0));
+            notificationManager.notify(new DownloadErrorNotification(content));
             return null;
         }
 
@@ -304,14 +270,17 @@ public class ContentDownloadService extends IntentService {
 
         if (hasError) {
             content.setStatus(StatusContent.ERROR);
+            content.setDownloadDate(Instant.now().toEpochMilli()); // Needs a download date to appear the right location when sorted by download date
             db.insertContent(content);
             db.deleteQueue(content);
             EventBus.getDefault().post(new DownloadEvent(content, DownloadEvent.EV_COMPLETE, 0, 0, 0));
             HentoidApp.trackDownloadEvent("Error");
+            notificationManager.notify(new DownloadErrorNotification(content));
             return null;
         }
 
         // In case the download has been canceled while in preparation phase
+        // NB : No log of any sort because this is normal behaviour
         if (downloadCanceled || downloadSkipped) return null;
 
         // Create destination folder for images to be downloaded
@@ -341,6 +310,7 @@ public class ContentDownloadService extends IntentService {
         // Folder creation succeeds -> memorize its path
         String fileRoot = Preferences.getRootFolderName();
         content.setStorageFolder(dir.getAbsolutePath().substring(fileRoot.length()));
+        if (0 == content.getQtyPages()) content.setQtyPages(images.size());
         content.setStatus(StatusContent.DOWNLOADING);
         db.insertContent(content);
 
@@ -421,7 +391,7 @@ public class ContentDownloadService extends IntentService {
 
             boolean hasError = false;
             // Less pages than initially detected - More than 10% difference in number of pages
-            if (!content.getSite().isDanbooru() && nbImages < content.getQtyPages() && Math.abs(nbImages - content.getQtyPages()) > content.getQtyPages() * 0.1) {
+            if (content.getQtyPages() > 0 && !content.getSite().isDanbooru() && nbImages < content.getQtyPages() && Math.abs(nbImages - content.getQtyPages()) > content.getQtyPages() * 0.1) {
                 String errorMsg = String.format("The number of images found (%s) does not match the book's number of pages (%s)", nbImages, content.getQtyPages());
                 logErrorRecord(content.getId(), ErrorType.PARSING, content.getGalleryUrl(), "pages", errorMsg);
                 hasError = true;
@@ -452,7 +422,8 @@ public class ContentDownloadService extends IntentService {
             }
 
             // Mark content as downloaded
-            if (0 == content.getDownloadDate()) content.setDownloadDate(new Date().getTime());
+            if (0 == content.getDownloadDate())
+                content.setDownloadDate(Instant.now().toEpochMilli());
             content.setStatus((0 == pagesKO && !hasError) ? StatusContent.DOWNLOADED : StatusContent.ERROR);
             // Clear download params from content
             if (0 == pagesKO && !hasError) content.setDownloadParams("");
@@ -462,7 +433,7 @@ public class ContentDownloadService extends IntentService {
             // Save JSON file
             if (dir.exists()) {
                 try {
-                    File jsonFile = JsonHelper.createJson(content.preJSONExport(), dir);
+                    File jsonFile = JsonHelper.createJson(JsonContent.fromEntity(content), JsonContent.class, dir);
                     // Cache its URI to the newly created content
                     DocumentFile jsonDocFile = FileHelper.getDocumentFile(jsonFile, false);
                     if (jsonDocFile != null) {
@@ -512,8 +483,8 @@ public class ContentDownloadService extends IntentService {
             Timber.d("Content download skipped : %s [%s]", content.getTitle(), content.getId());
         }
 
-        // Download next content in a new Intent
-        contentQueueManager.resumeQueue(this);
+        // Download next content
+        iterateQueue();
     }
 
     /**
@@ -524,6 +495,7 @@ public class ContentDownloadService extends IntentService {
      */
     private List<ImageFile> fetchImageURLs(Content content) throws Exception {
         List<ImageFile> imgs;
+        content.populateUniqueSiteId();
         // Use ImageListParser to query the source
         ImageListParser parser = ContentParserFactory.getInstance().getImageListParser(content.getSite());
         imgs = parser.parseImageList(content);
@@ -553,16 +525,21 @@ public class ContentDownloadService extends IntentService {
         String downloadParamsStr = img.getDownloadParams();
         if (downloadParamsStr != null && downloadParamsStr.length() > 2) // Avoid empty and "{}"
         {
-            Type type = new TypeToken<Map<String, String>>() {
-            }.getType();
-            Map<String, String> downloadParams = new Gson().fromJson(downloadParamsStr, type);
+            Map<String, String> downloadParams = null;
+            try {
+                downloadParams = JsonHelper.jsonToObject(downloadParamsStr, JsonHelper.MAP_STRINGS);
+            } catch (IOException e) {
+                Timber.w(e);
+            }
 
-            if (downloadParams.containsKey(HttpHelper.HEADER_COOKIE_KEY))
-                headers.put(HttpHelper.HEADER_COOKIE_KEY, downloadParams.get(HttpHelper.HEADER_COOKIE_KEY));
-            if (downloadParams.containsKey(HttpHelper.HEADER_REFERER_KEY))
-                headers.put(HttpHelper.HEADER_REFERER_KEY, downloadParams.get(HttpHelper.HEADER_REFERER_KEY));
-            if (downloadParams.containsKey("backupUrl"))
-                backupUrl = downloadParams.get("backupUrl");
+            if (downloadParams != null) {
+                if (downloadParams.containsKey(HttpHelper.HEADER_COOKIE_KEY))
+                    headers.put(HttpHelper.HEADER_COOKIE_KEY, downloadParams.get(HttpHelper.HEADER_COOKIE_KEY));
+                if (downloadParams.containsKey(HttpHelper.HEADER_REFERER_KEY))
+                    headers.put(HttpHelper.HEADER_REFERER_KEY, downloadParams.get(HttpHelper.HEADER_REFERER_KEY));
+                if (downloadParams.containsKey("backupUrl"))
+                    backupUrl = downloadParams.get("backupUrl");
+            }
         }
         final String backupUrlFinal = (null == backupUrl) ? "" : backupUrl;
 
@@ -599,7 +576,7 @@ public class ContentDownloadService extends IntentService {
         } catch (IOException e) {
             Timber.w(e, "I/O error - Image %s not saved in dir %s", img.getUrl(), dir.getPath());
             updateImageStatus(img, false);
-            logErrorRecord(img.content.getTargetId(), ErrorType.IO, img.getUrl(), img.getName(), "Save failed in dir " + dir.getAbsolutePath());
+            logErrorRecord(img.content.getTargetId(), ErrorType.IO, img.getUrl(), img.getName(), "Save failed in dir " + dir.getAbsolutePath() + " " + e.getMessage());
         }
     }
 
@@ -637,13 +614,14 @@ public class ContentDownloadService extends IntentService {
 
     private void tryUsingBackupUrl(@Nonnull ImageFile img, @Nonnull File dir, @Nonnull String backupUrl) {
         Timber.i("Using backup URL %s", backupUrl);
-        Site site = img.content.getTarget().getSite();
+        Content content = img.content.getTarget();
+        Site site = content.getSite();
         ImageListParser parser = ContentParserFactory.getInstance().getImageListParser(site);
 
         // per Volley behaviour, this method is called on the UI thread
         // -> need to create a new thread to do a network call
         compositeDisposable.add(
-                Single.fromCallable(() -> parser.parseBackupUrl(backupUrl, img.getOrder()))
+                Single.fromCallable(() -> parser.parseBackupUrl(backupUrl, img.getOrder(), content.getQtyPages()))
                         .subscribeOn(Schedulers.computation())
                         .observeOn(AndroidSchedulers.mainThread())
                         .subscribe(
@@ -701,21 +679,30 @@ public class ContentDownloadService extends IntentService {
 
         String fileExt = null;
         // Determine the extension of the file
-        //  - Case 1: Content served from an URL without any extension, but with a content-type in the HTTP headers of the response
-        //  - Case 2: Content served from an URL with an extension, but with no content-type at all
+
+        // Use the Content-type contained in the HTTP headers of the response
         if (null != contentType) {
             contentType = HttpHelper.cleanContentType(contentType).first;
-            fileExt = MimeTypeMap.getSingleton().getExtensionFromMimeType(contentType);
-            Timber.d("Using content-type %s to determine file extension %s", contentType, fileExt);
+            // Ignore neutral binary content-type
+            if (!contentType.equalsIgnoreCase("application/octet-stream")) {
+                fileExt = MimeTypeMap.getSingleton().getExtensionFromMimeType(contentType);
+                Timber.d("Using content-type %s to determine file extension -> %s", contentType, fileExt);
+            }
         }
-        // Content-type has not been useful to determine the extension
+        // Content-type has not been useful to determine the extension => See if the URL contains an extension
         if (null == fileExt || fileExt.isEmpty()) {
-            Timber.d("Using url to determine file extension (content-type was %s) for %s", contentType, img.getUrl());
             fileExt = HttpHelper.getExtensionFromUri(img.getUrl());
+            Timber.d("Using url to determine file extension (content-type was %s) for %s -> %s", contentType, img.getUrl(), fileExt);
         }
+        // No extension detected in the URL => Read binary header of the file to detect known formats
         if (fileExt.isEmpty()) {
-            Timber.d("Using default extension for %s", img.getUrl());
-            fileExt = "jpg"; // If all else fails, use jpg as default
+            fileExt = FileHelper.getImageExtensionFromPictureHeader(Arrays.copyOf(binaryContent, 12));
+            Timber.d("Reading headers to determine file extension for %s -> %s", img.getUrl(), fileExt);
+        }
+        // If all else fails, fall back to jpg as default
+        if (fileExt.isEmpty()) {
+            fileExt = "jpg";
+            Timber.d("Using default extension for %s -> %s", img.getUrl(), fileExt);
         }
 
         if (!Helper.isImageExtensionSupported(fileExt))
@@ -783,7 +770,7 @@ public class ContentDownloadService extends IntentService {
     }
 
     private void logErrorRecord(long contentId, ErrorType type, String url, String contentPart, String description) {
-        ErrorRecord record = new ErrorRecord(contentId, type, url, contentPart, description);
+        ErrorRecord record = new ErrorRecord(contentId, type, url, contentPart, description, Instant.now());
         if (contentId > 0) db.insertErrorRecord(record);
     }
 }

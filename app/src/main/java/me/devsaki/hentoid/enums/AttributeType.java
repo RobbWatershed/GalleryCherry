@@ -1,5 +1,8 @@
 package me.devsaki.hentoid.enums;
 
+import com.squareup.moshi.FromJson;
+import com.squareup.moshi.ToJson;
+
 import javax.annotation.Nullable;
 
 import io.objectbox.converter.PropertyConverter;
@@ -13,15 +16,15 @@ public enum AttributeType {
 
     // Attributes stored in Attributes table of the DB
     ARTIST(0, "Artist", R.drawable.ic_attribute_artist),
-    PUBLISHER(1, "Publisher", R.drawable.ic_menu_about),
+    PUBLISHER(1, "Publisher", R.drawable.ic_info),
     LANGUAGE(2, "Language", R.drawable.ic_attribute_language),
     TAG(3, "Tag", R.drawable.ic_attribute_tag),
-    TRANSLATOR(4, "Translator", R.drawable.ic_menu_about),
+    TRANSLATOR(4, "Translator", R.drawable.ic_info),
     SERIE(5, "Series", R.drawable.ic_attribute_serie),
-    UPLOADER(6, "Uploader", R.drawable.ic_menu_about),
-    CIRCLE(7, "Circle", R.drawable.ic_menu_about),
+    UPLOADER(6, "Uploader", R.drawable.ic_info),
+    CIRCLE(7, "Circle", R.drawable.ic_info),
     CHARACTER(8, "Character", R.drawable.ic_attribute_character),
-    CATEGORY(9, "Category", R.drawable.ic_menu_about),
+    CATEGORY(9, "Category", R.drawable.ic_info),
     SOURCE(10, "Source", R.drawable.ic_attribute_source), // Attribute displayed on screen and stored elsewhere
     MODEL(11, "Model", R.drawable.ic_attribute_character);
 
@@ -69,6 +72,21 @@ public enum AttributeType {
         return displayName;
     }
 
+
+    public static class AttributeTypeAdapter {
+        @ToJson
+        String toJson(AttributeType attrType) {
+            return attrType.name();
+        }
+
+        @FromJson
+        AttributeType fromJson(String name) {
+            AttributeType attrType = AttributeType.searchByName(name);
+            if (null == attrType && name.equalsIgnoreCase("series"))
+                attrType = SERIE; // Fix the issue with v1.6.5
+            return attrType;
+        }
+    }
 
     public static class AttributeTypeConverter implements PropertyConverter<AttributeType, Integer> {
         @Override

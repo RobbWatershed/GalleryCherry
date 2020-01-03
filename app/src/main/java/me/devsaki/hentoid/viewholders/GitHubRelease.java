@@ -5,7 +5,7 @@ import android.widget.TextView;
 
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.gson.annotations.SerializedName;
+import com.squareup.moshi.Json;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -19,6 +19,8 @@ import eu.davidea.flexibleadapter.items.AbstractFlexibleItem;
 import eu.davidea.flexibleadapter.items.IFlexible;
 import eu.davidea.viewholders.FlexibleViewHolder;
 import me.devsaki.hentoid.R;
+
+import static androidx.core.view.ViewCompat.requireViewById;
 
 public class GitHubRelease extends AbstractFlexibleItem<GitHubRelease.ReleaseViewHolder> {
 
@@ -98,10 +100,10 @@ public class GitHubRelease extends AbstractFlexibleItem<GitHubRelease.ReleaseVie
 
         ReleaseViewHolder(View view, FlexibleAdapter adapter) {
             super(view, adapter);
-            title = view.findViewById(R.id.changelogReleaseTitle);
+            title = requireViewById(view, R.id.changelogReleaseTitle);
 
             releaseDescriptionAdapter = new FlexibleAdapter<>(null);
-            RecyclerView releasedDescription = view.findViewById(R.id.changelogReleaseDescription);
+            RecyclerView releasedDescription = requireViewById(view, R.id.changelogReleaseDescription);
             releasedDescription.setAdapter(releaseDescriptionAdapter);
         }
 
@@ -122,19 +124,21 @@ public class GitHubRelease extends AbstractFlexibleItem<GitHubRelease.ReleaseVie
         }
     }
 
-    public class Struct {
-
-        @SerializedName("tag_name")
+    public static class Struct {
+        @Json(name = "tag_name")
         String tagName;
-
-        @SerializedName("name")
-        public String name;
-
-        @SerializedName("body")
-        public String body;
-
-        @SerializedName("created_at")
+        String name;
+        String body;
+        @Json(name = "created_at")
         Date creationDate;
+
+        public String getName() {
+            return name;
+        }
+
+        public String getBody() {
+            return body;
+        }
     }
 
 }

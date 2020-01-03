@@ -1,0 +1,38 @@
+package me.devsaki.hentoid.json.sources;
+
+import com.squareup.moshi.Json;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class RedditUserSavedPosts {
+
+    @Json(name = "data")
+    private SavedPostsDataContainer container;
+
+
+    class SavedPostsDataContainer {
+        @Json(name = "children")
+        List<SavedPostsDataRoot> roots;
+    }
+
+    class SavedPostsDataRoot {
+        @Json(name = "data")
+        SavedPostsData post;
+    }
+
+    class SavedPostsData {
+        String url;
+    }
+
+    public List<String> toImageList() {
+        List<String> result = new ArrayList<>();
+
+        if (container != null && container.roots != null)
+            for (SavedPostsDataRoot root : container.roots)
+                if (root.post != null)
+                    result.add(root.post.url);
+
+        return result;
+    }
+}

@@ -2,8 +2,9 @@
 <androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content">
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    app:cardBackgroundColor="?android:colorBackground">
 
     <LinearLayout
         android:id="@+id/changelogReleaseLayout"
@@ -22,7 +23,7 @@
             android:textColor="?colorSecondary"
             android:textSize="@dimen/text_subtitle_1"
             android:textStyle="bold"
-            tools:text="Hentoid v99.99" />
+            tools:text="GalleryCherry v99.99" />
 
         <TextView
             android:id="@+id/changelogReleaseCaption"

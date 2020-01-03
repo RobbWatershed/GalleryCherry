@@ -57,7 +57,7 @@ public class JpegworldContent implements ContentParser {
                 if (i != parts.length - 2)
                     hiResLink.append(parts[i]).append((i < parts.length - 1) ? "/" : "");
             }
-            images.add(new ImageFile(order++, hiResLink.toString().replace("/thumbs/", "/galleries/"), StatusContent.SAVED));
+            images.add(new ImageFile(order++, hiResLink.toString().replace("/thumbs/", "/galleries/"), StatusContent.SAVED, imageLinks.size()));
         }
         if (images.size() > 0) result.setCoverImageUrl(images.get(0).getUrl());
         result.setImageFiles(images);

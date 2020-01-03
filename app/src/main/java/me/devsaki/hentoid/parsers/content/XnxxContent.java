@@ -45,7 +45,7 @@ public class XnxxContent implements ContentParser {
         else result.setTitle(title);
 
         String theUrl = galleryUrl.isEmpty() ? url : galleryUrl;
-        result.setUrl(theUrl.replace(Site.XNXX.getUrl(),"").replace("gallery/",""));
+        result.setUrl(theUrl.replace(Site.XNXX.getUrl(), "").replace("gallery/", ""));
 
         AttributeMap attributes = new AttributeMap();
 
@@ -70,14 +70,11 @@ public class XnxxContent implements ContentParser {
         result.addAttributes(attributes);
 
 
-        result.addAttributes(attributes);
-
-
         List<ImageFile> images = new ArrayList<>();
 
         int order = 1;
         for (String s : imageLinks) {
-            images.add(new ImageFile(order++, s, StatusContent.SAVED));
+            images.add(new ImageFile(order++, s, StatusContent.SAVED, imageLinks.size()));
         }
         if (images.size() > 0) result.setCoverImageUrl(images.get(0).getUrl());
         result.setImageFiles(images);

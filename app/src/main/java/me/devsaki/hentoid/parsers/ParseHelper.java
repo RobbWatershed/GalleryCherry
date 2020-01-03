@@ -5,6 +5,7 @@ import org.jsoup.nodes.Element;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 import javax.annotation.Nonnull;
 
@@ -15,8 +16,14 @@ import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.events.DownloadPreparationEvent;
 import me.devsaki.hentoid.util.AttributeMap;
+import me.devsaki.hentoid.util.Helper;
 
 public class ParseHelper {
+
+    private ParseHelper() {
+        throw new IllegalStateException("Utility class");
+    }
+
     /**
      * Remove counters from given string (e.g. "Futanari (2660)" => "Futanari")
      *
@@ -39,18 +46,19 @@ public class ParseHelper {
     }
 
     public static void parseAttribute(AttributeMap map, AttributeType type, Element element, boolean filterCount, Site site) {
-        String name = element.text();
+        String name = Helper.removeNonPrintableChars(element.text());
         if (filterCount) name = removeBrackets(name);
         Attribute attribute = new Attribute(type, name, element.attr("href"), site);
 
         map.add(attribute);
     }
 
-    static ImageFile urlToImageFile(@Nonnull String imgUrl, int order) {
+    public static ImageFile urlToImageFile(@Nonnull String imgUrl, int order, int nbPages) {
         ImageFile result = new ImageFile();
 
-        result.setOrder(order).setUrl(imgUrl).setStatus(StatusContent.ONLINE);
-        result.computeNameFromOrder();
+        int nbMaxDigits = (int) (Math.floor(Math.log10(nbPages)) + 1);
+        String name = String.format(Locale.US, "%0" + nbMaxDigits + "d", order);
+        result.setName(name).setOrder(order).setUrl(imgUrl).setStatus(StatusContent.ONLINE);
 
         return result;
     }
@@ -59,12 +67,12 @@ public class ParseHelper {
         List<ImageFile> result = new ArrayList<>();
 
         int order = 1;
-        for (String s : imgUrls) result.add(urlToImageFile(s, order++));
+        for (String s : imgUrls) result.add(urlToImageFile(s, order++, imgUrls.size()));
 
         return result;
     }
 
-    static void signalProgress(int current, int max) {
+    public static void signalProgress(int current, int max) {
         EventBus.getDefault().post(new DownloadPreparationEvent(current, max));
     }
 }

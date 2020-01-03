@@ -34,7 +34,8 @@ public class NextpicturezContent implements ContentParser {
         result.setUrl(theUrl.substring(galleryLocation));
         result.setTitle(title);
 
-        if (null == imageLinks || imageLinks.isEmpty()) return result.setStatus(StatusContent.IGNORED);
+        if (null == imageLinks || imageLinks.isEmpty())
+            return result.setStatus(StatusContent.IGNORED);
 
         AttributeMap attributes = new AttributeMap();
         result.addAttributes(attributes);
@@ -44,7 +45,7 @@ public class NextpicturezContent implements ContentParser {
 
         int order = 1;
         for (String s : imageLinks) {
-            images.add(new ImageFile(order++, theUrl + s, StatusContent.SAVED));
+            images.add(new ImageFile(order++, theUrl + s, StatusContent.SAVED, imageLinks.size()));
         }
         if (images.size() > 0) result.setCoverImageUrl(images.get(0).getUrl());
         result.setImageFiles(images);

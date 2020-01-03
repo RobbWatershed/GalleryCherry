@@ -1,6 +1,12 @@
 {
   "updateURL": "https://github.com/RobbWatershed/GalleryCherry/releases/download/v1.3.0/cherry13095.apk",
   "versionCode": "95",
-  "updateURL.debug": "https://cdn.discordapp.com/attachments/528851212406358017/603112905008873472/cherry12277-debug.apk",
-  "versionCode.debug": "77"
+  "updateURL.beta": "https://cdn.discordapp.com/attachments/528851212406358017/603112905008873472/cherry12277-debug.apk",
+  "versionCode.beta": "77",
+  "sourceAlerts":[
+    {"sourceName":"EXAMPLE", "status":"RED", "fixedByBuild":"100" }
+  ],
+  "sourceAlerts.beta":[
+    {"sourceName":"EXAMPLE", "status":"RED", "fixedByBuild":"100" }
+  ]
 }
