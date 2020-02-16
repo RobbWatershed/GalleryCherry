@@ -270,7 +270,7 @@ public class ObjectBoxDB {
     }
 
     @Nullable
-    Content selectContentBySourceAndUrl(@NonNull Site site, @NonNull String url) {
+    public Content selectContentBySourceAndUrl(@NonNull Site site, @NonNull String url) {
         return store.boxFor(Content.class).query().equal(Content_.url, url).equal(Content_.site, site.getCode()).build().findFirst();
     }
 

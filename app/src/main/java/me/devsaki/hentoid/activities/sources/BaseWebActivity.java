@@ -79,7 +79,6 @@ import me.devsaki.hentoid.database.CollectionDAO;
 import me.devsaki.hentoid.database.ObjectBoxDAO;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.ImageFile;
-import me.devsaki.hentoid.database.domains.QueueRecord;
 import me.devsaki.hentoid.database.domains.SiteHistory;
 import me.devsaki.hentoid.enums.AlertStatus;
 import me.devsaki.hentoid.enums.Site;
@@ -664,7 +663,7 @@ public abstract class BaseWebActivity extends AppCompatActivity implements WebCo
                         existingImages.addAll(newImages);
                         contentDB.setImageFiles(existingImages);
                         contentDB.setQtyPages(existingImages.size());
-                        db.insertContent(contentDB);
+                        objectBoxDAO.insertContent(contentDB);
                     }
                 }
                 content = contentDB;

@@ -552,7 +552,7 @@ public class LibraryFragment extends Fragment implements ErrorsDialogFragment.Pa
         List<Content> contents = new ArrayList<>();
         for (ContentItem ci : selectedItems) {
             Content c = ci.getContent();
-            if (c.getSite().equals(Site.FAKKU2) || c.getSite().equals(Site.EXHENTAI)) {
+            if (c.getSite().equals(Site.REDDIT)) {
                 securedContent++;
             } else {
                 contents.add(ci.getContent());

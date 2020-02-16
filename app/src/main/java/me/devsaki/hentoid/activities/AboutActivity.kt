@@ -31,7 +31,6 @@ class AboutActivity : BaseActivity() {
 
         tv_version_name.text = getString(R.string.about_app_version, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE)
         tv_chrome_version_name.text = getString(R.string.about_chrome_version, Helper.getChromeVersion(this))
-        tv_hentoid_path.text = "Storage : " + Preferences.getRootFolderName()
 
         changelogButton.setOnClickListener { showFragment(ChangelogFragment()) }
 

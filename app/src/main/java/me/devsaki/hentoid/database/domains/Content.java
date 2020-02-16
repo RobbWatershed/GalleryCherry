@@ -19,7 +19,6 @@ import io.objectbox.relation.ToMany;
 import me.devsaki.hentoid.activities.sources.BaseWebActivity;
 import me.devsaki.hentoid.activities.sources.HellpornoActivity;
 import me.devsaki.hentoid.activities.sources.JjgirlsActivity;
-import me.devsaki.hentoid.activities.sources.ExHentaiActivity;
 import me.devsaki.hentoid.activities.sources.JpegworldActivity;
 import me.devsaki.hentoid.activities.sources.Link2GalleriesActivity;
 import me.devsaki.hentoid.activities.sources.NextpicturezActivity;

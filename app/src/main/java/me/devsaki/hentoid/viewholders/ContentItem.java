@@ -328,7 +328,7 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> {
                 int img = content.getSite().getIco();
                 ivSite.setImageResource(img);
             } else {
-                ivSite.setImageResource(R.drawable.ic_stat_hentoid);
+                ivSite.setImageResource(R.drawable.ic_cherry);
             }
 
             if (item.isQueued) {

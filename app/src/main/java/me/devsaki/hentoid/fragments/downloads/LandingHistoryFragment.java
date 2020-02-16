@@ -13,21 +13,20 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.annimon.stream.Stream;
+import com.mikepenz.fastadapter.FastAdapter;
+import com.mikepenz.fastadapter.adapters.ItemAdapter;
 
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import eu.davidea.flexibleadapter.FlexibleAdapter;
-import eu.davidea.flexibleadapter.SelectableAdapter;
-import me.devsaki.hentoid.HentoidApp;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.database.ObjectBoxDB;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.LandingRecord;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.util.ContentHelper;
-import me.devsaki.hentoid.viewholders.TextItemFlex;
+import me.devsaki.hentoid.viewholders.TextItem;
 
 import static androidx.core.view.ViewCompat.requireViewById;
 
@@ -43,9 +42,10 @@ public class LandingHistoryFragment extends Fragment {
 
     private Site site;
 
-    //    private Parent callbackActivity;
-    private FlexibleAdapter<TextItemFlex> adapter;
     private EditText input;
+
+    private final ItemAdapter<TextItem<String>> itemAdapter = new ItemAdapter<>();
+    private final FastAdapter<TextItem<String>> fastAdapter = FastAdapter.with(itemAdapter);
 
 
     static LandingHistoryFragment newInstance(Context context, Site site, String defaultUrl) {
@@ -71,14 +71,6 @@ public class LandingHistoryFragment extends Fragment {
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedState) {
-        /*
-        try {
-            callbackActivity = (Parent) getActivity();
-        } catch (ClassCastException e) {
-            Timber.e(e, "Calling Activity doesn't implement the Parent interface");
-        }
-         */
-
         return inflater.inflate(R.layout.fragment_landing_history, container, false);
     }
 
@@ -96,20 +88,20 @@ public class LandingHistoryFragment extends Fragment {
             if (null == foundSitesList)
                 throw new IllegalArgumentException("Landing history not found");
 
-            List<TextItemFlex> items = Stream.of(foundSitesList)
-                    .map(TextItemFlex::new)
+
+            List<TextItem<String>> items = Stream.of(foundSitesList)
+                    .map(s -> new TextItem<>(s, s, false))
                     .toList();
 
             // Add default page if empty
-            if (items.isEmpty()) items.add(new TextItemFlex(defaultUrl));
-
-            adapter = new FlexibleAdapter<>(null);
-            adapter.setMode(SelectableAdapter.Mode.SINGLE);
-            adapter.addListener((FlexibleAdapter.OnItemClickListener) this::onItemClick);
-            adapter.addItems(0, items);
+            if (items.isEmpty()) items.add(new TextItem<>(defaultUrl, defaultUrl, false));
+            itemAdapter.add(items);
 
             RecyclerView recyclerView = requireViewById(view, R.id.landing_history_list);
-            recyclerView.setAdapter(adapter);
+            recyclerView.setAdapter(fastAdapter);
+
+            // Item click listener
+            fastAdapter.setOnClickListener((v, a, i, p) -> onItemClick(i));
 
             View okBtn = requireViewById(view, R.id.landing_history_ok);
             okBtn.setOnClickListener(this::onOkClick);
@@ -128,12 +120,11 @@ public class LandingHistoryFragment extends Fragment {
         launchWebActivity(url);
     }
 
-    private boolean onItemClick(View view, int position) {
-        TextItemFlex item = adapter.getItem(position);
-        if (null == item) return false;
+    private boolean onItemClick(@NonNull TextItem<String> item) {
+        if (null == item.getTag()) return false;
 
-        recordUrlInDb(item.getCaption());
-        launchWebActivity(item.getCaption());
+        recordUrlInDb(item.getTag());
+        launchWebActivity(item.getTag());
         return true;
     }
 
@@ -159,10 +150,4 @@ public class LandingHistoryFragment extends Fragment {
         content.setUrl(completeUrl);
         ContentHelper.viewContent(requireContext(), content, true);
     }
-
-    /*
-    public interface Parent {
-        void goToUrl(String url);
-    }
-     */
 }

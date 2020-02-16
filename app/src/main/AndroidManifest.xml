@@ -16,8 +16,6 @@
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 
 
-
-
     <application
         android:name=".HentoidApp"
         android:allowBackup="false"
@@ -30,8 +28,8 @@
         tools:replace="android:allowBackup, android:supportsRtl, android:extractNativeLibs">
         <activity
             android:name=".activities.SplashActivity"
-            android:theme="@style/Theme.Light.Splash"
-            android:noHistory="true">
+            android:noHistory="true"
+            android:theme="@style/Theme.Light.Splash">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -70,8 +68,7 @@
             android:configChanges="orientation|screenSize" />
         <activity
             android:name=".activities.sources.RedditLaunchActivity"
-            android:configChanges="orientation|screenSize"
-            android:theme="@style/Theme.Base" />
+            android:configChanges="orientation|screenSize" />
         <activity
             android:name=".activities.sources.JjgirlsActivity"
             android:configChanges="orientation|screenSize" />
@@ -123,11 +120,11 @@
         <activity
             android:name=".activities.DrawerEditActivity"
             android:label="@string/title_activity_drawer_edit"
-            tools:ignore="UnusedAttribute"/>
+            tools:ignore="UnusedAttribute" />
         <activity
             android:name=".activities.SearchActivity"
             android:label="@string/title_activity_search"
-            tools:ignore="UnusedAttribute"/>
+            tools:ignore="UnusedAttribute" />
         <activity
             android:name=".activities.ImportActivity"
             android:configChanges="orientation|screenSize"
@@ -149,6 +146,7 @@
 
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+
                 <data
                     android:host="xhamster.com"
                     android:pathPrefix="/photos"
@@ -159,6 +157,7 @@
 
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+
                 <data
                     android:host="multi.xnxx.com"
                     android:pathPrefix="/gallery"
@@ -169,6 +168,7 @@
 
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+
                 <data
                     android:host="pornpics.com"
                     android:pathPrefix="/galleries"
@@ -179,6 +179,7 @@
 
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+
                 <data
                     android:host="jpegworld.com"
                     android:pathPrefix="/galleries"
@@ -189,6 +190,7 @@
 
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+
                 <data
                     android:host="nextpicturez.com"
                     android:pathPrefix="/gallery"

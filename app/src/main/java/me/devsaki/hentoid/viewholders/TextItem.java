@@ -4,6 +4,8 @@ import android.view.Gravity;
 import android.view.View;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
+
 import com.mikepenz.fastadapter.FastAdapter;
 import com.mikepenz.fastadapter.items.AbstractItem;
 import com.mikepenz.fastadapter.ui.utils.FastAdapterUIUtils;
@@ -25,7 +27,7 @@ public class TextItem<T> extends AbstractItem<TextItem.TextViewHolder> {
     private final T tag;
     private final boolean centered;
 
-    public TextItem(String text, T tag, boolean centered) {
+    public TextItem(@NonNull String text, T tag, boolean centered) {
         this.text = text;
         this.tag = tag;
         this.centered = centered;
