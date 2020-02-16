@@ -1,29 +1,53 @@
 package me.devsaki.hentoid.fragments
 
 import android.os.Bundle
-import androidx.appcompat.app.AppCompatDelegate
+import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.commit
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceScreen
-import me.devsaki.hentoid.HentoidApp
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.activities.PinPreferenceActivity
+import me.devsaki.hentoid.enums.Theme
 import me.devsaki.hentoid.fragments.import_.LibRefreshDialogFragment
 import me.devsaki.hentoid.services.ImportService
 import me.devsaki.hentoid.services.UpdateCheckService
 import me.devsaki.hentoid.services.UpdateDownloadService
 import me.devsaki.hentoid.util.*
 
-class MyPreferenceFragment : PreferenceFragmentCompat() {
 
+class PreferenceFragment : PreferenceFragmentCompat() {
+
+    companion object {
+        private const val KEY_ROOT = "root"
+
+        fun newInstance(rootKey: String?): PreferenceFragment {
+            val fragment = PreferenceFragment()
+            if (rootKey != null) {
+                val args = Bundle()
+                args.putCharSequence(KEY_ROOT, rootKey)
+                fragment.arguments = args
+            }
+            return fragment
+        }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        val arguments = arguments
+        if (arguments != null && arguments.containsKey(KEY_ROOT)) {
+            val root = arguments.getCharSequence(KEY_ROOT)
+            if (root != null) preferenceScreen = findPreference(root)
+        }
+    }
 
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         setPreferencesFromResource(R.xml.preferences, rootKey)
 
-        findPreference<Preference>(Preferences.Key.DARK_MODE)?.onPreferenceChangeListener =
+        findPreference<Preference>(Preferences.Key.PREF_COLOR_THEME)?.onPreferenceChangeListener =
                 Preference.OnPreferenceChangeListener { _, newValue ->
-                    onPrefDarkModeChanged(newValue)
+                    onPrefColorThemeChanged(newValue)
                 }
         findPreference<Preference>(Preferences.Key.PREF_DL_THREADS_QUANTITY_LISTS)?.onPreferenceChangeListener =
                 Preference.OnPreferenceChangeListener { _, _ ->
@@ -53,7 +77,7 @@ class MyPreferenceFragment : PreferenceFragmentCompat() {
                     if (ImportService.isRunning()) {
                         ToastUtil.toast("Import is already running")
                     } else {
-                        LibRefreshDialogFragment.invoke(requireFragmentManager())
+                        LibRefreshDialogFragment.invoke(parentFragmentManager)
                     }
                     true
                 }
@@ -65,11 +89,11 @@ class MyPreferenceFragment : PreferenceFragmentCompat() {
             }
 
     override fun onNavigateToScreen(preferenceScreen: PreferenceScreen) {
-        val preferenceFragment = MyPreferenceFragment().withArguments {
+        val preferenceFragment = PreferenceFragment().withArguments {
             putString(ARG_PREFERENCE_ROOT, preferenceScreen.key)
         }
 
-        requireFragmentManager().commit {
+        parentFragmentManager.commit {
             replace(android.R.id.content, preferenceFragment)
             addToBackStack(null) // This triggers a memory leak in LeakCanary but is _not_ a leak : see https://stackoverflow.com/questions/27913009/memory-leak-in-fragmentmanager
         }
@@ -87,8 +111,8 @@ class MyPreferenceFragment : PreferenceFragmentCompat() {
         return true
     }
 
-    private fun onPrefDarkModeChanged(value: Any): Boolean {
-        AppCompatDelegate.setDefaultNightMode(HentoidApp.darkModeFromPrefs(value.toString().toInt()))
+    private fun onPrefColorThemeChanged(value: Any): Boolean {
+        ThemeHelper.applyTheme(requireActivity() as AppCompatActivity, Theme.searchById(Integer.parseInt(value.toString())))
         return true
     }
 }

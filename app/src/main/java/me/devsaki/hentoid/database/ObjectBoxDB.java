@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import io.objectbox.Box;
@@ -151,7 +150,7 @@ public class ObjectBoxDB {
         deleteContentById(deletableContentId);
     }
 
-    public void deleteContent(Content content) {
+    void deleteContent(Content content) {
         deleteContentById(content.getId());
     }
 
@@ -207,11 +206,15 @@ public class ObjectBoxDB {
         return store.boxFor(QueueRecord.class).query().order(QueueRecord_.rank).build().find();
     }
 
-    public List<Content> selectQueueContents() {
+    List<Content> selectQueueContents() {
         List<Content> result = new ArrayList<>();
         List<QueueRecord> queueRecords = selectQueue();
         for (QueueRecord q : queueRecords) result.add(q.content.getTarget());
         return result;
+    }
+
+    Query<QueueRecord> selectQueueContentsQ() {
+        return store.boxFor(QueueRecord.class).query().order(QueueRecord_.rank).build();
     }
 
     long selectMaxQueueOrder() {
@@ -222,7 +225,7 @@ public class ObjectBoxDB {
         store.boxFor(QueueRecord.class).put(new QueueRecord(id, order));
     }
 
-    public void udpateQueue(long contentId, int newOrder) {
+    void updateQueue(long contentId, int newOrder) {
         Box<QueueRecord> queueRecordBox = store.boxFor(QueueRecord.class);
 
         QueueRecord record = queueRecordBox.query().equal(QueueRecord_.contentId, contentId).order(QueueRecord_.rank).build().findFirst();
@@ -232,7 +235,7 @@ public class ObjectBoxDB {
         }
     }
 
-    public void deleteQueue(Content content) {
+    public void deleteQueue(@NonNull Content content) {
         deleteQueue(content.getId());
     }
 
@@ -262,16 +265,16 @@ public class ObjectBoxDB {
     }
 
     @Nullable
-    public Content selectContentById(long id) {
+    Content selectContentById(long id) {
         return store.boxFor(Content.class).get(id);
     }
 
     @Nullable
-    public Content selectContentBySourceAndUrl(Site site, String url) {
+    Content selectContentBySourceAndUrl(@NonNull Site site, @NonNull String url) {
         return store.boxFor(Content.class).query().equal(Content_.url, url).equal(Content_.site, site.getCode()).build().findFirst();
     }
 
-    private static long[] getIdsFromAttributes(@Nonnull List<Attribute> attrs) {
+    private static long[] getIdsFromAttributes(@NonNull List<Attribute> attrs) {
         long[] result = new long[attrs.size()];
         if (!attrs.isEmpty()) {
             int index = 0;
@@ -645,17 +648,17 @@ public class ObjectBoxDB {
         store.boxFor(ErrorRecord.class).remove(records);
     }
 
-    public void insertImageFile(ImageFile img) {
+    public void insertImageFile(@NonNull ImageFile img) {
         if (img.getId() > 0) store.boxFor(ImageFile.class).put(img);
     }
 
     @Nullable
-    public ImageFile selectImageFile(long id) {
+    ImageFile selectImageFile(long id) {
         if (id > 0) return store.boxFor(ImageFile.class).get(id);
         else return null;
     }
 
-    public void insertSiteHistory(Site site, String url) {
+    void insertSiteHistory(@NonNull Site site, @NonNull String url) {
         SiteHistory siteHistory = getHistory(site);
         if (siteHistory != null) {
             siteHistory.setUrl(url);
@@ -666,7 +669,7 @@ public class ObjectBoxDB {
     }
 
     @Nullable
-    public SiteHistory getHistory(Site s) {
+    SiteHistory getHistory(@NonNull Site s) {
         return store.boxFor(SiteHistory.class).query().equal(SiteHistory_.site, s.getCode()).build().findFirst();
     }
 

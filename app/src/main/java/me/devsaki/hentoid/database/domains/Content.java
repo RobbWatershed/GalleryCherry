@@ -19,6 +19,7 @@ import io.objectbox.relation.ToMany;
 import me.devsaki.hentoid.activities.sources.BaseWebActivity;
 import me.devsaki.hentoid.activities.sources.HellpornoActivity;
 import me.devsaki.hentoid.activities.sources.JjgirlsActivity;
+import me.devsaki.hentoid.activities.sources.ExHentaiActivity;
 import me.devsaki.hentoid.activities.sources.JpegworldActivity;
 import me.devsaki.hentoid.activities.sources.Link2GalleriesActivity;
 import me.devsaki.hentoid.activities.sources.NextpicturezActivity;
@@ -82,8 +83,6 @@ public class Content implements Serializable {
     private boolean isFirst;    // True if current content is the first of its set in the DB query
     @Transient
     private boolean isLast;     // True if current content is the last of its set in the DB query
-    @Transient
-    private boolean selected = false; // True if current content is selected (library view)
     @Transient
     private int numberDownloadRetries = 0;  // Current number of download retries current content has gone through
 
@@ -376,6 +375,12 @@ public class Content implements Serializable {
         }
     }
 
+    public long getNbDownloadedPages() {
+        if (imageFiles != null)
+            return Stream.of(imageFiles).filter(i -> i.getStatus() == StatusContent.DOWNLOADED).count();
+        else return 0;
+    }
+
     public Site getSite() {
         return site;
     }
@@ -419,14 +424,6 @@ public class Content implements Serializable {
         this.isFirst = first;
     }
 
-    public boolean isSelected() {
-        return selected;
-    }
-
-    public void setSelected(boolean selected) {
-        this.selected = selected;
-    }
-
     public long getReads() {
         return reads;
     }
@@ -442,7 +439,7 @@ public class Content implements Serializable {
     }
 
     public long getLastReadDate() {
-        return (0 == lastReadDate) ? downloadDate : lastReadDate;
+        return lastReadDate;
     }
 
     public Content setLastReadDate(long lastReadDate) {

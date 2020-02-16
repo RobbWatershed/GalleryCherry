@@ -79,7 +79,7 @@ public class JsonHelper {
         }
     }
 
-    static <K> void updateJson(K object, Type type, @Nonnull OutputStream output) throws IOException {
+    private static <K> void updateJson(K object, Type type, @Nonnull OutputStream output) throws IOException {
         byte[] bytes = serializeToJson(object, type).getBytes();
         output.write(bytes);
         FileHelper.sync(output);

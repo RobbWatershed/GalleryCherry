@@ -5,7 +5,12 @@ import android.widget.TextView;
 
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.mikepenz.fastadapter.FastAdapter;
+import com.mikepenz.fastadapter.adapters.ItemAdapter;
+import com.mikepenz.fastadapter.items.AbstractItem;
 import com.squareup.moshi.Json;
+
+import org.jetbrains.annotations.NotNull;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -14,22 +19,18 @@ import java.util.Locale;
 
 import javax.annotation.Nonnull;
 
-import eu.davidea.flexibleadapter.FlexibleAdapter;
-import eu.davidea.flexibleadapter.items.AbstractFlexibleItem;
-import eu.davidea.flexibleadapter.items.IFlexible;
-import eu.davidea.viewholders.FlexibleViewHolder;
 import me.devsaki.hentoid.R;
 
 import static androidx.core.view.ViewCompat.requireViewById;
 
-public class GitHubRelease extends AbstractFlexibleItem<GitHubRelease.ReleaseViewHolder> {
+public class GitHubReleaseItem extends AbstractItem<GitHubReleaseItem.ReleaseViewHolder> {
 
     private final String tagName;
     private final String name;
     private final String description;
     private final Date creationDate;
 
-    public GitHubRelease(Struct releaseStruct) {
+    public GitHubReleaseItem(Struct releaseStruct) {
         tagName = releaseStruct.tagName.replace("v", "");
         name = releaseStruct.name;
         description = releaseStruct.body;
@@ -54,18 +55,10 @@ public class GitHubRelease extends AbstractFlexibleItem<GitHubRelease.ReleaseVie
         return result;
     }
 
+    @NotNull
     @Override
-    public boolean equals(Object o) {
-        if (o instanceof GitHubRelease) {
-            GitHubRelease inItem = (GitHubRelease) o;
-            return (this.hashCode() == inItem.hashCode());
-        }
-        return false;
-    }
-
-    @Override
-    public int hashCode() {
-        return tagName.hashCode();
+    public ReleaseViewHolder getViewHolder(@NotNull View view) {
+        return new ReleaseViewHolder(view);
     }
 
     @Override
@@ -74,37 +67,39 @@ public class GitHubRelease extends AbstractFlexibleItem<GitHubRelease.ReleaseVie
     }
 
     @Override
-    public ReleaseViewHolder createViewHolder(View view, FlexibleAdapter<IFlexible> adapter) {
-        return new ReleaseViewHolder(view, adapter);
+    public int getType() {
+        return R.id.github_release;
     }
 
-    @Override
-    public void bindViewHolder(FlexibleAdapter<IFlexible> adapter, ReleaseViewHolder holder, int position, List<Object> payloads) {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
 
-        holder.setTitle(name + " (" + dateFormat.format(creationDate) + ")");
-
-        holder.clearContent();
-        // Parse content and add lines to the description
-        for (String s : description.split("\\r\\n")) { // TODO - refactor this code with its copy in UpdateSuccessDialogFragment
-            s = s.trim();
-            if (s.startsWith("-")) holder.addListContent(s);
-            else holder.addDescContent(s);
-        }
-    }
-
-    public class ReleaseViewHolder extends FlexibleViewHolder {
+    static class ReleaseViewHolder extends FastAdapter.ViewHolder<GitHubReleaseItem> {
 
         private final TextView title;
-        private final FlexibleAdapter<IFlexible> releaseDescriptionAdapter;
+        private final ItemAdapter<GitHubReleaseDescItem> itemAdapter = new ItemAdapter<>();
 
-        ReleaseViewHolder(View view, FlexibleAdapter adapter) {
-            super(view, adapter);
+        ReleaseViewHolder(View view) {
+            super(view);
             title = requireViewById(view, R.id.changelogReleaseTitle);
 
-            releaseDescriptionAdapter = new FlexibleAdapter<>(null);
+            FastAdapter<GitHubReleaseDescItem> releaseDescriptionAdapter = FastAdapter.with(itemAdapter);
             RecyclerView releasedDescription = requireViewById(view, R.id.changelogReleaseDescription);
             releasedDescription.setAdapter(releaseDescriptionAdapter);
+        }
+
+
+        @Override
+        public void bindView(@NotNull GitHubReleaseItem item, @NotNull List<Object> list) {
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+
+            setTitle(item.name + " (" + dateFormat.format(item.creationDate) + ")");
+
+            clearContent();
+            // Parse content and add lines to the description
+            for (String s : item.description.split("\\r\\n")) { // TODO - refactor this code with its copy in UpdateSuccessDialogFragment
+                s = s.trim();
+                if (s.startsWith("-")) addListContent(s);
+                else addDescContent(s);
+            }
         }
 
         public void setTitle(String title) {
@@ -112,15 +107,20 @@ public class GitHubRelease extends AbstractFlexibleItem<GitHubRelease.ReleaseVie
         }
 
         void clearContent() {
-            releaseDescriptionAdapter.clear();
+            itemAdapter.clear();
         }
 
         void addDescContent(String text) {
-            releaseDescriptionAdapter.addItem(new GitHubReleaseDescription(text, GitHubReleaseDescription.Type.DESCRIPTION));
+            itemAdapter.add(new GitHubReleaseDescItem(text, GitHubReleaseDescItem.Type.DESCRIPTION));
         }
 
         void addListContent(String text) {
-            releaseDescriptionAdapter.addItem(new GitHubReleaseDescription(text, GitHubReleaseDescription.Type.LIST_ITEM));
+            itemAdapter.add(new GitHubReleaseDescItem(text, GitHubReleaseDescItem.Type.LIST_ITEM));
+        }
+
+        @Override
+        public void unbindView(@NotNull GitHubReleaseItem item) {
+
         }
     }
 
@@ -140,5 +140,4 @@ public class GitHubRelease extends AbstractFlexibleItem<GitHubRelease.ReleaseVie
             return body;
         }
     }
-
 }
