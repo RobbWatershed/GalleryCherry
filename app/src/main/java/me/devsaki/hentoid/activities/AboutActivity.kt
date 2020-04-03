@@ -9,7 +9,10 @@ import me.devsaki.hentoid.R
 import me.devsaki.hentoid.events.UpdateEvent
 import me.devsaki.hentoid.fragments.about.ChangelogFragment
 import me.devsaki.hentoid.fragments.about.LicensesFragment
-import me.devsaki.hentoid.util.*
+import me.devsaki.hentoid.util.Consts
+import me.devsaki.hentoid.util.Helper
+import me.devsaki.hentoid.util.ThemeHelper
+import me.devsaki.hentoid.util.startBrowserActivity
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode

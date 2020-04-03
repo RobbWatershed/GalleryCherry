@@ -90,6 +90,8 @@ public class SearchBookIdDialogFragment extends DialogFragment {
         switch (site) {
             case LUSCIOUS:
                 return site.getUrl().replace("porn", "albums") + id + "/";
+            case HBROWSE:
+                return site.getUrl() + id + "/c00001";
             default:
                 return site.getUrl();
         }
@@ -99,7 +101,6 @@ public class SearchBookIdDialogFragment extends DialogFragment {
         if (null == s) return false;
 
         Intent intent = new Intent(requireContext(), Content.getWebActivityClass(s));
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 
         BaseWebActivityBundle.Builder builder = new BaseWebActivityBundle.Builder();
         builder.setUrl(getUrlFromId(s, bookId));

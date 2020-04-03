@@ -11,6 +11,7 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.core.widget.ImageViewCompat;
 
@@ -47,7 +48,7 @@ import static androidx.core.view.ViewCompat.requireViewById;
 
 public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> {
 
-    private final static RequestOptions glideRequestOptions = new RequestOptions()
+    private static final RequestOptions glideRequestOptions = new RequestOptions()
             .centerInside()
             .error(R.drawable.ic_placeholder);
 
@@ -72,14 +73,15 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> {
     }
 
     // Constructor for queued item
-    public ContentItem(@NonNull QueueRecord content) {
-        this.content = content.content.getTarget();
+    public ContentItem(@NonNull QueueRecord record) {
         isQueued = true;
-        setIdentifier(this.content.getId());
-        setSelectable(!isQueued);
-        isEmpty = false;
+        setSelectable(false);
+        setIdentifier(record.id);
+        content = record.content.getTarget();
+        isEmpty = (null == content);
     }
 
+    @Nullable
     public Content getContent() {
         return content;
     }
@@ -154,7 +156,7 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> {
 
 
         @Override
-        public void bindView(@NotNull ContentItem item, @NotNull List<Object> payloads) {
+        public void bindView(@NotNull ContentItem item, @NotNull List<?> payloads) {
             if (item.isEmpty || null == item.content) return; // Ignore placeholders from PagedList
 
             // Payloads are set when the content stays the same but some properties alone change
@@ -186,7 +188,7 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> {
 
         private void updateLayoutVisibility(ContentItem item) {
             baseLayout.setVisibility(item.isEmpty ? View.GONE : View.VISIBLE);
-            if (item.getContent().isBeingDeleted())
+            if (item.getContent() != null && item.getContent().isBeingDeleted())
                 baseLayout.startAnimation(new BlinkAnimation(500, 250));
             else
                 baseLayout.clearAnimation();
@@ -228,7 +230,7 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> {
             }
 
             Glide.with(context.getApplicationContext())
-                    .load(ContentHelper.getThumb(content))
+                    .load(thumbLocation)
                     .apply(glideRequestOptions)
                     .into(ivCover);
         }
@@ -322,6 +324,7 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> {
 
         private void attachButtons(final ContentItem item) {
             Content content = item.getContent();
+            if (null == content) return;
 
             // Source icon
             if (content.getSite() != null) {
@@ -432,7 +435,7 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> {
 
         @Override
         public void unbindView(@NotNull ContentItem item) {
-            // Nothing to do here
+            // No specific behaviour to implement
         }
     }
 }

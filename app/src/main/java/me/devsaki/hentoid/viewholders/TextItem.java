@@ -34,6 +34,7 @@ public class TextItem<T> extends AbstractItem<TextItem.TextViewHolder> {
     }
 
     @Nullable
+    @Override
     public T getTag() {
         return tag;
     }
@@ -67,14 +68,14 @@ public class TextItem<T> extends AbstractItem<TextItem.TextViewHolder> {
 
 
         @Override
-        public void bindView(@NotNull TextItem<T> item, @NotNull List<Object> list) {
+        public void bindView(@NotNull TextItem<T> item, @NotNull List<?> list) {
             title.setText(Helper.capitalizeString(item.text));
             if (item.centered) title.setGravity(Gravity.CENTER);
         }
 
         @Override
         public void unbindView(@NotNull TextItem item) {
-
+            // No specific behaviour to implement
         }
     }
 }

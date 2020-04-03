@@ -9,7 +9,6 @@ import timber.log.Timber;
 /**
  * Created by neko on 20/06/2015.
  * Site enumerator
- * TODO: deprecate {@link #allowParallelDownloads} on 1/10/2020 if not needed by that time
  */
 public enum Site {
 
@@ -32,7 +31,6 @@ public enum Site {
     private final String uniqueKeyword;
     private final String url;
     private final int ico;
-    private final boolean allowParallelDownloads;
     private final boolean canKnowHentoidAgent;
     private final boolean hasImageProcessing;
     private final boolean hasBackupURLs;
@@ -43,7 +41,6 @@ public enum Site {
          String url,
          String uniqueKeyword,
          int ico,
-         boolean allowParallelDownloads,
          boolean canKnowHentoidAgent,
          boolean hasImageProcessing,
          boolean hasBackupURLs,
@@ -53,7 +50,6 @@ public enum Site {
         this.url = url;
         this.uniqueKeyword = uniqueKeyword;
         this.ico = ico;
-        this.allowParallelDownloads = allowParallelDownloads;
         this.canKnowHentoidAgent = canKnowHentoidAgent;
         this.hasImageProcessing = hasImageProcessing;
         this.hasBackupURLs = hasBackupURLs;
@@ -108,9 +104,6 @@ public enum Site {
         return ico;
     }
 
-    public boolean isAllowParallelDownloads() {
-        return allowParallelDownloads;
-    }
 
     public boolean canKnowHentoidAgent() {
         return canKnowHentoidAgent;

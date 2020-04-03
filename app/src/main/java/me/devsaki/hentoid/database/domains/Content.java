@@ -8,6 +8,7 @@ import com.annimon.stream.Stream;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import io.objectbox.annotation.Backlink;
@@ -21,11 +22,13 @@ import me.devsaki.hentoid.activities.sources.HellpornoActivity;
 import me.devsaki.hentoid.activities.sources.JjgirlsActivity;
 import me.devsaki.hentoid.activities.sources.JpegworldActivity;
 import me.devsaki.hentoid.activities.sources.Link2GalleriesActivity;
+import me.devsaki.hentoid.activities.sources.HbrowseActivity;
 import me.devsaki.hentoid.activities.sources.NextpicturezActivity;
 import me.devsaki.hentoid.activities.sources.LusciousActivity;
 import me.devsaki.hentoid.activities.sources.PornPicGalleriesActivity;
 import me.devsaki.hentoid.activities.sources.PornPicsActivity;
 import me.devsaki.hentoid.activities.sources.RedditActivity;
+import me.devsaki.hentoid.activities.sources.PorncomixActivity;
 import me.devsaki.hentoid.activities.sources.XhamsterActivity;
 import me.devsaki.hentoid.activities.sources.XnxxActivity;
 import me.devsaki.hentoid.enums.AttributeType;
@@ -100,14 +103,15 @@ public class Content implements Serializable {
 
     public AttributeMap getAttributeMap() {
         AttributeMap result = new AttributeMap();
-        for (Attribute a : attributes) result.add(a);
+        if (attributes != null)
+            for (Attribute a : attributes) result.add(a);
         return result;
     }
 
     public Content addAttributes(@NonNull AttributeMap attrs) {
         if (attributes != null) {
-            for (AttributeType type : attrs.keySet()) {
-                List<Attribute> attrList = attrs.get(type);
+            for (Map.Entry<AttributeType, List<Attribute>> entry : attrs.entrySet()) {
+                List<Attribute> attrList = entry.getValue();
                 if (attrList != null)
                     addAttributes(attrList);
             }
@@ -115,8 +119,9 @@ public class Content implements Serializable {
         return this;
     }
 
-    public void addAttributes(@NonNull List<Attribute> attrs) {
+    public Content addAttributes(@NonNull List<Attribute> attrs) {
         if (attributes != null) attributes.addAll(attrs);
+        return this;
     }
 
     public long getId() {
@@ -197,6 +202,10 @@ public class Content implements Serializable {
                 return JjgirlsActivity.class;
             case LUSCIOUS:
                 return LusciousActivity.class;
+            case PORNCOMIX:
+                return PorncomixActivity.class;
+            case HBROWSE:
+                return HbrowseActivity.class;
             default:
                 return BaseWebActivity.class;
         }
@@ -249,6 +258,7 @@ public class Content implements Serializable {
     public String getReaderUrl() {
         switch (site) {
             default:
+            case HBROWSE:
                 return getGalleryUrl();
         }
     }
@@ -288,7 +298,7 @@ public class Content implements Serializable {
     }
 
     public String getCoverImageUrl() {
-        if (coverImageUrl != null && !coverImageUrl.isEmpty()) return coverImageUrl;
+        if (coverImageUrl != null && !coverImageUrl.isEmpty()) return (null == coverImageUrl) ? "" : coverImageUrl;
         else if ((imageFiles != null) && (imageFiles.size() > 0)) return imageFiles.get(0).getUrl();
         else return null;
     }
@@ -500,12 +510,11 @@ public class Content implements Serializable {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Content content = (Content) o;
-        return Objects.equals(url, content.url) &&
-                site == content.site;
+        return id == content.id;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(url, site);
+        return Objects.hash(id);
     }
 }
