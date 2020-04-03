@@ -90,8 +90,6 @@ public class SearchBookIdDialogFragment extends DialogFragment {
         switch (site) {
             case LUSCIOUS:
                 return site.getUrl().replace("porn", "albums") + id + "/";
-            case HBROWSE:
-                return site.getUrl() + id + "/c00001";
             default:
                 return site.getUrl();
         }

@@ -12,18 +12,18 @@ import timber.log.Timber;
  */
 public enum Site {
 
-    XHAMSTER(0, "XHamster", "https://m.xhamster.com/photos/", "xhamster", R.drawable.ic_menu_xhamster, true, true, false, false, false),
-    XNXX(1, "XNXX", "https://multi.xnxx.com/", "XNXX", R.drawable.ic_menu_xnxx, true, true, false, false, false),
-    PORNPICS(2, "Pornpics", "https://www.pornpics.com/", "pornpics", R.drawable.ic_menu_pornpics, true, true, false, false, false),
-    JPEGWORLD(3, "Jpegworld", "https://www.jpegworld.com/", "jpegworld", R.drawable.ic_menu_jpegworld, true, true, false, false, false),
-    NEXTPICTUREZ(4, "Nextpicturez", "http://www.nextpicturez.com/", "nextpicturez", R.drawable.ic_menu_nextpicturez, true, true, false, false, false),
-    HELLPORNO(5, "Hellporno", "https://hellporno.com/albums/", "hellporno", R.drawable.ic_menu_hellporno, true, true, false, false, false),
-    PORNPICGALLERIES(6, "Pornpicgalleries", "http://pornpicgalleries.com/", "pornpicgalleries", R.drawable.ic_menu_ppg, true, true, false, false, false),
-    LINK2GALLERIES(7, "Link2galleries", "https://www.link2galleries.com/", "link2galleries", R.drawable.ic_menu_l2g, true, true, false, false, false),
-    REDDIT(8, "Reddit", "https://www.reddit.com/", "reddit", R.drawable.ic_social_reddit, true, true, false, false, true),
-    JJGIRLS(9, "JJGirls", "https://jjgirls.com/mobile/", "jjgirls", R.drawable.ic_menu_jjgirls, true, true, false, true, false),
-    LUSCIOUS(10, "luscious.net", "https://members.luscious.net/porn/", "luscious", R.drawable.ic_menu_luscious, true, false, false, false, false),
-    NONE(98, "none", "", "none", R.drawable.ic_info, true, true, false, false, false); // Fallback site
+    XHAMSTER(0, "XHamster", "https://m.xhamster.com/photos/", "xhamster", R.drawable.ic_menu_xhamster, true, false, false, false),
+    XNXX(1, "XNXX", "https://multi.xnxx.com/", "XNXX", R.drawable.ic_menu_xnxx, true, false, false, false),
+    PORNPICS(2, "Pornpics", "https://www.pornpics.com/", "pornpics", R.drawable.ic_menu_pornpics, true, false, false, false),
+    JPEGWORLD(3, "Jpegworld", "https://www.jpegworld.com/", "jpegworld", R.drawable.ic_menu_jpegworld, true, false, false, false),
+    NEXTPICTUREZ(4, "Nextpicturez", "http://www.nextpicturez.com/", "nextpicturez", R.drawable.ic_menu_nextpicturez, true, false, false, false),
+    HELLPORNO(5, "Hellporno", "https://hellporno.com/albums/", "hellporno", R.drawable.ic_menu_hellporno, true, false, false, false),
+    PORNPICGALLERIES(6, "Pornpicgalleries", "http://pornpicgalleries.com/", "pornpicgalleries", R.drawable.ic_menu_ppg, true, false, false, false),
+    LINK2GALLERIES(7, "Link2galleries", "https://www.link2galleries.com/", "link2galleries", R.drawable.ic_menu_l2g, true, false, false, false),
+    REDDIT(8, "Reddit", "https://www.reddit.com/", "reddit", R.drawable.ic_social_reddit, true, false, false, true),
+    JJGIRLS(9, "JJGirls", "https://jjgirls.com/mobile/", "jjgirls", R.drawable.ic_menu_jjgirls, true, false, true, false),
+    LUSCIOUS(10, "luscious.net", "https://members.luscious.net/porn/", "luscious", R.drawable.ic_menu_luscious, false, false, false, false),
+    NONE(98, "none", "", "none", R.drawable.ic_info, true, false, false, false); // Fallback site
 
 
     private final int code;

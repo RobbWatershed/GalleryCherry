@@ -22,13 +22,11 @@ import me.devsaki.hentoid.activities.sources.HellpornoActivity;
 import me.devsaki.hentoid.activities.sources.JjgirlsActivity;
 import me.devsaki.hentoid.activities.sources.JpegworldActivity;
 import me.devsaki.hentoid.activities.sources.Link2GalleriesActivity;
-import me.devsaki.hentoid.activities.sources.HbrowseActivity;
-import me.devsaki.hentoid.activities.sources.NextpicturezActivity;
 import me.devsaki.hentoid.activities.sources.LusciousActivity;
+import me.devsaki.hentoid.activities.sources.NextpicturezActivity;
 import me.devsaki.hentoid.activities.sources.PornPicGalleriesActivity;
 import me.devsaki.hentoid.activities.sources.PornPicsActivity;
 import me.devsaki.hentoid.activities.sources.RedditActivity;
-import me.devsaki.hentoid.activities.sources.PorncomixActivity;
 import me.devsaki.hentoid.activities.sources.XhamsterActivity;
 import me.devsaki.hentoid.activities.sources.XnxxActivity;
 import me.devsaki.hentoid.enums.AttributeType;
@@ -202,10 +200,6 @@ public class Content implements Serializable {
                 return JjgirlsActivity.class;
             case LUSCIOUS:
                 return LusciousActivity.class;
-            case PORNCOMIX:
-                return PorncomixActivity.class;
-            case HBROWSE:
-                return HbrowseActivity.class;
             default:
                 return BaseWebActivity.class;
         }
@@ -256,11 +250,7 @@ public class Content implements Serializable {
     }
 
     public String getReaderUrl() {
-        switch (site) {
-            default:
-            case HBROWSE:
-                return getGalleryUrl();
-        }
+        return getGalleryUrl();
     }
 
     public Content populateAuthor() {
@@ -298,7 +288,8 @@ public class Content implements Serializable {
     }
 
     public String getCoverImageUrl() {
-        if (coverImageUrl != null && !coverImageUrl.isEmpty()) return (null == coverImageUrl) ? "" : coverImageUrl;
+        if (coverImageUrl != null && !coverImageUrl.isEmpty())
+            return (null == coverImageUrl) ? "" : coverImageUrl;
         else if ((imageFiles != null) && (imageFiles.size() > 0)) return imageFiles.get(0).getUrl();
         else return null;
     }

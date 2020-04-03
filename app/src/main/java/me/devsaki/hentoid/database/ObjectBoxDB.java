@@ -228,7 +228,7 @@ public class ObjectBoxDB {
         }
     }
 
-    List<QueueRecord> selectQueue() {
+    public List<QueueRecord> selectQueue() {
         return store.boxFor(QueueRecord.class).query().order(QueueRecord_.rank).build().find();
     }
 
