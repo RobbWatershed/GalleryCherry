@@ -137,10 +137,9 @@ public class Content implements Serializable {
     }
 
     private String computeUniqueSiteId() {
-        String[] parts = url.split("/");
-
         if (null == url) return "";
 
+        String[] parts = url.split("/");
         switch (site) {
             case XHAMSTER:
                 return url.substring(url.lastIndexOf("-") + 1);
