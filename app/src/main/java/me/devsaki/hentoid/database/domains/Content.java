@@ -132,7 +132,8 @@ public class Content implements Serializable {
     }
 
     public String getUniqueSiteId() {
-        return this.uniqueSiteId;
+        if (null == uniqueSiteId) uniqueSiteId = computeUniqueSiteId();
+        return uniqueSiteId;
     }
 
     private String computeUniqueSiteId() {
