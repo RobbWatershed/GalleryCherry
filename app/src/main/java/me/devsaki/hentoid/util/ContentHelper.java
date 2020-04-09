@@ -142,8 +142,10 @@ public final class ContentHelper {
      * @param content Content whose cover to retrieve
      * @return URI string where the cover should be retrieved
      */
+    @NonNull
     public static String getThumb(@NonNull final Content content) {
         String coverUrl = content.getCoverImageUrl();
+        if (null == coverUrl) return "";
 
         // If trying to access a non-downloaded book cover (e.g. viewing the download queue)
         if (content.getStorageFolder().equals("")) return coverUrl;

@@ -287,9 +287,10 @@ public class Content implements Serializable {
         return this;
     }
 
+    @Nullable
     public String getCoverImageUrl() {
         if (coverImageUrl != null && !coverImageUrl.isEmpty())
-            return (null == coverImageUrl) ? "" : coverImageUrl;
+            return coverImageUrl;
         else if ((imageFiles != null) && (imageFiles.size() > 0)) return imageFiles.get(0).getUrl();
         else return null;
     }
