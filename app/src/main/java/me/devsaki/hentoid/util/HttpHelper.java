@@ -1,8 +1,10 @@
 package me.devsaki.hentoid.util;
 
+import android.net.Uri;
 import android.os.Build;
 import android.text.TextUtils;
 import android.util.Pair;
+import android.webkit.CookieManager;
 import android.webkit.WebResourceResponse;
 
 import androidx.annotation.NonNull;
@@ -97,10 +99,10 @@ public class HttpHelper {
     private static Map<String, String> okHttpHeadersToWebResourceHeaders(@NonNull final Map<String, List<String>> okHttpHeaders) {
         Map<String, String> result = new HashMap<>();
 
-        for (String key : okHttpHeaders.keySet()) {
-            List<String> values = okHttpHeaders.get(key);
+        for (Map.Entry<String, List<String>> entry : okHttpHeaders.entrySet()) {
+            List<String> values = entry.getValue();
             if (values != null)
-                result.put(key, TextUtils.join(getValuesSeparatorFromHttpHeader(key), values));
+                result.put(entry.getKey(), TextUtils.join(getValuesSeparatorFromHttpHeader(entry.getKey()), values));
         }
 
         return result;
@@ -133,6 +135,12 @@ public class HttpHelper {
         } else return new Pair<>(rawContentType, null);
     }
 
+    /**
+     * Return the extension of the file located at the given URI, without the leading '.'
+     *
+     * @param uri Location of the file
+     * @return Extension of the file located at the given URI, without the leading '.'
+     */
     public static String getExtensionFromUri(String uri) {
         String theUri = uri.toLowerCase();
         String uriNoParams = theUri;
@@ -147,5 +155,65 @@ public class HttpHelper {
         if (extIndex < 0 || extIndex < pathIndex) return "";
 
         return uriNoParams.substring(extIndex + 1);
+    }
+
+    @Nullable
+    private static String getDomainFromUri(@NonNull String uriStr) {
+        Uri uri = Uri.parse(uriStr);
+        String result = uri.getHost();
+        if (result != null && result.startsWith("www")) result = result.substring(3);
+        return result;
+    }
+
+    public static Map<String, String> parseCookies(@NonNull String cookiesStr) {
+        Map<String, String> result = new HashMap<>();
+
+        String[] cookiesParts = cookiesStr.split(";");
+        for (String cookie : cookiesParts) {
+            String[] cookieParts = cookie.trim().split("=");
+            if (cookieParts.length > 1)
+                result.put(cookieParts[0], cookieParts[1]);
+        }
+
+        return result;
+    }
+
+    /**
+     * Set a new cookie for the domain of the given url
+     * If the cookie already exists, replace it
+     *
+     * @param url     Full URL of the cookie
+     * @param cookies Cookies to set using key = name and value = value
+     */
+    public static void setDomainCookies(String url, Map<String, String> cookies) {
+        CookieManager mgr = CookieManager.getInstance();
+        String domain = getDomainFromUri(url);
+
+        /*
+        Check if given cookies are already registered
+
+        Rationale : setting any cookie programmatically will set it as a _session_ cookie.
+        It's not smart to do that if the very same cookie is already set for a longer lifespan.
+         */
+        Map<String, String> cookiesToSet = new HashMap<>();
+
+        String existingCookiesStr = mgr.getCookie(domain);
+        if (existingCookiesStr != null) {
+            Map<String, String> existingCookies = parseCookies(existingCookiesStr);
+
+            for (Map.Entry<String, String> entry : cookies.entrySet()) {
+                String key = entry.getKey();
+                String value = (null == entry.getValue()) ? "" : entry.getValue();
+                if (!existingCookies.containsKey(key)) cookiesToSet.put(key, value);
+                else {
+                    String val = existingCookies.get(key);
+                    if (val != null && !val.equals(cookies.get(key)))
+                        cookiesToSet.put(key, cookies.get(key));
+                }
+            }
+        }
+
+        for (Map.Entry<String, String> entry : cookiesToSet.entrySet())
+            mgr.setCookie(domain, entry.getKey() + "=" + entry.getValue());
     }
 }

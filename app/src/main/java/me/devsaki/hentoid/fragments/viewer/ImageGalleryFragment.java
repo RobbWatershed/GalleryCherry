@@ -7,19 +7,26 @@ import android.view.View;
 import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.appcompat.widget.Toolbar;
 import androidx.fragment.app.Fragment;
-import androidx.lifecycle.ViewModelProviders;
+import androidx.fragment.app.FragmentManager;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.mikepenz.fastadapter.FastAdapter;
+import com.mikepenz.fastadapter.adapters.ItemAdapter;
+import com.mikepenz.fastadapter.diff.FastAdapterDiffUtil;
+import com.mikepenz.fastadapter.listeners.ClickEventHook;
+
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.ArrayList;
 import java.util.List;
 
-import eu.davidea.flexibleadapter.FlexibleAdapter;
 import me.devsaki.hentoid.R;
-import me.devsaki.hentoid.adapters.ImageGalleryAdapter;
 import me.devsaki.hentoid.database.domains.ImageFile;
-import me.devsaki.hentoid.viewholders.ImageFileFlex;
+import me.devsaki.hentoid.viewholders.ImageFileItem;
 import me.devsaki.hentoid.viewmodels.ImageViewerViewModel;
 
 import static androidx.core.view.ViewCompat.requireViewById;
@@ -28,11 +35,15 @@ public class ImageGalleryFragment extends Fragment {
 
     private static final String KEY_FILTER_FAVOURITES = "filter_favourites";
 
-    private ImageGalleryAdapter galleryImagesAdapter;
+    private final ItemAdapter<ImageFileItem> itemAdapter = new ItemAdapter<>();
+    private final FastAdapter<ImageFileItem> fastAdapter = FastAdapter.with(itemAdapter);
+
     private ImageViewerViewModel viewModel;
     private MenuItem showFavouritePagesButton;
+    private RecyclerView recyclerView;
 
     private int startIndex = 0;
+    private boolean firstLoadDone = false;
 
     private boolean filterFavourites = false;
 
@@ -55,12 +66,32 @@ public class ImageGalleryFragment extends Fragment {
             filterFavourites = arguments.getBoolean(KEY_FILTER_FAVOURITES, false);
 
         setHasOptionsMenu(true);
-        viewModel = ViewModelProviders.of(requireActivity()).get(ImageViewerViewModel.class);
 
-        galleryImagesAdapter = new ImageGalleryAdapter(null, this::onFavouriteClick);
-        galleryImagesAdapter.addListener((FlexibleAdapter.OnItemClickListener) this::onItemClick);
-        RecyclerView recyclerView = requireViewById(rootView, R.id.viewer_gallery_recycler);
-        recyclerView.setAdapter(galleryImagesAdapter);
+        fastAdapter.setHasStableIds(true);
+        // Item click listener
+        fastAdapter.setOnClickListener((v, a, i, p) -> onItemClick(p));
+        // Favourite button click listener
+        fastAdapter.addEventHook(new ClickEventHook<ImageFileItem>() {
+            @Override
+            public void onClick(@NotNull View view, int i, @NotNull FastAdapter<ImageFileItem> fastAdapter, @NotNull ImageFileItem item) {
+                onFavouriteClick(item.getImage());
+            }
+
+            @Nullable
+            @Override
+            public View onBind(RecyclerView.@NotNull ViewHolder viewHolder) {
+                if (viewHolder instanceof ImageFileItem.ImageViewHolder) {
+                    return ((ImageFileItem.ImageViewHolder) viewHolder).getFavouriteButton();
+                }
+                return super.onBind(viewHolder);
+            }
+        });
+
+        // Filtering
+        itemAdapter.getItemFilter().setFilterPredicate((imageFileItem, charSequence) -> !charSequence.equals("true") || imageFileItem.isFavourite());
+
+        recyclerView = requireViewById(rootView, R.id.viewer_gallery_recycler);
+        recyclerView.setAdapter(fastAdapter);
 
         Toolbar toolbar = requireViewById(rootView, R.id.viewer_gallery_toolbar);
         toolbar.setNavigationOnClickListener(v -> requireActivity().onBackPressed());
@@ -80,16 +111,20 @@ public class ImageGalleryFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        viewModel.getStartingIndex().observe(this, this::onStartingIndexChanged);
-        viewModel.getImages().observe(this, this::onImagesChanged);
+        firstLoadDone = false;
+        viewModel = new ViewModelProvider(requireActivity()).get(ImageViewerViewModel.class);
+        viewModel.getStartingIndex().observe(getViewLifecycleOwner(), this::onStartingIndexChanged);
+        viewModel.getImages().observe(getViewLifecycleOwner(), this::onImagesChanged);
     }
 
     private void onImagesChanged(List<ImageFile> images) {
+        List<ImageFileItem> imgs = new ArrayList<>();
         for (ImageFile img : images) {
-            ImageFileFlex holder = new ImageFileFlex(img);
+            ImageFileItem holder = new ImageFileItem(img);
             if (startIndex == img.getDisplayOrder()) holder.setCurrent(true);
-            galleryImagesAdapter.addItem(holder);
+            imgs.add(holder);
         }
+        FastAdapterDiffUtil.INSTANCE.set(itemAdapter, imgs);
         updateListFilter();
         updateFavouriteDisplay();
     }
@@ -98,11 +133,16 @@ public class ImageGalleryFragment extends Fragment {
         startIndex = startingIndex;
     }
 
-    private boolean onItemClick(View view, int position) {
-        ImageFileFlex imgFileFlex = (ImageFileFlex) galleryImagesAdapter.getItem(position);
-        if (imgFileFlex != null)
-            viewModel.setStartingIndex(imgFileFlex.getItem().getDisplayOrder());
-        requireActivity().onBackPressed();
+    private boolean onItemClick(int position) {
+        ImageFileItem imgFile = itemAdapter.getAdapterItem(position);
+        viewModel.setStartingIndex(imgFile.getImage().getDisplayOrder());
+        getParentFragmentManager()
+                .beginTransaction()
+                .replace(android.R.id.content, new ImagePagerFragment())
+                .commit();
+
+        getParentFragmentManager().popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE); // Clear back stack
+
         return true;
     }
 
@@ -113,18 +153,17 @@ public class ImageGalleryFragment extends Fragment {
     private void onFavouriteSuccess(ImageFile img) {
         if (filterFavourites) {
             // Reset favs filter if no favourite page remains
-            if (!galleryImagesAdapter.isFavouritePresent()) {
+            if (!hasFavourite()) {
                 filterFavourites = false;
-                galleryImagesAdapter.setFilter(filterFavourites);
-                galleryImagesAdapter.filterItems();
-                if (galleryImagesAdapter.getItemCount() > 0)
-                    galleryImagesAdapter.smoothScrollToPosition(0);
+                itemAdapter.filter("");
+                if (itemAdapter.getAdapterItemCount() > 0)
+                    recyclerView.scrollToPosition(0);
             } else {
-                galleryImagesAdapter.notifyDataSetChanged(); // Because no easy way to spot which item has changed when the view is filtered
+                fastAdapter.notifyDataSetChanged(); // Because no easy way to spot which item has changed when the view is filtered
             }
-        } else galleryImagesAdapter.notifyItemChanged(img.getDisplayOrder());
+        } else fastAdapter.notifyItemChanged(img.getDisplayOrder());
 
-        showFavouritePagesButton.setVisible(galleryImagesAdapter.isFavouritePresent());
+        showFavouritePagesButton.setVisible(hasFavourite());
     }
 
     private void toggleFavouritesDisplay() {
@@ -134,17 +173,20 @@ public class ImageGalleryFragment extends Fragment {
     }
 
     private void updateFavouriteDisplay() {
-        showFavouritePagesButton.setVisible(galleryImagesAdapter.isFavouritePresent());
-        showFavouritePagesButton.setIcon(filterFavourites ? R.drawable.ic_fav_full : R.drawable.ic_fav_empty);
+        showFavouritePagesButton.setVisible(hasFavourite());
+        showFavouritePagesButton.setIcon(filterFavourites ? R.drawable.ic_filter_favs_on : R.drawable.ic_filter_favs_off);
     }
 
     private void updateListFilter() {
-        if (!galleryImagesAdapter.isEmpty()) {
-            galleryImagesAdapter.setFilter(filterFavourites);
-            galleryImagesAdapter.filterItems();
-            if (galleryImagesAdapter.getItemCount() > startIndex)
-                galleryImagesAdapter.smoothScrollToPosition(startIndex);
-            else galleryImagesAdapter.smoothScrollToPosition(0);
+        if (itemAdapter.getAdapterItemCount() > 0) {
+            itemAdapter.filter(filterFavourites ? "true" : "");
+
+            if (!firstLoadDone) {
+                if (itemAdapter.getAdapterItemCount() > startIndex)
+                    recyclerView.scrollToPosition(startIndex);
+                else recyclerView.scrollToPosition(0);
+                firstLoadDone = true;
+            }
         }
     }
 
@@ -159,5 +201,11 @@ public class ImageGalleryFragment extends Fragment {
         super.onViewStateRestored(savedInstanceState);
         if (savedInstanceState != null)
             filterFavourites = savedInstanceState.getBoolean(KEY_FILTER_FAVOURITES, false);
+    }
+
+    private boolean hasFavourite() {
+        List<ImageFileItem> images = itemAdapter.getAdapterItems();
+        for (ImageFileItem item : images) if (item.isFavourite()) return true;
+        return false;
     }
 }

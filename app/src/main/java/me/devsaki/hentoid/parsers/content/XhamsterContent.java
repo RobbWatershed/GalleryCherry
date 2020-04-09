@@ -23,7 +23,7 @@ public class XhamsterContent implements ContentParser {
 
     @Selector(value = "head meta[name='twitter:url']", attr = "content", defValue = "")
     private String galleryUrl;
-    @Selector(value = "img.thumb", attr = "src")
+    @Selector(value = "img.hidden-thumb-image", attr = "data-src", defValue = "")
     private List<String> thumbs;
     @Selector(value = ".page-title h1", defValue = "")
     private String title;
@@ -45,7 +45,7 @@ public class XhamsterContent implements ContentParser {
             result.setCoverImageUrl(thumbs.isEmpty() ? "" : thumbs.get(0));
         result.setTitle(title);
 
-        Pattern pattern = Pattern.compile(".* - (\\d+) .* - .*"); // e.g. "Big bewbs - 50 Pics - xHamster.com"
+        Pattern pattern = Pattern.compile(".* - (\\d+) .*amster.*"); // e.g. "Big bewbs - 50 Pics | xHamster.com"
         Matcher matcher = pattern.matcher(headTitle);
 
         Timber.d("Match found? %s", matcher.find());

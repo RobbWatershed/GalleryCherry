@@ -8,25 +8,28 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.VIBRATE" />
-    <!-- Required to run keep-alive service when targeting API 28 or higher -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <!-- Required to install update packages when targeting API 25 or higher -->
-    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- Required to run keep-alive service when targeting API 28 or higher -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- Required to install update packages when targeting API 29 or higher -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 
 
     <application
         android:name=".HentoidApp"
         android:allowBackup="false"
+        android:extractNativeLibs="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="false"
-        android:extractNativeLibs="true"
+        android:theme="@style/Theme.Light"
         android:usesCleartextTraffic="true"
         tools:replace="android:allowBackup, android:supportsRtl, android:extractNativeLibs">
         <activity
             android:name=".activities.SplashActivity"
             android:noHistory="true"
-            android:theme="@style/Theme.Base.Splash">
+            android:theme="@style/Theme.Light.Splash">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -35,62 +38,57 @@
         </activity>
         <activity
             android:name=".activities.IntroActivity"
-            android:label="@string/app_intro"
-            android:theme="@style/Theme.Base" />
+            android:label="@string/app_intro" />
         <activity
             android:name=".activities.sources.XhamsterActivity"
-            android:configChanges="orientation|screenSize"
-            android:theme="@style/Theme.Base.Browser" />
+            android:configChanges="orientation|screenSize" />
         <activity
             android:name=".activities.sources.XnxxActivity"
-            android:configChanges="orientation|screenSize"
-            android:theme="@style/Theme.Base.Browser" />
+            android:configChanges="orientation|screenSize" />
         <activity
             android:name=".activities.sources.PornPicsActivity"
-            android:configChanges="orientation|screenSize"
-            android:theme="@style/Theme.Base.Browser" />
+            android:configChanges="orientation|screenSize" />
         <activity
             android:name=".activities.sources.JpegworldActivity"
-            android:configChanges="orientation|screenSize"
-            android:theme="@style/Theme.Base.Browser" />
+            android:configChanges="orientation|screenSize" />
         <activity
             android:name=".activities.sources.NextpicturezActivity"
-            android:configChanges="orientation|screenSize"
-            android:theme="@style/Theme.Base.Browser" />
+            android:configChanges="orientation|screenSize" />
         <activity
             android:name=".activities.sources.HellpornoActivity"
-            android:configChanges="orientation|screenSize"
-            android:theme="@style/Theme.Base.Browser" />
+            android:configChanges="orientation|screenSize" />
         <activity
             android:name=".activities.sources.PornPicGalleriesActivity"
-            android:configChanges="orientation|screenSize"
-            android:theme="@style/Theme.Base.Browser" />
+            android:configChanges="orientation|screenSize" />
         <activity
             android:name=".activities.sources.Link2GalleriesActivity"
-            android:configChanges="orientation|screenSize"
-            android:theme="@style/Theme.Base.Browser" />
+            android:configChanges="orientation|screenSize" />
         <activity
             android:name=".activities.sources.RedditActivity"
-            android:configChanges="orientation|screenSize"
-            android:theme="@style/Theme.Base.Browser" />
+            android:configChanges="orientation|screenSize" />
         <activity
             android:name=".activities.sources.RedditLaunchActivity"
-            android:configChanges="orientation|screenSize"
-            android:theme="@style/Theme.Base" />
+            android:configChanges="orientation|screenSize" />
         <activity
             android:name=".activities.sources.JjgirlsActivity"
-            android:configChanges="orientation|screenSize"
-            android:theme="@style/Theme.Base.Browser" />
+            android:configChanges="orientation|screenSize" />
         <activity
             android:name=".activities.sources.LusciousActivity"
-            android:configChanges="orientation|screenSize"
-            android:theme="@style/Theme.Base.Browser" />
+            android:configChanges="orientation|screenSize" />
+        <activity
+            android:name=".activities.sources.ExHentaiActivity"
+            android:configChanges="orientation|screenSize" />
+        <activity
+            android:name=".activities.sources.PorncomixActivity"
+            android:configChanges="orientation|screenSize" />
+        <activity
+            android:name=".activities.sources.HbrowseActivity"
+            android:configChanges="orientation|screenSize" />
         <activity
             android:name=".activities.LibraryActivity"
             android:configChanges="orientation|screenSize"
             android:label="@string/title_activity_downloads"
-            android:launchMode="singleTop"
-            android:theme="@style/Theme.Base">
+            android:launchMode="singleTop">
             <meta-data
                 android:name="android.app.searchable"
                 android:resource="@xml/searchable" />
@@ -100,7 +98,6 @@
             android:configChanges="orientation|screenSize"
             android:label="@string/title_activity_queue"
             android:parentActivityName=".activities.LibraryActivity"
-            android:theme="@style/Theme.Base"
             tools:ignore="UnusedAttribute">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
@@ -111,7 +108,7 @@
             android:configChanges="orientation|screenSize"
             android:label="@string/title_activity_preferences"
             android:parentActivityName=".activities.LibraryActivity"
-            android:theme="@style/Theme.Base.Prefs"
+            android:theme="@style/Theme.Light.Prefs"
             tools:ignore="UnusedAttribute">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
@@ -121,7 +118,6 @@
             android:name=".activities.AboutActivity"
             android:label="@string/title_activity_about"
             android:parentActivityName=".activities.LibraryActivity"
-            android:theme="@style/Theme.Base"
             tools:ignore="UnusedAttribute">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
@@ -130,41 +126,40 @@
         <activity
             android:name=".activities.DrawerEditActivity"
             android:label="@string/title_activity_drawer_edit"
-            android:theme="@style/Theme.Base"
-            tools:ignore="UnusedAttribute">
-        </activity>
+            tools:ignore="UnusedAttribute" />
         <activity
             android:name=".activities.SearchActivity"
             android:label="@string/title_activity_search"
-            android:theme="@style/Theme.Base"
-            tools:ignore="UnusedAttribute">
-        </activity>
+            tools:ignore="UnusedAttribute" />
         <activity
             android:name=".activities.ImportActivity"
             android:configChanges="orientation|screenSize"
-            android:theme="@style/Theme.Base.Import" />
+            android:theme="@style/Theme.Invisible" />
         <activity
             android:name=".activities.UnlockActivity"
             android:noHistory="true"
             android:resizeableActivity="false"
-            android:screenOrientation="portrait"
-            android:theme="@style/Theme.Base" />
+            android:screenOrientation="portrait" />
         <activity
             android:name=".activities.PinPreferenceActivity"
             android:resizeableActivity="false"
-            android:screenOrientation="portrait"
-            android:theme="@style/Theme.Base" />
+            android:screenOrientation="portrait" />
         <activity
             android:name=".activities.IntentActivity"
-            android:theme="@style/Theme.Base.Browser">
+            android:theme="@style/Theme.Invisible">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+
                 <data
                     android:host="xhamster.com"
                     android:pathPrefix="/photos"
+                    android:scheme="https" />
+                <data
+                    android:host="www.nhentai.net"
+                    android:pathPrefix="/g/"
                     android:scheme="https" />
             </intent-filter>
             <intent-filter>
@@ -172,6 +167,7 @@
 
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+
                 <data
                     android:host="multi.xnxx.com"
                     android:pathPrefix="/gallery"
@@ -182,6 +178,7 @@
 
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+
                 <data
                     android:host="pornpics.com"
                     android:pathPrefix="/galleries"
@@ -192,6 +189,7 @@
 
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+
                 <data
                     android:host="jpegworld.com"
                     android:pathPrefix="/galleries"
@@ -202,6 +200,7 @@
 
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+
                 <data
                     android:host="nextpicturez.com"
                     android:pathPrefix="/gallery"
@@ -212,6 +211,7 @@
 
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+
                 <data
                     android:host="young-whores.net"
                     android:pathPrefix="/gallery"
@@ -222,6 +222,7 @@
 
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+
                 <data
                     android:host="hellporno.com"
                     android:pathPrefix="/albums"
@@ -232,6 +233,7 @@
 
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+
                 <data
                     android:host="jjgirls.com"
                     android:pathPattern="/..*/..*/..*/"
@@ -242,6 +244,7 @@
 
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+
                 <data
                     android:host="luscious.net"
                     android:pathPattern="..*/..*"
@@ -252,7 +255,7 @@
         <activity
             android:name=".activities.ImageViewerActivity"
             android:label="Image Viewer"
-            android:theme="@style/Theme.Base.Monochrome">
+            android:theme="@style/Theme.Light.Monochrome">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value=".activities.LibraryActivity" />

@@ -106,7 +106,7 @@ public class RedditAuthDownloadFragment extends Fragment {
 
         db = ObjectBoxDB.getInstance(requireContext());
         Content contentDB = db.selectContentBySourceAndUrl(Site.REDDIT, "");
-        List<ImageFile> newImages = ParseHelper.urlsToImageFiles(savedUrls);
+        List<ImageFile> newImages = ParseHelper.urlsToImageFiles(savedUrls, StatusContent.SAVED);
 
         if (null == contentDB) {    // The book has just been detected -> finalize before saving in DB
             currentContent = new Content().setSite(Site.REDDIT).setUrl("").setTitle("Reddit");

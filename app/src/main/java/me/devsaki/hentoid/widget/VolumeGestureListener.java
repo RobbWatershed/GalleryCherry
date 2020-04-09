@@ -3,6 +3,8 @@ package me.devsaki.hentoid.widget;
 import android.view.KeyEvent;
 import android.view.View;
 
+import me.devsaki.hentoid.util.Preferences;
+
 public final class VolumeGestureListener implements View.OnKeyListener {
 
     private Runnable onVolumeDownListener;
@@ -17,8 +19,6 @@ public final class VolumeGestureListener implements View.OnKeyListener {
     private int turboCooldown = 500;
 
     private boolean isTurboEnabled = true;
-
-    private boolean isButtonsInverted = false;
 
     private long nextNotifyTime;
 
@@ -53,13 +53,11 @@ public final class VolumeGestureListener implements View.OnKeyListener {
         return this;
     }
 
-    public VolumeGestureListener setButtonsInverted(boolean isInverted) {
-        isButtonsInverted = isInverted;
-        return this;
-    }
-
     private boolean isVolumeKey(int keyCode, int targetKeyCode) {
-        if (isButtonsInverted) {
+        // Ignore volume keys when disabled in preferences
+        if (!Preferences.isViewerVolumeToTurn()) return false;
+
+        if (Preferences.isViewerInvertVolumeRocker()) {
             if (targetKeyCode == KeyEvent.KEYCODE_VOLUME_DOWN)
                 return (keyCode == KeyEvent.KEYCODE_VOLUME_UP);
             else if (targetKeyCode == KeyEvent.KEYCODE_VOLUME_UP)

@@ -8,6 +8,7 @@ import com.annimon.stream.Stream;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import io.objectbox.annotation.Backlink;
@@ -21,8 +22,8 @@ import me.devsaki.hentoid.activities.sources.HellpornoActivity;
 import me.devsaki.hentoid.activities.sources.JjgirlsActivity;
 import me.devsaki.hentoid.activities.sources.JpegworldActivity;
 import me.devsaki.hentoid.activities.sources.Link2GalleriesActivity;
-import me.devsaki.hentoid.activities.sources.NextpicturezActivity;
 import me.devsaki.hentoid.activities.sources.LusciousActivity;
+import me.devsaki.hentoid.activities.sources.NextpicturezActivity;
 import me.devsaki.hentoid.activities.sources.PornPicGalleriesActivity;
 import me.devsaki.hentoid.activities.sources.PornPicsActivity;
 import me.devsaki.hentoid.activities.sources.RedditActivity;
@@ -83,8 +84,6 @@ public class Content implements Serializable {
     @Transient
     private boolean isLast;     // True if current content is the last of its set in the DB query
     @Transient
-    private boolean selected = false; // True if current content is selected (library view)
-    @Transient
     private int numberDownloadRetries = 0;  // Current number of download retries current content has gone through
 
 
@@ -102,14 +101,15 @@ public class Content implements Serializable {
 
     public AttributeMap getAttributeMap() {
         AttributeMap result = new AttributeMap();
-        for (Attribute a : attributes) result.add(a);
+        if (attributes != null)
+            for (Attribute a : attributes) result.add(a);
         return result;
     }
 
     public Content addAttributes(@NonNull AttributeMap attrs) {
         if (attributes != null) {
-            for (AttributeType type : attrs.keySet()) {
-                List<Attribute> attrList = attrs.get(type);
+            for (Map.Entry<AttributeType, List<Attribute>> entry : attrs.entrySet()) {
+                List<Attribute> attrList = entry.getValue();
                 if (attrList != null)
                     addAttributes(attrList);
             }
@@ -117,8 +117,9 @@ public class Content implements Serializable {
         return this;
     }
 
-    public void addAttributes(@NonNull List<Attribute> attrs) {
+    public Content addAttributes(@NonNull List<Attribute> attrs) {
         if (attributes != null) attributes.addAll(attrs);
+        return this;
     }
 
     public long getId() {
@@ -131,14 +132,14 @@ public class Content implements Serializable {
     }
 
     public String getUniqueSiteId() {
-        return this.uniqueSiteId;
+        if (null == uniqueSiteId) uniqueSiteId = computeUniqueSiteId();
+        return uniqueSiteId;
     }
 
     private String computeUniqueSiteId() {
-        String[] parts = url.split("/");
-
         if (null == url) return "";
 
+        String[] parts = url.split("/");
         switch (site) {
             case XHAMSTER:
                 return url.substring(url.lastIndexOf("-") + 1);
@@ -249,10 +250,7 @@ public class Content implements Serializable {
     }
 
     public String getReaderUrl() {
-        switch (site) {
-            default:
-                return getGalleryUrl();
-        }
+        return getGalleryUrl();
     }
 
     public Content populateAuthor() {
@@ -289,8 +287,10 @@ public class Content implements Serializable {
         return this;
     }
 
+    @Nullable
     public String getCoverImageUrl() {
-        if (coverImageUrl != null && !coverImageUrl.isEmpty()) return coverImageUrl;
+        if (coverImageUrl != null && !coverImageUrl.isEmpty())
+            return coverImageUrl;
         else if ((imageFiles != null) && (imageFiles.size() > 0)) return imageFiles.get(0).getUrl();
         else return null;
     }
@@ -376,6 +376,12 @@ public class Content implements Serializable {
         }
     }
 
+    public long getNbDownloadedPages() {
+        if (imageFiles != null)
+            return Stream.of(imageFiles).filter(i -> i.getStatus() == StatusContent.DOWNLOADED).count();
+        else return 0;
+    }
+
     public Site getSite() {
         return site;
     }
@@ -419,14 +425,6 @@ public class Content implements Serializable {
         this.isFirst = first;
     }
 
-    public boolean isSelected() {
-        return selected;
-    }
-
-    public void setSelected(boolean selected) {
-        this.selected = selected;
-    }
-
     public long getReads() {
         return reads;
     }
@@ -442,7 +440,7 @@ public class Content implements Serializable {
     }
 
     public long getLastReadDate() {
-        return (0 == lastReadDate) ? downloadDate : lastReadDate;
+        return lastReadDate;
     }
 
     public Content setLastReadDate(long lastReadDate) {
@@ -504,12 +502,11 @@ public class Content implements Serializable {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Content content = (Content) o;
-        return Objects.equals(url, content.url) &&
-                site == content.site;
+        return id == content.id;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(url, site);
+        return Objects.hash(id);
     }
 }

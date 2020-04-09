@@ -30,10 +30,11 @@ import me.devsaki.hentoid.notification.import_.ImportStartNotification;
 import me.devsaki.hentoid.util.Consts;
 import me.devsaki.hentoid.util.ContentHelper;
 import me.devsaki.hentoid.util.FileHelper;
+import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.JsonHelper;
 import me.devsaki.hentoid.util.LogUtil;
 import me.devsaki.hentoid.util.Preferences;
-import me.devsaki.hentoid.util.exception.JSONParseException;
+import me.devsaki.hentoid.util.exception.ParseException;
 import me.devsaki.hentoid.util.notification.ServiceNotificationManager;
 import timber.log.Timber;
 
@@ -107,18 +108,18 @@ public class ImportService extends IntentService {
         startImport(doRename, doCleanAbsent, doCleanNoImages, doCleanUnreadable);
     }
 
-    private void eventProgress(Content content, int nbBooks, int booksOK, int booksKO) {
-        EventBus.getDefault().post(new ImportEvent(ImportEvent.EV_PROGRESS, content, booksOK, booksKO, nbBooks));
+    private void eventProgress(int nbBooks, int booksOK, int booksKO) {
+        EventBus.getDefault().post(new ImportEvent(ImportEvent.EV_PROGRESS, booksOK, booksKO, nbBooks));
     }
 
     private void eventComplete(int nbBooks, int booksOK, int booksKO, File cleanupLogFile) {
         EventBus.getDefault().postSticky(new ImportEvent(ImportEvent.EV_COMPLETE, booksOK, booksKO, nbBooks, cleanupLogFile));
     }
 
-    private void trace(int priority, List<String> memoryLog, String s, String... t) {
+    private void trace(int priority, List<LogUtil.LogEntry> memoryLog, String s, String... t) {
         s = String.format(s, (Object[]) t);
         Timber.log(priority, s);
-        if (null != memoryLog) memoryLog.add(s);
+        if (null != memoryLog) memoryLog.add(new LogUtil.LogEntry(s));
     }
 
 
@@ -135,7 +136,7 @@ public class ImportService extends IntentService {
         int booksKO = 0;                        // Number of folders found with no valid book inside
         int nbFolders = 0;                      // Number of folders found with no content but subfolders
         Content content = null;
-        List<String> log = new ArrayList<>();
+        List<LogUtil.LogEntry> log = new ArrayList<>();
 
         File rootFolder = new File(Preferences.getRootFolderName());
 
@@ -160,15 +161,10 @@ public class ImportService extends IntentService {
             // Detect the presence of images if the corresponding cleanup option has been enabled
             if (cleanNoImages) {
                 File[] images = folder.listFiles(
-                        file -> (file.isDirectory()
-                                || file.getName().toLowerCase().endsWith(".jpg")
-                                || file.getName().toLowerCase().endsWith(".jpeg")
-                                || file.getName().toLowerCase().endsWith(".png")
-                                || file.getName().toLowerCase().endsWith(".gif")
-                        )
+                        file -> (file.isDirectory() || Helper.isImageExtensionSupported(FileHelper.getExtension(file.getName())))
                 );
 
-                if (0 == images.length) { // No images nor subfolders
+                if (images != null && 0 == images.length) { // No images nor subfolders
                     booksKO++;
                     boolean success = FileHelper.removeFile(folder);
                     trace(Log.INFO, log, "[Remove no image %s] Folder %s", success ? "OK" : "KO", folder.getAbsolutePath());
@@ -186,11 +182,10 @@ public class ImportService extends IntentService {
                         String[] currentPathParts = folder.getAbsolutePath().split(File.separator);
                         String currentBookDir = File.separator + currentPathParts[currentPathParts.length - 2] + File.separator + currentPathParts[currentPathParts.length - 1];
 
-                        if (!canonicalBookDir.equals(currentBookDir)) {
+                        if (!canonicalBookDir.equalsIgnoreCase(currentBookDir)) {
                             String settingDir = Preferences.getRootFolderName();
-                            if (settingDir.isEmpty()) {
+                            if (settingDir.isEmpty())
                                 settingDir = FileHelper.getDefaultDir(this, canonicalBookDir).getAbsolutePath();
-                            }
 
                             if (FileHelper.renameDirectory(folder, new File(settingDir, canonicalBookDir))) {
                                 content.setStorageFolder(canonicalBookDir);
@@ -223,7 +218,7 @@ public class ImportService extends IntentService {
 
                 if (null == content) booksKO++;
                 else booksOK++;
-            } catch (JSONParseException jse) {
+            } catch (ParseException jse) {
                 if (null == content)
                     content = new Content().setTitle("none").setSite(Site.NONE).setUrl("");
                 booksKO++;
@@ -239,7 +234,7 @@ public class ImportService extends IntentService {
                 trace(Log.ERROR, log, "Import book ERROR : %s for Folder %s", e.getMessage(), folder.getAbsolutePath());
             }
 
-            eventProgress(content, files.size() - nbFolders, booksOK, booksKO);
+            eventProgress(files.size() - nbFolders, booksOK, booksKO);
         }
         trace(Log.INFO, log, "Import books complete - %s OK; %s KO; %s final count", booksOK + "", booksKO + "", files.size() - nbFolders + "");
 
@@ -253,7 +248,7 @@ public class ImportService extends IntentService {
         stopSelf();
     }
 
-    private LogUtil.LogInfo buildLogInfo(boolean cleanup, @NonNull List<String> log) {
+    private LogUtil.LogInfo buildLogInfo(boolean cleanup, @NonNull List<LogUtil.LogEntry> log) {
         LogUtil.LogInfo logInfo = new LogUtil.LogInfo();
         logInfo.setLogName(cleanup ? "Cleanup" : "Import");
         logInfo.setFileName(cleanup ? "cleanup_log" : "import_log");
@@ -264,7 +259,7 @@ public class ImportService extends IntentService {
 
 
     @Nullable
-    private static Content importJson(File folder) throws JSONParseException {
+    private static Content importJson(File folder) throws ParseException {
         File json = new File(folder, Consts.JSON_FILE_NAME_V2); // (v2) JSON file format
         if (json.exists()) return importJsonV2(json);
 
@@ -274,7 +269,7 @@ public class ImportService extends IntentService {
     }
 
     @CheckResult
-    private static Content importJsonV2(File json) throws JSONParseException {
+    private static Content importJsonV2(File json) throws ParseException {
         try {
             JsonContent content = JsonHelper.jsonToObject(json, JsonContent.class);
             Content result = content.toEntity();
@@ -290,7 +285,7 @@ public class ImportService extends IntentService {
             return result;
         } catch (Exception e) {
             Timber.e(e, "Error reading JSON (v2) file");
-            throw new JSONParseException("Error reading JSON (v2) file : " + e.getMessage(), e);
+            throw new ParseException("Error reading JSON (v2) file : " + e.getMessage(), e);
         }
     }
 }

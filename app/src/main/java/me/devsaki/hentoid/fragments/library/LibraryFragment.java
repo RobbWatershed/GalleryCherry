@@ -24,8 +24,10 @@ import androidx.appcompat.widget.SearchView;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.content.FileProvider;
 import androidx.fragment.app.Fragment;
-import androidx.lifecycle.ViewModelProviders;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.paging.PagedList;
+import androidx.recyclerview.widget.AsyncDifferConfig;
+import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.recyclerview.widget.SimpleItemAnimator;
@@ -34,37 +36,49 @@ import com.annimon.stream.Stream;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.snackbar.BaseTransientBottomBar;
 import com.google.android.material.snackbar.Snackbar;
+import com.mikepenz.fastadapter.FastAdapter;
+import com.mikepenz.fastadapter.adapters.ItemAdapter;
+import com.mikepenz.fastadapter.extensions.ExtensionsFactories;
+import com.mikepenz.fastadapter.listeners.ClickEventHook;
+import com.mikepenz.fastadapter.paged.PagedModelAdapter;
+import com.mikepenz.fastadapter.select.SelectExtension;
+import com.mikepenz.fastadapter.select.SelectExtensionFactory;
 
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import me.devsaki.hentoid.BuildConfig;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.activities.LibraryActivity;
 import me.devsaki.hentoid.activities.QueueActivity;
 import me.devsaki.hentoid.activities.SearchActivity;
+import me.devsaki.hentoid.activities.bundles.ContentItemBundle;
 import me.devsaki.hentoid.activities.bundles.SearchActivityBundle;
-import me.devsaki.hentoid.adapters.ContentAdapter;
-import me.devsaki.hentoid.adapters.LibraryAdapter;
-import me.devsaki.hentoid.adapters.PagedContentAdapter;
 import me.devsaki.hentoid.database.domains.Attribute;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.enums.Site;
+import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.events.AppUpdatedEvent;
 import me.devsaki.hentoid.services.ContentQueueManager;
 import me.devsaki.hentoid.util.ContentHelper;
+import me.devsaki.hentoid.util.Debouncer;
 import me.devsaki.hentoid.util.FileHelper;
 import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.util.RandomSeedSingleton;
+import me.devsaki.hentoid.util.ThemeHelper;
 import me.devsaki.hentoid.util.ToastUtil;
 import me.devsaki.hentoid.util.exception.ContentNotRemovedException;
+import me.devsaki.hentoid.viewholders.ContentItem;
 import me.devsaki.hentoid.viewmodels.LibraryViewModel;
 import me.devsaki.hentoid.widget.LibraryPager;
 import timber.log.Timber;
@@ -74,12 +88,16 @@ import static com.annimon.stream.Collectors.toCollection;
 
 public class LibraryFragment extends Fragment implements ErrorsDialogFragment.Parent {
 
+    private static final String KEY_LAST_LIST_POSITION = "last_list_position";
+
+
     // ======== COMMUNICATION
     private OnBackPressedCallback callback;
     // Viewmodel
     private LibraryViewModel viewModel;
     // Settings listener
-    private final SharedPreferences.OnSharedPreferenceChangeListener prefsListener = this::onSharedPreferenceChanged;
+    private final SharedPreferences.OnSharedPreferenceChangeListener prefsListener = (p, k) -> onSharedPreferenceChanged(k);
+
 
     // ======== UI
     // Wrapper for the bottom pager
@@ -94,28 +112,8 @@ public class LibraryFragment extends Fragment implements ErrorsDialogFragment.Pa
     private TextView searchClearButton;
     // Main view where books are displayed
     private RecyclerView recyclerView;
-
-
-    // ======== VARIABLES
-    // Records the system time (ms) when back button has been last pressed (to detect "double back button" event)
-    private long backButtonPressed;
-    // Used to ignore native calls to onQueryTextChange
-    private boolean invalidateNextQueryTextChange = false;
-    // Total number of books in the whole unfiltered library
-    private int totalContentCount;
-    // True when a new search has been performed and its results have not been handled yet
-    // False when the refresh is passive (i.e. not from a direct user action)
-    private boolean newSearch = false;
-    // Collection of books according to current filters
-    private PagedList<Content> library;
-
-
-    // === SEARCH PARAMETERS
-    // Current text search query
-    private String query = "";
-    // Current metadata search query
-    private List<Attribute> metadata = Collections.emptyList();
-
+    // LayoutManager of the recyclerView
+    private LinearLayoutManager llm;
 
     // === TOOLBAR
     private Toolbar toolbar;
@@ -132,20 +130,86 @@ public class LibraryFragment extends Fragment implements ErrorsDialogFragment.Pa
     private MenuItem itemArchive;
     private MenuItem itemDeleteSwipe;
 
-    private final PagedContentAdapter endlessAdapter = new PagedContentAdapter.Builder()
-            .setBookClickListener(this::onBookClick)
-            .setSourceClickListener(this::onBookSourceClick)
-            .setFavClickListener(this::onBookFavouriteClick)
-            .setErrorClickListener(this::onBookErrorClick)
-            .setSelectionChangedListener(this::onSelectionChanged)
-            .build();
-    private final ContentAdapter pagerAdapter = new ContentAdapter.Builder()
-            .setBookClickListener(this::onBookClick)
-            .setSourceClickListener(this::onBookSourceClick)
-            .setFavClickListener(this::onBookFavouriteClick)
-            .setErrorClickListener(this::onBookErrorClick)
-            .setSelectionChangedListener(this::onSelectionChanged)
-            .build();
+    // === FASTADAPTER COMPONENTS AND HELPERS
+    private ItemAdapter<ContentItem> itemAdapter;
+    private PagedModelAdapter<Content, ContentItem> pagedItemAdapter;
+    private FastAdapter<ContentItem> fastAdapter;
+    private SelectExtension<ContentItem> selectExtension;
+
+
+    // ======== VARIABLES
+    // Records the system time (ms) when back button has been last pressed (to detect "double back button" event)
+    private long backButtonPressed;
+    // Used to ignore native calls to onQueryTextChange
+    private boolean invalidateNextQueryTextChange = false;
+    // Used to ignore native calls to onBookClick right after that book has been deselected
+    private boolean invalidateNextBookClick = false;
+    // Total number of books in the whole unfiltered library
+    private int totalContentCount;
+    // True when a new search has been performed and its results have not been handled yet
+    // False when the refresh is passive (i.e. not from a direct user action)
+    private boolean newSearch = false;
+    // Collection of books according to current filters
+    private PagedList<Content> library;
+    // Position of top item to memorize or restore (used when activity is destroyed and recreated)
+    private int topItemPosition = -1;
+
+    // Used to start processing when the recyclerView has finished updating
+    private final Debouncer<Integer> listRefreshDebouncer = new Debouncer<>(75, this::onRecyclerUpdated);
+
+
+    // === SEARCH PARAMETERS
+    // Current text search query
+    private String query = "";
+    // Current metadata search query
+    private List<Attribute> metadata = Collections.emptyList();
+
+
+    /**
+     * Diff calculation rules for list items
+     * <p>
+     * Created once and for all to be used by FastAdapter in endless mode (=using Android PagedList)
+     */
+    private final AsyncDifferConfig<Content> asyncDifferConfig = new AsyncDifferConfig.Builder<>(new DiffUtil.ItemCallback<Content>() {
+        @Override
+        public boolean areItemsTheSame(@NonNull Content oldItem, @NonNull Content newItem) {
+            return oldItem.getId() == newItem.getId();
+        }
+
+        @Override
+        public boolean areContentsTheSame(@NonNull Content oldItem, @NonNull Content newItem) {
+            return oldItem.getUrl().equalsIgnoreCase(newItem.getUrl())
+                    && oldItem.getSite().equals(newItem.getSite())
+                    && oldItem.getLastReadDate() == newItem.getLastReadDate()
+                    && oldItem.isBeingFavourited() == newItem.isBeingFavourited()
+                    && oldItem.isBeingDeleted() == newItem.isBeingDeleted()
+                    && oldItem.isFavourite() == newItem.isFavourite();
+        }
+
+        @Nullable
+        @Override
+        public Object getChangePayload(@NonNull Content oldItem, @NonNull Content newItem) {
+            ContentItemBundle.Builder diffBundleBuilder = new ContentItemBundle.Builder();
+
+            if (oldItem.isFavourite() != newItem.isFavourite()) {
+                diffBundleBuilder.setIsFavourite(newItem.isFavourite());
+            }
+            if (oldItem.isBeingFavourited() != newItem.isBeingFavourited()) {
+                diffBundleBuilder.setIsBeingFavourited(newItem.isBeingFavourited());
+            }
+            if (oldItem.isBeingDeleted() != newItem.isBeingDeleted()) {
+                diffBundleBuilder.setIsBeingDeleted(newItem.isBeingDeleted());
+            }
+            if (oldItem.getReads() != newItem.getReads()) {
+                diffBundleBuilder.setReads(newItem.getReads());
+            }
+
+            if (diffBundleBuilder.isEmpty()) return null;
+            else return diffBundleBuilder.getBundle();
+        }
+
+    }).build();
+
 
     /**
      * Get the icon resource ID according to the sort order code
@@ -193,6 +257,8 @@ public class LibraryFragment extends Fragment implements ErrorsDialogFragment.Pa
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        ExtensionsFactories.INSTANCE.register(new SelectExtensionFactory());
+        EventBus.getDefault().register(this);
         setRetainInstance(true);
     }
 
@@ -200,7 +266,7 @@ public class LibraryFragment extends Fragment implements ErrorsDialogFragment.Pa
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.fragment_library, container, false);
 
-        viewModel = ViewModelProviders.of(requireActivity()).get(LibraryViewModel.class);
+        viewModel = new ViewModelProvider(requireActivity()).get(LibraryViewModel.class);
         Preferences.registerPrefsChangedListener(prefsListener);
 
         initUI(rootView);
@@ -217,9 +283,11 @@ public class LibraryFragment extends Fragment implements ErrorsDialogFragment.Pa
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        viewModel.getNewSearch().observe(this, this::onNewSearch);
-        viewModel.getLibraryPaged().observe(this, this::onLibraryChanged);
-        viewModel.getTotalContent().observe(this, this::onTotalContentChanged);
+        viewModel.getNewSearch().observe(getViewLifecycleOwner(), this::onNewSearch);
+        viewModel.getLibraryPaged().observe(getViewLifecycleOwner(), this::onLibraryChanged);
+        viewModel.getTotalContent().observe(getViewLifecycleOwner(), this::onTotalContentChanged);
+
+        viewModel.updateOrder(); // Trigger a blank search
     }
 
     /**
@@ -229,8 +297,10 @@ public class LibraryFragment extends Fragment implements ErrorsDialogFragment.Pa
      */
     private void initUI(@NonNull View rootView) {
         emptyText = requireViewById(rootView, R.id.library_empty_txt);
+
+        // Search bar
         advancedSearchBar = requireViewById(rootView, R.id.advanced_search_group);
-        // TextView used as advanced search button
+
         TextView advancedSearchButton = requireViewById(rootView, R.id.advanced_search_btn);
         advancedSearchButton.setOnClickListener(v -> onAdvancedSearchButtonClick());
 
@@ -241,9 +311,13 @@ public class LibraryFragment extends Fragment implements ErrorsDialogFragment.Pa
             metadata.clear();
             searchClearButton.setVisibility(View.GONE);
             viewModel.searchUniversal("");
+            advancedSearchBar.setVisibility(View.GONE);
         });
 
+        // RecyclerView
         recyclerView = requireViewById(rootView, R.id.library_list);
+        llm = (LinearLayoutManager) recyclerView.getLayoutManager();
+
         // Disable blink animation on card change (bind holder)
         RecyclerView.ItemAnimator animator = recyclerView.getItemAnimator();
         if (animator instanceof SimpleItemAnimator)
@@ -379,7 +453,7 @@ public class LibraryFragment extends Fragment implements ErrorsDialogFragment.Pa
         } else { // Update the order menu icon and run a new search
             orderMenu.setIcon(getIconFromSortOrder(contentSortOrder));
             Preferences.setContentSortOrder(contentSortOrder);
-            viewModel.performSearch();
+            viewModel.updateOrder();
         }
 
         return true;
@@ -388,7 +462,7 @@ public class LibraryFragment extends Fragment implements ErrorsDialogFragment.Pa
     private void initSelectionToolbar(@NonNull View rootView) {
         selectionToolbar = requireViewById(rootView, R.id.library_selection_toolbar);
         selectionToolbar.setNavigationOnClickListener(v -> {
-            getAdapter().clearSelection();
+            selectExtension.deselect();
             selectionToolbar.setVisibility(View.GONE);
         });
 
@@ -399,6 +473,7 @@ public class LibraryFragment extends Fragment implements ErrorsDialogFragment.Pa
     }
 
     private boolean selectionToolbarOnItemClicked(@NonNull MenuItem menuItem) {
+        boolean keepToolbar = false;
         switch (menuItem.getItemId()) {
             case R.id.action_share:
                 shareSelectedItems();
@@ -410,17 +485,20 @@ public class LibraryFragment extends Fragment implements ErrorsDialogFragment.Pa
             case R.id.action_archive:
                 archiveSelectedItems();
                 break;
+            case R.id.action_redownload:
+                redownloadSelectedItems();
+                keepToolbar = true;
+                break;
             default:
                 selectionToolbar.setVisibility(View.GONE);
                 return false;
         }
-        selectionToolbar.setVisibility(View.GONE);
+        if (!keepToolbar) selectionToolbar.setVisibility(View.GONE);
         return true;
     }
 
     private void updateSelectionToolbar(long selectedCount) {
-        LibraryAdapter adapter = getAdapter();
-        boolean isMultipleSelection = adapter.getSelectedItemsCount() > 1;
+        boolean isMultipleSelection = selectedCount > 1;
 
         itemDelete.setVisible(!isMultipleSelection);
         itemShare.setVisible(!isMultipleSelection);
@@ -434,30 +512,79 @@ public class LibraryFragment extends Fragment implements ErrorsDialogFragment.Pa
      * Callback for the "share item" action button
      */
     private void shareSelectedItems() {
-        List<Content> selectedItems = getAdapter().getSelectedItems();
+        Set<ContentItem> selectedItems = selectExtension.getSelectedItems();
         Context context = getActivity();
-        if (1 == selectedItems.size() && context != null)
-            ContentHelper.shareContent(context, selectedItems.get(0));
+        if (1 == selectedItems.size() && context != null) {
+            Content c = Stream.of(selectedItems).findFirst().get().getContent();
+            if (c != null) ContentHelper.shareContent(context, c);
+        }
     }
 
     /**
      * Callback for the "delete item" action button
      */
     private void purgeSelectedItems() {
-        List<Content> selectedItems = getAdapter().getSelectedItems();
-        if (!selectedItems.isEmpty()) askDeleteItems(selectedItems);
+        Set<ContentItem> selectedItems = selectExtension.getSelectedItems();
+        if (!selectedItems.isEmpty()) {
+            List<Content> selectedContent = Stream.of(selectedItems).map(ContentItem::getContent).toList();
+            askDeleteItems(selectedContent);
+        }
     }
 
     /**
      * Callback for the "archive item" action button
      */
     private void archiveSelectedItems() {
-        List<Content> selectedItems = getAdapter().getSelectedItems();
+        Set<ContentItem> selectedItems = selectExtension.getSelectedItems();
         Context context = getActivity();
         if (1 == selectedItems.size() && context != null) {
             ToastUtil.toast(R.string.packaging_content);
-            viewModel.archiveContent(selectedItems.get(0), this::onContentArchiveSuccess);
+            Content c = Stream.of(selectedItems).findFirst().get().getContent();
+            if (c != null) viewModel.archiveContent(c, this::onContentArchiveSuccess);
         }
+    }
+
+    /**
+     * Callback for the "redownload from scratch" action button
+     */
+    private void redownloadSelectedItems() {
+        Set<ContentItem> selectedItems = selectExtension.getSelectedItems();
+
+        int securedContent = 0;
+        List<Content> contents = new ArrayList<>();
+        for (ContentItem ci : selectedItems) {
+            Content c = ci.getContent();
+            if (null == c) continue;
+            if (c.getSite().equals(Site.REDDIT)) {
+                securedContent++;
+            } else {
+                contents.add(c);
+            }
+        }
+
+        String message = getResources().getQuantityString(R.plurals.redownload_confirm, contents.size());
+        if (securedContent > 0)
+            message = getResources().getQuantityString(R.plurals.redownload_secured_content, securedContent);
+
+        // TODO make it work for secured sites (Fakku, ExHentai) -> open a browser to fetch the relevant cookies ?
+
+        new MaterialAlertDialogBuilder(requireContext(), ThemeHelper.getIdForCurrentTheme(requireContext(), R.style.Theme_Light_Dialog))
+                .setIcon(R.drawable.ic_warning)
+                .setCancelable(false)
+                .setTitle(R.string.app_name)
+                .setMessage(message)
+                .setPositiveButton(android.R.string.yes,
+                        (dialog1, which) -> {
+                            dialog1.dismiss();
+                            redownloadContent(contents, true);
+                            for (ContentItem ci : selectedItems) ci.setSelected(false);
+                            selectExtension.deselect();
+                            selectionToolbar.setVisibility(View.GONE);
+                        })
+                .setNegativeButton(android.R.string.no,
+                        (dialog12, which) -> dialog12.dismiss())
+                .create()
+                .show();
     }
 
     /**
@@ -498,11 +625,11 @@ public class LibraryFragment extends Fragment implements ErrorsDialogFragment.Pa
         builder.setMessage(title)
                 .setPositiveButton(android.R.string.yes,
                         (dialog, which) -> {
-                            getAdapter().clearSelection();
+                            selectExtension.deselect();
                             viewModel.deleteItems(items, this::onDeleteSuccess, this::onDeleteError);
                         })
                 .setNegativeButton(android.R.string.no,
-                        (dialog, which) -> getAdapter().clearSelection())
+                        (dialog, which) -> selectExtension.deselect())
                 .create().show();
     }
 
@@ -510,8 +637,7 @@ public class LibraryFragment extends Fragment implements ErrorsDialogFragment.Pa
      * Callback for the success of the "delete item" action
      */
     private void onDeleteSuccess() {
-        Context context = getActivity();
-        if (context != null) ToastUtil.toast(context, "Selected items have been deleted.");
+        ToastUtil.toast("Selected items have been deleted.");
     }
 
     /**
@@ -534,7 +660,7 @@ public class LibraryFragment extends Fragment implements ErrorsDialogFragment.Pa
      * Update favourite filter button appearance on the action bar
      */
     private void updateFavouriteFilter() {
-        favsMenu.setIcon(favsMenu.isChecked() ? R.drawable.ic_fav_full : R.drawable.ic_fav_empty);
+        favsMenu.setIcon(favsMenu.isChecked() ? R.drawable.ic_filter_favs_on : R.drawable.ic_filter_favs_off);
     }
 
     /**
@@ -546,24 +672,38 @@ public class LibraryFragment extends Fragment implements ErrorsDialogFragment.Pa
         return (!query.isEmpty() || !metadata.isEmpty());
     }
 
-
     @Override
     public void onSaveInstanceState(@NonNull Bundle outState) {
         super.onSaveInstanceState(outState);
         if (viewModel != null) viewModel.onSaveState(outState);
+        if (fastAdapter != null) fastAdapter.saveInstanceState(outState);
+
+        // Remember current position in the sorted list
+        int currentPosition = getTopItemPosition();
+        if (currentPosition > 0 || -1 == topItemPosition) topItemPosition = currentPosition;
+
+        outState.putInt(KEY_LAST_LIST_POSITION, topItemPosition);
+        topItemPosition = -1;
     }
 
     @Override
     public void onViewStateRestored(@Nullable Bundle savedInstanceState) {
         super.onViewStateRestored(savedInstanceState);
+
+        topItemPosition = 0;
+        if (null == savedInstanceState) return;
+
         if (viewModel != null) viewModel.onRestoreState(savedInstanceState);
+        if (fastAdapter != null) fastAdapter.withSavedInstanceState(savedInstanceState);
+        // Mark last position in the list to be the one it will come back to
+        topItemPosition = savedInstanceState.getInt(KEY_LAST_LIST_POSITION, 0);
     }
 
     @Subscribe(sticky = true, threadMode = ThreadMode.MAIN)
     public void onAppUpdated(AppUpdatedEvent event) {
         EventBus.getDefault().removeStickyEvent(event);
         // Display the "update success" dialog when an update is detected on a release version
-        if (!BuildConfig.DEBUG) UpdateSuccessDialogFragment.invoke(requireFragmentManager());
+        if (!BuildConfig.DEBUG) UpdateSuccessDialogFragment.invoke(getParentFragmentManager());
     }
 
     /**
@@ -589,14 +729,14 @@ public class LibraryFragment extends Fragment implements ErrorsDialogFragment.Pa
     @Override
     public void onDestroy() {
         Preferences.unregisterPrefsChangedListener(prefsListener);
+        EventBus.getDefault().unregister(this);
         super.onDestroy();
     }
 
     private void customBackPress() {
-        LibraryAdapter adapter = getAdapter();
         // If content is selected, deselect it
-        if (adapter.getSelectedItemsCount() > 0) {
-            adapter.clearSelection();
+        if (!selectExtension.getSelectedItems().isEmpty()) {
+            selectExtension.deselect();
             selectionToolbar.setVisibility(View.GONE);
             backButtonPressed = 0;
         } else if (searchMenu.isActionViewExpanded()) {
@@ -610,21 +750,27 @@ public class LibraryFragment extends Fragment implements ErrorsDialogFragment.Pa
 
         } else {
             backButtonPressed = SystemClock.elapsedRealtime();
-            Context c = getContext();
-            if (c != null) ToastUtil.toast(getContext(), R.string.press_back_again);
+            ToastUtil.toast(R.string.press_back_again);
 
-            if (recyclerView.getLayoutManager() != null)
-                ((LinearLayoutManager) recyclerView.getLayoutManager()).scrollToPositionWithOffset(0, 0);
+            llm.scrollToPositionWithOffset(0, 0);
         }
     }
 
     /**
      * Callback for any change in Preferences
      */
-    private void onSharedPreferenceChanged(SharedPreferences prefs, String key) {
+    private void onSharedPreferenceChanged(String key) {
         Timber.i("Prefs change detected : %s", key);
         if (Preferences.Key.PREF_ENDLESS_SCROLL.equals(key)) {
             initPagingMethod(Preferences.getEndlessScroll());
+            viewModel.updateOrder(); // Trigger a blank search
+        } else if (Preferences.Key.PREF_COLOR_THEME.equals(key)) {
+            // Restart the app with the library activity on top
+            Intent intent = requireActivity().getIntent();
+            intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            requireActivity().finish();
+            startActivity(intent);
         }
     }
 
@@ -650,19 +796,106 @@ public class LibraryFragment extends Fragment implements ErrorsDialogFragment.Pa
      * @param isEndless True if endless mode has to be set; false if paged mode has to be set
      */
     private void initPagingMethod(boolean isEndless) {
-        if (isEndless) {
+        viewModel.setPagingMethod(isEndless);
+
+        if (isEndless) { // Endless mode
             pager.hide();
-            recyclerView.setAdapter(endlessAdapter);
-            if (library != null) endlessAdapter.submitList(library);
-        } else {
-            recyclerView.setAdapter(pagerAdapter);
+
+            pagedItemAdapter = new PagedModelAdapter<>(asyncDifferConfig, i -> new ContentItem(false), ContentItem::new);
+            fastAdapter = FastAdapter.with(pagedItemAdapter);
+            fastAdapter.setHasStableIds(true);
+            ContentItem item = new ContentItem(false);
+            fastAdapter.registerItemFactory(item.getType(), item);
+
+            itemAdapter = null;
+        } else { // Paged mode
+            itemAdapter = new ItemAdapter<>();
+            fastAdapter = FastAdapter.with(itemAdapter);
+            fastAdapter.setHasStableIds(true);
             pager.setCurrentPage(1);
             pager.show();
-            if (library != null) {
-                pager.setPageCount((int) Math.ceil(library.size() * 1.0 / Preferences.getContentPageQuantity()));
-                loadBookshelf(library);
-            }
+
+            pagedItemAdapter = null;
         }
+
+        // Item click listener
+        fastAdapter.setOnClickListener((v, a, i, p) -> onBookClick(i, p));
+
+        // Favourite button click listener
+        fastAdapter.addEventHook(new ClickEventHook<ContentItem>() {
+            @Override
+            public void onClick(@NotNull View view, int i, @NotNull FastAdapter<ContentItem> fastAdapter, @NotNull ContentItem item) {
+                if (item.getContent() != null) onBookFavouriteClick(item.getContent());
+            }
+
+            @org.jetbrains.annotations.Nullable
+            @Override
+            public View onBind(RecyclerView.@NotNull ViewHolder viewHolder) {
+                if (viewHolder instanceof ContentItem.ContentViewHolder) {
+                    return ((ContentItem.ContentViewHolder) viewHolder).getFavouriteButton();
+                }
+                return super.onBind(viewHolder);
+            }
+        });
+
+        // Site button click listener
+        fastAdapter.addEventHook(new ClickEventHook<ContentItem>() {
+            @Override
+            public void onClick(@NotNull View view, int i, @NotNull FastAdapter<ContentItem> fastAdapter, @NotNull ContentItem item) {
+                if (item.getContent() != null) onBookSourceClick(item.getContent());
+            }
+
+            @org.jetbrains.annotations.Nullable
+            @Override
+            public View onBind(RecyclerView.@NotNull ViewHolder viewHolder) {
+                if (viewHolder instanceof ContentItem.ContentViewHolder) {
+                    return ((ContentItem.ContentViewHolder) viewHolder).getSiteButton();
+                }
+                return super.onBind(viewHolder);
+            }
+        });
+
+        // Error button click listener
+        fastAdapter.addEventHook(new ClickEventHook<ContentItem>() {
+            @Override
+            public void onClick(@NotNull View view, int i, @NotNull FastAdapter<ContentItem> fastAdapter, @NotNull ContentItem item) {
+                if (item.getContent() != null) onBookErrorClick(item.getContent());
+            }
+
+            @org.jetbrains.annotations.Nullable
+            @Override
+            public View onBind(RecyclerView.@NotNull ViewHolder viewHolder) {
+                if (viewHolder instanceof ContentItem.ContentViewHolder) {
+                    return ((ContentItem.ContentViewHolder) viewHolder).getErrorButton();
+                }
+                return super.onBind(viewHolder);
+            }
+        });
+
+        // Gets (or creates and attaches if not yet existing) the extension from the given `FastAdapter`
+        selectExtension = fastAdapter.getOrCreateExtension(SelectExtension.class);
+        if (selectExtension != null) {
+            selectExtension.setSelectable(true);
+            selectExtension.setMultiSelect(true);
+            selectExtension.setSelectOnLongClick(true);
+            selectExtension.setSelectionListener((item, b) -> LibraryFragment.this.onSelectionChanged());
+        }
+
+        recyclerView.setAdapter(fastAdapter);
+    }
+
+    /**
+     * Returns the index bounds of the list to be displayed according to the given shelf number
+     * Used for paged mode only
+     *
+     * @param shelfNumber Number of the shelf to display
+     * @param librarySize Size of the library
+     * @return Min and max index of the books to display on the given page
+     */
+    private ImmutablePair<Integer, Integer> getShelfBound(int shelfNumber, int librarySize) {
+        int minIndex = (shelfNumber - 1) * Preferences.getContentPageQuantity();
+        int maxIndex = Math.min(minIndex + Preferences.getContentPageQuantity(), librarySize);
+        return new ImmutablePair<>(minIndex, maxIndex);
     }
 
     /**
@@ -670,24 +903,47 @@ public class LibraryFragment extends Fragment implements ErrorsDialogFragment.Pa
      * NB : A bookshelf is the portion of the collection that is displayed on screen by the paged mode
      * The width of the shelf is determined by the "Quantity per page" setting
      *
-     * @param library Library to extract the shelf from
+     * @param iLibrary Library to extract the shelf from
      */
-    private void loadBookshelf(PagedList<Content> library) {
-        if (library.isEmpty()) pagerAdapter.setShelf(Collections.emptyList());
-        else {
-            int minIndex = (pager.getCurrentPageNumber() - 1) * Preferences.getContentPageQuantity();
-            int maxIndex = Math.min(minIndex + Preferences.getContentPageQuantity(), library.size());
+    private void loadBookshelf(PagedList<Content> iLibrary) {
+        if (iLibrary.isEmpty()) {
+            itemAdapter.set(Collections.emptyList());
+            fastAdapter.notifyDataSetChanged();
+        } else {
+            ImmutablePair<Integer, Integer> bounds = getShelfBound(pager.getCurrentPageNumber(), iLibrary.size());
+            int minIndex = bounds.getLeft();
+            int maxIndex = bounds.getRight();
 
             if (minIndex >= maxIndex) { // We just deleted the last item of the last page => Go back one page
                 pager.setCurrentPage(pager.getCurrentPageNumber() - 1);
-                loadBookshelf(library);
+                loadBookshelf(iLibrary);
                 return;
             }
 
-            library.loadAround(maxIndex - 1);
-            pagerAdapter.setShelf(library.subList(minIndex, maxIndex));
+            populateBookshelf(iLibrary, pager.getCurrentPageNumber());
         }
-        pagerAdapter.notifyDataSetChanged();
+    }
+
+    /**
+     * Displays the current "bookshelf" (section of the list corresponding to the selected page)
+     * A shelf contains as many books as the user has set in Preferences
+     * <p>
+     * Used in paged mode only
+     *
+     * @param iLibrary    Library to display books from
+     * @param shelfNumber Number of the shelf to display
+     */
+    private void populateBookshelf(@NonNull PagedList<Content> iLibrary, int shelfNumber) {
+        if (Preferences.getEndlessScroll()) return;
+
+        ImmutablePair<Integer, Integer> bounds = getShelfBound(shelfNumber, iLibrary.size());
+        int minIndex = bounds.getLeft();
+        int maxIndex = bounds.getRight();
+
+        //noinspection Convert2MethodRef need API24
+        List<ContentItem> contentItems = Stream.of(iLibrary.subList(minIndex, maxIndex)).filter(c -> c != null).map(ContentItem::new).toList();
+        itemAdapter.set(contentItems);
+        fastAdapter.notifyDataSetChanged();
     }
 
     /**
@@ -707,11 +963,7 @@ public class LibraryFragment extends Fragment implements ErrorsDialogFragment.Pa
      * @param result Current library according to active filters
      */
     private void onLibraryChanged(PagedList<Content> result) {
-        Timber.d(">>Library changed ! Size=%s", result.size());
-
-        // Don't passive-refresh the list if the order is random
-        if (!newSearch && Preferences.Constant.ORDER_CONTENT_RANDOM == Preferences.getContentSortOrder())
-            return;
+        Timber.i(">>Library changed ! Size=%s", result.size());
 
         updateTitle(result.size(), totalContentCount);
 
@@ -726,34 +978,34 @@ public class LibraryFragment extends Fragment implements ErrorsDialogFragment.Pa
         if (isSearchQueryActive()) {
             advancedSearchBar.setVisibility(View.VISIBLE);
             searchClearButton.setVisibility(View.VISIBLE);
-            if (result.size() > 0 && searchMenu != null) searchMenu.collapseActionView();
+            if (!result.isEmpty() && searchMenu != null) searchMenu.collapseActionView();
         } else {
-            advancedSearchBar.setVisibility(View.GONE);
+            searchClearButton.setVisibility(View.GONE);
         }
 
         // User searches a book ID
         // => Suggests searching through all sources except those where the selected book ID is already in the collection
-        if (Helper.isNumeric(query)) {
+        if (newSearch && Helper.isNumeric(query)) {
             ArrayList<Integer> siteCodes = Stream.of(result)
                     .filter(content -> query.equals(content.getUniqueSiteId()))
                     .map(Content::getSite)
                     .map(Site::getCode)
                     .collect(toCollection(ArrayList::new));
 
-            SearchBookIdDialogFragment.invoke(requireFragmentManager(), query, siteCodes);
+            SearchBookIdDialogFragment.invoke(getParentFragmentManager(), query, siteCodes);
         }
 
+        // If the update is the result of a new search, get back on top of the list
+        if (newSearch) topItemPosition = 0;
+
         // Update displayed books
-        if (Preferences.getEndlessScroll()) endlessAdapter.submitList(result);
-        else {
+        if (Preferences.getEndlessScroll()) {
+            pagedItemAdapter.submitList(result, this::differEndCallback);
+        } else {
             if (newSearch) pager.setCurrentPage(1);
             pager.setPageCount((int) Math.ceil(result.size() * 1.0 / Preferences.getContentPageQuantity()));
             loadBookshelf(result);
         }
-
-        // If the update is the result of a new search, let the items be sorted
-        // and get back to the top of the list
-        if (newSearch) new Handler().postDelayed(() -> recyclerView.scrollToPosition(0), 300);
 
         newSearch = false;
         library = result;
@@ -786,10 +1038,20 @@ public class LibraryFragment extends Fragment implements ErrorsDialogFragment.Pa
     /**
      * Callback for the book holder itself
      *
-     * @param content Content that has been clicked on
+     * @param item ContentItem that has been clicked on
      */
-    private void onBookClick(Content content) {
-        ContentHelper.openHentoidViewer(requireContext(), content, viewModel.getSearchManagerBundle());
+    private boolean onBookClick(@NonNull ContentItem item, int position) {
+        if (selectExtension.getSelectedItems().isEmpty()) {
+            if (!invalidateNextBookClick && item.getContent() != null && !item.getContent().isBeingDeleted()) {
+                topItemPosition = position;
+                ContentHelper.openHentoidViewer(requireContext(), item.getContent(), viewModel.getSearchManagerBundle());
+            } else invalidateNextBookClick = false;
+
+            return true;
+        } else {
+            selectExtension.setSelectOnLongClick(false);
+        }
+        return false;
     }
 
     /**
@@ -797,8 +1059,8 @@ public class LibraryFragment extends Fragment implements ErrorsDialogFragment.Pa
      *
      * @param content Content whose "source" button has been clicked on
      */
-    private void onBookSourceClick(Content content) {
-        ContentHelper.viewContent(requireContext(), content);
+    private void onBookSourceClick(@NonNull Content content) {
+        ContentHelper.viewContentGalleryPage(requireContext(), content);
     }
 
     /**
@@ -806,7 +1068,7 @@ public class LibraryFragment extends Fragment implements ErrorsDialogFragment.Pa
      *
      * @param content Content whose "favourite" button has been clicked on
      */
-    private void onBookFavouriteClick(Content content) {
+    private void onBookFavouriteClick(@NonNull Content content) {
         viewModel.toggleContentFavourite(content);
     }
 
@@ -815,7 +1077,7 @@ public class LibraryFragment extends Fragment implements ErrorsDialogFragment.Pa
      *
      * @param content Content whose "error" button has been clicked on
      */
-    private void onBookErrorClick(Content content) {
+    private void onBookErrorClick(@NonNull Content content) {
         ErrorsDialogFragment.invoke(this, content.getId());
     }
 
@@ -824,10 +1086,18 @@ public class LibraryFragment extends Fragment implements ErrorsDialogFragment.Pa
      *
      * @param content Content to add back to the download queue
      */
-    public void downloadContent(@NonNull final Content content) {
-        viewModel.addContentToQueue(content);
+    public void redownloadContent(@NonNull final Content content) {
+        List<Content> contentList = new ArrayList<>();
+        contentList.add(content);
+        redownloadContent(contentList, false);
+    }
 
-        ContentQueueManager.getInstance().resumeQueue(getContext());
+    private void redownloadContent(@NonNull final List<Content> contentList, boolean reparseImages) {
+        StatusContent targetImageStatus = reparseImages ? StatusContent.ERROR : null;
+        for (Content c : contentList) viewModel.addContentToQueue(c, targetImageStatus);
+
+        if (Preferences.isQueueAutostart())
+            ContentQueueManager.getInstance().resumeQueue(getContext());
 
         Snackbar snackbar = Snackbar.make(recyclerView, R.string.add_to_queue, BaseTransientBottomBar.LENGTH_LONG);
         snackbar.setAction("VIEW QUEUE", v -> viewQueue());
@@ -835,24 +1105,16 @@ public class LibraryFragment extends Fragment implements ErrorsDialogFragment.Pa
     }
 
     /**
-     * Get the currently active adapter (according to current mode : endless or paged)
-     *
-     * @return Currently active adapter
-     */
-    private LibraryAdapter getAdapter() {
-        if (Preferences.getEndlessScroll()) return endlessAdapter;
-        else return pagerAdapter;
-    }
-
-    /**
      * Callback for any selection change (item added to or removed from selection)
-     *
-     * @param selectedCount Number of currently selected items
      */
-    private void onSelectionChanged(long selectedCount) {
+    private void onSelectionChanged() {
+        int selectedCount = selectExtension.getSelectedItems().size();
 
         if (0 == selectedCount) {
             selectionToolbar.setVisibility(View.GONE);
+            selectExtension.setSelectOnLongClick(true);
+            invalidateNextBookClick = true;
+            new Handler().postDelayed(() -> invalidateNextBookClick = false, 200);
         } else {
             updateSelectionToolbar(selectedCount);
             selectionToolbar.setVisibility(View.VISIBLE);
@@ -873,5 +1135,36 @@ public class LibraryFragment extends Fragment implements ErrorsDialogFragment.Pa
     private void viewQueue() {
         Intent intent = new Intent(requireContext(), QueueActivity.class);
         requireContext().startActivity(intent);
+    }
+
+    /**
+     * Callback for the end of item diff calculations
+     * Activated when all _adapter_ items are placed on their definitive position
+     */
+    private void differEndCallback() {
+        if (topItemPosition > -1) {
+            int targetPos = topItemPosition;
+            listRefreshDebouncer.submit(targetPos);
+            topItemPosition = -1;
+        }
+    }
+
+    /**
+     * Callback for the end of recycler updates
+     * Activated when all _displayed_ items are placed on their definitive position
+     */
+    private void onRecyclerUpdated(int topItemPosition) {
+        int currentPosition = getTopItemPosition();
+        if (currentPosition != topItemPosition)
+            llm.scrollToPositionWithOffset(topItemPosition, 0); // Used to restore position after activity has been stopped and recreated
+    }
+
+    /**
+     * Calculate the position of the top visible item of the book list
+     *
+     * @return position of the top visible item of the book list
+     */
+    private int getTopItemPosition() {
+        return Math.max(llm.findFirstVisibleItemPosition(), llm.findFirstCompletelyVisibleItemPosition());
     }
 }

@@ -11,11 +11,11 @@ import java.util.List;
 
 import javax.annotation.Nonnull;
 
+import io.reactivex.Single;
 import me.devsaki.hentoid.activities.bundles.SearchActivityBundle;
 import me.devsaki.hentoid.database.CollectionDAO;
 import me.devsaki.hentoid.database.domains.Attribute;
 import me.devsaki.hentoid.database.domains.Content;
-import me.devsaki.hentoid.listener.PagedResultListener;
 import me.devsaki.hentoid.util.Preferences;
 
 public class ContentSearchManager {
@@ -37,6 +37,8 @@ public class ContentSearchManager {
     private String query = "";
     // Current search tags
     private List<Attribute> tags = new ArrayList<>();
+    // Current search tags
+    private boolean loadAll = false;
 
     private int contentSortOrder = Preferences.getContentSortOrder();
 
@@ -51,6 +53,10 @@ public class ContentSearchManager {
 
     public boolean isFilterFavourites() {
         return filterFavourites;
+    }
+
+    public void setLoadAll(boolean loadAll) {
+        this.loadAll = loadAll;
     }
 
     public void setQuery(String query) {
@@ -99,23 +105,19 @@ public class ContentSearchManager {
 
     public LiveData<PagedList<Content>> getLibrary() {
         if (!getQuery().isEmpty())
-            return collectionDAO.searchBooksUniversal(getQuery(), contentSortOrder, filterFavourites); // Universal search
+            return collectionDAO.searchBooksUniversal(getQuery(), contentSortOrder, filterFavourites, loadAll); // Universal search
         else if (!tags.isEmpty())
-            return collectionDAO.searchBooks("", tags, contentSortOrder, filterFavourites); // Advanced search
+            return collectionDAO.searchBooks("", tags, contentSortOrder, filterFavourites, loadAll); // Advanced search
         else
-            return collectionDAO.getRecentBooks(contentSortOrder, filterFavourites); // Default search (display recent)
+            return collectionDAO.getRecentBooks(contentSortOrder, filterFavourites, loadAll); // Default search (display recent)
     }
 
-    public void searchLibraryForId(PagedResultListener<Long> listener) {
+    public Single<List<Long>> searchLibraryForId() {
         if (!getQuery().isEmpty())
-            collectionDAO.searchBookIdsUniversal(getQuery(), contentSortOrder, filterFavourites, listener); // Universal search
+            return collectionDAO.searchBookIdsUniversal(getQuery(), contentSortOrder, filterFavourites); // Universal search
         else if (!tags.isEmpty())
-            collectionDAO.searchBookIds("", tags, contentSortOrder, filterFavourites, listener); // Advanced search
+            return collectionDAO.searchBookIds("", tags, contentSortOrder, filterFavourites); // Advanced search
         else
-            collectionDAO.getRecentBookIds(contentSortOrder, filterFavourites, listener); // Default search (display recent)
-    }
-
-    public void dispose() {
-        collectionDAO.dispose();
+            return collectionDAO.getRecentBookIds(contentSortOrder, filterFavourites); // Default search (display recent)
     }
 }

@@ -98,13 +98,18 @@ public class ErrorsDialogFragment extends DialogFragment {
         for (ImageFile imgFile : content.getImageFiles())
             if (imgFile.getStatus() == StatusContent.ERROR) imgErrors++;
 
+        if (0 == images) {
+            images = content.getQtyPages();
+            imgErrors = images;
+        }
+
         TextView details = rootView.findViewById(R.id.redownload_detail);
         String message = context.getString(R.string.redownload_dialog_message).replace("@clean", images - imgErrors + "").replace("@error", imgErrors + "").replace("@total", images + "");
         details.setText(message);
     }
 
     private LogUtil.LogInfo createLog(@NonNull final Content content) {
-        List<String> log = new ArrayList<>();
+        List<LogUtil.LogEntry> log = new ArrayList<>();
 
         LogUtil.LogInfo errorLogInfo = new LogUtil.LogInfo();
         errorLogInfo.setLogName("Error");
@@ -114,8 +119,9 @@ public class ErrorsDialogFragment extends DialogFragment {
 
         List<ErrorRecord> errorLog = content.getErrorLog();
         if (errorLog != null) {
-            log.add("Error log for " + content.getTitle() + " [" + content.getUniqueSiteId() + "@" + content.getSite().getDescription() + "] : " + errorLog.size() + " errors");
-            for (ErrorRecord e : errorLog) log.add(e.toString());
+            errorLogInfo.setHeader("Error log for " + content.getTitle() + " [" + content.getUniqueSiteId() + "@" + content.getSite().getDescription() + "] : " + errorLog.size() + " errors");
+            for (ErrorRecord e : errorLog)
+                log.add(new LogUtil.LogEntry(e.getTimestamp(), e.toString()));
         }
 
         return errorLogInfo;
@@ -137,11 +143,11 @@ public class ErrorsDialogFragment extends DialogFragment {
     }
 
     private void redownload(@NonNull final Content content) {
-        parent.downloadContent(content);
+        parent.redownloadContent(content);
         dismiss();
     }
 
     public interface Parent {
-        void downloadContent(final Content content);
+        void redownloadContent(final Content content);
     }
 }
