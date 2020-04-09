@@ -770,6 +770,7 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
     /**
      * Listener for the events of the download engine
      * Used to switch the action button to Read when the download of the currently viewed is completed
+     *
      * @param event Event fired by the download engine
      */
     @Subscribe(threadMode = ThreadMode.MAIN)
@@ -822,6 +823,7 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
 
         /**
          * Restrict link navigation to a given domain name
+         *
          * @param s Domain name to restrict link navigation to
          */
         protected void restrictTo(String s) {
@@ -844,6 +846,7 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
 
         /**
          * Indicates if the given URL is a book gallery page
+         *
          * @param url URL to test
          * @return True if the given URL represents a book gallery page
          */
@@ -930,7 +933,7 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
             isPageLoading = false;
             // Specific to Cherry : due to redirections, the correct page URLs are those visible from onPageFinished
 //Timber.i(">> onPageFinished %s %s", isHtmlLoaded, url);
-            if (isPageFiltered(url) && !isHtmlLoaded) parseResponse(url, null, true, false);
+            if (isBookGallery(url) && !isHtmlLoaded) parseResponse(url, null, true, false);
             isHtmlLoaded = false; // Reset for the next page
             refreshStopMenu.setIcon(R.drawable.ic_action_refresh);
             refreshNavigationMenu();
@@ -978,7 +981,8 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
 
         /**
          * Determines if the page at the given URL is to be processed
-         * @param url Called URL
+         *
+         * @param url     Called URL
          * @param headers Request headers
          * @return Processed response if the page has been processed;
          * null if vanilla processing should happen instead
@@ -1000,6 +1004,7 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
 
         /**
          * Process the given webpage in a background thread (used by quick download)
+         *
          * @param urlStr URL of the page to parse
          */
         void parseResponseAsync(@NonNull String urlStr) {
@@ -1014,13 +1019,14 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
 
         /**
          * Process the webpage at the given URL
-         * @param urlStr URL of the page to process
-         * @param requestHeaders Request headers to use
+         *
+         * @param urlStr             URL of the page to process
+         * @param requestHeaders     Request headers to use
          * @param analyzeForDownload True if the page has to be analyzed for potential downloads;
          *                           false if only ad removal should happen
-         * @param quickDownload True if the present call has been triggered by a quick download action
+         * @param quickDownload      True if the present call has been triggered by a quick download action
          * @return Processed response if the page has been actually processed;
-         *         null if vanilla processing should happen instead
+         * null if vanilla processing should happen instead
          */
         @SuppressLint("NewApi")
         @WorkerThread
@@ -1111,8 +1117,9 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
 
         /**
          * Process Content parsed from a webpage
-         * @param content Content to be processed
-         * @param headersList HTTP headers of the request that has generated the Content
+         *
+         * @param content       Content to be processed
+         * @param headersList   HTTP headers of the request that has generated the Content
          * @param quickDownload True if the present call has been triggered by a quick download action
          */
         void processContent(@Nonnull Content content, @Nonnull List<Pair<String, String>> headersList, boolean quickDownload) {
@@ -1146,8 +1153,9 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
 
         /**
          * Remove nodes from the HTML document contained in the given stream, using a list of CSS selectors to identify them
-         * @param stream Stream containing the HTML document to process
-         * @param baseUri Base URI if the document
+         *
+         * @param stream        Stream containing the HTML document to process
+         * @param baseUri       Base URI if the document
          * @param dirtyElements CSS selectors of the nodes to remove
          * @return Stream containing the HTML document stripped from the elements to remove
          */
@@ -1171,6 +1179,7 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
     /**
      * Indicate if the browser's back list contains a book gallery
      * Used to determine the display of the "back to latest gallery" button
+     *
      * @param backForwardList Back list to examine
      * @return Index of the latest book gallery in the list; -1 if none has been detected
      */
@@ -1184,6 +1193,7 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
 
     /**
      * Format the message to display for the given source alert
+     *
      * @param alert Source alert
      * @return Message to be displayed for the user for the given source alert
      */

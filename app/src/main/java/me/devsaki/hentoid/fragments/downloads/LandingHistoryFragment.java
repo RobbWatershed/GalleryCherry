@@ -148,6 +148,6 @@ public class LandingHistoryFragment extends Fragment {
         Content content = new Content();
         content.setSite(Site.REDDIT);
         content.setUrl(completeUrl);
-        ContentHelper.viewContent(requireContext(), content, true);
+        ContentHelper.viewContentGalleryPage(requireContext(), content, true);
     }
 }

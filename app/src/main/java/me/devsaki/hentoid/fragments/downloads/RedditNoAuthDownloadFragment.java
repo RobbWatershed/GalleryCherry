@@ -70,6 +70,6 @@ public class RedditNoAuthDownloadFragment extends Fragment {
         Content content = new Content();
         content.setSite(Site.REDDIT);
         content.setUrl(authUrl);
-        ContentHelper.viewContent(requireContext(), content, true);
+        ContentHelper.viewContentGalleryPage(requireContext(), content, true);
     }
 }

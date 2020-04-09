@@ -35,7 +35,7 @@ import static java.lang.String.format;
 public class SearchActivity extends BaseActivity {
 
     private TextView tagTypeButton;
-    private TextView modelCategoryText;
+    private TextView modelTypeButton;
     private TextView sourceTypeButton;
 
 
@@ -101,8 +101,8 @@ public class SearchActivity extends BaseActivity {
         tagTypeButton = findViewById(R.id.textCategoryTag);
         tagTypeButton.setOnClickListener(v -> onAttrButtonClick(AttributeType.TAG));
 
-        modelCategoryText = findViewById(R.id.textCategoryModel);
-        modelCategoryText.setOnClickListener(v -> onAttrButtonClick(AttributeType.MODEL));
+        modelTypeButton = findViewById(R.id.textCategoryModel);
+        modelTypeButton.setOnClickListener(v -> onAttrButtonClick(AttributeType.MODEL));
 
         sourceTypeButton = findViewById(R.id.textCategorySource);
         sourceTypeButton.setOnClickListener(v -> onAttrButtonClick(AttributeType.SOURCE));
@@ -139,9 +139,9 @@ public class SearchActivity extends BaseActivity {
      * @param attrCount Entry count in every attribute type (key = attribute type code; value = count)
      */
     private void onQueryUpdated(@NonNull final SparseIntArray attrCount) {
-        updateCategoryButton(tagCategoryText, attrCount, AttributeType.TAG);
-        updateCategoryButton(modelCategoryText, attrCount, AttributeType.MODEL);
-        updateCategoryButton(sourceCategoryText, attrCount, AttributeType.SOURCE);
+        updateAttributeTypeButton(tagTypeButton, attrCount, AttributeType.TAG);
+        updateAttributeTypeButton(modelTypeButton, attrCount, AttributeType.MODEL);
+        updateAttributeTypeButton(sourceTypeButton, attrCount, AttributeType.SOURCE);
     }
 
     /**

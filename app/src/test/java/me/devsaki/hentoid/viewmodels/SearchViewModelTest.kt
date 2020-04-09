@@ -40,10 +40,10 @@ class SearchViewModelTest : AbstractObjectBoxTest() {
             attrs3.add(Attribute(AttributeType.LANGUAGE, "english"))
 
             mockObjectBoxDAO = ObjectBoxDAO(store)
-            mockObjectBoxDAO.insertContent(Content().setTitle("").setStatus(StatusContent.DOWNLOADED).setSite(Site.ASMHENTAI).addAttributes(attrs1))
-            mockObjectBoxDAO.insertContent(Content().setTitle("").setStatus(StatusContent.DOWNLOADED).setSite(Site.HITOMI).addAttributes(attrs1))
-            mockObjectBoxDAO.insertContent(Content().setTitle("").setStatus(StatusContent.DOWNLOADED).setSite(Site.ASMHENTAI).addAttributes(attrs2))
-            mockObjectBoxDAO.insertContent(Content().setTitle("").setStatus(StatusContent.ONLINE).setSite(Site.HITOMI).addAttributes(attrs3))
+            mockObjectBoxDAO.insertContent(Content().setTitle("").setStatus(StatusContent.DOWNLOADED).setSite(Site.HELLPORNO).addAttributes(attrs1))
+            mockObjectBoxDAO.insertContent(Content().setTitle("").setStatus(StatusContent.DOWNLOADED).setSite(Site.XHAMSTER).addAttributes(attrs1))
+            mockObjectBoxDAO.insertContent(Content().setTitle("").setStatus(StatusContent.DOWNLOADED).setSite(Site.HELLPORNO).addAttributes(attrs2))
+            mockObjectBoxDAO.insertContent(Content().setTitle("").setStatus(StatusContent.ONLINE).setSite(Site.XHAMSTER).addAttributes(attrs3))
         }
     }
 
