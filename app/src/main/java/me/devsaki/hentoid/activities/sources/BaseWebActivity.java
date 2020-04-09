@@ -457,7 +457,7 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
 
                 if (url != null && !url.isEmpty() && webClient.isBookGallery(url)) {
                     // Launch on a new thread to avoid crashes
-                    webClient.parseResponseAsync(url);
+                    webClient.parseResponseAsync(url, true);
                     return true;
                 } else {
                     return false;
@@ -933,7 +933,8 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
             isPageLoading = false;
             // Specific to Cherry : due to redirections, the correct page URLs are those visible from onPageFinished
 //Timber.i(">> onPageFinished %s %s", isHtmlLoaded, url);
-            if (isBookGallery(url) && !isHtmlLoaded) parseResponse(url, null, true, false);
+            // Launch on a new thread to avoid crashes
+            if (isBookGallery(url) && !isHtmlLoaded) parseResponseAsync(url, false);
             isHtmlLoaded = false; // Reset for the next page
             refreshStopMenu.setIcon(R.drawable.ic_action_refresh);
             refreshNavigationMenu();
@@ -1007,9 +1008,9 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
          *
          * @param urlStr URL of the page to parse
          */
-        void parseResponseAsync(@NonNull String urlStr) {
+        void parseResponseAsync(@NonNull String urlStr, boolean quickDownload) {
             compositeDisposable.add(
-                    Completable.fromCallable(() -> parseResponse(urlStr, null, true, true))
+                    Completable.fromCallable(() -> parseResponse(urlStr, null, true, quickDownload))
                             .subscribeOn(Schedulers.io())
                             .observeOn(AndroidSchedulers.mainThread())
                             .subscribe(() -> {
