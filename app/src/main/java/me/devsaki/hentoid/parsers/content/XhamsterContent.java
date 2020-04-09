@@ -23,7 +23,6 @@ public class XhamsterContent implements ContentParser {
 
     @Selector(value = "head meta[name='twitter:url']", attr = "content", defValue = "")
     private String galleryUrl;
-    // TODO retarget
     @Selector(value = "img.hidden-thumb-image", attr = "data-src", defValue = "")
     private List<String> thumbs;
     @Selector(value = ".page-title h1", defValue = "")
