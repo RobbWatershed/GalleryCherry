@@ -315,6 +315,11 @@ public class ObjectBoxDAO implements CollectionDAO {
         db.insertQueue(content.getId(), lastIndex);
     }
 
+    @Override
+    public void insertQueue(long contentId, int order) {
+        db.insertQueue(contentId, order);
+    }
+
     private List<Long> contentIdSearch(@Mode int mode, String filter, List<Attribute> metadata, int orderField, boolean orderDesc, boolean favouritesOnly) {
 
         if (Mode.SEARCH_CONTENT_MODULAR == mode) {

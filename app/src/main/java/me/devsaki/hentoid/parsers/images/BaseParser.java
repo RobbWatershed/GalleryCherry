@@ -2,21 +2,23 @@ package me.devsaki.hentoid.parsers.images;
 
 import android.webkit.URLUtil;
 
+import androidx.annotation.NonNull;
+
+import com.annimon.stream.Optional;
+
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 
-import com.annimon.stream.Optional;
 import java.io.IOException;
 import java.util.List;
 
-import androidx.annotation.NonNull;
 import javax.annotation.Nullable;
 
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.parsers.ParseHelper;
-import me.devsaki.hentoid.util.OkHttpClientSingleton;
+import me.devsaki.hentoid.util.network.OkHttpClientSingleton;
 import okhttp3.HttpUrl;
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;

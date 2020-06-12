@@ -3,13 +3,6 @@ package me.devsaki.hentoid.services;
 import android.annotation.SuppressLint;
 import android.app.IntentService;
 import android.content.Intent;
-import android.os.Build;
-import android.os.IBinder;
-import android.os.SystemClock;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
-import android.graphics.Rect;
 import android.net.Uri;
 import android.webkit.MimeTypeMap;
 
@@ -27,6 +20,8 @@ import com.android.volley.VolleyError;
 import com.annimon.stream.Stream;
 import com.crashlytics.android.Crashlytics;
 
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.threeten.bp.Instant;

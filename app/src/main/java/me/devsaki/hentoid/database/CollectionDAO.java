@@ -120,6 +120,8 @@ public interface CollectionDAO {
 
     void addContentToQueue(@NonNull final Content content, StatusContent targetImageStatus);
 
+    void insertQueue(long contentId, int order);
+
     void updateQueue(@NonNull List<QueueRecord> queue);
 
     void deleteQueue(@NonNull Content content);

@@ -1,7 +1,5 @@
 package me.devsaki.hentoid.util.network;
 
-import android.util.SparseArray;
-
 import java.io.IOException;
 import java.util.Hashtable;
 import java.util.Map;
@@ -17,7 +15,8 @@ import okhttp3.Request;
 /**
  * Manages a single instance of OkHttpClient per timeout delay
  */
-@SuppressWarnings("squid:S3077") // https://stackoverflow.com/questions/11639746/what-is-the-point-of-making-the-singleton-instance-volatile-while-using-double-l
+@SuppressWarnings("squid:S3077")
+// https://stackoverflow.com/questions/11639746/what-is-the-point-of-making-the-singleton-instance-volatile-while-using-double-l
 public class OkHttpClientSingleton {
 
     private static volatile Map<String, OkHttpClient> instance = new Hashtable<>();
@@ -31,7 +30,7 @@ public class OkHttpClientSingleton {
     }
 
     public static OkHttpClient getInstance(int timeoutMs) {
-        return getInstance(timeoutMs, OkHttpClientSingleton::onIntercept);
+        return getInstance(timeoutMs, OkHttpClientSingleton::rewriteUserAgentInterceptor);
     }
 
     public static OkHttpClient getInstance(int timeoutMs, Interceptor interceptor) {

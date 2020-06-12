@@ -162,8 +162,12 @@ public class FileHelper {
      * @param target The file.
      * @return FileOutputStream.
      */
-    private static OutputStream getOutputStream(@NonNull final File target) throws IOException {
+    public static OutputStream getOutputStream(@NonNull final File target) throws IOException {
         return FileUtils.openOutputStream(target);
+    }
+
+    public static InputStream getInputStream(@NonNull final File target) throws IOException {
+        return FileUtils.openInputStream(target);
     }
 
     public static OutputStream getOutputStream(@NonNull final Context context, @NonNull final DocumentFile target) throws IOException {

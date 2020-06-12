@@ -2,7 +2,7 @@ package me.devsaki.hentoid.retrofit;
 
 import io.reactivex.Single;
 import me.devsaki.hentoid.json.oauth2.Oauth2AccessToken;
-import me.devsaki.hentoid.util.OkHttpClientSingleton;
+import me.devsaki.hentoid.util.network.OkHttpClientSingleton;
 import retrofit2.Retrofit;
 import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
 import retrofit2.converter.moshi.MoshiConverterFactory;

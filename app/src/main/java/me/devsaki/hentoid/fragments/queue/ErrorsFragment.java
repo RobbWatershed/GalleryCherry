@@ -40,7 +40,6 @@ import io.reactivex.disposables.CompositeDisposable;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.activities.QueueActivity;
 import me.devsaki.hentoid.database.domains.Content;
-import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.fragments.library.ErrorsDialogFragment;
 import me.devsaki.hentoid.services.ContentQueueManager;
@@ -392,11 +391,7 @@ public class ErrorsFragment extends Fragment implements ItemTouchCallback, Simpl
         for (ContentItem ci : selectedItems) {
             Content c = ci.getContent();
             if (null == c) continue;
-            if (c.getSite().equals(Site.FAKKU2) || c.getSite().equals(Site.EXHENTAI)) {
-                securedContent++;
-            } else {
-                contents.add(c);
-            }
+            contents.add(c);
         }
 
         String message = getResources().getQuantityString(R.plurals.redownload_confirm, contents.size());

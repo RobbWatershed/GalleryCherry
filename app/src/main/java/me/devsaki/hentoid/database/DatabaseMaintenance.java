@@ -7,7 +7,6 @@ import androidx.annotation.NonNull;
 import java.util.List;
 
 import me.devsaki.hentoid.database.domains.Content;
-import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.enums.StatusContent;
 import timber.log.Timber;
 
@@ -55,59 +54,5 @@ public class DatabaseMaintenance {
         for (Content c : contents) db.deleteContent(c);
         Timber.i("Clearing temporary books : done");
 
-        // Update URLs from deprecated Pururin image hosts
-        Timber.i("Upgrading Pururin image hosts : start");
-        contents = db.selectContentWithOldPururinHost();
-        Timber.i("Upgrading Pururin image hosts : %s books detected", contents.size());
-        for (Content c : contents) {
-            c.setCoverImageUrl(c.getCoverImageUrl().replace("api.pururin.io/images/", "cdn.pururin.io/assets/images/data/"));
-            if (c.getImageFiles() != null)
-                for (ImageFile i : c.getImageFiles()) {
-                    db.updateImageFileUrl(i.setUrl(i.getUrl().replace("api.pururin.io/images/", "cdn.pururin.io/assets/images/data/")));
-                }
-            db.insertContent(c);
-        }
-        Timber.i("Upgrading Pururin image hosts : done");
-
-        // Update URLs from deprecated Tsumino image covers
-        Timber.i("Upgrading Tsumino covers : start");
-        contents = db.selectContentWithOldTsuminoCovers();
-        Timber.i("Upgrading Tsumino covers : %s books detected", contents.size());
-        for (Content c : contents) {
-            String url = c.getCoverImageUrl().replace("www.tsumino.com/Image/Thumb", "content.tsumino.com/thumbs");
-            if (!url.endsWith("/1")) url += "/1";
-            c.setCoverImageUrl(url);
-            db.insertContent(c);
-        }
-        Timber.i("Upgrading Tsumino covers : done");
-    }
-
-    /**
-     * Handles complex DB version updates at startup
-     */
-    @SuppressWarnings({"deprecation", "squid:CallToDeprecatedMethod"})
-    public static void performOldDatabaseUpdate(@NonNull HentoidDB db) {
-        // Migrate the old download queue (books in DOWNLOADING or PAUSED status) in the queue table (since versionCode 60 / v1.3.7)
-        // Gets books that should be in the queue but aren't
-        List<Integer> contentToMigrate = db.selectContentsForQueueMigration();
-
-        if (!contentToMigrate.isEmpty()) {
-            // Gets last index of the queue
-            List<Pair<Integer, Integer>> queue = db.selectQueue();
-            int lastIndex = 1;
-            if (!queue.isEmpty()) {
-                lastIndex = queue.get(queue.size() - 1).second + 1;
-            }
-
-            for (int i : contentToMigrate) {
-                db.insertQueue(i, lastIndex++);
-            }
-        }
-    }
-
-    @SuppressWarnings({"deprecation", "squid:CallToDeprecatedMethod"})
-    public static boolean hasToMigrate(@NonNull Context context) {
-        HentoidDB oldDb = HentoidDB.getInstance(context);
-        return (oldDb.countContentEntries() > 0);
     }
 }

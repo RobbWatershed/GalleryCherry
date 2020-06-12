@@ -28,10 +28,13 @@ import me.devsaki.hentoid.activities.bundles.ImportActivityBundle;
 import me.devsaki.hentoid.database.CollectionDAO;
 import me.devsaki.hentoid.database.ObjectBoxDAO;
 import me.devsaki.hentoid.database.domains.Content;
+import me.devsaki.hentoid.database.domains.ImageFile;
+import me.devsaki.hentoid.database.domains.QueueRecord;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.events.ProcessEvent;
 import me.devsaki.hentoid.json.JsonContent;
+import me.devsaki.hentoid.json.JsonContentCollection;
 import me.devsaki.hentoid.notification.import_.ImportCompleteNotification;
 import me.devsaki.hentoid.notification.import_.ImportProgressNotification;
 import me.devsaki.hentoid.notification.import_.ImportStartNotification;
@@ -394,7 +397,7 @@ public class ImportService extends IntentService {
         DocumentFile file = FileHelper.findFile(this, folder, client, Consts.JSON_FILE_NAME_V2);
         if (file != null) return importJsonV2(file, folder);
 
-        Timber.w("Book folder %s : no JSON file found !", folder.getAbsolutePath());
+        Timber.w("Book folder %s : no JSON file found !", folder.getUri());
 
         return null;
     }

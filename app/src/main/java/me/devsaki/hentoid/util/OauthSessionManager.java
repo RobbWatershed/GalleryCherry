@@ -62,14 +62,14 @@ public class OauthSessionManager {
 
     /**
      * Save the Oauth session to the app's internal storage
+     *
      * @param context Context to be used
      * @param session Session to be saved
      */
     public void saveSession(Context context, OauthSession session) {
         File file = getSessionFile(context, session.getHost());
         try (OutputStream output = FileHelper.getOutputStream(file)) {
-            if (output != null) JsonHelper.updateJson(session, OauthSession.class, output);
-            else Timber.w("JSON file creation failed for %s", file.getPath());
+            JsonHelper.updateJson(session, OauthSession.class, output);
         } catch (IOException e) {
             Timber.e(e);
         }
@@ -77,8 +77,9 @@ public class OauthSessionManager {
 
     /**
      * Get the Oauth session from the app's internal storage
+     *
      * @param context Context to be used
-     * @param host Host the session belongs to
+     * @param host    Host the session belongs to
      * @return Oauth session from the given host; null if no such session exists
      */
     @Nullable

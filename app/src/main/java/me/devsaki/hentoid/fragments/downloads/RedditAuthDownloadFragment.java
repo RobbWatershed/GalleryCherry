@@ -19,7 +19,8 @@ import java.util.List;
 import io.reactivex.disposables.CompositeDisposable;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.activities.QueueActivity;
-import me.devsaki.hentoid.database.ObjectBoxDB;
+import me.devsaki.hentoid.database.CollectionDAO;
+import me.devsaki.hentoid.database.ObjectBoxDAO;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.database.domains.QueueRecord;
@@ -29,8 +30,8 @@ import me.devsaki.hentoid.parsers.ParseHelper;
 import me.devsaki.hentoid.retrofit.RedditOAuthApiServer;
 import me.devsaki.hentoid.services.ContentQueueManager;
 import me.devsaki.hentoid.util.Helper;
-import me.devsaki.hentoid.util.HttpHelper;
 import me.devsaki.hentoid.util.OauthSessionManager;
+import me.devsaki.hentoid.util.network.HttpHelper;
 import timber.log.Timber;
 
 import static androidx.core.view.ViewCompat.requireViewById;
@@ -43,7 +44,7 @@ public class RedditAuthDownloadFragment extends Fragment {
 
     private Content currentContent = null;
     private List<ImageFile> imageSet = null;
-    private ObjectBoxDB db = null;
+    private CollectionDAO db = null;
 
 
     static RedditAuthDownloadFragment newInstance() {
@@ -104,9 +105,10 @@ public class RedditAuthDownloadFragment extends Fragment {
 
         int newImageNumber = 0;
 
-        db = ObjectBoxDB.getInstance(requireContext());
+        db = new ObjectBoxDAO(requireContext());
         Content contentDB = db.selectContentBySourceAndUrl(Site.REDDIT, "");
-        List<ImageFile> newImages = ParseHelper.urlsToImageFiles(savedUrls, StatusContent.SAVED);
+        String coverUrl = savedUrls.isEmpty() ? "" : savedUrls.get(0);
+        List<ImageFile> newImages = ParseHelper.urlsToImageFiles(savedUrls, coverUrl, StatusContent.SAVED);
 
         if (null == contentDB) {    // The book has just been detected -> finalize before saving in DB
             currentContent = new Content().setSite(Site.REDDIT).setUrl("").setTitle("Reddit");

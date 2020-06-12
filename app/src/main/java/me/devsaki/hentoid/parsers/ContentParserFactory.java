@@ -3,7 +3,6 @@ package me.devsaki.hentoid.parsers;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.parsers.content.HellpornoContent;
 import me.devsaki.hentoid.parsers.content.JjgirlsContent;
-import me.devsaki.hentoid.parsers.content.Hentai2ReadContent;
 import me.devsaki.hentoid.parsers.content.JpegworldContent;
 import me.devsaki.hentoid.parsers.content.NextpicturezContent;
 import me.devsaki.hentoid.parsers.content.PornPicsContent;
