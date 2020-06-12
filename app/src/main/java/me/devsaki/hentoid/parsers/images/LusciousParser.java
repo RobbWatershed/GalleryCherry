@@ -2,6 +2,8 @@ package me.devsaki.hentoid.parsers.images;
 
 import androidx.annotation.NonNull;
 
+import com.annimon.stream.Optional;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -11,6 +13,7 @@ import java.util.Random;
 
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.ImageFile;
+import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.json.sources.LusciousGalleryMetadata;
 import me.devsaki.hentoid.retrofit.sources.LusciousServer;
 import retrofit2.Response;
@@ -23,6 +26,7 @@ public class LusciousParser implements ImageListParser {
     public List<ImageFile> parseImageList(@NonNull Content content) {
         List<ImageFile> result = new ArrayList<>();
 
+        result.add(ImageFile.newCover(content.getCoverImageUrl(), StatusContent.SAVED));
         getPages(content, content.getUniqueSiteId(), 1, result);
 
         progress.complete();
@@ -63,8 +67,8 @@ public class LusciousParser implements ImageListParser {
         }
     }
 
-    public ImageFile parseBackupUrl(@NonNull String url, int order, int maxPages) {
+    public Optional<ImageFile> parseBackupUrl(@NonNull String url, int order, int maxPages) {
         // This class does not use backup URLs
-        return null;
+        return Optional.of(new ImageFile(order, url, StatusContent.SAVED, maxPages));
     }
 }

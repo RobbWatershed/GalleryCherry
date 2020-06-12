@@ -2,8 +2,9 @@ package me.devsaki.hentoid.util;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.preference.PreferenceManager;
 import android.text.TextUtils;
+
+import androidx.preference.PreferenceManager;
 
 import com.annimon.stream.Stream;
 
@@ -45,6 +46,7 @@ public final class Preferences {
         }
     }
 
+    @SuppressWarnings({"deprecation", "squid:CallToDeprecatedMethod"})
     public static void performHousekeeping() {
         // Fling factor -> Swipe to fling (v1.9.0)
         if (sharedPreferences.contains(Key.PREF_VIEWER_FLING_FACTOR)) {
@@ -76,6 +78,58 @@ public final class Preferences {
             int colorTheme = (0 == darkMode) ? Constant.COLOR_THEME_LIGHT : Constant.COLOR_THEME_DARK;
             sharedPreferences.edit().putString(Key.PREF_COLOR_THEME, colorTheme + "").apply();
             sharedPreferences.edit().remove(Key.DARK_MODE).apply();
+        }
+
+        if (sharedPreferences.contains(Key.PREF_ORDER_CONTENT_LISTS)) {
+            int field = 0;
+            boolean isDesc = false;
+
+            switch (sharedPreferences.getInt(Key.PREF_ORDER_CONTENT_LISTS, Constant.ORDER_CONTENT_TITLE_ALPHA)) {
+                case (Constant.ORDER_CONTENT_TITLE_ALPHA):
+                    field = Constant.ORDER_FIELD_TITLE;
+                    break;
+                case (Constant.ORDER_CONTENT_TITLE_ALPHA_INVERTED):
+                    field = Constant.ORDER_FIELD_TITLE;
+                    isDesc = true;
+                    break;
+                case (Constant.ORDER_CONTENT_LAST_DL_DATE_FIRST):
+                    field = Constant.ORDER_FIELD_DOWNLOAD_DATE;
+                    isDesc = true;
+                    break;
+                case (Constant.ORDER_CONTENT_LAST_DL_DATE_LAST):
+                    field = Constant.ORDER_FIELD_DOWNLOAD_DATE;
+                    break;
+                case (Constant.ORDER_CONTENT_RANDOM):
+                    field = Constant.ORDER_FIELD_RANDOM;
+                    break;
+                case (Constant.ORDER_CONTENT_LAST_UL_DATE_FIRST):
+                    field = Constant.ORDER_FIELD_UPLOAD_DATE;
+                    isDesc = true;
+                    break;
+                case (Constant.ORDER_CONTENT_LEAST_READ):
+                    field = Constant.ORDER_FIELD_READS;
+                    break;
+                case (Constant.ORDER_CONTENT_MOST_READ):
+                    field = Constant.ORDER_FIELD_READS;
+                    isDesc = true;
+                    break;
+                case (Constant.ORDER_CONTENT_LAST_READ):
+                    field = Constant.ORDER_FIELD_READ_DATE;
+                    isDesc = true;
+                    break;
+                case (Constant.ORDER_CONTENT_PAGES_DESC):
+                    field = Constant.ORDER_FIELD_NB_PAGES;
+                    isDesc = true;
+                    break;
+                case (Constant.ORDER_CONTENT_PAGES_ASC):
+                    field = Constant.ORDER_FIELD_NB_PAGES;
+                    break;
+                default:
+                    // Nothing there
+            }
+            sharedPreferences.edit().putInt(Key.PREF_ORDER_CONTENT_FIELD, field).apply();
+            sharedPreferences.edit().putBoolean(Key.PREF_ORDER_CONTENT_DESC, isDesc).apply();
+            sharedPreferences.edit().remove(Key.PREF_ORDER_CONTENT_LISTS).apply();
         }
     }
 
@@ -115,13 +169,27 @@ public final class Preferences {
                 .apply();
     }
 
-    public static int getContentSortOrder() {
-        return sharedPreferences.getInt(Key.PREF_ORDER_CONTENT_LISTS, Default.PREF_ORDER_CONTENT_DEFAULT);
+    public static String getSettingsFolder() {
+        return sharedPreferences.getString(Key.PREF_SETTINGS_FOLDER, "");
     }
 
-    public static void setContentSortOrder(int sortOrder) {
+    public static int getContentSortField() {
+        return sharedPreferences.getInt(Key.PREF_ORDER_CONTENT_FIELD, Default.PREF_ORDER_CONTENT_FIELD);
+    }
+
+    public static void setContentSortField(int sortField) {
         sharedPreferences.edit()
-                .putInt(Key.PREF_ORDER_CONTENT_LISTS, sortOrder)
+                .putInt(Key.PREF_ORDER_CONTENT_FIELD, sortField)
+                .apply();
+    }
+
+    public static boolean isContentSortDesc() {
+        return sharedPreferences.getBoolean(Key.PREF_ORDER_CONTENT_DESC, Default.PREF_ORDER_CONTENT_DESC);
+    }
+
+    public static void setContentSortDesc(boolean isDesc) {
+        sharedPreferences.edit()
+                .putBoolean(Key.PREF_ORDER_CONTENT_DESC, isDesc)
                 .apply();
     }
 
@@ -152,11 +220,11 @@ public final class Preferences {
         return sharedPreferences.getBoolean(Key.PREF_APP_PREVIEW, BuildConfig.DEBUG);
     }
 
-    public static String getSdStorageUri() {
+    public static String getStorageUri() {
         return sharedPreferences.getString(Key.PREF_SD_STORAGE_URI, "");
     }
 
-    static void setSdStorageUri(String uri) {
+    static void setStorageUri(String uri) {
         sharedPreferences.edit()
                 .putString(Key.PREF_SD_STORAGE_URI, uri)
                 .apply();
@@ -166,16 +234,6 @@ public final class Preferences {
         return Integer.parseInt(
                 sharedPreferences.getString(Key.PREF_FOLDER_NAMING_CONTENT_LISTS,
                         Default.PREF_FOLDER_NAMING_CONTENT_DEFAULT + "") + "");
-    }
-
-    public static String getRootFolderName() {
-        return sharedPreferences.getString(Key.PREF_SETTINGS_FOLDER, "");
-    }
-
-    static boolean setRootFolderName(String rootFolderName) {
-        return sharedPreferences.edit()
-                .putString(Key.PREF_SETTINGS_FOLDER, rootFolderName)
-                .commit();
     }
 
     public static int getWebViewInitialZoom() {
@@ -320,6 +378,18 @@ public final class Preferences {
         return sharedPreferences.getBoolean(Key.PREF_QUEUE_AUTOSTART, Default.PREF_QUEUE_AUTOSTART);
     }
 
+    public static boolean isQueueWifiOnly() {
+        return sharedPreferences.getBoolean(Key.PREF_QUEUE_WIFI_ONLY, Default.PREF_QUEUE_WIFI_ONLY);
+    }
+
+    public static boolean isDownloadLargeOnlyWifi() {
+        return sharedPreferences.getBoolean(Key.PREF_DL_SIZE_WIFI, Default.PREF_DL_SIZE_WIFI);
+    }
+
+    public static int getDownloadLargeOnlyWifiThreshold() {
+        return Integer.parseInt(sharedPreferences.getString(Key.PREF_DL_SIZE_WIFI_THRESHOLD, Integer.toString(Default.PREF_DL_SIZE_WIFI_THRESHOLD)) + "");
+    }
+
     public static boolean isDlRetriesActive() {
         return sharedPreferences.getBoolean(Key.PREF_DL_RETRIES_ACTIVE, Default.PREF_DL_RETRIES_ACTIVE);
     }
@@ -394,10 +464,14 @@ public final class Preferences {
         static final String PREF_CHECK_UPDATES = "pref_check_updates";
         public static final String PREF_CHECK_UPDATE_MANUAL = "pref_check_updates_manual";
         public static final String PREF_REFRESH_LIBRARY = "pref_refresh_bookshelf";
+        public static final String DELETE_ALL_EXCEPT_FAVS = "pref_delete_all_except_favs";
+        public static final String EXPORT_LIBRARY = "pref_export_library";
+        public static final String IMPORT_LIBRARY = "pref_import_library";
         static final String PREF_WELCOME_DONE = "pref_welcome_done";
         static final String PREFS_VERSION_KEY = "prefs_version";
         static final String PREF_QUANTITY_PER_PAGE_LISTS = "pref_quantity_per_page_lists";
-        static final String PREF_ORDER_CONTENT_LISTS = "pref_order_content_lists";
+        static final String PREF_ORDER_CONTENT_FIELD = "pref_order_content_field";
+        static final String PREF_ORDER_CONTENT_DESC = "pref_order_content_desc";
         static final String PREF_ORDER_ATTRIBUTE_LISTS = "pref_order_attribute_lists";
         static final String PREF_FIRST_RUN = "pref_first_run";
         public static final String PREF_ENDLESS_SCROLL = "pref_endless_scroll";
@@ -432,6 +506,9 @@ public final class Preferences {
         static final String LAST_KNOWN_APP_VERSION_CODE = "last_known_app_version_code";
         public static final String PREF_COLOR_THEME = "pref_color_theme";
         static final String PREF_QUEUE_AUTOSTART = "pref_queue_autostart";
+        static final String PREF_QUEUE_WIFI_ONLY = "pref_queue_wifi_only";
+        static final String PREF_DL_SIZE_WIFI = "pref_dl_size_wifi";
+        static final String PREF_DL_SIZE_WIFI_THRESHOLD = "pref_dl_size_wifi_threshold";
         static final String PREF_DL_RETRIES_ACTIVE = "pref_dl_retries_active";
         static final String PREF_DL_RETRIES_NUMBER = "pref_dl_retries_number";
         static final String PREF_DL_RETRIES_MEM_LIMIT = "pref_dl_retries_mem_limit";
@@ -441,12 +518,13 @@ public final class Preferences {
         static final String PREF_LOCK_ON_APP_RESTORE = "pref_lock_on_app_restore";
         static final String PREF_LOCK_TIMER = "pref_lock_timer";
 
-        //Keys that were removed from the app, kept for housekeeping
+        // Deprecated values kept for housekeeping/migration
         static final String PREF_ANALYTICS_TRACKING = "pref_analytics_tracking";
         static final String PREF_HIDE_RECENT = "pref_hide_recent";
         static final String PREF_VIEWER_FLING_FACTOR = "pref_viewer_fling_factor";
         static final String PREF_CHECK_UPDATES_LISTS = "pref_check_updates_lists";
         static final String DARK_MODE = "pref_dark_mode";
+        static final String PREF_ORDER_CONTENT_LISTS = "pref_order_content_lists";
     }
 
     // IMPORTANT : Any default value change must be mirrored in res/values/strings_settings.xml
@@ -457,7 +535,8 @@ public final class Preferences {
         }
 
         static final int PREF_QUANTITY_PER_PAGE_DEFAULT = 20;
-        static final int PREF_ORDER_CONTENT_DEFAULT = Constant.ORDER_CONTENT_TITLE_ALPHA;
+        static final int PREF_ORDER_CONTENT_FIELD = Constant.ORDER_FIELD_TITLE;
+        static final boolean PREF_ORDER_CONTENT_DESC = false;
         static final int PREF_ORDER_ATTRIBUTES_DEFAULT = Constant.ORDER_ATTRIBUTES_COUNT;
         static final boolean PREF_FIRST_RUN_DEFAULT = true;
         static final boolean PREF_ENDLESS_SCROLL_DEFAULT = true;
@@ -490,6 +569,9 @@ public final class Preferences {
         static final boolean PREF_VIEWER_AUTO_ROTATE = false;
         static final int PREF_COLOR_THEME = Constant.COLOR_THEME_LIGHT;
         static final boolean PREF_QUEUE_AUTOSTART = true;
+        static final boolean PREF_QUEUE_WIFI_ONLY = false;
+        static final boolean PREF_DL_SIZE_WIFI = false;
+        static final int PREF_DL_SIZE_WIFI_THRESHOLD = 40;
         static final boolean PREF_DL_RETRIES_ACTIVE = false;
         static final int PREF_DL_RETRIES_NUMBER = 3;
         static final int PREF_DL_RETRIES_MEM_LIMIT = 100;
@@ -510,19 +592,20 @@ public final class Preferences {
         }
 
         public static final int DOWNLOAD_THREAD_COUNT_AUTO = 0;
+
         public static final int ORDER_CONTENT_FAVOURITE = -2; // Artificial order created for clarity purposes
-        public static final int ORDER_CONTENT_NONE = -1;
-        public static final int ORDER_CONTENT_TITLE_ALPHA = 0;
-        public static final int ORDER_CONTENT_LAST_DL_DATE_FIRST = 1;
-        public static final int ORDER_CONTENT_TITLE_ALPHA_INVERTED = 2;
-        public static final int ORDER_CONTENT_LAST_DL_DATE_LAST = 3;
-        public static final int ORDER_CONTENT_RANDOM = 4;
-        public static final int ORDER_CONTENT_LAST_UL_DATE_FIRST = 5;
-        public static final int ORDER_CONTENT_LEAST_READ = 6;
-        public static final int ORDER_CONTENT_MOST_READ = 7;
-        public static final int ORDER_CONTENT_LAST_READ = 8;
-        public static final int ORDER_CONTENT_PAGES_DESC = 9;
-        public static final int ORDER_CONTENT_PAGES_ASC = 10;
+
+        public static final int ORDER_FIELD_NONE = -1;
+        public static final int ORDER_FIELD_TITLE = 0;
+        public static final int ORDER_FIELD_ARTIST = 1; // Not implemented yet
+        public static final int ORDER_FIELD_NB_PAGES = 2;
+        public static final int ORDER_FIELD_DOWNLOAD_DATE = 3;
+        public static final int ORDER_FIELD_UPLOAD_DATE = 4;
+        public static final int ORDER_FIELD_READ_DATE = 5;
+        public static final int ORDER_FIELD_READS = 6;
+        public static final int ORDER_FIELD_SIZE = 7; // Not implemented yet
+        public static final int ORDER_FIELD_RANDOM = 99;
+
         public static final int ORDER_ATTRIBUTES_ALPHABETIC = 0;
         static final int ORDER_ATTRIBUTES_COUNT = 1;
         static final int PREF_FOLDER_NAMING_CONTENT_ID = 0;
@@ -561,5 +644,29 @@ public final class Preferences {
         public static final int PREF_LOCK_TIMER_30S = 2;
         public static final int PREF_LOCK_TIMER_1M = 3;
         public static final int PREF_LOCK_TIMER_2M = 4;
+
+        // Deprecated values kept for housekeeping/migration
+        @Deprecated
+        public static final int ORDER_CONTENT_TITLE_ALPHA = 0;
+        @Deprecated
+        public static final int ORDER_CONTENT_LAST_DL_DATE_FIRST = 1;
+        @Deprecated
+        public static final int ORDER_CONTENT_TITLE_ALPHA_INVERTED = 2;
+        @Deprecated
+        public static final int ORDER_CONTENT_LAST_DL_DATE_LAST = 3;
+        @Deprecated
+        public static final int ORDER_CONTENT_RANDOM = 4;
+        @Deprecated
+        public static final int ORDER_CONTENT_LAST_UL_DATE_FIRST = 5;
+        @Deprecated
+        public static final int ORDER_CONTENT_LEAST_READ = 6;
+        @Deprecated
+        public static final int ORDER_CONTENT_MOST_READ = 7;
+        @Deprecated
+        public static final int ORDER_CONTENT_LAST_READ = 8;
+        @Deprecated
+        public static final int ORDER_CONTENT_PAGES_DESC = 9;
+        @Deprecated
+        public static final int ORDER_CONTENT_PAGES_ASC = 10;
     }
 }

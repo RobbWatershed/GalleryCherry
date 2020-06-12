@@ -19,6 +19,7 @@ import android.net.Uri;
 import android.os.Handler;
 import android.os.Message;
 import android.provider.MediaStore;
+import android.renderscript.RenderScript;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
 import android.util.TypedValue;
@@ -31,10 +32,7 @@ import androidx.annotation.AnyThread;
 import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.WorkerThread;
 import androidx.exifinterface.media.ExifInterface;
-
-import org.apache.commons.lang3.tuple.ImmutablePair;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -202,6 +200,9 @@ public class CustomSubsamplingScaleImageView extends View {
 
     // Specifies if a cache handler is also referencing the bitmap. Do not recycle if so.
     private boolean bitmapIsCached;
+
+    // To signal the bitmap being currently loading and avoid freeing it
+    private boolean bitmapIsLoading;
 
     // Uri of full size image
     private Uri uri;
@@ -374,9 +375,10 @@ public class CustomSubsamplingScaleImageView extends View {
     private int screenHeight;
 
     private final CompositeDisposable loadDisposable = new CompositeDisposable();
+    private RenderScript rs;
 
 
-    public CustomSubsamplingScaleImageView(Context context, AttributeSet attr) {
+    public CustomSubsamplingScaleImageView(@NonNull Context context, @Nullable AttributeSet attr) {
         super(context, attr);
         density = getResources().getDisplayMetrics().density;
         screenWidth = context.getResources().getDisplayMetrics().widthPixels;
@@ -550,7 +552,7 @@ public class CustomSubsamplingScaleImageView extends View {
                 }
                 if (previewSourceUri != null) {
                     loadDisposable.add(
-                            Single.fromCallable(() -> bitmapDecoderFactory.make().decode(getContext(), uri))
+                            Single.fromCallable(() -> loadBitmap(getContext(), bitmapDecoderFactory, uri))
                                     .subscribeOn(Schedulers.io())
                                     .observeOn(Schedulers.computation())
                                     .map(b -> processBitmap(uri, getContext(), b, this, targetScale))
@@ -581,6 +583,7 @@ public class CustomSubsamplingScaleImageView extends View {
                 loadDisposable.add(
                         Single.fromCallable(() -> initTiles(this, getContext(), regionDecoderFactory, uri))
                                 .subscribeOn(Schedulers.computation())
+                                .filter(res -> res[0] > -1) // Remove invalid results
                                 .observeOn(AndroidSchedulers.mainThread())
                                 .subscribe(
                                         a -> onTilesInitialized(a[0], a[1], a[2]),
@@ -590,7 +593,7 @@ public class CustomSubsamplingScaleImageView extends View {
             } else {
                 // Load the bitmap as a single image.
                 loadDisposable.add(
-                        Single.fromCallable(() -> bitmapDecoderFactory.make().decode(getContext(), uri))
+                        Single.fromCallable(() -> loadBitmap(getContext(), bitmapDecoderFactory, uri))
                                 .subscribeOn(Schedulers.io())
                                 .observeOn(Schedulers.computation())
                                 .map(b -> processBitmap(uri, getContext(), b, this, targetScale))
@@ -645,7 +648,7 @@ public class CustomSubsamplingScaleImageView extends View {
             } finally {
                 decoderLock.writeLock().unlock();
             }
-            if (bitmap != null && !bitmapIsCached) {
+            if (bitmap != null && !bitmapIsCached && !bitmapIsLoading) {
                 bitmap.recycle();
             }
             if (bitmap != null && bitmapIsCached && onImageEventListener != null) {
@@ -658,15 +661,15 @@ public class CustomSubsamplingScaleImageView extends View {
             pRegion = null;
             readySent = false;
             imageLoadedSent = false;
-            bitmap = null;
             bitmapIsPreview = false;
             bitmapIsCached = false;
+            if (!bitmapIsLoading) bitmap = null;
         }
         if (tileMap != null) {
             for (Map.Entry<Integer, List<Tile>> tileMapEntry : tileMap.entrySet()) {
                 for (Tile tile : tileMapEntry.getValue()) {
                     tile.visible = false;
-                    if (tile.bitmap != null) {
+                    if (tile.bitmap != null && !tile.loading) {
                         tile.bitmap.recycle();
                         tile.bitmap = null;
                     }
@@ -1461,6 +1464,9 @@ public class CustomSubsamplingScaleImageView extends View {
     @SuppressLint("NewApi")
     private synchronized void initialiseBaseLayer(@NonNull Point maxTileDimensions) {
         debug("initialiseBaseLayer maxTileDimensions=%dx%d", maxTileDimensions.x, maxTileDimensions.y);
+        // null Uri's may happen when sliding fast, which causes views to be reset when recycled by the RecyclerView
+        // they reset faster than their initialization can process them, hence initialiseBaseLayer being called (e.g. through onDraw) _after_ recycle has been called
+        if (null == uri) return;
 
         satTemp = new ScaleAndTranslate(0f, new PointF(0, 0));
         fitToBounds(true, satTemp, new Point(sWidth(), sHeight()));
@@ -1480,11 +1486,11 @@ public class CustomSubsamplingScaleImageView extends View {
 
             // Whole image is required at native resolution, and is smaller than the canvas max bitmap size.
             // Use BitmapDecoder for better image support.
-            decoder.recycle();
+            if (decoder != null) decoder.recycle();
             decoder = null;
 
             loadDisposable.add(
-                    Single.fromCallable(() -> bitmapDecoderFactory.make().decode(getContext(), uri))
+                    Single.fromCallable(() -> loadBitmap(getContext(), bitmapDecoderFactory, uri))
                             .subscribeOn(Schedulers.io())
                             .observeOn(Schedulers.computation())
                             .map(b -> processBitmap(uri, getContext(), b, this, targetScale))
@@ -1504,9 +1510,9 @@ public class CustomSubsamplingScaleImageView extends View {
                                 .flatMap(tile -> Observable.just(tile)
                                         .observeOn(Schedulers.io())
                                         .map(tile2 -> loadTile(this, decoder, tile2))
-                                        .filter(res -> res.bitmap != null)
                                         .observeOn(Schedulers.computation())
-                                        .map(res -> processTile(res, this, targetScale))
+                                        .filter(tile3 -> tile3.bitmap != null && !tile3.bitmap.isRecycled())
+                                        .map(tile4 -> processTile(tile4, this, targetScale))
                                 )
                                 .observeOn(AndroidSchedulers.mainThread())
                                 .subscribe(
@@ -1540,7 +1546,7 @@ public class CustomSubsamplingScaleImageView extends View {
             for (Tile tile : tileMapEntry.getValue()) {
                 if (tile.sampleSize < sampleSize || (tile.sampleSize > sampleSize && tile.sampleSize != fullImageSampleSize)) {
                     tile.visible = false;
-                    if (tile.bitmap != null) {
+                    if (tile.bitmap != null && !tile.loading) {
                         tile.bitmap.recycle();
                         tile.bitmap = null;
                     }
@@ -1552,9 +1558,9 @@ public class CustomSubsamplingScaleImageView extends View {
                             loadDisposable.add(
                                     Single.fromCallable(() -> loadTile(this, decoder, tile))
                                             .subscribeOn(Schedulers.io())
-                                            .filter(res -> res.bitmap != null)
                                             .observeOn(Schedulers.computation())
-                                            .map(res -> processTile(res, this, scale))
+                                            .filter(res -> res.bitmap != null && !res.bitmap.isRecycled())
+                                            .map(res1 -> processTile(res1, this, scale))
                                             .observeOn(AndroidSchedulers.mainThread())
                                             .subscribe(
                                                     this::onTileLoaded,
@@ -1564,7 +1570,7 @@ public class CustomSubsamplingScaleImageView extends View {
                         }
                     } else if (tile.sampleSize != fullImageSampleSize) {
                         tile.visible = false;
-                        if (tile.bitmap != null) {
+                        if (tile.bitmap != null && !tile.loading) {
                             tile.bitmap.recycle();
                             tile.bitmap = null;
                         }
@@ -1817,12 +1823,12 @@ public class CustomSubsamplingScaleImageView extends View {
         }
     }
 
-    @WorkerThread
     private int[] initTiles(
             @NonNull CustomSubsamplingScaleImageView view,
             @NonNull Context context,
             @NonNull DecoderFactory<? extends ImageRegionDecoder> decoderFactory,
             @NonNull Uri source) throws Exception {
+        Helper.mustNotRunOnUiThread();
         String sourceUri = source.toString();
         view.debug("TilesInitTask.doInBackground");
         decoder = decoderFactory.make();
@@ -1830,7 +1836,7 @@ public class CustomSubsamplingScaleImageView extends View {
         int sWidthTile = dimensions.x;
         int sHeightTile = dimensions.y;
         int exifOrientation = view.getExifOrientation(context, sourceUri);
-        if (view.sRegion != null) {
+        if (sWidthTile > -1 && view.sRegion != null) {
             view.sRegion.left = Math.max(0, view.sRegion.left);
             view.sRegion.top = Math.max(0, view.sRegion.top);
             view.sRegion.right = Math.min(sWidthTile, view.sRegion.right);
@@ -1850,7 +1856,7 @@ public class CustomSubsamplingScaleImageView extends View {
         if (this.sWidth > 0 && this.sHeight > 0 && (this.sWidth != sWidth || this.sHeight != sHeight)) {
             reset(false);
             if (bitmap != null) {
-                if (!bitmapIsCached) {
+                if (!bitmapIsCached && !bitmapIsLoading) {
                     bitmap.recycle();
                 }
                 bitmap = null;
@@ -1873,11 +1879,11 @@ public class CustomSubsamplingScaleImageView extends View {
         requestLayout();
     }
 
-    @WorkerThread
     protected Tile loadTile(
             @NonNull CustomSubsamplingScaleImageView view,
             @NonNull ImageRegionDecoder decoder,
             @NonNull Tile tile) {
+        Helper.mustNotRunOnUiThread();
         if (decoder.isReady() && tile.visible) {
             view.decoderLock.readLock().lock();
             try {
@@ -1897,15 +1903,20 @@ public class CustomSubsamplingScaleImageView extends View {
         return tile;
     }
 
-    @WorkerThread
     protected Tile processTile(
             @NonNull Tile loadedTile,
             @NonNull CustomSubsamplingScaleImageView view,
             final float targetScale) {
+        Helper.mustNotRunOnUiThread();
 
-        ImmutablePair<Integer, Float> resizeParams = computeResizeParams(targetScale);
-        loadedTile.bitmap = ResizeBitmapHelper.successiveResize(loadedTile.bitmap, resizeParams.left);
-        //workingBitmap = ResizeBitmap.successiveResizeRS(rs, loadedTile.bitmap, resizeParams.left); <-- needs bitmaps decoded as ARGB_8888; demands more memory
+        // Take any prior subsampling into consideration _before_ processing the tile
+        // Don't use resize nice above 0.75%; classic bilinear resize does the job well with more sharpness to the picture
+        float resizeScale = targetScale * loadedTile.sampleSize;
+        if (rs != null && resizeScale < 0.75) {
+            loadedTile.bitmap = ResizeBitmapHelper.resizeNice(rs, loadedTile.bitmap, resizeScale, resizeScale);
+        } else if (null == rs) {
+            Timber.w("Cannot process images; RenderScript not set");
+        }
 
         loadedTile.loading = false;
         return loadedTile;
@@ -1918,7 +1929,7 @@ public class CustomSubsamplingScaleImageView extends View {
         checkReady();
         checkImageLoaded();
         if (isBaseLayerReady()) {
-            if (!bitmapIsCached && bitmap != null) {
+            if (!bitmapIsCached && bitmap != null && !bitmapIsLoading) {
                 bitmap.recycle();
             }
             bitmap = null;
@@ -1931,44 +1942,31 @@ public class CustomSubsamplingScaleImageView extends View {
         invalidate();
     }
 
-    @WorkerThread
+    private Bitmap loadBitmap(@NonNull Context context, @NonNull DecoderFactory<? extends ImageDecoder> factory, @NonNull Uri uri) throws Exception {
+        Helper.mustNotRunOnUiThread();
+        bitmapIsLoading = true;
+        return factory.make().decode(context, uri);
+    }
+
     private ProcessBitmapResult processBitmap(
             @NonNull final Uri source,
             @NonNull Context context,
             @NonNull Bitmap bitmap,
             @NonNull CustomSubsamplingScaleImageView view,
             final float targetScale) {
+        Helper.mustNotRunOnUiThread();
+        float useScale = targetScale;
 
-        ImmutablePair<Integer, Float> resizeParams = computeResizeParams(targetScale);
-        bitmap = ResizeBitmapHelper.successiveResize(bitmap, resizeParams.left);
-        //workingBitmap = ResizeBitmap.successiveResizeRS(rs, bitmap, resizeParams.left); <-- needs bitmaps decoded as ARGB_8888; demands more memory
-
-        return new ProcessBitmapResult(bitmap, view.getExifOrientation(context, source.toString()), resizeParams.right);
-    }
-
-    /**
-     * Compute resizing parameters according to the given target scale
-     * TODO can that algorithm be merged with calculateInSampleSize ?
-     *
-     * @param targetScale target scale of the image to display (% of the raw dimensions)
-     * @return Pair containing
-     *    - First : Number of half-resizes to perform (see {@link ResizeBitmapHelper})
-     *    - Second : New scale to use to display the resized image at the initial target zoom level
-     */
-    @WorkerThread
-    private ImmutablePair<Integer, Float> computeResizeParams(final float targetScale) {
-        float resultScale = targetScale;
-        int nbResize = 0;
-
-        // Resize when approaching the target scale by 1/3 because there may already be artifacts displayed at that point
-        // (seen with full-res pictures resized to 65% with Android's default bilinear filtering)
-        for (int i = 1; i < 10; i++) if (targetScale < Math.pow(0.5, i) * 1.33) nbResize++;
-
-        if (nbResize > 0) {
-            float newScale = (float) Math.pow(0.5, nbResize);
-            resultScale = resultScale / newScale;
+        // Don't use resize nice above 0.75%; classic bilinear resize does the job well with more sharpness to the picture
+        if (rs != null && targetScale < 0.75) {
+            bitmap = ResizeBitmapHelper.resizeNice(rs, bitmap, targetScale, targetScale);
+            useScale = 1f;
+        } else if (null == rs) {
+            Timber.w("Cannot process images; RenderScript not set");
         }
-        return new ImmutablePair<>(nbResize, resultScale);
+
+        bitmapIsLoading = false;
+        return new ProcessBitmapResult(bitmap, view.getExifOrientation(context, source.toString()), useScale);
     }
 
     /**
@@ -1985,7 +1983,7 @@ public class CustomSubsamplingScaleImageView extends View {
             orientation = ORIENTATION_90;
         else orientation = ORIENTATION_0;
 
-        if (this.bitmap != null && !this.bitmapIsCached) {
+        if (this.bitmap != null && !this.bitmapIsCached && !this.bitmapIsLoading) {
             this.bitmap.recycle();
         }
 
@@ -2084,7 +2082,7 @@ public class CustomSubsamplingScaleImageView extends View {
      * The goal is to align the picture's proportions with the phone screen's proportions
      * NB : The result of this method is independent from auto-rotate mode being enabled
      *
-     * @param sWidth Picture width
+     * @param sWidth  Picture width
      * @param sHeight Picture height
      * @return True if the picture needs to be rotated 90°
      */
@@ -3006,6 +3004,7 @@ public class CustomSubsamplingScaleImageView extends View {
 
     /**
      * Set the direction of the viewing (default : Horizontal)
+     *
      * @param direction Direction to set
      */
     public final void setDirection(@Direction int direction) {
@@ -3014,6 +3013,7 @@ public class CustomSubsamplingScaleImageView extends View {
 
     /**
      * Indicate if the image offset should be its left side (default : true)
+     *
      * @param offsetLeftSide True if the image offset is its left side; false for the right side
      */
     public final void setOffsetLeftSide(boolean offsetLeftSide) {
@@ -3023,7 +3023,7 @@ public class CustomSubsamplingScaleImageView extends View {
 
     /**
      * Enable auto-rotate mode (default : false)
-     *
+     * <p>
      * Auto-rotate chooses automatically the most fitting orientation so that the image occupies
      * most of the screen, according to its dimensions and the device's screen dimensions and
      * the device's orientation (see needsRotating method)
@@ -3032,6 +3032,10 @@ public class CustomSubsamplingScaleImageView extends View {
      */
     public final void setAutoRotate(boolean autoRotate) {
         this.autoRotate = autoRotate;
+    }
+
+    public final void setRenderScript(@NonNull RenderScript rs) {
+        this.rs = rs;
     }
 
     /**

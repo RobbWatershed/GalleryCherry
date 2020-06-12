@@ -4,6 +4,7 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.res.Configuration;
+import android.os.Looper;
 import android.util.DisplayMetrics;
 import android.webkit.WebSettings;
 
@@ -38,6 +39,8 @@ public final class Helper {
     private static final Pattern NUMERIC_PATTERN = Pattern.compile("-?\\d+(\\.\\d+)?");
 
     private static int DENSITY_DPI = -1;
+
+    private static FileHelper.NameFilter imageNamesFilter;
 
 
     public static String capitalizeString(String s) {
@@ -145,6 +148,12 @@ public final class Helper {
                 || extension.equalsIgnoreCase("webp");
     }
 
+    public static FileHelper.NameFilter getImageNamesFilter() {
+        if (null == imageNamesFilter)
+            imageNamesFilter = displayName -> Helper.isImageExtensionSupported(FileHelper.getExtension(displayName));
+        return imageNamesFilter;
+    }
+
     // https://stackoverflow.com/a/18603020/8374722
     public static String removeNonPrintableChars(@NonNull final String s) {
         StringBuilder newString = new StringBuilder(s.length());
@@ -189,5 +198,11 @@ public final class Helper {
             String version = defaultUserAgent.substring(chromeIndex + chromeString.length(), dotIndex);
             return Integer.parseInt(version);
         } else return -1;
+    }
+
+    public static void assertNonUiThread() {
+        if (Looper.getMainLooper().getThread() == Thread.currentThread()) {
+            throw new IllegalStateException("This should not be run on the UI thread");
+        }
     }
 }

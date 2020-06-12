@@ -8,6 +8,7 @@ import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.BitmapRegionDecoder;
+import android.graphics.ColorSpace;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.net.Uri;
@@ -18,6 +19,7 @@ import androidx.annotation.Keep;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 import java.util.concurrent.locks.Lock;
@@ -68,7 +70,7 @@ public class SkiaImageRegionDecoder implements ImageRegionDecoder {
 
     @Override
     @NonNull
-    public Point init(Context context, @NonNull Uri uri) throws Exception {
+    public Point init(Context context, @NonNull Uri uri) throws IOException, PackageManager.NameNotFoundException {
         String uriString = uri.toString();
         if (uriString.startsWith(RESOURCE_PREFIX)) {
             Resources res;
@@ -100,23 +102,14 @@ public class SkiaImageRegionDecoder implements ImageRegionDecoder {
         } else if (uriString.startsWith(FILE_PREFIX)) {
             decoder = BitmapRegionDecoder.newInstance(uriString.substring(FILE_PREFIX.length()), false);
         } else {
-            InputStream inputStream = null;
-            try {
-                ContentResolver contentResolver = context.getContentResolver();
-                inputStream = contentResolver.openInputStream(uri);
-                if (inputStream == null) {
-                    throw new Exception("Content resolver returned null stream. Unable to initialise with uri.");
-                }
-                decoder = BitmapRegionDecoder.newInstance(inputStream, false);
-            } finally {
-                if (inputStream != null) {
-                    try {
-                        inputStream.close();
-                    } catch (Exception e) { /* Ignore */ }
-                }
+            try (InputStream input = context.getContentResolver().openInputStream(uri)) {
+                if (input == null)
+                    throw new RuntimeException("Content resolver returned null stream. Unable to initialise with uri.");
+                decoder = BitmapRegionDecoder.newInstance(input, false);
             }
         }
-        return new Point(decoder.getWidth(), decoder.getHeight());
+        if (decoder != null && !decoder.isRecycled()) return new Point(decoder.getWidth(), decoder.getHeight());
+        else return new Point(-1, -1);
     }
 
     @Override
@@ -128,10 +121,16 @@ public class SkiaImageRegionDecoder implements ImageRegionDecoder {
                 BitmapFactory.Options options = new BitmapFactory.Options();
                 options.inSampleSize = sampleSize;
                 options.inPreferredConfig = bitmapConfig;
+                // If that is not set, some PNGs are read with a ColorSpace of code "Unknown" (-1),
+                // which makes resizing buggy (generates a black picture)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                    options.inPreferredColorSpace = ColorSpace.get(ColorSpace.Named.SRGB);
+
                 Bitmap bitmap = decoder.decodeRegion(sRect, options);
                 if (bitmap == null) {
                     throw new RuntimeException("Skia image decoder returned null bitmap - image format may not be supported");
                 }
+
                 return bitmap;
             } else {
                 throw new IllegalStateException("Cannot decode region after decoder has been recycled");
@@ -163,10 +162,6 @@ public class SkiaImageRegionDecoder implements ImageRegionDecoder {
      * use the write lock to enforce single threaded decoding.
      */
     private Lock getDecodeLock() {
-        if (Build.VERSION.SDK_INT < 21) {
-            return decoderLock.writeLock();
-        } else {
-            return decoderLock.readLock();
-        }
+        return decoderLock.readLock();
     }
 }

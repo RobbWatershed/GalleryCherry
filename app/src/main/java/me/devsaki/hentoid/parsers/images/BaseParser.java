@@ -5,6 +5,7 @@ import android.webkit.URLUtil;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 
+import com.annimon.stream.Optional;
 import java.io.IOException;
 import java.util.List;
 
@@ -61,15 +62,15 @@ public abstract class BaseParser implements ImageListParser {
         content.populateUniqueSiteId();
 
         List<String> imgUrls = parseImages(content);
-        List<ImageFile> images = ParseHelper.urlsToImageFiles(imgUrls, StatusContent.SAVED);
+        List<ImageFile> images = ParseHelper.urlsToImageFiles(imgUrls, content.getCoverImageUrl(), StatusContent.SAVED);
 
         Timber.d("%s", images);
 
         return images;
     }
 
-    public ImageFile parseBackupUrl(@NonNull String url, int order, int maxPages) {
-        return null;
+    public Optional<ImageFile> parseBackupUrl(@NonNull String url, int order, int maxPages) {
+        return Optional.of(new ImageFile(order, url, StatusContent.SAVED, maxPages));
     }
 
     void progressStart(int maxSteps) {

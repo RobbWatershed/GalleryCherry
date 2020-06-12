@@ -1,7 +1,6 @@
 package me.devsaki.hentoid.database;
 
 import android.content.Context;
-import android.util.Pair;
 
 import androidx.annotation.NonNull;
 
@@ -30,12 +29,6 @@ public class DatabaseMaintenance {
 
         // Perform functional data updates
         performDatabaseCleanups(db);
-
-        HentoidDB oldDb = HentoidDB.getInstance(context);
-        // Perform technical data updates on the old database engine
-        if (oldDb.countContentEntries() > 0) {
-            oldDb.updateContentStatus(StatusContent.DOWNLOADING, StatusContent.PAUSED);
-        }
     }
 
     private static void performDatabaseCleanups(@NonNull ObjectBoxDB db) {

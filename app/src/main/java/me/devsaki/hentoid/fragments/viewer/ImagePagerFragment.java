@@ -2,10 +2,10 @@ package me.devsaki.hentoid.fragments.viewer;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
-import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Point;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
@@ -20,6 +20,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.widget.Toolbar;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.LinearSmoothScroller;
@@ -50,13 +51,14 @@ import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.util.ThemeHelper;
 import me.devsaki.hentoid.util.ToastUtil;
 import me.devsaki.hentoid.viewmodels.ImageViewerViewModel;
+import me.devsaki.hentoid.viewmodels.ViewModelFactory;
 import me.devsaki.hentoid.views.ZoomableFrame;
 import me.devsaki.hentoid.views.ZoomableRecyclerView;
 import me.devsaki.hentoid.widget.OnZoneTapListener;
 import me.devsaki.hentoid.widget.PageSnapWidget;
 import me.devsaki.hentoid.widget.PrefetchLinearLayoutManager;
 import me.devsaki.hentoid.widget.ScrollPositionListener;
-import me.devsaki.hentoid.widget.VolumeGestureListener;
+import me.devsaki.hentoid.widget.VolumeKeyListener;
 import timber.log.Timber;
 
 import static androidx.core.view.ViewCompat.requireViewById;
@@ -123,12 +125,6 @@ public class ImagePagerFragment extends Fragment implements GoToPageDialogFragme
 
         Preferences.registerPrefsChangedListener(listener);
 
-        ((ImageViewerActivity) requireActivity()).registerKeyListener(
-                new VolumeGestureListener()
-                        .setOnVolumeDownListener(this::previousPage)
-                        .setOnVolumeUpListener(this::nextPage)
-                        .setOnBackListener(this::onBackClick));
-
         initPager(rootView);
         initControlsOverlay(rootView);
 
@@ -175,7 +171,8 @@ public class ImagePagerFragment extends Fragment implements GoToPageDialogFragme
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        viewModel = new ViewModelProvider(requireActivity()).get(ImageViewerViewModel.class);
+        ViewModelFactory vmFactory = new ViewModelFactory(requireActivity().getApplication());
+        viewModel = new ViewModelProvider(requireActivity(), vmFactory).get(ImageViewerViewModel.class);
 
         viewModel.onRestoreState(savedInstanceState);
 
@@ -217,6 +214,17 @@ public class ImagePagerFragment extends Fragment implements GoToPageDialogFragme
     }
 
     @Override
+    public void onStart() {
+        super.onStart();
+
+        ((ImageViewerActivity) requireActivity()).registerKeyListener(
+                new VolumeKeyListener()
+                        .setOnVolumeDownListener(this::previousPage)
+                        .setOnVolumeUpListener(this::nextPage)
+                        .setOnBackListener(this::onBackClick));
+    }
+
+    @Override
     public void onResume() {
         super.onResume();
 
@@ -232,12 +240,22 @@ public class ImagePagerFragment extends Fragment implements GoToPageDialogFragme
     public void onStop() {
         viewModel.onLeaveBook(imageIndex, highestImageIndexReached);
         if (slideshowTimer != null) slideshowTimer.dispose();
+        ((ImageViewerActivity) requireActivity()).unregisterKeyListener();
         super.onStop();
     }
 
+    @Override
+    public void onDestroy() {
+        Preferences.unregisterPrefsChangedListener(listener);
+        adapter.setRecyclerView(null);
+        adapter.destroy();
+        if (recyclerView != null) recyclerView.setAdapter(null);
+        recyclerView = null;
+        super.onDestroy();
+    }
 
     private void initPager(View rootView) {
-        adapter = new ImagePagerAdapter();
+        adapter = new ImagePagerAdapter(requireContext());
 
         zoomFrame = requireViewById(rootView, R.id.image_viewer_zoom_frame);
 
@@ -341,12 +359,6 @@ public class ImagePagerFragment extends Fragment implements GoToPageDialogFragme
         favouritesGalleryBtn.setOnClickListener(v -> displayGallery(true));
     }
 
-    @Override
-    public void onDestroy() {
-        Preferences.unregisterPrefsChangedListener(listener);
-        super.onDestroy();
-    }
-
     /**
      * Back button handler
      */
@@ -386,7 +398,8 @@ public class ImagePagerFragment extends Fragment implements GoToPageDialogFragme
      * Handle click on "Page menu" action button
      */
     private void onPageMenuClick() {
-        ImageBottomSheetFragment.show(requireContext(), requireActivity().getSupportFragmentManager(), imageIndex);
+        float currentScale = adapter.getScaleAtPosition(imageIndex);
+        ImageBottomSheetFragment.show(requireContext(), requireActivity().getSupportFragmentManager(), imageIndex, currentScale);
     }
 
     /**
@@ -439,7 +452,7 @@ public class ImagePagerFragment extends Fragment implements GoToPageDialogFragme
         // -> activate scroll listener manually
         if (currentPosition == startingIndex) onScrollPositionChange(startingIndex);
         else {
-            if (Preferences.Constant.PREF_VIEWER_ORIENTATION_HORIZONTAL == Preferences.getViewerOrientation())
+            if (Preferences.Constant.PREF_VIEWER_ORIENTATION_HORIZONTAL == Preferences.getViewerOrientation() && recyclerView != null)
                 recyclerView.scrollToPosition(startingIndex);
             else
                 llm.scrollToPositionWithOffset(startingIndex, 0);
@@ -734,11 +747,10 @@ public class ImagePagerFragment extends Fragment implements GoToPageDialogFragme
      */
     private void seekToPosition(int position) {
         if (View.VISIBLE == previewImage2.getVisibility()) {
-            Context ctx = previewImage2.getContext().getApplicationContext();
             ImageFile img = adapter.getImageAt(position - 1);
             if (img != null) {
-                Glide.with(ctx)
-                        .load(img.getAbsolutePath())
+                Glide.with(previewImage1)
+                        .load(Uri.parse(img.getFileUri()))
                         .apply(glideRequestOptions)
                         .into(previewImage1);
                 previewImage1.setVisibility(View.VISIBLE);
@@ -746,15 +758,15 @@ public class ImagePagerFragment extends Fragment implements GoToPageDialogFragme
 
             img = adapter.getImageAt(position);
             if (img != null)
-                Glide.with(ctx)
-                        .load(img.getAbsolutePath())
+                Glide.with(previewImage2)
+                        .load(Uri.parse(img.getFileUri()))
                         .apply(glideRequestOptions)
                         .into(previewImage2);
 
             img = adapter.getImageAt(position + 1);
             if (img != null) {
-                Glide.with(ctx)
-                        .load(img.getAbsolutePath())
+                Glide.with(previewImage3)
+                        .load(Uri.parse(img.getFileUri()))
                         .apply(glideRequestOptions)
                         .into(previewImage3);
                 previewImage3.setVisibility(View.VISIBLE);
@@ -875,11 +887,27 @@ public class ImagePagerFragment extends Fragment implements GoToPageDialogFragme
     private void displayGallery(boolean filterFavourites) {
         hasGalleryBeenShown = true;
         viewModel.setStartingIndex(imageIndex); // Memorize the current page
+
+        if (getParentFragmentManager().getBackStackEntryCount() > 0) { // Gallery mode (Library -> gallery -> pager)
+            getParentFragmentManager().popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE); // Leave only the latest element in the back stack
+        } else { // Pager mode (Library -> pager -> gallery -> pager)
+            getParentFragmentManager()
+                    .beginTransaction()
+                    .replace(android.R.id.content, ImageGalleryFragment.newInstance(filterFavourites))
+                    .addToBackStack(null)
+                    .commit();
+        }
+
+        /*
         getParentFragmentManager()
                 .beginTransaction()
                 .replace(android.R.id.content, ImageGalleryFragment.newInstance(filterFavourites))
                 .addToBackStack(null)
                 .commit();
+        if (getParentFragmentManager().getBackStackEntryCount() > 0) // Library -> gallery -> pager navigation
+            getParentFragmentManager().popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE); // Leave only the latest element in the back stack
+
+         */
     }
 
     /**
