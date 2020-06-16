@@ -11,17 +11,17 @@ public class RedditUserSavedPosts {
     private SavedPostsDataContainer container;
 
 
-    class SavedPostsDataContainer {
+    static class SavedPostsDataContainer {
         @Json(name = "children")
         List<SavedPostsDataRoot> roots;
     }
 
-    class SavedPostsDataRoot {
+    static class SavedPostsDataRoot {
         @Json(name = "data")
         SavedPostsData post;
     }
 
-    class SavedPostsData {
+    static class SavedPostsData {
         String url;
     }
 

@@ -16,6 +16,7 @@ import org.jetbrains.annotations.NotNull;
 import java.util.List;
 
 import me.devsaki.hentoid.R;
+import me.devsaki.hentoid.activities.sources.RedditLaunchActivity;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.enums.AlertStatus;
 import me.devsaki.hentoid.enums.Site;
@@ -47,7 +48,10 @@ public class DrawerItem extends AbstractItem<DrawerItem.DrawerViewHolder> {
     public DrawerItem(Site site) {
         this.label = site.getDescription().toUpperCase();
         this.icon = site.getIco();
-        this.activityClass = Content.getWebActivityClass(site);
+        if (Site.REDDIT.equals(site))
+            this.activityClass = RedditLaunchActivity.class; // Specific launcher for Reddit
+        else
+            this.activityClass = Content.getWebActivityClass(site);
         this.site = site;
     }
 
