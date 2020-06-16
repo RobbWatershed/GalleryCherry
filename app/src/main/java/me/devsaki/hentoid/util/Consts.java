@@ -14,7 +14,7 @@ public abstract class Consts {
 
     public static final String DATABASE_NAME = "cherry.db";
 
-    public static final String DEFAULT_LOCAL_DIRECTORY_OLD = "Hentoid";
+    public static final String DEFAULT_LOCAL_DIRECTORY_OLD = "Cherry";
     public static final String DEFAULT_LOCAL_DIRECTORY = ".Cherry";
 
     public static final String JSON_FILE_NAME_V2 = "contentV2.json";
