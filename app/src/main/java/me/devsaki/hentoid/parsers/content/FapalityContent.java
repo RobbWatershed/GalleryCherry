@@ -16,45 +16,47 @@ import me.devsaki.hentoid.parsers.ParseHelper;
 import me.devsaki.hentoid.util.AttributeMap;
 import pl.droidsonroids.jspoon.annotation.Selector;
 
-public class JpegworldContent implements ContentParser {
+public class FapalityContent implements ContentParser {
 
-    private String GALLERY_FOLDER = "/galleries/";
-
-    @Selector(value = "head link[rel='canonical']", attr = "href", defValue = "")
-    private String galleryUrl;
-    @Selector("#gallery-title")
-    private String title;
-    @Selector(value = ".tags-col a:not(.paysite)")
+    @Selector("h1")
+    private List<Element> titles;
+    @Selector(value = ".tags_list a")
     private List<Element> tags;
-    @Selector(value = ".gallery-item img", attr = "src")
+    @Selector(value = "img[itemprop]", attr = "src")
     private List<String> imageLinks;
 
 
     public Content toContent(@NonNull String url) {
         Content result = new Content();
 
-        result.setSite(Site.JPEGWORLD);
+        result.setSite(Site.FAPALITY);
+        result.setUrl(url.substring(Site.FAPALITY.getUrl().length()));
 
-        String theUrl = galleryUrl.isEmpty() ? url : galleryUrl;
-        int galleryLocation = theUrl.indexOf(GALLERY_FOLDER) + GALLERY_FOLDER.length();
-        result.setUrl(theUrl.substring(galleryLocation));
+        String title = "";
+        if (titles != null && !titles.isEmpty()) {
+            title = titles.get(0).text();
+            int titleEnd = title.lastIndexOf(" - ");
+            if (titleEnd > -1)
+                title = title.substring(0, title.lastIndexOf(" - "));
+        }
         result.setTitle(title);
 
         AttributeMap attributes = new AttributeMap();
-        ParseHelper.parseAttributes(attributes, AttributeType.TAG, tags, true, Site.JPEGWORLD);
+        ParseHelper.parseAttributes(attributes, AttributeType.TAG, tags, true, Site.FAPALITY);
         result.addAttributes(attributes);
 
         List<ImageFile> images = new ArrayList<>();
         int order = 1;
         String[] parts;
         for (String s : imageLinks) {
-            StringBuilder hiResLink = new StringBuilder();
+            StringBuilder sourceLink = new StringBuilder();
             parts = s.split("/");
             for (int i = 0; i < parts.length; i++) {
-                if (i != parts.length - 2)
-                    hiResLink.append(parts[i]).append((i < parts.length - 1) ? "/" : "");
+                if (i > 0 && parts[i - 1].equalsIgnoreCase("main"))
+                    continue; // Ignore the part after "main" to reconstitute the source URL
+                sourceLink.append(parts[i]).append((i < parts.length - 1) ? "/" : "");
             }
-            images.add(new ImageFile(order++, hiResLink.toString().replace("/thumbs/", "/galleries/"), StatusContent.SAVED, imageLinks.size()));
+            images.add(new ImageFile(order++, sourceLink.toString().replace("/main/", "/sources/"), StatusContent.SAVED, imageLinks.size()));
         }
         if (images.size() > 0) result.setCoverImageUrl(images.get(0).getUrl());
         result.setImageFiles(images);

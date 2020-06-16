@@ -1,7 +1,5 @@
 package me.devsaki.hentoid.enums;
 
-import java.io.File;
-
 import io.objectbox.converter.PropertyConverter;
 import me.devsaki.hentoid.R;
 import timber.log.Timber;
@@ -23,6 +21,7 @@ public enum Site {
     REDDIT(8, "Reddit", "https://www.reddit.com/", "reddit", R.drawable.ic_social_reddit, true, false, false, true),
     JJGIRLS(9, "JJGirls", "https://jjgirls.com/mobile/", "jjgirls", R.drawable.ic_menu_jjgirls, true, false, true, false),
     LUSCIOUS(10, "luscious.net", "https://members.luscious.net/porn/", "luscious", R.drawable.ic_menu_luscious, false, false, false, false),
+    FAPALITY(11, "Fapality", "https://fapality.com/photos/", "fapality", R.drawable.ic_menu_fapality, true, false, false, false),
     NONE(98, "none", "", "none", R.drawable.ic_info, true, false, false, false); // Fallback site
 
 
@@ -122,7 +121,7 @@ public enum Site {
     }
 
     public String getFolder() {
-        return File.separator + description + File.separator;
+        return description;
     }
 
     public static class SiteConverter implements PropertyConverter<Site, Long> {

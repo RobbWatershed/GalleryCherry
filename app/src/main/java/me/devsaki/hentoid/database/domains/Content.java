@@ -21,6 +21,7 @@ import io.objectbox.annotation.Transient;
 import io.objectbox.converter.PropertyConverter;
 import io.objectbox.relation.ToMany;
 import me.devsaki.hentoid.activities.sources.BaseWebActivity;
+import me.devsaki.hentoid.activities.sources.FapalityActivity;
 import me.devsaki.hentoid.activities.sources.HellpornoActivity;
 import me.devsaki.hentoid.activities.sources.JjgirlsActivity;
 import me.devsaki.hentoid.activities.sources.JpegworldActivity;
@@ -164,6 +165,8 @@ public class Content implements Serializable {
             case LINK2GALLERIES:
             case NEXTPICTUREZ:
                 return parts[parts.length - 1];
+            case FAPALITY:
+                return parts[parts.length - 2];
             case JPEGWORLD:
                 return url.substring(url.lastIndexOf("-") + 1, url.lastIndexOf("."));
             case REDDIT:
@@ -212,6 +215,8 @@ public class Content implements Serializable {
                 return JjgirlsActivity.class;
             case LUSCIOUS:
                 return LusciousActivity.class;
+            case FAPALITY:
+                return FapalityActivity.class;
             default:
                 return BaseWebActivity.class;
         }
@@ -247,6 +252,7 @@ public class Content implements Serializable {
             case JJGIRLS:
                 return url; // Specific case - user can go on any site (smart parser)
             case HELLPORNO:
+            case FAPALITY:
                 galleryConst = ""; // Site landpage URL already contains the "/albums/" prefix
                 break;
             case PORNPICS:

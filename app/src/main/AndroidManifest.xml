@@ -6,7 +6,7 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.VIBRATE" />
@@ -80,16 +80,7 @@
             android:name=".activities.sources.LusciousActivity"
             android:configChanges="orientation|screenSize" />
         <activity
-            android:name=".activities.sources.ExHentaiActivity"
-            android:configChanges="orientation|screenSize" />
-        <activity
-            android:name=".activities.sources.PorncomixActivity"
-            android:configChanges="orientation|screenSize" />
-        <activity
-            android:name=".activities.sources.HbrowseActivity"
-            android:configChanges="orientation|screenSize" />
-        <activity
-            android:name=".activities.sources.Hentai2ReadActivity"
+            android:name=".activities.sources.FapalityActivity"
             android:configChanges="orientation|screenSize" />
         <activity
             android:name=".activities.LibraryActivity"
@@ -251,6 +242,17 @@
                 <data
                     android:host="luscious.net"
                     android:pathPattern="..*/..*"
+                    android:scheme="https" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="fapality.com"
+                    android:pathPattern="/photos"
                     android:scheme="https" />
             </intent-filter>
         </activity>

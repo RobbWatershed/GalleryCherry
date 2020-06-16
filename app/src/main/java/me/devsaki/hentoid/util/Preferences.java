@@ -602,7 +602,7 @@ public final class Preferences {
         static final boolean PREF_DL_HITOMI_WEBP = true;
         static final boolean PREF_CHECK_UPDATES = true;
         // Default menu in v1.3.x
-        static final Site[] DEFAULT_SITES = new Site[]{Site.XHAMSTER, Site.XNXX, Site.PORNPICS, Site.JPEGWORLD, Site.NEXTPICTUREZ, Site.HELLPORNO, Site.PORNPICGALLERIES, Site.LINK2GALLERIES, Site.REDDIT, Site.JJGIRLS};
+        static final Site[] DEFAULT_SITES = new Site[]{Site.XHAMSTER, Site.XNXX, Site.PORNPICS, Site.JPEGWORLD, Site.NEXTPICTUREZ, Site.HELLPORNO, Site.PORNPICGALLERIES, Site.LINK2GALLERIES, Site.REDDIT, Site.JJGIRLS, Site.FAPALITY};
         static final String ACTIVE_SITES = TextUtils.join(",", Stream.of(DEFAULT_SITES).map(Site::getCode).toList());
         static final boolean PREF_LOCK_ON_APP_RESTORE = false;
         static final int PREF_LOCK_TIMER = Constant.PREF_LOCK_TIMER_30S;

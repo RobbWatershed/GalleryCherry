@@ -1,6 +1,7 @@
 package me.devsaki.hentoid.parsers;
 
 import me.devsaki.hentoid.enums.Site;
+import me.devsaki.hentoid.parsers.content.FapalityContent;
 import me.devsaki.hentoid.parsers.content.HellpornoContent;
 import me.devsaki.hentoid.parsers.content.JjgirlsContent;
 import me.devsaki.hentoid.parsers.content.JpegworldContent;
@@ -42,6 +43,8 @@ public class ContentParserFactory {
                 return XnxxContent.class;
             case JJGIRLS:
                 return JjgirlsContent.class;
+            case FAPALITY:
+                return FapalityContent.class;
             case REDDIT:
             case LINK2GALLERIES:
             case PORNPICGALLERIES:
