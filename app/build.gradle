@@ -20,6 +20,7 @@ android {
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_1_8
     }
+    buildToolsVersion "29.0.3"
     defaultConfig {
         applicationId "me.devsaki.cherry"
         minSdkVersion 21
@@ -33,6 +34,9 @@ android {
         buildConfigField "boolean", "INCLUDE_OBJECTBOX_BROWSER", includeObjectBoxBrowser
 
         proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+
+        renderscriptTargetApi 21
+        renderscriptSupportModeEnabled false
 
         javaCompileOptions {
             annotationProcessorOptions {

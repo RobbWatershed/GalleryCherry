@@ -39,7 +39,6 @@ import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 import org.jetbrains.annotations.NotNull;
 
-import java.text.MessageFormat;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
@@ -369,7 +368,6 @@ public class QueueFragment extends Fragment implements ItemTouchCallback, Simple
                 break;
             case DownloadEvent.EV_SKIP:
                 // Books switch / display handled directly by the adapter
-                updateBookTitle();
                 queueInfo.setText("");
                 dlPreparationProgressBar.setVisibility(View.GONE);
                 break;
@@ -440,7 +438,7 @@ public class QueueFragment extends Fragment implements ItemTouchCallback, Simple
                 int pagesOKDisplay = Math.max(0, pagesOK - 1);
 
                 // Update book progress bar
-                Timber.i(">> setProgress %s", pagesOKDisplay + pagesKO);
+                Timber.d(">> setProgress %s", pagesOKDisplay + pagesKO);
                 content.setProgress((long) pagesOKDisplay + pagesKO);
                 content.setDownloadedBytes(downloadedSizeB);
                 content.setQtyPages(totalPagesDisplay);
@@ -472,7 +470,7 @@ public class QueueFragment extends Fragment implements ItemTouchCallback, Simple
         Content content = itemAdapter.getAdapterItem(0).getContent();
         if (null == content) return;
 
-        queueStatus.setText(MessageFormat.format(requireActivity().getString(R.string.queue_dl), content.getTitle()));
+        queueStatus.setText(getResources().getString(R.string.queue_dl, content.getTitle()));
     }
 
     /**
@@ -488,7 +486,7 @@ public class QueueFragment extends Fragment implements ItemTouchCallback, Simple
     }
 
     private void onQueueChanged(List<QueueRecord> result) {
-        Timber.i(">>Queue changed ! Size=%s", result.size());
+        Timber.d(">>Queue changed ! Size=%s", result.size());
         isEmpty = (result.isEmpty());
         isPaused = (!isEmpty && (ContentQueueManager.getInstance().isQueuePaused() || !ContentQueueManager.getInstance().isQueueActive()));
 

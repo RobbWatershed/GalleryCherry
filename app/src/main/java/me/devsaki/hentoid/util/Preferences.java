@@ -2,6 +2,7 @@ package me.devsaki.hentoid.util;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.text.TextUtils;
 
 import androidx.preference.PreferenceManager;
@@ -11,6 +12,7 @@ import com.annimon.stream.Stream;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import me.devsaki.hentoid.BuildConfig;
 import me.devsaki.hentoid.enums.Site;
@@ -224,7 +226,7 @@ public final class Preferences {
         return sharedPreferences.getString(Key.PREF_SD_STORAGE_URI, "");
     }
 
-    static void setStorageUri(String uri) {
+    public static void setStorageUri(String uri) {
         sharedPreferences.edit()
                 .putString(Key.PREF_SD_STORAGE_URI, uri)
                 .apply();
@@ -302,6 +304,26 @@ public final class Preferences {
         sharedPreferences.edit()
                 .putString(Key.PREF_VIEWER_BROWSE_MODE, Integer.toString(browseMode))
                 .apply();
+    }
+
+    public static boolean isContentSmoothRendering(Map<String, String> bookPrefs) {
+        if (bookPrefs.containsKey(Key.PREF_VIEWER_RENDERING)) {
+            String value = bookPrefs.get(Key.PREF_VIEWER_RENDERING);
+            if (value != null) return isSmoothRendering(Integer.parseInt(value));
+        }
+        return isViewerSmoothRendering();
+    }
+
+    public static boolean isViewerSmoothRendering() {
+        return isSmoothRendering(getViewerRenderingMode());
+    }
+
+    public static boolean isSmoothRendering(int mode) {
+        return (mode == Constant.PREF_VIEWER_RENDERING_SMOOTH && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M);
+    }
+
+    public static int getViewerRenderingMode() {
+        return Integer.parseInt(sharedPreferences.getString(Key.PREF_VIEWER_RENDERING, Integer.toString(Default.PREF_VIEWER_RENDERING)) + "");
     }
 
     public static boolean isViewerDisplayPageNum() {
@@ -487,6 +509,7 @@ public final class Preferences {
         static final String PREF_VIEWER_RESUME_LAST_LEFT = "pref_viewer_resume_last_left";
         public static final String PREF_VIEWER_KEEP_SCREEN_ON = "pref_viewer_keep_screen_on";
         public static final String PREF_VIEWER_IMAGE_DISPLAY = "pref_viewer_image_display";
+        public static final String PREF_VIEWER_RENDERING = "pref_viewer_rendering";
         public static final String PREF_VIEWER_BROWSE_MODE = "pref_viewer_browse_mode";
         public static final String PREF_VIEWER_DISPLAY_PAGENUM = "pref_viewer_display_pagenum";
         public static final String PREF_VIEWER_SWIPE_TO_FLING = "pref_viewer_swipe_to_fling";
@@ -551,6 +574,7 @@ public final class Preferences {
         static final boolean PREF_VIEWER_RESUME_LAST_LEFT = true;
         static final boolean PREF_VIEWER_KEEP_SCREEN_ON = true;
         static final int PREF_VIEWER_IMAGE_DISPLAY = Constant.PREF_VIEWER_DISPLAY_FIT;
+        static final int PREF_VIEWER_RENDERING = Constant.PREF_VIEWER_RENDERING_SHARP;
         static final int PREF_VIEWER_BROWSE_MODE = Constant.PREF_VIEWER_BROWSE_NONE;
         static final boolean PREF_VIEWER_DISPLAY_PAGENUM = false;
         static final boolean PREF_VIEWER_TAP_TRANSITIONS = true;
@@ -616,6 +640,8 @@ public final class Preferences {
         public static final int PREF_VIEWER_DISPLAY_FIT = 0;
         public static final int PREF_VIEWER_DISPLAY_FILL = 1;
         public static final int PREF_VIEWER_DISPLAY_STRETCH = 2;
+        public static final int PREF_VIEWER_RENDERING_SHARP = 0;
+        public static final int PREF_VIEWER_RENDERING_SMOOTH = 1;
         public static final int PREF_VIEWER_BROWSE_NONE = -1;
         public static final int PREF_VIEWER_BROWSE_LTR = 0;
         public static final int PREF_VIEWER_BROWSE_RTL = 1;

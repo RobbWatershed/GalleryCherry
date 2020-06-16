@@ -24,7 +24,9 @@ import me.devsaki.hentoid.events.ProcessEvent;
 import me.devsaki.hentoid.notification.import_.ImportNotificationChannel;
 import me.devsaki.hentoid.services.API29MigrationService;
 import me.devsaki.hentoid.util.FileHelper;
+import me.devsaki.hentoid.util.ImportHelper;
 import me.devsaki.hentoid.util.Preferences;
+import me.devsaki.hentoid.util.ToastUtil;
 import timber.log.Timber;
 
 public class Api29MigrationActivity extends AppCompatActivity {
@@ -88,9 +90,16 @@ public class Api29MigrationActivity extends AppCompatActivity {
         DocumentFile storageDoc = (storageUri.isEmpty()) ? null : DocumentFile.fromTreeUri(this, Uri.parse(storageUri));
 
         // If the root folder is already set to a content:// URI (previous use of SAF picker), start scanning at once
-        if (storageDoc != null && storageDoc.exists()) scanLibrary(storageDoc);
-            // else ask for the Hentoid folder, as PersistableUriPermission might not have been granted at all
-            // (case of v11- app running on Android 10 with API28- target)
+        if (storageDoc != null && storageDoc.exists()) {
+            Timber.d("Detected dir : %s", storageDoc.getUri().toString());
+            // Make certain we have the actual Hentoid/.Hentoid folder (root URI can be set to its parent on certain devices)
+            storageDoc = ImportHelper.getExistingHentoidDirFrom(this, storageDoc);
+            Timber.d("Suggested dir : %s", storageDoc.getUri().toString());
+            Preferences.setStorageUri(storageDoc.getUri().toString());
+            scanLibrary(storageDoc);
+        }
+        // else ask for the Hentoid folder, as PersistableUriPermission might not have been granted at all
+        // (case of v11- app running on Android 10 with API28- target)
         else step1button.setVisibility(View.VISIBLE);
     }
 
@@ -143,8 +152,23 @@ public class Api29MigrationActivity extends AppCompatActivity {
                     Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
         }
 
-        DocumentFile docFile = DocumentFile.fromTreeUri(this, treeUri);
-        if (docFile != null) scanLibrary(docFile);
+        DocumentFile selectedFolder = DocumentFile.fromTreeUri(this, treeUri);
+        if (selectedFolder != null) {
+            String folderName = selectedFolder.getName();
+            if (null == folderName) folderName = "";
+
+            // Make sure we detect the Hentoid folder if it's a child of the selected folder
+            if (!ImportHelper.isHentoidFolderName(folderName))
+                selectedFolder = ImportHelper.getExistingHentoidDirFrom(this, selectedFolder);
+        }
+
+        // If no existing hentoid folder is detected, tell the user to select it again
+        if (null == selectedFolder || null == selectedFolder.getName() || !ImportHelper.isHentoidFolderName(selectedFolder.getName()))
+        {
+            ToastUtil.toast("Please select an existing Hentoid folder. Its location is displayed on screen.");
+            return;
+        }
+        scanLibrary(selectedFolder);
     }
 
     private void scanLibrary(@NonNull final DocumentFile root) {

@@ -46,6 +46,8 @@
     <string name="search_hint">Title, author, tag or book ID</string>
     <string name="send_to">Share with:</string>
     <string name="open_settings">Open settings</string>
+    <string name="app_settings">App settings</string>
+    <string name="book_settings">Book settings</string>
 
     <!-- Queue -->
     <string name="queue_queue_tab">In progress</string>
@@ -64,7 +66,7 @@
     <string name="queue_empty2" />
     <string name="queue_paused">Queue paused</string>
     <string name="queue_preparing">Preparing download</string>
-    <string name="queue_dl">Downloading {0}</string>
+    <string name="queue_dl">Downloading %s</string>
     <string name="err_stats_title">Error stats</string>
     <string name="err_stats_help">Show detailed stats about current download errors</string>
     <string name="err_no_content">Book does not exist yet</string>
@@ -136,6 +138,7 @@
     <string name="permissioncomplaint_snackbar_manual">You must manually grant permissions before you can continue</string>
     <string name="import_canceled">Import canceled</string>
     <string name="import_invalid">Invalid folder selected - please select another one</string>
+    <string name="import_create_fail">Hentoid folder creation failed - please select another location</string>
     <string name="import_other">Import has stopped</string>
     <string name="cleanup_folders">Do you want to cleanup your library while refreshing ?\nCleanup removes all empty folders and renames the others according to the current naming and max length preference.</string>
     <string name="action_refresh">Just refresh</string>
@@ -184,7 +187,7 @@
     <string name="book_title">"This is a rather long title, just because we need it to be."</string>
     <string name="book_series">"Series: Name"</string>
     <string name="book_artist">"Artist: Name"</string>
-    <string name="book_pages">"Pages: 1234; 125 MB (est.)"</string>
+    <string name="book_pages">"Pages: 1234; estimated 125 MB"</string>
     <string name="book_tags">""tag1, tag2, tag3, etc.</string>
     <plurals name="number_of_book_search_results">
         <item quantity="one">%d/%d result</item>

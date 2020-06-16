@@ -44,7 +44,7 @@ public class ImportHelper {
 
     private static final int RQST_STORAGE_PERMISSION = 3;
 
-    @IntDef({Result.OK_EMPTY_FOLDER, Result.OK_LIBRARY_DETECTED, Result.OK_LIBRARY_DETECTED_ASK, Result.CANCELED, Result.INVALID_FOLDER, Result.OTHER})
+    @IntDef({Result.OK_EMPTY_FOLDER, Result.OK_LIBRARY_DETECTED, Result.OK_LIBRARY_DETECTED_ASK, Result.CANCELED, Result.INVALID_FOLDER, Result.CREATE_FAIL, Result.OTHER})
     @Retention(RetentionPolicy.SOURCE)
     public @interface Result {
         int OK_EMPTY_FOLDER = 0;
@@ -52,7 +52,8 @@ public class ImportHelper {
         int OK_LIBRARY_DETECTED_ASK = 2;
         int CANCELED = 3;
         int INVALID_FOLDER = 4;
-        int OTHER = 5;
+        int CREATE_FAIL = 5;
+        int OTHER = 6;
     }
 
     private static final FileHelper.NameFilter hentoidFolderNames = displayName -> displayName.equalsIgnoreCase(Consts.DEFAULT_LOCAL_DIRECTORY)
@@ -65,6 +66,9 @@ public class ImportHelper {
         public boolean cleanUnreadable;
     }
 
+    public static boolean isHentoidFolderName(@NonNull final String folderName) {
+        return hentoidFolderNames.accept(folderName);
+    }
 
     public static void openFolderPicker(@NonNull final Fragment caller) {
         Intent intent = getFolderPickerIntent(caller.requireContext());
@@ -149,8 +153,11 @@ public class ImportHelper {
             Timber.e("Could not find the selected file %s", treeUri.toString());
             return Result.INVALID_FOLDER;
         }
-
         DocumentFile hentoidFolder = addHentoidFolder(context, docFile);
+        if (null == hentoidFolder) {
+            Timber.e("Could not create Hentoid folder in root %s", docFile.getUri().toString());
+            return Result.CREATE_FAIL;
+        }
         if (!FileHelper.checkAndSetRootFolder(context, hentoidFolder, true)) {
             Timber.e("Could not set the selected root folder %s", hentoidFolder.getUri().toString());
             return Result.INVALID_FOLDER;
@@ -222,12 +229,13 @@ public class ImportHelper {
         return false;
     }
 
+    @Nullable
     private static DocumentFile addHentoidFolder(@NonNull final Context context, @NonNull final DocumentFile baseFolder) {
         String folderName = baseFolder.getName();
         if (null == folderName) folderName = "";
 
         // Don't create a .Hentoid subfolder inside the .Hentoid (or Hentoid) folder the user just selected...
-        if (!hentoidFolderNames.accept(folderName)) {
+        if (!isHentoidFolderName(folderName)) {
             DocumentFile targetFolder = getExistingHentoidDirFrom(context, baseFolder);
 
             // If not, create one
@@ -239,11 +247,11 @@ public class ImportHelper {
     }
 
     // Try and detect any ".Hentoid" or "Hentoid" folder inside the selected folder
-    private static DocumentFile getExistingHentoidDirFrom(@NonNull final Context context, @NonNull final DocumentFile root) {
+    public static DocumentFile getExistingHentoidDirFrom(@NonNull final Context context, @NonNull final DocumentFile root) {
         if (!root.exists() || !root.isDirectory() || null == root.getName()) return root;
 
         // Selected folder _is_ the Hentoid folder
-        if (hentoidFolderNames.accept(root.getName())) return root;
+        if (isHentoidFolderName(root.getName())) return root;
 
         // If not, look for it in its children
         List<DocumentFile> hentoidDirs = FileHelper.listFoldersFilter(context, root, hentoidFolderNames);

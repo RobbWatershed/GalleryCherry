@@ -311,7 +311,7 @@ public class ErrorsFragment extends Fragment implements ItemTouchCallback, Simpl
     }
 
     private boolean onBookClick(ContentItem item) {
-        if (selectExtension.getSelectedItems().isEmpty()) {
+        if (null == selectExtension || selectExtension.getSelectedItems().isEmpty()) {
             Content c = item.getContent();
             if (!invalidateNextBookClick && c != null) {
                 if (!ContentHelper.openHentoidViewer(requireContext(), c, null))
