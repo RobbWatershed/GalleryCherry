@@ -108,6 +108,7 @@ public class SmartContent implements ContentParser {
 
         if (imageLinks.size() > 4) addLinksToImages(imageLinks, images, url);
         else if (imageElts.size() > 4) addLinksToImages(imageElts, images, url);
+        if (images.size() > 0) result.setCoverImageUrl(images.get(0).getUrl());
 
         result.setQtyPages(images.size());
         result.setImageFiles(images);

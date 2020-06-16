@@ -45,6 +45,7 @@ public class JjgirlsContent extends SmartContent {
                 img.setDownloadParams(downloadParamsStr);
             }
         }
+        if (result.getImageFiles().size() > 0) result.setCoverImageUrl(result.getImageFiles().get(0).getUrl());
 
         return result;
     }
