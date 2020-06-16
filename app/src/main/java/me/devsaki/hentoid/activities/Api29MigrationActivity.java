@@ -165,7 +165,7 @@ public class Api29MigrationActivity extends AppCompatActivity {
         // If no existing hentoid folder is detected, tell the user to select it again
         if (null == selectedFolder || null == selectedFolder.getName() || !ImportHelper.isHentoidFolderName(selectedFolder.getName()))
         {
-            ToastUtil.toast("Please select an existing Hentoid folder. Its location is displayed on screen.");
+            ToastUtil.toast("Please select an existing Cherry folder. Its location is displayed on screen.");
             return;
         }
         scanLibrary(selectedFolder);

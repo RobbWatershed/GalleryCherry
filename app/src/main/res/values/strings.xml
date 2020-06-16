@@ -20,11 +20,11 @@
     <string name="title_activity_search">Advanced Search</string>
 
     <!-- API29 migration / library refresh screen -->
-    <string name="api29_migration_title">Hentoid v12\nFile management update</string>
-    <string name="api29_migration_subtitle">Hentoid is updating your collection.\nIt may require a few minutes.</string>
-    <string name="api29_migration_location">Current Hentoid folder location\n%s</string>
-    <string name="api29_migration_step1">Hentoid folder</string>
-    <string name="api29_migration_step1_select">Select Hentoid folder</string>
+    <string name="api29_migration_title">GalleryCherry v1.6\nFile management update</string>
+    <string name="api29_migration_subtitle">GalleryCherry is updating your collection.\nIt may require a few minutes.</string>
+    <string name="api29_migration_location">Current app folder location\n%s</string>
+    <string name="api29_migration_step1">GalleryCherry folder</string>
+    <string name="api29_migration_step1_select">Select app folder</string>
     <string name="api29_migration_step2">Scan site folders</string>
     <string name="api29_migration_step3_init">Library scan starting…</string>
     <string name="api29_migration_step3">Scan library (%1$d / %2$d)</string>
@@ -138,7 +138,7 @@
     <string name="permissioncomplaint_snackbar_manual">You must manually grant permissions before you can continue</string>
     <string name="import_canceled">Import canceled</string>
     <string name="import_invalid">Invalid folder selected - please select another one</string>
-    <string name="import_create_fail">Hentoid folder creation failed - please select another location</string>
+    <string name="import_create_fail">App folder creation failed - please select another location</string>
     <string name="import_other">Import has stopped</string>
     <string name="cleanup_folders">Do you want to cleanup your library while refreshing ?\nCleanup removes all empty folders and renames the others according to the current naming and max length preference.</string>
     <string name="action_refresh">Just refresh</string>
