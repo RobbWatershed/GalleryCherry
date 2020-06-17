@@ -43,7 +43,7 @@ public class RedditAuthDownloadFragment extends Fragment {
     private TextView imgCount;
 
     private Content currentContent = null;
-    private List<ImageFile> imageSet = null;
+    private List<ImageFile> imageSet = null; // Set of existing and new images of the Reddit album
     private CollectionDAO db = null;
 
 
@@ -111,6 +111,7 @@ public class RedditAuthDownloadFragment extends Fragment {
         List<ImageFile> newImages = ParseHelper.urlsToImageFiles(savedUrls, coverUrl, StatusContent.SAVED);
 
         if (null == contentDB) {    // The book has just been detected -> finalize before saving in DB
+            Timber.i("Reddit : new content created (%s pages)", newImages.size());
             currentContent = new Content().setSite(Site.REDDIT).setUrl("").setTitle("Reddit");
             currentContent.setStatus(StatusContent.SAVED);
             currentContent.populateAuthor();
@@ -120,9 +121,10 @@ public class RedditAuthDownloadFragment extends Fragment {
         } else {
             // Ignore the images that are already contained in the central booru book
             List<ImageFile> existingImages = contentDB.getImageFiles();
-            if (newImages != null && existingImages != null) {
+            if (existingImages != null) {
                 if (!existingImages.isEmpty()) {
                     newImages.removeAll(existingImages);
+                    Timber.i("Reddit : adding %s new pages to existing content (%s pages)", newImages.size(), existingImages.size());
 
                     // Reindex new images according to their future position in the existing album
                     int maxOrder = Stream.of(existingImages).max(ImageFile.ORDER_COMPARATOR).mapToInt(ImageFile::getOrder).getAsInt();
@@ -139,6 +141,7 @@ public class RedditAuthDownloadFragment extends Fragment {
             }
             currentContent = contentDB;
         }
+        Timber.i("Reddit : final image set : %s pages", imageSet.size());
 
         // Display size of new images on screen
         if (newImageNumber > 0)
@@ -153,18 +156,19 @@ public class RedditAuthDownloadFragment extends Fragment {
 
     private void onDownloadClick() {
         // Save new images to DB
-        for (ImageFile img : imageSet) img.setStatus(StatusContent.SAVED);
-        currentContent.setImageFiles(imageSet);
-        currentContent.setQtyPages(imageSet.size());
+        currentContent.setQtyPages(imageSet.size() - 1); // Don't count the cover
         currentContent.setStatus(StatusContent.DOWNLOADING);
-        db.insertContent(currentContent);
+        long contentId = db.insertContent(currentContent);
+
+        for (ImageFile img : imageSet) img.setStatus(StatusContent.SAVED);
+        db.replaceImageList(contentId, imageSet);
 
         List<QueueRecord> queue = db.selectQueue();
         int lastIndex = 1;
         if (!queue.isEmpty()) {
             lastIndex = queue.get(queue.size() - 1).rank + 1;
         }
-        db.insertQueue(currentContent.getId(), lastIndex);
+        db.insertQueue(contentId, lastIndex);
 
         ContentQueueManager.getInstance().resumeQueue(requireContext());
         viewQueue();

@@ -193,14 +193,13 @@ public class ImageFile {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-
         ImageFile imageFile = (ImageFile) o;
-
-        return Objects.equals(url, imageFile.url);
+        return isCover == imageFile.isCover &&
+                Objects.equals(url, imageFile.url);
     }
 
     @Override
     public int hashCode() {
-        return url != null ? url.hashCode() : 0;
+        return Objects.hash(url, isCover);
     }
 }
