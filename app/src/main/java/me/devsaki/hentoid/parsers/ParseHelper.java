@@ -128,6 +128,18 @@ public class ParseHelper {
         // Cover
         result.add(ImageFile.newCover(coverUrl, status));
         // Images
+        result.addAll(urlsToImageFiles(imgUrls, status));
+
+        return result;
+    }
+
+    public static List<ImageFile> urlsToImageFiles(
+            @Nonnull List<String> imgUrls,
+            @NonNull final StatusContent status
+    ) {
+        List<ImageFile> result = new ArrayList<>();
+
+        // Images
         int order = 1;
         for (String s : imgUrls) result.add(urlToImageFile(s, order++, imgUrls.size(), status));
 

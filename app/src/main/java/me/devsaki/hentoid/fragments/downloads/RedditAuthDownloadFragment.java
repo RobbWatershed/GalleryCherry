@@ -107,24 +107,29 @@ public class RedditAuthDownloadFragment extends Fragment {
 
         db = new ObjectBoxDAO(requireContext());
         Content contentDB = db.selectContentBySourceAndUrl(Site.REDDIT, "");
-        String coverUrl = savedUrls.isEmpty() ? "" : savedUrls.get(0);
-        List<ImageFile> newImages = ParseHelper.urlsToImageFiles(savedUrls, coverUrl, StatusContent.SAVED);
 
         if (null == contentDB) {    // The book has just been detected -> finalize before saving in DB
-            Timber.i("Reddit : new content created (%s pages)", newImages.size());
+
+            // Create a new image set based on saved Urls, adding the cover in the process
+            String coverUrl = savedUrls.isEmpty() ? "" : savedUrls.get(0);
+            List<ImageFile> newImages = ParseHelper.urlsToImageFiles(savedUrls, coverUrl, StatusContent.SAVED);
+
+            Timber.d("Reddit : new content created (%s pages)", newImages.size());
             currentContent = new Content().setSite(Site.REDDIT).setUrl("").setTitle("Reddit");
             currentContent.setStatus(StatusContent.SAVED);
             currentContent.populateAuthor();
             db.insertContent(currentContent);
             imageSet = newImages;
-            newImageNumber = newImages.size();
+            newImageNumber = newImages.size() - 1; // Don't count the cover
         } else {
+            // Create a new image set based on saved Urls, ignoring the cover that should already be there
+            List<ImageFile> newImages = ParseHelper.urlsToImageFiles(savedUrls, StatusContent.SAVED);
             // Ignore the images that are already contained in the central booru book
             List<ImageFile> existingImages = contentDB.getImageFiles();
             if (existingImages != null) {
                 if (!existingImages.isEmpty()) {
                     newImages.removeAll(existingImages);
-                    Timber.i("Reddit : adding %s new pages to existing content (%s pages)", newImages.size(), existingImages.size());
+                    Timber.d("Reddit : adding %s new pages to existing content (%s pages)", newImages.size(), existingImages.size());
 
                     // Reindex new images according to their future position in the existing album
                     int maxOrder = Stream.of(existingImages).max(ImageFile.ORDER_COMPARATOR).mapToInt(ImageFile::getOrder).getAsInt();
@@ -141,7 +146,7 @@ public class RedditAuthDownloadFragment extends Fragment {
             }
             currentContent = contentDB;
         }
-        Timber.i("Reddit : final image set : %s pages", imageSet.size());
+        Timber.d("Reddit : final image set : %s pages", imageSet.size());
 
         // Display size of new images on screen
         if (newImageNumber > 0)
