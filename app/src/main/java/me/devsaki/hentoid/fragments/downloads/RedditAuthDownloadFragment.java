@@ -14,6 +14,7 @@ import androidx.fragment.app.Fragment;
 import com.annimon.stream.Stream;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import io.reactivex.disposables.CompositeDisposable;
@@ -102,6 +103,8 @@ public class RedditAuthDownloadFragment extends Fragment {
 
         // Remove duplicates and unsupported files from saved URLs
         savedUrls = Stream.of(savedUrls).distinct().filter(this::isImageSupported).toList();
+        // Reverse the list as Reddit puts most recent first and Hentoid does the opposite
+        Collections.reverse(savedUrls);
 
         int newImageNumber = 0;
 
@@ -121,7 +124,7 @@ public class RedditAuthDownloadFragment extends Fragment {
             db.insertContent(currentContent);
             imageSet = newImages;
             newImageNumber = newImages.size() - 1; // Don't count the cover
-        } else {
+        } else { // TODO duplicated code with BaseWebActivity
             // Create a new image set based on saved Urls, ignoring the cover that should already be there
             List<ImageFile> newImages = ParseHelper.urlsToImageFiles(savedUrls, StatusContent.SAVED);
             // Ignore the images that are already contained in the central booru book
@@ -131,10 +134,16 @@ public class RedditAuthDownloadFragment extends Fragment {
                     newImages.removeAll(existingImages);
                     Timber.d("Reddit : adding %s new pages to existing content (%s pages)", newImages.size(), existingImages.size());
 
+                    // Recompute the name of existing images to align them with the formatting of the new ones
+                    Collections.sort(existingImages, ImageFile.ORDER_COMPARATOR);
+                    int order = 0;
+                    for (ImageFile img : existingImages) {
+                        img.setOrder(order++);
+                        img.computeNameFromOrder();
+                    }
                     // Reindex new images according to their future position in the existing album
-                    int maxOrder = Stream.of(existingImages).max(ImageFile.ORDER_COMPARATOR).mapToInt(ImageFile::getOrder).getAsInt();
                     for (ImageFile img : newImages) {
-                        img.setOrder(++maxOrder);
+                        img.setOrder(order++);
                         img.computeNameFromOrder();
                     }
                 }

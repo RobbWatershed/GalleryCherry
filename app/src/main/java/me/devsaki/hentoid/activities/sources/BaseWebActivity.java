@@ -734,7 +734,7 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
                 objectBoxDAO.insertContent(content);
             } else {
                 // Add new pages to current content with a proper index, and save them
-                if (content.getSite().isDanbooru()) {
+                if (content.getSite().isDanbooru()) { // TODO duplicated code with RedditAuthDownloadFragment
                     // Ignore the images that are already contained in the central booru book
                     List<ImageFile> newImages = content.getImageFiles();
                     List<ImageFile> existingImages = contentDB.getImageFiles();
