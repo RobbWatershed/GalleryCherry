@@ -8,8 +8,8 @@ ___
 ![cherry_app](https://user-images.githubusercontent.com/35880555/50556968-6f3d3280-0ce0-11e9-8355-b135b02a5869.png)
 
 ##### `GalleryCherry` is a XXX galleries archiving app. Is is a fork of the [Hentoid](https://github.com/avluis/Hentoid) app, which is dedicated to Doujinshi and H-Manga.
-###### `GalleryCherry` will support :
-###### [xhamster](https://xhamster.com/photos) and many more
+###### `GalleryCherry` supports :
+###### [xhamster](https://xhamster.com/photos), [XNXX](https://multi.xnxx.com/), [Pornpics](https://www.pornpics.com/), [Jpegworld](https://www.jpegworld.com/), [Nextpicturez](http://www.nextpicturez.com/), [Hellporno](https://hellporno.com/albums/), [Pornpicgalleries](http://pornpicgalleries.com/), [Link2galleries](https://www.link2galleries.com/), [Reddit](https://www.reddit.com/), [JJGirls](https://jjgirls.com/mobile/), [Luscious.net](https://members.luscious.net/porn/), [Fapality](https://fapality.com/photos/)
 
 ##### Check out the [GalleryCherry wiki](https://github.com/RobbWatershed/GalleryCherry/wiki) if you need assistance installing `GalleryCherry` on your device.
 ##### For the latest release, click [here](https://github.com/RobbWatershed/GalleryCherry/releases/latest).
