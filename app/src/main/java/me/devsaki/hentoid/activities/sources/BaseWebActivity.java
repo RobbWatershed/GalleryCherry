@@ -845,6 +845,8 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
         private boolean isPageLoading = false;
         // Loading state of the HTML code of the current webpage (used to trigger the action button)
         boolean isHtmlLoaded = false;
+        // Flag to automatically prevent augmented browser to be used
+        boolean preventAugmentedBrowser = false;
 
 
         @SuppressWarnings("unchecked")
@@ -914,7 +916,8 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
          * false if the webview has to handle the display (OkHttp will be used as a 2nd request for parsing)
          */
         private boolean canUseSingleOkHttpRequest() {
-            return (Preferences.isBrowserAugmented()
+            return (!preventAugmentedBrowser
+                    && Preferences.isBrowserAugmented()
                     && (chromeVersion < 45 || chromeVersion > 71)
             );
         }

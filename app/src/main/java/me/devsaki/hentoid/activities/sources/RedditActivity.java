@@ -29,7 +29,7 @@ import static io.reactivex.android.schedulers.AndroidSchedulers.mainThread;
 public class RedditActivity extends BaseWebActivity {
 
     private static final String DOMAIN_FILTER = "reddit.com";
-    private static final String[] GALLERY_FILTER = {""}; // regular posts : //"https://gateway.reddit.com/desktopapi/v1/postcomments"; => XML received when browsing posts
+    private static final String[] GALLERY_FILTER = {"§§§"}; // regular posts : //"https://gateway.reddit.com/desktopapi/v1/postcomments"; => XML received when browsing posts
 
     private static final String OAUTH_REDIRECT_URL = "https://github.com/RobbWatershed/GalleryCherry";
 
@@ -73,6 +73,7 @@ public class RedditActivity extends BaseWebActivity {
     private class RedditWebViewClient extends CustomWebViewClient {
         RedditWebViewClient(String[] filteredUrl, WebContentListener listener) {
             super(filteredUrl, listener);
+            preventAugmentedBrowser = true;
         }
 
         @Override
