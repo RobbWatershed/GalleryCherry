@@ -52,7 +52,7 @@ public class ErrorRecord {
     @Override
     public String toString() {
         String timeStr = "";
-        if (timestamp != null) {
+        if (timestamp != null && !timestamp.equals(Instant.EPOCH)) {
             DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME; // e.g. 2011-12-03T10:15:30
             timeStr = timestamp.atZone(ZoneId.systemDefault()).format(formatter) + " ";
         }
@@ -72,10 +72,10 @@ public class ErrorRecord {
     }
 
     public String getDescription() {
-        return description;
+        return (null == description) ? "" : description;
     }
 
     public Instant getTimestamp() {
-        return timestamp;
+        return (null == timestamp) ? Instant.EPOCH : timestamp;
     }
 }

@@ -14,12 +14,14 @@ import androidx.fragment.app.Fragment;
 import com.annimon.stream.Stream;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import io.reactivex.disposables.CompositeDisposable;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.activities.QueueActivity;
-import me.devsaki.hentoid.database.ObjectBoxDB;
+import me.devsaki.hentoid.database.CollectionDAO;
+import me.devsaki.hentoid.database.ObjectBoxDAO;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.database.domains.QueueRecord;
@@ -29,8 +31,8 @@ import me.devsaki.hentoid.parsers.ParseHelper;
 import me.devsaki.hentoid.retrofit.RedditOAuthApiServer;
 import me.devsaki.hentoid.services.ContentQueueManager;
 import me.devsaki.hentoid.util.Helper;
-import me.devsaki.hentoid.util.HttpHelper;
 import me.devsaki.hentoid.util.OauthSessionManager;
+import me.devsaki.hentoid.util.network.HttpHelper;
 import timber.log.Timber;
 
 import static androidx.core.view.ViewCompat.requireViewById;
@@ -42,8 +44,8 @@ public class RedditAuthDownloadFragment extends Fragment {
     private TextView imgCount;
 
     private Content currentContent = null;
-    private List<ImageFile> imageSet = null;
-    private ObjectBoxDB db = null;
+    private List<ImageFile> imageSet = null; // Set of existing and new images of the Reddit album
+    private CollectionDAO db = null;
 
 
     static RedditAuthDownloadFragment newInstance() {
@@ -101,31 +103,47 @@ public class RedditAuthDownloadFragment extends Fragment {
 
         // Remove duplicates and unsupported files from saved URLs
         savedUrls = Stream.of(savedUrls).distinct().filter(this::isImageSupported).toList();
+        // Reverse the list as Reddit puts most recent first and Hentoid does the opposite
+        Collections.reverse(savedUrls);
 
         int newImageNumber = 0;
 
-        db = ObjectBoxDB.getInstance(requireContext());
+        db = new ObjectBoxDAO(requireContext());
         Content contentDB = db.selectContentBySourceAndUrl(Site.REDDIT, "");
-        List<ImageFile> newImages = ParseHelper.urlsToImageFiles(savedUrls, StatusContent.SAVED);
 
         if (null == contentDB) {    // The book has just been detected -> finalize before saving in DB
+
+            // Create a new image set based on saved Urls, adding the cover in the process
+            String coverUrl = savedUrls.isEmpty() ? "" : savedUrls.get(0);
+            List<ImageFile> newImages = ParseHelper.urlsToImageFiles(savedUrls, coverUrl, StatusContent.SAVED);
+
+            Timber.d("Reddit : new content created (%s pages)", newImages.size());
             currentContent = new Content().setSite(Site.REDDIT).setUrl("").setTitle("Reddit");
             currentContent.setStatus(StatusContent.SAVED);
             currentContent.populateAuthor();
             db.insertContent(currentContent);
             imageSet = newImages;
-            newImageNumber = newImages.size();
-        } else {
+            newImageNumber = newImages.size() - 1; // Don't count the cover
+        } else { // TODO duplicated code with BaseWebActivity
+            // Create a new image set based on saved Urls, ignoring the cover that should already be there
+            List<ImageFile> newImages = ParseHelper.urlsToImageFiles(savedUrls, StatusContent.SAVED);
             // Ignore the images that are already contained in the central booru book
             List<ImageFile> existingImages = contentDB.getImageFiles();
-            if (newImages != null && existingImages != null) {
+            if (existingImages != null) {
                 if (!existingImages.isEmpty()) {
                     newImages.removeAll(existingImages);
+                    Timber.d("Reddit : adding %s new pages to existing content (%s pages)", newImages.size(), existingImages.size());
 
+                    // Recompute the name of existing images to align them with the formatting of the new ones
+                    Collections.sort(existingImages, ImageFile.ORDER_COMPARATOR);
+                    int order = 0;
+                    for (ImageFile img : existingImages) {
+                        img.setOrder(order++);
+                        img.computeNameFromOrder();
+                    }
                     // Reindex new images according to their future position in the existing album
-                    int maxOrder = Stream.of(existingImages).max(ImageFile.ORDER_COMPARATOR).mapToInt(ImageFile::getOrder).getAsInt();
                     for (ImageFile img : newImages) {
-                        img.setOrder(++maxOrder);
+                        img.setOrder(order++);
                         img.computeNameFromOrder();
                     }
                 }
@@ -137,6 +155,7 @@ public class RedditAuthDownloadFragment extends Fragment {
             }
             currentContent = contentDB;
         }
+        Timber.d("Reddit : final image set : %s pages", imageSet.size());
 
         // Display size of new images on screen
         if (newImageNumber > 0)
@@ -151,18 +170,19 @@ public class RedditAuthDownloadFragment extends Fragment {
 
     private void onDownloadClick() {
         // Save new images to DB
-        for (ImageFile img : imageSet) img.setStatus(StatusContent.SAVED);
-        currentContent.setImageFiles(imageSet);
-        currentContent.setQtyPages(imageSet.size());
+        currentContent.setQtyPages(imageSet.size() - 1); // Don't count the cover
         currentContent.setStatus(StatusContent.DOWNLOADING);
-        db.insertContent(currentContent);
+        long contentId = db.insertContent(currentContent);
+
+        for (ImageFile img : imageSet) img.setStatus(StatusContent.SAVED);
+        db.replaceImageList(contentId, imageSet);
 
         List<QueueRecord> queue = db.selectQueue();
         int lastIndex = 1;
         if (!queue.isEmpty()) {
             lastIndex = queue.get(queue.size() - 1).rank + 1;
         }
-        db.insertQueue(currentContent.getId(), lastIndex);
+        db.insertQueue(contentId, lastIndex);
 
         ContentQueueManager.getInstance().resumeQueue(requireContext());
         viewQueue();

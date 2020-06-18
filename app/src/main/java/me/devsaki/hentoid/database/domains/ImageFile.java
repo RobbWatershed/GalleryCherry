@@ -11,6 +11,7 @@ import io.objectbox.annotation.Id;
 import io.objectbox.annotation.Transient;
 import io.objectbox.relation.ToOne;
 import me.devsaki.hentoid.enums.StatusContent;
+import me.devsaki.hentoid.util.Consts;
 
 /**
  * Created by DevSaki on 10/05/2015.
@@ -21,18 +22,20 @@ public class ImageFile {
 
     @Id
     private long id;
-    private Integer order;
-    private String url;
-    private String name;
+    private Integer order = -1;
+    private String url = "";
+    private String name = "";
+    private String fileUri = "";
     private boolean favourite = false;
+    private boolean isCover = false;
     @Convert(converter = StatusContent.StatusContentConverter.class, dbType = Integer.class)
-    private StatusContent status;
+    private StatusContent status = StatusContent.UNHANDLED_ERROR;
     public ToOne<Content> content;
     private String mimeType;
-
+    private long size = 0;
 
     // Temporary attributes during SAVED state only; no need to expose them for JSON persistence
-    private String downloadParams;
+    private String downloadParams = "";
 
 
     // Runtime attributes; no need to expose them nor to persist them
@@ -40,9 +43,6 @@ public class ImageFile {
     // Display order of the image in the image viewer
     @Transient
     private int displayOrder;
-    // Absolute storage path of the image
-    @Transient
-    private String absolutePath;
     // Has the image been read from a backup URL ?
     @Transient
     private boolean isBackup = false;
@@ -59,7 +59,12 @@ public class ImageFile {
 
         this.url = url;
         this.status = status;
-        this.favourite = false;
+    }
+
+    public static ImageFile newCover(String url, StatusContent status) {
+        ImageFile result = new ImageFile().setOrder(0).setUrl(url).setStatus(status);
+        result.setName(Consts.THUMB_FILE_NAME).setIsCover(true);
+        return result;
     }
 
     public long getId() {
@@ -119,6 +124,15 @@ public class ImageFile {
         return this;
     }
 
+    public boolean isCover() {
+        return isCover;
+    }
+
+    public ImageFile setIsCover(boolean isCover) {
+        this.isCover = isCover;
+        return this;
+    }
+
     public boolean isFavourite() {
         return favourite;
     }
@@ -127,12 +141,13 @@ public class ImageFile {
         this.favourite = favourite;
     }
 
-    public String getAbsolutePath() {
-        return absolutePath;
+    public String getFileUri() {
+        return (null == fileUri) ? "" : fileUri;
     }
 
-    public void setAbsolutePath(String absolutePath) {
-        this.absolutePath = absolutePath;
+    public ImageFile setFileUri(String fileUri) {
+        this.fileUri = fileUri;
+        return this;
     }
 
     public int getDisplayOrder() {
@@ -152,14 +167,25 @@ public class ImageFile {
     }
 
     public String getMimeType() {
-        return (null == mimeType) ? "" : mimeType;
+        return (null == mimeType) ? "image/*" : mimeType;
     }
 
     public void setMimeType(String mimeType) {
         this.mimeType = mimeType;
     }
 
-    public void setContent(@NonNull Content content) { this.content.setTargetId(content.getId()); }
+    public void setContentId(long contentId) {
+        this.content.setTargetId(contentId);
+    }
+
+    public long getSize() {
+        return size;
+    }
+
+    public ImageFile setSize(long size) {
+        this.size = size;
+        return this;
+    }
 
     public static final Comparator<ImageFile> ORDER_COMPARATOR = (a, b) -> a.getOrder().compareTo(b.getOrder());
 
@@ -167,14 +193,13 @@ public class ImageFile {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-
         ImageFile imageFile = (ImageFile) o;
-
-        return Objects.equals(url, imageFile.url);
+        return isCover == imageFile.isCover &&
+                Objects.equals(url, imageFile.url);
     }
 
     @Override
     public int hashCode() {
-        return url != null ? url.hashCode() : 0;
+        return Objects.hash(url, isCover);
     }
 }

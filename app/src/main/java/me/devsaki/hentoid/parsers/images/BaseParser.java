@@ -2,20 +2,23 @@ package me.devsaki.hentoid.parsers.images;
 
 import android.webkit.URLUtil;
 
+import androidx.annotation.NonNull;
+
+import com.annimon.stream.Optional;
+
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 
 import java.io.IOException;
 import java.util.List;
 
-import androidx.annotation.NonNull;
 import javax.annotation.Nullable;
 
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.parsers.ParseHelper;
-import me.devsaki.hentoid.util.OkHttpClientSingleton;
+import me.devsaki.hentoid.util.network.OkHttpClientSingleton;
 import okhttp3.HttpUrl;
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
@@ -61,15 +64,15 @@ public abstract class BaseParser implements ImageListParser {
         content.populateUniqueSiteId();
 
         List<String> imgUrls = parseImages(content);
-        List<ImageFile> images = ParseHelper.urlsToImageFiles(imgUrls, StatusContent.SAVED);
+        List<ImageFile> images = ParseHelper.urlsToImageFiles(imgUrls, content.getCoverImageUrl(), StatusContent.SAVED);
 
         Timber.d("%s", images);
 
         return images;
     }
 
-    public ImageFile parseBackupUrl(@NonNull String url, int order, int maxPages) {
-        return null;
+    public Optional<ImageFile> parseBackupUrl(@NonNull String url, int order, int maxPages) {
+        return Optional.of(new ImageFile(order, url, StatusContent.SAVED, maxPages));
     }
 
     void progressStart(int maxSteps) {

@@ -61,7 +61,7 @@ public class TextItem<T> extends AbstractItem<TextItem.TextViewHolder> {
 
         TextViewHolder(View view) {
             super(view);
-            title = requireViewById(view, R.id.drawer_item_txt);
+            title = requireViewById(view, R.id.item_txt);
             int color = ThemeHelper.getColor(view.getContext(), R.color.secondary_light);
             view.setBackground(FastAdapterUIUtils.getSelectablePressedBackground(view.getContext(), FastAdapterUIUtils.adjustAlpha(color, 100), 50, true));
         }

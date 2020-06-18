@@ -64,7 +64,7 @@ public class RedditLauncherDialogFragment extends DialogFragment {
 
         tabs.setupWithViewPager(viewPager);
 
-        tabs.getTabAt(0).setIcon(R.drawable.ic_menu_sort_last_read);
+        tabs.getTabAt(0).setIcon(R.drawable.ic_chrono);
         tabs.getTabAt(1).setIcon(R.drawable.ic_action_download);
     }
 }

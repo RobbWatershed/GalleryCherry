@@ -6,7 +6,9 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.annimon.stream.Stream;
 
+import java.io.IOException;
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -16,8 +18,10 @@ import io.objectbox.annotation.Convert;
 import io.objectbox.annotation.Entity;
 import io.objectbox.annotation.Id;
 import io.objectbox.annotation.Transient;
+import io.objectbox.converter.PropertyConverter;
 import io.objectbox.relation.ToMany;
 import me.devsaki.hentoid.activities.sources.BaseWebActivity;
+import me.devsaki.hentoid.activities.sources.FapalityActivity;
 import me.devsaki.hentoid.activities.sources.HellpornoActivity;
 import me.devsaki.hentoid.activities.sources.JjgirlsActivity;
 import me.devsaki.hentoid.activities.sources.JpegworldActivity;
@@ -33,6 +37,10 @@ import me.devsaki.hentoid.enums.AttributeType;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.util.AttributeMap;
+import me.devsaki.hentoid.util.JsonHelper;
+import timber.log.Timber;
+
+import static me.devsaki.hentoid.util.JsonHelper.MAP_STRINGS;
 
 /**
  * Created by DevSaki on 09/05/2015.
@@ -58,31 +66,36 @@ public class Content implements Serializable {
     private ToMany<ImageFile> imageFiles;
     @Convert(converter = Site.SiteConverter.class, dbType = Long.class)
     private Site site;
-    private String storageFolder; // Not exposed because it will vary according to book location -> valued at import
+    private String storageFolder; // Used as pivot for API29 migration; no use after that (replaced by storageUri)
+    private String storageUri; // Not exposed because it will vary according to book location -> valued at import
     private boolean favourite;
     private long reads = 0;
     private long lastReadDate;
     private int lastReadPageIndex = 0;
+    @Convert(converter = Content.StringMapConverter.class, dbType = String.class)
+    private Map<String, String> bookPreferences = new HashMap<>();
+
     // Temporary during SAVED state only; no need to expose them for JSON persistence
     private String downloadParams;
     // Temporary during ERROR state only; no need to expose them for JSON persistence
     @Backlink(to = "content")
     private ToMany<ErrorRecord> errorLog;
-    // Needs to be in the DB to keep the information when deletion/favouriting takes a long time
+    // Needs to be in the DB to keep the information when deletion takes a long time
     // and user navigates away; no need to save that into JSON
     private boolean isBeingDeleted = false;
-    private boolean isBeingFavourited = false;
     // Needs to be in the DB to optimize I/O
     // No need to save that into the JSON file itself, obviously
     private String jsonUri;
 
     // Runtime attributes; no need to expose them for JSON persistence nor to persist them to DB
     @Transient
-    private double percent;     // % progress to display the progress bar on the queue screen
+    private long progress;          // number of downloaded pages; used to display the progress bar on the queue screen
     @Transient
-    private boolean isFirst;    // True if current content is the first of its set in the DB query
+    private long downloadedBytes = 0;// Number of downloaded bytes; used to display the size estimate on the queue screen
     @Transient
-    private boolean isLast;     // True if current content is the last of its set in the DB query
+    private boolean isFirst;        // True if current content is the first of its set in the DB query
+    @Transient
+    private boolean isLast;         // True if current content is the last of its set in the DB query
     @Transient
     private int numberDownloadRetries = 0;  // Current number of download retries current content has gone through
 
@@ -152,6 +165,8 @@ public class Content implements Serializable {
             case LINK2GALLERIES:
             case NEXTPICTUREZ:
                 return parts[parts.length - 1];
+            case FAPALITY:
+                return parts[parts.length - 2];
             case JPEGWORLD:
                 return url.substring(url.lastIndexOf("-") + 1, url.lastIndexOf("."));
             case REDDIT:
@@ -200,6 +215,8 @@ public class Content implements Serializable {
                 return JjgirlsActivity.class;
             case LUSCIOUS:
                 return LusciousActivity.class;
+            case FAPALITY:
+                return FapalityActivity.class;
             default:
                 return BaseWebActivity.class;
         }
@@ -235,6 +252,7 @@ public class Content implements Serializable {
             case JJGIRLS:
                 return url; // Specific case - user can go on any site (smart parser)
             case HELLPORNO:
+            case FAPALITY:
                 galleryConst = ""; // Site landpage URL already contains the "/albums/" prefix
                 break;
             case PORNPICS:
@@ -287,19 +305,6 @@ public class Content implements Serializable {
         return this;
     }
 
-    @Nullable
-    public String getCoverImageUrl() {
-        if (coverImageUrl != null && !coverImageUrl.isEmpty())
-            return coverImageUrl;
-        else if ((imageFiles != null) && (imageFiles.size() > 0)) return imageFiles.get(0).getUrl();
-        else return null;
-    }
-
-    public Content setCoverImageUrl(String coverImageUrl) {
-        this.coverImageUrl = coverImageUrl;
-        return this;
-    }
-
     public int getQtyPages() {
         return qtyPages;
     }
@@ -349,6 +354,24 @@ public class Content implements Serializable {
         return this;
     }
 
+    public ImageFile getCover() {
+        List<ImageFile> images = getImageFiles();
+        if (images != null && !images.isEmpty()) {
+            for (ImageFile img : images)
+                if (img.isCover()) return img;
+        }
+        return new ImageFile();
+    }
+
+    public String getCoverImageUrl() {
+        return (null == coverImageUrl) ? "" : coverImageUrl;
+    }
+
+    public Content setCoverImageUrl(String coverImageUrl) {
+        this.coverImageUrl = coverImageUrl;
+        return this;
+    }
+
     @Nullable
     public ToMany<ErrorRecord> getErrorLog() {
         return errorLog;
@@ -362,23 +385,38 @@ public class Content implements Serializable {
     }
 
     public double getPercent() {
-        return percent;
+        return progress * 1.0 / qtyPages;
     }
 
-    public void setPercent(double percent) {
-        this.percent = percent;
+    public void setProgress(long progress) {
+        this.progress = progress;
     }
 
-    public void computePercent() {
-        if (imageFiles != null && 0 == percent && qtyPages > 0) {
-            long progress = Stream.of(imageFiles).filter(i -> i.getStatus() == StatusContent.DOWNLOADED || i.getStatus() == StatusContent.ERROR).count();
-            percent = progress * 100.0 / qtyPages;
+    public void computeProgress() {
+        if (0 == progress && imageFiles != null)
+            progress = Stream.of(imageFiles).filter(i -> i.getStatus() == StatusContent.DOWNLOADED || i.getStatus() == StatusContent.ERROR).count();
+    }
+
+    public double getBookSizeEstimate() {
+        if (downloadedBytes > 0) {
+            computeProgress();
+            if (progress > 3) return (long) (downloadedBytes / getPercent());
         }
+        return 0;
+    }
+
+    public void setDownloadedBytes(long downloadedBytes) {
+        this.downloadedBytes = downloadedBytes;
+    }
+
+    public void computeDownloadedBytes() {
+        if (0 == downloadedBytes)
+            downloadedBytes = Stream.of(imageFiles).mapToLong(ImageFile::getSize).sum();
     }
 
     public long getNbDownloadedPages() {
         if (imageFiles != null)
-            return Stream.of(imageFiles).filter(i -> i.getStatus() == StatusContent.DOWNLOADED).count();
+            return Stream.of(imageFiles).filter(i -> i.getStatus() == StatusContent.DOWNLOADED && !i.isCover()).count();
         else return 0;
     }
 
@@ -391,12 +429,25 @@ public class Content implements Serializable {
         return this;
     }
 
+
+    /**
+     * @deprecated Replaced by getStorageUri; accessor is kept for API29 migration
+     */
+    @Deprecated
     public String getStorageFolder() {
         return storageFolder == null ? "" : storageFolder;
     }
 
-    public Content setStorageFolder(String storageFolder) {
-        this.storageFolder = storageFolder;
+    public void resetStorageFolder() {
+        storageFolder = "";
+    }
+
+    public String getStorageUri() {
+        return storageUri == null ? "" : storageUri;
+    }
+
+    public Content setStorageUri(String storageUri) {
+        this.storageUri = storageUri;
         return this;
     }
 
@@ -457,6 +508,18 @@ public class Content implements Serializable {
         return this;
     }
 
+    public Map<String, String> getBookPreferences() {
+        return bookPreferences;
+    }
+
+    public void setBookPreferences(Map<String, String> bookPreferences) {
+        this.bookPreferences = bookPreferences;
+    }
+
+    public void putBookPreferenceMap(String key, String value) {
+        bookPreferences.put(key, value);
+    }
+
     public int getLastReadPageIndex() {
         return lastReadPageIndex;
     }
@@ -473,14 +536,6 @@ public class Content implements Serializable {
         this.isBeingDeleted = isBeingDeleted;
     }
 
-    public boolean isBeingFavourited() {
-        return isBeingFavourited;
-    }
-
-    public void setIsBeingFavourited(boolean isBeingFavourited) {
-        this.isBeingFavourited = isBeingFavourited;
-    }
-
     public String getJsonUri() {
         return (null == jsonUri) ? "" : jsonUri;
     }
@@ -495,6 +550,25 @@ public class Content implements Serializable {
 
     public void increaseNumberDownloadRetries() {
         this.numberDownloadRetries++;
+    }
+
+    public static class StringMapConverter implements PropertyConverter<Map<String, String>, String> {
+        @Override
+        public Map<String, String> convertToEntityProperty(String databaseValue) {
+            if (null == databaseValue) return new HashMap<>();
+
+            try {
+                return JsonHelper.jsonToObject(databaseValue, MAP_STRINGS);
+            } catch (IOException e) {
+                Timber.w(e);
+                return new HashMap<>();
+            }
+        }
+
+        @Override
+        public String convertToDatabaseValue(Map<String, String> entityProperty) {
+            return JsonHelper.serializeToJson(entityProperty, MAP_STRINGS);
+        }
     }
 
     @Override

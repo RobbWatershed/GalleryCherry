@@ -32,13 +32,14 @@ import androidx.annotation.DrawableRes;
 import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.WorkerThread;
+import androidx.annotation.StringRes;
 import androidx.appcompat.widget.Toolbar;
 import androidx.coordinatorlayout.widget.CoordinatorLayout;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.annimon.stream.Stream;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.skydoves.balloon.ArrowOrientation;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
@@ -72,7 +73,6 @@ import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.schedulers.Schedulers;
 import me.devsaki.hentoid.BuildConfig;
-import me.devsaki.hentoid.HentoidApp;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.activities.BaseActivity;
 import me.devsaki.hentoid.activities.LibraryActivity;
@@ -95,11 +95,12 @@ import me.devsaki.hentoid.services.ContentQueueManager;
 import me.devsaki.hentoid.util.Consts;
 import me.devsaki.hentoid.util.ContentHelper;
 import me.devsaki.hentoid.util.Helper;
-import me.devsaki.hentoid.util.HttpHelper;
 import me.devsaki.hentoid.util.JsonHelper;
 import me.devsaki.hentoid.util.PermissionUtil;
 import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.util.ToastUtil;
+import me.devsaki.hentoid.util.TooltipUtil;
+import me.devsaki.hentoid.util.network.HttpHelper;
 import me.devsaki.hentoid.views.NestedScrollWebView;
 import okhttp3.Response;
 import pl.droidsonroids.jspoon.HtmlAdapter;
@@ -107,17 +108,13 @@ import pl.droidsonroids.jspoon.Jspoon;
 import timber.log.Timber;
 
 import static me.devsaki.hentoid.util.Helper.getChromeVersion;
-import static me.devsaki.hentoid.util.HttpHelper.HEADER_CONTENT_TYPE;
+import static me.devsaki.hentoid.util.PermissionUtil.RQST_STORAGE_PERMISSION;
+import static me.devsaki.hentoid.util.network.HttpHelper.HEADER_CONTENT_TYPE;
 
 /**
  * Browser activity which allows the user to navigate a supported source.
  * No particular source should be filtered/defined here.
  * The source itself should contain every method it needs to function.
- * <p>
- * todo issue:
- * {@link #checkPermissions()} causes the app to reset unexpectedly. If permission is integral to
- * this activity's function, it is recommended to request for this permission and show rationale if
- * permission request is denied
  */
 public abstract class BaseWebActivity extends BaseActivity implements WebContentListener {
 
@@ -147,7 +144,9 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
     // === UI
     // Associated webview
     protected NestedScrollWebView webView;
-    // Toolbar buttons
+    // Bottom toolbar
+    private BottomNavigationView bottomToolbar;
+    // Bottom toolbar buttons
     private MenuItem backMenu;
     private MenuItem forwardMenu;
     private MenuItem galleryMenu;
@@ -209,6 +208,12 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
         universalBlockedContent.add("hadskiz.com");
         universalBlockedContent.add("pushnotifications.click");
         universalBlockedContent.add("fingahvf.top");
+        universalBlockedContent.add("displayvertising.com");
+        universalBlockedContent.add("tsyndicate.com");
+        universalBlockedContent.add("semireproji.pro");
+        universalBlockedContent.add("defutohi.pro");
+        universalBlockedContent.add("realsrv.com");
+        universalBlockedContent.add("smartclick.net");
     }
 
     protected abstract CustomWebViewClient getWebClient();
@@ -259,7 +264,7 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
         toolbar.setOnMenuItemClickListener(this::onMenuItemSelected);
         refreshStopMenu = toolbar.getMenu().findItem(R.id.web_menu_refresh_stop);
 
-        BottomNavigationView bottomToolbar = findViewById(R.id.bottom_navigation);
+        bottomToolbar = findViewById(R.id.bottom_navigation);
         bottomToolbar.setOnNavigationItemSelectedListener(this::onMenuItemSelected);
         bottomToolbar.setItemIconTintList(null); // Hack to make selector resource work
         backMenu = bottomToolbar.getMenu().findItem(R.id.web_menu_back);
@@ -346,6 +351,28 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
     }
 
     @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+
+        // NB : This doesn't restore the browsing history, but WebView.saveState/restoreState
+        // doesn't work that well (bugged when using back/forward commands). A valid solution still has to be found
+        BaseWebActivityBundle.Builder builder = new BaseWebActivityBundle.Builder();
+        builder.setUrl(webView.getUrl());
+        outState.putAll(builder.getBundle());
+    }
+
+    @Override
+    protected void onRestoreInstanceState(@NonNull Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+
+        // NB : This doesn't restore the browsing history, but WebView.saveState/restoreState
+        // doesn't work that well (bugged when using back/forward commands). A valid solution still has to be found
+        String url = new BaseWebActivityBundle.Parser(savedInstanceState).getUrl();
+        if (url != null && !url.isEmpty())
+            webView.loadUrl(url);
+    }
+
+    @Override
     protected void onResume() {
         super.onResume();
 
@@ -382,14 +409,10 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
     }
 
     // Validate permissions
+    // TODO find something better than that
     private void checkPermissions() {
-        if (PermissionUtil.checkExternalStoragePermission(this)) {
-            Timber.d("Storage permission allowed!");
-        } else {
-            Timber.d("Storage permission denied!");
-            ToastUtil.toast(R.string.reset);
-            HentoidApp.reset(this);
-        }
+        if (!PermissionUtil.requestExternalStorageReadPermission(this, RQST_STORAGE_PERMISSION))
+            ToastUtil.toast("Storage permission denied - cannot use the downloader");
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -428,9 +451,7 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
             webView.getSettings().setLoadWithOverviewMode(true);
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT && BuildConfig.DEBUG) {
-            WebView.setWebContentsDebuggingEnabled(true);
-        }
+        if (BuildConfig.DEBUG) WebView.setWebContentsDebuggingEnabled(true);
 
 
         webClient = getWebClient();
@@ -638,13 +659,12 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
             if (!quickDownload) changeActionMode(ActionMode.READ);
             return;
         }
-        ToastUtil.toast(R.string.add_to_queue);
+        ToastUtil.toast(getResources().getQuantityString(R.plurals.add_to_queue, 1));
 
         objectBoxDAO.addContentToQueue(currentContent, null);
 
         if (Preferences.isQueueAutostart()) ContentQueueManager.getInstance().resumeQueue(this);
 
-        /*if (!quickDownload) */
         changeActionMode(ActionMode.VIEW_QUEUE);
     }
 
@@ -697,10 +717,10 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
         boolean isInCollection = (contentDB != null && (
                 contentDB.getStatus().equals(StatusContent.DOWNLOADED)
                         || contentDB.getStatus().equals(StatusContent.MIGRATED)
-                        || contentDB.getStatus().equals(StatusContent.ERROR)
         ));
         boolean isInQueue = (contentDB != null && (
                 contentDB.getStatus().equals(StatusContent.DOWNLOADING)
+                        || contentDB.getStatus().equals(StatusContent.ERROR)
                         || contentDB.getStatus().equals(StatusContent.PAUSED)
         ));
 
@@ -714,7 +734,7 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
                 objectBoxDAO.insertContent(content);
             } else {
                 // Add new pages to current content with a proper index, and save them
-                if (content.getSite().isDanbooru()) {
+                if (content.getSite().isDanbooru()) { // TODO duplicated code with RedditAuthDownloadFragment
                     // Ignore the images that are already contained in the central booru book
                     List<ImageFile> newImages = content.getImageFiles();
                     List<ImageFile> existingImages = contentDB.getImageFiles();
@@ -780,6 +800,28 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
         }
     }
 
+    void showTooltip(@StringRes int resource) {
+        TooltipUtil.showTooltip(this, resource, ArrowOrientation.BOTTOM, bottomToolbar, this);
+    }
+
+    /**
+     * Indicates if the given URL is forbidden by the current content filters
+     *
+     * @param url URL to be examinated
+     * @return True if URL is forbidden according to current filters; false if not
+     */
+    protected boolean isUrlForbidden(@NonNull String url) {
+        for (String s : universalBlockedContent) {
+            if (url.contains(s)) return true;
+        }
+        if (localBlockedContent != null)
+            for (String s : localBlockedContent) {
+                if (url.contains(s)) return true;
+            }
+        return false;
+    }
+
+
     /**
      * Analyze loaded HTML to display download button
      * Override blocked content with empty content
@@ -798,11 +840,13 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
         // Adapter used to parse the HTML code of book gallery pages
         private final HtmlAdapter<ContentParser> htmlAdapter;
         // Domain name for which link navigation is restricted
-        private List<String> domainNames = new ArrayList<>();
+        private List<String> restrictedDomainNames = new ArrayList<>();
         // Loading state of the current webpage (used for the refresh/stop feature)
         private boolean isPageLoading = false;
         // Loading state of the HTML code of the current webpage (used to trigger the action button)
         boolean isHtmlLoaded = false;
+        // Flag to automatically prevent augmented browser to be used
+        boolean preventAugmentedBrowser = false;
 
 
         @SuppressWarnings("unchecked")
@@ -827,20 +871,21 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
          * @param s Domain name to restrict link navigation to
          */
         protected void restrictTo(String s) {
-            domainNames.add(s);
+            restrictedDomainNames.add(s);
         }
 
         void restrictTo(String... s) {
-            domainNames.addAll(Arrays.asList(s));
+            restrictedDomainNames.addAll(Arrays.asList(s));
         }
 
         private boolean isHostNotInRestrictedDomains(@NonNull String host) {
-            if (domainNames.isEmpty()) return false;
+            if (restrictedDomainNames.isEmpty()) return false;
 
-            for (String s : domainNames) {
+            for (String s : restrictedDomainNames) {
                 if (host.contains(s)) return false;
             }
 
+            Timber.i("Unrestricted host detected : %s", host);
             return true;
         }
 
@@ -861,23 +906,6 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
         }
 
         /**
-         * Indicates if the given URL is forbidden by the current content filters
-         *
-         * @param url URL to be examinated
-         * @return True if URL is forbidden according to current filters; false if not
-         */
-        private boolean isUrlForbidden(@NonNull String url) {
-            for (String s : universalBlockedContent) {
-                if (url.contains(s)) return true;
-            }
-            if (localBlockedContent != null)
-                for (String s : localBlockedContent) {
-                    if (url.contains(s)) return true;
-                }
-            return false;
-        }
-
-        /**
          * Determines if the browser can use one single OkHttp request to serve HTML pages
          * - Does not work on 4.4 & 4.4.2 because calling CookieManager.getCookie inside shouldInterceptRequest triggers a deadlock
          * https://issuetracker.google.com/issues/36989494
@@ -888,8 +916,8 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
          * false if the webview has to handle the display (OkHttp will be used as a 2nd request for parsing)
          */
         private boolean canUseSingleOkHttpRequest() {
-            return (Preferences.isBrowserAugmented()
-                    && Build.VERSION.SDK_INT > Build.VERSION_CODES.KITKAT_WATCH
+            return (!preventAugmentedBrowser
+                    && Preferences.isBrowserAugmented()
                     && (chromeVersion < 45 || chromeVersion > 71)
             );
         }
@@ -926,6 +954,8 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
                 actionMenu.setIcon(R.drawable.selector_download_action);
                 actionMenu.setEnabled(false);
             }
+            // Display download button tooltip if a book page has been reached
+            if (isBookGallery(url)) showTooltip(R.string.help_web_download);
         }
 
         @Override
@@ -950,21 +980,8 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
         }
 
         /**
-         * @deprecated kept for API19-API20
+         * Note : this method is called by a non-UI thread
          */
-        @Override
-        @Deprecated
-        public WebResourceResponse shouldInterceptRequest(@NonNull WebView view,
-                                                          @NonNull String url) {
-            // Prevents processing the page twice on Lollipop and above
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
-                WebResourceResponse result = shouldInterceptRequestInternal(url, null);
-                if (result != null) return result;
-            }
-            return super.shouldInterceptRequest(view, url);
-        }
-
-        @TargetApi(Build.VERSION_CODES.LOLLIPOP)
         @Override
         public WebResourceResponse shouldInterceptRequest(@NonNull WebView view,
                                                           @NonNull WebResourceRequest request) {
@@ -1030,8 +1047,8 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
          * null if vanilla processing should happen instead
          */
         @SuppressLint("NewApi")
-        @WorkerThread
         protected WebResourceResponse parseResponse(@NonNull String urlStr, @Nullable Map<String, String> requestHeaders, boolean analyzeForDownload, boolean quickDownload) {
+            Helper.assertNonUiThread();
             // If we're here for dirty content removal only, and can't use the OKHTTP request, it's no use going further
             if (!analyzeForDownload && !canUseSingleOkHttpRequest()) return null;
 

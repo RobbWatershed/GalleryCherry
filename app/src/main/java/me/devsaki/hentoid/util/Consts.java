@@ -14,10 +14,14 @@ public abstract class Consts {
 
     public static final String DATABASE_NAME = "cherry.db";
 
-    public static final String DEFAULT_LOCAL_DIRECTORY_OLD = "Hentoid";
+    public static final String DEFAULT_LOCAL_DIRECTORY_OLD = "Cherry";
     public static final String DEFAULT_LOCAL_DIRECTORY = ".Cherry";
 
     public static final String JSON_FILE_NAME_V2 = "contentV2.json";
+
+    public static final String QUEUE_JSON_FILE_NAME = "queue.json";
+
+    public static final String THUMB_FILE_NAME = "thumb";
 
     public static final String USER_AGENT_NEUTRAL = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36";
 

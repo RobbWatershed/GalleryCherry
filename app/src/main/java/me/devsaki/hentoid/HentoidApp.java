@@ -1,10 +1,10 @@
 package me.devsaki.hentoid;
 
-import android.app.Activity;
 import android.app.Application;
 import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
 import android.os.Build;
 import android.os.Bundle;
 
@@ -20,10 +20,12 @@ import com.jakewharton.threetenabp.AndroidThreeTen;
 
 import org.threeten.bp.Instant;
 
+import java.io.IOException;
+
 import io.fabric.sdk.android.Fabric;
-import me.devsaki.hentoid.activities.IntroActivity;
-import me.devsaki.hentoid.database.DatabaseMaintenance;
-import me.devsaki.hentoid.database.HentoidDB;
+import io.reactivex.exceptions.UndeliverableException;
+import io.reactivex.plugins.RxJavaPlugins;
+import me.devsaki.hentoid.customssiv.CustomSubsamplingScaleImageView;
 import me.devsaki.hentoid.notification.download.DownloadNotificationChannel;
 import me.devsaki.hentoid.notification.maintenance.MaintenanceNotificationChannel;
 import me.devsaki.hentoid.notification.update.UpdateNotificationChannel;
@@ -107,6 +109,11 @@ public class HentoidApp extends Application {
         Preferences.init(this);
         Preferences.performHousekeeping();
 
+        // Image viewer
+        // Needs ARGB_8888 to be able to resize images using RenderScript
+        // (defaults to Bitmap.Config.RGB_565 if not set)
+        CustomSubsamplingScaleImageView.setPreferredBitmapConfig(Bitmap.Config.ARGB_8888);
+
         // Init version number on first run
         if (0 == Preferences.getLastKnownAppVersionCode())
             Preferences.setLastKnownAppVersionCode(BuildConfig.VERSION_CODE);
@@ -140,30 +147,31 @@ public class HentoidApp extends Application {
         FirebaseAnalytics.getInstance(this).setUserProperty("color_theme", Integer.toString(Preferences.getColorTheme()));
         FirebaseAnalytics.getInstance(this).setUserProperty("endless", Boolean.toString(Preferences.getEndlessScroll()));
 
+        // Plug the lifecycle listener to handle locking
         ProcessLifecycleOwner.get().getLifecycle().addObserver(new LifeCycleListener());
-    }
 
-    /**
-     * Reset the app and close caller activity
-     */
-    public static void reset(Activity activity) {
-        Preferences.setIsFirstRun(true);
-        Intent intent = new Intent(activity, IntroActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        instance.startActivity(intent);
-        activity.finish();
+        // Set RxJava's default error handler for unprocessed network and IO errors
+        RxJavaPlugins.setErrorHandler(e -> {
+            if (e instanceof UndeliverableException) {
+                e = e.getCause();
+            }
+            if (e instanceof IOException) {
+                // fine, irrelevant network problem or API that throws on cancellation
+                return;
+            }
+            if (e instanceof InterruptedException) {
+                // fine, some blocking code was interrupted by a dispose call
+                return;
+            }
+            Timber.w(e, "Undeliverable exception received, not sure what to do");
+        });
     }
 
     /**
      * Clean up and upgrade database
      */
-    @SuppressWarnings({"deprecation", "squid:CallToDeprecatedMethod"})
+    @SuppressWarnings({"squid:CallToDeprecatedMethod"})
     private void performDatabaseHousekeeping() {
-        HentoidDB oldDB = HentoidDB.getInstance(this);
-
-        // Perform technical data updates that need to be done before app launches
-        DatabaseMaintenance.performOldDatabaseUpdate(oldDB);
-
         // Launch a service that will perform non-structural DB housekeeping tasks
         Intent intent = DatabaseMaintenanceService.makeIntent(this);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

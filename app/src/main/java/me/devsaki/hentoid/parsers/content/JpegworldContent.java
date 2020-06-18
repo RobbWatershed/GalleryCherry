@@ -41,13 +41,10 @@ public class JpegworldContent implements ContentParser {
         result.setTitle(title);
 
         AttributeMap attributes = new AttributeMap();
-
         ParseHelper.parseAttributes(attributes, AttributeType.TAG, tags, true, Site.JPEGWORLD);
-
         result.addAttributes(attributes);
 
         List<ImageFile> images = new ArrayList<>();
-
         int order = 1;
         String[] parts;
         for (String s : imageLinks) {
