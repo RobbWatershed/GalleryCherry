@@ -219,8 +219,6 @@ public class Content implements Serializable {
                 return LusciousActivity.class;
             case FAPALITY:
                 return FapalityActivity.class;
-            case HENTAIFOX:
-                return HentaifoxActivity.class;
             default:
                 return BaseWebActivity.class;
         }
@@ -250,7 +248,6 @@ public class Content implements Serializable {
     public String getGalleryUrl() {
         String galleryConst;
         switch (site) {
-            case HENTAIFOX:
             case PORNPICGALLERIES:
             case LINK2GALLERIES:
             case REDDIT: // N/A

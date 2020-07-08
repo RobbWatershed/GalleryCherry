@@ -58,7 +58,7 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
 
     private static final RequestOptions glideRequestOptions = new RequestOptions()
             .centerInside()
-            .error(R.drawable.ic_hentoid);
+            .error(R.drawable.ic_cherry);
 
     @IntDef({ViewType.LIBRARY, ViewType.QUEUE, ViewType.ERRORS})
     @Retention(RetentionPolicy.SOURCE)

@@ -5,7 +5,6 @@ import me.devsaki.hentoid.parsers.content.FapalityContent;
 import me.devsaki.hentoid.parsers.content.HellpornoContent;
 import me.devsaki.hentoid.parsers.content.JjgirlsContent;
 import me.devsaki.hentoid.parsers.content.JpegworldContent;
-import me.devsaki.hentoid.parsers.content.HentaifoxContent;
 import me.devsaki.hentoid.parsers.content.NextpicturezContent;
 import me.devsaki.hentoid.parsers.content.PornPicsContent;
 import me.devsaki.hentoid.parsers.content.SmartContent;

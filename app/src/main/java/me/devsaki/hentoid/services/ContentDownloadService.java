@@ -19,8 +19,6 @@ import com.android.volley.TimeoutError;
 import com.android.volley.VolleyError;
 import com.annimon.stream.Stream;
 
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
