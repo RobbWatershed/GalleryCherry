@@ -96,6 +96,12 @@ public final class Helper {
         return list;
     }
 
+    public static List<Integer> getListFromPrimitiveArray(int[] input) {
+        List<Integer> list = new ArrayList<>(input.length);
+        for (int n : input) list.add(n);
+        return list;
+    }
+
     public static long[] getPrimitiveLongArrayFromList(List<Long> integers) {
         long[] ret = new long[integers.size()];
         Iterator<Long> iterator = integers.iterator();
@@ -157,7 +163,7 @@ public final class Helper {
 
     // https://stackoverflow.com/a/18603020/8374722
     public static String removeNonPrintableChars(@Nullable final String s) {
-        if (null == s) return "";
+        if (null == s || s.isEmpty()) return "";
 
         StringBuilder newString = new StringBuilder(s.length());
         for (int offset = 0; offset < s.length(); ) {

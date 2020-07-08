@@ -44,6 +44,7 @@ import me.devsaki.hentoid.database.domains.Attribute;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.QueueRecord;
 import me.devsaki.hentoid.enums.AttributeType;
+import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.services.ContentQueueManager;
 import me.devsaki.hentoid.ui.BlinkAnimation;
 import me.devsaki.hentoid.util.JsonHelper;
@@ -57,7 +58,7 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
 
     private static final RequestOptions glideRequestOptions = new RequestOptions()
             .centerInside()
-            .error(R.drawable.ic_placeholder);
+            .error(R.drawable.ic_hentoid);
 
     @IntDef({ViewType.LIBRARY, ViewType.QUEUE, ViewType.ERRORS})
     @Retention(RetentionPolicy.SOURCE)
@@ -89,23 +90,25 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
     }
 
     // Constructor for library and error item
-    public ContentItem(Content content, @NonNull ItemTouchHelper touchHelper, @ViewType int viewType) {
+    public ContentItem(Content content, @Nullable ItemTouchHelper touchHelper, @ViewType int viewType) {
         this.content = content;
         this.viewType = viewType;
         this.touchHelper = touchHelper;
         isEmpty = (null == content);
+        isSwipeable = (viewType == ViewType.ERRORS);
         if (content != null) setIdentifier(content.getId());
         else setIdentifier(generateIdForPlaceholder());
     }
 
     // Constructor for queued item
     public ContentItem(@NonNull QueueRecord record, ItemTouchHelper touchHelper) {
-        setSelectable(false);
-        setIdentifier(record.id);
         content = record.content.getTarget();
         viewType = ViewType.QUEUE;
-        isEmpty = (null == content);
         this.touchHelper = touchHelper;
+        isEmpty = (null == content);
+//        setIdentifier(record.id);
+        if (content != null) setIdentifier(content.getId());
+        else setIdentifier(generateIdForPlaceholder());
     }
 
     @Nullable
@@ -288,7 +291,9 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
         }
 
         private void attachCover(@NonNull final Content content) {
-            String thumbLocation = content.getCover().getFileUri();
+            String thumbLocation = "";
+            if (content.getCover().getStatus().equals(StatusContent.DOWNLOADED) || content.getCover().getStatus().equals(StatusContent.MIGRATED) || content.getCover().getStatus().equals(StatusContent.EXTERNAL))
+                thumbLocation = content.getCover().getFileUri();
             if (thumbLocation.isEmpty()) thumbLocation = content.getCover().getUrl();
             if (thumbLocation.isEmpty()) thumbLocation = content.getCoverImageUrl();
 
@@ -391,16 +396,22 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
         private void attachPages(@NonNull final Content content, @ViewType int viewType) {
             tvPages.setVisibility(0 == content.getQtyPages() ? View.INVISIBLE : View.VISIBLE);
             Context context = tvPages.getContext();
-            String template = context.getResources().getString(R.string.work_pages);
-            template = template.replace("@pages@", content.getQtyPages() + "");
-            if (viewType != ViewType.QUEUE) {
-                long nbMissingPages = content.getQtyPages() - content.getNbDownloadedPages();
-                if (nbMissingPages > 0)
-                    template = template.replace("@missing@", " (" + nbMissingPages + " missing)");
-                else
+
+            String template;
+            if (viewType == ViewType.QUEUE || viewType == ViewType.ERRORS) {
+                template = context.getResources().getString(R.string.work_pages_queue);
+                template = template.replace("@pages@", content.getQtyPages() + "");
+                if (viewType == ViewType.ERRORS) {
+                    long nbMissingPages = content.getQtyPages() - content.getNbDownloadedPages();
+                    if (nbMissingPages > 0)
+                        template = template.replace("@missing@", " (" + nbMissingPages + " missing)");
+                    else
+                        template = template.replace("@missing@", "");
+                } else
                     template = template.replace("@missing@", "");
-            } else
-                template = template.replace("@missing@", "");
+            } else { // Library
+                template = context.getResources().getString(R.string.work_pages_library, content.getNbDownloadedPages(), content.getSize() * 1.0 / (1024 * 1024));
+            }
 
             tvPages.setText(template);
         }

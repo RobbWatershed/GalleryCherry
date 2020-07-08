@@ -28,6 +28,7 @@ public class DatabaseMaintenance {
 
         // Perform functional data updates
         performDatabaseCleanups(db);
+        db.closeThreadResources();
     }
 
     private static void performDatabaseCleanups(@NonNull ObjectBoxDB db) {
@@ -54,5 +55,14 @@ public class DatabaseMaintenance {
         for (Content c : contents) db.deleteContent(c);
         Timber.i("Clearing temporary books : done");
 
+        // Compute missing downloaded Content size according to underlying ImageFile sizes
+        Timber.i("Computing downloaded content size : start");
+        contents = db.selectDownloadedContentWithNoSize();
+        Timber.i("Computing downloaded content size : %s books detected", contents.size());
+        for (Content c : contents) {
+            c.computeSize();
+            db.insertContent(c);
+        }
+        Timber.i("Computing downloaded content size : done");
     }
 }

@@ -212,8 +212,8 @@ public class LibraryViewModel extends AndroidViewModel {
 
             // Persist in it JSON
             if (!theContent.getJsonUri().isEmpty())
-                ContentHelper.updateJson(getApplication(), theContent);
-            else ContentHelper.createJson(getApplication(), theContent);
+                ContentHelper.updateContentJson(getApplication(), theContent);
+            else ContentHelper.createContentJson(getApplication(), theContent);
 
             // Persist in it DB
             dao.insertContent(theContent);
@@ -304,7 +304,7 @@ public class LibraryViewModel extends AndroidViewModel {
         DocumentFile bookFolder = DocumentFile.fromTreeUri(getApplication(), Uri.parse(content.getStorageUri()));
         if (null == bookFolder || !bookFolder.exists()) return;
 
-        List<DocumentFile> files = FileHelper.listDocumentFiles(getApplication(), bookFolder, null); // Everything (incl. JSON and thumb) gets into the archive
+        List<DocumentFile> files = FileHelper.listFiles(getApplication(), bookFolder, null); // Everything (incl. JSON and thumb) gets into the archive
         if (!files.isEmpty()) {
             // Create folder to share from
             File sharedDir = new File(getApplication().getExternalCacheDir() + "/shared");

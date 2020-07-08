@@ -6,13 +6,12 @@ import androidx.annotation.NonNull;
 import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MediatorLiveData;
-import androidx.paging.PagedList;
+import androidx.lifecycle.MutableLiveData;
 
 import org.greenrobot.eventbus.EventBus;
 
 import java.util.List;
 
-import io.reactivex.Completable;
 import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.CompositeDisposable;
@@ -36,10 +35,12 @@ public class QueueViewModel extends AndroidViewModel {
 
     // Collection data for queue
     private LiveData<List<QueueRecord>> currentQueueSource;
-    private final MediatorLiveData<List<QueueRecord>> queuePaged = new MediatorLiveData<>();
+    private final MediatorLiveData<List<QueueRecord>> queue = new MediatorLiveData<>();
     // Collection data for errors
-    private LiveData<PagedList<Content>> currentErrorsSource;
-    private final MediatorLiveData<PagedList<Content>> errorsPaged = new MediatorLiveData<>();
+    private LiveData<List<Content>> currentErrorsSource;
+    private final MediatorLiveData<List<Content>> errors = new MediatorLiveData<>();
+
+    private final MutableLiveData<Long> contentIdToShowFirst = new MutableLiveData<>();     // ID of the content to show at 1st display
 
 
     public QueueViewModel(@NonNull Application application, @NonNull CollectionDAO collectionDAO) {
@@ -55,13 +56,18 @@ public class QueueViewModel extends AndroidViewModel {
     }
 
     @NonNull
-    public LiveData<List<QueueRecord>> getQueuePaged() {
-        return queuePaged;
+    public LiveData<List<QueueRecord>> getQueue() {
+        return queue;
     }
 
     @NonNull
-    public LiveData<PagedList<Content>> getErrorsPaged() {
-        return errorsPaged;
+    public LiveData<List<Content>> getErrors() {
+        return errors;
+    }
+
+    @NonNull
+    public LiveData<Long> getContentIdToShowFirst() {
+        return contentIdToShowFirst;
     }
 
 
@@ -74,13 +80,13 @@ public class QueueViewModel extends AndroidViewModel {
      */
     private void refresh() {
         // Queue
-        if (currentQueueSource != null) queuePaged.removeSource(currentQueueSource);
+        if (currentQueueSource != null) queue.removeSource(currentQueueSource);
         currentQueueSource = dao.getQueueContent();
-        queuePaged.addSource(currentQueueSource, queuePaged::setValue);
+        queue.addSource(currentQueueSource, queue::setValue);
         // Errors
-        if (currentErrorsSource != null) errorsPaged.removeSource(currentErrorsSource);
+        if (currentErrorsSource != null) errors.removeSource(currentErrorsSource);
         currentErrorsSource = dao.getErrorContent();
-        errorsPaged.addSource(currentErrorsSource, errorsPaged::setValue);
+        errors.addSource(currentErrorsSource, errors::setValue);
     }
 
 
@@ -90,6 +96,7 @@ public class QueueViewModel extends AndroidViewModel {
 
     public void move(@NonNull Integer oldPosition, @NonNull Integer newPosition) {
         if (oldPosition.equals(newPosition)) return;
+        Timber.d(">> move %s to %s", oldPosition, newPosition);
 
         // Get unpaged data to be sure we have everything in one collection
         List<QueueRecord> queue = dao.selectQueue();
@@ -135,22 +142,22 @@ public class QueueViewModel extends AndroidViewModel {
      * Cancel download of designated Content
      * NB : Contrary to Pause command, Cancel removes the Content from the download queue
      *
-     * @param content Content whose download has to be canceled
+     * @param contents Contents whose download has to be canceled
      */
-    public void cancel(@NonNull Content content) {
-        EventBus.getDefault().post(new DownloadEvent(content, DownloadEvent.EV_CANCEL));
-        remove(content);
+    public void cancel(@NonNull List<Content> contents) {
+        for (Content c : contents)
+            EventBus.getDefault().post(new DownloadEvent(c, DownloadEvent.EV_CANCEL));
+        remove(contents);
     }
 
-    public void remove(@NonNull Content content) {
+    public void remove(@NonNull List<Content> content) {
         compositeDisposable.add(
-                Completable.fromRunnable(() -> doRemove(content.getId()))
-                        .subscribeOn(Schedulers.io())
+                Observable.fromIterable(content)
+                        .observeOn(Schedulers.io())
+                        .map(c -> doRemove(c.getId()))
                         .observeOn(AndroidSchedulers.mainThread())
                         .subscribe(
-                                () -> {
-                                    // Nothing to do here; UI callbacks are handled through LiveData
-                                },
+                                v -> saveQueue(),
                                 Timber::e
                         )
         );
@@ -195,5 +202,40 @@ public class QueueViewModel extends AndroidViewModel {
      */
     public void addContentToQueue(@NonNull final Content content, StatusContent targetImageStatus) {
         dao.addContentToQueue(content, targetImageStatus);
+    }
+
+    public void setContentIdToShowFirst(long id) {
+        contentIdToShowFirst.setValue(id);
+    }
+
+    private void saveQueue() {
+        if (ContentHelper.updateQueueJson(getApplication().getApplicationContext(), dao))
+            Timber.i("Queue JSON successfully saved");
+        else Timber.w("Queue JSON saving failed");
+    }
+
+    /**
+     * Move all items at given positions to top of the list
+     *
+     * @param positions Adapter positions of the items to move
+     */
+    public void moveTop(List<Integer> positions) {
+        int processed = 0;
+        for (Integer oldPos : positions) {
+            move(oldPos, processed);
+            processed++;
+        }
+    }
+
+    public void moveBottom(List<Integer> positions) {
+        List<QueueRecord> queueRecords = queue.getValue();
+        if (null == queueRecords) return;
+        int endPos = queueRecords.size() - 1;
+        int processed = 0;
+
+        for (Integer oldPos : positions) {
+            move(oldPos - processed, endPos);
+            processed++;
+        }
     }
 }

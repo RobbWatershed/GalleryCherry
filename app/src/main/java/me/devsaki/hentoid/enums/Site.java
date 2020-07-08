@@ -22,7 +22,7 @@ public enum Site {
     JJGIRLS(9, "JJGirls", "https://jjgirls.com/mobile/", "jjgirls", R.drawable.ic_menu_jjgirls, true, false, true, false),
     LUSCIOUS(10, "luscious.net", "https://members.luscious.net/porn/", "luscious", R.drawable.ic_menu_luscious, false, false, false, false),
     FAPALITY(11, "Fapality", "https://fapality.com/photos/", "fapality", R.drawable.ic_menu_fapality, true, false, false, false),
-    NONE(98, "none", "", "none", R.drawable.ic_info, true, false, false, false); // Fallback site
+    NONE(98, "none", "", "none", R.drawable.ic_external_library, true, false, false, false); // External library; fallback site
 
 
     private final int code;

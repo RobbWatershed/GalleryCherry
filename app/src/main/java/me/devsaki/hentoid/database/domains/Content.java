@@ -4,6 +4,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.annimon.stream.Collectors;
 import com.annimon.stream.Stream;
 
 import java.io.IOException;
@@ -70,6 +71,7 @@ public class Content implements Serializable {
     private String storageUri; // Not exposed because it will vary according to book location -> valued at import
     private boolean favourite;
     private long reads = 0;
+    private long size = 0; // Yes, it _is_ redundant with the contained images' size. ObjectBox can't do thesum in a single Query, so here it is !
     private long lastReadDate;
     private int lastReadPageIndex = 0;
     @Convert(converter = Content.StringMapConverter.class, dbType = String.class)
@@ -217,6 +219,8 @@ public class Content implements Serializable {
                 return LusciousActivity.class;
             case FAPALITY:
                 return FapalityActivity.class;
+            case HENTAIFOX:
+                return HentaifoxActivity.class;
             default:
                 return BaseWebActivity.class;
         }
@@ -246,6 +250,7 @@ public class Content implements Serializable {
     public String getGalleryUrl() {
         String galleryConst;
         switch (site) {
+            case HENTAIFOX:
             case PORNPICGALLERIES:
             case LINK2GALLERIES:
             case REDDIT: // N/A
@@ -416,8 +421,22 @@ public class Content implements Serializable {
 
     public long getNbDownloadedPages() {
         if (imageFiles != null)
-            return Stream.of(imageFiles).filter(i -> i.getStatus() == StatusContent.DOWNLOADED && !i.isCover()).count();
+            return Stream.of(imageFiles).filter(i -> (i.getStatus() == StatusContent.DOWNLOADED || i.getStatus() == StatusContent.EXTERNAL) && !i.isCover()).count();
         else return 0;
+    }
+
+    private long getDownloadedPagesSize() {
+        if (imageFiles != null)
+            return Stream.of(imageFiles).filter(i -> (i.getStatus() == StatusContent.DOWNLOADED || i.getStatus() == StatusContent.EXTERNAL)).collect(Collectors.summingLong(ImageFile::getSize));
+        else return 0;
+    }
+
+    public long getSize() {
+        return size;
+    }
+
+    public void computeSize() {
+        size = getDownloadedPagesSize();
     }
 
     public Site getSite() {

@@ -23,6 +23,7 @@
         android:allowBackup="false"
         android:extractNativeLibs="true"
         android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
         android:supportsRtl="false"
         android:theme="@style/Theme.Light"
@@ -81,6 +82,9 @@
             android:configChanges="orientation|screenSize" />
         <activity
             android:name=".activities.sources.FapalityActivity"
+            android:configChanges="orientation|screenSize" />
+        <activity
+            android:name=".activities.sources.HentaifoxActivity"
             android:configChanges="orientation|screenSize" />
         <activity
             android:name=".activities.LibraryActivity"
@@ -255,6 +259,17 @@
                     android:pathPattern="/photos"
                     android:scheme="https" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="hentaifox.com"
+                    android:pathPattern="/gallery/..*/"
+                    android:scheme="https" />
+            </intent-filter>
         </activity>
 
         <activity
@@ -276,6 +291,8 @@
         <service android:name=".services.UpdateDownloadService" />
 
         <service android:name=".services.ImportService" />
+
+        <service android:name=".services.ExternalImportService" />
 
         <service android:name=".services.DatabaseMaintenanceService" />
 
