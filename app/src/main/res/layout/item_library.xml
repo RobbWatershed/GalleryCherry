@@ -78,7 +78,7 @@
             android:tooltipText="@string/view_source_help"
             app:tint="?colorSecondary"
             tools:ignore="ContentDescription"
-            tools:src="@drawable/ic_menu_nhentai" />
+            tools:src="@drawable/ic_menu_pornpics" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <LinearLayout
