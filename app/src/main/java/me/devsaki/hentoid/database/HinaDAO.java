@@ -4,7 +4,7 @@ import android.util.SparseIntArray;
 
 import androidx.annotation.NonNull;
 import androidx.lifecycle.LiveData;
-import androidx.lifecycle.MutableLiveData;
+import androidx.lifecycle.MediatorLiveData;
 import androidx.paging.LivePagedListBuilder;
 import androidx.paging.PagedList;
 
@@ -16,6 +16,7 @@ import java.util.Map;
 import javax.annotation.Nullable;
 
 import io.reactivex.Single;
+import io.reactivex.disposables.CompositeDisposable;
 import me.devsaki.hentoid.database.domains.Attribute;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.ErrorRecord;
@@ -25,10 +26,11 @@ import me.devsaki.hentoid.database.domains.SiteHistory;
 import me.devsaki.hentoid.enums.AttributeType;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
-import me.devsaki.hentoid.json.hina.HinaResult;
-import me.devsaki.hentoid.util.Preferences;
 
 public class HinaDAO implements CollectionDAO {
+
+    private static final CompositeDisposable disposable = new CompositeDisposable();
+
     @Nullable
     @Override
     public Content selectContent(long id) {
@@ -148,8 +150,7 @@ public class HinaDAO implements CollectionDAO {
 
     @Override
     public LiveData<PagedList<Content>> getRecentBooks(int orderField, boolean orderDesc, boolean favouritesOnly, boolean loadAll) {
-        HinaDataSourceFactory factory = new HinaDataSourceFactory(null, "");
-        MutableLiveData<HinaDataSource> dataSourceMutableLiveData = factory.getMutableLiveData();
+        HinaDataSourceFactory factory = new HinaDataSourceFactory(disposable, "");
 
         PagedList.Config config = (new PagedList.Config.Builder())
                 .setEnablePlaceholders(true)
@@ -175,7 +176,11 @@ public class HinaDAO implements CollectionDAO {
 
     @Override
     public LiveData<Integer> countAllBooks() {
-        return null;
+        HinaDataSourceFactory factory = new HinaDataSourceFactory(disposable, "");
+
+        MediatorLiveData<Integer> result = new MediatorLiveData<>();
+        result.addSource(factory.mutableLiveData, v -> result.setValue(v.count().getValue()));
+        return result;
     }
 
     @Override
@@ -280,7 +285,7 @@ public class HinaDAO implements CollectionDAO {
 
     @Override
     public void cleanup() {
-
+        disposable.clear();
     }
 
     @Override

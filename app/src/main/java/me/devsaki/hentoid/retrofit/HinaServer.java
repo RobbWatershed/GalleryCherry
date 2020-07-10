@@ -13,10 +13,11 @@ import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
 import retrofit2.converter.moshi.MoshiConverterFactory;
 import retrofit2.http.Field;
 import retrofit2.http.GET;
+import retrofit2.http.Query;
 
 public class HinaServer {
 
-    private static final String GITHUB_BASE_URL = "https://api.ixil.cc/hina/";
+    private static final String GITHUB_BASE_URL = "https://api.ixil.cc/";
 
     private static final Moshi moshi = new Moshi.Builder()
             .add(Date.class, new Rfc3339DateJsonAdapter())
@@ -32,22 +33,22 @@ public class HinaServer {
 
     public interface Api {
 
-        @GET("")
+        @GET("hina")
         Single<HinaResult> getLatest(
-                @Field("page") int page,
-                @Field("op") int resultsPerPage
+                @Query("page") int page,
+                @Query("op") int resultsPerPage
         );
 
-        @GET("search")
+        @GET("hina/search")
         Single<HinaResult> search(
-                @Field("page") int page,
-                @Field("op") int resultsPerPage,
-                @Field("query") String query
+                @Query("page") int page,
+                @Query("op") int resultsPerPage,
+                @Query("query") String query
         );
 
-        @GET("payload")
+        @GET("hina/payload")
         Single<HinaResult.HinaGallery> getGallery(
-                @Field("id") String id
+                @Query("id") String id
         );
     }
 }

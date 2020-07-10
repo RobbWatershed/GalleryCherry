@@ -29,6 +29,7 @@ import java.util.Map;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.activities.AboutActivity;
 import me.devsaki.hentoid.activities.DrawerEditActivity;
+import me.devsaki.hentoid.activities.HinaActivity;
 import me.devsaki.hentoid.activities.LibraryActivity;
 import me.devsaki.hentoid.activities.PrefsActivity;
 import me.devsaki.hentoid.activities.QueueActivity;
@@ -87,6 +88,7 @@ public final class NavigationDrawerFragment extends Fragment {
         List<Site> activeSites = Preferences.getActiveSites();
         for (Site s : activeSites) drawerItems.add(new DrawerItem(s));
 
+        drawerItems.add(new DrawerItem("HINA", R.drawable.ic_info, HinaActivity.class));
         drawerItems.add(new DrawerItem("QUEUE", R.drawable.ic_action_download, QueueActivity.class));
         drawerItems.add(new DrawerItem("ABOUT", R.drawable.ic_info, AboutActivity.class));
 

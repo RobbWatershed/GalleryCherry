@@ -15,26 +15,25 @@ import me.devsaki.hentoid.parsers.ParseHelper;
 
 public class HinaResult {
 
-    private long maxres;
+    private int maxres;
     private List<HinaGallery> data;
 
 
-    public long getMaxRes() {
+    public int getMaxRes() {
         return maxres;
     }
 
     public List<Content> getGalleries() {
         List<Content> result = new ArrayList<>();
-        if (data != null) {
+        if (data != null)
             for (HinaGallery g : data) result.add(g.toContent());
-        }
         return result;
     }
 
     public static class HinaGallery {
         private String id;
         private Date time;
-        private String origin; // TODO check if URL ?
+        private String origin;
         private String name;
         private String idol;
         private String edata; // WIP
@@ -46,7 +45,7 @@ public class HinaResult {
             Content result = new Content();
 
             result.setSite(Site.HINA);
-            result.setUrl(origin); // TODO check
+            result.setUrl(origin);
             result.setTitle(name);
 
             List<Attribute> attrList = new ArrayList<>();
@@ -57,13 +56,15 @@ public class HinaResult {
                 for (String attr : edataPartsUnique)
                     attrList.add(new Attribute(AttributeType.TAG, attr, "hina/" + attr, Site.HINA));
             }
-            if (idol != null && !idol.isEmpty()) { // TODO check for "unknown" placeholder
+            if (idol != null && !idol.isEmpty() && !idol.equalsIgnoreCase("unknown")) {
                 attrList.add(new Attribute(AttributeType.MODEL, idol, "hina/" + idol, Site.HINA));
             }
             result.addAttributes(attrList);
             if (gliphs != null && !gliphs.isEmpty()) {
                 result.setImageFiles(ParseHelper.urlsToImageFiles(gliphs, thumb, StatusContent.SAVED));
                 result.setQtyPages(gliphs.size());
+            } else {
+                result.setCoverImageUrl(thumb);
             }
 
             result.populateAuthor();

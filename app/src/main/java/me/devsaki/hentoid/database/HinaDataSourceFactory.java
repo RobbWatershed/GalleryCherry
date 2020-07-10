@@ -7,7 +7,6 @@ import androidx.paging.DataSource;
 
 import io.reactivex.disposables.CompositeDisposable;
 import me.devsaki.hentoid.database.domains.Content;
-import me.devsaki.hentoid.json.hina.HinaResult;
 
 public class HinaDataSourceFactory extends DataSource.Factory<Integer, Content> {
 

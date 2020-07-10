@@ -36,6 +36,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Random;
 
 import me.devsaki.hentoid.R;
@@ -96,8 +97,10 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
         this.touchHelper = touchHelper;
         isEmpty = (null == content);
         isSwipeable = (viewType == ViewType.ERRORS);
-        if (content != null) setIdentifier(content.getId());
-        else setIdentifier(generateIdForPlaceholder());
+        if (content != null) {
+            if (content.getId() > 0) setIdentifier(content.getId());
+            else setIdentifier(Objects.hash(content.getUniqueSiteId()));
+        } else setIdentifier(generateIdForPlaceholder());
     }
 
     // Constructor for queued item
