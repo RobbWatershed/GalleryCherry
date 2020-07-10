@@ -19,7 +19,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvTitle"
         tools:ignore="ContentDescription"
-        tools:src="@drawable/ic_placeholder" />
+        tools:src="@drawable/ic_cherry_flower" />
 
     <TextView
         android:id="@+id/tvTitle"
