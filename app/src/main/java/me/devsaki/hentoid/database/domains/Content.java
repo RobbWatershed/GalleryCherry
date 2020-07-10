@@ -189,6 +189,10 @@ public class Content implements Serializable {
         this.uniqueSiteId = computeUniqueSiteId();
     }
 
+    public void setUniqueSiteId(@NonNull String uniqueId) {
+        this.uniqueSiteId = uniqueId;
+    }
+
     public Class<?> getWebActivityClass() {
         return getWebActivityClass(this.site);
     }
