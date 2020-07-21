@@ -128,6 +128,9 @@ public class LibRefreshDialogFragment extends DialogFragment {
 
             RadioGroup locationGrp = requireViewById(rootView, R.id.refresh_location);
             locationGrp.setOnCheckedChangeListener((g, i) -> onLocationChanged(i));
+            Group locationGroup = requireViewById(rootView, R.id.refresh_location_group);
+            if (!Preferences.getExternalLibraryUri().isEmpty())
+                locationGroup.setVisibility(View.VISIBLE);
 
             View okBtn = requireViewById(rootView, R.id.refresh_ok);
             okBtn.setOnClickListener(v -> launchRefreshImport(externalChk.isChecked(), renameChk.isChecked(), cleanAbsentChk.isChecked(), cleanNoImagesChk.isChecked(), cleanUnreadableChk.isChecked()));
@@ -173,7 +176,7 @@ public class LibRefreshDialogFragment extends DialogFragment {
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(
                             res -> {
-                                if (ImportHelper.Result.INVALID_FOLDER == res || ImportHelper.Result.CREATE_FAIL == res)
+                                if (ImportHelper.Result.INVALID_FOLDER == res || ImportHelper.Result.CREATE_FAIL == res || ImportHelper.Result.OK_EMPTY_FOLDER == res)
                                     dismiss();
                             },
                             Timber::w

@@ -86,6 +86,7 @@ import me.devsaki.hentoid.util.ThemeHelper;
 import me.devsaki.hentoid.util.ToastUtil;
 import me.devsaki.hentoid.util.TooltipUtil;
 import me.devsaki.hentoid.util.exception.ContentNotRemovedException;
+import me.devsaki.hentoid.util.exception.FileNotRemovedException;
 import me.devsaki.hentoid.viewholders.ContentItem;
 import me.devsaki.hentoid.viewmodels.LibraryViewModel;
 import me.devsaki.hentoid.viewmodels.ViewModelFactory;
@@ -770,11 +771,12 @@ public class LibraryFragment extends Fragment implements ErrorsDialogFragment.Pa
         Timber.e(t);
         if (t instanceof ContentNotRemovedException) {
             ContentNotRemovedException e = (ContentNotRemovedException) t;
-            Snackbar snackbar = Snackbar.make(recyclerView, "Content removal failed", BaseTransientBottomBar.LENGTH_LONG);
-            viewModel.flagContentDelete(e.getContent(), false);
-            List<Content> contents = new ArrayList<>();
-            contents.add(e.getContent());
-            snackbar.setAction("RETRY", v -> viewModel.deleteItems(contents, this::onDeleteError));
+            String message = (null == e.getMessage()) ? "Content removal failed" : e.getMessage();
+            Snackbar snackbar = Snackbar.make(recyclerView, message, BaseTransientBottomBar.LENGTH_LONG);
+            // If the cause if not the file not being removed, keep the item on screen, not blinking
+            if (!(t instanceof FileNotRemovedException))
+                viewModel.flagContentDelete(e.getContent(), false);
+            snackbar.setAction("RETRY", v -> viewModel.deleteItems(Stream.of(e.getContent()).toList(), this::onDeleteError));
             snackbar.show();
         }
     }

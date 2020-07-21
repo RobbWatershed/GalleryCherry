@@ -1,7 +1,11 @@
 package me.devsaki.hentoid.viewholders;
 
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.PorterDuff;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -39,6 +43,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
 
+import me.devsaki.hentoid.HentoidApp;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.activities.bundles.ContentItemBundle;
 import me.devsaki.hentoid.database.domains.Attribute;
@@ -54,12 +59,11 @@ import me.devsaki.hentoid.util.network.HttpHelper;
 import timber.log.Timber;
 
 import static androidx.core.view.ViewCompat.requireViewById;
+import static me.devsaki.hentoid.util.ImageHelper.tintBitmap;
 
 public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> implements IExtendedDraggable, ISwipeable {
 
-    private static final RequestOptions glideRequestOptions = new RequestOptions()
-            .centerInside()
-            .error(R.drawable.ic_cherry);
+    private static final RequestOptions glideRequestOptions;
 
     @IntDef({ViewType.LIBRARY, ViewType.QUEUE, ViewType.ERRORS})
     @Retention(RetentionPolicy.SOURCE)
@@ -80,6 +84,18 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
     private boolean isSwipeable = true;
     private Runnable undoSwipeAction; // Action to run when hitting the "undo" button
 
+
+    static {
+        Context context = HentoidApp.getInstance();
+        int tintColor = ThemeHelper.getColor(context, R.color.light_gray);
+
+        Bitmap bmp = BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_hentoid_trans);
+        Drawable d = new BitmapDrawable(context.getResources(), tintBitmap(bmp, tintColor));
+
+        glideRequestOptions = new RequestOptions()
+                .centerInside()
+                .error(d);
+    }
 
     // Constructor for empty placeholder
     public ContentItem(@ViewType int viewType) {
