@@ -30,7 +30,7 @@ import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.parsers.ParseHelper;
 import me.devsaki.hentoid.retrofit.RedditOAuthApiServer;
 import me.devsaki.hentoid.services.ContentQueueManager;
-import me.devsaki.hentoid.util.Helper;
+import me.devsaki.hentoid.util.ImageHelper;
 import me.devsaki.hentoid.util.OauthSessionManager;
 import me.devsaki.hentoid.util.network.HttpHelper;
 import timber.log.Timber;
@@ -92,7 +92,7 @@ public class RedditAuthDownloadFragment extends Fragment {
 
     private boolean isImageSupported(String imgUrl) {
         String extension = HttpHelper.getExtensionFromUri(imgUrl);
-        return Helper.isImageExtensionSupported(extension);
+        return ImageHelper.isImageExtensionSupported(extension);
     }
 
     private void onSavedItemsSuccess(List<String> savedUrls) { // TODO don't display placeholder when load is not complete - use a "loading..." image

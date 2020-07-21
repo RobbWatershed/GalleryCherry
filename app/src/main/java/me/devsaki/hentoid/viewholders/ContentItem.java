@@ -89,7 +89,7 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
         Context context = HentoidApp.getInstance();
         int tintColor = ThemeHelper.getColor(context, R.color.light_gray);
 
-        Bitmap bmp = BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_hentoid_trans);
+        Bitmap bmp = BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_cherry_icon);
         Drawable d = new BitmapDrawable(context.getResources(), tintBitmap(bmp, tintColor));
 
         glideRequestOptions = new RequestOptions()
