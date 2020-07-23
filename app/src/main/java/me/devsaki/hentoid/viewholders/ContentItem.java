@@ -53,6 +53,7 @@ import me.devsaki.hentoid.enums.AttributeType;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.services.ContentQueueManager;
 import me.devsaki.hentoid.ui.BlinkAnimation;
+import me.devsaki.hentoid.util.ImageHelper;
 import me.devsaki.hentoid.util.JsonHelper;
 import me.devsaki.hentoid.util.ThemeHelper;
 import me.devsaki.hentoid.util.network.HttpHelper;
@@ -89,7 +90,8 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
         Context context = HentoidApp.getInstance();
         int tintColor = ThemeHelper.getColor(context, R.color.light_gray);
 
-        Bitmap bmp = BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_cherry_icon);
+//        Bitmap bmp = BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_cherry_icon);
+        Bitmap bmp = ImageHelper.getBitmapFromResource(context, R.drawable.ic_cherry_icon);
         Drawable d = new BitmapDrawable(context.getResources(), tintBitmap(bmp, tintColor));
 
         glideRequestOptions = new RequestOptions()
