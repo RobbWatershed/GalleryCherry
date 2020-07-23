@@ -19,11 +19,6 @@ public class HinaDataSource extends PageKeyedDataSource<Integer, Content> {
     private final CompositeDisposable compositeDisposable;
     private final String query;
 
-    public HinaDataSource(@NonNull CompositeDisposable cd) {
-        compositeDisposable = cd;
-        this.query = "";
-    }
-
     public HinaDataSource(@NonNull CompositeDisposable cd, @NonNull final String query) {
         compositeDisposable = cd;
         this.query = query;

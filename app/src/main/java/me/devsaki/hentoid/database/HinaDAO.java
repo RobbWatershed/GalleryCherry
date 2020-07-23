@@ -150,7 +150,7 @@ public class HinaDAO implements CollectionDAO {
 
     @Override
     public LiveData<PagedList<Content>> getRecentBooks(int orderField, boolean orderDesc, boolean favouritesOnly, boolean loadAll) {
-        HinaDataSourceFactory factory = new HinaDataSourceFactory(disposable, "");
+        HinaDataSourceFactory factory = new HinaDataSourceFactory(disposable);
 
         PagedList.Config config = (new PagedList.Config.Builder())
                 .setEnablePlaceholders(true)

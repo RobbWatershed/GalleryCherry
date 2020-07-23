@@ -60,6 +60,7 @@ public class HinaViewModel extends AndroidViewModel {
     protected void onCleared() {
         super.onCleared();
         compositeDisposable.clear();
+        dao.cleanup();
     }
 
     @NonNull
@@ -92,7 +93,7 @@ public class HinaViewModel extends AndroidViewModel {
 
         currentSource = searchManager.getLibrary();
 
-        libraryPaged.addSource(currentSource, libraryPaged::setValue);
+        libraryPaged.addSource(currentSource, libraryPaged::postValue);
     }
 
     /**
