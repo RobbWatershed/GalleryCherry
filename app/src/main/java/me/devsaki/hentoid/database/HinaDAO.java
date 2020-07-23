@@ -176,10 +176,10 @@ public class HinaDAO implements CollectionDAO {
 
     @Override
     public LiveData<Integer> countAllBooks() {
-        HinaDataSourceFactory factory = new HinaDataSourceFactory(disposable, "");
+        HinaDataSource dataSource = new HinaDataSource(disposable, "");
 
         MediatorLiveData<Integer> result = new MediatorLiveData<>();
-        result.addSource(factory.mutableLiveData, v -> result.setValue(v.count().getValue()));
+        result.addSource(dataSource.count(), result::postValue);
         return result;
     }
 

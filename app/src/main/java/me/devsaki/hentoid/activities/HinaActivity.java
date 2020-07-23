@@ -384,7 +384,10 @@ public class HinaActivity extends BaseActivity {
      * @param count Current book count in the whole, unfiltered library
      */
     private void onTotalContentChanged(Integer count) {
-        totalContentCount = count;
+        // TODO change the logic here
+        //  - total content count should be the size of the very first (unfiltered) dataset
+        //  - "library size" should be the size of the current dataset
+        totalContentCount = (null == count) ? 0 : count;
         if (library != null) updateTitle(library.size(), totalContentCount);
     }
 
