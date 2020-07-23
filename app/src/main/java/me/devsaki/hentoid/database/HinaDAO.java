@@ -156,7 +156,7 @@ public class HinaDAO implements CollectionDAO {
                 .setEnablePlaceholders(true)
                 .setInitialLoadSizeHint(10)
                 .setPageSize(20)
-                .setPrefetchDistance(4)
+//                .setPrefetchDistance(4)
                 .build();
 
         return (new LivePagedListBuilder<>(new HinaDataSource2.HinaDataSource2Factory(disposable), config)).build();

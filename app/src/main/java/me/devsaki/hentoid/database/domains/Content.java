@@ -596,11 +596,12 @@ public class Content implements Serializable {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Content content = (Content) o;
-        return id == content.id;
+        return getId() == content.getId() &&
+                Objects.equals(getUniqueSiteId(), content.getUniqueSiteId());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id);
+        return Objects.hash(getId(), getUniqueSiteId());
     }
 }

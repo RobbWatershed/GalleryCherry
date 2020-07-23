@@ -47,7 +47,7 @@ public class HinaDataSource extends PageKeyedDataSource<Integer, Content> {
             compositeDisposable.add(HinaServer.API.search(1, ITEMS_PER_PAGE, query)
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(
-                            r -> result.postValue(r.getMaxRes()),
+                            r -> result.postValue(r.getMaxRes() * ITEMS_PER_PAGE),
                             Timber::e)
             );
         else

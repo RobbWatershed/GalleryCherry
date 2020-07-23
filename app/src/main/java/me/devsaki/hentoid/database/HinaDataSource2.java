@@ -48,7 +48,7 @@ public class HinaDataSource2 extends PositionalDataSource<Content> {
                     .subscribe(
                             r -> {
                                 if (initialCallback != null)
-                                    initialCallback.onResult(r.getGalleries(), (requestedPage - 1) * pageSize, r.getMaxRes());
+                                    initialCallback.onResult(r.getGalleries(), (requestedPage - 1) * pageSize, r.getMaxRes() * pageSize);
                                 if (callback != null)
                                     callback.onResult(r.getGalleries());
                             },
@@ -60,7 +60,7 @@ public class HinaDataSource2 extends PositionalDataSource<Content> {
                     .subscribe(
                             r -> {
                                 if (initialCallback != null)
-                                    initialCallback.onResult(r.getGalleries(), (requestedPage - 1) * pageSize, r.getMaxRes());
+                                    initialCallback.onResult(r.getGalleries(), (requestedPage - 1) * pageSize, r.getMaxRes()* pageSize);
                                 if (callback != null)
                                     callback.onResult(r.getGalleries());
                             },

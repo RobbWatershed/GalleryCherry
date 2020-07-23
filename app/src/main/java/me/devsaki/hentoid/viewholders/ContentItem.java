@@ -2,7 +2,6 @@ package me.devsaki.hentoid.viewholders;
 
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.PorterDuff;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
@@ -40,7 +39,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Random;
 
 import me.devsaki.hentoid.HentoidApp;
@@ -90,7 +88,6 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
         Context context = HentoidApp.getInstance();
         int tintColor = ThemeHelper.getColor(context, R.color.light_gray);
 
-//        Bitmap bmp = BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_cherry_icon);
         Bitmap bmp = ImageHelper.getBitmapFromResource(context, R.drawable.ic_cherry_icon);
         Drawable d = new BitmapDrawable(context.getResources(), tintBitmap(bmp, tintColor));
 
@@ -115,10 +112,8 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
         this.touchHelper = touchHelper;
         isEmpty = (null == content);
         isSwipeable = (viewType == ViewType.ERRORS);
-        if (content != null) {
-            if (content.getId() > 0) setIdentifier(content.getId());
-            else setIdentifier(Objects.hash(content.getUniqueSiteId()));
-        } else setIdentifier(generateIdForPlaceholder());
+        if (content != null) setIdentifier(content.hashCode());
+        else setIdentifier(generateIdForPlaceholder());
     }
 
     // Constructor for queued item
