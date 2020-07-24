@@ -158,6 +158,7 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
 
         initToolbar();
         toolbar.setOnMenuItemClickListener(this::toolbarOnItemClicked);
+        toolbar.setNavigationOnClickListener(v -> onBackPressed());
 
         viewModel.getNewSearch().observe(this, this::onNewSearch);
         viewModel.getLibraryPaged().observe(this, this::onLibraryChanged);

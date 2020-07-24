@@ -23,6 +23,7 @@ import java.util.List;
 
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.database.domains.ImageFile;
+import me.devsaki.hentoid.util.network.HttpHelper;
 
 import static androidx.core.view.ViewCompat.requireViewById;
 
@@ -107,12 +108,21 @@ public class ImageFileItem extends AbstractItem<ImageFileItem.ImageViewHolder> {
                 favouriteBtn.setVisibility(View.GONE);
             }
 
-//            String uri = item.image.getFileUri();
-//            if (null == uri || uri.isEmpty()) uri = item.image.getUrl();
+            String uri = item.image.getFileUri();
+            if (null == uri || uri.isEmpty()) {
+                uri = item.image.getUrl();
+                // Hack to display thumbs when retrieving online images from Hina
+                if (uri.contains("hina.ixil.cc")) {
+                    int lastSeparator = uri.lastIndexOf("/");
+                    uri = uri.substring(0, lastSeparator) + "/tn_" + uri.substring(lastSeparator + 1);
+                }
+                // Fix invalid files not ending with ".jpg"
+                String ext = HttpHelper.getExtensionFromUri(uri);
+                if (ext.isEmpty()) uri += ".jpg";
+            }
 
             Glide.with(image)
-//                    .load(Uri.parse(uri))
-                    .load(item.image.getUrl())
+                    .load(Uri.parse(uri))
                     .apply(glideRequestOptions)
                     .into(image);
         }
