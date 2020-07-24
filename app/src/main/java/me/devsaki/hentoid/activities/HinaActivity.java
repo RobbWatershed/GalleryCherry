@@ -31,13 +31,15 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Collections;
 import java.util.List;
 
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.Disposable;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.activities.bundles.ContentItemBundle;
 import me.devsaki.hentoid.database.domains.Attribute;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.fragments.library.GalleryDialogFragment;
+import me.devsaki.hentoid.retrofit.HinaServer;
 import me.devsaki.hentoid.services.ContentQueueManager;
-import me.devsaki.hentoid.util.ContentHelper;
 import me.devsaki.hentoid.util.Debouncer;
 import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.viewholders.ContentItem;
@@ -105,6 +107,8 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
     private String query = "";
     // Current metadata search query
     private List<Attribute> metadata = Collections.emptyList();
+
+    private Disposable downloadDisposable;
 
 
     /**
@@ -311,27 +315,32 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
     private void initPagingMethod() {
         viewModel.setPagingMethod(true);
 
-        pagedItemAdapter = new PagedModelAdapter<>(asyncDifferConfig, i -> new ContentItem(ContentItem.ViewType.LIBRARY), c -> new ContentItem(c, null, ContentItem.ViewType.LIBRARY));
+        pagedItemAdapter = new PagedModelAdapter<>(asyncDifferConfig, i -> new ContentItem(ContentItem.ViewType.ONLINE), c -> new ContentItem(c, null, ContentItem.ViewType.ONLINE));
         fastAdapter = FastAdapter.with(pagedItemAdapter);
         fastAdapter.setHasStableIds(true);
-        ContentItem item = new ContentItem(ContentItem.ViewType.LIBRARY);
+        ContentItem item = new ContentItem(ContentItem.ViewType.ONLINE);
         fastAdapter.registerItemFactory(item.getType(), item);
 
         // Item click listener
         fastAdapter.setOnClickListener((v, a, i, p) -> onBookClick(i, p));
 
-        // Site button click listener
+        // Download button click listener
         fastAdapter.addEventHook(new ClickEventHook<ContentItem>() {
             @Override
             public void onClick(@NotNull View view, int i, @NotNull FastAdapter<ContentItem> fastAdapter, @NotNull ContentItem item) {
-                if (item.getContent() != null) onBookSourceClick(item.getContent());
+                if (item.getContent() != null)
+                    downloadDisposable = HinaServer.API.getGallery(item.getContent().getUniqueSiteId())
+                            .observeOn(AndroidSchedulers.mainThread())
+                            .subscribe(
+                                    g -> downloadContent(g.toContent()),
+                                    Timber::e);
             }
 
             @org.jetbrains.annotations.Nullable
             @Override
             public View onBind(RecyclerView.@NotNull ViewHolder viewHolder) {
                 if (viewHolder instanceof ContentItem.ContentViewHolder) {
-                    return ((ContentItem.ContentViewHolder) viewHolder).getSiteButton();
+                    return ((ContentItem.ContentViewHolder) viewHolder).getDownloadButton();
                 }
                 return super.onBind(viewHolder);
             }
@@ -425,17 +434,12 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
         return false;
     }
 
-    /**
-     * Callback for the "source" button of the book holder
-     *
-     * @param content Content whose "source" button has been clicked on
-     */
-    private void onBookSourceClick(@NonNull Content content) {
-        ContentHelper.viewContentGalleryPage(this, content);
-    }
-
     @Override
     public void downloadContent(Content content) {
+        if (downloadDisposable != null) {
+            downloadDisposable.dispose();
+            downloadDisposable = null;
+        }
         viewModel.addContentToQueue(content, null);
 
         if (Preferences.isQueueAutostart())

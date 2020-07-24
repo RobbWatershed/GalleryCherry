@@ -99,13 +99,6 @@ public class GalleryDialogFragment extends DialogFragment {
 
         if (null == content.getImageFiles()) return;
 
-        // TODO display thumbs instead if available
-        /*
-        so if you need thumbs for the images (only works for hina.ixil.cc domain images)
-        just apped
-        tn_{number}.jpg
-         */
-
         this.content = content;
         FastAdapterDiffUtil.INSTANCE.set(itemAdapter,
                 Stream.of(content.getImageFiles())

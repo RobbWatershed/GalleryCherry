@@ -64,12 +64,13 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
 
     private static final RequestOptions glideRequestOptions;
 
-    @IntDef({ViewType.LIBRARY, ViewType.QUEUE, ViewType.ERRORS})
+    @IntDef({ViewType.LIBRARY, ViewType.QUEUE, ViewType.ERRORS, ViewType.ONLINE})
     @Retention(RetentionPolicy.SOURCE)
     public @interface ViewType {
         int LIBRARY = 0;
         int QUEUE = 1;
         int ERRORS = 2;
+        int ONLINE = 3;
     }
 
     private final Content content;
@@ -105,7 +106,7 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
         setIdentifier(generateIdForPlaceholder());
     }
 
-    // Constructor for library and error item
+    // Constructor for library, online and error item
     public ContentItem(Content content, @Nullable ItemTouchHelper touchHelper, @ViewType int viewType) {
         this.content = content;
         this.viewType = viewType;
@@ -140,7 +141,8 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
 
     @Override
     public int getLayoutRes() {
-        if (ViewType.LIBRARY == viewType) return R.layout.item_library;
+        if (ViewType.LIBRARY == viewType || ViewType.ONLINE == viewType)
+            return R.layout.item_library;
         else return R.layout.item_queue;
     }
 
@@ -243,6 +245,9 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
                 ivFavourite = itemView.findViewById(R.id.ivFavourite);
                 tvSeries = requireViewById(itemView, R.id.tvSeries);
                 tvTags = requireViewById(itemView, R.id.tvTags);
+            } else if (viewType == ViewType.ONLINE) {
+                tvTags = requireViewById(itemView, R.id.tvTags);
+                ivRedownload = itemView.findViewById(R.id.ivRedownload);
             } else if (viewType == ViewType.QUEUE) {
                 progressBar = itemView.findViewById(R.id.pbDownload);
                 ivTop = itemView.findViewById(R.id.queueTopBtn);
@@ -458,9 +463,10 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
             if (null == content) return;
 
             // Source icon
+            if (content.isUrlBrowsable()) ivSite.setVisibility(View.VISIBLE);
+            else ivSite.setVisibility(View.GONE);
             if (content.getSite() != null) {
-                int img = content.getSite().getIco();
-                ivSite.setImageResource(img);
+                ivSite.setImageResource(content.getSite().getIco());
             } else {
                 ivSite.setImageResource(R.drawable.ic_cherry);
             }
@@ -474,7 +480,10 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
             } else if (ViewType.ERRORS == item.viewType) {
                 ivRedownload.setVisibility(View.VISIBLE);
                 ivError.setVisibility(View.VISIBLE);
+            } else if (ViewType.ONLINE == item.viewType) {
+                ivRedownload.setVisibility(View.VISIBLE);
             } else if (ViewType.LIBRARY == item.viewType) {
+                ivFavourite.setVisibility(View.VISIBLE);
                 if (content.isFavourite()) {
                     ivFavourite.setImageResource(R.drawable.ic_fav_full);
                 } else {

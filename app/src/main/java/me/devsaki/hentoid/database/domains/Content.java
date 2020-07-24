@@ -249,6 +249,13 @@ public class Content implements Serializable {
         return this;
     }
 
+    public boolean isUrlBrowsable() {
+        if (url != null) {
+            return !site.equals(Site.NONE) && !site.equals(Site.HINA);
+        }
+        return false;
+    }
+
     public String getGalleryUrl() {
         String galleryConst;
         switch (site) {
