@@ -29,13 +29,11 @@ public class HinaDataSource extends PositionalDataSource<Content> {
     @Override
     public void loadInitial(@NonNull LoadInitialParams params, @NonNull LoadInitialCallback<Content> callback) {
         this.pageSize = params.pageSize;
-        Timber.i(">> loadInitial %s", params.requestedStartPosition);
         createItemsObservable((params.requestedStartPosition / pageSize) + 1, params.requestedLoadSize, callback, null);
     }
 
     @Override
     public void loadRange(@NonNull LoadRangeParams params, @NonNull LoadRangeCallback<Content> callback) {
-        Timber.i(">> loadRange %s", params.startPosition);
         createItemsObservable((params.startPosition / pageSize) + 1, params.loadSize, null, callback);
     }
 
@@ -45,7 +43,6 @@ public class HinaDataSource extends PositionalDataSource<Content> {
             @Nullable PositionalDataSource.LoadInitialCallback<Content> initialCallback,
             @Nullable PositionalDataSource.LoadRangeCallback<Content> callback
     ) {
-        Timber.i(">> createItemsObservable %s", requestedPage);
         if (!query.isEmpty())
             compositeDisposable.add(HinaServer.API.search(requestedPage, pageSize, query)
                     .observeOn(AndroidSchedulers.mainThread())
@@ -75,13 +72,6 @@ public class HinaDataSource extends PositionalDataSource<Content> {
                             },
                             Timber::e)
             );
-    }
-
-    private List<Content> padList(List<Content> list, int size) {
-        int diff = size - list.size();
-        if (diff > 0)
-            for (int i = 0; i < diff; i++) list.add(null);
-        return list;
     }
 
     public LiveData<Integer> count() {
