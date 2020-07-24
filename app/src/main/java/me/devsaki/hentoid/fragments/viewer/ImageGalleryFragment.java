@@ -134,7 +134,7 @@ public class ImageGalleryFragment extends Fragment {
     private void onImagesChanged(List<ImageFile> images) {
         List<ImageFileItem> imgs = new ArrayList<>();
         for (ImageFile img : images) {
-            ImageFileItem holder = new ImageFileItem(img);
+            ImageFileItem holder = new ImageFileItem(img, ImageFileItem.ViewType.LIBRARY);
             if (startIndex == img.getDisplayOrder()) holder.setCurrent(true);
             imgs.add(holder);
         }

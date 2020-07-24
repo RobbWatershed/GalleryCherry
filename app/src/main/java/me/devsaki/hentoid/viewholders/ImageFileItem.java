@@ -7,6 +7,7 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 
 import com.bumptech.glide.Glide;
@@ -16,6 +17,8 @@ import com.mikepenz.fastadapter.items.AbstractItem;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.util.List;
 
 import me.devsaki.hentoid.R;
@@ -25,13 +28,23 @@ import static androidx.core.view.ViewCompat.requireViewById;
 
 public class ImageFileItem extends AbstractItem<ImageFileItem.ImageViewHolder> {
 
+    @IntDef({ViewType.LIBRARY, ViewType.ONLINE})
+    @Retention(RetentionPolicy.SOURCE)
+    public @interface ViewType {
+        int LIBRARY = 0;
+        int ONLINE = 1;
+    }
+
     private final ImageFile image;
+    private final @ViewType
+    int viewType;
     private boolean isCurrent;
     private static final RequestOptions glideRequestOptions = new RequestOptions().centerInside();
 
-    public ImageFileItem(@NonNull ImageFile image) {
+    public ImageFileItem(@NonNull ImageFile image, @ViewType int viewType) {
         this.image = image;
-        setIdentifier(image.getId());
+        this.viewType = viewType;
+        setIdentifier(image.hashCode());
     }
 
     public ImageFile getImage() {
@@ -50,7 +63,7 @@ public class ImageFileItem extends AbstractItem<ImageFileItem.ImageViewHolder> {
     @NotNull
     @Override
     public ImageViewHolder getViewHolder(@NotNull View view) {
-        return new ImageViewHolder(view);
+        return new ImageViewHolder(view, viewType);
     }
 
     @Override
@@ -69,24 +82,37 @@ public class ImageFileItem extends AbstractItem<ImageFileItem.ImageViewHolder> {
         private final TextView pageNumberTxt;
         private final ImageView image;
         private final ImageButton favouriteBtn;
+        private final @ViewType
+        int viewType;
 
-        ImageViewHolder(View view) {
+        ImageViewHolder(@NonNull View view, @ViewType int viewType) {
             super(view);
             pageNumberTxt = requireViewById(view, R.id.viewer_gallery_pagenumber_text);
             image = requireViewById(view, R.id.viewer_gallery_image);
             favouriteBtn = requireViewById(view, R.id.viewer_gallery_favourite_btn);
+            this.viewType = viewType;
         }
 
 
         @Override
         public void bindView(@NotNull ImageFileItem item, @NotNull List<?> list) {
-            String currentBegin = item.isCurrent ? ">" : "";
-            String currentEnd = item.isCurrent ? "<" : "";
-            pageNumberTxt.setText(String.format("%sPage %s%s", currentBegin, item.image.getOrder(), currentEnd));
-            if (item.isCurrent) pageNumberTxt.setTypeface(null, Typeface.BOLD);
-            updateFavourite(item.isFavourite());
+            if (ViewType.LIBRARY == viewType) {
+                String currentBegin = item.isCurrent ? ">" : "";
+                String currentEnd = item.isCurrent ? "<" : "";
+                pageNumberTxt.setText(String.format("%sPage %s%s", currentBegin, item.image.getOrder(), currentEnd));
+                if (item.isCurrent) pageNumberTxt.setTypeface(null, Typeface.BOLD);
+                updateFavourite(item.isFavourite());
+            } else {
+                pageNumberTxt.setVisibility(View.GONE);
+                favouriteBtn.setVisibility(View.GONE);
+            }
+
+//            String uri = item.image.getFileUri();
+//            if (null == uri || uri.isEmpty()) uri = item.image.getUrl();
+
             Glide.with(image)
-                    .load(Uri.parse(item.image.getFileUri()))
+//                    .load(Uri.parse(uri))
+                    .load(item.image.getUrl())
                     .apply(glideRequestOptions)
                     .into(image);
         }

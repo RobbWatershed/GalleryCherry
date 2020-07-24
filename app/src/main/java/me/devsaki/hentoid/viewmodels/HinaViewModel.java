@@ -24,8 +24,9 @@ import me.devsaki.hentoid.widget.ContentSearchManager;
 
 public class HinaViewModel extends AndroidViewModel {
 
-    // Collection DAO
-    private final CollectionDAO dao;
+    // DAOs
+    private final CollectionDAO collectionDao;
+    private final CollectionDAO queueDao;
     // Library search manager
     private final ContentSearchManager searchManager;
     // Cleanup for all RxJava calls
@@ -40,11 +41,12 @@ public class HinaViewModel extends AndroidViewModel {
     private MutableLiveData<Boolean> newSearch = new MutableLiveData<>();
 
 
-    public HinaViewModel(@NonNull Application application, @NonNull CollectionDAO collectionDAO) {
+    public HinaViewModel(@NonNull Application application, @NonNull CollectionDAO collectionDAO, @NonNull CollectionDAO queueDAO) {
         super(application);
-        dao = collectionDAO;
-        searchManager = new ContentSearchManager(dao);
-        totalContent = dao.countAllBooks();
+        collectionDao = collectionDAO;
+        queueDao = queueDAO;
+        searchManager = new ContentSearchManager(collectionDao);
+        totalContent = collectionDao.countAllBooks();
     }
 
     public void onSaveState(Bundle outState) {
@@ -60,7 +62,8 @@ public class HinaViewModel extends AndroidViewModel {
     protected void onCleared() {
         super.onCleared();
         compositeDisposable.clear();
-        dao.cleanup();
+        collectionDao.cleanup();
+        queueDao.cleanup();
     }
 
     @NonNull
@@ -149,6 +152,6 @@ public class HinaViewModel extends AndroidViewModel {
      * @param content Content to be added to the download queue
      */
     public void addContentToQueue(@NonNull final Content content, StatusContent targetImageStatus) {
-        dao.addContentToQueue(content, targetImageStatus);
+        queueDao.addContentToQueue(content, targetImageStatus);
     }
 }

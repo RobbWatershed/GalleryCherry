@@ -1,5 +1,6 @@
 package me.devsaki.hentoid.activities;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.view.MenuItem;
@@ -17,6 +18,8 @@ import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.snackbar.BaseTransientBottomBar;
+import com.google.android.material.snackbar.Snackbar;
 import com.mikepenz.fastadapter.FastAdapter;
 import com.mikepenz.fastadapter.extensions.ExtensionsFactories;
 import com.mikepenz.fastadapter.listeners.ClickEventHook;
@@ -32,8 +35,11 @@ import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.activities.bundles.ContentItemBundle;
 import me.devsaki.hentoid.database.domains.Attribute;
 import me.devsaki.hentoid.database.domains.Content;
+import me.devsaki.hentoid.fragments.library.GalleryDialogFragment;
+import me.devsaki.hentoid.services.ContentQueueManager;
 import me.devsaki.hentoid.util.ContentHelper;
 import me.devsaki.hentoid.util.Debouncer;
+import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.viewholders.ContentItem;
 import me.devsaki.hentoid.viewmodels.HinaViewModel;
 import me.devsaki.hentoid.viewmodels.ViewModelFactory;
@@ -43,7 +49,7 @@ import timber.log.Timber;
 /**
  * Handles hosting of QueueFragment for a single screen.
  */
-public class HinaActivity extends BaseActivity {
+public class HinaActivity extends BaseActivity implements GalleryDialogFragment.Parent {
 
     private static final String KEY_LAST_LIST_POSITION = "last_list_position";
 
@@ -352,6 +358,7 @@ public class HinaActivity extends BaseActivity {
     private void onLibraryChanged(PagedList<Content> result) {
         Timber.i(">>Library changed ! Size=%s", result.size());
 
+        /*
         updateTitle(result.size(), totalContentCount);
 
         // Update background text
@@ -360,6 +367,7 @@ public class HinaActivity extends BaseActivity {
             if (isSearchQueryActive()) emptyText.setText(R.string.search_entry_not_found);
             else emptyText.setText(R.string.downloads_empty_library);
         } else emptyText.setVisibility(View.GONE);
+         */
 
         // Update visibility of advanced search bar
         if (isSearchQueryActive()) {
@@ -411,8 +419,7 @@ public class HinaActivity extends BaseActivity {
      * @param item ContentItem that has been clicked on
      */
     private boolean onBookClick(@NonNull ContentItem item, int position) {
-        topItemPosition = position;
-        //ContentHelper.openHentoidViewer(requireContext(), item.getContent(), viewModel.getSearchManagerBundle());
+        GalleryDialogFragment.invoke(this, item.getContent().getUniqueSiteId());
 
         return false;
     }
@@ -424,6 +431,19 @@ public class HinaActivity extends BaseActivity {
      */
     private void onBookSourceClick(@NonNull Content content) {
         ContentHelper.viewContentGalleryPage(this, content);
+    }
+
+    @Override
+    public void downloadContent(Content content) {
+        viewModel.addContentToQueue(content, null);
+
+        if (Preferences.isQueueAutostart())
+            ContentQueueManager.getInstance().resumeQueue(this);
+
+        String message = getResources().getQuantityString(R.plurals.add_to_queue, 1, 1);
+        Snackbar snackbar = Snackbar.make(recyclerView, message, BaseTransientBottomBar.LENGTH_LONG);
+        snackbar.setAction("VIEW QUEUE", v -> viewQueue());
+        snackbar.show();
     }
 
     /**
@@ -455,5 +475,13 @@ public class HinaActivity extends BaseActivity {
      */
     private int getTopItemPosition() {
         return Math.max(llm.findFirstVisibleItemPosition(), llm.findFirstCompletelyVisibleItemPosition());
+    }
+
+    /**
+     * Navigate to the queue screen
+     */
+    private void viewQueue() {
+        Intent intent = new Intent(this, QueueActivity.class);
+        startActivity(intent);
     }
 }
