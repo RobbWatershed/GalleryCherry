@@ -140,7 +140,13 @@ public class HinaDAO implements CollectionDAO {
 
     @Override
     public LiveData<PagedList<Content>> searchBooksUniversal(String query, int orderField, boolean orderDesc, boolean favouritesOnly, boolean loadAll) {
-        return null;
+        PagedList.Config config = (new PagedList.Config.Builder())
+                .setEnablePlaceholders(true)
+                .setInitialLoadSizeHint(10)
+                .setPageSize(20)
+                .build();
+
+        return (new LivePagedListBuilder<>(new HinaDataSource.HinaDataSource2Factory(disposable, query), config)).build();
     }
 
     @Override
@@ -150,24 +156,13 @@ public class HinaDAO implements CollectionDAO {
 
     @Override
     public LiveData<PagedList<Content>> getRecentBooks(int orderField, boolean orderDesc, boolean favouritesOnly, boolean loadAll) {
-//        HinaDataSourceFactory factory = new HinaDataSourceFactory(disposable);
-
         PagedList.Config config = (new PagedList.Config.Builder())
                 .setEnablePlaceholders(true)
                 .setInitialLoadSizeHint(10)
                 .setPageSize(20)
-//                .setPrefetchDistance(4)
                 .build();
 
-        return (new LivePagedListBuilder<>(new HinaDataSource2.HinaDataSource2Factory(disposable), config)).build();
-
-        /*
-//        executor = Executors.newFixedThreadPool(5);
-        return (new LivePagedListBuilder<>(factory, config))
-//                .setFetchExecutor(executor)
-                .build();
-
-         */
+        return (new LivePagedListBuilder<>(new HinaDataSource.HinaDataSource2Factory(disposable), config)).build();
     }
 
     @Override

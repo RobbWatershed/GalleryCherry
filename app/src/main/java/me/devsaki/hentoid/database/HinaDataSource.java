@@ -4,7 +4,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
-import androidx.paging.PageKeyedDataSource;
+import androidx.paging.DataSource;
+import androidx.paging.PositionalDataSource;
 
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.CompositeDisposable;
@@ -12,12 +13,11 @@ import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.retrofit.HinaServer;
 import timber.log.Timber;
 
-public class HinaDataSource extends PageKeyedDataSource<Integer, Content> {
+public class HinaDataSource extends PositionalDataSource<Content> {
 
-    private static final int ITEMS_PER_PAGE = 10; // TODO
-
-    private final CompositeDisposable compositeDisposable;
     private final String query;
+    private final CompositeDisposable compositeDisposable;
+    private int pageSize = 0;
 
     public HinaDataSource(@NonNull CompositeDisposable cd, @NonNull final String query) {
         compositeDisposable = cd;
@@ -25,70 +25,89 @@ public class HinaDataSource extends PageKeyedDataSource<Integer, Content> {
     }
 
     @Override
-    public void loadInitial(@NonNull LoadInitialParams<Integer> params, @NonNull LoadInitialCallback<Integer, Content> callback) {
-        createItemsObservable(1, 2, callback, null);
+    public void loadInitial(@NonNull LoadInitialParams params, @NonNull LoadInitialCallback<Content> callback) {
+        this.pageSize = params.pageSize;
+        Timber.i(">> loadInitial %s", params.requestedStartPosition);
+        createItemsObservable((params.requestedStartPosition / pageSize) + 1, params.requestedLoadSize, callback, null);
     }
 
     @Override
-    public void loadBefore(@NonNull LoadParams<Integer> params, @NonNull LoadCallback<Integer, Content> callback) {
-        int page = params.key;
-        createItemsObservable(page, page - 1, null, callback);
+    public void loadRange(@NonNull LoadRangeParams params, @NonNull LoadRangeCallback<Content> callback) {
+        Timber.i(">> loadRange %s", params.startPosition);
+        createItemsObservable((params.startPosition / pageSize) + 1, params.loadSize, null, callback);
     }
 
-    @Override
-    public void loadAfter(@NonNull LoadParams<Integer> params, @NonNull LoadCallback<Integer, Content> callback) {
-        int page = params.key;
-        createItemsObservable(page, page + 1, null, callback);
+    private void createItemsObservable(
+            int requestedPage,
+            int loadSize,
+            @Nullable PositionalDataSource.LoadInitialCallback<Content> initialCallback,
+            @Nullable PositionalDataSource.LoadRangeCallback<Content> callback
+    ) {
+        Timber.i(">> createItemsObservable %s", requestedPage);
+        if (!query.isEmpty())
+            compositeDisposable.add(HinaServer.API.search(requestedPage, pageSize, query)
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe(
+                            r -> {
+                                if (initialCallback != null)
+                                    initialCallback.onResult(r.getGalleries(), (requestedPage - 1) * pageSize, (r.getMaxRes() + 1) * pageSize);
+                                if (callback != null)
+                                    callback.onResult(r.getGalleries());
+                            },
+                            Timber::e)
+            );
+        else
+            compositeDisposable.add(HinaServer.API.getLatest(requestedPage, pageSize)
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe(
+                            r -> {
+                                if (initialCallback != null)
+                                    initialCallback.onResult(r.getGalleries(), (requestedPage - 1) * pageSize, (r.getMaxRes() + 1) * pageSize);
+                                if (callback != null)
+                                    callback.onResult(r.getGalleries());
+                            },
+                            Timber::e)
+            );
     }
 
     public LiveData<Integer> count() {
         MutableLiveData<Integer> result = new MutableLiveData<>();
         if (!query.isEmpty())
-            compositeDisposable.add(HinaServer.API.search(1, ITEMS_PER_PAGE, query)
+            compositeDisposable.add(HinaServer.API.search(1, 1, query)
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(
-                            r -> result.postValue(r.getMaxRes() * ITEMS_PER_PAGE),
+                            r -> result.postValue(r.getMaxRes() + 1),
                             Timber::e)
             );
         else
-            compositeDisposable.add(HinaServer.API.getLatest(1, ITEMS_PER_PAGE)
+            compositeDisposable.add(HinaServer.API.getLatest(1, 1)
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(
-                            r -> result.postValue(r.getMaxRes()),
+                            r -> result.postValue(r.getMaxRes() + 1),
                             Timber::e)
             );
         return result;
     }
 
-    private void createItemsObservable(
-            int requestedPage,
-            int adjacentPage,
-            @Nullable LoadInitialCallback<Integer, Content> initialCallback,
-            @Nullable LoadCallback<Integer, Content> callback
-    ) {
-        if (!query.isEmpty())
-            compositeDisposable.add(HinaServer.API.search(requestedPage, ITEMS_PER_PAGE, query)
-                    .observeOn(AndroidSchedulers.mainThread())
-                    .subscribe(
-                            r -> {
-                                if (initialCallback != null)
-                                    initialCallback.onResult(r.getGalleries(), null, adjacentPage);
-                                if (callback != null)
-                                    callback.onResult(r.getGalleries(), adjacentPage);
-                            },
-                            Timber::e)
-            );
-        else
-            compositeDisposable.add(HinaServer.API.getLatest(requestedPage, ITEMS_PER_PAGE)
-                    .observeOn(AndroidSchedulers.mainThread())
-                    .subscribe(
-                            r -> {
-                                if (initialCallback != null)
-                                    initialCallback.onResult(r.getGalleries(), null, adjacentPage);
-                                if (callback != null)
-                                    callback.onResult(r.getGalleries(), adjacentPage);
-                            },
-                            Timber::e)
-            );
+    // === FACTORY
+
+    public static class HinaDataSource2Factory extends androidx.paging.DataSource.Factory<Integer, Content> {
+        private final String query;
+        private final CompositeDisposable compositeDisposable;
+
+        HinaDataSource2Factory(CompositeDisposable cd) {
+            compositeDisposable = cd;
+            query = "";
+        }
+
+        HinaDataSource2Factory(CompositeDisposable cd, String query) {
+            compositeDisposable = cd;
+            this.query = query;
+        }
+
+        @NonNull
+        public DataSource<Integer, Content> create() {
+            return new HinaDataSource(compositeDisposable, query);
+        }
     }
 }
