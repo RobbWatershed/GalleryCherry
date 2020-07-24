@@ -7,6 +7,8 @@ import androidx.lifecycle.MutableLiveData;
 import androidx.paging.DataSource;
 import androidx.paging.PositionalDataSource;
 
+import java.util.List;
+
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.CompositeDisposable;
 import me.devsaki.hentoid.database.domains.Content;
@@ -49,8 +51,13 @@ public class HinaDataSource extends PositionalDataSource<Content> {
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(
                             r -> {
+                                int position = (requestedPage - 1) * pageSize;
+                                int totalCount = (r.getMaxRes() + 1) * pageSize;
+                                int dataSize = r.getGalleries().size();
+                                if (position + dataSize != totalCount && dataSize % pageSize != 0) totalCount = position + dataSize;
+
                                 if (initialCallback != null)
-                                    initialCallback.onResult(r.getGalleries(), (requestedPage - 1) * pageSize, (r.getMaxRes() + 1) * pageSize);
+                                    initialCallback.onResult(r.getGalleries(), position, totalCount);
                                 if (callback != null)
                                     callback.onResult(r.getGalleries());
                             },
@@ -68,6 +75,13 @@ public class HinaDataSource extends PositionalDataSource<Content> {
                             },
                             Timber::e)
             );
+    }
+
+    private List<Content> padList(List<Content> list, int size) {
+        int diff = size - list.size();
+        if (diff > 0)
+            for (int i = 0; i < diff; i++) list.add(null);
+        return list;
     }
 
     public LiveData<Integer> count() {
