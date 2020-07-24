@@ -74,6 +74,9 @@ public class IntentActivity extends AppCompatActivity {
         if (null == toParse) return null;
 
         switch (site) {
+            case XHAMSTER:
+                int galleryIndex = toParse.indexOf("/gallery/");
+                return toParse.substring(galleryIndex + 9);
             default:
                 return toParse;
         }
