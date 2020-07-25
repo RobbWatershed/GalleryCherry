@@ -72,6 +72,7 @@ public class DrawerEditActivity extends BaseActivity implements ItemTouchCallbac
         for (Site s : Site.values())
             // We don't want to show these
             if (s != Site.NONE               // Technical fallback
+                    && s != Site.HINA        // Harcdoded link to a specific screen
                     && !activeSites.contains(s)
             )
                 items.add(new SiteItem(s, false, touchHelper));
