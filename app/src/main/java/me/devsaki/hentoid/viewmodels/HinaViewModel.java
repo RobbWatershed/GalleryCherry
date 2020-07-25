@@ -11,11 +11,8 @@ import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.paging.PagedList;
 
-import java.util.List;
-
 import io.reactivex.disposables.CompositeDisposable;
 import me.devsaki.hentoid.database.CollectionDAO;
-import me.devsaki.hentoid.database.domains.Attribute;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.util.Preferences;
@@ -106,20 +103,9 @@ public class HinaViewModel extends AndroidViewModel {
      */
     public void searchUniversal(@NonNull String query) {
         searchManager.clearSelectedSearchTags(); // If user searches in main toolbar, universal search takes over advanced search
+        // Auto-adds "'s around words to make a "cumulative AND" query
+        if (query.contains(" ")) query = "\"" + query.replace(" ", "\" \"") + "\"";
         searchManager.setQuery(query);
-        newSearch.setValue(true);
-        performSearch();
-    }
-
-    /**
-     * Perform a new search using the given query and metadata
-     *
-     * @param query    Query to use for the search
-     * @param metadata Metadata to use for the search
-     */
-    public void search(@NonNull String query, @NonNull List<Attribute> metadata) {
-        searchManager.setQuery(query);
-        searchManager.setTags(metadata);
         newSearch.setValue(true);
         performSearch();
     }
