@@ -34,7 +34,8 @@ public class SourcesIntroFragment extends Fragment {
         for (Site s : Site.values())
             // We don't want to show these
             if (
-                    s != Site.NONE               // Technical fallback
+                    s != Site.NONE           // Technical fallback
+                            && s != Site.HINA        // Harcdoded link to a specific screen
             ) items.add(new SiteItem(s, true, false));
         itemAdapter.add(items);
 
