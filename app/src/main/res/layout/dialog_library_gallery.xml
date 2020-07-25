@@ -23,7 +23,7 @@
         android:id="@+id/library_gallery_recycler"
         android:layout_width="match_parent"
         android:layout_height="600dp"
-        app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
+        app:layoutManager="androidx.recyclerview.widget.StaggeredGridLayoutManager"
         app:layout_constraintTop_toBottomOf="@id/library_gallery_toolbar"
         app:spanCount="5"
         tools:listitem="@layout/item_viewer_gallery_image" />
