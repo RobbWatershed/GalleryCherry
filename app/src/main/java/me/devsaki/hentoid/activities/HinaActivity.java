@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -26,6 +27,9 @@ import com.mikepenz.fastadapter.listeners.ClickEventHook;
 import com.mikepenz.fastadapter.paged.PagedModelAdapter;
 import com.mikepenz.fastadapter.select.SelectExtensionFactory;
 
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collections;
@@ -37,7 +41,11 @@ import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.activities.bundles.ContentItemBundle;
 import me.devsaki.hentoid.database.domains.Attribute;
 import me.devsaki.hentoid.database.domains.Content;
+import me.devsaki.hentoid.enums.AlertStatus;
+import me.devsaki.hentoid.enums.Site;
+import me.devsaki.hentoid.events.UpdateEvent;
 import me.devsaki.hentoid.fragments.library.GalleryDialogFragment;
+import me.devsaki.hentoid.json.UpdateInfo;
 import me.devsaki.hentoid.retrofit.HinaServer;
 import me.devsaki.hentoid.services.ContentQueueManager;
 import me.devsaki.hentoid.util.Debouncer;
@@ -79,8 +87,12 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
     // "Search" button on top menu
     private MenuItem searchMenu;
 
+    // Alert message panel and text
+    private View alertBanner;
+    private ImageView alertIcon;
+    private TextView alertMessage;
+
     // === FASTADAPTER COMPONENTS AND HELPERS
-//    private ItemAdapter<ContentItem> itemAdapter;
     private PagedModelAdapter<Content, ContentItem> pagedItemAdapter;
     private FastAdapter<ContentItem> fastAdapter;
 
@@ -97,6 +109,9 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
     private PagedList<Content> library;
     // Position of top item to memorize or restore (used when activity is destroyed and recreated)
     private int topItemPosition = -1;
+
+    // Alert to be displayed
+    private UpdateInfo.SourceAlert alert;
 
     // Used to start processing when the recyclerView has finished updating
     private final Debouncer<Integer> listRefreshDebouncer = new Debouncer<>(75, this::onRecyclerUpdated);
@@ -151,7 +166,7 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
         super.onCreate(savedInstanceState);
 
         ExtensionsFactories.INSTANCE.register(new SelectExtensionFactory());
-//        EventBus.getDefault().register(this);
+        if (!EventBus.getDefault().isRegistered(this)) EventBus.getDefault().register(this);
 
         setContentView(R.layout.activity_hina);
 
@@ -168,7 +183,11 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
         viewModel.getLibraryPaged().observe(this, this::onLibraryChanged);
         viewModel.getTotalContent().observe(this, this::onTotalContentChanged);
 
-//        viewModel.updateOrder(); // Trigger a blank search
+        // Alert banner
+        alertBanner = findViewById(R.id.web_alert_group);
+        alertIcon = findViewById(R.id.web_alert_icon);
+        alertMessage = findViewById(R.id.web_alert_txt);
+        displayAlertBanner();
     }
 
     /**
@@ -252,6 +271,61 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
     }
 
     /**
+     * Displays the top alert banner
+     * (the one that contains the alerts when downloads are broken or sites are unavailable)
+     */
+    private void displayAlertBanner() {
+        if (alertMessage != null && alert != null) {
+            alertIcon.setImageResource(alert.getStatus().getIcon());
+            alertMessage.setText(formatAlertMessage(alert));
+            alertBanner.setVisibility(View.VISIBLE);
+        }
+    }
+
+    @Subscribe(sticky = true, threadMode = ThreadMode.MAIN)
+    public void onUpdateEvent(UpdateEvent event) {
+        if (event.sourceAlerts.containsKey(Site.HINA)) {
+            alert = event.sourceAlerts.get(Site.HINA);
+            displayAlertBanner();
+        }
+    }
+
+    /**
+     * Handler for the close icon of the top alert banner
+     */
+    public void onAlertCloseClick(View view) {
+        alertBanner.setVisibility(View.GONE);
+    }
+
+    /**
+     * Format the message to display for the given source alert
+     *
+     * @param alert Source alert
+     * @return Message to be displayed for the user for the given source alert
+     */
+    private String formatAlertMessage(@NonNull final UpdateInfo.SourceAlert alert) {
+        String result = "";
+
+        // Main message body
+        if (alert.getStatus().equals(AlertStatus.ORANGE)) {
+            result = getResources().getString(R.string.alert_orange);
+        } else if (alert.getStatus().equals(AlertStatus.RED)) {
+            result = getResources().getString(R.string.alert_red);
+        } else if (alert.getStatus().equals(AlertStatus.GREY)) {
+            result = getResources().getString(R.string.alert_grey);
+        } else if (alert.getStatus().equals(AlertStatus.BLACK)) {
+            result = getResources().getString(R.string.alert_black);
+        }
+
+        // End of message
+        if (alert.getFixedByBuild() < Integer.MAX_VALUE)
+            result = result.replace("%s", getResources().getString(R.string.alert_fix_available));
+        else result = result.replace("%s", getResources().getString(R.string.alert_wip));
+
+        return result;
+    }
+
+    /**
      * Callback method used when a sort method is selected in the sort drop-down menu
      * Updates the UI according to the chosen sort method
      *
@@ -305,7 +379,7 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
 
     @Override
     public void onDestroy() {
-//        EventBus.getDefault().unregister(this);
+        if (EventBus.getDefault().isRegistered(this)) EventBus.getDefault().unregister(this);
         super.onDestroy();
     }
 
