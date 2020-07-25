@@ -7,6 +7,8 @@
     {"sourceName":"EXAMPLE", "status":"RED", "fixedByBuild":"100" }
   ],
   "sourceAlerts.beta":[
-    {"sourceName":"EXAMPLE", "status":"RED", "fixedByBuild":"100" }
+    {"sourceName":"EXAMPLE", "status":"RED", "fixedByBuild":"100" },
+    {"sourceName":"XHAMSTER", "status":"GREY" },
+    {"sourceName":"HINA", "status":"ORANGE" }
   ]
 }
