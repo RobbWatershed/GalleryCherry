@@ -88,7 +88,7 @@ public final class NavigationDrawerFragment extends Fragment {
         List<Site> activeSites = Preferences.getActiveSites();
         for (Site s : activeSites) drawerItems.add(new DrawerItem(s));
 
-        drawerItems.add(new DrawerItem("HINA", R.drawable.ic_info, HinaActivity.class));
+        drawerItems.add(new DrawerItem("HINA", R.drawable.ic_menu_hina, HinaActivity.class));
         drawerItems.add(new DrawerItem("QUEUE", R.drawable.ic_action_download, QueueActivity.class));
         drawerItems.add(new DrawerItem("ABOUT", R.drawable.ic_info, AboutActivity.class));
 
