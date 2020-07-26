@@ -34,7 +34,6 @@ public class HinaViewModel extends AndroidViewModel {
 
     // Collection data
     private LiveData<PagedList<Content>> currentSource;
-    private LiveData<Integer> totalContent;
     private LiveData<Map<String, StatusContent>> hinaBooksStatus;
     private final MediatorLiveData<PagedList<Content>> libraryPaged = new MediatorLiveData<>();
 
@@ -47,7 +46,6 @@ public class HinaViewModel extends AndroidViewModel {
         hinaDao = hinaDAO;
         hentoidDao = hentoidDAO;
         searchManager = new ContentSearchManager(hinaDao);
-        totalContent = hinaDao.countAllBooks();
         hinaBooksStatus = hentoidDAO.selectContentUniqueIdStates(Site.HINA);
     }
 
@@ -71,11 +69,6 @@ public class HinaViewModel extends AndroidViewModel {
     @NonNull
     public LiveData<PagedList<Content>> getLibraryPaged() {
         return libraryPaged;
-    }
-
-    @NonNull
-    public LiveData<Integer> getTotalContent() {
-        return totalContent;
     }
 
     @NonNull

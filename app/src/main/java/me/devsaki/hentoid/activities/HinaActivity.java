@@ -104,8 +104,8 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
     // ======== VARIABLES
     // Used to ignore native calls to onQueryTextChange
     private boolean invalidateNextQueryTextChange = false;
-    // Total number of books in the whole unfiltered library
-    private int totalContentCount;
+    // Total number of books in the whole unfiltered collection
+    private int totalContentCount = -1;
     // True when a new search has been performed and its results have not been handled yet
     // False when the refresh is passive (i.e. not from a direct user action)
     private boolean newSearch = false;
@@ -188,7 +188,6 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
 
         viewModel.getNewSearch().observe(this, this::onNewSearch);
         viewModel.getLibraryPaged().observe(this, this::onLibraryChanged);
-        viewModel.getTotalContent().observe(this, this::onTotalContentChanged);
         viewModel.getHinaBooksStatus().observe(this, this::onHinaBooksStatusChanged);
 
         // Alert banner
@@ -450,9 +449,8 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
     private void onLibraryChanged(PagedList<Content> result) {
         Timber.i(">>Library changed ! Size=%s", result.size());
 
+        // TODO replace by a loading text
         /*
-        updateTitle(result.size(), totalContentCount);
-
         // Update background text
         if (result.isEmpty()) {
             emptyText.setVisibility(View.VISIBLE);
@@ -471,6 +469,37 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
         // If the update is the result of a new search, get back on top of the list
         if (newSearch) topItemPosition = 0;
 
+        result.addWeakCallback(null, new PagedList.Callback() {
+            @Override
+            // Called when progressing through the list
+            // Items are being load to replace placeholders at the given location
+            public void onChanged(int position, int count) {
+                updateContentStatus(position, count);
+            }
+
+            @Override
+            // Called once when loading the results for the 1st time
+            // Contains the whole list with the first X elements and placeholders
+            public void onInserted(int position, int count) {
+                if (-1 == totalContentCount) totalContentCount = count;
+                updateTitle(count, totalContentCount);
+
+                // Update background text
+                if (0 == count) {
+                    emptyText.setVisibility(View.VISIBLE);
+                    if (isSearchQueryActive()) emptyText.setText(R.string.search_entry_not_found);
+                    else emptyText.setText(R.string.downloads_empty_library);
+                } else emptyText.setVisibility(View.GONE);
+
+                updateContentStatus(position, count);
+            }
+
+            @Override
+            public void onRemoved(int position, int count) {
+                Timber.i(">> library removed %s %s", position, count);
+            }
+        });
+
         // Update displayed books
         pagedItemAdapter.submitList(result, this::differEndCallback);
 
@@ -478,17 +507,24 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
         library = result;
     }
 
-    /**
-     * LiveData callback when the total number of books changes (because of book download of removal)
-     *
-     * @param count Current book count in the whole, unfiltered library
-     */
-    private void onTotalContentChanged(Integer count) {
-        // TODO change the logic here
-        //  - total content count should be the size of the very first (unfiltered) dataset
-        //  - "library size" should be the size of the current dataset
-        totalContentCount = (null == count) ? 0 : count;
-        if (library != null) updateTitle(library.size(), totalContentCount);
+    private void updateContentStatus(int position, int count) {
+        List<ContentItem> contents = pagedItemAdapter.getAdapterItems();
+        int listPosition = 0;
+        for (ContentItem c : contents) {
+            if (c.getContent() != null && listPosition >= position && listPosition < position + count) {
+                if (booksStatus.containsKey(c.getContent().getUniqueSiteId())) {
+                    StatusContent s = booksStatus.get(c.getContent().getUniqueSiteId());
+                    if (s != null) {
+                        final int updatePosition = listPosition;
+                        new Handler().postDelayed(() -> {
+                            Bundle payload = new ContentItemBundle.Builder().setStatus(s).getBundle();
+                            fastAdapter.notifyAdapterItemChanged(updatePosition, payload);
+                        }, 100);
+                    }
+                }
+            }
+            listPosition++;
+        }
     }
 
     /**
