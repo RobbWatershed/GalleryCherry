@@ -300,9 +300,11 @@ public class ObjectBoxDB {
         return store.boxFor(Content.class).get(id);
     }
 
-    @Nullable
-    public Content selectContentBySourceAndUrl(@NonNull Site site, @NonNull String url) {
-        return store.boxFor(Content.class).query().equal(Content_.url, url).equal(Content_.site, site.getCode()).build().findFirst();
+    public Query<Content> selectContentBySourceAndUrlQ(@NonNull Site site, @Nullable String url) {
+        QueryBuilder<Content> queryBuilder = store.boxFor(Content.class).query();
+        queryBuilder.equal(Content_.site, site.getCode());
+        if (url != null) queryBuilder.equal(Content_.url, url);
+        return queryBuilder.build();
     }
 
     private static long[] getIdsFromAttributes(@NonNull List<Attribute> attrs) {
@@ -826,7 +828,8 @@ public class ObjectBoxDB {
 
     @Nullable
     public LandingRecord selectLandingRecord(@NonNull Site site, @NonNull String url) {
-        if (!url.isEmpty()) return store.boxFor(LandingRecord.class).query().equal(LandingRecord_.url, url).equal(LandingRecord_.site, site.getCode()).build().findFirst();
+        if (!url.isEmpty())
+            return store.boxFor(LandingRecord.class).query().equal(LandingRecord_.url, url).equal(LandingRecord_.site, site.getCode()).build().findFirst();
         else return null;
     }
 
@@ -835,8 +838,7 @@ public class ObjectBoxDB {
         return store.boxFor(LandingRecord.class).query().equal(LandingRecord_.site, s.getCode()).sort(LandingRecord.DATE_COMPARATOR_DESC).build().find();
     }
 
-    public void deleteAllLandingRecords()
-    {
+    public void deleteAllLandingRecords() {
         store.boxFor(LandingRecord.class).removeAll();
     }
 

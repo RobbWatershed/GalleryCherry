@@ -10,6 +10,9 @@ import androidx.lifecycle.MediatorLiveData;
 import androidx.paging.LivePagedListBuilder;
 import androidx.paging.PagedList;
 
+import com.annimon.stream.Collectors;
+import com.annimon.stream.Stream;
+
 import org.apache.commons.lang3.tuple.ImmutablePair;
 
 import java.lang.annotation.Retention;
@@ -197,7 +200,16 @@ public class ObjectBoxDAO implements CollectionDAO {
 
     @Nullable
     public Content selectContentBySourceAndUrl(@NonNull Site site, @NonNull String url) {
-        return db.selectContentBySourceAndUrl(site, url);
+        return db.selectContentBySourceAndUrlQ(site, url).findFirst();
+    }
+
+    public LiveData<Map<String, StatusContent>> selectContentUniqueIdStates(@NonNull final Site site) {
+        ObjectBoxLiveData<Content> livedata = new ObjectBoxLiveData<>(db.selectContentBySourceAndUrlQ(site, null));
+
+        MediatorLiveData<Map<String, StatusContent>> result = new MediatorLiveData<>();
+        result.addSource(livedata, v -> result.setValue(Stream.of(v).withoutNulls().collect(Collectors.toMap(Content::getUniqueSiteId, Content::getStatus))));
+
+        return result;
     }
 
     public long insertContent(@NonNull final Content content) {

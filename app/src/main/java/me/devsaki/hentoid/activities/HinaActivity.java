@@ -32,8 +32,11 @@ import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
@@ -43,6 +46,7 @@ import me.devsaki.hentoid.database.domains.Attribute;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.enums.AlertStatus;
 import me.devsaki.hentoid.enums.Site;
+import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.events.UpdateEvent;
 import me.devsaki.hentoid.fragments.library.GalleryDialogFragment;
 import me.devsaki.hentoid.json.UpdateInfo;
@@ -116,6 +120,9 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
     // Used to start processing when the recyclerView has finished updating
     private final Debouncer<Integer> listRefreshDebouncer = new Debouncer<>(75, this::onRecyclerUpdated);
 
+    // TODO comment
+    private Map<String, StatusContent> booksStatus;
+
 
     // === SEARCH PARAMETERS
     // Current text search query
@@ -182,6 +189,7 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
         viewModel.getNewSearch().observe(this, this::onNewSearch);
         viewModel.getLibraryPaged().observe(this, this::onLibraryChanged);
         viewModel.getTotalContent().observe(this, this::onTotalContentChanged);
+        viewModel.getHinaBooksStatus().observe(this, this::onHinaBooksStatusChanged);
 
         // Alert banner
         alertBanner = findViewById(R.id.web_alert_group);
@@ -495,6 +503,33 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
             title = getResources().getQuantityString(R.plurals.number_of_book_search_results, (int) totalSelectedCount, (int) totalSelectedCount, totalCount);
         }
         toolbar.setTitle(title);
+    }
+
+    private void onHinaBooksStatusChanged(Map<String, StatusContent> booksStatus) {
+        if (this.booksStatus != null) {
+            Map<String, StatusContent> changes = new HashMap<>();
+
+            // 1st pass : detect added elements
+            List<String> addedBooksIds = new ArrayList<>(booksStatus.keySet());
+            addedBooksIds.removeAll(this.booksStatus.keySet());
+            for (String id : addedBooksIds)
+                changes.put(id, booksStatus.get(id));
+
+            // 2nd pass : detect updated elements
+            for (Map.Entry<String, StatusContent> entry : this.booksStatus.entrySet())
+                if (booksStatus.containsKey(entry.getKey())) {
+                    StatusContent newValue = booksStatus.get(entry.getKey());
+                    if (newValue != null && entry.getValue() != null && !newValue.equals(entry.getValue()))
+                        changes.put(entry.getKey(), newValue);
+                }
+
+            for (Map.Entry<String, StatusContent> changedEntry : changes.entrySet()) {
+                Bundle payload = new ContentItemBundle.Builder().setStatus(changedEntry.getValue()).getBundle();
+                fastAdapter.notifyAdapterItemChanged(fastAdapter.getPosition(Content.hash(0L, changedEntry.getKey())), payload);
+            }
+        }
+
+        this.booksStatus = booksStatus;
     }
 
     /**

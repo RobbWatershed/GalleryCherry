@@ -94,6 +94,8 @@ public interface CollectionDAO {
 
     LiveData<PagedList<Content>> getRecentBooks(int orderField, boolean orderDesc, boolean favouritesOnly, boolean loadAll);
 
+    LiveData<Map<String, StatusContent>> selectContentUniqueIdStates(@NonNull final Site site);
+
 
     LiveData<List<Content>> getErrorContent();
 

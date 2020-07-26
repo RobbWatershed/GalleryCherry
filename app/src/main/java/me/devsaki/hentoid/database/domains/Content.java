@@ -607,8 +607,12 @@ public class Content implements Serializable {
                 Objects.equals(getUniqueSiteId(), content.getUniqueSiteId());
     }
 
+    public static int hash(long id, String uniqueSiteId) {
+        return Objects.hash(id, uniqueSiteId);
+    }
+
     @Override
     public int hashCode() {
-        return Objects.hash(getId(), getUniqueSiteId());
+        return hash(getId(), getUniqueSiteId());
     }
 }

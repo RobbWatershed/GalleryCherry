@@ -47,6 +47,7 @@ public class HinaResult {
             result.setSite(Site.HINA);
             result.setUrl(origin);
             result.setTitle(name);
+            result.setStatus(StatusContent.ONLINE);
 
             List<Attribute> attrList = new ArrayList<>();
             if (edata != null && !edata.isEmpty()) {

@@ -263,7 +263,7 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
             if (item.isEmpty || null == item.content) return; // Ignore placeholders from PagedList
 
             // Payloads are set when the content stays the same but some properties alone change
-            if (!payloads.isEmpty()) {
+            if (!payloads.isEmpty() && payloads.get(0) instanceof Bundle) {
                 Bundle bundle = (Bundle) payloads.get(0);
                 ContentItemBundle.Parser bundleParser = new ContentItemBundle.Parser(bundle);
 
@@ -273,6 +273,8 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
                 if (boolValue != null) item.content.setFavourite(boolValue);
                 Long longValue = bundleParser.getReads();
                 if (longValue != null) item.content.setReads(longValue);
+                StatusContent status = bundleParser.getStatus();
+                if (status != null) item.content.setStatus(status);
             }
 
             updateLayoutVisibility(item);
@@ -481,7 +483,10 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
                 ivRedownload.setVisibility(View.VISIBLE);
                 ivError.setVisibility(View.VISIBLE);
             } else if (ViewType.ONLINE == item.viewType) {
-                ivRedownload.setVisibility(View.VISIBLE);
+                if (content.getStatus().equals(StatusContent.ONLINE))
+                    ivRedownload.setVisibility(View.VISIBLE);
+                else
+                    ivRedownload.setVisibility(View.GONE);
             } else if (ViewType.LIBRARY == item.viewType) {
                 ivFavourite.setVisibility(View.VISIBLE);
                 if (content.isFavourite()) {

@@ -11,9 +11,12 @@ import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.paging.PagedList;
 
+import java.util.Map;
+
 import io.reactivex.disposables.CompositeDisposable;
 import me.devsaki.hentoid.database.CollectionDAO;
 import me.devsaki.hentoid.database.domains.Content;
+import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.widget.ContentSearchManager;
@@ -22,8 +25,8 @@ import me.devsaki.hentoid.widget.ContentSearchManager;
 public class HinaViewModel extends AndroidViewModel {
 
     // DAOs
-    private final CollectionDAO collectionDao;
-    private final CollectionDAO queueDao;
+    private final CollectionDAO hinaDao;
+    private final CollectionDAO hentoidDao;
     // Library search manager
     private final ContentSearchManager searchManager;
     // Cleanup for all RxJava calls
@@ -32,18 +35,20 @@ public class HinaViewModel extends AndroidViewModel {
     // Collection data
     private LiveData<PagedList<Content>> currentSource;
     private LiveData<Integer> totalContent;
+    private LiveData<Map<String, StatusContent>> hinaBooksStatus;
     private final MediatorLiveData<PagedList<Content>> libraryPaged = new MediatorLiveData<>();
 
     // Updated whenever a new search is performed
     private MutableLiveData<Boolean> newSearch = new MutableLiveData<>();
 
 
-    public HinaViewModel(@NonNull Application application, @NonNull CollectionDAO collectionDAO, @NonNull CollectionDAO queueDAO) {
+    public HinaViewModel(@NonNull Application application, @NonNull CollectionDAO hinaDAO, @NonNull CollectionDAO hentoidDAO) {
         super(application);
-        collectionDao = collectionDAO;
-        queueDao = queueDAO;
-        searchManager = new ContentSearchManager(collectionDao);
-        totalContent = collectionDao.countAllBooks();
+        hinaDao = hinaDAO;
+        hentoidDao = hentoidDAO;
+        searchManager = new ContentSearchManager(hinaDao);
+        totalContent = hinaDao.countAllBooks();
+        hinaBooksStatus = hentoidDAO.selectContentUniqueIdStates(Site.HINA);
     }
 
     public void onSaveState(Bundle outState) {
@@ -59,8 +64,8 @@ public class HinaViewModel extends AndroidViewModel {
     protected void onCleared() {
         super.onCleared();
         compositeDisposable.clear();
-        collectionDao.cleanup();
-        queueDao.cleanup();
+        hinaDao.cleanup();
+        hentoidDao.cleanup();
     }
 
     @NonNull
@@ -71,6 +76,11 @@ public class HinaViewModel extends AndroidViewModel {
     @NonNull
     public LiveData<Integer> getTotalContent() {
         return totalContent;
+    }
+
+    @NonNull
+    public LiveData<Map<String, StatusContent>> getHinaBooksStatus() {
+        return hinaBooksStatus;
     }
 
     @NonNull
@@ -138,6 +148,6 @@ public class HinaViewModel extends AndroidViewModel {
      * @param content Content to be added to the download queue
      */
     public void addContentToQueue(@NonNull final Content content, StatusContent targetImageStatus) {
-        queueDao.addContentToQueue(content, targetImageStatus);
+        hentoidDao.addContentToQueue(content, targetImageStatus);
     }
 }

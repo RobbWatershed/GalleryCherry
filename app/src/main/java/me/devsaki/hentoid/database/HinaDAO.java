@@ -166,6 +166,11 @@ public class HinaDAO implements CollectionDAO {
     }
 
     @Override
+    public LiveData<Map<String, StatusContent>> selectContentUniqueIdStates(@NonNull Site site) {
+        return null;
+    }
+
+    @Override
     public LiveData<List<Content>> getErrorContent() {
         return null;
     }
