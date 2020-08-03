@@ -377,25 +377,15 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
 
         private void attachArtist(@NonNull final Content content) {
             Context context = tvArtist.getContext();
-            String templateArtist = context.getResources().getString(R.string.work_artist);
-            List<Attribute> attributes = new ArrayList<>();
+            List<Attribute> attributes = content.getAttributeMap().get(AttributeType.MODEL);
 
-            List<Attribute> artistAttributes = content.getAttributeMap().get(AttributeType.ARTIST);
-            if (artistAttributes != null)
-                attributes.addAll(artistAttributes);
-            List<Attribute> circleAttributes = content.getAttributeMap().get(AttributeType.CIRCLE);
-            if (circleAttributes != null)
-                attributes.addAll(circleAttributes);
-
-            if (attributes.isEmpty()) {
-                tvArtist.setText(templateArtist.replace("@artist@", context.getResources().getString(R.string.work_untitled)));
+            if (null == attributes || attributes.isEmpty()) {
+                tvArtist.setText(context.getResources().getString(R.string.work_model, "[No data]"));
             } else {
                 List<String> allArtists = new ArrayList<>();
-                for (Attribute attribute : attributes) {
-                    allArtists.add(attribute.getName());
-                }
+                for (Attribute attribute : attributes) allArtists.add(attribute.getName());
                 String artists = android.text.TextUtils.join(", ", allArtists);
-                tvArtist.setText(templateArtist.replace("@artist@", artists));
+                tvArtist.setText(context.getResources().getString(R.string.work_model, artists));
             }
         }
 
