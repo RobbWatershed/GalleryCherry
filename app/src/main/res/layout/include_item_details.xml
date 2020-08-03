@@ -20,7 +20,7 @@
         app:layout_constraintTop_toBottomOf="@id/tvTitle"
         tools:tint="@color/light_gray"
         tools:ignore="ContentDescription"
-        tools:src="@drawable/ic_cherry_flower" />
+        tools:src="@drawable/ic_cherry_outline" />
 
     <TextView
         android:id="@+id/tvTitle"
