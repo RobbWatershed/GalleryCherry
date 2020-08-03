@@ -20,10 +20,12 @@ import org.jetbrains.annotations.NotNull;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.List;
+import java.util.Map;
 
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.database.domains.ImageFile;
-import me.devsaki.hentoid.util.network.HttpHelper;
+import me.devsaki.hentoid.retrofit.HinaServer;
+import me.devsaki.hentoid.util.ContentHelper;
 
 import static androidx.core.view.ViewCompat.requireViewById;
 
@@ -109,16 +111,10 @@ public class ImageFileItem extends AbstractItem<ImageFileItem.ImageViewHolder> {
             }
 
             String uri = item.image.getFileUri();
-            if (null == uri || uri.isEmpty()) {
-                uri = item.image.getUrl();
-                // Hack to display thumbs when retrieving online images from Hina
-                if (uri.contains("hina.ixil.cc")) {
-                    int lastSeparator = uri.lastIndexOf("/");
-                    uri = uri.substring(0, lastSeparator) + "/tn_" + uri.substring(lastSeparator + 1);
-                }
-                // Fix invalid files not ending with ".jpg"
-                String ext = HttpHelper.getExtensionFromUri(uri);
-                if (ext.isEmpty()) uri += ".jpg";
+            // Hack to display thumbs when retrieving online images from Hina
+            if (item.image.getDownloadParams().contains("hina-id")) {
+                Map<String, String> downloadParams = ContentHelper.parseDownloadParams(item.image.getDownloadParams());
+                uri = HinaServer.getThumbFor(downloadParams.get("hina-id"), item.image.getOrder() - 1);
             }
 
             Glide.with(image)

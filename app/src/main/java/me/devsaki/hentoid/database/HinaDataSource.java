@@ -2,12 +2,8 @@ package me.devsaki.hentoid.database;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.lifecycle.LiveData;
-import androidx.lifecycle.MutableLiveData;
 import androidx.paging.DataSource;
 import androidx.paging.PositionalDataSource;
-
-import java.util.List;
 
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.CompositeDisposable;
@@ -49,12 +45,9 @@ public class HinaDataSource extends PositionalDataSource<Content> {
                     .subscribe(
                             r -> {
                                 int position = (requestedPage - 1) * pageSize;
-                                int totalCount = (r.getMaxRes() + 1) * pageSize;
-                                int dataSize = r.getGalleries().size();
-                                if (position + dataSize != totalCount && dataSize % pageSize != 0) totalCount = position + dataSize;
 
                                 if (initialCallback != null)
-                                    initialCallback.onResult(r.getGalleries(), position, totalCount);
+                                    initialCallback.onResult(r.getGalleries(), position, r.getMaxAlbums());
                                 if (callback != null)
                                     callback.onResult(r.getGalleries());
                             },
@@ -66,31 +59,12 @@ public class HinaDataSource extends PositionalDataSource<Content> {
                     .subscribe(
                             r -> {
                                 if (initialCallback != null)
-                                    initialCallback.onResult(r.getGalleries(), (requestedPage - 1) * pageSize, (r.getMaxRes() + 1) * pageSize);
+                                    initialCallback.onResult(r.getGalleries(), (requestedPage - 1) * pageSize, r.getMaxAlbums());
                                 if (callback != null)
                                     callback.onResult(r.getGalleries());
                             },
                             Timber::e)
             );
-    }
-
-    public LiveData<Integer> count() {
-        MutableLiveData<Integer> result = new MutableLiveData<>();
-        if (!query.isEmpty())
-            compositeDisposable.add(HinaServer.API.search(1, 1, query)
-                    .observeOn(AndroidSchedulers.mainThread())
-                    .subscribe(
-                            r -> result.postValue(r.getMaxRes() + 1),
-                            Timber::e)
-            );
-        else
-            compositeDisposable.add(HinaServer.API.getLatest(1, 1)
-                    .observeOn(AndroidSchedulers.mainThread())
-                    .subscribe(
-                            r -> result.postValue(r.getMaxRes() + 1),
-                            Timber::e)
-            );
-        return result;
     }
 
     // === FACTORY

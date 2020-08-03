@@ -3,7 +3,6 @@ package me.devsaki.hentoid.services;
 import android.annotation.SuppressLint;
 import android.app.IntentService;
 import android.content.Intent;
-import android.net.Uri;
 import android.webkit.MimeTypeMap;
 
 import androidx.annotation.NonNull;

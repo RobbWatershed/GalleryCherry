@@ -4,7 +4,6 @@ import android.util.SparseIntArray;
 
 import androidx.annotation.NonNull;
 import androidx.lifecycle.LiveData;
-import androidx.lifecycle.MediatorLiveData;
 import androidx.paging.LivePagedListBuilder;
 import androidx.paging.PagedList;
 
@@ -198,11 +197,7 @@ public class HinaDAO implements CollectionDAO {
 
     @Override
     public LiveData<Integer> countAllBooks() {
-        HinaDataSource dataSource = new HinaDataSource(disposable, "");
-
-        MediatorLiveData<Integer> result = new MediatorLiveData<>();
-        result.addSource(dataSource.count(), result::postValue);
-        return result;
+        return null;
     }
 
     @Override

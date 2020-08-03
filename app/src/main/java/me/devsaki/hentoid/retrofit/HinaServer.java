@@ -1,5 +1,7 @@
 package me.devsaki.hentoid.retrofit;
 
+import androidx.annotation.NonNull;
+
 import com.squareup.moshi.Moshi;
 import com.squareup.moshi.adapters.Rfc3339DateJsonAdapter;
 
@@ -11,25 +13,29 @@ import me.devsaki.hentoid.util.network.OkHttpClientSingleton;
 import retrofit2.Retrofit;
 import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
 import retrofit2.converter.moshi.MoshiConverterFactory;
-import retrofit2.http.Field;
 import retrofit2.http.GET;
 import retrofit2.http.Query;
 
 public class HinaServer {
 
-    private static final String GITHUB_BASE_URL = "https://api.ixil.cc/";
+    private static final String HINA_BASE_URL = "https://api.ixil.cc/bloom/";
+    private static final String HINA_THUMBS_URL = "https://api.ixil.cc/bloom/strat/thumbs/%s/%s?width=75&height=100";
 
     private static final Moshi moshi = new Moshi.Builder()
             .add(Date.class, new Rfc3339DateJsonAdapter())
             .build();
 
     public static final Api API = new Retrofit.Builder()
-            .baseUrl(GITHUB_BASE_URL)
+            .baseUrl(HINA_BASE_URL)
             .client(OkHttpClientSingleton.getInstance())
             .addCallAdapterFactory(RxJava2CallAdapterFactory.createAsync())
             .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build()
             .create(Api.class);
+
+    public static String getThumbFor(@NonNull final String albumId, int pageNum) {
+        return String.format(HINA_THUMBS_URL, albumId, pageNum);
+    }
 
     public interface Api {
 

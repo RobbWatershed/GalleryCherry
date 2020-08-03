@@ -8,19 +8,26 @@ import java.util.List;
 
 import me.devsaki.hentoid.database.domains.Attribute;
 import me.devsaki.hentoid.database.domains.Content;
+import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.enums.AttributeType;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.parsers.ParseHelper;
+import me.devsaki.hentoid.util.ContentHelper;
 
 public class HinaResult {
 
     private int maxres;
+    private int maxctr;
     private List<HinaGallery> data;
 
 
-    public int getMaxRes() {
+    public int getMaxPages() {
         return maxres;
+    }
+
+    public int getMaxAlbums() {
+        return maxctr;
     }
 
     public List<Content> getGalleries() {
@@ -36,7 +43,7 @@ public class HinaResult {
         private String origin;
         private String name;
         private String idol;
-        private String edata; // WIP
+        private String edata;
         private String thumb;
         private List<String> gliphs;
 
@@ -62,7 +69,10 @@ public class HinaResult {
             }
             result.addAttributes(attrList);
             if (gliphs != null && !gliphs.isEmpty()) {
-                result.setImageFiles(ParseHelper.urlsToImageFiles(gliphs, thumb, StatusContent.SAVED));
+                List<ImageFile> imgs = ParseHelper.urlsToImageFiles(gliphs, thumb, StatusContent.SAVED);
+                for (ImageFile i : imgs)
+                    i.setDownloadParams(ContentHelper.makeDownloadParams("hina-id", id));
+                result.setImageFiles(imgs);
                 result.setQtyPages(gliphs.size());
             } else {
                 result.setCoverImageUrl(thumb);
