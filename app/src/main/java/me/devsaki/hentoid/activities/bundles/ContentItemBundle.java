@@ -18,6 +18,7 @@ public class ContentItemBundle {
     private static final String KEY_FAV_STATE = "favourite";
     private static final String KEY_READS = "reads";
     private static final String KEY_STATUS = "status";
+    private static final String KEY_COVER_URI = "cover_uri";
 
     private ContentItemBundle() {
         throw new UnsupportedOperationException();
@@ -42,6 +43,10 @@ public class ContentItemBundle {
 
         public void setReads(long reads) {
             bundle.putLong(KEY_READS, reads);
+        }
+
+        public void setCoverUri(String uri) {
+            bundle.putString(KEY_COVER_URI, uri);
         }
 
         public boolean isEmpty() {
@@ -84,6 +89,12 @@ public class ContentItemBundle {
         public StatusContent getStatus() {
             if (bundle.containsKey(KEY_STATUS))
                 return StatusContent.searchByCode(bundle.getInt(KEY_STATUS));
+            else return null;
+        }
+
+        @Nullable
+        public String getCoverUri() {
+            if (bundle.containsKey(KEY_COVER_URI)) return bundle.getString(KEY_COVER_URI);
             else return null;
         }
     }

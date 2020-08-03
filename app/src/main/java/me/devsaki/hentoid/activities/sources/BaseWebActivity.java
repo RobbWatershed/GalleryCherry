@@ -724,7 +724,7 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
     private @ContentStatus
     int processContent(@NonNull Content content, boolean quickDownload) {
         @ContentStatus int result = ContentStatus.UNKNOWN;
-        if (null == content.getUrl() || 0 == content.getQtyPages()) return result;
+        if (content.getUrl().isEmpty() || 0 == content.getQtyPages()) return result;
 
         Content contentDB = objectBoxDAO.selectContentBySourceAndUrl(content.getSite(), content.getUrl());
 

@@ -198,7 +198,9 @@ public class LibraryFragment extends Fragment implements ErrorsDialogFragment.Pa
     private final AsyncDifferConfig<Content> asyncDifferConfig = new AsyncDifferConfig.Builder<>(new DiffUtil.ItemCallback<Content>() {
         @Override
         public boolean areItemsTheSame(@NonNull Content oldItem, @NonNull Content newItem) {
-            return oldItem.getId() == newItem.getId();
+//            return oldItem.equals(newItem) && oldItem.getCover().equals(newItem.getCover());
+//            return oldItem.equals(newItem) && oldItem.getCoverImageUrl().equals(newItem.getCoverImageUrl());
+            return oldItem.equals(newItem);
         }
 
         @Override
@@ -206,6 +208,7 @@ public class LibraryFragment extends Fragment implements ErrorsDialogFragment.Pa
             return oldItem.getUrl().equalsIgnoreCase(newItem.getUrl())
                     && oldItem.getSite().equals(newItem.getSite())
                     && oldItem.getLastReadDate() == newItem.getLastReadDate()
+                    && oldItem.getCoverImageUrl().equals(newItem.getCoverImageUrl())
 //                    && oldItem.isBeingDeleted() == newItem.isBeingDeleted()
                     && oldItem.isFavourite() == newItem.isFavourite();
         }
@@ -220,6 +223,9 @@ public class LibraryFragment extends Fragment implements ErrorsDialogFragment.Pa
             }
             if (oldItem.getReads() != newItem.getReads()) {
                 diffBundleBuilder.setReads(newItem.getReads());
+            }
+            if (!oldItem.getCoverImageUrl().equals(newItem.getCoverImageUrl())) {
+                diffBundleBuilder.setCoverUri(newItem.getCover().getFileUri());
             }
 
             if (diffBundleBuilder.isEmpty()) return null;
@@ -655,9 +661,8 @@ public class LibraryFragment extends Fragment implements ErrorsDialogFragment.Pa
                     return;
                 }
 
-                Uri folderUri = Uri.parse(c.getStorageUri());
-                DocumentFile folder = DocumentFile.fromTreeUri(requireContext(), folderUri);
-                if (folder != null && folder.exists()) {
+                DocumentFile folder = FileHelper.getFolderFromTreeUriString(requireContext(), c.getStorageUri());
+                if (folder != null) {
                     selectExtension.deselect();
                     selectionToolbar.setVisibility(View.GONE);
                     FileHelper.openFile(requireContext(), folder);
@@ -1003,7 +1008,7 @@ public class LibraryFragment extends Fragment implements ErrorsDialogFragment.Pa
             selectExtension.setSelectable(true);
             selectExtension.setMultiSelect(true);
             selectExtension.setSelectOnLongClick(true);
-            selectExtension.setSelectionListener((item, b) -> LibraryFragment.this.onSelectionChanged());
+            selectExtension.setSelectionListener((item, b) -> this.onSelectionChanged());
         }
 
         recyclerView.setAdapter(fastAdapter);
@@ -1299,8 +1304,8 @@ public class LibraryFragment extends Fragment implements ErrorsDialogFragment.Pa
     }
 
     private boolean isLowOnSpace() {
-        DocumentFile rootFolder = DocumentFile.fromTreeUri(requireActivity(), Uri.parse(Preferences.getStorageUri()));
-        if (null == rootFolder || !rootFolder.exists()) return false;
+        DocumentFile rootFolder = FileHelper.getFolderFromTreeUriString(requireActivity(), Preferences.getStorageUri());
+        if (null == rootFolder) return false;
 
         double freeSpaceRatio = new FileHelper.MemoryUsageFigures(requireActivity(), rootFolder).getFreeUsageRatio100();
         return (freeSpaceRatio < 100 - Preferences.getMemoryAlertThreshold());

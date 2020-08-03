@@ -204,10 +204,10 @@ public class ContentDownloadService extends IntentService {
             return new ImmutablePair<>(QueuingResult.QUEUE_END, null);
         }
 
-        DocumentFile rootFolder = DocumentFile.fromTreeUri(this, Uri.parse(Preferences.getStorageUri()));
-        if (rootFolder != null && rootFolder.exists() && new FileHelper.MemoryUsageFigures(this, rootFolder).getfreeUsageMb() < 2) {
+        DocumentFile rootFolder = FileHelper.getFolderFromTreeUriString(this, Preferences.getStorageUri());
+        if (rootFolder != null && new FileHelper.MemoryUsageFigures(this, rootFolder).getfreeUsageMb() < 2) {
             Timber.w("Device very low on storage space (<2 MB). Queue paused.");
-            EventBus.getDefault().post(new DownloadEvent(DownloadEvent.EV_PAUSE, DownloadEvent.Motive.NO_WIFI));
+            EventBus.getDefault().post(new DownloadEvent(DownloadEvent.EV_PAUSE, DownloadEvent.Motive.NO_STORAGE));
             return new ImmutablePair<>(QueuingResult.QUEUE_END, null);
         }
 
@@ -288,7 +288,7 @@ public class ContentDownloadService extends IntentService {
                     return new ImmutablePair<>(QueuingResult.CONTENT_SKIPPED, null);
             } catch (CaptchaException cpe) {
                 Timber.w(cpe, "A captcha has been found while parsing %s. Download aborted.", content.getTitle());
-                logErrorRecord(content.getId(), ErrorType.CAPTCHA, content.getUrl(), CONTENT_PART_IMAGE_LIST, "Captcha found");
+                logErrorRecord(content.getId(), ErrorType.CAPTCHA, content.getUrl(), CONTENT_PART_IMAGE_LIST, "Captcha found. Please go back to the site, browse a book and solve the captcha.");
                 hasError = true;
             } catch (AccountException ae) {
                 String description = String.format("Your %s account does not allow to download the book %s. %s. Download aborted.", content.getSite().getDescription(), content.getTitle(), ae.getMessage());
@@ -496,8 +496,8 @@ public class ContentDownloadService extends IntentService {
 
             if (content.getStorageUri().isEmpty()) return;
 
-            DocumentFile dir = DocumentFile.fromTreeUri(this, Uri.parse(content.getStorageUri()));
-            if (dir != null && dir.exists()) {
+            DocumentFile dir = FileHelper.getFolderFromTreeUriString(this, content.getStorageUri());
+            if (dir != null) {
                 // Auto-retry when error pages are remaining and conditions are met
                 // NB : Differences between expected and detected pages (see block above) can't be solved by retrying - it's a parsing issue
                 // TODO - test to make sure the service's thread continues to run in such a scenario

@@ -188,19 +188,17 @@ public class ImageFile {
         return this;
     }
 
-    public static final Comparator<ImageFile> ORDER_COMPARATOR = (a, b) -> a.getOrder().compareTo(b.getOrder());
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         ImageFile imageFile = (ImageFile) o;
-        return isCover == imageFile.isCover &&
-                Objects.equals(url, imageFile.url);
+        return getId() == imageFile.getId() &&
+                Objects.equals(getUrl(), imageFile.getUrl());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(url, isCover);
+        return Objects.hash(getId(), getUrl());
     }
 }

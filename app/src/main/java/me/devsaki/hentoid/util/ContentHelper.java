@@ -96,7 +96,7 @@ public final class ContentHelper {
      */
     public static void updateContentJson(@NonNull Context context, @NonNull Content content) {
         Helper.assertNonUiThread();
-        DocumentFile file = DocumentFile.fromSingleUri(context, Uri.parse(content.getJsonUri()));
+        DocumentFile file = FileHelper.getFileFromSingleUriString(context, content.getJsonUri());
         if (null == file)
             throw new InvalidParameterException("'" + content.getJsonUri() + "' does not refer to a valid file");
 
@@ -114,8 +114,8 @@ public final class ContentHelper {
      */
     public static void createContentJson(@NonNull Context context, @NonNull Content content) {
         Helper.assertNonUiThread();
-        DocumentFile folder = DocumentFile.fromTreeUri(context, Uri.parse(content.getStorageUri()));
-        if (null == folder || !folder.exists()) return;
+        DocumentFile folder = FileHelper.getFolderFromTreeUriString(context, content.getStorageUri());
+        if (null == folder) return;
         try {
             JsonHelper.jsonToFile(context, JsonContent.fromEntity(content), JsonContent.class, folder);
         } catch (IOException e) {
@@ -130,8 +130,8 @@ public final class ContentHelper {
         JsonContentCollection contentCollection = new JsonContentCollection();
         contentCollection.setQueue(queuedContent);
 
-        DocumentFile rootFolder = DocumentFile.fromTreeUri(context, Uri.parse(Preferences.getStorageUri()));
-        if (null == rootFolder || !rootFolder.exists()) return false;
+        DocumentFile rootFolder = FileHelper.getFolderFromTreeUriString(context, Preferences.getStorageUri());
+        if (null == rootFolder) return false;
 
         try {
             JsonHelper.jsonToFile(context, contentCollection, JsonContentCollection.class, rootFolder, Consts.QUEUE_JSON_FILE_NAME);
@@ -199,8 +199,8 @@ public final class ContentHelper {
         String storageUri = content.getStorageUri();
 
         Timber.d("Opening: %s from: %s", content.getTitle(), storageUri);
-        DocumentFile folder = DocumentFile.fromTreeUri(context, Uri.parse(storageUri));
-        if (null == folder || !folder.exists()) {
+        DocumentFile folder = FileHelper.getFolderFromTreeUriString(context, storageUri);
+        if (null == folder) {
             Timber.d("File not found!! Exiting method.");
             return new ArrayList<>();
         }
@@ -225,42 +225,78 @@ public final class ContentHelper {
         // NB : start with DB to have a LiveData feedback, because file removal can take much time
         dao.deleteContent(content);
         // If the book has just starting being downloaded and there are no complete pictures on memory yet, it has no storage folder => nothing to delete
-        if (!content.getStorageUri().isEmpty()) {
-            DocumentFile folder = DocumentFile.fromTreeUri(context, Uri.parse(content.getStorageUri()));
-            if (null == folder || !folder.exists())
-                throw new FileNotRemovedException(content, "Failed to find directory " + content.getStorageUri());
+        DocumentFile folder = FileHelper.getFolderFromTreeUriString(context, content.getStorageUri());
+        if (null == folder)
+            throw new FileNotRemovedException(content, "Failed to find directory " + content.getStorageUri());
 
-            if (folder.delete()) {
-                Timber.i("Directory removed : %s", content.getStorageUri());
-            } else {
-                throw new FileNotRemovedException(content, "Failed to delete directory " + content.getStorageUri());
-            }
+        if (folder.delete()) {
+            Timber.i("Directory removed : %s", content.getStorageUri());
+        } else {
+            throw new FileNotRemovedException(content, "Failed to delete directory " + content.getStorageUri());
         }
     }
 
     /**
-     * Remove the given page from the disk and the DB
+     * Remove the given pages from the disk and the DB
      *
-     * @param image Page to be removed
-     * @param dao   DAO to be used
+     * @param images  Pages to be removed
+     * @param dao     DAO to be used
+     * @param context Context to be used
      */
-    public static void removePage(@NonNull ImageFile image, @NonNull CollectionDAO dao, @NonNull final Context context) {
+    public static void removePages(@NonNull List<ImageFile> images, @NonNull CollectionDAO dao, @NonNull final Context context) {
         Helper.assertNonUiThread();
         // Remove from DB
         // NB : start with DB to have a LiveData feedback, because file removal can take much time
-        dao.deleteImageFile(image);
+        dao.deleteImageFiles(images);
 
-        // Remove the page from disk
-        if (image.getFileUri() != null && !image.getFileUri().isEmpty()) {
-            Uri uri = Uri.parse(image.getFileUri());
-
-            DocumentFile doc = DocumentFile.fromSingleUri(context, uri);
-            if (doc != null && doc.exists()) doc.delete();
+        // Remove the pages from disk
+        for (ImageFile image : images) {
+            DocumentFile doc = FileHelper.getFileFromSingleUriString(context, image.getFileUri());
+            if (doc != null) doc.delete();
         }
 
+        // Lists all relevant content
+        List<Long> contents = Stream.of(images).filter(i -> i.content != null).map(i -> i.content.getTargetId()).distinct().toList();
+
         // Update content JSON if it exists (i.e. if book is not queued)
-        Content content = dao.selectContent(image.content.getTargetId());
-        if (content != null && !content.getJsonUri().isEmpty()) updateContentJson(context, content);
+        for (Long contentId : contents) {
+            Content content = dao.selectContent(contentId);
+            if (content != null && !content.getJsonUri().isEmpty())
+                updateContentJson(context, content);
+        }
+    }
+
+    // TODO doc
+    public static void setCover(@NonNull ImageFile newCover, @NonNull CollectionDAO dao, @NonNull final Context context) {
+        Helper.assertNonUiThread();
+
+        // Get all images from the DB
+        Content content = dao.selectContent(newCover.content.getTargetId());
+        if (null == content) return;
+        List<ImageFile> images = content.getImageFiles();
+        if (null == images) return;
+
+        // Remove current cover from the set
+        for (int i = 0; i < images.size(); i++)
+            if (images.get(i).isCover()) {
+                images.remove(i);
+                break;
+            }
+
+        // Duplicate given picture and set it as a cover
+        ImageFile cover = ImageFile.newCover(newCover.getUrl(), newCover.getStatus()).setFileUri(newCover.getFileUri()).setMimeType(newCover.getMimeType());
+        images.add(0, cover);
+
+        // Update cover URL to "ping" the content to be updated too (useful for library screen that only detects "direct" content updates)
+        content.setCoverImageUrl(newCover.getUrl());
+
+        // Update the whole list
+//        dao.replaceImageList(content.getId(), images);
+        dao.insertContent(content);
+
+        // Update content JSON if it exists (i.e. if book is not queued)
+        if (!content.getJsonUri().isEmpty())
+            updateContentJson(context, content);
     }
 
     /**
@@ -291,7 +327,8 @@ public final class ContentHelper {
     public static String formatBookFolderName(@NonNull final Content content) {
         String result = "";
 
-        String title = content.getTitle().replaceAll(UNAUTHORIZED_CHARS, "_");
+        String title = content.getTitle();
+        title = (null == title) ? "" : title.replaceAll(UNAUTHORIZED_CHARS, "_");
         String author = content.getAuthor().toLowerCase().replaceAll(UNAUTHORIZED_CHARS, "_");
 
         switch (Preferences.getFolderNameFormat()) {
@@ -452,7 +489,7 @@ public final class ContentHelper {
             ImageFile img = new ImageFile();
             if (name.startsWith(Consts.THUMB_FILE_NAME)) img.setIsCover(true);
             else order++;
-            img.setName(FileHelper.getFileNameWithoutExtension(name)).setOrder(order).setUrl("").setStatus(status).setFileUri(f.getUri().toString()).setSize(f.length());
+            img.setName(FileHelper.getFileNameWithoutExtension(name)).setOrder(order).setUrl(f.getUri().toString()).setStatus(status).setFileUri(f.getUri().toString()).setSize(f.length());
             img.setMimeType(FileHelper.getMimeTypeFromExtension(FileHelper.getExtension(name)));
             result.add(img);
         }

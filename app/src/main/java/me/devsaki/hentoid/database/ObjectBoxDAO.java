@@ -212,6 +212,11 @@ public class ObjectBoxDAO implements CollectionDAO {
         return result;
     }
 
+    @Nullable
+    public Content selectContentByFolderUri(@NonNull final String folderUri, boolean onlyFlagged) {
+        return db.selectContentByFolderUri(folderUri, onlyFlagged);
+    }
+
     public long insertContent(@NonNull final Content content) {
         return db.insertContent(content);
     }
@@ -262,6 +267,10 @@ public class ObjectBoxDAO implements CollectionDAO {
         return db.selectAllQueueBooksQ().find();
     }
 
+    public void flagAllInternalBooks() {
+        db.flagContentById(db.selectAllInternalBooksQ(false).findIds(), true);
+    }
+
     public void deleteAllInternalBooks(boolean resetRemainingImagesStatus) {
         db.deleteContentById(db.selectAllInternalBooksQ(false).findIds());
 
@@ -273,8 +282,19 @@ public class ObjectBoxDAO implements CollectionDAO {
         }
     }
 
-    public void deleteAllErrorBooksWithJson() {
-        db.deleteContentById(db.selectAllErrorJsonBooksQ().findIds());
+    public void deleteAllFlaggedBooks(boolean resetRemainingImagesStatus) {
+        db.deleteContentById(db.selectAllFlaggedBooksQ().findIds());
+
+        // Switch status of all remaining images (i.e. from queued books) to SAVED, as we cannot guarantee the files are still there
+        if (resetRemainingImagesStatus) {
+            long[] remainingContentIds = db.selectAllQueueBooksQ().findIds();
+            for (long contentId : remainingContentIds)
+                db.updateImageContentStatus(contentId, null, StatusContent.SAVED);
+        }
+    }
+
+    public void flagAllErrorBooksWithJson() {
+        db.flagContentById(db.selectAllErrorJsonBooksQ().findIds(), true);
     }
 
     public void deleteAllQueuedBooks() {
@@ -301,15 +321,20 @@ public class ObjectBoxDAO implements CollectionDAO {
         db.updateImageFileStatusParamsMimeTypeUriSize(image);
     }
 
-    public void deleteImageFile(@NonNull ImageFile img) {
+    public void deleteImageFiles(@NonNull List<ImageFile> imgs) {
         // Delete the page
-        db.deleteImageFile(img.getId());
+        db.deleteImageFiles(imgs);
+
+        // Lists all relevant content
+        List<Long> contents = Stream.of(imgs).filter(i -> i.content != null).map(i -> i.content.getTargetId()).distinct().toList();
 
         // Update the content with its new size
-        Content content = db.selectContentById(img.content.getTargetId());
-        if (content != null) {
-            content.computeSize();
-            db.insertContent(content);
+        for (Long contentId : contents) {
+            Content content = db.selectContentById(contentId);
+            if (content != null) {
+                content.computeSize();
+                db.insertContent(content);
+            }
         }
     }
 

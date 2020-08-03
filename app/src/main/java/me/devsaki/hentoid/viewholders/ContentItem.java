@@ -124,7 +124,7 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
         this.touchHelper = touchHelper;
         isEmpty = (null == content);
 //        setIdentifier(record.id);
-        if (content != null) setIdentifier(content.getId());
+        if (content != null) setIdentifier(content.hashCode());
         else setIdentifier(generateIdForPlaceholder());
     }
 
@@ -275,6 +275,8 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
                 if (longValue != null) item.content.setReads(longValue);
                 StatusContent status = bundleParser.getStatus();
                 if (status != null) item.content.setStatus(status);
+                String stringValue = bundleParser.getCoverUri();
+                if (stringValue != null) item.content.getCover().setFileUri(stringValue);
             }
 
             updateLayoutVisibility(item);

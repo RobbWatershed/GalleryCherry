@@ -154,10 +154,11 @@
     <string name="import_invalid">Invalid folder selected - please select another one</string>
     <string name="import_create_fail">App folder creation failed - please select another location</string>
     <string name="import_other">Import has stopped</string>
+    <string name="import_unexpected">Import has stopped unexpectedly</string>
     <string name="cleanup_folders">Do you want to cleanup your library while refreshing ?\nCleanup removes all empty folders and renames the others according to the current naming and max length preference.</string>
     <string name="action_refresh">Just refresh</string>
     <string name="action_refresh_cleanup">Refresh and cleanup</string>
-    <string name="task_done">Cleanup complete - see details in the log</string>
+    <string name="task_done">Task complete - see details in the log</string>
     <string name="content_not_found">Error - content not found</string>
     <string name="contents_detected">GalleryCherry has recognized an existing library in this location.\nDo you want to import this library?</string>
     <string name="starting_import">Starting import…</string>
@@ -354,6 +355,7 @@
     <string name="viewer_filter_favourite_off">Only show favourite pages</string>
     <string name="viewer_filter_favourite_on">Show all pages</string>
     <string name="viewer_filter_favourite_help">Toggle display of favourite page</string>
+    <string name="viewer_make_cover">Set as cover</string>
     <string name="viewer_page_menu">Page menu</string>
     <string name="viewer_page_menu_help">Open page properties</string>
     <string name="viewer_delete_book">Delete book</string>
@@ -369,6 +371,7 @@
     <string name="page_copy_help">Copy page to the Android Downloads folder</string>
     <string name="page_share_help">Share page using another app</string>
     <string name="page_delete_help">Delete page</string>
+    <string name="viewer_ask_cover">Set this page as book cover?</string>
 
     <!-- Changelog -->
     <string name="view_changelog">View changelog</string>

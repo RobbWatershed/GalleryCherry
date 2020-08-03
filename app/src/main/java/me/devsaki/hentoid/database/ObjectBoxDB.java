@@ -120,6 +120,7 @@ public class ObjectBoxDB {
             Attribute dbAttr;
             Attribute inputAttr;
             if (attributes != null)
+                // This transaction may consume a lot of DB readers depending on the number of attributes involved
                 for (int i = 0; i < attributes.size(); i++) {
                     inputAttr = attributes.get(i);
                     dbAttr = (Attribute) attrByUniqueKey.setParameter(Attribute_.name, inputAttr.getName())
@@ -189,6 +190,21 @@ public class ObjectBoxDB {
                 StatusContent.ERROR.getCode()
         };
         return store.boxFor(Content.class).query().in(Content_.status, storedContentStatus).build();
+    }
+
+    Query<Content> selectAllFlaggedBooksQ() {
+        return store.boxFor(Content.class).query().equal(Content_.isFlaggedForDeletion, true).build();
+    }
+
+    void flagContentById(long[] contentId, boolean flag) {
+        Box<Content> contentBox = store.boxFor(Content.class);
+        for (long id : contentId) {
+            Content c = contentBox.get(id);
+            if (c != null) {
+                c.setFlaggedForDeletion(flag);
+                contentBox.put(c);
+            }
+        }
     }
 
     void deleteContent(Content content) {
@@ -302,9 +318,17 @@ public class ObjectBoxDB {
 
     public Query<Content> selectContentBySourceAndUrlQ(@NonNull Site site, @Nullable String url) {
         QueryBuilder<Content> queryBuilder = store.boxFor(Content.class).query();
-        queryBuilder.equal(Content_.site, site.getCode());
+        queryBuilder.notEqual(Content_.url, "").equal(Content_.site, site.getCode());
         if (url != null) queryBuilder.equal(Content_.url, url);
         return queryBuilder.build();
+    }
+
+    @Nullable
+    Content selectContentByFolderUri(@NonNull final String folderUri, boolean onlyFlagged) {
+        QueryBuilder<Content> queryBuilder = store.boxFor(Content.class).query().equal(Content_.storageUri, folderUri);
+        if (onlyFlagged) queryBuilder.equal(Content_.isFlaggedForDeletion, true);
+
+        return queryBuilder.build().findFirst();
     }
 
     private static long[] getIdsFromAttributes(@NonNull List<Attribute> attrs) {
@@ -785,8 +809,8 @@ public class ObjectBoxDB {
         store.boxFor(ImageFile.class).query().equal(ImageFile_.contentId, contentId).build().remove();
     }
 
-    void deleteImageFile(long imageId) {
-        store.boxFor(ImageFile.class).remove(imageId);
+    void deleteImageFiles(List<ImageFile> images) {
+        store.boxFor(ImageFile.class).remove(images);
     }
 
     void insertImageFiles(@NonNull List<ImageFile> imgs) {

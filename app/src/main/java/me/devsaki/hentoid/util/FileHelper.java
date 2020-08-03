@@ -67,24 +67,42 @@ public class FileHelper {
     }
 
     /**
-     * Build a DocumentFile from the given Uri string
+     * Build a DocumentFile representing a file from the given Uri string
+     *
      * @param context Context to use for the conversion
-     * @param uriStr Uri string to use
+     * @param uriStr  Uri string to use
      * @return DocumentFile built from the given Uri string; null if the DocumentFile couldn't be built
      */
     @Nullable
-    public static DocumentFile getFileFromUriString(@NonNull final Context context, @NonNull final String uriStr) {
-        Uri fileUri = Uri.parse(uriStr);
-        return DocumentFile.fromSingleUri(context, fileUri);
+    public static DocumentFile getFileFromSingleUriString(@NonNull final Context context, final String uriStr) {
+        if (null == uriStr || uriStr.isEmpty()) return null;
+        DocumentFile result = DocumentFile.fromSingleUri(context, Uri.parse(uriStr));
+        if (null == result || !result.exists()) return null;
+        else return result;
+    }
+
+    /**
+     * Build a DocumentFile representing a folder from the given Uri string
+     *
+     * @param context    Context to use for the conversion
+     * @param treeUriStr Uri string to use
+     * @return DocumentFile built from the given Uri string; null if the DocumentFile couldn't be built
+     */
+    @Nullable
+    public static DocumentFile getFolderFromTreeUriString(@NonNull final Context context, final String treeUriStr) {
+        if (null == treeUriStr || treeUriStr.isEmpty()) return null;
+        DocumentFile folder = DocumentFile.fromTreeUri(context, Uri.parse(treeUriStr));
+        if (null == folder || !folder.exists()) return null;
+        else return folder;
     }
 
     /**
      * Get the full, human-readable access path from the given Uri
-     *
+     * <p>
      * Credits go to https://stackoverflow.com/questions/34927748/android-5-0-documentfile-from-tree-uri/36162691#36162691
      *
-     * @param context Context to use for the conversion
-     * @param uri Uri to get the full path from
+     * @param context  Context to use for the conversion
+     * @param uri      Uri to get the full path from
      * @param isFolder true if the given Uri represents a folder; false if it represents a file
      * @return Full, human-readable access path from the given Uri
      */
@@ -110,7 +128,8 @@ public class FileHelper {
 
     /**
      * Get the human-readable access path for the given volume ID
-     * @param context Context to use
+     *
+     * @param context  Context to use
      * @param volumeId Volume ID to get the path from
      * @return Human-readable access path of the given volume ID
      */
@@ -151,7 +170,8 @@ public class FileHelper {
 
     /**
      * Get the volume ID of the given Uri
-     * @param uri Uri to get the volume ID for
+     *
+     * @param uri      Uri to get the volume ID for
      * @param isFolder true if the given Uri represents a folder; false if it represents a file
      * @return Volume ID of the given Uri
      */
@@ -167,7 +187,8 @@ public class FileHelper {
 
     /**
      * Get the human-readable document path of the given Uri
-     * @param uri Uri to get the path for
+     *
+     * @param uri      Uri to get the path for
      * @param isFolder true if the given Uri represents a folder; false if it represents a file
      * @return Human-readable document path of the given Uri
      */
@@ -194,6 +215,7 @@ public class FileHelper {
     /**
      * Create an OutputStream opened the given file
      * NB : File length will be truncated to the length of the written data
+     *
      * @param target File to open the OutputStream on
      * @return New OutputStream opened on the given file
      */
@@ -204,8 +226,9 @@ public class FileHelper {
     /**
      * Create an OutputStream opened the given file
      * NB : File length will be truncated to the length of the written data
+     *
      * @param context Context to use
-     * @param target File to open the OutputStream on
+     * @param target  File to open the OutputStream on
      * @return New OutputStream opened on the given file
      * @throws IOException In case something horrible happens during I/O
      */
@@ -215,8 +238,9 @@ public class FileHelper {
 
     /**
      * Create an InputStream opened the given file
+     *
      * @param context Context to use
-     * @param target File to open the InputStream on
+     * @param target  File to open the InputStream on
      * @return New InputStream opened on the given file
      * @throws IOException In case something horrible happens during I/O
      */
@@ -284,9 +308,10 @@ public class FileHelper {
 
     /**
      * Check if the given folder is valid; if it is, set it as the app's root folder
+     *
      * @param context Context to use
-     * @param folder Folder to check and set
-     * @param notify true if the method is allowed to create a toast in case of any error -- TODO this parameter is a joke
+     * @param folder  Folder to check and set
+     * @param notify  true if the method is allowed to create a toast in case of any error -- TODO this parameter is a joke
      * @return true if the given folder is valid and has been set; false if not
      */
     public static boolean checkAndSetRootFolder(@NonNull final Context context, @NonNull final DocumentFile folder, boolean notify) {
@@ -337,9 +362,10 @@ public class FileHelper {
 
     /**
      * Attempt to open the file or folder at the given Uri using the device's app(s) of choice
-     * @param context Context to use
-     * @param uri Uri of the file or folder to be opened
-     * @param fileName Display name of the file or folder to be opened
+     *
+     * @param context     Context to use
+     * @param uri         Uri of the file or folder to be opened
+     * @param fileName    Display name of the file or folder to be opened
      * @param isDirectory true if the given Uri represents a folder; false if it represents a file
      */
     private static void tryOpenFile(@NonNull Context context, @NonNull Uri uri, @NonNull String fileName, boolean isDirectory) {
@@ -365,8 +391,9 @@ public class FileHelper {
 
     /**
      * Opens the given Uri using the device's app(s) of choice
-     * @param context Context to use
-     * @param uri Uri of the file or folder to be opened
+     *
+     * @param context  Context to use
+     * @param uri      Uri of the file or folder to be opened
      * @param mimeType Mime-type to use (determines the apps the device will suggest for opening the resource)
      */
     private static void openFileWithIntent(@NonNull Context context, @NonNull Uri uri, @Nullable String mimeType) {
@@ -398,8 +425,9 @@ public class FileHelper {
 
     /**
      * Save the given binary data in the given file, truncating the file length to the given data
-     * @param context Context to use
-     * @param file File to write to
+     *
+     * @param context    Context to use
+     * @param file       File to write to
      * @param binaryData Data to write
      * @throws IOException In case something horrible happens during I/O
      */
@@ -421,6 +449,7 @@ public class FileHelper {
 
     /**
      * Get the relevant file extension (without the ".") from the given mime-type
+     *
      * @param mimeType Mime-type to get a file extension from
      * @return Most relevant file extension (without the ".") corresponding to the given mime-type; null if none has been found
      */
@@ -439,6 +468,7 @@ public class FileHelper {
 
     /**
      * Get the most relevant mime-type for the given file extension
+     *
      * @param extension File extension to get the mime-type for (without the ".")
      * @return Most relevant mime-type for the given file extension; generic mime-type if none found
      */
@@ -451,9 +481,10 @@ public class FileHelper {
 
     /**
      * Share the given file using the device's app(s) of choice
+     *
      * @param context Context to use
-     * @param f File to share
-     * @param title Title of the user dialog
+     * @param f       File to share
+     * @param title   Title of the user dialog
      */
     public static void shareFile(final @NonNull Context context, final @NonNull DocumentFile f, final @NonNull String title) {
         Intent sharingIntent = new Intent(Intent.ACTION_SEND);
@@ -463,15 +494,38 @@ public class FileHelper {
         context.startActivity(Intent.createChooser(sharingIntent, context.getString(R.string.send_to)));
     }
 
+    /**
+     * List all subfolders inside the given parent folder (non recursive)
+     *
+     * @param context Context to use
+     * @param parent  Parent folder to list subfolders from
+     * @return Subfolders of the given parent folder
+     */
     // see https://stackoverflow.com/questions/5084896/using-contentproviderclient-vs-contentresolver-to-access-content-provider
     public static List<DocumentFile> listFolders(@NonNull Context context, @NonNull DocumentFile parent) {
         return listFoldersFilter(context, parent, null);
     }
 
+    /**
+     * List all subfolders inside the given parent folder (non recursive)
+     *
+     * @param context Context to use
+     * @param parent  Parent folder to list subfolders from
+     * @param client  ContentProviderClient to use
+     * @return Subfolders of the given parent folder
+     */
     public static List<DocumentFile> listFolders(@NonNull Context context, @NonNull DocumentFile parent, @NonNull ContentProviderClient client) {
         return FileUtil.listDocumentFiles(context, parent, client, null, true, false);
     }
 
+    /**
+     * List all subfolders inside the given parent folder (non recursive) that match the given name filter
+     *
+     * @param context Context to use
+     * @param parent  Parent folder to list subfolders from
+     * @param filter  Name filter to use to filter the folders to list
+     * @return Subfolders of the given parent folder matching the given name filter
+     */
     public static List<DocumentFile> listFoldersFilter(@NonNull Context context, @NonNull DocumentFile parent, final FileHelper.NameFilter filter) {
         ContentProviderClient client = context.getContentResolver().acquireContentProviderClient(parent.getUri());
         if (null == client) return Collections.emptyList();
@@ -486,14 +540,39 @@ public class FileHelper {
         }
     }
 
+    /**
+     * List all files (non-folders) inside the given parent folder (non recursive) that match the given name filter
+     *
+     * @param context Context to use
+     * @param parent  Parent folder to list files from
+     * @param client  ContentProviderClient to use
+     * @param filter  Name filter to use to filter the files to list
+     * @return Files of the given parent folder matching the given name filter
+     */
     public static List<DocumentFile> listFiles(@NonNull Context context, @NonNull DocumentFile parent, @NonNull ContentProviderClient client, final FileHelper.NameFilter filter) {
         return FileUtil.listDocumentFiles(context, parent, client, filter, false, true);
     }
 
+    /**
+     * Count all files (non-folders) inside the given parent folder (non recursive) that match the given name filter
+     *
+     * @param parent Parent folder to count files from
+     * @param client ContentProviderClient to use
+     * @param filter Name filter to use to filter the files to count
+     * @return Number of files inside the given parent folder matching the given name filter
+     */
     public static int countFiles(@NonNull DocumentFile parent, @NonNull ContentProviderClient client, final FileHelper.NameFilter filter) {
         return FileUtil.countDocumentFiles(parent, client, filter, false, true);
     }
 
+    /**
+     * List all files (non-folders) inside the given parent folder (non recursive) that match the given name filter
+     *
+     * @param context Context to use
+     * @param parent  Parent folder to list files from
+     * @param filter  Name filter to use to filter the files to list
+     * @return Files of the given parent folder matching the given name filter
+     */
     public static List<DocumentFile> listFiles(@NonNull Context context, @NonNull DocumentFile parent, final FileHelper.NameFilter filter) {
         ContentProviderClient client = context.getContentResolver().acquireContentProviderClient(parent.getUri());
         if (null == client) return Collections.emptyList();
@@ -508,6 +587,15 @@ public class FileHelper {
         }
     }
 
+    /**
+     * Find the folder inside the given parent folder (non recursive) that has the given name
+     *
+     * @param context       Context to use
+     * @param parent        Parent folder of the folder to find
+     * @param client        ContentProviderClient to use
+     * @param subfolderName Name of the folder to find
+     * @return Folder inside the given parent folder (non recursive) that has the given name; null if not found
+     */
     @Nullable
     public static DocumentFile findFolder(@NonNull Context context, @NonNull DocumentFile parent, @NonNull ContentProviderClient client, @NonNull String subfolderName) {
         List<DocumentFile> result = FileUtil.listDocumentFiles(context, parent, client, FileHelper.createNameFilterEquals(subfolderName), true, false);
@@ -515,6 +603,15 @@ public class FileHelper {
         else return null;
     }
 
+    /**
+     * Find the file inside the given parent folder (non recursive) that has the given name
+     *
+     * @param context  Context to use
+     * @param parent   Parent folder of the file to find
+     * @param client   ContentProviderClient to use
+     * @param fileName Name of the file to find
+     * @return File inside the given parent folder (non recursive) that has the given name; null if not found
+     */
     @Nullable
     public static DocumentFile findFile(@NonNull Context context, @NonNull DocumentFile parent, @NonNull ContentProviderClient client, @NonNull String fileName) {
         List<DocumentFile> result = FileUtil.listDocumentFiles(context, parent, client, FileHelper.createNameFilterEquals(fileName), false, true);
@@ -522,6 +619,14 @@ public class FileHelper {
         else return null;
     }
 
+    /**
+     * Find the folder inside the given parent folder (non recursive) that has the given name
+     *
+     * @param context       Context to use
+     * @param parent        Parent folder of the folder to find
+     * @param subfolderName Name of the folder to find
+     * @return Folder inside the given parent folder (non recursive) that has the given name; null if not found
+     */
     @Nullable
     public static DocumentFile findFolder(@NonNull Context context, @NonNull DocumentFile parent, @NonNull String subfolderName) {
         List<DocumentFile> result = listDocumentFiles(context, parent, subfolderName, true, false);
@@ -529,6 +634,14 @@ public class FileHelper {
         else return null;
     }
 
+    /**
+     * Find the file inside the given parent folder (non recursive) that has the given name
+     *
+     * @param context  Context to use
+     * @param parent   Parent folder of the file to find
+     * @param fileName Name of the file to find
+     * @return File inside the given parent folder (non recursive) that has the given name; null if not found
+     */
     @Nullable
     public static DocumentFile findFile(@NonNull Context context, @NonNull DocumentFile parent, @NonNull String fileName) {
         List<DocumentFile> result = listDocumentFiles(context, parent, fileName, false, true);
@@ -536,12 +649,30 @@ public class FileHelper {
         else return null;
     }
 
+    /**
+     * List all folders _and_ files inside the given parent folder (non recursive)
+     *
+     * @param context Context to use
+     * @param parent  Parent folder to list elements from
+     * @param client  ContentProviderClient to use
+     * @return Folders and files of the given parent folder
+     */
     public static List<DocumentFile> listDocumentFiles(@NonNull final Context context,
                                                        @NonNull final DocumentFile parent,
                                                        @NonNull ContentProviderClient client) {
         return FileUtil.listDocumentFiles(context, parent, client, null, true, true);
     }
 
+    /**
+     * List all elements inside the given parent folder (non recursive) that match the given criteria
+     *
+     * @param context     Context to use
+     * @param parent      Parent folder to list elements from
+     * @param nameFilter  Name filter to use to filter the elements to list
+     * @param listFolders True if the listed elements have to include folders
+     * @param listFiles   True if the listed elements have to include files (non-folders)
+     * @return Elements of the given parent folder matching the given criteria
+     */
     private static List<DocumentFile> listDocumentFiles(@NonNull final Context context,
                                                         @NonNull final DocumentFile parent,
                                                         final String nameFilter,
@@ -560,6 +691,15 @@ public class FileHelper {
         }
     }
 
+    /**
+     * Return the position of the given sequence in the given data array
+     *
+     * @param data       Data where to find the sequence
+     * @param initialPos Initial position to start from
+     * @param sequence   Sequence to look for
+     * @param limit      Limit not to cross (in bytes counted from the initial position); 0 for unlimited
+     * @return Position of the sequence in the data array; -1 if not found within the given initial position and limit
+     */
     static int findSequencePosition(byte[] data, int initialPos, byte[] sequence, int limit) {
 //        int BUFFER_SIZE = 64;
 //        byte[] readBuffer = new byte[BUFFER_SIZE];
@@ -594,6 +734,13 @@ public class FileHelper {
         return -1;
     }
 
+    /**
+     * Copy all data from the given InputStream to the given OutputStream
+     *
+     * @param in  InputStream to read data from
+     * @param out OutputStream to write data to
+     * @throws IOException If something horrible happens during I/O
+     */
     public static void copy(@NonNull InputStream in, @NonNull OutputStream out) throws IOException {
         // Transfer bytes from in to out
         byte[] buf = new byte[1024];
@@ -604,10 +751,25 @@ public class FileHelper {
         out.flush();
     }
 
+    /**
+     * Get the device's Downloads folder
+     *
+     * @return Device's Downloads folder
+     */
     public static File getDownloadsFolder() {
         return Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
     }
 
+    /**
+     * Return an opened OutputStream in a brand new file created in the device's Downloads folder
+     *
+     * @param context  Context to use
+     * @param fileName Name of the file to create
+     * @param mimeType Mime-type of the file to create
+     * @return Opened OutputStream in a brand new file created in the device's Downloads folder
+     * @throws IOException If something horrible happens during I/O
+     */
+    // TODO document what happens when a file with the same name already exists there before the call
     public static OutputStream openNewDownloadOutputStream(
             @NonNull final Context context,
             @NonNull final String fileName,
@@ -620,6 +782,7 @@ public class FileHelper {
         }
     }
 
+    // Legacy (non-SAF, pre-Android 10) version of openNewDownloadOutputStream
     private static OutputStream openNewDownloadOutputStreamLegacy(@NonNull final String fileName) throws IOException {
         File downloadsFolder = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
         if (null == downloadsFolder) throw new IOException("Downloads folder not found");
@@ -631,6 +794,7 @@ public class FileHelper {
         return getOutputStream(target);
     }
 
+    // Android 10 version of openNewDownloadOutputStream
     // https://gitlab.com/commonsguy/download-wrangler/blob/master/app/src/main/java/com/commonsware/android/download/DownloadRepository.kt
     @TargetApi(29)
     private static OutputStream openNewDownloadOutputStreamQ(
@@ -648,10 +812,19 @@ public class FileHelper {
         return resolver.openOutputStream(targetFileUri);
     }
 
+    /**
+     * Class to use to obtain information about memory usage
+     */
     public static class MemoryUsageFigures {
         private final long freeMemBytes;
         private final long totalMemBytes;
 
+        /**
+         * Get memory usage figures for the volume containing the given folder
+         *
+         * @param context Context to use
+         * @param f       Folder to get the figures from
+         */
         // Check https://stackoverflow.com/questions/56663624/how-to-get-free-and-total-size-of-each-storagevolume
         // to see if a better solution compatible with API21 has been found
         // TODO - encapsulate the reflection trick used by getVolumePath
@@ -667,20 +840,25 @@ public class FileHelper {
             }
         }
 
+        /**
+         * Get free usage ratio (0 = all memory full; 100 = all memory free)
+         */
         public double getFreeUsageRatio100() {
             return freeMemBytes * 100.0 / totalMemBytes;
         }
 
+        /**
+         * Get total storage capacity in "traditional" MB (base 1024)
+         */
         public double getTotalSpaceMb() {
             return totalMemBytes * 1.0 / (1024 * 1024);
         }
 
+        /**
+         * Get free storage capacity in "traditional" MB (base 1024)
+         */
         public double getfreeUsageMb() {
             return freeMemBytes * 1.0 / (1024 * 1024);
-        }
-
-        public String formatFreeUsageMb() {
-            return Math.round(getfreeUsageMb()) + "/" + Math.round(getfreeUsageMb());
         }
     }
 
@@ -747,6 +925,12 @@ public class FileHelper {
         }
     }
 
+    /**
+     * Create a NameFilter that filters all names equal'ing the given string
+     *
+     * @param name String to be used for filtering names
+     * @return NameFilter that filters all names equal'ing the given string
+     */
     private static NameFilter createNameFilterEquals(@NonNull final String name) {
         return displayName -> displayName.equalsIgnoreCase(name);
     }

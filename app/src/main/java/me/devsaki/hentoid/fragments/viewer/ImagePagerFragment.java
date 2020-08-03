@@ -871,7 +871,7 @@ public class ImagePagerFragment extends Fragment implements GoToPageDialogFragme
         }
 
         // Side-tapping disabled when view is zoomed
-        if (recyclerView.getScale() != 1.0) return;
+        if (recyclerView != null && recyclerView.getScale() != 1.0) return;
         // Side-tapping disabled when disabled in preferences
         if (!Preferences.isViewerTapToTurn()) return;
 
@@ -943,17 +943,6 @@ public class ImagePagerFragment extends Fragment implements GoToPageDialogFragme
                     .addToBackStack(null)
                     .commit();
         }
-
-        /*
-        getParentFragmentManager()
-                .beginTransaction()
-                .replace(android.R.id.content, ImageGalleryFragment.newInstance(filterFavourites))
-                .addToBackStack(null)
-                .commit();
-        if (getParentFragmentManager().getBackStackEntryCount() > 0) // Library -> gallery -> pager navigation
-            getParentFragmentManager().popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE); // Leave only the latest element in the back stack
-
-         */
     }
 
     /**
