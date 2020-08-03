@@ -29,8 +29,6 @@ public class DatabaseMaintenance {
         List<Observable<Float>> result = new ArrayList<>();
         result.add(createObservableFrom(context, DatabaseMaintenance::cleanContent));
         result.add(createObservableFrom(context, DatabaseMaintenance::clearTempContent));
-        result.add(createObservableFrom(context, DatabaseMaintenance::cleanProperties1));
-        result.add(createObservableFrom(context, DatabaseMaintenance::cleanProperties2));
         result.add(createObservableFrom(context, DatabaseMaintenance::computeContentSize));
         return result;
     }
@@ -87,54 +85,6 @@ public class DatabaseMaintenance {
                 emitter.onNext(pos++ / max);
             }
             Timber.i("Clearing temporary books : done");
-        } finally {
-            db.closeThreadResources();
-            emitter.onComplete();
-        }
-    }
-
-    private static void cleanProperties1(@NonNull final Context context, ObservableEmitter<Float> emitter) {
-        ObjectBoxDB db = ObjectBoxDB.getInstance(context);
-        try {
-            // Update URLs from deprecated Pururin image hosts
-            Timber.i("Upgrading Pururin image hosts : start");
-            List<Content> contents = db.selectContentWithOldPururinHost();
-            Timber.i("Upgrading Pururin image hosts : %s books detected", contents.size());
-            int max = contents.size();
-            float pos = 1;
-            for (Content c : contents) {
-                c.setCoverImageUrl(c.getCoverImageUrl().replace("api.pururin.io/images/", "cdn.pururin.io/assets/images/data/"));
-                if (c.getImageFiles() != null)
-                    for (ImageFile i : c.getImageFiles()) {
-                        db.updateImageFileUrl(i.setUrl(i.getUrl().replace("api.pururin.io/images/", "cdn.pururin.io/assets/images/data/")));
-                    }
-                db.insertContent(c);
-                emitter.onNext(pos++ / max);
-            }
-            Timber.i("Upgrading Pururin image hosts : done");
-        } finally {
-            db.closeThreadResources();
-            emitter.onComplete();
-        }
-    }
-
-    private static void cleanProperties2(@NonNull final Context context, ObservableEmitter<Float> emitter) {
-        ObjectBoxDB db = ObjectBoxDB.getInstance(context);
-        try {
-            // Update URLs from deprecated Tsumino image covers
-            Timber.i("Upgrading Tsumino covers : start");
-            List<Content> contents = db.selectContentWithOldTsuminoCovers();
-            Timber.i("Upgrading Tsumino covers : %s books detected", contents.size());
-            int max = contents.size();
-            float pos = 1;
-            for (Content c : contents) {
-                String url = c.getCoverImageUrl().replace("www.tsumino.com/Image/Thumb", "content.tsumino.com/thumbs");
-                if (!url.endsWith("/1")) url += "/1";
-                c.setCoverImageUrl(url);
-                db.insertContent(c);
-                emitter.onNext(pos++ / max);
-            }
-            Timber.i("Upgrading Tsumino covers : done");
         } finally {
             db.closeThreadResources();
             emitter.onComplete();

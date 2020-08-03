@@ -3,7 +3,6 @@ package me.devsaki.hentoid.database.domains;
 import java.util.Comparator;
 import java.util.Locale;
 import java.util.Objects;
-import androidx.annotation.NonNull;
 
 import io.objectbox.annotation.Convert;
 import io.objectbox.annotation.Entity;
@@ -187,6 +186,8 @@ public class ImageFile {
         this.size = size;
         return this;
     }
+
+    public static final Comparator<ImageFile> ORDER_COMPARATOR = (a, b) -> a.getOrder().compareTo(b.getOrder());
 
     @Override
     public boolean equals(Object o) {

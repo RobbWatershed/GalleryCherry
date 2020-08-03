@@ -39,6 +39,12 @@ public class HinaDAO implements CollectionDAO {
 
     @Nullable
     @Override
+    public Content selectContentByFolderUri(@NonNull String folderUri, boolean onlyFlagged) {
+        return null;
+    }
+
+    @Nullable
+    @Override
     public Content selectContentBySourceAndUrl(@NonNull Site site, @NonNull String url) {
         return null;
     }
@@ -84,12 +90,17 @@ public class HinaDAO implements CollectionDAO {
     }
 
     @Override
+    public void flagAllInternalBooks() {
+
+    }
+
+    @Override
     public void deleteAllInternalBooks(boolean resetRemainingImagesStatus) {
 
     }
 
     @Override
-    public void deleteAllErrorBooksWithJson() {
+    public void flagAllErrorBooksWithJson() {
 
     }
 
@@ -105,6 +116,11 @@ public class HinaDAO implements CollectionDAO {
 
     @Override
     public void deleteAllQueuedBooks() {
+
+    }
+
+    @Override
+    public void deleteAllFlaggedBooks(boolean resetRemainingImagesStatus) {
 
     }
 
@@ -210,7 +226,7 @@ public class HinaDAO implements CollectionDAO {
     }
 
     @Override
-    public void deleteImageFile(@NonNull ImageFile img) {
+    public void deleteImageFiles(@NonNull List<ImageFile> imgs) {
 
     }
 
