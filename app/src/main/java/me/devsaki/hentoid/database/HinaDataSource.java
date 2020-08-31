@@ -69,16 +69,16 @@ public class HinaDataSource extends PositionalDataSource<Content> {
 
     // === FACTORY
 
-    public static class HinaDataSource2Factory extends androidx.paging.DataSource.Factory<Integer, Content> {
+    public static class HinaDataSourceFactory extends androidx.paging.DataSource.Factory<Integer, Content> {
         private final String query;
         private final CompositeDisposable compositeDisposable;
 
-        HinaDataSource2Factory(CompositeDisposable cd) {
+        HinaDataSourceFactory(CompositeDisposable cd) {
             compositeDisposable = cd;
             query = "";
         }
 
-        HinaDataSource2Factory(CompositeDisposable cd, String query) {
+        HinaDataSourceFactory(CompositeDisposable cd, String query) {
             compositeDisposable = cd;
             this.query = query;
         }

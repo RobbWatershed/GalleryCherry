@@ -54,18 +54,18 @@
             tools:listitem="@layout/item_library" />
 
         <TextView
-            android:id="@+id/library_empty_txt"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="150dp"
+            android:id="@+id/hina_loading_txt"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:background="@color/black_opacity_50"
             android:gravity="center"
-            android:text="@string/downloads_empty_library"
-            android:textAppearance="?android:attr/textAppearanceLarge"
+            android:text="@string/hina_loading"
+            android:textColor="@color/white_opacity_66"
+            android:textSize="@dimen/text_header_4"
             android:visibility="gone"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintBottom_toBottomOf="@id/library_list"
+            app:layout_constraintTop_toTopOf="@id/library_list"
+            tools:visibility="visible" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

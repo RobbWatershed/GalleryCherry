@@ -52,6 +52,7 @@ import me.devsaki.hentoid.fragments.library.GalleryDialogFragment;
 import me.devsaki.hentoid.json.UpdateInfo;
 import me.devsaki.hentoid.retrofit.HinaServer;
 import me.devsaki.hentoid.services.ContentQueueManager;
+import me.devsaki.hentoid.ui.BlinkAnimation;
 import me.devsaki.hentoid.util.Debouncer;
 import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.viewholders.ContentItem;
@@ -74,7 +75,7 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
 
     // ======== UI
     // Text that displays in the background when the list is empty
-    private TextView emptyText;
+    private TextView loadingText;
     // Action view associated with search menu button
     private SearchView mainSearchView;
     // Main view where books are displayed
@@ -201,7 +202,7 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
      * Initialize the UI components
      */
     private void initUI() {
-        emptyText = findViewById(R.id.library_empty_txt);
+        loadingText = findViewById(R.id.hina_loading_txt);
 
         // Clear search
         searchClearButton = findViewById(R.id.search_clear_btn);
@@ -255,10 +256,10 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
         mainSearchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String s) {
+                showLoadingMessage();
                 query = s;
                 viewModel.searchUniversal(query);
                 mainSearchView.clearFocus();
-
                 return true;
             }
 
@@ -267,6 +268,7 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
                 if (invalidateNextQueryTextChange) { // Should not happen when search panel is closing or opening
                     invalidateNextQueryTextChange = false;
                 } else if (s.isEmpty()) {
+                    showLoadingMessage();
                     query = "";
                     viewModel.searchUniversal(query);
                     searchClearButton.setVisibility(View.GONE);
@@ -275,6 +277,12 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
                 return true;
             }
         });
+    }
+
+    private void showLoadingMessage() {
+        loadingText.setText(R.string.hina_loading);
+        loadingText.startAnimation(new BlinkAnimation(750, 20));
+        loadingText.setVisibility(View.VISIBLE);
     }
 
     /**
@@ -394,7 +402,8 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
      * Initialize the paging method of the screen
      */
     private void initPagingMethod() {
-        viewModel.setPagingMethod(true);
+        showLoadingMessage();
+        viewModel.setPagingMethod(true); // Runs a new search
 
         pagedItemAdapter = new PagedModelAdapter<>(asyncDifferConfig, i -> new ContentItem(ContentItem.ViewType.ONLINE), c -> new ContentItem(c, null, ContentItem.ViewType.ONLINE));
         fastAdapter = FastAdapter.with(pagedItemAdapter);
@@ -403,7 +412,7 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
         fastAdapter.registerItemFactory(item.getType(), item);
 
         // Item click listener
-        fastAdapter.setOnClickListener((v, a, i, p) -> onBookClick(i, p));
+        fastAdapter.setOnClickListener((v, a, i, p) -> onBookClick(i));
 
         // Download button click listener
         fastAdapter.addEventHook(new ClickEventHook<ContentItem>() {
@@ -449,15 +458,7 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
     private void onLibraryChanged(PagedList<Content> result) {
         Timber.i(">>Library changed ! Size=%s", result.size());
 
-        // TODO replace by a loading text
-        /*
-        // Update background text
-        if (result.isEmpty()) {
-            emptyText.setVisibility(View.VISIBLE);
-            if (isSearchQueryActive()) emptyText.setText(R.string.search_entry_not_found);
-            else emptyText.setText(R.string.downloads_empty_library);
-        } else emptyText.setVisibility(View.GONE);
-         */
+        // TODO message when loading failed
 
         // Update visibility of advanced search bar
         if (isSearchQueryActive()) {
@@ -485,11 +486,12 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
                 updateTitle(count, totalContentCount);
 
                 // Update background text
-                if (0 == count) {
-                    emptyText.setVisibility(View.VISIBLE);
-                    if (isSearchQueryActive()) emptyText.setText(R.string.search_entry_not_found);
-                    else emptyText.setText(R.string.downloads_empty_library);
-                } else emptyText.setVisibility(View.GONE);
+                loadingText.clearAnimation();
+                if (0 == count) { // TODO this never happens since insert(x,0) is never called
+                    if (isSearchQueryActive()) loadingText.setText(R.string.hina_no_results);
+                    else loadingText.setText(R.string.hina_loading_failed);
+                    loadingText.setVisibility(View.VISIBLE);
+                } else loadingText.setVisibility(View.GONE);
 
                 updateContentStatus(position, count);
             }
@@ -573,7 +575,7 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
      *
      * @param item ContentItem that has been clicked on
      */
-    private boolean onBookClick(@NonNull ContentItem item, int position) {
+    private boolean onBookClick(@NonNull ContentItem item) {
         GalleryDialogFragment.invoke(this, item.getContent().getUniqueSiteId());
 
         return false;

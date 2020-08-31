@@ -161,7 +161,7 @@ public class HinaDAO implements CollectionDAO {
                 .setPageSize(10)
                 .build();
 
-        return (new LivePagedListBuilder<>(new HinaDataSource.HinaDataSource2Factory(disposable, query), config)).build();
+        return (new LivePagedListBuilder<>(new HinaDataSource.HinaDataSourceFactory(disposable, query), config)).build();
     }
 
     @Override
@@ -177,7 +177,7 @@ public class HinaDAO implements CollectionDAO {
                 .setPageSize(10)
                 .build();
 
-        return (new LivePagedListBuilder<>(new HinaDataSource.HinaDataSource2Factory(disposable), config)).build();
+        return (new LivePagedListBuilder<>(new HinaDataSource.HinaDataSourceFactory(disposable), config)).build();
     }
 
     @Override

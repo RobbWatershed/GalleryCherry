@@ -217,6 +217,8 @@
         <item quantity="one">%d/%d result</item>
         <item quantity="other">%d/%d results</item>
     </plurals>
+
+    <!-- Reddit -->
     <string name="landing_history_title">Type or select subreddit</string>
     <string name="reddit_navigate">Navigate</string>
     <string name="reddit_dl">Download</string>
@@ -228,6 +230,12 @@
     <string name="reddit_auth_noimg">No new items to download</string>
     <string name="reddit_auth_img_note">Note : Animated pictures hosted by gfycat are not supported by GalleryCherry</string>
     <string name="reddit_auth_action">DOWNLOAD</string>
+
+    <!-- Hina -->
+    <string name="hina_loading">Loading…</string>
+    <string name="hina_loading_failed">Loading failed - Please try another search</string>
+    <string name="hina_no_results">No results found</string>
+    <string name="hina_no_library">Hina access failed !</string>
 
     <string name="reset">Permissions have been reset.\nResetting app.</string>
     <string name="restart_needed">"Changes will be applied after GalleryCherry is restarted"</string>
