@@ -487,16 +487,6 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
                 if (-1 == totalContentCount) totalContentCount = count;
                 updateTitle(count, totalContentCount);
 
-                /*
-                // Update background text
-                loadingText.clearAnimation();
-                if (0 == count) { // TODO this never happens since insert(x,0) is never called
-                    if (isSearchQueryActive()) loadingText.setText(R.string.hina_no_results);
-                    else loadingText.setText(R.string.hina_loading_failed);
-                    loadingText.setVisibility(View.VISIBLE);
-                } else loadingText.setVisibility(View.GONE);
-                 */
-
                 updateContentStatus(position, count);
             }
 
