@@ -7,6 +7,8 @@ import androidx.lifecycle.LiveData;
 import androidx.paging.LivePagedListBuilder;
 import androidx.paging.PagedList;
 
+import com.annimon.stream.function.Consumer;
+
 import org.apache.commons.lang3.tuple.ImmutablePair;
 
 import java.util.List;
@@ -29,6 +31,15 @@ import me.devsaki.hentoid.enums.StatusContent;
 public class HinaDAO implements CollectionDAO {
 
     private static final CompositeDisposable disposable = new CompositeDisposable();
+
+    // Hack to avoid introducing a Consumer<Boolean> argument into CollectionDAO
+    // Should become unnecessary wil Android paging 3
+    private Consumer<Integer> completionCallback;
+
+
+    public void setCompletionCallback(Consumer<Integer> completionCallback) {
+        this.completionCallback = completionCallback;
+    }
 
     @Nullable
     @Override
@@ -161,7 +172,7 @@ public class HinaDAO implements CollectionDAO {
                 .setPageSize(10)
                 .build();
 
-        return (new LivePagedListBuilder<>(new HinaDataSource.HinaDataSourceFactory(disposable, query), config)).build();
+        return (new LivePagedListBuilder<>(new HinaDataSource.HinaDataSourceFactory(disposable, query, completionCallback), config)).build();
     }
 
     @Override
@@ -177,7 +188,7 @@ public class HinaDAO implements CollectionDAO {
                 .setPageSize(10)
                 .build();
 
-        return (new LivePagedListBuilder<>(new HinaDataSource.HinaDataSourceFactory(disposable), config)).build();
+        return (new LivePagedListBuilder<>(new HinaDataSource.HinaDataSourceFactory(disposable, completionCallback), config)).build();
     }
 
     @Override
@@ -303,6 +314,7 @@ public class HinaDAO implements CollectionDAO {
     @Override
     public void cleanup() {
         disposable.clear();
+        completionCallback = null;
     }
 
     @Override

@@ -1,9 +1,16 @@
 package me.devsaki.hentoid.database;
 
+import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.paging.DataSource;
 import androidx.paging.PositionalDataSource;
+
+import com.annimon.stream.function.Consumer;
+
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.util.List;
 
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.CompositeDisposable;
@@ -13,13 +20,23 @@ import timber.log.Timber;
 
 public class HinaDataSource extends PositionalDataSource<Content> {
 
+    @IntDef({Status.SUCCESS, Status.SUCCESS_EMPTY, Status.ERROR})
+    @Retention(RetentionPolicy.SOURCE)
+    public @interface Status {
+        int SUCCESS = 0;
+        int SUCCESS_EMPTY = 1;
+        int ERROR = 2;
+    }
+
     private final String query;
     private final CompositeDisposable compositeDisposable;
+    private final Consumer<Integer> completionCallback;
     private int pageSize = 0;
 
-    public HinaDataSource(@NonNull CompositeDisposable cd, @NonNull final String query) {
+    public HinaDataSource(@NonNull CompositeDisposable cd, @NonNull final String query, @NonNull Consumer<Integer> completionCallback) {
         compositeDisposable = cd;
         this.query = query;
+        this.completionCallback = completionCallback;
     }
 
     @Override
@@ -46,24 +63,37 @@ public class HinaDataSource extends PositionalDataSource<Content> {
                             r -> {
                                 int position = (requestedPage - 1) * pageSize;
 
+                                List<Content> contents = r.getGalleries();
                                 if (initialCallback != null)
-                                    initialCallback.onResult(r.getGalleries(), position, r.getMaxAlbums());
+                                    initialCallback.onResult(contents, position, r.getMaxAlbums());
                                 if (callback != null)
-                                    callback.onResult(r.getGalleries());
+                                    callback.onResult(contents);
+
+                                completionCallback.accept(contents.isEmpty() ? Status.SUCCESS_EMPTY : Status.SUCCESS);
                             },
-                            Timber::e)
+                            e -> {
+                                Timber.e(e);
+                                completionCallback.accept(Status.ERROR);
+                            }
+                    )
             );
         else
             compositeDisposable.add(HinaServer.API.getLatest(requestedPage, pageSize)
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(
                             r -> {
+                                List<Content> contents = r.getGalleries();
                                 if (initialCallback != null)
-                                    initialCallback.onResult(r.getGalleries(), (requestedPage - 1) * pageSize, r.getMaxAlbums());
+                                    initialCallback.onResult(contents, (requestedPage - 1) * pageSize, r.getMaxAlbums());
                                 if (callback != null)
-                                    callback.onResult(r.getGalleries());
+                                    callback.onResult(contents);
+
+                                completionCallback.accept(contents.isEmpty() ? Status.SUCCESS_EMPTY : Status.SUCCESS);
                             },
-                            Timber::e)
+                            e -> {
+                                Timber.e(e);
+                                completionCallback.accept(Status.ERROR);
+                            })
             );
     }
 
@@ -72,20 +102,23 @@ public class HinaDataSource extends PositionalDataSource<Content> {
     public static class HinaDataSourceFactory extends androidx.paging.DataSource.Factory<Integer, Content> {
         private final String query;
         private final CompositeDisposable compositeDisposable;
+        private final Consumer<Integer> completionCallback;
 
-        HinaDataSourceFactory(CompositeDisposable cd) {
+        HinaDataSourceFactory(CompositeDisposable cd, @NonNull Consumer<Integer> completionCallback) {
             compositeDisposable = cd;
+            this.completionCallback = completionCallback;
             query = "";
         }
 
-        HinaDataSourceFactory(CompositeDisposable cd, String query) {
+        HinaDataSourceFactory(CompositeDisposable cd, String query, @NonNull Consumer<Integer> completionCallback) {
             compositeDisposable = cd;
+            this.completionCallback = completionCallback;
             this.query = query;
         }
 
         @NonNull
         public DataSource<Integer, Content> create() {
-            return new HinaDataSource(compositeDisposable, query);
+            return new HinaDataSource(compositeDisposable, query, completionCallback);
         }
     }
 }

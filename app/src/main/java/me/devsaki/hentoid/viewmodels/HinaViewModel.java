@@ -15,6 +15,7 @@ import java.util.Map;
 
 import io.reactivex.disposables.CompositeDisposable;
 import me.devsaki.hentoid.database.CollectionDAO;
+import me.devsaki.hentoid.database.HinaDAO;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
@@ -39,11 +40,15 @@ public class HinaViewModel extends AndroidViewModel {
 
     // Updated whenever a new search is performed
     private MutableLiveData<Boolean> newSearch = new MutableLiveData<>();
+    private MutableLiveData<Integer> hinaCallStatus = new MutableLiveData<>();
 
 
     public HinaViewModel(@NonNull Application application, @NonNull CollectionDAO hinaDAO, @NonNull CollectionDAO hentoidDAO) {
         super(application);
         hinaDao = hinaDAO;
+        // Hack to avoid introducing a Consumer<Boolean> argument into CollectionDAO
+        // Should become unnecessary wil Android paging 3
+        ((HinaDAO) hinaDAO).setCompletionCallback(hinaCallStatus::postValue);
         hentoidDao = hentoidDAO;
         searchManager = new ContentSearchManager(hinaDao);
         hinaBooksStatus = hentoidDAO.selectContentUniqueIdStates(Site.HINA);
@@ -79,6 +84,11 @@ public class HinaViewModel extends AndroidViewModel {
     @NonNull
     public LiveData<Boolean> getNewSearch() {
         return newSearch;
+    }
+
+    @NonNull
+    public LiveData<Integer> getHinaCallStatus() {
+        return hinaCallStatus;
     }
 
     // =========================
@@ -118,14 +128,6 @@ public class HinaViewModel extends AndroidViewModel {
      */
     public void setPagingMethod(boolean isEndless) {
         searchManager.setLoadAll(!isEndless);
-        newSearch.setValue(true);
-        performSearch();
-    }
-
-    /**
-     * Update the order of the list
-     */
-    public void updateOrder() {
         newSearch.setValue(true);
         performSearch();
     }

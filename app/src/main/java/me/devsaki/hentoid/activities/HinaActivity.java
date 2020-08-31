@@ -42,6 +42,7 @@ import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.activities.bundles.ContentItemBundle;
+import me.devsaki.hentoid.database.HinaDataSource;
 import me.devsaki.hentoid.database.domains.Attribute;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.enums.AlertStatus;
@@ -187,6 +188,7 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
         toolbar.setOnMenuItemClickListener(this::toolbarOnItemClicked);
         toolbar.setNavigationOnClickListener(v -> onBackPressed());
 
+        viewModel.getHinaCallStatus().observe(this, this::onHinaCallStatus);
         viewModel.getNewSearch().observe(this, this::onNewSearch);
         viewModel.getLibraryPaged().observe(this, this::onLibraryChanged);
         viewModel.getHinaBooksStatus().observe(this, this::onHinaBooksStatusChanged);
@@ -485,6 +487,7 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
                 if (-1 == totalContentCount) totalContentCount = count;
                 updateTitle(count, totalContentCount);
 
+                /*
                 // Update background text
                 loadingText.clearAnimation();
                 if (0 == count) { // TODO this never happens since insert(x,0) is never called
@@ -492,6 +495,7 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
                     else loadingText.setText(R.string.hina_loading_failed);
                     loadingText.setVisibility(View.VISIBLE);
                 } else loadingText.setVisibility(View.GONE);
+                 */
 
                 updateContentStatus(position, count);
             }
@@ -507,6 +511,23 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
 
         newSearch = false;
         library = result;
+    }
+
+    private void onHinaCallStatus(Integer status) {
+        loadingText.clearAnimation();
+        switch (status) {
+            case HinaDataSource.Status.SUCCESS:
+                loadingText.setVisibility(View.GONE);
+                break;
+            case HinaDataSource.Status.SUCCESS_EMPTY:
+                loadingText.setText(R.string.hina_no_results);
+                loadingText.setVisibility(View.VISIBLE);
+                break;
+            case HinaDataSource.Status.ERROR:
+                loadingText.setText(R.string.hina_loading_failed);
+                loadingText.setVisibility(View.VISIBLE);
+                break;
+        }
     }
 
     private void updateContentStatus(int position, int count) {
