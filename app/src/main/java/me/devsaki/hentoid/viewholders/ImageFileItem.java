@@ -1,6 +1,10 @@
 package me.devsaki.hentoid.viewholders;
 
+import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.Typeface;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.view.View;
 import android.widget.ImageButton;
@@ -22,12 +26,16 @@ import java.lang.annotation.RetentionPolicy;
 import java.util.List;
 import java.util.Map;
 
+import me.devsaki.hentoid.HentoidApp;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.retrofit.HinaServer;
 import me.devsaki.hentoid.util.ContentHelper;
+import me.devsaki.hentoid.util.ImageHelper;
+import me.devsaki.hentoid.util.ThemeHelper;
 
 import static androidx.core.view.ViewCompat.requireViewById;
+import static me.devsaki.hentoid.util.ImageHelper.tintBitmap;
 
 public class ImageFileItem extends AbstractItem<ImageFileItem.ImageViewHolder> {
 
@@ -42,7 +50,20 @@ public class ImageFileItem extends AbstractItem<ImageFileItem.ImageViewHolder> {
     private final @ViewType
     int viewType;
     private boolean isCurrent;
-    private static final RequestOptions glideRequestOptions = new RequestOptions().centerInside();
+    private static final RequestOptions glideRequestOptions;
+
+
+    static {
+        Context context = HentoidApp.getInstance();
+        int tintColor = ThemeHelper.getColor(context, R.color.light_gray);
+
+        Bitmap bmp = ImageHelper.getBitmapFromResource(context, R.drawable.ic_cherry_icon);
+        Drawable d = new BitmapDrawable(context.getResources(), tintBitmap(bmp, tintColor));
+
+        glideRequestOptions = new RequestOptions()
+                .centerInside()
+                .placeholder(d);
+    }
 
     public ImageFileItem(@NonNull ImageFile image, @ViewType int viewType) {
         this.image = image;
