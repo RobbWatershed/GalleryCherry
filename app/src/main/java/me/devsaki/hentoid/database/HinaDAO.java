@@ -35,10 +35,16 @@ public class HinaDAO implements CollectionDAO {
     // Hack to avoid introducing a Consumer<Boolean> argument into CollectionDAO
     // Should become unnecessary wil Android paging 3
     private Consumer<Integer> completionCallback;
+    // TODO doc
+    private Consumer<List<Content>> interceptor;
 
 
     public void setCompletionCallback(Consumer<Integer> completionCallback) {
         this.completionCallback = completionCallback;
+    }
+
+    public void setInterceptor(Consumer<List<Content>> interceptor) {
+        this.interceptor = interceptor;
     }
 
     @Nullable
@@ -172,7 +178,7 @@ public class HinaDAO implements CollectionDAO {
                 .setPageSize(10)
                 .build();
 
-        return (new LivePagedListBuilder<>(new HinaDataSource.HinaDataSourceFactory(disposable, query, completionCallback), config)).build();
+        return (new LivePagedListBuilder<>(new HinaDataSource.HinaDataSourceFactory(disposable, query, completionCallback, interceptor), config)).build();
     }
 
     @Override
@@ -188,7 +194,7 @@ public class HinaDAO implements CollectionDAO {
                 .setPageSize(10)
                 .build();
 
-        return (new LivePagedListBuilder<>(new HinaDataSource.HinaDataSourceFactory(disposable, completionCallback), config)).build();
+        return (new LivePagedListBuilder<>(new HinaDataSource.HinaDataSourceFactory(disposable, completionCallback, interceptor), config)).build();
     }
 
     @Override

@@ -31,12 +31,18 @@ public class HinaDataSource extends PositionalDataSource<Content> {
     private final String query;
     private final CompositeDisposable compositeDisposable;
     private final Consumer<Integer> completionCallback;
+    private final Consumer<List<Content>> interceptor;
     private int pageSize = 0;
 
-    public HinaDataSource(@NonNull CompositeDisposable cd, @NonNull final String query, @NonNull Consumer<Integer> completionCallback) {
+    public HinaDataSource(
+            @NonNull CompositeDisposable cd,
+            @NonNull final String query,
+            @NonNull Consumer<Integer> completionCallback,
+            @Nullable Consumer<List<Content>> interceptor) {
         compositeDisposable = cd;
         this.query = query;
         this.completionCallback = completionCallback;
+        this.interceptor = interceptor;
     }
 
     @Override
@@ -64,6 +70,7 @@ public class HinaDataSource extends PositionalDataSource<Content> {
                                 int position = (requestedPage - 1) * pageSize;
 
                                 List<Content> contents = r.getGalleries();
+                                if (interceptor != null) interceptor.accept(contents);
                                 if (initialCallback != null)
                                     initialCallback.onResult(contents, position, r.getMaxAlbums());
                                 if (callback != null)
@@ -83,6 +90,7 @@ public class HinaDataSource extends PositionalDataSource<Content> {
                     .subscribe(
                             r -> {
                                 List<Content> contents = r.getGalleries();
+                                if (interceptor != null) interceptor.accept(contents);
                                 if (initialCallback != null)
                                     initialCallback.onResult(contents, (requestedPage - 1) * pageSize, r.getMaxAlbums());
                                 if (callback != null)
@@ -103,22 +111,34 @@ public class HinaDataSource extends PositionalDataSource<Content> {
         private final String query;
         private final CompositeDisposable compositeDisposable;
         private final Consumer<Integer> completionCallback;
+        private final Consumer<List<Content>> interceptor;
 
-        HinaDataSourceFactory(CompositeDisposable cd, @NonNull Consumer<Integer> completionCallback) {
+        HinaDataSourceFactory(
+                CompositeDisposable cd,
+                @NonNull Consumer<Integer> completionCallback,
+                @Nullable Consumer<List<Content>> interceptor
+        ) {
             compositeDisposable = cd;
             this.completionCallback = completionCallback;
             query = "";
+            this.interceptor = interceptor;
         }
 
-        HinaDataSourceFactory(CompositeDisposable cd, String query, @NonNull Consumer<Integer> completionCallback) {
+        HinaDataSourceFactory(
+                CompositeDisposable cd,
+                @NonNull String query,
+                @NonNull Consumer<Integer> completionCallback,
+                @Nullable Consumer<List<Content>> interceptor
+        ) {
             compositeDisposable = cd;
             this.completionCallback = completionCallback;
             this.query = query;
+            this.interceptor = interceptor;
         }
 
         @NonNull
         public DataSource<Integer, Content> create() {
-            return new HinaDataSource(compositeDisposable, query, completionCallback);
+            return new HinaDataSource(compositeDisposable, query, completionCallback, interceptor);
         }
     }
 }

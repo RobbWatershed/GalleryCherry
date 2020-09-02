@@ -486,7 +486,6 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
             public void onInserted(int position, int count) {
                 if (-1 == totalContentCount) totalContentCount = count;
                 updateTitle(count, totalContentCount);
-
                 updateContentStatus(position, count);
             }
 
@@ -532,7 +531,7 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
                         new Handler().postDelayed(() -> {
                             Bundle payload = new ContentItemBundle.Builder().setStatus(s).getBundle();
                             fastAdapter.notifyAdapterItemChanged(updatePosition, payload);
-                        }, 100);
+                        }, 400);
                     }
                 }
             }

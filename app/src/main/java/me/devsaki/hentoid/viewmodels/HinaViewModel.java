@@ -11,6 +11,7 @@ import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.paging.PagedList;
 
+import java.util.List;
 import java.util.Map;
 
 import io.reactivex.disposables.CompositeDisposable;
@@ -49,9 +50,12 @@ public class HinaViewModel extends AndroidViewModel {
         // Hack to avoid introducing a Consumer<Boolean> argument into CollectionDAO
         // Should become unnecessary wil Android paging 3
         ((HinaDAO) hinaDAO).setCompletionCallback(hinaCallStatus::postValue);
+        // TODO doc
+        ((HinaDAO) hinaDAO).setInterceptor(this::embedLibraryStatus);
         hentoidDao = hentoidDAO;
         searchManager = new ContentSearchManager(hinaDao);
         hinaBooksStatus = hentoidDAO.selectContentUniqueIdStates(Site.HINA);
+
     }
 
     public void onSaveState(Bundle outState) {
@@ -132,6 +136,16 @@ public class HinaViewModel extends AndroidViewModel {
         performSearch();
     }
 
+    private void embedLibraryStatus(@NonNull List<Content> contents) {
+        if (null == hinaBooksStatus || null == hinaBooksStatus.getValue()) return;
+        Map<String, StatusContent> booksStatus = hinaBooksStatus.getValue();
+        for (Content c : contents) {
+            if (booksStatus.containsKey(c.getUniqueSiteId())) {
+                StatusContent s = booksStatus.get(c.getUniqueSiteId());
+                if (s != null) c.setStatus(s);
+            }
+        }
+    }
 
     // =========================
     // ========= CONTENT ACTIONS
