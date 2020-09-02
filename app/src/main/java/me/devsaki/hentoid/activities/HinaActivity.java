@@ -531,7 +531,7 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
                         new Handler().postDelayed(() -> {
                             Bundle payload = new ContentItemBundle.Builder().setStatus(s).getBundle();
                             fastAdapter.notifyAdapterItemChanged(updatePosition, payload);
-                        }, 400);
+                        }, 150);
                     }
                 }
             }
