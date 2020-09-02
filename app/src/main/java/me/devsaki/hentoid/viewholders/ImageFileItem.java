@@ -137,7 +137,8 @@ public class ImageFileItem extends AbstractItem<ImageFileItem.ImageViewHolder> {
 
         @Override
         public void unbindView(@NotNull ImageFileItem item) {
-            // No specific behaviour to implement
+            // Unload resources & cancel any pending load
+            Glide.with(image).clear(image);
         }
     }
 }
