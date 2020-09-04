@@ -11,6 +11,7 @@ import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.paging.PagedList;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -120,11 +121,55 @@ public class HinaViewModel extends AndroidViewModel {
      */
     public void searchUniversal(@NonNull String query) {
         searchManager.clearSelectedSearchTags(); // If user searches in main toolbar, universal search takes over advanced search
-        // Auto-adds "'s around words to make a "cumulative AND" query
-        if (query.contains(" ")) query = "\"" + query.replace(" ", "\" \"") + "\"";
+        // Clean the search string
+        query = query.trim().replace("   ", " ").replace("  ", " ");
+        if (query.length() > 0) query = manageQuotes(query);
+
         searchManager.setQuery(query);
         newSearch.setValue(true);
         performSearch();
+    }
+
+    // Auto-add "'s around words that are not quoted to make a "cumulative AND" query
+    private String manageQuotes(@NonNull final String query) {
+        String result = query;
+
+        // 1- Identify quotes
+        List<Integer> quoteIndexes = new ArrayList<>();
+        int quoteIndex = result.indexOf('"');
+        while (quoteIndex > -1) {
+            quoteIndexes.add(quoteIndex);
+            quoteIndex = result.indexOf('"', quoteIndex + 1);
+        }
+
+        // 2- Build the definitive query
+        int spaceIndex = result.indexOf(' ');
+        int offset = 0;
+        while (spaceIndex > -1) {
+            if (!isInRange(spaceIndex, quoteIndexes, offset)) {
+                boolean isPreviousQuote = ('"' == result.charAt(spaceIndex - 1));
+                boolean isNextQuote = ('"' == result.charAt(spaceIndex + 1));
+                String toInsert = (isPreviousQuote ? "" : "\"") + " " + (isNextQuote ? "" : "\"");
+                result = result.substring(0, spaceIndex) + toInsert + result.substring(spaceIndex + 1);
+                spaceIndex += 2;
+                offset += toInsert.length() - 1;
+            }
+            spaceIndex = result.indexOf(' ', spaceIndex + 1);
+        }
+
+        if (!result.startsWith("\"")) result = "\"" + result;
+        if (!result.endsWith("\"")) result = result + "\"";
+
+        return result;
+    }
+
+    private boolean isInRange(int index, List<Integer> ranges, int offset) {
+        if (ranges.size() < 2) return false;
+
+        for (int i = 0; i < ranges.size() / 2; i += 2)
+            if (index >= ranges.get(i) + offset && index < ranges.get(i + 1) + offset) return true;
+
+        return false;
     }
 
     /**
