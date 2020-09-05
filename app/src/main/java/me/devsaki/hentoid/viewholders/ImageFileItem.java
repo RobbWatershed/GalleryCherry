@@ -31,6 +31,7 @@ import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.retrofit.HinaServer;
 import me.devsaki.hentoid.util.ContentHelper;
+import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.ImageHelper;
 import me.devsaki.hentoid.util.ThemeHelper;
 
@@ -159,7 +160,8 @@ public class ImageFileItem extends AbstractItem<ImageFileItem.ImageViewHolder> {
         @Override
         public void unbindView(@NotNull ImageFileItem item) {
             // Unload resources & cancel any pending load
-            Glide.with(image).clear(image);
+            if (Helper.isValidContextForGlide(image))
+                Glide.with(image).clear(image);
         }
     }
 }
