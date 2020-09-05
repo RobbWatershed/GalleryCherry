@@ -18,6 +18,7 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -207,7 +208,11 @@ public class ObjectBoxDAO implements CollectionDAO {
         ObjectBoxLiveData<Content> livedata = new ObjectBoxLiveData<>(db.selectContentBySourceAndUrlQ(site, null));
 
         MediatorLiveData<Map<String, StatusContent>> result = new MediatorLiveData<>();
-        result.addSource(livedata, v -> result.setValue(Stream.of(v).withoutNulls().collect(Collectors.toMap(Content::getUniqueSiteId, Content::getStatus))));
+        result.addSource(livedata, v -> result.setValue(Stream.of(v).withoutNulls().collect(Collectors.toMap(
+                Content::getUniqueSiteId,
+                Content::getStatus,
+                (a, b) -> a, // In case of duplicate keys, keep the first entry
+                HashMap::new))));
 
         return result;
     }
