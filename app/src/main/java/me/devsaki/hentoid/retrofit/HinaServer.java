@@ -6,8 +6,11 @@ import com.squareup.moshi.Moshi;
 import com.squareup.moshi.adapters.Rfc3339DateJsonAdapter;
 
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 import io.reactivex.Single;
+import me.devsaki.hentoid.BuildConfig;
 import me.devsaki.hentoid.json.hina.HinaResult;
 import me.devsaki.hentoid.util.network.OkHttpClientSingleton;
 import retrofit2.Retrofit;
@@ -38,6 +41,15 @@ public class HinaServer {
 
     public static String getThumbFor(@NonNull final String albumId, int pageNum) {
         return String.format(HINA_THUMBS_URL, albumId, pageNum);
+    }
+
+    public static Map<String, String> getHeadersForThumbs() {
+        Map<String, String> result = new HashMap<>();
+
+        result.put("x-rapidapi-key", BuildConfig.RAPIDAPI_KEY);
+        result.put("x-rapidapi-host", HINA_RAPIDAPI_HOST);
+
+        return result;
     }
 
     public interface Api {

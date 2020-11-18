@@ -5,7 +5,6 @@ import android.graphics.Bitmap;
 import android.graphics.Typeface;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
-import android.net.Uri;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -15,6 +14,8 @@ import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.model.GlideUrl;
+import com.bumptech.glide.load.model.LazyHeaders;
 import com.bumptech.glide.request.RequestOptions;
 import com.mikepenz.fastadapter.FastAdapter;
 import com.mikepenz.fastadapter.items.AbstractItem;
@@ -133,14 +134,24 @@ public class ImageFileItem extends AbstractItem<ImageFileItem.ImageViewHolder> {
             }
 
             String uri = item.image.getFileUri();
+            GlideUrl glideUrl;
             // Hack to display thumbs when retrieving online images from Hina
             if (item.image.getDownloadParams().contains("hina-id")) {
                 Map<String, String> downloadParams = ContentHelper.parseDownloadParams(item.image.getDownloadParams());
                 uri = HinaServer.getThumbFor(downloadParams.get("hina-id"), item.image.getOrder() - 1);
+
+                LazyHeaders.Builder builder = new LazyHeaders.Builder();
+                Map<String, String> headers = HinaServer.getHeadersForThumbs();
+                for (String key : headers.keySet()) {
+                    builder.addHeader(key, headers.get(key));
+                }
+                glideUrl = new GlideUrl(uri, builder.build());
+            } else {
+                glideUrl = new GlideUrl(uri);
             }
 
             Glide.with(image)
-                    .load(Uri.parse(uri))
+                    .load(glideUrl)
                     .apply(glideRequestOptions)
                     .into(image);
         }
