@@ -14,12 +14,15 @@ import retrofit2.Retrofit;
 import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
 import retrofit2.converter.moshi.MoshiConverterFactory;
 import retrofit2.http.GET;
+import retrofit2.http.Header;
 import retrofit2.http.Query;
 
 public class HinaServer {
 
-    private static final String HINA_BASE_URL = "https://api.ixil.cc/bloom/";
-    private static final String HINA_THUMBS_URL = "https://api.ixil.cc/bloom/strat/thumbs/%s/%s?width=75&height=100";
+    public static final String HINA_RAPIDAPI_HOST = "bloom-hina.p.rapidapi.com";
+
+    private static final String HINA_BASE_URL = "https://bloom-hina.p.rapidapi.com/";
+    private static final String HINA_THUMBS_URL = "https://bloom-hina.p.rapidapi.com/strat/thumbs/%s/%s?width=75&height=100";
 
     private static final Moshi moshi = new Moshi.Builder()
             .add(Date.class, new Rfc3339DateJsonAdapter())
@@ -42,19 +45,25 @@ public class HinaServer {
         @GET("hina")
         Single<HinaResult> getLatest(
                 @Query("page") int page,
-                @Query("op") int resultsPerPage
+                @Query("op") int resultsPerPage,
+                @Header("x-rapidapi-key") String rapidApiKey,
+                @Header("x-rapidapi-host") String rapidApiHost
         );
 
-        @GET("hina/search")
+        @GET("search")
         Single<HinaResult> search(
                 @Query("page") int page,
                 @Query("op") int resultsPerPage,
-                @Query("query") String query
+                @Query("query") String query,
+                @Header("x-rapidapi-key") String rapidApiKey,
+                @Header("x-rapidapi-host") String rapidApiHost
         );
 
         @GET("hina/payload")
         Single<HinaResult.HinaGallery> getGallery(
-                @Query("id") String id
+                @Query("id") String id,
+                @Header("x-rapidapi-key") String rapidApiKey,
+                @Header("x-rapidapi-host") String rapidApiHost
         );
     }
 }

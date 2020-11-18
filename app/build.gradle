@@ -31,9 +31,15 @@ android {
         versionCode 130 // is updated automatically by BitRise; only used when building locally
         versionName '1.7.1'
 
-        def includeObjectBoxBrowser = System.getenv("INCLUDE_OBJECTBOX_BROWSER")?:"false"
+        Properties properties = new Properties()
+        properties.load(project.rootProject.file("local.properties").newDataInputStream())
+
+        def includeObjectBoxBrowser = System.getenv("INCLUDE_OBJECTBOX_BROWSER") ?: "false"
 
         buildConfigField "boolean", "INCLUDE_OBJECTBOX_BROWSER", includeObjectBoxBrowser
+
+        def rapidapiKey = properties.getProperty("rapidapi.key", System.getenv("rapidapi_key"))
+        buildConfigField "String", "RAPIDAPI_KEY", rapidapiKey
 
         proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
 
@@ -103,7 +109,8 @@ dependencies {
     implementation 'com.google.android.gms:play-services-safetynet:17.0.0'
     implementation 'androidx.paging:paging-runtime:2.1.2'
     implementation "androidx.fragment:fragment-ktx:1.2.5"
-    implementation "androidx.documentfile:documentfile:1.0.1" // <-- if this evolves, please examine FileUtil.fromTreeUriOptimized for evolutions
+    implementation "androidx.documentfile:documentfile:1.0.1"
+    // <-- if this evolves, please examine FileUtil.fromTreeUriOptimized for evolutions
     implementation "androidx.viewpager2:viewpager2:1.0.0"
 
     // For ViewModel to work
@@ -135,7 +142,8 @@ dependencies {
     implementation 'com.squareup.okhttp3:okhttp:4.8.0'
 
     // For downloading images : github.com/google/volley
-    implementation 'com.android.volley:volley:1.1.1' // <-- if this evolves, please examine RequestQueueManager.getRequestQueue for evolutions
+    implementation 'com.android.volley:volley:1.1.1'
+    // <-- if this evolves, please examine RequestQueueManager.getRequestQueue for evolutions
 
     // EventBus: github.com/greenrobot/EventBus
     implementation 'org.greenrobot:eventbus:3.2.0'
@@ -159,7 +167,8 @@ dependencies {
     implementation 'org.apache.commons:commons-lang3:3.9'
 
     // https://mvnrepository.com/artifact/org.apache.commons/commons-text/
-    implementation 'org.apache.commons:commons-text:1.4' // !!! Don't update that one or Lint will go mad
+    implementation 'org.apache.commons:commons-text:1.4'
+    // !!! Don't update that one or Lint will go mad
 
     // Retrofit-ready-ready HTML parser with CSS selectors : https://github.com/DroidsOnRoids/jspoon
     implementation 'pl.droidsonroids:jspoon:1.3.2'
@@ -188,14 +197,17 @@ dependencies {
     implementation 'com.github.penfeizhou.android.animation:apng:1.3.3'
 
     // https://github.com/mikepenz/FastAdapter
-    implementation "com.mikepenz:fastadapter:5.2.4" // needs the `expandable`, `drag` and `scroll` extension.
+    implementation "com.mikepenz:fastadapter:5.2.4"
+    // needs the `expandable`, `drag` and `scroll` extension.
     implementation "com.mikepenz:fastadapter-extensions-diff:5.2.4" // diff util helpers
     implementation "com.mikepenz:fastadapter-extensions-drag:5.2.4" // drag support
     implementation "com.mikepenz:fastadapter-extensions-expandable:5.2.4"
     implementation "com.mikepenz:fastadapter-extensions-scroll:5.2.4" // scroll helpers
     implementation "com.mikepenz:fastadapter-extensions-paged:5.2.4"
-    implementation "com.mikepenz:fastadapter-extensions-ui:5.2.4" // needs the `expandable`, `drag` and `scroll` extension.
-    implementation "com.mikepenz:fastadapter-extensions-utils:5.2.4" // needs the `expandable`, `drag` and `scroll` extension.
+    implementation "com.mikepenz:fastadapter-extensions-ui:5.2.4"
+    // needs the `expandable`, `drag` and `scroll` extension.
+    implementation "com.mikepenz:fastadapter-extensions-utils:5.2.4"
+    // needs the `expandable`, `drag` and `scroll` extension.
 
     // Fast scroller
     implementation "me.zhanghai.android.fastscroll:library:1.1.4"

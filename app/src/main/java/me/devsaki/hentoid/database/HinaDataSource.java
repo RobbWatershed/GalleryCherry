@@ -14,6 +14,7 @@ import java.util.List;
 
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.CompositeDisposable;
+import me.devsaki.hentoid.BuildConfig;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.retrofit.HinaServer;
 import timber.log.Timber;
@@ -63,7 +64,12 @@ public class HinaDataSource extends PositionalDataSource<Content> {
             @Nullable PositionalDataSource.LoadRangeCallback<Content> callback
     ) {
         if (!query.isEmpty())
-            compositeDisposable.add(HinaServer.API.search(requestedPage, pageSize, query)
+            compositeDisposable.add(HinaServer.API.search(
+                    requestedPage,
+                    pageSize,
+                    query,
+                    BuildConfig.RAPIDAPI_KEY,
+                    HinaServer.HINA_RAPIDAPI_HOST)
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(
                             r -> {
@@ -85,7 +91,11 @@ public class HinaDataSource extends PositionalDataSource<Content> {
                     )
             );
         else
-            compositeDisposable.add(HinaServer.API.getLatest(requestedPage, pageSize)
+            compositeDisposable.add(HinaServer.API.getLatest(
+                    requestedPage,
+                    pageSize,
+                    BuildConfig.RAPIDAPI_KEY,
+                    HinaServer.HINA_RAPIDAPI_HOST)
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(
                             r -> {

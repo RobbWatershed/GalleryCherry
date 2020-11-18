@@ -40,6 +40,7 @@ import java.util.Map;
 
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
+import me.devsaki.hentoid.BuildConfig;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.activities.bundles.ContentItemBundle;
 import me.devsaki.hentoid.database.HinaDataSource;
@@ -421,7 +422,10 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
             @Override
             public void onClick(@NotNull View view, int i, @NotNull FastAdapter<ContentItem> fastAdapter, @NotNull ContentItem item) {
                 if (item.getContent() != null)
-                    downloadDisposable = HinaServer.API.getGallery(item.getContent().getUniqueSiteId())
+                    downloadDisposable = HinaServer.API.getGallery(
+                            item.getContent().getUniqueSiteId(),
+                            BuildConfig.RAPIDAPI_KEY,
+                            HinaServer.HINA_RAPIDAPI_HOST)
                             .observeOn(AndroidSchedulers.mainThread())
                             .subscribe(
                                     g -> downloadContent(g.toContent()),

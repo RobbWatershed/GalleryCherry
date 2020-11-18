@@ -19,6 +19,7 @@ import com.mikepenz.fastadapter.diff.FastAdapterDiffUtil;
 
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
+import me.devsaki.hentoid.BuildConfig;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.retrofit.HinaServer;
@@ -87,7 +88,9 @@ public class GalleryDialogFragment extends DialogFragment {
             return true;
         });
 
-        disposable = HinaServer.API.getGallery(id)
+        disposable = HinaServer.API.getGallery(id,
+                BuildConfig.RAPIDAPI_KEY,
+                HinaServer.HINA_RAPIDAPI_HOST)
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(
                         g -> loadGallery(g.toContent()),
