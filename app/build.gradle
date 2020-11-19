@@ -31,15 +31,17 @@ android {
         versionCode 130 // is updated automatically by BitRise; only used when building locally
         versionName '1.7.2'
 
-        Properties properties = new Properties()
-        properties.load(project.rootProject.file("local.properties").newDataInputStream())
+        def rapidapiKey = System.getenv("rapidapi_key")
+        if (null == rapidapiKey) {
+            Properties properties = new Properties()
+            properties.load(project.rootProject.file("local.properties").newDataInputStream())
+            rapidapiKey = properties.getProperty("rapidapi.key", "")
+        }
+        buildConfigField "String", "RAPIDAPI_KEY", rapidapiKey
 
         def includeObjectBoxBrowser = System.getenv("INCLUDE_OBJECTBOX_BROWSER") ?: "false"
 
         buildConfigField "boolean", "INCLUDE_OBJECTBOX_BROWSER", includeObjectBoxBrowser
-
-        def rapidapiKey = properties.getProperty("rapidapi.key", System.getenv("rapidapi_key"))
-        buildConfigField "String", "RAPIDAPI_KEY", rapidapiKey
 
         proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
 
