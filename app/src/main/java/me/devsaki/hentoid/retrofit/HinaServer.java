@@ -6,11 +6,8 @@ import com.squareup.moshi.Moshi;
 import com.squareup.moshi.adapters.Rfc3339DateJsonAdapter;
 
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
 
 import io.reactivex.Single;
-import me.devsaki.hentoid.BuildConfig;
 import me.devsaki.hentoid.json.hina.HinaResult;
 import me.devsaki.hentoid.util.network.OkHttpClientSingleton;
 import retrofit2.Retrofit;
@@ -25,7 +22,7 @@ public class HinaServer {
     public static final String HINA_RAPIDAPI_HOST = "bloom-hina.p.rapidapi.com";
 
     private static final String HINA_BASE_URL = "https://bloom-hina.p.rapidapi.com/";
-    private static final String HINA_THUMBS_URL = "https://bloom-hina.p.rapidapi.com/strat/thumbs/%s/%s?width=75&height=100";
+    private static final String HINA_THUMBS_URL = "https://proxy.ixil.cc/ren?width=75&height=100&method=cover&image=%s";
 
     private static final Moshi moshi = new Moshi.Builder()
             .add(Date.class, new Rfc3339DateJsonAdapter())
@@ -39,17 +36,8 @@ public class HinaServer {
             .build()
             .create(Api.class);
 
-    public static String getThumbFor(@NonNull final String albumId, int pageNum) {
-        return String.format(HINA_THUMBS_URL, albumId, pageNum);
-    }
-
-    public static Map<String, String> getHeadersForThumbs() {
-        Map<String, String> result = new HashMap<>();
-
-        result.put("x-rapidapi-key", BuildConfig.RAPIDAPI_KEY);
-        result.put("x-rapidapi-host", HINA_RAPIDAPI_HOST);
-
-        return result;
+    public static String getThumbFor(@NonNull final String uri) {
+        return String.format(HINA_THUMBS_URL, uri);
     }
 
     public interface Api {

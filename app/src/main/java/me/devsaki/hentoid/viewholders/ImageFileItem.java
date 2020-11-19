@@ -14,8 +14,6 @@ import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 
 import com.bumptech.glide.Glide;
-import com.bumptech.glide.load.model.GlideUrl;
-import com.bumptech.glide.load.model.LazyHeaders;
 import com.bumptech.glide.request.RequestOptions;
 import com.mikepenz.fastadapter.FastAdapter;
 import com.mikepenz.fastadapter.items.AbstractItem;
@@ -25,13 +23,11 @@ import org.jetbrains.annotations.NotNull;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.List;
-import java.util.Map;
 
 import me.devsaki.hentoid.HentoidApp;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.retrofit.HinaServer;
-import me.devsaki.hentoid.util.ContentHelper;
 import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.ImageHelper;
 import me.devsaki.hentoid.util.ThemeHelper;
@@ -134,24 +130,12 @@ public class ImageFileItem extends AbstractItem<ImageFileItem.ImageViewHolder> {
             }
 
             String uri = item.image.getFileUri();
-            GlideUrl glideUrl;
             // Hack to display thumbs when retrieving online images from Hina
-            if (item.image.getDownloadParams().contains("hina-id")) {
-                Map<String, String> downloadParams = ContentHelper.parseDownloadParams(item.image.getDownloadParams());
-                uri = HinaServer.getThumbFor(downloadParams.get("hina-id"), item.image.getOrder() - 1);
-
-                LazyHeaders.Builder builder = new LazyHeaders.Builder();
-                Map<String, String> headers = HinaServer.getHeadersForThumbs();
-                for (String key : headers.keySet()) {
-                    builder.addHeader(key, headers.get(key));
-                }
-                glideUrl = new GlideUrl(uri, builder.build());
-            } else {
-                glideUrl = new GlideUrl(uri);
-            }
+            if (item.image.getDownloadParams().contains("hina-id"))
+                uri = HinaServer.getThumbFor(item.image.getUrl());
 
             Glide.with(image)
-                    .load(glideUrl)
+                    .load(uri)
                     .apply(glideRequestOptions)
                     .into(image);
         }
