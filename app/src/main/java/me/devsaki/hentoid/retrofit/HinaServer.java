@@ -50,7 +50,7 @@ public class HinaServer {
                 @Header("x-rapidapi-host") String rapidApiHost
         );
 
-        @GET("search")
+        @GET("hina/search")
         Single<HinaResult> search(
                 @Query("page") int page,
                 @Query("op") int resultsPerPage,
