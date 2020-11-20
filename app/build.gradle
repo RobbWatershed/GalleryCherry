@@ -29,7 +29,7 @@ android {
         //noinspection ExpiringTargetSdkVersion
         targetSdkVersion 29
         versionCode 130 // is updated automatically by BitRise; only used when building locally
-        versionName '1.7.2'
+        versionName '1.7.3'
 
         def rapidapiKey = System.getenv("rapidapi_key")
         if (null == rapidapiKey) {
