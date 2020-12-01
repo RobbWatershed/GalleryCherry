@@ -10,6 +10,7 @@ import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.VectorDrawable;
 
+import androidx.annotation.ColorInt;
 import androidx.annotation.DrawableRes;
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
@@ -32,7 +33,12 @@ public final class ImageHelper {
     private static FileHelper.NameFilter imageNamesFilter;
     private static final Charset CHARSET_LATIN_1 = StandardCharsets.ISO_8859_1;
 
-
+    /**
+     * Determine if the given image file extension is supported by the app
+     *
+     * @param extension File extension to test
+     * @return True if the app supports the reading of images with the given file extension; false if not
+     */
     public static boolean isImageExtensionSupported(String extension) {
         return extension.equalsIgnoreCase("jpg")
                 || extension.equalsIgnoreCase("jpeg")
@@ -42,12 +48,27 @@ public final class ImageHelper {
                 || extension.equalsIgnoreCase("webp");
     }
 
+    public static boolean isSupportedImage(@NonNull final String fileName) {
+        return isImageExtensionSupported(FileHelper.getExtension(fileName));
+    }
+
+    /**
+     * Build a {@link FileHelper.NameFilter} only accepting image files supported by the app
+     *
+     * @return {@link FileHelper.NameFilter} only accepting image files supported by the app
+     */
     public static FileHelper.NameFilter getImageNamesFilter() {
         if (null == imageNamesFilter)
             imageNamesFilter = displayName -> ImageHelper.isImageExtensionSupported(FileHelper.getExtension(displayName));
         return imageNamesFilter;
     }
 
+    /**
+     * Determine the MIME-type of the given binary data if it's a picture
+     *
+     * @param binary Picture binary data to determine the MIME-type for
+     * @return MIME-type of the given binary data; empty string if not supported
+     */
     public static String getMimeTypeFromPictureBinary(byte[] binary) {
         if (binary.length < 12) return "";
 
@@ -72,6 +93,13 @@ public final class ImageHelper {
         else return "image/*";
     }
 
+    /**
+     * Convert the given Drawable ID into a Bitmap
+     *
+     * @param context    Context to be used
+     * @param drawableId Drawable ID to get the Bitmap from
+     * @return Given drawable ID rendered into a Bitmap
+     */
     public static Bitmap getBitmapFromResource(@NonNull Context context, @DrawableRes int drawableId) {
         Drawable drawable = ContextCompat.getDrawable(context, drawableId);
         if (drawable instanceof BitmapDrawable) {
@@ -84,7 +112,7 @@ public final class ImageHelper {
     }
 
     // TODO make dimensions variable
-    private static Bitmap getBitmapFromVectorDrawable(Context context, @DrawableRes int drawableId) {
+    private static Bitmap getBitmapFromVectorDrawable(@NonNull final Context context, @DrawableRes int drawableId) {
         Drawable d = ContextCompat.getDrawable(context, drawableId);
 
         if (d != null) {
@@ -99,7 +127,14 @@ public final class ImageHelper {
         }
     }
 
-    public static Bitmap tintBitmap(@NonNull Bitmap bitmap, int color) {
+    /**
+     * Tint the given Bitmap with the given color
+     *
+     * @param bitmap Bitmap to be tinted
+     * @param color  Color to use as tint
+     * @return Given Bitmap tinted with the given color
+     */
+    public static Bitmap tintBitmap(@NonNull Bitmap bitmap, @ColorInt int color) {
         Paint p = new Paint();
         p.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_IN));
         Bitmap b = Bitmap.createBitmap(bitmap.getWidth(), bitmap.getHeight(), ARGB_8888);

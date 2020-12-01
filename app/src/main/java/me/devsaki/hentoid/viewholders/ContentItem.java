@@ -13,6 +13,7 @@ import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import androidx.annotation.DrawableRes;
 import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -20,6 +21,7 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.annimon.stream.function.Consumer;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.model.GlideUrl;
 import com.bumptech.glide.load.model.LazyHeaders;
@@ -27,6 +29,7 @@ import com.bumptech.glide.request.RequestOptions;
 import com.mikepenz.fastadapter.FastAdapter;
 import com.mikepenz.fastadapter.drag.IExtendedDraggable;
 import com.mikepenz.fastadapter.items.AbstractItem;
+import com.mikepenz.fastadapter.swipe.IDrawerSwipeableViewHolder;
 import com.mikepenz.fastadapter.swipe.ISwipeable;
 import com.mikepenz.fastadapter.utils.DragDropUtil;
 
@@ -46,15 +49,21 @@ import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.activities.bundles.ContentItemBundle;
 import me.devsaki.hentoid.database.domains.Attribute;
 import me.devsaki.hentoid.database.domains.Content;
+import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.database.domains.QueueRecord;
 import me.devsaki.hentoid.enums.AttributeType;
+import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.services.ContentQueueManager;
 import me.devsaki.hentoid.ui.BlinkAnimation;
 import me.devsaki.hentoid.util.ImageHelper;
+import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.JsonHelper;
+import me.devsaki.hentoid.util.LanguageHelper;
+import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.util.ThemeHelper;
 import me.devsaki.hentoid.util.network.HttpHelper;
+import me.devsaki.hentoid.views.CircularProgressView;
 import timber.log.Timber;
 
 import static androidx.core.view.ViewCompat.requireViewById;
@@ -64,19 +73,23 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
 
     private static final RequestOptions glideRequestOptions;
 
-    @IntDef({ViewType.LIBRARY, ViewType.QUEUE, ViewType.ERRORS, ViewType.ONLINE})
+    @IntDef({ViewType.LIBRARY, ViewType.LIBRARY_GRID, ViewType.LIBRARY_EDIT, ViewType.QUEUE, ViewType.ERRORS, ViewType.ONLINE})
     @Retention(RetentionPolicy.SOURCE)
     public @interface ViewType {
         int LIBRARY = 0;
-        int QUEUE = 1;
-        int ERRORS = 2;
-        int ONLINE = 3;
+        int LIBRARY_GRID = 1;
+        int LIBRARY_EDIT = 2;
+        int QUEUE = 3;
+        int ERRORS = 4;
+        int ONLINE = 5;
     }
 
     private final Content content;
     private final @ViewType
     int viewType;
     private final boolean isEmpty;
+
+    private Consumer<ContentItem> deleteAction = null;
 
     // Drag, drop & swipe
     private final ItemTouchHelper touchHelper;
@@ -107,19 +120,20 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
     }
 
     // Constructor for library, online and error item
-    public ContentItem(Content content, @Nullable ItemTouchHelper touchHelper, @ViewType int viewType) {
+    public ContentItem(Content content, @Nullable ItemTouchHelper touchHelper, @ViewType int viewType, @Nullable final Consumer<ContentItem> deleteAction) {
         this.content = content;
         this.viewType = viewType;
         this.touchHelper = touchHelper;
+        this.deleteAction = deleteAction;
         isEmpty = (null == content);
-        isSwipeable = (viewType == ViewType.ERRORS);
+        isSwipeable = (content != null && (!content.getStatus().equals(StatusContent.EXTERNAL) || Preferences.isDeleteExternalLibrary()));
         if (content != null) setIdentifier(content.hashCode());
         else setIdentifier(generateIdForPlaceholder());
     }
 
     // Constructor for queued item
     public ContentItem(@NonNull QueueRecord record, ItemTouchHelper touchHelper) {
-        content = record.content.getTarget();
+        content = record.getContent().getTarget();
         viewType = ViewType.QUEUE;
         this.touchHelper = touchHelper;
         isEmpty = (null == content);
@@ -142,7 +156,8 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
     @Override
     public int getLayoutRes() {
         if (ViewType.LIBRARY == viewType || ViewType.ONLINE == viewType)
-            return R.layout.item_library;
+            return R.layout.item_library_content;
+        else if (ViewType.LIBRARY_GRID == viewType) return R.layout.item_library_content_grid2;
         else return R.layout.item_queue;
     }
 
@@ -153,7 +168,7 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
 
     @Override
     public boolean isDraggable() {
-        return (ViewType.QUEUE == viewType);
+        return (ViewType.QUEUE == viewType || ViewType.LIBRARY_EDIT == viewType);
     }
 
     @Override
@@ -197,32 +212,39 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
     }
 
 
-    public static class ContentViewHolder extends FastAdapter.ViewHolder<ContentItem> implements IDraggableViewHolder {
+    public static class ContentViewHolder extends FastAdapter.ViewHolder<ContentItem> implements IDraggableViewHolder, IDrawerSwipeableViewHolder, ISwipeableViewHolder {
 
         // Common elements
-        private View baseLayout;
-        private TextView tvTitle;
-        private ImageView ivCover;
-        private TextView tvSeries;
-        private TextView tvArtist;
-        private TextView tvPages;
-        private TextView tvTags;
-        private ImageView ivSite;
+        private final View baseLayout;
+        private final TextView tvTitle;
+        private final ImageView ivCover;
+        private final ImageView ivFlag;
+        private final TextView tvArtist;
+        private final TextView tvPages;
+        private final ImageView ivSite;
+        private final ImageView ivError;
+
+        private final View swipeResult;
+        private final View bookCard;
+        private final View tvUndoSwipe;
+        private final View deleteButton;
 
         // Specific to library content
         private View ivNew;
-        private ImageView ivError;
+        private TextView tvTags;
+        private TextView tvSeries;
         private ImageView ivFavourite;
+        private ImageView ivExternal;
+        private CircularProgressView readingProgress;
 
         // Specific to Queued content
-        private View swipeResult;
-        private View bookCard;
         private ProgressBar progressBar;
         private View ivTop;
         private View ivBottom;
         private View ivReorder;
-        private View tvUndoSwipe;
         private View ivRedownload;
+
+        private Runnable deleteActionRunnable = null;
 
 
         ContentViewHolder(View view, @ViewType int viewType) {
@@ -231,25 +253,34 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
             baseLayout = requireViewById(itemView, R.id.item);
             tvTitle = requireViewById(itemView, R.id.tvTitle);
             ivCover = requireViewById(itemView, R.id.ivCover);
-            tvArtist = requireViewById(itemView, R.id.tvArtist);
-            tvPages = requireViewById(itemView, R.id.tvPages);
+            ivFlag = requireViewById(itemView, R.id.ivFlag);
             ivSite = requireViewById(itemView, R.id.queue_site_button);
+            tvArtist = itemView.findViewById(R.id.tvArtist);
+            tvPages = itemView.findViewById(R.id.tvPages);
             ivError = itemView.findViewById(R.id.ivError);
             // Swipe elements
             swipeResult = itemView.findViewById(R.id.swipe_result_content);
             bookCard = itemView.findViewById(R.id.item_card);
             tvUndoSwipe = itemView.findViewById(R.id.undo_swipe);
+            deleteButton = itemView.findViewById(R.id.delete_btn);
 
             if (viewType == ViewType.LIBRARY) {
                 ivNew = itemView.findViewById(R.id.lineNew);
                 ivFavourite = itemView.findViewById(R.id.ivFavourite);
+                ivExternal = itemView.findViewById(R.id.ivExternal);
                 tvSeries = requireViewById(itemView, R.id.tvSeries);
                 tvTags = requireViewById(itemView, R.id.tvTags);
+                readingProgress = requireViewById(itemView, R.id.reading_progress);
             } else if (viewType == ViewType.ONLINE) {
                 tvTags = requireViewById(itemView, R.id.tvTags);
                 ivRedownload = itemView.findViewById(R.id.ivRedownload);
-            } else if (viewType == ViewType.QUEUE) {
-                progressBar = itemView.findViewById(R.id.pbDownload);
+            } else if (viewType == ViewType.LIBRARY_GRID) {
+                ivNew = itemView.findViewById(R.id.lineNew);
+                ivFavourite = itemView.findViewById(R.id.ivFavourite);
+                ivExternal = itemView.findViewById(R.id.ivExternal);
+            } else if (viewType == ViewType.QUEUE || viewType == ViewType.LIBRARY_EDIT) {
+                if (viewType == ViewType.QUEUE)
+                    progressBar = itemView.findViewById(R.id.pbDownload);
                 ivTop = itemView.findViewById(R.id.queueTopBtn);
                 ivBottom = itemView.findViewById(R.id.queueBottomBtn);
                 ivReorder = itemView.findViewById(R.id.ivReorder);
@@ -273,22 +304,28 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
                 if (boolValue != null) item.content.setFavourite(boolValue);
                 Long longValue = bundleParser.getReads();
                 if (longValue != null) item.content.setReads(longValue);
+                longValue = bundleParser.getReadPagesCount();
+                if (longValue != null) item.content.setReadPagesCount(longValue.intValue());
                 StatusContent status = bundleParser.getStatus();
                 if (status != null) item.content.setStatus(status);
                 String stringValue = bundleParser.getCoverUri();
                 if (stringValue != null) item.content.getCover().setFileUri(stringValue);
             }
 
+            if (item.deleteAction != null)
+                deleteActionRunnable = () -> item.deleteAction.accept(item);
+
             updateLayoutVisibility(item);
             attachCover(item.content);
+            attachFlag(item.content);
             attachTitle(item.content);
-            attachArtist(item.content);
-            if (tvSeries != null)
-                attachSeries(item.content);
-            attachPages(item.content, item.viewType);
+            if (readingProgress != null) attachReadingProgress(item.content);
+            if (tvArtist != null) attachArtist(item.content);
+            if (tvSeries != null) attachSeries(item.content);
+            if (tvPages != null) attachPages(item.content, item.viewType);
+            if (tvTags != null) attachTags(item.content);
             attachButtons(item);
-            if (tvTags != null)
-                attachTags(item.content);
+
             if (progressBar != null)
                 updateProgress(item.content, baseLayout, getAdapterPosition(), false);
             if (ivReorder != null)
@@ -308,7 +345,7 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
             if (ivNew != null)
                 ivNew.setVisibility((0 == item.getContent().getReads()) ? View.VISIBLE : View.GONE);
 
-            // Queue swipe
+            // Swipe
             if (swipeResult != null) {
                 bookCard.setVisibility((item.swipeDirection != 0) ? View.INVISIBLE : View.VISIBLE);
                 swipeResult.setVisibility((item.swipeDirection != 0) ? View.VISIBLE : View.GONE);
@@ -363,6 +400,20 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
                         .into(ivCover);
         }
 
+        private void attachFlag(@NonNull final Content content) {
+            List<Attribute> langAttributes = content.getAttributeMap().get(AttributeType.LANGUAGE);
+            if (langAttributes != null && !langAttributes.isEmpty())
+                for (Attribute lang : langAttributes) {
+                    @DrawableRes int resId = LanguageHelper.getFlagFromLanguage(ivFlag.getContext(), lang.getName());
+                    if (resId != 0) {
+                        ivFlag.setImageResource(resId);
+                        ivFlag.setVisibility(View.VISIBLE);
+                        return;
+                    }
+                }
+            ivFlag.setVisibility(View.GONE);
+        }
+
         private void attachTitle(@NonNull final Content content) {
             CharSequence title;
             Context context = tvTitle.getContext();
@@ -373,6 +424,16 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
             }
             tvTitle.setText(title);
             tvTitle.setTextColor(ThemeHelper.getColor(tvTitle.getContext(), R.color.card_title_light));
+        }
+
+        private void attachReadingProgress(@NonNull final Content content) {
+            List<ImageFile> imgs = content.getImageFiles();
+            if (imgs != null) {
+                readingProgress.setVisibility(View.VISIBLE);
+                readingProgress.setTotalColor(readingProgress.getContext(), R.color.transparent);
+                readingProgress.setTotal(content.getImageFiles().size() - 1L); // Remove the cover
+                readingProgress.setProgress1(content.getReadPagesCount());
+            }
         }
 
         private void attachArtist(@NonNull final Content content) {
@@ -391,12 +452,9 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
 
 
         private void attachSeries(@NonNull final Content content) {
-            Context context = tvSeries.getContext();
-            String templateSeries = context.getResources().getString(R.string.work_series);
             List<Attribute> seriesAttributes = content.getAttributeMap().get(AttributeType.SERIE);
             if (seriesAttributes == null || seriesAttributes.isEmpty()) {
                 tvSeries.setVisibility(View.GONE);
-                tvSeries.setText(templateSeries.replace("@series@", context.getResources().getString(R.string.work_untitled)));
             } else {
                 tvSeries.setVisibility(View.VISIBLE);
                 List<String> allSeries = new ArrayList<>();
@@ -404,7 +462,7 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
                     allSeries.add(attribute.getName());
                 }
                 String series = android.text.TextUtils.join(", ", allSeries);
-                tvSeries.setText(templateSeries.replace("@series@", series));
+                tvSeries.setText(tvSeries.getContext().getString(R.string.work_series, series));
             }
         }
 
@@ -413,17 +471,16 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
             Context context = tvPages.getContext();
 
             String template;
-            if (viewType == ViewType.QUEUE || viewType == ViewType.ERRORS) {
-                template = context.getResources().getString(R.string.work_pages_queue);
-                template = template.replace("@pages@", content.getQtyPages() + "");
+            String nbPages = content.getQtyPages() + "";
+            if (viewType == ViewType.QUEUE || viewType == ViewType.ERRORS || viewType == ViewType.LIBRARY_EDIT) {
                 if (viewType == ViewType.ERRORS) {
                     long nbMissingPages = content.getQtyPages() - content.getNbDownloadedPages();
                     if (nbMissingPages > 0)
-                        template = template.replace("@missing@", " (" + nbMissingPages + " missing)");
+                        template = context.getString(R.string.work_pages_queue, nbPages, " (" + nbMissingPages + " missing)");
                     else
-                        template = template.replace("@missing@", "");
+                        template = context.getString(R.string.work_pages_queue, nbPages, "");
                 } else
-                    template = template.replace("@missing@", "");
+                    template = context.getString(R.string.work_pages_queue, nbPages, "");
             } else { // Library
                 template = context.getResources().getString(R.string.work_pages_library, content.getNbDownloadedPages(), content.getSize() * 1.0 / (1024 * 1024));
             }
@@ -465,7 +522,11 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
                 ivSite.setImageResource(R.drawable.ic_cherry);
             }
 
-            if (ViewType.QUEUE == item.viewType) {
+            if (deleteButton != null) {
+                deleteButton.setOnClickListener(v -> deleteActionRunnable.run());
+            }
+
+            if (ViewType.QUEUE == item.viewType || ViewType.LIBRARY_EDIT == item.viewType) {
                 boolean isFirstItem = (0 == getAdapterPosition());
                 ivTop.setVisibility((isFirstItem) ? View.INVISIBLE : View.VISIBLE);
                 ivTop.setVisibility(View.VISIBLE);
@@ -479,8 +540,8 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
                     ivRedownload.setVisibility(View.VISIBLE);
                 else
                     ivRedownload.setVisibility(View.GONE);
-            } else if (ViewType.LIBRARY == item.viewType) {
-                ivFavourite.setVisibility(View.VISIBLE);
+            } else if (ViewType.LIBRARY == item.viewType || ViewType.LIBRARY_GRID == item.viewType) {
+                ivExternal.setVisibility(content.getStatus().equals(StatusContent.EXTERNAL) ? View.VISIBLE : View.GONE);
                 if (content.isFavourite()) {
                     ivFavourite.setImageResource(R.drawable.ic_fav_full);
                 } else {
@@ -520,7 +581,7 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
                         String pagesText = tvPages.getText().toString();
                         int separator = pagesText.indexOf(";");
                         if (separator > -1) pagesText = pagesText.substring(0, separator);
-                        pagesText = pagesText + String.format(Locale.US, "; estimated %.1f MB", content.getBookSizeEstimate() / (1024 * 1024));
+                        pagesText = pagesText + String.format(Locale.ENGLISH, "; estimated %.1f MB", content.getBookSizeEstimate() / (1024 * 1024));
                         tvPages.setText(pagesText);
                     }
                 } else {
@@ -564,6 +625,10 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
         @Override
         public void unbindView(@NotNull ContentItem item) {
 //            item.setUndoSwipeAction(null);
+            deleteActionRunnable = null;
+            bookCard.setTranslationX(0f);
+            if (ivCover != null && Helper.isValidContextForGlide(ivCover))
+                Glide.with(ivCover).clear(ivCover);
         }
 
         @Override
@@ -576,6 +641,22 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
         public void onDropped() {
             // TODO fix incorrect visual behaviour when dragging an item to 1st position
             //bookCard.setBackground(bookCard.getContext().getDrawable(R.drawable.bg_book_card));
+        }
+
+        @NotNull
+        @Override
+        public View getSwipeableView() {
+            return bookCard;
+        }
+
+        @Override
+        public void onSwiped() {
+            if (deleteButton != null) deleteButton.setVisibility(View.VISIBLE);
+        }
+
+        @Override
+        public void onUnswiped() {
+            if (deleteButton != null) deleteButton.setVisibility(View.GONE);
         }
     }
 }

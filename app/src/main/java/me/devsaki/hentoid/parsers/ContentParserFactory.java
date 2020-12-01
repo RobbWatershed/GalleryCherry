@@ -13,6 +13,8 @@ import me.devsaki.hentoid.parsers.content.XnxxContent;
 import me.devsaki.hentoid.parsers.images.DummyParser;
 import me.devsaki.hentoid.parsers.images.ImageListParser;
 import me.devsaki.hentoid.parsers.images.LusciousParser;
+import me.devsaki.hentoid.parsers.images.ManhwaParser;
+import me.devsaki.hentoid.parsers.images.MrmParser;
 import me.devsaki.hentoid.parsers.images.XhamsterParser;
 
 public class ContentParserFactory {
@@ -27,7 +29,7 @@ public class ContentParserFactory {
     }
 
 
-    public Class getContentParserClass(Site site) {
+    public Class<? extends ContentParser> getContentParserClass(Site site) {
         switch (site) {
             case HELLPORNO:
                 return HellpornoContent.class;

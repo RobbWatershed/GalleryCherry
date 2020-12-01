@@ -1,7 +1,10 @@
 package me.devsaki.hentoid.enums;
 
+import androidx.annotation.Nullable;
+
 import io.objectbox.converter.PropertyConverter;
 import me.devsaki.hentoid.R;
+import me.devsaki.hentoid.util.network.HttpHelper;
 import timber.log.Timber;
 
 /**
@@ -29,7 +32,6 @@ public enum Site {
     private final int code;
     private final String description;
     private final String url;
-    private final String uniqueKeyword;
     private final int ico;
     private final boolean canKnowHentoidAgent;
     private final boolean hasImageProcessing;
@@ -39,7 +41,6 @@ public enum Site {
     Site(int code,
          String description,
          String url,
-         String uniqueKeyword,
          int ico,
          boolean canKnowHentoidAgent,
          boolean hasImageProcessing,
@@ -48,7 +49,6 @@ public enum Site {
         this.code = code;
         this.description = description;
         this.url = url;
-        this.uniqueKeyword = uniqueKeyword;
         this.ico = ico;
         this.canKnowHentoidAgent = canKnowHentoidAgent;
         this.hasImageProcessing = hasImageProcessing;
@@ -72,15 +72,17 @@ public enum Site {
         return NONE;
     }
 
+    @Nullable
     public static Site searchByUrl(String url) {
         if (null == url || url.isEmpty()) {
             Timber.w("Invalid url");
             return null;
         }
-        for (Site s : Site.values()) {
-            if (url.contains(s.getUniqueKeyword()))
+
+        for (Site s : Site.values())
+            if (s.code > 0 && HttpHelper.getDomainFromUri(url).equalsIgnoreCase(HttpHelper.getDomainFromUri(s.url)))
                 return s;
-        }
+
         return Site.NONE;
     }
 
@@ -90,10 +92,6 @@ public enum Site {
 
     public String getDescription() {
         return description;
-    }
-
-    private String getUniqueKeyword() {
-        return uniqueKeyword;
     }
 
     public String getUrl() {

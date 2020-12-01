@@ -135,7 +135,7 @@ public class ParseHelper {
         ImageFile result = new ImageFile();
 
         int nbMaxDigits = (int) (Math.floor(Math.log10(nbPages)) + 1);
-        String name = String.format(Locale.US, "%0" + nbMaxDigits + "d", order);
+        String name = String.format(Locale.ENGLISH, "%0" + nbMaxDigits + "d", order);
         result.setName(name).setOrder(order).setUrl(imgUrl).setStatus(status);
 
         return result;
@@ -164,7 +164,8 @@ public class ParseHelper {
 
         // Images
         int order = 1;
-        for (String s : imgUrls) result.add(urlToImageFile(s, order++, imgUrls.size(), status));
+        for (String s : imgUrls)
+            result.add(urlToImageFile(s.trim(), order++, imgUrls.size(), status));
 
         return result;
     }
