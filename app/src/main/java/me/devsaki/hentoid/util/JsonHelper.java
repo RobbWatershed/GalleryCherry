@@ -14,6 +14,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.lang.reflect.Type;
 import java.util.Date;
@@ -148,10 +149,6 @@ public class JsonHelper {
      */
     public static <T> T jsonToObject(@NonNull final Context context, DocumentFile f, Class<T> type) throws IOException {
         return jsonToObject(FileHelper.readFileAsString(context, f), type);
-    }
-
-    public static <T> T jsonToObject(File f, Class<T> type) throws IOException {
-        return jsonToObject(readJsonString(f), type);
     }
 
     /**

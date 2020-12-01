@@ -180,7 +180,7 @@ public class RedditAuthDownloadFragment extends Fragment {
         List<QueueRecord> queue = db.selectQueue();
         int lastIndex = 1;
         if (!queue.isEmpty()) {
-            lastIndex = queue.get(queue.size() - 1).rank + 1;
+            lastIndex = queue.get(queue.size() - 1).getRank() + 1;
         }
         db.insertQueue(contentId, lastIndex);
 

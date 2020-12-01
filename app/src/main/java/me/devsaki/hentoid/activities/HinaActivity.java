@@ -121,7 +121,7 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
     private UpdateInfo.SourceAlert alert;
 
     // Used to start processing when the recyclerView has finished updating
-    private final Debouncer<Integer> listRefreshDebouncer = new Debouncer<>(75, this::onRecyclerUpdated);
+    private Debouncer<Integer> listRefreshDebouncer;
 
     // TODO comment
     private Map<String, StatusContent> booksStatus;
@@ -199,6 +199,8 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
         alertIcon = findViewById(R.id.web_alert_icon);
         alertMessage = findViewById(R.id.web_alert_txt);
         displayAlertBanner();
+
+        listRefreshDebouncer = new Debouncer<>(this, 75, this::onRecyclerUpdated);
     }
 
     /**
@@ -408,7 +410,7 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
         showLoadingMessage();
         viewModel.setPagingMethod(true); // Runs a new search
 
-        pagedItemAdapter = new PagedModelAdapter<>(asyncDifferConfig, i -> new ContentItem(ContentItem.ViewType.ONLINE), c -> new ContentItem(c, null, ContentItem.ViewType.ONLINE));
+        pagedItemAdapter = new PagedModelAdapter<>(asyncDifferConfig, i -> new ContentItem(ContentItem.ViewType.ONLINE), c -> new ContentItem(c, null, ContentItem.ViewType.ONLINE, null));
         fastAdapter = FastAdapter.with(pagedItemAdapter);
         fastAdapter.setHasStableIds(true);
         ContentItem item = new ContentItem(ContentItem.ViewType.ONLINE);

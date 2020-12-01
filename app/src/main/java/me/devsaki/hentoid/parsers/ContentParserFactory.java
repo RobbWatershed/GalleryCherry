@@ -1,6 +1,7 @@
 package me.devsaki.hentoid.parsers;
 
 import me.devsaki.hentoid.enums.Site;
+import me.devsaki.hentoid.parsers.content.ContentParser;
 import me.devsaki.hentoid.parsers.content.FapalityContent;
 import me.devsaki.hentoid.parsers.content.HellpornoContent;
 import me.devsaki.hentoid.parsers.content.JjgirlsContent;
@@ -13,8 +14,6 @@ import me.devsaki.hentoid.parsers.content.XnxxContent;
 import me.devsaki.hentoid.parsers.images.DummyParser;
 import me.devsaki.hentoid.parsers.images.ImageListParser;
 import me.devsaki.hentoid.parsers.images.LusciousParser;
-import me.devsaki.hentoid.parsers.images.ManhwaParser;
-import me.devsaki.hentoid.parsers.images.MrmParser;
 import me.devsaki.hentoid.parsers.images.XhamsterParser;
 
 public class ContentParserFactory {

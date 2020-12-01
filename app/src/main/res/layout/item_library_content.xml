@@ -75,7 +75,6 @@
             android:src="@drawable/selector_download_action"
             android:tooltipText="@string/menu_redownload"
             android:visibility="gone"
-            android:tooltipText="@string/book_fav_help"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toBottomOf="@id/tvTags"

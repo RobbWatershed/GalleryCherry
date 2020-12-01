@@ -29,8 +29,6 @@ import me.devsaki.hentoid.activities.sources.JjgirlsActivity;
 import me.devsaki.hentoid.activities.sources.JpegworldActivity;
 import me.devsaki.hentoid.activities.sources.Link2GalleriesActivity;
 import me.devsaki.hentoid.activities.sources.LusciousActivity;
-import me.devsaki.hentoid.activities.sources.ManhwaActivity;
-import me.devsaki.hentoid.activities.sources.MrmActivity;
 import me.devsaki.hentoid.activities.sources.NextpicturezActivity;
 import me.devsaki.hentoid.activities.sources.PornPicGalleriesActivity;
 import me.devsaki.hentoid.activities.sources.PornPicsActivity;
@@ -249,10 +247,6 @@ public class Content implements Serializable {
                 return LusciousActivity.class;
             case FAPALITY:
                 return FapalityActivity.class;
-            case MRM:
-                return MrmActivity.class;
-            case MANHWA:
-                return ManhwaActivity.class;
             default:
                 return BaseWebActivity.class;
         }

@@ -939,7 +939,7 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
 
     private List<ImageFile> doSearchForMoreImages(@NonNull final Content c) {
         List<ImageFile> result = Collections.emptyList();
-        ImageListParser parser = ContentParserFactory.getInstance().getImageListParser(c);
+        ImageListParser parser = ContentParserFactory.getInstance().getImageListParser(c.getSite());
         try {
             List<ImageFile> imgs = parser.parseImageList(c);
             if (imgs.isEmpty()) return result;
@@ -1256,7 +1256,7 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
             // Specific to Cherry : due to redirections, the correct page URLs are those visible from onPageFinished
 //Timber.i(">> onPageFinished %s %s", isHtmlLoaded, url);
             // Launch on a new thread to avoid crashes
-            if (isBookGallery(url) && !isHtmlLoaded) parseResponseAsync(url, false);
+            if (isGalleryPage(url) && !isHtmlLoaded) parseResponseAsync(url, false);
             isHtmlLoaded = false; // Reset for the next page
             refreshStopMenu.setIcon(R.drawable.ic_action_refresh);
             refreshNavigationMenu();
