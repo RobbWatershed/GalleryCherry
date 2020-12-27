@@ -7,8 +7,6 @@ import android.content.Context;
 import android.content.res.Configuration;
 import android.os.Looper;
 import android.view.View;
-import android.view.View;
-import android.webkit.WebSettings;
 
 import androidx.annotation.DimenRes;
 import androidx.annotation.NonNull;

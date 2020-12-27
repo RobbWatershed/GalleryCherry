@@ -9,8 +9,8 @@ import java.util.List;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.json.sources.XhamsterGalleryContent;
 import me.devsaki.hentoid.json.sources.XhamsterGalleryQuery;
-import me.devsaki.hentoid.util.Consts;
 import me.devsaki.hentoid.util.JsonHelper;
+import me.devsaki.hentoid.util.network.HttpHelper;
 import okhttp3.HttpUrl;
 import okhttp3.Interceptor;
 import okhttp3.Request;
@@ -51,11 +51,10 @@ public class XhamsterParser extends BaseParser {
     }
 
     private static okhttp3.Response onIntercept(Interceptor.Chain chain) throws IOException {
-        Request request = chain.request()
-                .newBuilder()
-                .header("User-Agent", Consts.USER_AGENT)
-                .header("x-requested-with", "XMLHttpRequest")
-                .build();
-        return chain.proceed(request);
+        Request.Builder builder = chain.request().newBuilder();
+        if (null == chain.request().header("User-Agent") && null == chain.request().header("user-agent"))
+            builder.header(HttpHelper.HEADER_USER_AGENT, HttpHelper.getMobileUserAgent(false));
+        builder.header("x-requested-with", "XMLHttpRequest");
+        return chain.proceed(builder.build());
     }
 }

@@ -297,6 +297,7 @@ public class ViewerGalleryFragment extends Fragment {
 
     /**
      * Returns true if the current book has at least a favourite
+     *
      * @return True if the current book has at least a favourite
      */
     private boolean hasFavourite() {
@@ -360,6 +361,7 @@ public class ViewerGalleryFragment extends Fragment {
 
     /**
      * Display the yes/no dialog to make sure the user really wants to set the cover
+     *
      * @param item Item that contains the image to set as a cover
      */
     private void askSetSelectedCover(@NonNull final ImageFile item) {

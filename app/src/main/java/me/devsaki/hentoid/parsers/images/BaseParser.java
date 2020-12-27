@@ -6,12 +6,10 @@ import androidx.annotation.NonNull;
 
 import com.annimon.stream.Optional;
 
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-
-
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
 
 import java.io.IOException;
 import java.util.List;

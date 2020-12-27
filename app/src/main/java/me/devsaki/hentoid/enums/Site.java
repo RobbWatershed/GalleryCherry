@@ -13,20 +13,20 @@ import timber.log.Timber;
  */
 public enum Site {
 
-    XHAMSTER(0, "XHamster", "https://m.xhamster.com/photos/", R.drawable.ic_menu_xhamster, true, false, false, false),
-    XNXX(1, "XNXX", "https://multi.xnxx.com/", R.drawable.ic_menu_xnxx, true, false, false, false),
-    PORNPICS(2, "Pornpics", "https://www.pornpics.com/", R.drawable.ic_menu_pornpics, true, false, false, false),
-    JPEGWORLD(3, "Jpegworld", "https://www.jpegworld.com/", R.drawable.ic_menu_jpegworld, true, false, false, false),
-    NEXTPICTUREZ(4, "Nextpicturez", "http://www.nextpicturez.com/", R.drawable.ic_menu_nextpicturez, true, false, false, false),
-    HELLPORNO(5, "Hellporno", "https://hellporno.com/albums/", R.drawable.ic_menu_hellporno, true, false, false, false),
-    PORNPICGALLERIES(6, "Pornpicgalleries", "http://pornpicgalleries.com/", R.drawable.ic_menu_ppg, true, false, false, false),
-    LINK2GALLERIES(7, "Link2galleries", "https://www.link2galleries.com/", R.drawable.ic_menu_l2g, true, false, false, false),
-    REDDIT(8, "Reddit", "https://www.reddit.com/", R.drawable.ic_social_reddit, true, false, false, true),
-    JJGIRLS(9, "JJGirls", "https://jjgirls.com/mobile/", R.drawable.ic_menu_jjgirls, true, false, true, false),
-    LUSCIOUS(10, "luscious.net", "https://members.luscious.net/porn/", R.drawable.ic_menu_luscious, false, false, false, false),
-    FAPALITY(11, "Fapality", "https://fapality.com/photos/", R.drawable.ic_menu_fapality, true, false, false, false),
-    HINA(12, "Hina", "https://github.com/ixilia/hina", R.drawable.ic_menu_hina, true, false, false, false),
-    NONE(98, "none", "", R.drawable.ic_external_library, true, false, false, false); // External library; fallback site
+    XHAMSTER(0, "XHamster", "https://m.xhamster.com/photos/", R.drawable.ic_menu_xhamster),
+    XNXX(1, "XNXX", "https://multi.xnxx.com/", R.drawable.ic_menu_xnxx),
+    PORNPICS(2, "Pornpics", "https://www.pornpics.com/", R.drawable.ic_menu_pornpics),
+    JPEGWORLD(3, "Jpegworld", "https://www.jpegworld.com/", R.drawable.ic_menu_jpegworld),
+    NEXTPICTUREZ(4, "Nextpicturez", "http://www.nextpicturez.com/", R.drawable.ic_menu_nextpicturez),
+    HELLPORNO(5, "Hellporno", "https://hellporno.com/albums/", R.drawable.ic_menu_hellporno),
+    PORNPICGALLERIES(6, "Pornpicgalleries", "http://pornpicgalleries.com/", R.drawable.ic_menu_ppg),
+    LINK2GALLERIES(7, "Link2galleries", "https://www.link2galleries.com/", R.drawable.ic_menu_l2g),
+    REDDIT(8, "Reddit", "https://www.reddit.com/", R.drawable.ic_social_reddit, true, true, false, false, true), // Reddit is treated as a booru source
+    JJGIRLS(9, "JJGirls", "https://jjgirls.com/mobile/", R.drawable.ic_menu_jjgirls, true, true, false, true, false), // JJgirls uses the backup URL mechanism to fill in the gaps of fake image links leading to ads
+    LUSCIOUS(10, "luscious.net", "https://members.luscious.net/porn/", R.drawable.ic_menu_luscious),
+    FAPALITY(11, "Fapality", "https://fapality.com/photos/", R.drawable.ic_menu_fapality),
+    HINA(12, "Hina", "https://github.com/ixilia/hina", R.drawable.ic_menu_hina),
+    NONE(98, "none", "", R.drawable.ic_external_library); // External library; fallback site
 
 
     private final int code;
@@ -71,6 +71,7 @@ public enum Site {
         this.useHentoidAgent = false;
         this.hasImageProcessing = false;
         this.hasBackupURLs = false;
+        this.isDanbooru = false;
     }
 
     public static Site searchByCode(long code) {
