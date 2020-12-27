@@ -15,6 +15,7 @@ import androidx.documentfile.provider.DocumentFile;
 import androidx.fragment.app.Fragment;
 
 import com.annimon.stream.Collectors;
+import com.annimon.stream.Optional;
 import com.annimon.stream.Stream;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
@@ -24,7 +25,9 @@ import java.lang.annotation.RetentionPolicy;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import me.devsaki.hentoid.HentoidApp;
 import me.devsaki.hentoid.R;
@@ -34,6 +37,7 @@ import me.devsaki.hentoid.database.ObjectBoxDAO;
 import me.devsaki.hentoid.database.domains.Attribute;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.ImageFile;
+import me.devsaki.hentoid.database.domains.SiteBookmark;
 import me.devsaki.hentoid.enums.AttributeType;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
@@ -457,8 +461,10 @@ public class ImportHelper {
         boolean coverExists = Stream.of(images).anyMatch(ImageFile::isCover);
         if (!coverExists) createCover(images);
         result.setImageFiles(images);
-        if (0 == result.getQtyPages())
-            result.setQtyPages(images.size() - 1); // Minus the cover
+        if (0 == result.getQtyPages()) {
+            int countUnreadable = (int) Stream.of(images).filterNot(ImageFile::isReadable).count();
+            result.setQtyPages(images.size() - countUnreadable); // Minus unreadable pages (cover thumb)
+        }
         result.computeSize();
         return result;
     }
@@ -498,8 +504,10 @@ public class ImportHelper {
         boolean coverExists = Stream.of(images).anyMatch(ImageFile::isCover);
         if (!coverExists) createCover(images);
         result.setImageFiles(images);
-        if (0 == result.getQtyPages())
-            result.setQtyPages(images.size() - 1); // Minus the cover
+        if (0 == result.getQtyPages()) {
+            int countUnreadable = (int) Stream.of(images).filterNot(ImageFile::isReadable).count();
+            result.setQtyPages(images.size() - countUnreadable); // Minus unreadable pages (cover thumb)
+        }
         result.computeSize();
         return result;
     }
@@ -530,15 +538,8 @@ public class ImportHelper {
      */
     public static void createCover(@NonNull final List<ImageFile> images) {
         if (!images.isEmpty()) {
-            ImageFile firstImg = images.get(0);
-            ImageFile cover = new ImageFile(0, "", images.get(0).getStatus(), images.size());
-            cover.setName(Consts.THUMB_FILE_NAME);
-            cover.setUrl(firstImg.getUrl());
-            cover.setFileUri(firstImg.getFileUri());
-            cover.setSize(firstImg.getSize());
-            cover.setMimeType(firstImg.getMimeType());
-            cover.setIsCover(true);
-            images.add(0, cover);
+            // Set the 1st element as cover
+            images.get(0).setIsCover(true);
         }
     }
 
@@ -564,13 +565,28 @@ public class ImportHelper {
             @NonNull final Context context,
             @NonNull final List<DocumentFile> subFolders,
             @NonNull final ContentProviderClient client,
-            @NonNull final List<String> parentNames) {
+            @NonNull final List<String> parentNames,
+            @NonNull final CollectionDAO dao) {
         List<Content> result = new ArrayList<>();
 
         for (DocumentFile subfolder : subFolders) {
-            List<DocumentFile> archives = FileHelper.listFiles(context, subfolder, client, ArchiveHelper.getArchiveNamesFilter());
+            List<DocumentFile> files = FileHelper.listFiles(context, subfolder, client, null);
+
+            List<DocumentFile> archives = new ArrayList<>();
+            List<DocumentFile> jsons = new ArrayList<>();
+
+            // Look for the interesting stuff
+            for (DocumentFile file : files)
+                if (file.getName() != null) {
+                    if (ArchiveHelper.getArchiveNamesFilter().accept(file.getName()))
+                        archives.add(file);
+                    else if (JsonHelper.getJsonNamesFilter().accept(file.getName()))
+                        jsons.add(file);
+                }
+
             for (DocumentFile archive : archives) {
-                Content c = scanArchive(context, archive, parentNames, StatusContent.EXTERNAL);
+                DocumentFile json = getFileWithName(jsons, archive.getName());
+                Content c = scanArchive(context, subfolder, archive, parentNames, StatusContent.EXTERNAL, dao, json);
                 if (!c.getStatus().equals(StatusContent.IGNORED))
                     result.add(c);
             }
@@ -581,11 +597,25 @@ public class ImportHelper {
 
     public static Content scanArchive(
             @NonNull final Context context,
+            @NonNull final DocumentFile parentFolder,
             @NonNull final DocumentFile archive,
             @NonNull final List<String> parentNames,
-            @NonNull final StatusContent targetStatus) {
-        List<ArchiveHelper.ArchiveEntry> entries = Collections.emptyList();
+            @NonNull final StatusContent targetStatus,
+            @NonNull final CollectionDAO dao,
+            @Nullable final DocumentFile jsonFile) {
 
+        Content result = null;
+        if (jsonFile != null) {
+            try {
+                JsonContent content = JsonHelper.jsonToObject(context, jsonFile, JsonContent.class);
+                result = content.toEntity(dao);
+                result.setJsonUri(jsonFile.getUri().toString());
+            } catch (IOException ioe) {
+                Timber.w(ioe);
+            }
+        }
+
+        List<ArchiveHelper.ArchiveEntry> entries = Collections.emptyList();
         try {
             entries = ArchiveHelper.getArchiveEntries(context, archive);
         } catch (Exception e) {
@@ -603,22 +633,29 @@ public class ImportHelper {
         // Sort by number of images desc
         List<ArchiveHelper.ArchiveEntry> entryList = Stream.of(imageEntries).sortBy(ie -> -ie.size()).toList().get(0);
 
-        List<ImageFile> images = ContentHelper.createImageListFromArchiveEntries(archive.getUri(), entryList, targetStatus, 1, "");
+        List<ImageFile> images = ContentHelper.createImageListFromArchiveEntries(archive.getUri(), entryList, targetStatus, 0, "");
         boolean coverExists = Stream.of(images).anyMatch(ImageFile::isCover);
         if (!coverExists) createCover(images);
 
         // Create content envelope
-        Content result = new Content().setSite(Site.NONE).setTitle((null == archive.getName()) ? "" : FileHelper.getFileNameWithoutExtension(archive.getName())).setUrl("");
-        result.setDownloadDate(archive.lastModified());
-        result.addAttributes(parentNamesAsTags(parentNames));
-        result.addAttributes(newExternalAttribute());
-
+        if (null == result) {
+            result = new Content().setSite(Site.NONE).setTitle((null == archive.getName()) ? "" : FileHelper.getFileNameWithoutExtension(archive.getName())).setUrl("");
+            result.setDownloadDate(archive.lastModified());
+            result.addAttributes(parentNamesAsTags(parentNames));
+            result.addAttributes(newExternalAttribute());
+        }
         result.setStatus(targetStatus).setStorageUri(archive.getUri().toString()); // Here storage URI is a file URI, not a folder
+        result.setArchiveLocationUri(parentFolder.getUri().toString());
 
         result.setImageFiles(images);
-        if (0 == result.getQtyPages())
-            result.setQtyPages(images.size() - 1); // Minus the cover
+        if (0 == result.getQtyPages()) {
+            int countUnreadable = (int) Stream.of(images).filterNot(ImageFile::isReadable).count();
+            result.setQtyPages(images.size() - countUnreadable); // Minus unreadable pages (cover thumb)
+        }
         result.computeSize();
+        // e.g. when the ZIP table doesn't contain any size entry
+        if (result.getSize() <= 0) result.forceSize(archive.length());
+
         return result;
     }
 
@@ -628,5 +665,22 @@ public class ImportHelper {
         if (-1 == separatorIndex) return "";
 
         return path.substring(0, separatorIndex);
+    }
+
+    public static int importBookmarks(@NonNull final CollectionDAO dao, List<SiteBookmark> bookmarks) {
+        // Don't import bookmarks that have the same URL as existing ones
+        Set<SiteBookmark> existingBookmarkUrls = new HashSet<>(dao.selectAllBookmarks());
+        List<SiteBookmark> bookmarksToImport = Stream.of(new HashSet<>(bookmarks)).filterNot(existingBookmarkUrls::contains).toList();
+        dao.insertBookmarks(bookmarksToImport);
+        return bookmarksToImport.size();
+    }
+
+    @Nullable
+    public static DocumentFile getFileWithName(List<DocumentFile> files, @Nullable String name) {
+        if (null == name) return null;
+
+        String targetBareName = FileHelper.getFileNameWithoutExtension(name);
+        Optional<DocumentFile> file = Stream.of(files).filter(f -> (f.getName() != null && FileHelper.getFileNameWithoutExtension(f.getName()).equalsIgnoreCase(targetBareName))).findFirst();
+        return file.orElse(null);
     }
 }

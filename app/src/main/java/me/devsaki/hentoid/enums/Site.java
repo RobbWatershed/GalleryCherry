@@ -33,7 +33,8 @@ public enum Site {
     private final String description;
     private final String url;
     private final int ico;
-    private final boolean canKnowHentoidAgent;
+    private final boolean useMobileAgent;
+    private final boolean useHentoidAgent;
     private final boolean hasImageProcessing;
     private final boolean hasBackupURLs;
     private final boolean isDanbooru;
@@ -42,7 +43,8 @@ public enum Site {
          String description,
          String url,
          int ico,
-         boolean canKnowHentoidAgent,
+         boolean useMobileAgent,
+         boolean useHentoidAgent,
          boolean hasImageProcessing,
          boolean hasBackupURLs,
          boolean isDanbooru) {
@@ -50,10 +52,25 @@ public enum Site {
         this.description = description;
         this.url = url;
         this.ico = ico;
-        this.canKnowHentoidAgent = canKnowHentoidAgent;
+        this.useMobileAgent = useMobileAgent;
+        this.useHentoidAgent = useHentoidAgent;
         this.hasImageProcessing = hasImageProcessing;
         this.hasBackupURLs = hasBackupURLs;
         this.isDanbooru = isDanbooru;
+    }
+
+    Site(int code,
+         String description,
+         String url,
+         int ico) {
+        this.code = code;
+        this.description = description;
+        this.url = url;
+        this.ico = ico;
+        this.useMobileAgent = true;
+        this.useHentoidAgent = false;
+        this.hasImageProcessing = false;
+        this.hasBackupURLs = false;
     }
 
     public static Site searchByCode(long code) {
@@ -102,9 +119,12 @@ public enum Site {
         return ico;
     }
 
+    public boolean useMobileAgent() {
+        return useMobileAgent;
+    }
 
-    public boolean canKnowHentoidAgent() {
-        return canKnowHentoidAgent;
+    public boolean useHentoidAgent() {
+        return useHentoidAgent;
     }
 
     public boolean hasImageProcessing() {
@@ -121,6 +141,13 @@ public enum Site {
 
     public String getFolder() {
         return description;
+    }
+
+    public String getUserAgent() {
+        if (useMobileAgent())
+            return HttpHelper.getMobileUserAgent(useHentoidAgent());
+        else
+            return HttpHelper.getDesktopUserAgent(useHentoidAgent());
     }
 
     public static class SiteConverter implements PropertyConverter<Site, Long> {

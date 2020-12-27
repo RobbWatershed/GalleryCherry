@@ -15,6 +15,7 @@ import org.greenrobot.eventbus.Subscribe;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 import javax.annotation.Nullable;
 
@@ -89,7 +90,7 @@ public abstract class BaseParser implements ImageListParser {
         return result;
     }
 
-    public Optional<ImageFile> parseBackupUrl(@NonNull String url, int order, int maxPages) {
+    public Optional<ImageFile> parseBackupUrl(@NonNull String url, @NonNull Map<String, String> requestHeaders, int order, int maxPages) {
         return Optional.of(new ImageFile(order, url, StatusContent.SAVED, maxPages));
     }
 

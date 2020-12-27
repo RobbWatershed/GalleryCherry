@@ -13,9 +13,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.documentfile.provider.DocumentFile;
 
-import com.annimon.stream.Optional;
-import com.annimon.stream.Stream;
-
 import org.greenrobot.eventbus.EventBus;
 
 import java.io.IOException;
@@ -66,7 +63,7 @@ public class ImportService extends IntentService {
     public static final int STEP_1 = 1;
     public static final int STEP_2_BOOK_FOLDERS = 2;
     public static final int STEP_3_BOOKS = 3;
-    public static final int STEP_4_QUEUE = 4;
+    public static final int STEP_4_QUEUE_FINAL = 4;
 
     private static boolean running;
     private ServiceNotificationManager notificationManager;
@@ -214,7 +211,7 @@ public class ImportService extends IntentService {
                 }
 
                 // Find the corresponding flagged book in the library
-                Content existingFlaggedContent = dao.selectContentByFolderUri(bookFolder.getUri().toString(), true);
+                Content existingFlaggedContent = dao.selectContentByStorageUri(bookFolder.getUri().toString(), true);
 
                 // Detect JSON and try to parse it
                 try {
@@ -229,7 +226,8 @@ public class ImportService extends IntentService {
                         Content existingDuplicate = dao.selectContentBySourceAndUrl(content.getSite(), content.getUrl());
                         if (existingDuplicate != null && !existingDuplicate.isFlaggedForDeletion()) {
                             booksKO++;
-                            trace(Log.INFO, STEP_2_BOOK_FOLDERS, log, "Import book KO! (already in queue) : %s", bookFolder.getUri().toString());
+                            String location = ContentHelper.isInQueue(existingDuplicate.getStatus()) ? "queue" : "collection";
+                            trace(Log.INFO, STEP_2_BOOK_FOLDERS, log, "Import book KO! (already in " + location + ") : %s", bookFolder.getUri().toString());
                             continue;
                         }
 
@@ -255,26 +253,16 @@ public class ImportService extends IntentService {
                             }
                         }
 
-                        // Attach file Uri's to the book's images
+                        // Attach image file Uri's to the book's images
                         List<DocumentFile> imageFiles = FileHelper.listFiles(this, bookFolder, client, imageNames);
-                        if (!imageFiles.isEmpty()) { // No images described in the JSON -> recreate them
+                        if (!imageFiles.isEmpty()) {
+                            // No images described in the JSON -> recreate them
                             if (contentImages.isEmpty()) {
                                 contentImages = ContentHelper.createImageListFromFiles(imageFiles);
                                 content.setImageFiles(contentImages);
                                 content.getCover().setUrl(content.getCoverImageUrl());
                             } else { // Existing images described in the JSON -> map them
                                 contentImages = ContentHelper.matchFilesToImageList(imageFiles, contentImages);
-                                // If no cover is defined, get it too
-                                if (StatusContent.UNHANDLED_ERROR == content.getCover().getStatus()) {
-                                    Optional<DocumentFile> file = Stream.of(imageFiles).filter(f -> f.getName() != null && f.getName().startsWith(Consts.THUMB_FILE_NAME)).findFirst();
-                                    if (file.isPresent()) {
-                                        ImageFile cover = new ImageFile(0, content.getCoverImageUrl(), StatusContent.DOWNLOADED, content.getQtyPages());
-                                        cover.setName(Consts.THUMB_FILE_NAME);
-                                        cover.setFileUri(file.get().getUri().toString());
-                                        cover.setIsCover(true);
-                                        contentImages.add(0, cover);
-                                    }
-                                }
                                 content.setImageFiles(contentImages);
                             }
                         }
@@ -362,7 +350,7 @@ public class ImportService extends IntentService {
             // 4th pass : Import queue JSON
             DocumentFile queueFile = FileHelper.findFile(this, rootFolder, client, Consts.QUEUE_JSON_FILE_NAME);
             if (queueFile != null) importQueue(queueFile, dao, log);
-            else trace(Log.INFO, STEP_4_QUEUE, log, "No queue file found");
+            else trace(Log.INFO, STEP_4_QUEUE_FINAL, log, "No queue file found");
         } finally {
             // Write log in root folder
             DocumentFile logFile = LogUtil.writeLog(this, buildLogInfo(rename || cleanNoJSON || cleanNoImages, log));
@@ -377,7 +365,7 @@ public class ImportService extends IntentService {
             dao.deleteAllFlaggedGroups();
             dao.cleanup();
 
-            eventComplete(STEP_4_QUEUE, bookFolders.size(), booksOK, booksKO, logFile);
+            eventComplete(STEP_4_QUEUE_FINAL, bookFolders.size(), booksOK, booksKO, logFile);
             notificationManager.notify(new ImportCompleteNotification(booksOK, booksKO));
         }
 
@@ -412,29 +400,35 @@ public class ImportService extends IntentService {
     }
 
     private void importQueue(@NonNull DocumentFile queueFile, @NonNull CollectionDAO dao, @NonNull List<LogUtil.LogEntry> log) {
-        trace(Log.INFO, STEP_4_QUEUE, log, "Queue JSON found");
-        eventProgress(STEP_4_QUEUE, -1, 0, 0);
+        trace(Log.INFO, STEP_4_QUEUE_FINAL, log, "Queue JSON found");
+        eventProgress(STEP_4_QUEUE_FINAL, -1, 0, 0);
         JsonContentCollection contentCollection = deserialiseCollectionJson(queueFile);
         if (null != contentCollection) {
             int queueSize = (int) dao.countAllQueueBooks();
             List<Content> queuedContent = contentCollection.getQueue();
-            eventProgress(STEP_4_QUEUE, queuedContent.size(), 0, 0);
-            trace(Log.INFO, STEP_4_QUEUE, log, "Queue JSON deserialized : %s books detected", queuedContent.size() + "");
+            eventProgress(STEP_4_QUEUE_FINAL, queuedContent.size(), 0, 0);
+            trace(Log.INFO, STEP_4_QUEUE_FINAL, log, "Queue JSON deserialized : %s books detected", queuedContent.size() + "");
             List<QueueRecord> lst = new ArrayList<>();
             int count = 1;
             for (Content c : queuedContent) {
-                // Only add at the end of the queue if it isn't a duplicate
                 Content duplicate = dao.selectContentBySourceAndUrl(c.getSite(), c.getUrl());
                 if (null == duplicate) {
-                    long newContentId = ContentHelper.addContent(this, dao, c);
-                    lst.add(new QueueRecord(newContentId, queueSize++));
+                    if (c.getStatus().equals(StatusContent.ERROR)) {
+                        // Add error books as library entries, not queue entries
+                        c.computeSize();
+                        ContentHelper.addContent(this, dao, c);
+                    } else {
+                        // Only add at the end of the queue if it isn't a duplicate
+                        long newContentId = ContentHelper.addContent(this, dao, c);
+                        lst.add(new QueueRecord(newContentId, queueSize++));
+                    }
                 }
-                eventProgress(STEP_4_QUEUE, queuedContent.size(), count++, 0);
+                eventProgress(STEP_4_QUEUE_FINAL, queuedContent.size(), count++, 0);
             }
             dao.updateQueue(lst);
-            trace(Log.INFO, STEP_4_QUEUE, log, "Import queue succeeded");
+            trace(Log.INFO, STEP_4_QUEUE_FINAL, log, "Import queue succeeded");
         } else {
-            trace(Log.INFO, STEP_4_QUEUE, log, "Import queue failed : Queue JSON unreadable");
+            trace(Log.INFO, STEP_4_QUEUE_FINAL, log, "Import queue failed : Queue JSON unreadable");
         }
     }
 

@@ -338,7 +338,7 @@ public class ObjectBoxDB {
     }
 
     Query<Content> selectVisibleContentQ() {
-        return selectContentSearchContentQ("", -1, Collections.emptyList(), false, Preferences.Constant.ORDER_FIELD_NONE, false);
+        return selectContentSearchContentQ("", -1, Collections.emptyList(), false, false, Preferences.Constant.ORDER_FIELD_NONE, false);
     }
 
     @Nullable
@@ -359,8 +359,8 @@ public class ObjectBoxDB {
     }
 
     @Nullable
-    Content selectContentByFolderUri(@NonNull final String folderUri, boolean onlyFlagged) {
-        QueryBuilder<Content> queryBuilder = store.boxFor(Content.class).query().equal(Content_.storageUri, folderUri);
+    Content selectContentEndWithStorageUri(@NonNull final String folderUriEnd, boolean onlyFlagged) {
+        QueryBuilder<Content> queryBuilder = store.boxFor(Content.class).query().endsWith(Content_.storageUri, folderUriEnd);
         if (onlyFlagged) queryBuilder.equal(Content_.isFlaggedForDeletion, true);
 
         return queryBuilder.build().findFirst();
@@ -435,7 +435,8 @@ public class ObjectBoxDB {
             String title,
             long groupId,
             List<Attribute> metadata,
-            boolean filterFavourites,
+            boolean filterBookFavourites,
+            boolean filterPageFavourites,
             int orderField,
             boolean orderDesc) {
         if (Preferences.Constant.ORDER_FIELD_CUSTOM == orderField)
@@ -457,7 +458,7 @@ public class ObjectBoxDB {
 
         if (hasSiteFilter)
             query.in(Content_.site, getIdsFromAttributes(sources));
-        if (filterFavourites) query.equal(Content_.favourite, true);
+        if (filterBookFavourites) query.equal(Content_.favourite, true);
         if (hasTitleFilter) query.contains(Content_.title, title);
         if (hasTagFilter) {
             for (Map.Entry<AttributeType, List<Attribute>> entry : metadataMap.entrySet()) {
@@ -470,6 +471,7 @@ public class ObjectBoxDB {
                 }
             }
         }
+        if (filterPageFavourites) filterWithPageFavs(query);
         if (hasGroupFilter) {
             Group group = store.boxFor(Group.class).get(groupId);
             if (group != null && group.grouping.equals(Grouping.DL_DATE)) // According to days since download date
@@ -528,11 +530,12 @@ public class ObjectBoxDB {
         return Helper.getPrimitiveLongArrayFromList(Stream.of(query.build().find()).map(gi -> gi.content.getTargetId()).toList());
     }
 
-    private Query<Content> selectContentUniversalAttributesQ(String queryStr, long groupId, boolean filterFavourites) {
+    private Query<Content> selectContentUniversalAttributesQ(String queryStr, long groupId, boolean filterBookFavourites, boolean filterPageFavourites) {
         QueryBuilder<Content> query = store.boxFor(Content.class).query();
         query.in(Content_.status, libraryStatus);
 
-        if (filterFavourites) query.equal(Content_.favourite, true);
+        if (filterBookFavourites) query.equal(Content_.favourite, true);
+        if (filterPageFavourites) filterWithPageFavs(query);
         query.link(Content_.attributes).contains(Attribute_.name, queryStr, QueryBuilder.StringOrder.CASE_INSENSITIVE);
 
         if (groupId > 0) query.in(Content_.id, selectFilteredContent(groupId));
@@ -543,7 +546,8 @@ public class ObjectBoxDB {
     private Query<Content> selectContentUniversalContentQ(
             String queryStr,
             long groupId,
-            boolean filterFavourites,
+            boolean filterBookFavourites,
+            boolean filterPageFavourites,
             long[] additionalIds,
             int orderField,
             boolean orderDesc) {
@@ -553,7 +557,9 @@ public class ObjectBoxDB {
         QueryBuilder<Content> query = store.boxFor(Content.class).query();
         query.in(Content_.status, libraryStatus);
 
-        if (filterFavourites) query.equal(Content_.favourite, true);
+        if (filterBookFavourites) query.equal(Content_.favourite, true);
+        if (filterPageFavourites) filterWithPageFavs(query);
+
         query.contains(Content_.title, queryStr, QueryBuilder.StringOrder.CASE_INSENSITIVE);
         query.or().equal(Content_.uniqueSiteId, queryStr);
         //        query.or().link(Content_.attributes).contains(Attribute_.name, queryStr, QueryBuilder.StringOrder.CASE_INSENSITIVE); // Use of or() here is not possible yet with ObjectBox v2.3.1
@@ -604,25 +610,27 @@ public class ObjectBoxDB {
     Query<Content> selectContentUniversalQ(
             String queryStr,
             long groupId,
-            boolean filterFavourites,
+            boolean filterBookFavourites,
+            boolean filterPageFavourites,
             int orderField,
             boolean orderDesc) {
         // Due to objectBox limitations (see https://github.com/objectbox/objectbox-java/issues/497 and https://github.com/objectbox/objectbox-java/issues/201)
         // querying Content and attributes have to be done separately
-        Query<Content> contentAttrSubQuery = selectContentUniversalAttributesQ(queryStr, groupId, filterFavourites);
-        return selectContentUniversalContentQ(queryStr, groupId, filterFavourites, contentAttrSubQuery.findIds(), orderField, orderDesc);
+        Query<Content> contentAttrSubQuery = selectContentUniversalAttributesQ(queryStr, groupId, filterBookFavourites, filterPageFavourites);
+        return selectContentUniversalContentQ(queryStr, groupId, filterBookFavourites, filterPageFavourites, contentAttrSubQuery.findIds(), orderField, orderDesc);
     }
 
     long[] selectContentUniversalByGroupItem(
             String queryStr,
             long groupId,
-            boolean filterFavourites,
+            boolean filterBookFavourites,
+            boolean filterPageFavourites,
             int orderField,
             boolean orderDesc) {
         // Due to objectBox limitations (see https://github.com/objectbox/objectbox-java/issues/497 and https://github.com/objectbox/objectbox-java/issues/201)
         // querying Content and attributes have to be done separately
-        Query<Content> contentAttrSubQuery = selectContentUniversalAttributesQ(queryStr, groupId, filterFavourites);
-        return selectContentUniversalContentByGroupItem(queryStr, groupId, filterFavourites, contentAttrSubQuery.findIds(), orderField, orderDesc);
+        Query<Content> contentAttrSubQuery = selectContentUniversalAttributesQ(queryStr, groupId, filterBookFavourites, filterPageFavourites);
+        return selectContentUniversalContentByGroupItem(queryStr, groupId, filterBookFavourites, contentAttrSubQuery.findIds(), orderField, orderDesc);
     }
 
     private static long[] shuffleRandomSortId(Query<Content> query) {
@@ -638,9 +646,9 @@ public class ObjectBoxDB {
         return Helper.getPrimitiveLongArrayFromList(result);
     }
 
-    long[] selectContentSearchId(String title, long groupId, List<Attribute> tags, boolean filterFavourites, int orderField, boolean orderDesc) {
+    long[] selectContentSearchId(String title, long groupId, List<Attribute> tags, boolean filterBookFavourites, boolean filterPageFavourites, int orderField, boolean orderDesc) {
         long[] result;
-        Query<Content> query = selectContentSearchContentQ(title, groupId, tags, filterFavourites, orderField, orderDesc);
+        Query<Content> query = selectContentSearchContentQ(title, groupId, tags, filterBookFavourites, filterPageFavourites, orderField, orderDesc);
 
         if (orderField != Preferences.Constant.ORDER_FIELD_RANDOM) {
             result = query.findIds();
@@ -650,12 +658,12 @@ public class ObjectBoxDB {
         return result;
     }
 
-    long[] selectContentUniversalId(String queryStr, long groupId, boolean filterFavourites, int orderField, boolean orderDesc) {
+    long[] selectContentUniversalId(String queryStr, long groupId, boolean filterBookFavourites, boolean filterPageFavourites, int orderField, boolean orderDesc) {
         long[] result;
         // Due to objectBox limitations (see https://github.com/objectbox/objectbox-java/issues/497 and https://github.com/objectbox/objectbox-java/issues/201)
         // querying Content and attributes have to be done separately
-        Query<Content> contentAttrSubQuery = selectContentUniversalAttributesQ(queryStr, groupId, filterFavourites);
-        Query<Content> query = selectContentUniversalContentQ(queryStr, groupId, filterFavourites, contentAttrSubQuery.findIds(), orderField, orderDesc);
+        Query<Content> contentAttrSubQuery = selectContentUniversalAttributesQ(queryStr, groupId, filterBookFavourites, filterPageFavourites);
+        Query<Content> query = selectContentUniversalContentQ(queryStr, groupId, filterBookFavourites, filterPageFavourites, contentAttrSubQuery.findIds(), orderField, orderDesc);
 
         if (orderField != Preferences.Constant.ORDER_FIELD_RANDOM) {
             result = query.findIds();
@@ -668,7 +676,11 @@ public class ObjectBoxDB {
     private long[] selectFilteredContent(long groupId) {
         if (groupId < 1) return new long[0];
 
-        return Helper.getPrimitiveLongArrayFromList(store.boxFor(Group.class).get(groupId).getContentIds());
+        Box<Group> box = store.boxFor(Group.class);
+        Group group = box.get(groupId);
+        if (null == group) return new long[0];
+
+        return Helper.getPrimitiveLongArrayFromList(group.getContentIds());
     }
 
     private long[] selectFilteredContent(List<Attribute> attrs, boolean filterFavourites) {
@@ -710,6 +722,18 @@ public class ObjectBoxDB {
         }
 
         return Helper.getPrimitiveLongArrayFromList(results);
+    }
+
+    /*
+    private long[] selectContentWithPageFavs() {
+        QueryBuilder<ImageFile> builder = store.boxFor(ImageFile.class).query();
+        builder.equal(ImageFile_.favourite, true);
+        return builder.build().property(ImageFile_.contentId).distinct().findLongs();
+    }
+     */
+
+    private void filterWithPageFavs(QueryBuilder<Content> builder) {
+        builder.link(Content_.imageFiles).equal(ImageFile_.favourite, true);
     }
 
     List<Attribute> selectAvailableSources() {
@@ -761,6 +785,20 @@ public class ObjectBoxDB {
 
     Query<Content> selectErrorContentQ() {
         return store.boxFor(Content.class).query().equal(Content_.status, StatusContent.ERROR.getCode()).orderDesc(Content_.downloadDate).build();
+    }
+
+    List<Content> selectContentByDlDate(int minDays, int maxDays) {
+        QueryBuilder<Content> qb = store.boxFor(Content.class).query();
+        qb.in(Content_.status, libraryStatus);
+        applyDownloadDateFilter(qb, minDays, maxDays);
+        return qb.build().find();
+    }
+
+    private void applyDownloadDateFilter(@NonNull final QueryBuilder<Content> qb, int minDays, int maxDays) {
+        long today = Instant.now().toEpochMilli();
+        long minDownloadDate = today - (maxDays * DAY_IN_MILLIS);
+        long maxDownloadDate = today - (minDays * DAY_IN_MILLIS);
+        qb.between(Content_.downloadDate, minDownloadDate, maxDownloadDate);
     }
 
     private Query<Attribute> queryAvailableAttributes(
@@ -1047,6 +1085,10 @@ public class ObjectBoxDB {
         store.boxFor(SiteBookmark.class).remove(bookmarkId);
     }
 
+    int getMaxBookmarkOrderFor(@NonNull final Site site) {
+        return (int) store.boxFor(SiteBookmark.class).query().equal(SiteBookmark_.site, site.getCode()).build().property(SiteBookmark_.order).max();
+    }
+
     long insertGroup(Group group) {
         return store.boxFor(Group.class).put(group);
     }
@@ -1063,19 +1105,6 @@ public class ObjectBoxDB {
         QueryBuilder<GroupItem> qb = store.boxFor(GroupItem.class).query().equal(GroupItem_.contentId, contentId);
         qb.link(GroupItem_.group).equal(Group_.grouping, groupingId);
         return qb.build().find();
-    }
-
-    List<GroupItem> selectGroupItemsByDlDate(int minDays, int maxDays) {
-        QueryBuilder<GroupItem> qb = store.boxFor(GroupItem.class).query();
-        applyDownloadDateFilter(qb.link(GroupItem_.content), minDays, maxDays);
-        return qb.build().find();
-    }
-
-    private void applyDownloadDateFilter(@NonNull final QueryBuilder<Content> qb, int minDays, int maxDays) {
-        long today = Instant.now().toEpochMilli();
-        long minDownloadDate = today - (maxDays * DAY_IN_MILLIS);
-        long maxDownloadDate = today - (minDays * DAY_IN_MILLIS);
-        qb.between(Content_.downloadDate, minDownloadDate, maxDownloadDate);
     }
 
     void deleteGroupItem(long groupItemId) {
@@ -1181,7 +1210,7 @@ public class ObjectBoxDB {
         return query.build();
     }
 
-    long[] selectStoredContentIds(boolean nonFavouritesOnly, boolean includeQueued) {
+    List<Content> selectStoredContent(boolean nonFavouritesOnly, boolean includeQueued) {
         QueryBuilder<Content> query = store.boxFor(Content.class).query();
         if (includeQueued)
             query.in(Content_.status, new int[]{
@@ -1197,6 +1226,17 @@ public class ObjectBoxDB {
         query.notNull(Content_.storageUri);
         query.notEqual(Content_.storageUri, "");
         if (nonFavouritesOnly) query.equal(Content_.favourite, false);
-        return query.build().findIds();
+        return query.build().find();
+    }
+
+    // Select all duplicate bookmarks that end with a "/"
+    public Query<SiteBookmark> selectAllDuplicateBookmarks() {
+        String[] urls = selectAllBooksmarkUrls();
+        for (int i = 0; i < urls.length; i++) urls[i] = urls[i] + "/";
+
+        QueryBuilder<SiteBookmark> query = store.boxFor(SiteBookmark.class).query();
+        query.in(SiteBookmark_.url, urls);
+
+        return query.build();
     }
 }

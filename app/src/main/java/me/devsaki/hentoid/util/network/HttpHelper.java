@@ -1,10 +1,12 @@
 package me.devsaki.hentoid.util.network;
 
+import android.content.Context;
 import android.net.Uri;
 import android.text.TextUtils;
 import android.util.Pair;
 import android.webkit.CookieManager;
 import android.webkit.WebResourceResponse;
+import android.webkit.WebSettings;
 
 import androidx.annotation.NonNull;
 
@@ -14,14 +16,16 @@ import org.jsoup.nodes.Document;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import javax.annotation.Nullable;
 
-import me.devsaki.hentoid.util.Consts;
+import me.devsaki.hentoid.BuildConfig;
 import okhttp3.MediaType;
 import okhttp3.Request;
 import okhttp3.RequestBody;
@@ -29,13 +33,35 @@ import okhttp3.Response;
 import okhttp3.ResponseBody;
 import timber.log.Timber;
 
+/**
+ * Helper for HTTP protocol operations
+ */
 public class HttpHelper {
 
     private static final int TIMEOUT = 30000; // 30 seconds
+
+    // Keywords of the HTTP protocol
     public static final String HEADER_ACCEPT_KEY = "accept";
     public static final String HEADER_COOKIE_KEY = "cookie";
     public static final String HEADER_REFERER_KEY = "referer";
     public static final String HEADER_CONTENT_TYPE = "Content-Type";
+    public static final String HEADER_USER_AGENT = "User-Agent";
+
+    public static final Set<String> COOKIES_STANDARD_ATTRS = new HashSet<>();
+
+    // To display sites with desktop layouts
+    public static final String DESKTOP_USER_AGENT_PATTERN = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) %s Safari/537.36";
+
+    public static String defaultUserAgent = null;
+    public static String defaultChromeAgent = null;
+    public static int defaultChromeVersion = -1;
+
+
+    static {
+        // Can't be done on the variable initializer as Set.of is only available since API R
+        COOKIES_STANDARD_ATTRS.addAll(Arrays.asList("expires", "max-age", "domain", "path", "secure", "httponly", "samesite"));
+    }
+
 
     private HttpHelper() {
         throw new IllegalStateException("Utility class");
@@ -64,7 +90,7 @@ public class HttpHelper {
      */
     @Nullable
     public static Document getOnlineDocument(String url, List<Pair<String, String>> headers, boolean useHentoidAgent) throws IOException {
-        ResponseBody resource = getOnlineResource(url, headers, useHentoidAgent).body();
+        ResponseBody resource = getOnlineResource(url, headers, true, useHentoidAgent).body();
         if (resource != null) {
             return Jsoup.parse(resource.string());
         }
@@ -80,8 +106,8 @@ public class HttpHelper {
      * @return HTTP response
      * @throws IOException in case something bad happens when trying to access the online resource
      */
-    public static Response getOnlineResource(@NonNull String url, @Nullable List<Pair<String, String>> headers, boolean useHentoidAgent) throws IOException {
-        Request.Builder requestBuilder = buildRequest(url, headers, useHentoidAgent);
+    public static Response getOnlineResource(@NonNull String url, @Nullable List<Pair<String, String>> headers, boolean useMobileAgent, boolean useHentoidAgent) throws IOException {
+        Request.Builder requestBuilder = buildRequest(url, headers, useMobileAgent, useHentoidAgent);
         Request request = requestBuilder.get().build();
         return OkHttpClientSingleton.getInstance(TIMEOUT).newCall(request).execute();
     }
@@ -102,18 +128,29 @@ public class HttpHelper {
             boolean useHentoidAgent,
             @NonNull final String body,
             @NonNull final String mimeType) throws IOException {
-        Request.Builder requestBuilder = buildRequest(url, headers, useHentoidAgent);
+        Request.Builder requestBuilder = buildRequest(url, headers, true, useHentoidAgent);
         Request request = requestBuilder.post(RequestBody.create(body, MediaType.parse(mimeType))).build();
         return OkHttpClientSingleton.getInstance(TIMEOUT).newCall(request).execute();
     }
 
-    private static Request.Builder buildRequest(@NonNull String url, @Nullable List<Pair<String, String>> headers, boolean useHentoidAgent) {
+    /**
+     * Build an HTTP request using the given arguments
+     *
+     * @param url             URL to read the resource from
+     * @param headers         Headers to use when building the request
+     * @param useMobileAgent  True if a mobile User-Agent has to be used; false if a desktop User-Agent has to be used
+     * @param useHentoidAgent True if the Hentoid User-Agent has to be used; false if a neutral User-Agent has to be used
+     * @return HTTP request built with the given arguments
+     */
+    private static Request.Builder buildRequest(@NonNull String url, @Nullable List<Pair<String, String>> headers, boolean useMobileAgent, boolean useHentoidAgent) {
         Request.Builder requestBuilder = new Request.Builder().url(url);
         if (headers != null)
             for (Pair<String, String> header : headers)
                 if (header.second != null)
                     requestBuilder.addHeader(header.first, header.second);
-        requestBuilder.header("User-Agent", useHentoidAgent ? Consts.USER_AGENT : Consts.USER_AGENT_NEUTRAL);
+
+        requestBuilder.header(HEADER_USER_AGENT, useMobileAgent ? getMobileUserAgent(useHentoidAgent) : getDesktopUserAgent(useHentoidAgent));
+
         return requestBuilder;
     }
 
@@ -127,23 +164,25 @@ public class HttpHelper {
         final String contentTypeValue = resp.header(HEADER_CONTENT_TYPE);
 
         WebResourceResponse result;
+        Map<String, String> responseHeaders = okHttpHeadersToWebResourceHeaders(resp.headers().toMultimap());
+        String message = resp.message();
+        if (message.trim().isEmpty()) message = "None";
         if (contentTypeValue != null) {
             Pair<String, String> details = cleanContentType(contentTypeValue);
-            result = new WebResourceResponse(details.first, details.second, is);
+            result = new WebResourceResponse(details.first, details.second, resp.code(), message, responseHeaders, is);
         } else {
-            result = new WebResourceResponse("application/octet-stream", null, is);
+            result = new WebResourceResponse("application/octet-stream", null, resp.code(), message, responseHeaders, is);
         }
-
-        result.setResponseHeaders(okHttpHeadersToWebResourceHeaders(resp.headers().toMultimap()));
 
         return result;
     }
 
     /**
-     * "Flatten"" HTTP headers from the OKHTTP convention to be used with {@link android.webkit.WebResourceRequest} or {@link android.webkit.WebResourceResponse}
+     * "Flatten"" HTTP headers from an OkHttp-compatible structure to a Webkit-compatible structure
+     * to be used with {@link android.webkit.WebResourceRequest} or {@link android.webkit.WebResourceResponse}
      *
-     * @param okHttpHeaders HTTP Headers orgarnized according to the convention used by OKHTTP
-     * @return "Flattened" HTTP headers
+     * @param okHttpHeaders HTTP Headers structured according to the convention used by OkHttp
+     * @return "Flattened" HTTP headers structured according to the convention used by Webkit
      */
     private static Map<String, String> okHttpHeadersToWebResourceHeaders(@NonNull final Map<String, List<String>> okHttpHeaders) {
         Map<String, String> result = new HashMap<>();
@@ -157,18 +196,24 @@ public class HttpHelper {
         return result;
     }
 
-    // TODO doc
-    public static List<Pair<String, String>> webResourceHeadersToOkHttpHeaders(@Nullable final Map<String, String> webResourceHeaders, @Nullable String url, boolean useCookies) {
+    /**
+     * Convert HTTP headers from a Webkit-compatible structure to an OkHttp-compatible structure
+     *
+     * @param webResourceHeaders HTTP Headers structured according to the convention used by Webkit
+     * @param url                Corresponding URL
+     * @return HTTP Headers structured according to the convention used by OkHttp
+     */
+    public static List<Pair<String, String>> webResourceHeadersToOkHttpHeaders(@Nullable final Map<String, String> webResourceHeaders, @Nullable String url) {
         List<Pair<String, String>> result = new ArrayList<>();
 
         if (webResourceHeaders != null)
             for (Map.Entry<String, String> entry : webResourceHeaders.entrySet())
                 result.add(new Pair<>(entry.getKey(), entry.getValue()));
 
-        if (useCookies) {
-            String cookie = CookieManager.getInstance().getCookie(url);
-            if (cookie != null)
-                result.add(new Pair<>(HttpHelper.HEADER_COOKIE_KEY, cookie));
+        String cookie = CookieManager.getInstance().getCookie(url);
+        if (cookie != null) {
+            cookie = HttpHelper.stripParams(cookie);
+            result.add(new Pair<>(HttpHelper.HEADER_COOKIE_KEY, cookie));
         }
 
         return result;
@@ -254,65 +299,80 @@ public class HttpHelper {
         String[] cookiesParts = cookiesStr.split(";");
         for (String cookie : cookiesParts) {
             String[] cookieParts = cookie.trim().split("=");
-            if (cookieParts.length > 1)
-                result.put(cookieParts[0], cookieParts[1]);
+            result.put(cookieParts[0], (1 == cookieParts.length) ? "" : cookieParts[1]);
         }
 
         return result;
     }
 
     /**
-     * Set a new cookie for the domain of the given url, using the CookieManager
-     * If the cookie already exists, replace it
+     * Strip the given cookie string from the standard parameters
+     * i.e. only return the cookie values
      *
-     * @param url     Full URL of the cookie
-     * @param cookies Cookies to set using key = name and value = value
+     * @param cookieStr The cookie as a string, using the format of the 'Set-Cookie' HTTP response header
+     * @return Cookie string without the standard parameters
      */
-    public static void setDomainCookies(String url, Map<String, String> cookies) {
-        CookieManager mgr = CookieManager.getInstance();
-        String domain = getDomainFromUri(url);
+    public static String stripParams(@NonNull String cookieStr) {
+        Map<String, String> cookies = parseCookies(cookieStr);
+        List<String> namesToSet = new ArrayList<>();
+        for (Map.Entry<String, String> entry : cookies.entrySet()) {
+            if (!COOKIES_STANDARD_ATTRS.contains(entry.getKey().toLowerCase()))
+                namesToSet.add(entry.getKey() + "=" + entry.getValue());
+        }
+        return TextUtils.join("; ", namesToSet);
+    }
 
+    /**
+     * Set session cookies for the given URL, keeping existing cookies if they are still active
+     *
+     * @param url       Url to set the cookies for
+     * @param cookieStr The cookie as a string, using the format of the 'Set-Cookie' HTTP response header
+     */
+    public static void setCookies(String url, String cookieStr) {
         /*
         Check if given cookies are already registered
 
         Rationale : setting any cookie programmatically will set it as a _session_ cookie.
         It's not smart to do that if the very same cookie is already set for a longer lifespan.
          */
-        Map<String, String> cookiesToSet = new HashMap<>();
+        Map<String, String> cookies = parseCookies(cookieStr);
+        Map<String, String> names = new HashMap<>();
 
-        String existingCookiesStr = mgr.getCookie(domain);
-        if (existingCookiesStr != null) {
-            Map<String, String> existingCookies = parseCookies(existingCookiesStr);
+        List<String> paramsToSet = new ArrayList<>();
+        List<String> namesToSet = new ArrayList<>();
 
-            for (Map.Entry<String, String> entry : cookies.entrySet()) {
-                String key = entry.getKey();
-                String value = (null == entry.getValue()) ? "" : entry.getValue();
-                if (!existingCookies.containsKey(key)) cookiesToSet.put(key, value);
-                else {
-                    String val = existingCookies.get(key);
-                    if (val != null && !val.equals(cookies.get(key)))
-                        cookiesToSet.put(key, cookies.get(key));
-                }
-            }
+        for (Map.Entry<String, String> entry : cookies.entrySet()) {
+            if (COOKIES_STANDARD_ATTRS.contains(entry.getKey().toLowerCase())) {
+                if (entry.getValue().isEmpty())
+                    paramsToSet.add(entry.getKey());
+                else
+                    paramsToSet.add(entry.getKey() + "=" + entry.getValue());
+            } else names.put(entry.getKey(), entry.getValue());
         }
 
-        for (Map.Entry<String, String> entry : cookiesToSet.entrySet())
-            mgr.setCookie(domain, entry.getKey() + "=" + entry.getValue());
+        CookieManager mgr = CookieManager.getInstance();
+        String existingCookiesStr = mgr.getCookie(url);
+        if (existingCookiesStr != null) {
+            Map<String, String> existingCookies = parseCookies(existingCookiesStr);
+            for (Map.Entry<String, String> entry : names.entrySet()) {
+                String key = entry.getKey();
+                String value = (null == entry.getValue()) ? "" : entry.getValue();
+                if (!existingCookies.containsKey(key)) namesToSet.add(key + "=" + value);
+            }
+        } else {
+            for (Map.Entry<String, String> name : names.entrySet())
+                namesToSet.add(name.getKey() + "=" + name.getValue());
+        }
+
+        StringBuilder cookieStrToSet = new StringBuilder();
+
+        cookieStrToSet.append(TextUtils.join("; ", paramsToSet));
+        for (String name : namesToSet) cookieStrToSet.append("; ").append(name);
+
+        mgr.setCookie(url, cookieStrToSet.toString());
+        Timber.v("Setting cookie for %s : %s", url, cookieStrToSet.toString());
 
         mgr.flush();
-    }
-
-    /**
-     * Determine whether the given URL is associated with a cookie with the given name
-     *
-     * @param url        URL to test against
-     * @param cookieName Cookie name to test against on the given URl's domain
-     * @return True if the given URL's domain is associated with a cookie with the given name; false if not
-     */
-    public static boolean hasDomainCookie(@NonNull final String url, @NonNull final String cookieName) {
-        String domain = getDomainFromUri(url);
-        String existingCookiesStr = CookieManager.getInstance().getCookie(domain);
-        return (existingCookiesStr != null && existingCookiesStr.toLowerCase().contains(cookieName.toLowerCase() + "="));
     }
 
     /**
@@ -337,8 +397,13 @@ public class HttpHelper {
         } else return url;
     }
 
-    // TODO Doc
-    public static Map<String, String> extractParameters(@NonNull final Uri uri) {
+    /**
+     * Parse the parameters of the given Uri into a map
+     *
+     * @param uri Uri to parse the paramaters from
+     * @return Parsed parameters, where each key is the parameters name and each corresponding value their respective value
+     */
+    public static Map<String, String> parseParameters(@NonNull final Uri uri) {
         Map<String, String> result = new HashMap<>();
 
         Set<String> keys = uri.getQueryParameterNames();
@@ -356,12 +421,82 @@ public class HttpHelper {
      */
     public static String peekCookies(@NonNull final String url) {
         try {
-            Response response = getOnlineResource(url, null, false);
+            Response response = getOnlineResource(url, null, true, false);
             List<String> cookielist = response.headers().values("Set-Cookie");
             return TextUtils.join("; ", cookielist);
         } catch (IOException e) {
             Timber.e(e);
         }
         return "";
+    }
+
+    /**
+     * Initialize the app's user agents
+     *
+     * @param context Context to be used
+     */
+    public static void initUserAgents(@NonNull final Context context) {
+        String chromeString = "Chrome/";
+        defaultUserAgent = WebSettings.getDefaultUserAgent(context);
+        if (defaultUserAgent.contains(chromeString)) {
+            int chromeIndex = defaultUserAgent.indexOf(chromeString);
+            int spaceIndex = defaultUserAgent.indexOf(' ', chromeIndex);
+            int dotIndex = defaultUserAgent.indexOf('.', chromeIndex);
+            String version = defaultUserAgent.substring(chromeIndex + chromeString.length(), dotIndex);
+            defaultChromeVersion = Integer.parseInt(version);
+            defaultChromeAgent = defaultUserAgent.substring(chromeIndex, spaceIndex);
+        }
+        Timber.i("defaultUserAgent = %s", defaultUserAgent);
+        Timber.i("defaultChromeAgent = %s", defaultChromeAgent);
+        Timber.i("defaultChromeVersion = %s", defaultChromeVersion);
+    }
+
+    /**
+     * Get the app's mobile user agent
+     *
+     * @param withHentoid True if the Hentoid user-agent has to appear
+     * @return The app's mobile user agent
+     */
+    public static String getMobileUserAgent(boolean withHentoid) {
+        return getDefaultUserAgent(withHentoid);
+    }
+
+    /**
+     * Get the app's desktop user agent
+     *
+     * @param withHentoid True if the Hentoid user-agent has to appear
+     * @return The app's desktop user agent
+     */
+    public static String getDesktopUserAgent(boolean withHentoid) {
+        if (null == defaultChromeAgent)
+            throw new RuntimeException("Call initUserAgents first to initialize them !");
+        String result = String.format(DESKTOP_USER_AGENT_PATTERN, defaultChromeAgent);
+        if (withHentoid) result += " Hentoid/v" + BuildConfig.VERSION_NAME;
+        return result;
+    }
+
+    /**
+     * Get the app's default user agent
+     *
+     * @param withHentoid True if the Hentoid user-agent has to appear
+     * @return The app's default user agent
+     */
+    public static String getDefaultUserAgent(boolean withHentoid) {
+        if (null == defaultUserAgent)
+            throw new RuntimeException("Call initUserAgents first to initialize them !");
+        String result = defaultUserAgent;
+        if (withHentoid) result += " Hentoid/v" + BuildConfig.VERSION_NAME;
+        return result;
+    }
+
+    /**
+     * Get the app's Chrome version
+     *
+     * @return The app's Chrome version
+     */
+    public static int getChromeVersion() {
+        if (-1 == defaultChromeVersion)
+            throw new RuntimeException("Call initUserAgents first to initialize them !");
+        return defaultChromeVersion;
     }
 }

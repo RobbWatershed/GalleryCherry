@@ -78,7 +78,14 @@ public final class Helper {
         return result;
     }
 
-    // TODO doc
+    /**
+     * Indicate of the given string is present as a word inside the given expression
+     * "present as a word" means present as a substring separated from other substrings by separating characters
+     *
+     * @param toDetect   String whose presence to detect within the given expression
+     * @param expression Expression where the given string will be searched for
+     * @return True if the given string is present as a word inside the given expression; false if not
+     */
     public static boolean isPresentAsWord(@NonNull final String toDetect, @NonNull final String expression) {
         String[] words = expression.split("\\W");
         return Stream.of(words).anyMatch(w -> w.equalsIgnoreCase(toDetect));
@@ -88,14 +95,13 @@ public final class Helper {
      * Decode the given base-64-encoded string
      *
      * @param encodedString Base-64 encoded string to decode
-     * @return Decoded string
+     * @return Raw decoded data
      */
-    public static String decode64(String encodedString) {
+    public static byte[] decode64(String encodedString) {
         // Pure Java
-        //byte[] decodedBytes = org.apache.commons.codec.binary.Base64.decodeBase64(encodedString);
+        // return org.apache.commons.codec.binary.Base64.decodeBase64(encodedString);
         // Android
-        byte[] decodedBytes = android.util.Base64.decode(encodedString, android.util.Base64.DEFAULT);
-        return new String(decodedBytes);
+        return android.util.Base64.decode(encodedString, android.util.Base64.DEFAULT);
     }
 
     /**
@@ -277,23 +283,6 @@ public final class Helper {
     }
 
     /**
-     * Get the version of Chrome installed on the device
-     *
-     * @param context Context to be used
-     * @return Version of Chrome installed on the device
-     */
-    public static int getChromeVersion(@NonNull final Context context) {
-        String chromeString = "Chrome/";
-        String defaultUserAgent = WebSettings.getDefaultUserAgent(context);
-        if (defaultUserAgent.contains(chromeString)) {
-            int chromeIndex = defaultUserAgent.indexOf(chromeString);
-            int dotIndex = defaultUserAgent.indexOf('.', chromeIndex);
-            String version = defaultUserAgent.substring(chromeIndex + chromeString.length(), dotIndex);
-            return Integer.parseInt(version);
-        } else return -1;
-    }
-
-    /**
      * Crashes if called on the UI thread
      * To be used as a marker wherever processing in a background thread is mandatory
      */
@@ -341,6 +330,12 @@ public final class Helper {
             return mStr + ":" + sStr;
     }
 
+    /**
+     * Return the given value, or an empty string if it's null
+     *
+     * @param s String to protect if its value its null
+     * @return The given value, or an empty string if it's null
+     */
     public static String protect(@Nullable String s) {
         return (null == s) ? "" : s;
     }

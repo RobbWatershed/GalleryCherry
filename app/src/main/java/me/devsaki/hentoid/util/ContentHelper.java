@@ -12,7 +12,6 @@ import androidx.documentfile.provider.DocumentFile;
 
 import com.annimon.stream.Stream;
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
-import com.mikepenz.fastadapter.diff.DiffCallback;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.greenrobot.eventbus.EventBus;
@@ -36,7 +35,6 @@ import me.devsaki.hentoid.activities.UnlockActivity;
 import me.devsaki.hentoid.activities.bundles.BaseWebActivityBundle;
 import me.devsaki.hentoid.activities.bundles.ImageViewerActivityBundle;
 import me.devsaki.hentoid.database.CollectionDAO;
-import me.devsaki.hentoid.database.ObjectBoxDAO;
 import me.devsaki.hentoid.database.domains.Attribute;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.Group;
@@ -52,7 +50,6 @@ import me.devsaki.hentoid.json.JsonContent;
 import me.devsaki.hentoid.json.JsonContentCollection;
 import me.devsaki.hentoid.util.exception.ContentNotRemovedException;
 import me.devsaki.hentoid.util.exception.FileNotRemovedException;
-import me.devsaki.hentoid.viewholders.ContentItem;
 import timber.log.Timber;
 
 import static com.annimon.stream.Collectors.toList;
@@ -79,8 +76,16 @@ public final class ContentHelper {
         return libraryStatus;
     }
 
+    public static boolean isInLibrary(@NonNull final StatusContent status) {
+        return Helper.getListFromPrimitiveArray(libraryStatus).contains(status.getCode());
+    }
+
     public static int[] getQueueStatuses() {
         return queueStatus;
+    }
+
+    public static boolean isInQueue(@NonNull final StatusContent status) {
+        return Helper.getListFromPrimitiveArray(queueStatus).contains(status.getCode());
     }
 
     /**
@@ -119,7 +124,6 @@ public final class ContentHelper {
      */
     public static void updateContentJson(@NonNull Context context, @NonNull Content content) {
         Helper.assertNonUiThread();
-        if (content.isArchive()) return;
 
         DocumentFile file = FileHelper.getFileFromSingleUriString(context, content.getJsonUri());
         if (null == file)
@@ -139,7 +143,7 @@ public final class ContentHelper {
      */
     public static void createContentJson(@NonNull Context context, @NonNull Content content) {
         Helper.assertNonUiThread();
-        if (content.isArchive()) return;
+        if (content.isArchive()) return; // Keep that as is, we can't find the parent folder anyway
 
         DocumentFile folder = FileHelper.getFolderFromTreeUriString(context, content.getStorageUri());
         if (null == folder) return;
@@ -160,8 +164,12 @@ public final class ContentHelper {
     public static boolean updateQueueJson(@NonNull Context context, @NonNull CollectionDAO dao) {
         Helper.assertNonUiThread();
         List<QueueRecord> queue = dao.selectQueue();
+        List<Content> errors = dao.selectErrorContentList();
+
         // Save current queue (to be able to restore it in case the app gets uninstalled)
         List<Content> queuedContent = Stream.of(queue).map(qr -> qr.getContent().getTarget()).withoutNulls().toList();
+        if (errors != null) queuedContent.addAll(errors);
+
         JsonContentCollection contentCollection = new JsonContentCollection();
         contentCollection.setQueue(queuedContent);
 
@@ -213,16 +221,16 @@ public final class ContentHelper {
      * @param context Context to use for the action
      * @param dao     DAO to use for the action
      * @param content Content to update
-     *                TODO update doc
      */
-    public static void updateContentReads(
+    public static void updateContentReadStats(
             @NonNull Context context,
             @Nonnull CollectionDAO dao,
             @NonNull Content content,
+            @NonNull List<ImageFile> images,
             int targetLastReadPageIndex,
-            @NonNull List<ImageFile> images) {
-        content.increaseReads().setLastReadDate(Instant.now().toEpochMilli());
+            boolean updateReads) {
         content.setLastReadPageIndex(targetLastReadPageIndex);
+        if (updateReads) content.increaseReads().setLastReadDate(Instant.now().toEpochMilli());
         dao.insertContent(content);
         dao.replaceImageList(content.getId(), images);
 
@@ -287,7 +295,7 @@ public final class ContentHelper {
             File[] images = appFolder.listFiles((dir, name) -> FileHelper.getFileNameWithoutExtension(name).equals(content.getId() + ""));
             if (images != null)
                 for (File f : images) FileHelper.removeFile(f);
-        } else { // Remove a folder and its content
+        } else if (isInLibrary(content.getStatus()) && !content.getStorageUri().isEmpty()) { // Remove a folder and its content
             // If the book has just starting being downloaded and there are no complete pictures on memory yet, it has no storage folder => nothing to delete
             DocumentFile folder = FileHelper.getFolderFromTreeUriString(context, content.getStorageUri());
             if (null == folder)
@@ -299,23 +307,6 @@ public final class ContentHelper {
                 throw new FileNotRemovedException(content, "Failed to delete directory " + content.getStorageUri());
             }
         }
-    }
-
-    // TODO doc
-    public static void removeAllExternalContent(@NonNull final Context context) {
-        // Remove all external books from DB
-        CollectionDAO dao = new ObjectBoxDAO(context);
-        try {
-            dao.deleteAllExternalBooks();
-        } finally {
-            dao.cleanup();
-        }
-
-        // Remove all images stored in the app's persistent folder (archive covers)
-        File appFolder = context.getFilesDir();
-        File[] images = appFolder.listFiles((dir, name) -> ImageHelper.isSupportedImage(name));
-        if (images != null)
-            for (File f : images) FileHelper.removeFile(f);
     }
 
     /**
@@ -537,6 +528,8 @@ public final class ContentHelper {
         if (truncLength > 0 && titleLength + suffix.length() > truncLength)
             result = result.substring(0, truncLength - suffix.length() - 1);
 
+        // We always add the unique ID at the end of the folder name to avoid collisions between two books with the same title from the same source
+        // (e.g. different scans, different languages)
         result += suffix;
 
         return result;
@@ -672,19 +665,30 @@ public final class ContentHelper {
     public static List<ImageFile> matchFilesToImageList(@NonNull final List<DocumentFile> files, @NonNull final List<ImageFile> images) {
         Map<String, ImmutablePair<String, Long>> fileNameProperties = new HashMap<>(files.size());
         List<ImageFile> result = new ArrayList<>();
+        boolean coverFound = false;
 
+        // Put file names into a Map to speed up the lookup
         for (DocumentFile file : files)
             fileNameProperties.put(removeLeadingZeroesAndExtensionCached(file.getName()), new ImmutablePair<>(file.getUri().toString(), file.length()));
 
+        // Look up similar names between images and file names
         for (ImageFile img : images) {
             String imgName = removeLeadingZeroesAndExtensionCached(img.getName());
             if (fileNameProperties.containsKey(imgName)) {
                 ImmutablePair<String, Long> property = fileNameProperties.get(imgName);
-                if (property != null)
-                    result.add(img.setFileUri(property.left).setSize(property.right).setStatus(StatusContent.DOWNLOADED).setIsCover(imgName.equals(Consts.THUMB_FILE_NAME)));
+                if (property != null) {
+                    if (imgName.equals(Consts.THUMB_FILE_NAME)) {
+                        coverFound = true;
+                        img.setIsCover(true);
+                    }
+                    result.add(img.setFileUri(property.left).setSize(property.right).setStatus(StatusContent.DOWNLOADED));
+                }
             } else
                 Timber.i(">> img dropped %s", imgName);
         }
+
+        // If no thumb found, set the 1st image as cover
+        if (!coverFound && !result.isEmpty()) result.get(0).setIsCover(true);
         return result;
     }
 
@@ -729,22 +733,37 @@ public final class ContentHelper {
         Helper.assertNonUiThread();
         List<ImageFile> result = new ArrayList<>();
         int order = startingOrder;
+        boolean coverFound = false;
         // Sort files by anything that resembles a number inside their names
         List<DocumentFile> fileList = Stream.of(files).withoutNulls().sorted(new InnerNameNumberFileComparator()).collect(toList());
         for (DocumentFile f : fileList) {
             String name = namePrefix + ((f.getName() != null) ? f.getName() : "");
             ImageFile img = new ImageFile();
-            if (name.startsWith(Consts.THUMB_FILE_NAME)) img.setIsCover(true);
-            else order++;
+            if (name.startsWith(Consts.THUMB_FILE_NAME)) {
+                coverFound = true;
+                img.setIsCover(true);
+            } else order++;
             img.setName(FileHelper.getFileNameWithoutExtension(name)).setOrder(order).setUrl(f.getUri().toString()).setStatus(targetStatus).setFileUri(f.getUri().toString()).setSize(f.length());
             img.setMimeType(FileHelper.getMimeTypeFromFileName(name));
             result.add(img);
         }
+        // If no thumb found, set the 1st image as cover
+        if (!coverFound && !result.isEmpty()) result.get(0).setIsCover(true);
         return result;
     }
 
+    /**
+     * Create a list of ImageFiles from the given archive entries
+     *
+     * @param archiveFileUri Uri of the archive file the entries have been read from
+     * @param files          Entries to create the ImageFile list with
+     * @param targetStatus   Target status of the ImageFiles
+     * @param startingOrder  Starting order of the first ImageFile to add; will be numbered incrementally from that number on
+     * @param namePrefix     Prefix to add to image names
+     * @return List of ImageFiles contructed from the given parameters
+     */
     public static List<ImageFile> createImageListFromArchiveEntries(
-            @NonNull final Uri zipFileUri,
+            @NonNull final Uri archiveFileUri,
             @NonNull final List<ArchiveHelper.ArchiveEntry> files,
             @NonNull final StatusContent targetStatus,
             int startingOrder,
@@ -756,7 +775,7 @@ public final class ContentHelper {
         List<ArchiveHelper.ArchiveEntry> fileList = Stream.of(files).withoutNulls().sorted(new InnerNameNumberArchiveComparator()).collect(toList());
         for (ArchiveHelper.ArchiveEntry f : fileList) {
             String name = namePrefix + f.path;
-            String path = zipFileUri.toString() + File.separator + f.path;
+            String path = archiveFileUri.toString() + File.separator + f.path;
             ImageFile img = new ImageFile();
             if (name.startsWith(Consts.THUMB_FILE_NAME)) img.setIsCover(true);
             else order++;
@@ -767,7 +786,14 @@ public final class ContentHelper {
         return result;
     }
 
-    // TODO doc
+    /**
+     * Launch the web browser for the given site and URL
+     * TODO make sure the URL and the site are compatible
+     *
+     * @param context   COntext to be used
+     * @param s         Site to navigate to
+     * @param targetUrl Url to navigate to
+     */
     public static void launchBrowserFor(@NonNull final Context context, @NonNull final Site s, @NonNull final String targetUrl) {
         Intent intent = new Intent(context, Content.getWebActivityClass(s));
 
@@ -778,7 +804,13 @@ public final class ContentHelper {
         context.startActivity(intent);
     }
 
-    // TODO doc
+    /**
+     * Get the blocked tags of the given Content
+     * NB : Blocked tags are detected according to the current app Preferences
+     *
+     * @param content Content to extract blocked tags from
+     * @return List of blocked tags from the given Content
+     */
     public static List<String> getBlockedTags(@NonNull final Content content) {
         List<String> result = Collections.emptyList();
         if (!Preferences.getBlockedTags().isEmpty()) {
@@ -806,9 +838,7 @@ public final class ContentHelper {
     }
 
     /**
-     * Comparator to be used to sort files according to their names :
-     * - Sort according to the concatenation of all its numerical characters, if any
-     * - If none, sort alphabetically (default string compare)
+     * Comparator to be used to sort files according to their names
      */
     private static class InnerNameNumberFileComparator implements Comparator<DocumentFile> {
         @Override
@@ -817,34 +847,13 @@ public final class ContentHelper {
         }
     }
 
+    /**
+     * Comparator to be used to sort archive entries according to their names
+     */
     private static class InnerNameNumberArchiveComparator implements Comparator<ArchiveHelper.ArchiveEntry> {
         @Override
         public int compare(@NonNull ArchiveHelper.ArchiveEntry o1, @NonNull ArchiveHelper.ArchiveEntry o2) {
             return new NaturalOrderComparator().compare(o1.path, o2.path);
         }
     }
-
-    /**
-     * Diff calculation rules for ContentItem's
-     * <p>
-     * Created once and for all to be used by FastAdapter when posting updates without PagedList
-     */
-    public static final DiffCallback<ContentItem> CONTENT_ITEM_DIFF_CALLBACK = new DiffCallback<ContentItem>() {
-        @Override
-        public boolean areItemsTheSame(ContentItem oldItem, ContentItem newItem) {
-            return oldItem.getIdentifier() == newItem.getIdentifier();
-        }
-
-        @Override
-        public boolean areContentsTheSame(ContentItem oldItem, ContentItem newItem) {
-            return false; // Avoid keeping items un-updated as it ignores certain items and desynchronizes the "real" list from the one manipulated by selectExtension
-            // when using mass-moving (select multiple + move up/down) or when coming back from the image viewer
-        }
-
-        @Override
-        public @org.jetbrains.annotations.Nullable Object getChangePayload(ContentItem queueRecord, int i, ContentItem item1, int i1) {
-            return null;
-        }
-    };
-
 }

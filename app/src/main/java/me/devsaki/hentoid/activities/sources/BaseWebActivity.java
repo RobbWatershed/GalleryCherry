@@ -40,6 +40,7 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.coordinatorlayout.widget.CoordinatorLayout;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
+import com.annimon.stream.Optional;
 import com.annimon.stream.Stream;
 import com.annimon.stream.function.BiFunction;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
@@ -106,7 +107,6 @@ import me.devsaki.hentoid.parsers.content.ContentParser;
 import me.devsaki.hentoid.parsers.images.ImageListParser;
 import me.devsaki.hentoid.services.ContentQueueManager;
 import me.devsaki.hentoid.ui.InputDialog;
-import me.devsaki.hentoid.util.Consts;
 import me.devsaki.hentoid.util.ContentHelper;
 import me.devsaki.hentoid.util.FileHelper;
 import me.devsaki.hentoid.util.Helper;
@@ -123,7 +123,6 @@ import pl.droidsonroids.jspoon.HtmlAdapter;
 import pl.droidsonroids.jspoon.Jspoon;
 import timber.log.Timber;
 
-import static me.devsaki.hentoid.util.Helper.getChromeVersion;
 import static me.devsaki.hentoid.util.PermissionUtil.RQST_STORAGE_PERMISSION;
 import static me.devsaki.hentoid.util.network.HttpHelper.HEADER_CONTENT_TYPE;
 import static me.devsaki.hentoid.util.network.HttpHelper.getExtensionFromUri;
@@ -203,8 +202,6 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
     // Indicates which mode the seek button is in
     protected @SeekMode
     int seekButtonMode;
-    // Version of installed Chrome client
-    private int chromeVersion;
     // Alert to be displayed
     private UpdateInfo.SourceAlert alert;
     // Disposable to be used for punctual search
@@ -252,6 +249,8 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
         universalBlockedContent.add("realsrv.com");
         universalBlockedContent.add("smartclick.net");
         universalBlockedContent.add("ulukaris.com");
+        universalBlockedContent.add("alliedthirteen.com");
+        universalBlockedContent.add("acknowledgenightsabstain.com");
     }
 
     protected abstract CustomWebViewClient getWebClient();
@@ -350,7 +349,7 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
 
         // Priority 2 : Last viewed position, if option enabled
         if (Preferences.isBrowserResumeLast()) {
-            SiteHistory siteHistory = objectBoxDAO.getHistory(getStartSite());
+            SiteHistory siteHistory = objectBoxDAO.selectHistory(getStartSite());
             if (siteHistory != null && !siteHistory.getUrl().isEmpty()) return siteHistory.getUrl();
         }
 
@@ -540,14 +539,12 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
         CookieManager cookieManager = CookieManager.getInstance();
         cookieManager.setAcceptThirdPartyCookies(webView, true);
 
-        Timber.i("Using agent %s", webView.getSettings().getUserAgentString());
-        chromeVersion = getChromeVersion(this);
-
         WebSettings webSettings = webView.getSettings();
         webSettings.setBuiltInZoomControls(true);
         webSettings.setDisplayZoomControls(false);
 
-        webSettings.setUserAgentString(Consts.USER_AGENT_NEUTRAL);
+        Timber.i("%s : using user-agent %s", getStartSite().name(), getStartSite().getUserAgent());
+        webSettings.setUserAgentString(getStartSite().getUserAgent());
 
         webSettings.setDomStorageEnabled(true);
         webSettings.setUseWideViewPort(true);
@@ -859,8 +856,8 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
 
         Content contentDB = objectBoxDAO.selectContentBySourceAndUrl(content.getSite(), content.getUrl());
 
-        boolean isInCollection = (contentDB != null && Helper.getListFromPrimitiveArray(ContentHelper.getLibraryStatuses()).contains(contentDB.getStatus().getCode()));
-        boolean isInQueue = (contentDB != null && Helper.getListFromPrimitiveArray(ContentHelper.getQueueStatuses()).contains(contentDB.getStatus().getCode()));
+        boolean isInCollection = (contentDB != null && ContentHelper.isInLibrary(contentDB.getStatus()));
+        boolean isInQueue = (contentDB != null && ContentHelper.isInQueue(contentDB.getStatus()));
 
         // Danbooru sites have a single book that allows incremental downloads
         if (isInCollection && content.getSite().isDanbooru()) isInCollection = false;
@@ -910,7 +907,8 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
             result = ContentStatus.IN_QUEUE;
         }
 
-        webClient.setBlockedTags(ContentHelper.getBlockedTags(content));
+        if (webClient != null)
+            webClient.setBlockedTags(ContentHelper.getBlockedTags(content));
 
         currentContent = content;
         return result;
@@ -945,14 +943,14 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
             if (imgs.isEmpty()) return result;
 
             int coverCount = (imgs.get(0).isCover()) ? 1 : 0;
-            int maxImageOrder;
+            Optional<Integer> maxImageOrder;
             if (c.getImageFiles() != null)
-                maxImageOrder = Stream.of(c.getImageFiles()).filter(i -> i.getStatus().equals(StatusContent.DOWNLOADED)).map(ImageFile::getOrder).max(Integer::compareTo).get();
+                maxImageOrder = Stream.of(c.getImageFiles()).filter(i -> i.getStatus().equals(StatusContent.DOWNLOADED)).map(ImageFile::getOrder).max(Integer::compareTo);
             else
-                maxImageOrder = 0;
+                maxImageOrder = Optional.of(0);
 
-            if (imgs.size() - coverCount > maxImageOrder)
-                return Stream.of(imgs).filter(i -> i.getOrder() > maxImageOrder).toList();
+            if (maxImageOrder.isPresent() && imgs.size() - coverCount > maxImageOrder.get())
+                return Stream.of(imgs).filter(i -> i.getOrder() > maxImageOrder.get()).toList();
         } catch (Exception e) {
             Timber.w(e);
         }
@@ -985,13 +983,13 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
      */
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onDownloadEvent(DownloadEvent event) {
-        if (event.eventType == DownloadEvent.EV_COMPLETE && event.content != null && event.content.equals(currentContent)) {
+        if (event.eventType == DownloadEvent.EV_COMPLETE && event.content != null && event.content.equals(currentContent) && event.content.getStatus().equals(StatusContent.DOWNLOADED)) {
             changeActionMode(ActionMode.READ);
         }
     }
 
-    void showTooltip(@StringRes int resource) {
-        TooltipUtil.showTooltip(this, resource, ArrowOrientation.BOTTOM, bottomToolbar, this);
+    void showTooltip(@StringRes int resource, boolean always) {
+        TooltipUtil.showTooltip(this, resource, ArrowOrientation.BOTTOM, bottomToolbar, this, always);
     }
 
     /**
@@ -1154,7 +1152,7 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
         private boolean canUseSingleOkHttpRequest() {
             return (!preventAugmentedBrowser
                     && Preferences.isBrowserAugmented()
-                    && (chromeVersion < 45 || chromeVersion > 71)
+                    && (HttpHelper.getChromeVersion() < 45 || HttpHelper.getChromeVersion() > 71)
             );
         }
 
@@ -1213,9 +1211,9 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
                                   @NonNull final String url,
                                   @Nullable final Map<String, String> requestHeaders) throws IOException {
             List<Pair<String, String>> requestHeadersList;
-            requestHeadersList = HttpHelper.webResourceHeadersToOkHttpHeaders(requestHeaders, url, canUseSingleOkHttpRequest());
+            requestHeadersList = HttpHelper.webResourceHeadersToOkHttpHeaders(requestHeaders, url);
 
-            Response onlineFileResponse = HttpHelper.getOnlineResource(url, requestHeadersList, getStartSite().canKnowHentoidAgent());
+            Response onlineFileResponse = HttpHelper.getOnlineResource(url, requestHeadersList, getStartSite().useMobileAgent(), getStartSite().useHentoidAgent());
             ResponseBody body = onlineFileResponse.body();
             if (null == body)
                 throw new IOException("Empty response from server");
@@ -1247,7 +1245,7 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
                 actionMenu.setEnabled(false);
             }
             // Display download button tooltip if a book page has been reached
-            if (isGalleryPage(url)) showTooltip(R.string.help_web_download);
+            if (isGalleryPage(url)) showTooltip(R.string.help_web_download, false);
         }
 
         @Override
@@ -1281,13 +1279,14 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
         @Override
         public WebResourceResponse shouldInterceptRequest(@NonNull WebView view,
                                                           @NonNull WebResourceRequest request) {
+            String url = request.getUrl().toString();
+
             // Data fetched with POST is out of scope of analysis and adblock
             if (!request.getMethod().equalsIgnoreCase("get")) {
-                Timber.v("[%s] ignored by interceptor; method = %s", request.getUrl().toString(), request.getMethod());
+                Timber.v("[%s] ignored by interceptor; method = %s", url, request.getMethod());
                 return super.shouldInterceptRequest(view, request);
             }
 
-            String url = request.getUrl().toString();
             WebResourceResponse result = shouldInterceptRequestInternal(url, request.getRequestHeaders());
             if (result != null) return result;
             else return super.shouldInterceptRequest(view, request);
@@ -1350,11 +1349,21 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
             if (!analyzeForDownload && !canUseSingleOkHttpRequest()) return null;
 
             blockedTags = Collections.emptyList();
-            List<Pair<String, String>> requestHeadersList = HttpHelper.webResourceHeadersToOkHttpHeaders(requestHeaders, urlStr, canUseSingleOkHttpRequest());
+            List<Pair<String, String>> requestHeadersList = HttpHelper.webResourceHeadersToOkHttpHeaders(requestHeaders, urlStr);
 
             try {
                 // Query resource here, using OkHttp
-                Response response = HttpHelper.getOnlineResource(urlStr, requestHeadersList, getStartSite().canKnowHentoidAgent());
+                Response response = HttpHelper.getOnlineResource(urlStr, requestHeadersList, getStartSite().useMobileAgent(), getStartSite().useHentoidAgent());
+
+                // Scram if the response is a redirection or an error
+                if (response.code() >= 300) return null;
+
+                // Scram if the response is something else than html
+                Pair<String, String> contentType = HttpHelper.cleanContentType(response.header(HEADER_CONTENT_TYPE, ""));
+                if (!contentType.first.isEmpty() && !contentType.first.equals("text/html"))
+                    return null;
+
+                // Scram if the response is empty
                 ResponseBody body = response.body();
                 if (null == body) throw new IOException("Empty body");
 
@@ -1375,24 +1384,19 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
 
                     // Remove dirty elements from HTML resources
                     if (dirtyElements != null) {
-                        String mimeType = response.header(HEADER_CONTENT_TYPE);
-                        if (mimeType != null) {
-                            mimeType = HttpHelper.cleanContentType(mimeType).first.toLowerCase();
-                            if (mimeType.contains("html"))
-                                browserStream = removeCssElementsFromStream(browserStream, urlStr, dirtyElements);
-                        }
+                        browserStream = removeCssElementsFromStream(browserStream, urlStr, dirtyElements);
+                        if (null == browserStream) return null;
                     }
 
                     // Convert OkHttp response to the expected format
                     result = HttpHelper.okHttpResponseToWebResourceResponse(response, browserStream);
 
-                    // Manually set cookie if present in response header (won't be set by Android if we don't do this)
-                    if (result.getResponseHeaders().containsKey("set-cookie")) {
+                    // Manually set cookie if present in response header (has to be set manually because we're using OkHttp right now, not the webview)
+                    if (result.getResponseHeaders().containsKey("set-cookie") || result.getResponseHeaders().containsKey("Set-Cookie")) {
                         String cookiesStr = result.getResponseHeaders().get("set-cookie");
-                        if (cookiesStr != null) {
-                            Map<String, String> cookies = HttpHelper.parseCookies(cookiesStr);
-                            HttpHelper.setDomainCookies(urlStr, cookies);
-                        }
+                        if (null == cookiesStr)
+                            cookiesStr = result.getResponseHeaders().get("Set-Cookie");
+                        if (cookiesStr != null) HttpHelper.setCookies(urlStr, cookiesStr);
                     }
                 } else {
                     parserStream = body.byteStream();
@@ -1425,11 +1429,11 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
         /**
          * Process Content parsed from a webpage
          *
-         * @param content       Content to be processed
-         * @param headersList   HTTP headers of the request that has generated the Content
-         * @param quickDownload True if the present call has been triggered by a quick download action
+         * @param content        Content to be processed
+         * @param requestHeaders HTTP headers of the request that has generated the Content
+         * @param quickDownload  True if the present call has been triggered by a quick download action
          */
-        void processContent(@Nonnull Content content, @Nonnull List<Pair<String, String>> headersList, boolean quickDownload) {
+        void processContent(@Nonnull Content content, @Nonnull List<Pair<String, String>> requestHeaders, boolean quickDownload) {
             if (content.getStatus() != null && content.getStatus().equals(StatusContent.IGNORED))
                 return;
 
@@ -1437,7 +1441,7 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
 
             // Save cookies for future calls during download
             Map<String, String> params = new HashMap<>();
-            for (Pair<String, String> p : headersList)
+            for (Pair<String, String> p : requestHeaders)
                 if (p.first.equals(HttpHelper.HEADER_COOKIE_KEY))
                     params.put(HttpHelper.HEADER_COOKIE_KEY, p.second);
 
@@ -1466,9 +1470,11 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
          * @param dirtyElements CSS selectors of the nodes to remove
          * @return Stream containing the HTML document stripped from the elements to remove
          */
+        @Nullable
         private InputStream removeCssElementsFromStream(@NonNull InputStream stream, @NonNull String baseUri, @NonNull List<String> dirtyElements) {
             try {
                 Document doc = Jsoup.parse(stream, null, baseUri);
+
                 for (String s : dirtyElements)
                     for (Element e : doc.select(s)) {
                         Timber.d("[%s] Removing node %s", baseUri, e.toString());
@@ -1477,7 +1483,7 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
                 return new ByteArrayInputStream(doc.toString().getBytes(StandardCharsets.UTF_8));
             } catch (IOException e) {
                 Timber.e(e);
-                return stream;
+                return null;
             }
         }
 

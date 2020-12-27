@@ -339,17 +339,29 @@ public class FileHelper {
      * @return 0 if the given folder is valid and has been set; -1 if the given folder is invalid; -2 if write credentials could not be set
      */
     public static int checkAndSetRootFolder(@NonNull final Context context, @NonNull final DocumentFile folder) {
+        int result = createNoMedia(context, folder);
+        if (0 == result) Preferences.setStorageUri(folder.getUri().toString());
+        return result;
+    }
+
+    /**
+     * Try to create the .nomedia file inside the given folder
+     *
+     * @param context Context to use
+     * @param folder  Folder to create the file into
+     * @return 0 if the given folder is valid and has been set; -1 if the given folder is invalid; -2 if write credentials are insufficient
+     */
+    public static int createNoMedia(@NonNull final Context context, @NonNull final DocumentFile folder) {
         // Validate folder
         if (!folder.exists() && !folder.isDirectory()) return -1;
 
         // Remove and add back the nomedia file to test if the user has the I/O rights to the selected folder
         DocumentFile nomedia = findFile(context, folder, NOMEDIA_FILE_NAME);
-        if (nomedia != null) nomedia.delete();
+        if (nomedia != null && !nomedia.delete()) return -2;
 
         nomedia = folder.createFile("application/octet-steam", NOMEDIA_FILE_NAME);
         if (null == nomedia || !nomedia.exists()) return -2;
 
-        Preferences.setStorageUri(folder.getUri().toString());
         return 0;
     }
 
@@ -1045,6 +1057,24 @@ public class FileHelper {
             DocumentFile doc = FileHelper.getFileFromSingleUriString(context, fileUri.toString());
             return (doc != null);
         }
+    }
+
+    /**
+     * Return the size of the file at the given Uri, in bytes
+     *
+     * @param context Context to be used
+     * @param fileUri Uri to the file whose size to retrieve
+     * @return Size of the file at the given Uri; -1 if it cannot be found
+     */
+    public static long fileSizeFromUri(@NonNull final Context context, @NonNull final Uri fileUri) {
+        if (ContentResolver.SCHEME_FILE.equals(fileUri.getScheme())) {
+            String path = fileUri.getPath();
+            if (path != null) return new File(path).length();
+        } else {
+            DocumentFile doc = FileHelper.getFileFromSingleUriString(context, fileUri.toString());
+            if (doc != null) return doc.length();
+        }
+        return -1;
     }
 
     @FunctionalInterface

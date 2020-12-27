@@ -11,7 +11,6 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import javax.annotation.Nullable;
 
@@ -44,7 +43,7 @@ public interface CollectionDAO {
     List<Content> selectContent(long[] id);
 
     @Nullable
-    Content selectContentByFolderUri(@NonNull final String folderUri, boolean onlyFlagged);
+    Content selectContentByStorageUri(@NonNull final String folderUri, boolean onlyFlagged);
 
     @Nullable
     Content selectContentBySourceAndUrl(@NonNull Site site, @NonNull String url);
@@ -124,24 +123,22 @@ public interface CollectionDAO {
 
     List<GroupItem> selectGroupItems(long contentId, Grouping grouping);
 
-    List<GroupItem> selectGroupItemsByDlDate(int minDays, int maxDays);
-
     void deleteGroupItems(List<Long> groupItemIds);
 
 
     // High-level queries (internal and external locations)
 
-    Single<List<Long>> getStoredBookIds(boolean nonFavouriteOnly, boolean includeQueued);
+    Single<List<Content>> selectStoredBooks(boolean nonFavouriteOnly, boolean includeQueued);
 
 
-    Single<List<Long>> getRecentBookIds(long groupId, int orderField, boolean orderDesc, boolean favouritesOnly);
+    Single<List<Long>> selectRecentBookIds(long groupId, int orderField, boolean orderDesc, boolean bookFavouritesOnly, boolean pageFavouritesOnly);
 
-    Single<List<Long>> searchBookIds(String query, long groupId, List<Attribute> metadata, int orderField, boolean orderDesc, boolean favouritesOnly);
+    Single<List<Long>> searchBookIds(String query, long groupId, List<Attribute> metadata, int orderField, boolean orderDesc, boolean bookFavouritesOnly, boolean pageFavouritesOnly);
 
-    Single<List<Long>> searchBookIdsUniversal(String query, long groupId, int orderField, boolean orderDesc, boolean favouritesOnly);
+    Single<List<Long>> searchBookIdsUniversal(String query, long groupId, int orderField, boolean orderDesc, boolean bookFavouritesOnly, boolean pageFavouritesOnly);
 
 
-    LiveData<PagedList<Content>> getRecentBooks(long groupId, int orderField, boolean orderDesc, boolean favouritesOnly, boolean loadAll);
+    LiveData<PagedList<Content>> selectRecentBooks(long groupId, int orderField, boolean orderDesc, boolean favouritesOnly, boolean loadAll);
 
     LiveData<PagedList<Content>> searchBooks(String query, long groupId, List<Attribute> metadata, int orderField, boolean orderDesc, boolean favouritesOnly, boolean loadAll);
 
@@ -150,7 +147,9 @@ public interface CollectionDAO {
     LiveData<Map<String, StatusContent>> selectContentUniqueIdStates(@NonNull final Site site);
 
 
-    LiveData<List<Content>> getErrorContent();
+    LiveData<List<Content>> selectErrorContent();
+
+    List<Content> selectErrorContentList();
 
 
     LiveData<Integer> countBooks(String query, long groupId, List<Attribute> metadata, boolean favouritesOnly);
@@ -172,18 +171,18 @@ public interface CollectionDAO {
 
     ImageFile selectImageFile(long id);
 
-    LiveData<List<ImageFile>> getDownloadedImagesFromContent(long id);
+    LiveData<List<ImageFile>> selectDownloadedImagesFromContent(long id);
 
     Map<StatusContent, ImmutablePair<Integer, Long>> countProcessedImagesById(long contentId);
 
-    Map<Site, ImmutablePair<Integer, Long>> getMemoryUsagePerSource();
+    Map<Site, ImmutablePair<Integer, Long>> selectMemoryUsagePerSource();
 
 
     // QUEUE
 
     List<QueueRecord> selectQueue();
 
-    LiveData<List<QueueRecord>> getQueueContent();
+    LiveData<List<QueueRecord>> selectQueueContent();
 
     void addContentToQueue(@NonNull final Content content, StatusContent targetImageStatus);
 
@@ -198,7 +197,7 @@ public interface CollectionDAO {
 
     // ATTRIBUTES
 
-    Single<AttributeQueryResult> getAttributeMasterDataPaged(
+    Single<AttributeQueryResult> selectAttributeMasterDataPaged(
             @NonNull List<AttributeType> types,
             String filter,
             List<Attribute> attrs,
@@ -212,7 +211,7 @@ public interface CollectionDAO {
 
     // SITE HISTORY
 
-    SiteHistory getHistory(@NonNull Site s);
+    SiteHistory selectHistory(@NonNull Site s);
 
     void insertSiteHistory(@NonNull Site site, @NonNull String url);
 
@@ -222,8 +221,6 @@ public interface CollectionDAO {
     long countAllBookmarks();
 
     List<SiteBookmark> selectAllBookmarks();
-
-    Set<String> selectAllBookmarkUrls();
 
     List<SiteBookmark> selectBookmarks(@NonNull Site s);
 
@@ -245,7 +242,7 @@ public interface CollectionDAO {
 
     // ONE-TIME USE QUERIES (MIGRATION & CLEANUP)
 
-    Single<List<Long>> getOldStoredBookIds();
+    Single<List<Long>> selectOldStoredBookIds();
 
     long countOldStoredContent();
 

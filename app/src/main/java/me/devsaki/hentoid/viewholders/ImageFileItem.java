@@ -154,8 +154,7 @@ public class ImageFileItem extends AbstractItem<ImageFileItem.ImageViewHolder> {
 
         @Override
         public void unbindView(@NotNull ImageFileItem item) {
-            // Unload resources & cancel any pending load
-            if (Helper.isValidContextForGlide(image))
+            if (image != null && Helper.isValidContextForGlide(image))
                 Glide.with(image).clear(image);
         }
     }
