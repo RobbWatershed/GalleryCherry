@@ -87,7 +87,7 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
 
     // ==== Advanced search / sort bar
     // CLEAR button
-    private TextView searchClearButton;
+    private View searchClearButton;
 
     // === TOOLBAR
     private Toolbar toolbar;
