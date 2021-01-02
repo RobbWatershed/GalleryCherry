@@ -8,7 +8,7 @@
     <string name="slide_02_text">We need to ask for your permission to store files on your device.</string>
     <!-- Slide 04 -->
     <string name="slide_04_header">Library</string>
-    <string name="slide_04_text">Hentoid requires a dedicated folder for storing your media.</string>
+    <string name="slide_04_text">GalleryCherry requires a dedicated folder for storing your media.</string>
     <string name="slide_04_skip">Skip</string>
     <string name="slide_04_skip_title">Skip?</string>
     <string name="slide_04_skip_msg">You won\'t be able to download if you skip this step.\nIn order to download, you\'ll have to set the download folder through the app settings.</string>
