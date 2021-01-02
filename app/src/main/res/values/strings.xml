@@ -111,7 +111,7 @@
     <string name="refresh_title">Refresh library</string>
     <string name="refresh_caption">Automatically refresh library data by rescanning files and folders.</string>
     <string name="refresh_options">Cleanup options</string>
-    <string name="refresh_location_internal">Hentoid library</string>
+    <string name="refresh_location_internal">GalleryCherry library</string>
     <string name="refresh_location_external">External library</string>
     <string name="refresh_options_rename">Rename all folders according to the current naming and max length preference</string>
     <string name="refresh_options_remove">Remove folders where…</string>
@@ -205,7 +205,7 @@
     <string name="memory_title">Memory usage</string>
     <string name="memory_total">Total : %.2f GB</string>
     <string name="memory_free">Free : %.2f GB</string>
-    <string name="memory_hentoid">Hentoid : %.2f GB</string>
+    <string name="memory_hentoid">GalleryCherry : %.2f GB</string>
     <string name="memory_database">Database : %1$s (%2$.1f%% full)</string>
     <string name="memory_details">View details</string>
 
@@ -416,7 +416,7 @@
     <string name="web_unparsable">This content cannot be downloaded. Sorry~</string>
     <string name="web_url_clipboard">URL copied to clipboard</string>
     <string name="help_web_download">You\'ve reached a book page.\nTime to download with the bottom bar!</string>
-    <string name="help_web_fakku_account">Please use or create a legit Fakku account.\nHentoid won\'t work without.</string>
+    <string name="help_web_fakku_account">Please use or create a legit Fakku account.\nGalleryCherry won\'t work without.</string>
     <string name="help_web_exh_account">Please use or create an ExHentai account</string>
     <string name="help_web_invalid_exh_credentials">Invalid credentials, please log in again</string>
     <string name="help_web_incomplete_exh_credentials">Incomplete credentials, please log in again. If the issue persists, consider accessing the site from another country or creating a new account.</string>
