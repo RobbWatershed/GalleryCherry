@@ -26,6 +26,7 @@ public enum Site {
     LUSCIOUS(10, "luscious.net", "https://members.luscious.net/porn/", R.drawable.ic_menu_luscious),
     FAPALITY(11, "Fapality", "https://fapality.com/photos/", R.drawable.ic_menu_fapality),
     HINA(12, "Hina", "https://github.com/ixilia/hina", R.drawable.ic_menu_hina),
+    IMHENTAI(21, "Imhentai", "https://imhentai.com", R.drawable.ic_menu_imhentai),
     NONE(98, "none", "", R.drawable.ic_external_library); // External library; fallback site
 
 

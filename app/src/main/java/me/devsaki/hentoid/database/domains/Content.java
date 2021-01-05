@@ -28,6 +28,7 @@ import me.devsaki.hentoid.activities.sources.HellpornoActivity;
 import me.devsaki.hentoid.activities.sources.JjgirlsActivity;
 import me.devsaki.hentoid.activities.sources.JpegworldActivity;
 import me.devsaki.hentoid.activities.sources.Link2GalleriesActivity;
+import me.devsaki.hentoid.activities.sources.ImhentaiActivity;
 import me.devsaki.hentoid.activities.sources.LusciousActivity;
 import me.devsaki.hentoid.activities.sources.NextpicturezActivity;
 import me.devsaki.hentoid.activities.sources.PornPicGalleriesActivity;
@@ -41,6 +42,7 @@ import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.util.ArchiveHelper;
 import me.devsaki.hentoid.util.AttributeMap;
+import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.JsonHelper;
 import timber.log.Timber;
 
@@ -249,6 +251,8 @@ public class Content implements Serializable {
                 return LusciousActivity.class;
             case FAPALITY:
                 return FapalityActivity.class;
+            case IMHENTAI:
+                return ImhentaiActivity.class;
             default:
                 return BaseWebActivity.class;
         }
@@ -326,7 +330,7 @@ public class Content implements Serializable {
     }
 
     public String getTitle() {
-        return title;
+        return Helper.protect(title);
     }
 
     public Content setTitle(String title) {
@@ -645,9 +649,9 @@ public class Content implements Serializable {
         if (readPagesCount > -1) return readPagesCount;
 
         if (null == imageFiles) return 0;
-        int countReadPages = (int) Stream.of(imageFiles).filter(ImageFile::isRead).filterNot(ImageFile::isCover).count();
+        int countReadPages = (int) Stream.of(imageFiles).filter(ImageFile::isRead).filter(ImageFile::isReadable).count();
         if (0 == countReadPages && lastReadPageIndex > 0)
-            return lastReadPageIndex + 1; // pre-v1.13 content
+            return lastReadPageIndex; // pre-v1.13 content
         else return countReadPages; // post v1.13 content
     }
 

@@ -87,11 +87,8 @@ public class ViewerGalleryFragment extends Fragment {
 
         setHasOptionsMenu(true);
 
-        if (!fastAdapter.hasObservers())
-            fastAdapter.setHasStableIds(true);
+        if (!fastAdapter.hasObservers()) fastAdapter.setHasStableIds(true);
 
-        // Item click listener
-        fastAdapter.setOnClickListener((v, a, i, p) -> onItemClick(i));
         // Favourite button click listener
         fastAdapter.addEventHook(new ClickEventHook<ImageFileItem>() {
             @Override
@@ -117,6 +114,9 @@ public class ViewerGalleryFragment extends Fragment {
             selectExtension.setSelectOnLongClick(true);
             selectExtension.setSelectionListener((i, b) -> this.onSelectionChanged());
         }
+
+        // Item click listener
+        fastAdapter.setOnClickListener((v, a, i, p) -> onItemClick(i));
 
         // Filtering
         itemAdapter.getItemFilter().setFilterPredicate((imageFileItem, charSequence) -> !charSequence.equals("true") || imageFileItem.isFavourite());
