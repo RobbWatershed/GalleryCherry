@@ -28,7 +28,6 @@ import me.devsaki.hentoid.activities.sources.HellpornoActivity;
 import me.devsaki.hentoid.activities.sources.JjgirlsActivity;
 import me.devsaki.hentoid.activities.sources.JpegworldActivity;
 import me.devsaki.hentoid.activities.sources.Link2GalleriesActivity;
-import me.devsaki.hentoid.activities.sources.ImhentaiActivity;
 import me.devsaki.hentoid.activities.sources.LusciousActivity;
 import me.devsaki.hentoid.activities.sources.NextpicturezActivity;
 import me.devsaki.hentoid.activities.sources.PornPicGalleriesActivity;
@@ -251,8 +250,6 @@ public class Content implements Serializable {
                 return LusciousActivity.class;
             case FAPALITY:
                 return FapalityActivity.class;
-            case IMHENTAI:
-                return ImhentaiActivity.class;
             default:
                 return BaseWebActivity.class;
         }
