@@ -261,6 +261,8 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
                 tvTags = requireViewById(itemView, R.id.tvTags);
                 readingProgress = requireViewById(itemView, R.id.reading_progress);
             } else if (viewType == ViewType.ONLINE) {
+                ivFavourite = itemView.findViewById(R.id.ivFavourite);
+                ivExternal = itemView.findViewById(R.id.ivExternal);
                 tvTags = requireViewById(itemView, R.id.tvTags);
                 ivRedownload = itemView.findViewById(R.id.ivRedownload);
             } else if (viewType == ViewType.LIBRARY_GRID) {
@@ -530,6 +532,8 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
                 ivRedownload.setVisibility(View.VISIBLE);
                 ivError.setVisibility(View.VISIBLE);
             } else if (ViewType.ONLINE == item.viewType) {
+                ivExternal.setVisibility(View.GONE);
+                ivFavourite.setVisibility(View.GONE);
                 if (content.getStatus().equals(StatusContent.ONLINE))
                     ivRedownload.setVisibility(View.VISIBLE);
                 else

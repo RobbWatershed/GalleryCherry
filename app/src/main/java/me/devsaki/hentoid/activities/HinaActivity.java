@@ -112,8 +112,6 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
     // True when a new search has been performed and its results have not been handled yet
     // False when the refresh is passive (i.e. not from a direct user action)
     private boolean newSearch = false;
-    // Collection of books according to current filters
-    private PagedList<Content> library;
     // Position of top item to memorize or restore (used when activity is destroyed and recreated)
     private int topItemPosition = -1;
 
@@ -131,7 +129,7 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
     // Current text search query
     private String query = "";
     // Current metadata search query
-    private List<Attribute> metadata = Collections.emptyList();
+    private final List<Attribute> metadata = Collections.emptyList();
 
     private Disposable downloadDisposable;
 
@@ -505,7 +503,7 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
         pagedItemAdapter.submitList(result, this::differEndCallback);
 
         newSearch = false;
-        library = result;
+        // Collection of books according to current filters
     }
 
     private void onHinaCallStatus(Integer status) {

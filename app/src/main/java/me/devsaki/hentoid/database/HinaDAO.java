@@ -258,7 +258,13 @@ public class HinaDAO implements CollectionDAO {
 
     @Override
     public LiveData<PagedList<Content>> selectRecentBooks(long groupId, int orderField, boolean orderDesc, boolean favouritesOnly, boolean loadAll) {
-        return null;
+        PagedList.Config config = (new PagedList.Config.Builder())
+                .setEnablePlaceholders(true)
+                .setInitialLoadSizeHint(20)
+                .setPageSize(10)
+                .build();
+
+        return (new LivePagedListBuilder<>(new HinaDataSource.HinaDataSourceFactory(disposable, completionCallback, interceptor), config)).build();
     }
 
     @Override
