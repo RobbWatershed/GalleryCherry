@@ -9,6 +9,7 @@ import com.annimon.stream.Stream;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,9 +36,12 @@ import me.devsaki.hentoid.activities.sources.RedditActivity;
 import me.devsaki.hentoid.activities.sources.XhamsterActivity;
 import me.devsaki.hentoid.activities.sources.XnxxActivity;
 import me.devsaki.hentoid.enums.AttributeType;
+import me.devsaki.hentoid.enums.Grouping;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
+import me.devsaki.hentoid.util.ArchiveHelper;
 import me.devsaki.hentoid.util.AttributeMap;
+import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.JsonHelper;
 import timber.log.Timber;
 
@@ -47,6 +51,7 @@ import static me.devsaki.hentoid.util.JsonHelper.MAP_STRINGS;
  * Created by DevSaki on 09/05/2015.
  * Content builder
  */
+@SuppressWarnings("UnusedReturnValue")
 @Entity
 public class Content implements Serializable {
 
@@ -58,15 +63,21 @@ public class Content implements Serializable {
     private String author;
     private ToMany<Attribute> attributes;
     private String coverImageUrl;
-    private Integer qtyPages = 0; // Integer is actually unnecessary, but changing this to plain int requires a small DB model migration...
+    private Integer qtyPages; // Integer is actually unnecessary, but changing this to plain int requires a small DB model migration...
     private long uploadDate;
     private long downloadDate = 0;
     @Convert(converter = StatusContent.StatusContentConverter.class, dbType = Integer.class)
     private StatusContent status;
     @Backlink(to = "content")
     private ToMany<ImageFile> imageFiles;
+    @Backlink(to = "content")
+    public ToMany<GroupItem> groupItems;
     @Convert(converter = Site.SiteConverter.class, dbType = Long.class)
     private Site site;
+    /**
+     * @deprecated Replaced by {@link me.devsaki.hentoid.services.ImportService} methods; class is kept for retrocompatibilty
+     */
+    @Deprecated
     private String storageFolder; // Used as pivot for API29 migration; no use after that (replaced by storageUri)
     private String storageUri; // Not exposed because it will vary according to book location -> valued at import
     private boolean favourite;
@@ -101,6 +112,13 @@ public class Content implements Serializable {
     private boolean isLast;         // True if current content is the last of its set in the DB query
     @Transient
     private int numberDownloadRetries = 0;  // Current number of download retries current content has gone through
+    @Transient
+    private int readPagesCount = -1;  // Read pages count fed by payload; only useful to update list display
+    @Transient
+    private String archiveLocationUri;  // Only used when importing external archives
+
+    public Content() {
+    }
 
 
     public ToMany<Attribute> getAttributes() {
@@ -113,6 +131,14 @@ public class Content implements Serializable {
 
     public void clearAttributes() {
         this.attributes.clear();
+    }
+
+    public void putAttributes(List<Attribute> attributes) {
+        // We do want to compare array references, not content
+        if (attributes != null && attributes != this.attributes) {
+            this.attributes.clear();
+            this.attributes.addAll(attributes);
+        }
     }
 
     public AttributeMap getAttributeMap() {
@@ -301,7 +327,7 @@ public class Content implements Serializable {
     }
 
     public String getTitle() {
-        return title;
+        return Helper.protect(title);
     }
 
     public Content setTitle(String title) {
@@ -320,7 +346,7 @@ public class Content implements Serializable {
     }
 
     public int getQtyPages() {
-        return qtyPages;
+        return (null == qtyPages) ? 0 : qtyPages;
     }
 
     public Content setQtyPages(int qtyPages) {
@@ -375,7 +401,7 @@ public class Content implements Serializable {
             for (ImageFile img : images)
                 if (img.isCover()) return img;
         }
-        return new ImageFile();
+        return new ImageFile(0, getCoverImageUrl(), StatusContent.ONLINE, 1);
     }
 
     public String getCoverImageUrl() {
@@ -400,7 +426,10 @@ public class Content implements Serializable {
     }
 
     public double getPercent() {
-        return progress * 1.0 / qtyPages;
+        if (getQtyPages() > 0)
+            return progress * 1.0 / getQtyPages();
+        else
+            return 0;
     }
 
     public void setProgress(long progress) {
@@ -445,6 +474,10 @@ public class Content implements Serializable {
         return size;
     }
 
+    public void forceSize(long size) {
+        this.size = size;
+    }
+
     public void computeSize() {
         size = getDownloadedPagesSize();
     }
@@ -467,6 +500,10 @@ public class Content implements Serializable {
         return storageFolder == null ? "" : storageFolder;
     }
 
+    /**
+     * @deprecated Replaced by getStorageUri; accessor is kept for API29 migration
+     */
+    @Deprecated
     public void resetStorageFolder() {
         storageFolder = "";
     }
@@ -545,10 +582,6 @@ public class Content implements Serializable {
         this.bookPreferences = bookPreferences;
     }
 
-    public void putBookPreferenceMap(String key, String value) {
-        bookPreferences.put(key, value);
-    }
-
     public int getLastReadPageIndex() {
         return lastReadPageIndex;
     }
@@ -588,6 +621,41 @@ public class Content implements Serializable {
     public void increaseNumberDownloadRetries() {
         this.numberDownloadRetries++;
     }
+
+    public boolean isArchive() {
+        return ArchiveHelper.isSupportedArchive(getStorageUri()); // Warning : this shortcut assumes the URI contains the file name, which is not guaranteed !
+    }
+
+    public String getArchiveLocationUri() {
+        return archiveLocationUri;
+    }
+
+    public void setArchiveLocationUri(String archiveLocationUri) {
+        this.archiveLocationUri = archiveLocationUri;
+    }
+
+    public List<GroupItem> getGroupItems(Grouping grouping) {
+        List<GroupItem> result = new ArrayList<>();
+        for (GroupItem gi : groupItems)
+            if (gi.group.getTarget().grouping.equals(grouping)) result.add(gi);
+
+        return result;
+    }
+
+    public int getReadPagesCount() {
+        if (readPagesCount > -1) return readPagesCount;
+
+        if (null == imageFiles) return 0;
+        int countReadPages = (int) Stream.of(imageFiles).filter(ImageFile::isRead).filter(ImageFile::isReadable).count();
+        if (0 == countReadPages && lastReadPageIndex > 0)
+            return lastReadPageIndex; // pre-v1.13 content
+        else return countReadPages; // post v1.13 content
+    }
+
+    public void setReadPagesCount(int count) {
+        readPagesCount = count;
+    }
+
 
     public static class StringMapConverter implements PropertyConverter<Map<String, String>, String> {
         @Override

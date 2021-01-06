@@ -14,12 +14,15 @@ import com.annimon.stream.Stream;
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.greenrobot.eventbus.EventBus;
 import org.threeten.bp.Instant;
 
+import java.io.File;
 import java.io.IOException;
 import java.security.InvalidParameterException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,11 +35,17 @@ import me.devsaki.hentoid.activities.UnlockActivity;
 import me.devsaki.hentoid.activities.bundles.BaseWebActivityBundle;
 import me.devsaki.hentoid.activities.bundles.ImageViewerActivityBundle;
 import me.devsaki.hentoid.database.CollectionDAO;
+import me.devsaki.hentoid.database.domains.Attribute;
 import me.devsaki.hentoid.database.domains.Content;
+import me.devsaki.hentoid.database.domains.Group;
+import me.devsaki.hentoid.database.domains.GroupItem;
 import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.database.domains.QueueRecord;
+import me.devsaki.hentoid.enums.AttributeType;
+import me.devsaki.hentoid.enums.Grouping;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
+import me.devsaki.hentoid.events.DownloadEvent;
 import me.devsaki.hentoid.json.JsonContent;
 import me.devsaki.hentoid.json.JsonContentCollection;
 import me.devsaki.hentoid.util.exception.ContentNotRemovedException;
@@ -51,6 +60,9 @@ import static com.annimon.stream.Collectors.toList;
 public final class ContentHelper {
 
     private static final String UNAUTHORIZED_CHARS = "[^a-zA-Z0-9.-]";
+    private static final int[] libraryStatus = new int[]{StatusContent.DOWNLOADED.getCode(), StatusContent.MIGRATED.getCode(), StatusContent.EXTERNAL.getCode()};
+    private static final int[] queueStatus = new int[]{StatusContent.DOWNLOADING.getCode(), StatusContent.PAUSED.getCode(), StatusContent.ERROR.getCode()};
+    private static final int[] queueTabStatus = new int[]{StatusContent.DOWNLOADING.getCode(), StatusContent.PAUSED.getCode()};
 
     // TODO empty this cache at some point
     private static final Map<String, String> fileNameMatchCache = new HashMap<>();
@@ -58,6 +70,27 @@ public final class ContentHelper {
 
     private ContentHelper() {
         throw new IllegalStateException("Utility class");
+    }
+
+
+    public static int[] getLibraryStatuses() {
+        return libraryStatus;
+    }
+
+    public static boolean isInLibrary(@NonNull final StatusContent status) {
+        return Helper.getListFromPrimitiveArray(libraryStatus).contains(status.getCode());
+    }
+
+    public static int[] getQueueStatuses() {
+        return queueStatus;
+    }
+
+    public static boolean isInQueue(@NonNull final StatusContent status) {
+        return Helper.getListFromPrimitiveArray(queueStatus).contains(status.getCode());
+    }
+
+    private static boolean isInQueueTab(@NonNull final StatusContent status) {
+        return Helper.getListFromPrimitiveArray(queueTabStatus).contains(status.getCode());
     }
 
     /**
@@ -96,6 +129,7 @@ public final class ContentHelper {
      */
     public static void updateContentJson(@NonNull Context context, @NonNull Content content) {
         Helper.assertNonUiThread();
+
         DocumentFile file = FileHelper.getFileFromSingleUriString(context, content.getJsonUri());
         if (null == file)
             throw new InvalidParameterException("'" + content.getJsonUri() + "' does not refer to a valid file");
@@ -114,6 +148,8 @@ public final class ContentHelper {
      */
     public static void createContentJson(@NonNull Context context, @NonNull Content content) {
         Helper.assertNonUiThread();
+        if (content.isArchive()) return; // Keep that as is, we can't find the parent folder anyway
+
         DocumentFile folder = FileHelper.getFolderFromTreeUriString(context, content.getStorageUri());
         if (null == folder) return;
         try {
@@ -123,10 +159,22 @@ public final class ContentHelper {
         }
     }
 
+    /**
+     * Update the JSON file that stores the queue with the current contents of the queue
+     *
+     * @param context Context to be used
+     * @param dao     DAO to be used
+     * @return True if the queue JSON file has been updated properly; false instead
+     */
     public static boolean updateQueueJson(@NonNull Context context, @NonNull CollectionDAO dao) {
+        Helper.assertNonUiThread();
         List<QueueRecord> queue = dao.selectQueue();
+        List<Content> errors = dao.selectErrorContentList();
+
         // Save current queue (to be able to restore it in case the app gets uninstalled)
-        List<Content> queuedContent = Stream.of(queue).map(qr -> qr.content.getTarget()).withoutNulls().toList();
+        List<Content> queuedContent = Stream.of(queue).map(qr -> qr.getContent().getTarget()).withoutNulls().toList();
+        if (errors != null) queuedContent.addAll(errors);
+
         JsonContentCollection contentCollection = new JsonContentCollection();
         contentCollection.setQueue(queuedContent);
 
@@ -179,8 +227,16 @@ public final class ContentHelper {
      * @param dao     DAO to use for the action
      * @param content Content to update
      */
-    public static void updateContentReads(@NonNull Context context, @Nonnull CollectionDAO dao, @NonNull Content content) {
-        content.increaseReads().setLastReadDate(Instant.now().toEpochMilli());
+    public static void updateContentReadStats(
+            @NonNull Context context,
+            @Nonnull CollectionDAO dao,
+            @NonNull Content content,
+            @NonNull List<ImageFile> images,
+            int targetLastReadPageIndex,
+            boolean updateReads) {
+        content.setLastReadPageIndex(targetLastReadPageIndex);
+        if (updateReads) content.increaseReads().setLastReadDate(Instant.now().toEpochMilli());
+        dao.replaceImageList(content.getId(), images);
         dao.insertContent(content);
 
         if (!content.getJsonUri().isEmpty()) updateContentJson(context, content);
@@ -217,24 +273,146 @@ public final class ContentHelper {
     /**
      * Remove the given Content from the disk and the DB
      *
-     * @param content Content to be removed
+     * @param context Context to be used
      * @param dao     DAO to be used
+     * @param content Content to be removed
+     * @throws ContentNotRemovedException in case an issue prevents the content from being actually removed
      */
-    public static void removeContent(@NonNull Context context, @NonNull Content content, @NonNull CollectionDAO dao) throws ContentNotRemovedException {
+    public static void removeContent(@NonNull Context context, @NonNull CollectionDAO dao, @NonNull Content content) throws ContentNotRemovedException {
         Helper.assertNonUiThread();
         // Remove from DB
         // NB : start with DB to have a LiveData feedback, because file removal can take much time
         dao.deleteContent(content);
-        // If the book has just starting being downloaded and there are no complete pictures on memory yet, it has no storage folder => nothing to delete
-        DocumentFile folder = FileHelper.getFolderFromTreeUriString(context, content.getStorageUri());
-        if (null == folder)
-            throw new FileNotRemovedException(content, "Failed to find directory " + content.getStorageUri());
 
-        if (folder.delete()) {
-            Timber.i("Directory removed : %s", content.getStorageUri());
-        } else {
-            throw new FileNotRemovedException(content, "Failed to delete directory " + content.getStorageUri());
+        if (content.isArchive()) { // Remove an archive
+            DocumentFile archive = FileHelper.getFileFromSingleUriString(context, content.getStorageUri());
+            if (null == archive)
+                throw new FileNotRemovedException(content, "Failed to find archive " + content.getStorageUri());
+
+            if (archive.delete()) {
+                Timber.i("Archive removed : %s", content.getStorageUri());
+            } else {
+                throw new FileNotRemovedException(content, "Failed to delete archive " + content.getStorageUri());
+            }
+
+            // Remove the cover stored in the app's persistent folder
+            File appFolder = context.getFilesDir();
+            File[] images = appFolder.listFiles((dir, name) -> FileHelper.getFileNameWithoutExtension(name).equals(content.getId() + ""));
+            if (images != null)
+                for (File f : images) FileHelper.removeFile(f);
+        } else if (isInLibrary(content.getStatus()) && !content.getStorageUri().isEmpty()) { // Remove a folder and its content
+            // If the book has just starting being downloaded and there are no complete pictures on memory yet, it has no storage folder => nothing to delete
+            DocumentFile folder = FileHelper.getFolderFromTreeUriString(context, content.getStorageUri());
+            if (null == folder)
+                throw new FileNotRemovedException(content, "Failed to find directory " + content.getStorageUri());
+
+            if (folder.delete()) {
+                Timber.i("Directory removed : %s", content.getStorageUri());
+            } else {
+                throw new FileNotRemovedException(content, "Failed to delete directory " + content.getStorageUri());
+            }
         }
+    }
+
+    /**
+     * Remove the given Content from the queue, disk and the DB
+     *
+     * @param context Context to be used
+     * @param dao     DAO to be used
+     * @param content Content to be removed
+     * @throws ContentNotRemovedException in case an issue prevents the content from being actually removed
+     */
+    public static void removeQueuedContent(@NonNull Context context, @NonNull CollectionDAO dao, @NonNull Content content) throws ContentNotRemovedException {
+        Helper.assertNonUiThread();
+
+        // Check if the content is on top of the queue; if so, send a CANCEL event
+        if (isInQueueTab(content.getStatus())) {
+            List<QueueRecord> queue = dao.selectQueue();
+            if (!queue.isEmpty() && queue.get(0).getContent().getTargetId() == content.getId())
+                EventBus.getDefault().post(new DownloadEvent(content, DownloadEvent.EV_CANCEL));
+
+            // Remove from queue
+            dao.deleteQueue(content);
+        }
+
+        // Remove content itself
+        removeContent(context, dao, content);
+    }
+
+    /**
+     * Add new content to the library
+     *
+     * @param dao     DAO to be used
+     * @param content Content to add to the library
+     * @return ID of the newly added Content
+     */
+    public static long addContent(
+            @NonNull final Context context,
+            @NonNull final CollectionDAO dao,
+            @NonNull final Content content) {
+        content.populateAuthor();
+        long newContentId = dao.insertContent(content);
+        content.setId(newContentId);
+
+        // Perform group operations only if
+        //   - the book is in the library (i.e. not queued)
+        //   - the book is linked to no group from the given grouping
+        if (Helper.getListFromPrimitiveArray(libraryStatus).contains(content.getStatus().getCode())) {
+            List<Grouping> staticGroupings = Stream.of(Grouping.values()).filter(Grouping::canReorderBooks).toList();
+            for (Grouping g : staticGroupings)
+                if (content.getGroupItems(g).isEmpty()) {
+                    if (g.equals(Grouping.ARTIST)) {
+                        int nbGroups = (int) dao.countGroupsFor(g);
+                        AttributeMap attrs = content.getAttributeMap();
+                        List<Attribute> artists = new ArrayList<>();
+                        List<Attribute> sublist = attrs.get(AttributeType.ARTIST);
+                        if (sublist != null)
+                            artists.addAll(sublist);
+                        sublist = attrs.get(AttributeType.CIRCLE);
+                        if (sublist != null)
+                            artists.addAll(sublist);
+
+                        if (artists.isEmpty()) { // Add to the "no artist" group if no artist has been found
+                            Group group = GroupHelper.getOrCreateNoArtistGroup(context, dao);
+                            GroupItem item = new GroupItem(content, group, -1);
+                            dao.insertGroupItem(item);
+                        } else
+                            for (Attribute a : artists) { // Add to the artist groups attached to the artists attributes
+                                Group group = a.getGroup().getTarget();
+                                if (null == group) {
+                                    group = new Group(Grouping.ARTIST, a.getName(), ++nbGroups);
+                                    group.setSubtype(a.getType().equals(AttributeType.ARTIST) ? Preferences.Constant.ARTIST_GROUP_VISIBILITY_ARTISTS : Preferences.Constant.ARTIST_GROUP_VISIBILITY_GROUPS);
+                                    if (!a.contents.isEmpty())
+                                        group.picture.setTarget(a.contents.get(0).getCover());
+                                }
+                                GroupHelper.addContentToAttributeGroup(dao, group, a, content);
+                            }
+                    }
+                }
+        }
+
+        // Extract the cover to the app's persistent folder if the book is an archive
+        if (content.isArchive()) {
+            DocumentFile archive = FileHelper.getFileFromSingleUriString(context, content.getStorageUri());
+            if (archive != null) {
+                try {
+                    List<Uri> outputFiles = ArchiveHelper.extractArchiveEntries(
+                            context,
+                            archive,
+                            Stream.of(content.getCover().getFileUri().replace(content.getStorageUri() + File.separator, "")).toList(),
+                            context.getFilesDir(),
+                            Stream.of(newContentId + "").toList());
+                    if (!outputFiles.isEmpty() && content.getImageFiles() != null) {
+                        content.getCover().setFileUri(outputFiles.get(0).toString());
+                        dao.replaceImageList(newContentId, content.getImageFiles());
+                    }
+                } catch (IOException e) {
+                    Timber.w(e);
+                }
+            }
+        }
+
+        return newContentId;
     }
 
     /**
@@ -251,13 +429,11 @@ public final class ContentHelper {
         dao.deleteImageFiles(images);
 
         // Remove the pages from disk
-        for (ImageFile image : images) {
-            DocumentFile doc = FileHelper.getFileFromSingleUriString(context, image.getFileUri());
-            if (doc != null) doc.delete();
-        }
+        for (ImageFile image : images)
+            FileHelper.removeFile(context, Uri.parse(image.getFileUri()));
 
         // Lists all relevant content
-        List<Long> contents = Stream.of(images).filter(i -> i.content != null).map(i -> i.content.getTargetId()).distinct().toList();
+        List<Long> contents = Stream.of(images).filter(i -> i.getContent() != null).map(i -> i.getContent().getTargetId()).distinct().toList();
 
         // Update content JSON if it exists (i.e. if book is not queued)
         for (Long contentId : contents) {
@@ -267,12 +443,18 @@ public final class ContentHelper {
         }
     }
 
-    // TODO doc
-    public static void setCover(@NonNull ImageFile newCover, @NonNull CollectionDAO dao, @NonNull final Context context) {
+    /**
+     * Define a new cover among a Content's ImageFiles
+     *
+     * @param newCover ImageFile to be used as a cover for the Content it is related to
+     * @param dao      DAO to be used
+     * @param context  Context to be used
+     */
+    public static void setContentCover(@NonNull ImageFile newCover, @NonNull CollectionDAO dao, @NonNull final Context context) {
         Helper.assertNonUiThread();
 
         // Get all images from the DB
-        Content content = dao.selectContent(newCover.content.getTargetId());
+        Content content = dao.selectContent(newCover.getContent().getTargetId());
         if (null == content) return;
         List<ImageFile> images = content.getImageFiles();
         if (null == images) return;
@@ -292,7 +474,6 @@ public final class ContentHelper {
         content.setCoverImageUrl(newCover.getUrl());
 
         // Update the whole list
-//        dao.replaceImageList(content.getId(), images);
         dao.insertContent(content);
 
         // Update content JSON if it exists (i.e. if book is not queued)
@@ -333,13 +514,13 @@ public final class ContentHelper {
         String author = content.getAuthor().toLowerCase().replaceAll(UNAUTHORIZED_CHARS, "_");
 
         switch (Preferences.getFolderNameFormat()) {
-            case Preferences.Constant.PREF_FOLDER_NAMING_CONTENT_TITLE_ID:
+            case Preferences.Constant.FOLDER_NAMING_CONTENT_TITLE_ID:
                 result += title;
                 break;
-            case Preferences.Constant.PREF_FOLDER_NAMING_CONTENT_AUTH_TITLE_ID:
+            case Preferences.Constant.FOLDER_NAMING_CONTENT_AUTH_TITLE_ID:
                 result += author + " - " + title;
                 break;
-            case Preferences.Constant.PREF_FOLDER_NAMING_CONTENT_TITLE_AUTH_ID:
+            case Preferences.Constant.FOLDER_NAMING_CONTENT_TITLE_AUTH_ID:
                 result += title + " - " + author;
                 break;
         }
@@ -355,6 +536,8 @@ public final class ContentHelper {
         if (truncLength > 0 && titleLength + suffix.length() > truncLength)
             result = result.substring(0, truncLength - suffix.length() - 1);
 
+        // We always add the unique ID at the end of the folder name to avoid collisions between two books with the same title from the same source
+        // (e.g. different scans, different languages)
         result += suffix;
 
         return result;
@@ -426,7 +609,32 @@ public final class ContentHelper {
         context.startActivity(Intent.createChooser(intent, context.getString(R.string.send_to)));
     }
 
-    private static String removeLeadingZeroesAndExtension(String s) {
+    /**
+     * Parse the given download parameters string into a map of strings
+     *
+     * @param downloadParamsStr String representation of the download parameters to parse
+     * @return Map of strings describing the given download parameters
+     */
+    public static Map<String, String> parseDownloadParams(final String downloadParamsStr) {
+        // Handle empty and {}
+        if (null == downloadParamsStr || downloadParamsStr.trim().length() <= 2)
+            return new HashMap<>();
+        try {
+            return JsonHelper.jsonToObject(downloadParamsStr, JsonHelper.MAP_STRINGS);
+        } catch (IOException e) {
+            Timber.w(e);
+        }
+        return new HashMap<>();
+    }
+
+
+    /**
+     * Remove the leading zeroes and the file extension of the given string
+     *
+     * @param s String to be cleaned
+     * @return Input string, without leading zeroes and extension
+     */
+    private static String removeLeadingZeroesAndExtension(@Nullable String s) {
         if (null == s) return "";
 
         int beginIndex = 0;
@@ -440,6 +648,12 @@ public final class ContentHelper {
         return (-1 == beginIndex) ? "0" : s.substring(beginIndex);
     }
 
+    /**
+     * Remove the leading zeroes and the file extension of the given string using cached results
+     *
+     * @param s String to be cleaned
+     * @return Input string, without leading zeroes and extension
+     */
     private static String removeLeadingZeroesAndExtensionCached(String s) {
         if (fileNameMatchCache.containsKey(s)) return fileNameMatchCache.get(s);
         else {
@@ -449,25 +663,50 @@ public final class ContentHelper {
         }
     }
 
+    /**
+     * Matches the given files to the given ImageFiles according to their name (without leading zeroes nor file extension)
+     *
+     * @param files  Files to be matched to the given ImageFiles
+     * @param images ImageFiles to be matched to the given files
+     * @return List of matched ImageFiles, with the Uri of the matching file
+     */
     public static List<ImageFile> matchFilesToImageList(@NonNull final List<DocumentFile> files, @NonNull final List<ImageFile> images) {
         Map<String, ImmutablePair<String, Long>> fileNameProperties = new HashMap<>(files.size());
         List<ImageFile> result = new ArrayList<>();
+        boolean coverFound = false;
 
+        // Put file names into a Map to speed up the lookup
         for (DocumentFile file : files)
             fileNameProperties.put(removeLeadingZeroesAndExtensionCached(file.getName()), new ImmutablePair<>(file.getUri().toString(), file.length()));
 
+        // Look up similar names between images and file names
         for (ImageFile img : images) {
             String imgName = removeLeadingZeroesAndExtensionCached(img.getName());
             if (fileNameProperties.containsKey(imgName)) {
                 ImmutablePair<String, Long> property = fileNameProperties.get(imgName);
-                if (property != null)
-                    result.add(img.setFileUri(property.left).setSize(property.right).setStatus(StatusContent.DOWNLOADED).setIsCover(imgName.equals(Consts.THUMB_FILE_NAME)));
+                if (property != null) {
+                    if (imgName.equals(Consts.THUMB_FILE_NAME)) {
+                        coverFound = true;
+                        img.setIsCover(true);
+                    }
+                    result.add(img.setFileUri(property.left).setSize(property.right).setStatus(StatusContent.DOWNLOADED));
+                }
             } else
                 Timber.i(">> img dropped %s", imgName);
         }
+
+        // If no thumb found, set the 1st image as cover
+        if (!coverFound && !result.isEmpty()) result.get(0).setIsCover(true);
         return result;
     }
 
+    /**
+     * Create the list of ImageFiles from the given folder
+     *
+     * @param context Context to be used
+     * @param folder  Folder to read the images from
+     * @return List of ImageFiles corresponding to all supported pictures inside the given folder, sorted numerically then alphabetically
+     */
     public static List<ImageFile> createImageListFromFolder(@NonNull final Context context, @NonNull final DocumentFile folder) {
         List<DocumentFile> imageFiles = FileHelper.listFiles(context, folder, ImageHelper.getImageNamesFilter());
         if (!imageFiles.isEmpty())
@@ -475,39 +714,124 @@ public final class ContentHelper {
         else return Collections.emptyList();
     }
 
+    /**
+     * Create the list of ImageFiles from the given files
+     *
+     * @param files Files to find images into
+     * @return List of ImageFiles corresponding to all supported pictures among the given files, sorted numerically then alphabetically
+     */
     public static List<ImageFile> createImageListFromFiles(@NonNull final List<DocumentFile> files) {
         return createImageListFromFiles(files, StatusContent.DOWNLOADED, 0, "");
     }
 
-    public static List<ImageFile> createImageListFromFiles(@NonNull final List<DocumentFile> files, StatusContent status, int initialOrder, String namePrefix) {
+    /**
+     * Create the list of ImageFiles from the given files
+     *
+     * @param files         Files to find images into
+     * @param targetStatus  Target status of the ImageFiles to create
+     * @param startingOrder Starting order of the ImageFiles to create
+     * @param namePrefix    Prefix to add in front of the name of the ImageFiles to create
+     * @return List of ImageFiles corresponding to all supported pictures among the given files, sorted numerically then alphabetically
+     */
+    public static List<ImageFile> createImageListFromFiles(
+            @NonNull final List<DocumentFile> files,
+            @NonNull final StatusContent targetStatus,
+            int startingOrder,
+            @NonNull final String namePrefix) {
         Helper.assertNonUiThread();
         List<ImageFile> result = new ArrayList<>();
-        int order = initialOrder;
-        // Sort files by name alpha
-        List<DocumentFile> fileList = Stream.of(files).withoutNulls().sortBy(DocumentFile::getName).collect(toList());
+        int order = startingOrder;
+        boolean coverFound = false;
+        // Sort files by anything that resembles a number inside their names
+        List<DocumentFile> fileList = Stream.of(files).withoutNulls().sorted(new InnerNameNumberFileComparator()).collect(toList());
         for (DocumentFile f : fileList) {
             String name = namePrefix + ((f.getName() != null) ? f.getName() : "");
             ImageFile img = new ImageFile();
+            if (name.startsWith(Consts.THUMB_FILE_NAME)) {
+                coverFound = true;
+                img.setIsCover(true);
+            } else order++;
+            img.setName(FileHelper.getFileNameWithoutExtension(name)).setOrder(order).setUrl(f.getUri().toString()).setStatus(targetStatus).setFileUri(f.getUri().toString()).setSize(f.length());
+            img.setMimeType(FileHelper.getMimeTypeFromFileName(name));
+            result.add(img);
+        }
+        // If no thumb found, set the 1st image as cover
+        if (!coverFound && !result.isEmpty()) result.get(0).setIsCover(true);
+        return result;
+    }
+
+    /**
+     * Create a list of ImageFiles from the given archive entries
+     *
+     * @param archiveFileUri Uri of the archive file the entries have been read from
+     * @param files          Entries to create the ImageFile list with
+     * @param targetStatus   Target status of the ImageFiles
+     * @param startingOrder  Starting order of the first ImageFile to add; will be numbered incrementally from that number on
+     * @param namePrefix     Prefix to add to image names
+     * @return List of ImageFiles contructed from the given parameters
+     */
+    public static List<ImageFile> createImageListFromArchiveEntries(
+            @NonNull final Uri archiveFileUri,
+            @NonNull final List<ArchiveHelper.ArchiveEntry> files,
+            @NonNull final StatusContent targetStatus,
+            int startingOrder,
+            @NonNull final String namePrefix) {
+        Helper.assertNonUiThread();
+        List<ImageFile> result = new ArrayList<>();
+        int order = startingOrder;
+        // Sort files by anything that resembles a number inside their names (default entry order from ZipInputStream is chaotic)
+        List<ArchiveHelper.ArchiveEntry> fileList = Stream.of(files).withoutNulls().sorted(new InnerNameNumberArchiveComparator()).collect(toList());
+        for (ArchiveHelper.ArchiveEntry f : fileList) {
+            String name = namePrefix + f.path;
+            String path = archiveFileUri.toString() + File.separator + f.path;
+            ImageFile img = new ImageFile();
             if (name.startsWith(Consts.THUMB_FILE_NAME)) img.setIsCover(true);
             else order++;
-            img.setName(FileHelper.getFileNameWithoutExtension(name)).setOrder(order).setUrl(f.getUri().toString()).setStatus(status).setFileUri(f.getUri().toString()).setSize(f.length());
-            img.setMimeType(FileHelper.getMimeTypeFromExtension(FileHelper.getExtension(name)));
+            img.setName(FileHelper.getFileNameWithoutExtension(name)).setOrder(order).setUrl(path).setStatus(targetStatus).setFileUri(path).setSize(f.size);
+            img.setMimeType(FileHelper.getMimeTypeFromFileName(name));
             result.add(img);
         }
         return result;
     }
 
-    public static Map<String, String> parseDownloadParams(final String downloadParamsStr) {
-        // Handle empty and {}
-        if (null == downloadParamsStr || downloadParamsStr.trim().length() <= 2)
-            return new HashMap<>();
+    /**
+     * Launch the web browser for the given site and URL
+     * TODO make sure the URL and the site are compatible
+     *
+     * @param context   COntext to be used
+     * @param s         Site to navigate to
+     * @param targetUrl Url to navigate to
+     */
+    public static void launchBrowserFor(@NonNull final Context context, @NonNull final Site s, @NonNull final String targetUrl) {
+        Intent intent = new Intent(context, Content.getWebActivityClass(s));
 
-        try {
-            return JsonHelper.jsonToObject(downloadParamsStr, JsonHelper.MAP_STRINGS);
-        } catch (IOException e) {
-            Timber.w(e);
+        BaseWebActivityBundle.Builder builder = new BaseWebActivityBundle.Builder();
+        builder.setUrl(targetUrl);
+        intent.putExtras(builder.getBundle());
+
+        context.startActivity(intent);
+    }
+
+    /**
+     * Get the blocked tags of the given Content
+     * NB : Blocked tags are detected according to the current app Preferences
+     *
+     * @param content Content to extract blocked tags from
+     * @return List of blocked tags from the given Content
+     */
+    public static List<String> getBlockedTags(@NonNull final Content content) {
+        List<String> result = Collections.emptyList();
+        if (!Preferences.getBlockedTags().isEmpty()) {
+            List<String> tags = Stream.of(content.getAttributes()).filter(a -> a.getType().equals(AttributeType.TAG)).map(Attribute::getName).toList();
+            for (String blocked : Preferences.getBlockedTags())
+                for (String tag : tags)
+                    if (blocked.equalsIgnoreCase(tag) || Helper.isPresentAsWord(blocked, tag)) {
+                        if (result.isEmpty()) result = new ArrayList<>();
+                        result.add(tag);
+                        break;
+                    }
         }
-        return new HashMap<>();
+        return result;
     }
 
     public static String makeDownloadParams(String... downloadParamsArgs) {
@@ -519,5 +843,25 @@ public final class ContentHelper {
             downloadParams.put(downloadParamsArgs[i], downloadParamsArgs[i + 1]);
 
         return JsonHelper.serializeToJson(downloadParams, JsonHelper.MAP_STRINGS);
+    }
+
+    /**
+     * Comparator to be used to sort files according to their names
+     */
+    private static class InnerNameNumberFileComparator implements Comparator<DocumentFile> {
+        @Override
+        public int compare(@NonNull DocumentFile o1, @NonNull DocumentFile o2) {
+            return new NaturalOrderComparator().compare(Helper.protect(o1.getName()), Helper.protect(o2.getName()));
+        }
+    }
+
+    /**
+     * Comparator to be used to sort archive entries according to their names
+     */
+    private static class InnerNameNumberArchiveComparator implements Comparator<ArchiveHelper.ArchiveEntry> {
+        @Override
+        public int compare(@NonNull ArchiveHelper.ArchiveEntry o1, @NonNull ArchiveHelper.ArchiveEntry o2) {
+            return new NaturalOrderComparator().compare(o1.path, o2.path);
+        }
     }
 }

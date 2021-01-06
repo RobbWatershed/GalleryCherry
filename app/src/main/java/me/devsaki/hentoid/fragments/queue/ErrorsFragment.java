@@ -1,8 +1,10 @@
 package me.devsaki.hentoid.fragments.queue;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
@@ -12,7 +14,6 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.widget.Toolbar;
-import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.ItemTouchHelper;
@@ -29,7 +30,7 @@ import com.mikepenz.fastadapter.diff.FastAdapterDiffUtil;
 import com.mikepenz.fastadapter.drag.ItemTouchCallback;
 import com.mikepenz.fastadapter.listeners.ClickEventHook;
 import com.mikepenz.fastadapter.select.SelectExtension;
-import com.mikepenz.fastadapter.swipe.SimpleSwipeCallback;
+import com.mikepenz.fastadapter.swipe.SimpleSwipeDrawerCallback;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -42,15 +43,18 @@ import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.activities.QueueActivity;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.enums.StatusContent;
+import me.devsaki.hentoid.fragments.DeleteProgressDialogFragment;
 import me.devsaki.hentoid.fragments.library.ErrorsDialogFragment;
 import me.devsaki.hentoid.services.ContentQueueManager;
 import me.devsaki.hentoid.util.ContentHelper;
 import me.devsaki.hentoid.util.Debouncer;
+import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.util.ThemeHelper;
 import me.devsaki.hentoid.util.ToastUtil;
 import me.devsaki.hentoid.util.exception.ContentNotRemovedException;
 import me.devsaki.hentoid.viewholders.ContentItem;
+import me.devsaki.hentoid.viewholders.ISwipeableViewHolder;
 import me.devsaki.hentoid.viewmodels.QueueViewModel;
 import me.devsaki.hentoid.viewmodels.ViewModelFactory;
 import me.zhanghai.android.fastscroll.FastScrollerBuilder;
@@ -62,7 +66,7 @@ import static androidx.core.view.ViewCompat.requireViewById;
  * Created by Robb on 04/2020
  * Presents the list of downloads with errors
  */
-public class ErrorsFragment extends Fragment implements ItemTouchCallback, SimpleSwipeCallback.ItemSwipeCallback, ErrorsDialogFragment.Parent {
+public class ErrorsFragment extends Fragment implements ItemTouchCallback, ErrorsDialogFragment.Parent, SimpleSwipeDrawerCallback.ItemSwipeCallback {
 
     private final CompositeDisposable compositeDisposable = new CompositeDisposable();
 
@@ -85,11 +89,90 @@ public class ErrorsFragment extends Fragment implements ItemTouchCallback, Simpl
     // === VARIABLES
     // Used to ignore native calls to onBookClick right after that book has been deselected
     private boolean invalidateNextBookClick = false;
+    // TODO doc
+    private int previousSelectedCount = 0;
     // Used to show a given item at first display
-    private long contentIdToDisplayFirst = -1;
+    private long contentHashToDisplayFirst = 0;
     // Used to start processing when the recyclerView has finished updating
-    private final Debouncer<Integer> listRefreshDebouncer = new Debouncer<>(75, this::onRecyclerUpdated);
+    private Debouncer<Integer> listRefreshDebouncer;
+    // Indicate if the fragment is currently canceling all items
+    private boolean isDeletingAll = false;
 
+
+    @Override
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        // UI ELEMENTS
+        View rootView = inflater.inflate(R.layout.fragment_queue_errors, container, false);
+
+        mEmptyText = requireViewById(rootView, R.id.errors_empty_txt);
+
+        // Book list container
+        recyclerView = requireViewById(rootView, R.id.queue_list);
+
+        fastAdapter = FastAdapter.with(itemAdapter);
+        ContentItem item = new ContentItem(ContentItem.ViewType.ERRORS);
+        fastAdapter.registerItemFactory(item.getType(), item);
+
+        // Gets (or creates and attaches if not yet existing) the extension from the given `FastAdapter`
+        selectExtension = fastAdapter.getOrCreateExtension(SelectExtension.class);
+        if (selectExtension != null) {
+            selectExtension.setSelectable(true);
+            selectExtension.setMultiSelect(true);
+            selectExtension.setSelectOnLongClick(true);
+            selectExtension.setSelectWithItemUpdate(true);
+            selectExtension.setSelectionListener((i, b) -> this.onSelectionChanged());
+        }
+
+        recyclerView.setAdapter(fastAdapter);
+        recyclerView.setHasFixedSize(true);
+        llm = (LinearLayoutManager) recyclerView.getLayoutManager();
+
+        // Swiping
+        SimpleSwipeDrawerCallback swipeCallback = new SimpleSwipeDrawerCallback(ItemTouchHelper.LEFT, this)
+                .withSwipeLeft(Helper.dimensAsDp(requireContext(), R.dimen.delete_drawer_width_list))
+                .withSensitivity(1.5f)
+                .withSurfaceThreshold(0.3f);
+
+        touchHelper = new ItemTouchHelper(swipeCallback);
+        touchHelper.attachToRecyclerView(recyclerView);
+
+        // Item click listener
+        fastAdapter.setOnClickListener((v, a, i, p) -> onBookClick(p, i));
+
+        // Fast scroller
+        new FastScrollerBuilder(recyclerView).build();
+
+        initToolbar();
+        initSelectionToolbar();
+        attachButtons(fastAdapter);
+
+        listRefreshDebouncer = new Debouncer<>(requireContext(), 75, this::onRecyclerUpdated);
+
+        return rootView;
+    }
+
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+        ViewModelFactory vmFactory = new ViewModelFactory(requireActivity().getApplication());
+        viewModel = new ViewModelProvider(requireActivity(), vmFactory).get(QueueViewModel.class);
+        viewModel.getErrors().observe(getViewLifecycleOwner(), this::onErrorsChanged);
+        viewModel.getContentHashToShowFirst().observe(getViewLifecycleOwner(), this::onContentHashToShowFirstChanged);
+    }
+
+    @Override
+    public void onSaveInstanceState(@NonNull Bundle outState) {
+        super.onSaveInstanceState(outState);
+        if (fastAdapter != null) fastAdapter.saveInstanceState(outState);
+    }
+
+    @Override
+    public void onViewStateRestored(@Nullable Bundle savedInstanceState) {
+        super.onViewStateRestored(savedInstanceState);
+        if (null == savedInstanceState) return;
+
+        if (fastAdapter != null) fastAdapter.withSavedInstanceState(savedInstanceState);
+    }
 
     @Override
     public void onResume() {
@@ -105,90 +188,21 @@ public class ErrorsFragment extends Fragment implements ItemTouchCallback, Simpl
         super.onDestroy();
     }
 
-    @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        // UI ELEMENTS
-        View rootView = inflater.inflate(R.layout.fragment_queue_errors, container, false);
-
-        mEmptyText = requireViewById(rootView, R.id.errors_empty_txt);
-
-        // Book list container
-        recyclerView = requireViewById(rootView, R.id.queue_list);
-
-        fastAdapter = FastAdapter.with(itemAdapter);
-        fastAdapter.setHasStableIds(true);
-        ContentItem item = new ContentItem(ContentItem.ViewType.ERRORS);
-        fastAdapter.registerItemFactory(item.getType(), item);
-
-        // Gets (or creates and attaches if not yet existing) the extension from the given `FastAdapter`
-        selectExtension = fastAdapter.getOrCreateExtension(SelectExtension.class);
-        if (selectExtension != null) {
-            selectExtension.setSelectable(true);
-            selectExtension.setMultiSelect(true);
-            selectExtension.setSelectOnLongClick(true);
-            selectExtension.setSelectionListener((i, b) -> this.onSelectionChanged());
-        }
-
-        recyclerView.setAdapter(fastAdapter);
-        llm = (LinearLayoutManager) recyclerView.getLayoutManager();
-
-        // Swiping
-        SimpleSwipeCallback swipeCallback = new SimpleSwipeCallback(
-                this,
-                ContextCompat.getDrawable(requireContext(), R.drawable.ic_action_delete_forever)).withSensitivity(10f).withSurfaceThreshold(0.75f);
-
-        touchHelper = new ItemTouchHelper(swipeCallback);
-        touchHelper.attachToRecyclerView(recyclerView);
-
-        // Fast scroller
-        new FastScrollerBuilder(recyclerView).build();
-
-        // Item click listener
-        fastAdapter.setOnClickListener((v, a, i, p) -> onBookClick(i));
-
-        initToolbar();
-        initSelectionToolbar();
-        attachButtons(fastAdapter);
-
-        return rootView;
-    }
-
-    @Override
-    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
-        ViewModelFactory vmFactory = new ViewModelFactory(requireActivity().getApplication());
-        viewModel = new ViewModelProvider(requireActivity(), vmFactory).get(QueueViewModel.class);
-        viewModel.getErrors().observe(getViewLifecycleOwner(), this::onErrorsChanged);
-        viewModel.getContentIdToShowFirst().observe(getViewLifecycleOwner(), this::onContentIdToShowFirstChanged);
-    }
-
     private void initToolbar() {
         if (!(requireActivity() instanceof QueueActivity)) return;
         QueueActivity activity = (QueueActivity) requireActivity();
         MenuItem redownloadAllMenu = activity.getToolbar().getMenu().findItem(R.id.action_redownload_all);
         redownloadAllMenu.setOnMenuItemClickListener(item -> {
-            // Don't do anything if the queue is empty
-            if (0 == itemAdapter.getAdapterItemCount()) return true;
-                // Just do it if the queue has a single item
-            else if (1 == itemAdapter.getAdapterItemCount()) redownloadAll();
-                // Ask if there's more than 1 item
-            else
-                new MaterialAlertDialogBuilder(requireContext(), ThemeHelper.getIdForCurrentTheme(requireContext(), R.style.Theme_Light_Dialog))
-                        .setIcon(R.drawable.ic_warning)
-                        .setCancelable(false)
-                        .setTitle(R.string.app_name)
-                        .setMessage(getString(R.string.confirm_redownload_all, fastAdapter.getItemCount()))
-                        .setPositiveButton(R.string.yes,
-                                (dialog1, which) -> {
-                                    dialog1.dismiss();
-                                    redownloadAll();
-                                })
-                        .setNegativeButton(R.string.no,
-                                (dialog12, which) -> dialog12.dismiss())
-                        .create()
-                        .show();
+            onRedownloadAllClick();
             return true;
         });
+
+        MenuItem cancelAllMenu = activity.getToolbar().getMenu().findItem(R.id.action_cancel_all);
+        cancelAllMenu.setOnMenuItemClickListener(item -> {
+            onCancelAllClick();
+            return true;
+        });
+
         MenuItem invertMenu = activity.getToolbar().getMenu().findItem(R.id.action_invert_queue);
         invertMenu.setOnMenuItemClickListener(item -> {
             viewModel.invertQueue();
@@ -208,6 +222,7 @@ public class ErrorsFragment extends Fragment implements ItemTouchCallback, Simpl
         selectionToolbar.setOnMenuItemClickListener(this::onSelectionMenuItemClicked);
     }
 
+    @SuppressLint("NonConstantResourceId")
     private boolean onSelectionMenuItemClicked(@NonNull MenuItem menuItem) {
         boolean keepToolbar = false;
         switch (menuItem.getItemId()) {
@@ -300,13 +315,17 @@ public class ErrorsFragment extends Fragment implements ItemTouchCallback, Simpl
     private void onErrorsChanged(List<Content> result) {
         Timber.i(">>Errors changed ! Size=%s", result.size());
 
+        // Don't process changes while everything is being canceled, it usually kills the UI as too many changes are processed at the same time
+        if (isDeletingAll && !result.isEmpty()) return;
+
         // Update list visibility
         mEmptyText.setVisibility(result.isEmpty() ? View.VISIBLE : View.GONE);
 
         // Update displayed books
-        List<ContentItem> content = Stream.of(result).map(c -> new ContentItem(c, touchHelper, ContentItem.ViewType.ERRORS)).toList();
-        FastAdapterDiffUtil.INSTANCE.set(itemAdapter, content);
-        differEndCallback();
+        List<ContentItem> contentItems = Stream.of(result).map(c -> new ContentItem(c, touchHelper, ContentItem.ViewType.ERRORS, this::onDeleteSwipedBook)).withoutNulls().toList();
+        //        itemAdapter.setNewList(contentItems, true);
+        FastAdapterDiffUtil.INSTANCE.set(itemAdapter, contentItems);
+        new Handler(Looper.getMainLooper()).postDelayed(this::differEndCallback, 150);
     }
 
     /**
@@ -314,10 +333,10 @@ public class ErrorsFragment extends Fragment implements ItemTouchCallback, Simpl
      * Activated when all _adapter_ items are placed on their definitive position
      */
     private void differEndCallback() {
-        if (contentIdToDisplayFirst > -1) {
-            int targetPos = fastAdapter.getPosition(contentIdToDisplayFirst);
+        if (contentHashToDisplayFirst != 0) {
+            int targetPos = fastAdapter.getPosition(contentHashToDisplayFirst);
             if (targetPos > -1) listRefreshDebouncer.submit(targetPos);
-            contentIdToDisplayFirst = -1;
+            contentHashToDisplayFirst = 0;
         }
     }
 
@@ -329,46 +348,115 @@ public class ErrorsFragment extends Fragment implements ItemTouchCallback, Simpl
         llm.scrollToPositionWithOffset(topItemPosition, 0); // Used to restore position after activity has been stopped and recreated
     }
 
-    private void onContentIdToShowFirstChanged(Long contentId) {
-        Timber.d(">>onContentIdToShowFirstChanged %s", contentId);
-        contentIdToDisplayFirst = contentId;
+    private void onContentHashToShowFirstChanged(Integer contentHash) {
+        Timber.d(">>onContentIdToShowFirstChanged %s", contentHash);
+        contentHashToDisplayFirst = contentHash;
     }
 
-    private boolean onBookClick(ContentItem item) {
+    private boolean onBookClick(int position, ContentItem item) {
         if (null == selectExtension || selectExtension.getSelectedItems().isEmpty()) {
             Content c = item.getContent();
-            if (!invalidateNextBookClick && c != null) {
-                if (!ContentHelper.openHentoidViewer(requireContext(), c, null))
-                    ToastUtil.toast(R.string.err_no_content);
-            } else invalidateNextBookClick = false;
+            if (c != null && !ContentHelper.openHentoidViewer(requireContext(), c, null))
+                ToastUtil.toast(R.string.err_no_content);
 
             return true;
-        } else {
-            selectExtension.setSelectOnLongClick(false);
+        } else if (!invalidateNextBookClick) {
+            selectExtension.toggleSelection(position);
         }
         return false;
     }
 
-    private void onDeleteBook(@NonNull Content c) {
-        viewModel.remove(Stream.of(c).toList(), this::onDeleteError);
+    private void onDeleteSwipedBook(@NonNull final ContentItem item) {
+        // Deleted book is the last selected books => disable selection mode
+        if (item.isSelected()) {
+            selectExtension.deselect(item);
+            if (selectExtension.getSelectedItems().isEmpty())
+                selectionToolbar.setVisibility(View.GONE);
+        }
+
+        viewModel.remove(Stream.of(item.getContent()).toList(), this::onDeleteError, this::onDeleteComplete);
     }
 
     private void onDeleteBooks(@NonNull List<Content> c) {
-        viewModel.remove(c, this::onDeleteError);
+        if (c.size() > 2) {
+            isDeletingAll = true;
+            DeleteProgressDialogFragment.invoke(getParentFragmentManager(), getResources().getString(R.string.cancel_queue_progress));
+        }
+        viewModel.remove(c, this::onDeleteError, this::onDeleteComplete);
+    }
+
+    private void doCancelAll() {
+        isDeletingAll = true;
+        DeleteProgressDialogFragment.invoke(getParentFragmentManager(), getResources().getString(R.string.cancel_queue_progress));
+        viewModel.removeAll(this::onDeleteError, this::onDeleteComplete);
+    }
+
+    private void onDeleteComplete() {
+        isDeletingAll = false;
+        viewModel.refresh();
+        if (null == selectExtension || selectExtension.getSelectedItems().isEmpty())
+            selectionToolbar.setVisibility(View.GONE);
     }
 
     /**
      * Callback for the failure of the "delete item" action
      */
     private void onDeleteError(Throwable t) {
+        isDeletingAll = false;
+        viewModel.refresh();
         Timber.e(t);
         if (t instanceof ContentNotRemovedException) {
             ContentNotRemovedException e = (ContentNotRemovedException) t;
             String message = (null == e.getMessage()) ? "Content removal failed" : e.getMessage();
             Snackbar.make(recyclerView, message, BaseTransientBottomBar.LENGTH_LONG).show();
         }
+        if (null == selectExtension || selectExtension.getSelectedItems().isEmpty())
+            selectionToolbar.setVisibility(View.GONE);
     }
 
+    private void onRedownloadAllClick() {
+        // Don't do anything if the queue is empty
+        if (0 == itemAdapter.getAdapterItemCount()) return;
+
+        // Just do it if the queue has a single item
+        if (1 == itemAdapter.getAdapterItemCount()) redownloadAll();
+        else // Ask if there's more than 1 item
+            new MaterialAlertDialogBuilder(requireContext(), ThemeHelper.getIdForCurrentTheme(requireContext(), R.style.Theme_Light_Dialog))
+                    .setIcon(R.drawable.ic_warning)
+                    .setTitle(R.string.app_name)
+                    .setMessage(getString(R.string.confirm_redownload_all, fastAdapter.getItemCount()))
+                    .setPositiveButton(R.string.yes,
+                            (dialog1, which) -> {
+                                dialog1.dismiss();
+                                redownloadAll();
+                            })
+                    .setNegativeButton(R.string.no,
+                            (dialog12, which) -> dialog12.dismiss())
+                    .create()
+                    .show();
+    }
+
+    private void onCancelAllClick() {
+        // Don't do anything if the queue is empty
+        if (0 == itemAdapter.getAdapterItemCount()) return;
+
+        // Just do it if the queue has a single item
+        if (1 == itemAdapter.getAdapterItemCount()) doCancelAll();
+        else // Ask if there's more than 1 item
+            new MaterialAlertDialogBuilder(requireContext(), ThemeHelper.getIdForCurrentTheme(requireContext(), R.style.Theme_Light_Dialog))
+                    .setIcon(R.drawable.ic_warning)
+                    .setTitle(R.string.app_name)
+                    .setMessage(getString(R.string.confirm_cancel_all_errors, fastAdapter.getItemCount()))
+                    .setPositiveButton(R.string.yes,
+                            (dialog1, which) -> {
+                                dialog1.dismiss();
+                                doCancelAll();
+                            })
+                    .setNegativeButton(R.string.no,
+                            (dialog12, which) -> dialog12.dismiss())
+                    .create()
+                    .show();
+    }
 
     /**
      * DRAG, DROP & SWIPE METHODS
@@ -387,22 +475,17 @@ public class ErrorsFragment extends Fragment implements ItemTouchCallback, Simpl
 
     @Override
     public void itemSwiped(int position, int direction) {
-        ContentItem item = itemAdapter.getAdapterItem(position);
-        item.setSwipeDirection(direction);
+        RecyclerView.ViewHolder vh = recyclerView.findViewHolderForAdapterPosition(position);
+        if (vh instanceof ISwipeableViewHolder) {
+            ((ISwipeableViewHolder) vh).onSwiped();
+        }
+    }
 
-        if (item.getContent() != null) {
-            Debouncer<Content> deleteDebouncer = new Debouncer<>(2000, this::onDeleteBook);
-            deleteDebouncer.submit(item.getContent());
-
-            Runnable cancelSwipe = () -> {
-                deleteDebouncer.clear();
-                item.setSwipeDirection(0);
-                int position1 = itemAdapter.getAdapterPosition(item);
-                if (position1 != RecyclerView.NO_POSITION)
-                    fastAdapter.notifyItemChanged(position1);
-            };
-            item.setUndoSwipeAction(cancelSwipe);
-            fastAdapter.notifyItemChanged(position);
+    @Override
+    public void itemUnswiped(int position) {
+        RecyclerView.ViewHolder vh = recyclerView.findViewHolderForAdapterPosition(position);
+        if (vh instanceof ISwipeableViewHolder) {
+            ((ISwipeableViewHolder) vh).onUnswiped();
         }
     }
 
@@ -414,13 +497,16 @@ public class ErrorsFragment extends Fragment implements ItemTouchCallback, Simpl
 
         if (0 == selectedCount) {
             selectionToolbar.setVisibility(View.GONE);
-            selectExtension.setSelectOnLongClick(true);
-            invalidateNextBookClick = true;
-            new Handler().postDelayed(() -> invalidateNextBookClick = false, 200);
         } else {
             updateSelectionToolbar(selectedCount);
             selectionToolbar.setVisibility(View.VISIBLE);
         }
+
+        if (1 == selectedCount && 0 == previousSelectedCount) {
+            invalidateNextBookClick = true;
+            new Handler(Looper.getMainLooper()).postDelayed(() -> invalidateNextBookClick = false, 450);
+        }
+        previousSelectedCount = selectedCount;
     }
 
     private void askRedownloadSelectedScratch() {
@@ -445,7 +531,7 @@ public class ErrorsFragment extends Fragment implements ItemTouchCallback, Simpl
                 .setCancelable(false)
                 .setTitle(R.string.app_name)
                 .setMessage(message)
-                .setPositiveButton(android.R.string.yes,
+                .setPositiveButton(R.string.yes,
                         (dialog1, which) -> {
                             dialog1.dismiss();
                             redownloadContent(contents, true);
@@ -453,8 +539,13 @@ public class ErrorsFragment extends Fragment implements ItemTouchCallback, Simpl
                             selectExtension.deselect();
                             selectionToolbar.setVisibility(View.GONE);
                         })
-                .setNegativeButton(android.R.string.no,
-                        (dialog12, which) -> dialog12.dismiss())
+                .setNegativeButton(R.string.no,
+                        (dialog12, which) -> {
+                            dialog12.dismiss();
+                            for (ContentItem ci : selectedItems) ci.setSelected(false);
+                            selectExtension.deselect();
+                            selectionToolbar.setVisibility(View.GONE);
+                        })
                 .create()
                 .show();
     }
@@ -506,13 +597,14 @@ public class ErrorsFragment extends Fragment implements ItemTouchCallback, Simpl
         MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(context);
         String title = context.getResources().getQuantityString(R.plurals.ask_cancel_multiple, items.size());
         builder.setMessage(title)
-                .setPositiveButton(android.R.string.yes,
+                .setPositiveButton(R.string.yes,
                         (dialog, which) -> {
                             selectExtension.deselect();
                             onDeleteBooks(items);
                         })
-                .setNegativeButton(android.R.string.no,
+                .setNegativeButton(R.string.no,
                         (dialog, which) -> selectExtension.deselect())
+                .setOnCancelListener(dialog -> selectExtension.deselect())
                 .create().show();
     }
 }

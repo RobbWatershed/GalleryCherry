@@ -6,17 +6,21 @@ import androidx.annotation.NonNull;
 
 import com.annimon.stream.Optional;
 
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 import javax.annotation.Nullable;
 
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.enums.StatusContent;
+import me.devsaki.hentoid.events.DownloadEvent;
 import me.devsaki.hentoid.parsers.ParseHelper;
 import me.devsaki.hentoid.util.network.OkHttpClientSingleton;
 import okhttp3.HttpUrl;
@@ -29,15 +33,11 @@ import timber.log.Timber;
 public abstract class BaseParser implements ImageListParser {
 
     private final ParseProgress progress = new ParseProgress();
+    protected boolean processHalted = false;
 
     private static final int TIMEOUT = 30000; // 30 seconds
 
     protected abstract List<String> parseImages(@NonNull Content content) throws Exception;
-
-    @Nullable
-    Document getOnlineDocument(HttpUrl url) throws IOException {
-        return getOnlineDocument(url, null);
-    }
 
     @Nullable
     Document getOnlineDocument(HttpUrl url, Interceptor interceptor) throws IOException {
@@ -60,16 +60,22 @@ public abstract class BaseParser implements ImageListParser {
             throw new IllegalArgumentException("Invalid gallery URL : " + readerUrl);
 
         Timber.d("Gallery URL: %s", readerUrl);
-
         content.populateUniqueSiteId();
 
-        List<String> imgUrls = parseImages(content);
-        List<ImageFile> result = ParseHelper.urlsToImageFiles(imgUrls, content.getCoverImageUrl(), StatusContent.SAVED);
+        EventBus.getDefault().register(this);
 
-        // Copy the content's download params to the images
-        String downloadParamsStr = content.getDownloadParams();
-        if (downloadParamsStr != null && downloadParamsStr.length() > 2) {
-            for (ImageFile i : result) i.setDownloadParams(downloadParamsStr);
+        List<ImageFile> result;
+        try {
+            List<String> imgUrls = parseImages(content);
+            result = ParseHelper.urlsToImageFiles(imgUrls, content.getCoverImageUrl(), StatusContent.SAVED);
+
+            // Copy the content's download params to the images
+            String downloadParamsStr = content.getDownloadParams();
+            if (downloadParamsStr != null && downloadParamsStr.length() > 2) {
+                for (ImageFile i : result) i.setDownloadParams(downloadParamsStr);
+            }
+        } finally {
+            EventBus.getDefault().unregister(this);
         }
 
         Timber.d("%s", result);
@@ -77,7 +83,7 @@ public abstract class BaseParser implements ImageListParser {
         return result;
     }
 
-    public Optional<ImageFile> parseBackupUrl(@NonNull String url, int order, int maxPages) {
+    public Optional<ImageFile> parseBackupUrl(@NonNull String url, @NonNull Map<String, String> requestHeaders, int order, int maxPages) {
         return Optional.of(new ImageFile(order, url, StatusContent.SAVED, maxPages));
     }
 
@@ -91,5 +97,23 @@ public abstract class BaseParser implements ImageListParser {
 
     void progressComplete() {
         progress.complete();
+    }
+
+    /**
+     * Download event handler called by the event bus
+     *
+     * @param event Download event
+     */
+    @Subscribe
+    public void onDownloadEvent(DownloadEvent event) {
+        switch (event.eventType) {
+            case DownloadEvent.EV_PAUSE:
+            case DownloadEvent.EV_CANCEL:
+            case DownloadEvent.EV_SKIP:
+                processHalted = true;
+                break;
+            default:
+                // Other events aren't handled here
+        }
     }
 }

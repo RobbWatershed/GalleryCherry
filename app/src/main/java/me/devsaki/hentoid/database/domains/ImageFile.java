@@ -11,6 +11,8 @@ import io.objectbox.annotation.Transient;
 import io.objectbox.relation.ToOne;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.util.Consts;
+import me.devsaki.hentoid.util.ContentHelper;
+import me.devsaki.hentoid.util.ImageHelper;
 
 /**
  * Created by DevSaki on 10/05/2015.
@@ -25,11 +27,12 @@ public class ImageFile {
     private String url = "";
     private String name = "";
     private String fileUri = "";
+    private boolean read = false;
     private boolean favourite = false;
     private boolean isCover = false;
     @Convert(converter = StatusContent.StatusContentConverter.class, dbType = Integer.class)
     private StatusContent status = StatusContent.UNHANDLED_ERROR;
-    public ToOne<Content> content;
+    private ToOne<Content> content;
     private String mimeType;
     private long size = 0;
 
@@ -54,7 +57,7 @@ public class ImageFile {
         this.order = order;
 
         int nbMaxDigits = (int) (Math.floor(Math.log10(maxPages)) + 1);
-        this.name = String.format(Locale.US, "%0" + nbMaxDigits + "d", order);
+        this.name = String.format(Locale.ENGLISH, "%0" + nbMaxDigits + "d", order);
 
         this.url = url;
         this.status = status;
@@ -129,6 +132,7 @@ public class ImageFile {
 
     public ImageFile setIsCover(boolean isCover) {
         this.isCover = isCover;
+        if (isCover) this.read = true;
         return this;
     }
 
@@ -166,7 +170,7 @@ public class ImageFile {
     }
 
     public String getMimeType() {
-        return (null == mimeType) ? "image/*" : mimeType;
+        return (null == mimeType) ? ImageHelper.MIME_IMAGE_GENERIC : mimeType;
     }
 
     public ImageFile setMimeType(String mimeType) {
@@ -185,6 +189,36 @@ public class ImageFile {
     public ImageFile setSize(long size) {
         this.size = size;
         return this;
+    }
+
+    public boolean isRead() {
+        return read;
+    }
+
+    public void setRead(boolean read) {
+        this.read = read;
+    }
+
+    public ToOne<Content> getContent() {
+        return content;
+    }
+
+    public void setContent(ToOne<Content> content) {
+        this.content = content;
+    }
+
+    public boolean isReadable() {
+        return !name.equals(Consts.THUMB_FILE_NAME);
+    }
+
+    public String getUsableUri() {
+        String result = "";
+        if (ContentHelper.isInLibrary(getStatus())) result = getFileUri();
+        if (result.isEmpty()) result = getUrl();
+        if (result.isEmpty() && !getContent().isNull())
+            result = getContent().getTarget().getCoverImageUrl();
+
+        return result;
     }
 
     public static final Comparator<ImageFile> ORDER_COMPARATOR = (a, b) -> a.getOrder().compareTo(b.getOrder());

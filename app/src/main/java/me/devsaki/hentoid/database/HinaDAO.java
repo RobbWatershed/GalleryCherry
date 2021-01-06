@@ -21,10 +21,14 @@ import io.reactivex.disposables.CompositeDisposable;
 import me.devsaki.hentoid.database.domains.Attribute;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.ErrorRecord;
+import me.devsaki.hentoid.database.domains.Group;
+import me.devsaki.hentoid.database.domains.GroupItem;
 import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.database.domains.QueueRecord;
+import me.devsaki.hentoid.database.domains.SiteBookmark;
 import me.devsaki.hentoid.database.domains.SiteHistory;
 import me.devsaki.hentoid.enums.AttributeType;
+import me.devsaki.hentoid.enums.Grouping;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
 
@@ -47,15 +51,25 @@ public class HinaDAO implements CollectionDAO {
         this.interceptor = interceptor;
     }
 
+    @Override
+    public LiveData<PagedList<Content>> selectNoContent() {
+        return null;
+    }
+
     @Nullable
     @Override
     public Content selectContent(long id) {
         return null;
     }
 
+    @Override
+    public List<Content> selectContent(long[] id) {
+        return null;
+    }
+
     @Nullable
     @Override
-    public Content selectContentByFolderUri(@NonNull String folderUri, boolean onlyFlagged) {
+    public Content selectContentByStorageUri(@NonNull String folderUri, boolean onlyFlagged) {
         return null;
     }
 
@@ -151,43 +165,99 @@ public class HinaDAO implements CollectionDAO {
     }
 
     @Override
-    public Single<List<Long>> getStoredBookIds(boolean nonFavouriteOnly, boolean includeQueued) {
+    public LiveData<List<Group>> selectGroups(int grouping, @Nullable String query, int orderField, boolean orderDesc, int artistGroupVisibility) {
         return null;
     }
 
     @Override
-    public Single<List<Long>> getRecentBookIds(int orderField, boolean orderDesc, boolean favouritesOnly) {
+    public List<Group> selectGroups(int grouping) {
+        return null;
+    }
+
+    @Nullable
+    @Override
+    public Group selectGroup(long groupId) {
+        return null;
+    }
+
+    @Nullable
+    @Override
+    public Group selectGroupByName(int grouping, @NonNull String name) {
         return null;
     }
 
     @Override
-    public Single<List<Long>> searchBookIds(String query, List<Attribute> metadata, int orderField, boolean orderDesc, boolean favouritesOnly) {
+    public long countGroupsFor(Grouping grouping) {
+        return 0;
+    }
+
+    @Override
+    public LiveData<Integer> countLiveGroupsFor(@NonNull Grouping grouping) {
         return null;
     }
 
     @Override
-    public Single<List<Long>> searchBookIdsUniversal(String query, int orderField, boolean orderDesc, boolean favouritesOnly) {
+    public long insertGroup(Group group) {
+        return 0;
+    }
+
+    @Override
+    public void deleteGroup(long groupId) {
+
+    }
+
+    @Override
+    public void deleteAllGroups(Grouping grouping) {
+
+    }
+
+    @Override
+    public void flagAllGroups(Grouping grouping) {
+
+    }
+
+    @Override
+    public void deleteAllFlaggedGroups() {
+
+    }
+
+    @Override
+    public long insertGroupItem(GroupItem item) {
+        return 0;
+    }
+
+    @Override
+    public List<GroupItem> selectGroupItems(long contentId, Grouping grouping) {
         return null;
     }
 
     @Override
-    public LiveData<PagedList<Content>> searchBooksUniversal(String query, int orderField, boolean orderDesc, boolean favouritesOnly, boolean loadAll) {
-        PagedList.Config config = (new PagedList.Config.Builder())
-                .setEnablePlaceholders(true)
-                .setInitialLoadSizeHint(20)
-                .setPageSize(10)
-                .build();
+    public void deleteGroupItems(List<Long> groupItemIds) {
 
-        return (new LivePagedListBuilder<>(new HinaDataSource.HinaDataSourceFactory(disposable, query, completionCallback, interceptor), config)).build();
     }
 
     @Override
-    public LiveData<PagedList<Content>> searchBooks(String query, List<Attribute> metadata, int orderField, boolean orderDesc, boolean favouritesOnly, boolean loadAll) {
+    public Single<List<Content>> selectStoredBooks(boolean nonFavouriteOnly, boolean includeQueued) {
         return null;
     }
 
     @Override
-    public LiveData<PagedList<Content>> getRecentBooks(int orderField, boolean orderDesc, boolean favouritesOnly, boolean loadAll) {
+    public Single<List<Long>> selectRecentBookIds(long groupId, int orderField, boolean orderDesc, boolean bookFavouritesOnly, boolean pageFavouritesOnly) {
+        return null;
+    }
+
+    @Override
+    public Single<List<Long>> searchBookIds(String query, long groupId, List<Attribute> metadata, int orderField, boolean orderDesc, boolean bookFavouritesOnly, boolean pageFavouritesOnly) {
+        return null;
+    }
+
+    @Override
+    public Single<List<Long>> searchBookIdsUniversal(String query, long groupId, int orderField, boolean orderDesc, boolean bookFavouritesOnly, boolean pageFavouritesOnly) {
+        return null;
+    }
+
+    @Override
+    public LiveData<PagedList<Content>> selectRecentBooks(long groupId, int orderField, boolean orderDesc, boolean favouritesOnly, boolean loadAll) {
         PagedList.Config config = (new PagedList.Config.Builder())
                 .setEnablePlaceholders(true)
                 .setInitialLoadSizeHint(20)
@@ -198,17 +268,38 @@ public class HinaDAO implements CollectionDAO {
     }
 
     @Override
+    public LiveData<PagedList<Content>> searchBooks(String query, long groupId, List<Attribute> metadata, int orderField, boolean orderDesc, boolean favouritesOnly, boolean loadAll) {
+        return null;
+    }
+
+    @Override
+    public LiveData<PagedList<Content>> searchBooksUniversal(String query, long groupId, int orderField, boolean orderDesc, boolean favouritesOnly, boolean loadAll) {
+        PagedList.Config config = (new PagedList.Config.Builder())
+                .setEnablePlaceholders(true)
+                .setInitialLoadSizeHint(20)
+                .setPageSize(10)
+                .build();
+
+        return (new LivePagedListBuilder<>(new HinaDataSource.HinaDataSourceFactory(disposable, query, completionCallback, interceptor), config)).build();
+    }
+
+    @Override
     public LiveData<Map<String, StatusContent>> selectContentUniqueIdStates(@NonNull Site site) {
         return null;
     }
 
     @Override
-    public LiveData<List<Content>> getErrorContent() {
+    public LiveData<List<Content>> selectErrorContent() {
         return null;
     }
 
     @Override
-    public LiveData<Integer> countBooks(String query, List<Attribute> metadata, boolean favouritesOnly) {
+    public List<Content> selectErrorContentList() {
+        return null;
+    }
+
+    @Override
+    public LiveData<Integer> countBooks(String query, long groupId, List<Attribute> metadata, boolean favouritesOnly) {
         return null;
     }
 
@@ -248,7 +339,7 @@ public class HinaDAO implements CollectionDAO {
     }
 
     @Override
-    public LiveData<List<ImageFile>> getDownloadedImagesFromContent(long id) {
+    public LiveData<List<ImageFile>> selectDownloadedImagesFromContent(long id) {
         return null;
     }
 
@@ -258,7 +349,7 @@ public class HinaDAO implements CollectionDAO {
     }
 
     @Override
-    public Map<Site, ImmutablePair<Integer, Long>> getMemoryUsagePerSource() {
+    public Map<Site, ImmutablePair<Integer, Long>> selectMemoryUsagePerSource() {
         return null;
     }
 
@@ -268,7 +359,7 @@ public class HinaDAO implements CollectionDAO {
     }
 
     @Override
-    public LiveData<List<QueueRecord>> getQueueContent() {
+    public LiveData<List<QueueRecord>> selectQueueContent() {
         return null;
     }
 
@@ -298,7 +389,7 @@ public class HinaDAO implements CollectionDAO {
     }
 
     @Override
-    public Single<AttributeQueryResult> getAttributeMasterDataPaged(@NonNull List<AttributeType> types, String filter, List<Attribute> attrs, boolean filterFavourites, int page, int booksPerPage, int orderStyle) {
+    public Single<AttributeQueryResult> selectAttributeMasterDataPaged(@NonNull List<AttributeType> types, String filter, List<Attribute> attrs, boolean filterFavourites, int page, int booksPerPage, int orderStyle) {
         return null;
     }
 
@@ -308,12 +399,47 @@ public class HinaDAO implements CollectionDAO {
     }
 
     @Override
-    public SiteHistory getHistory(@NonNull Site s) {
+    public SiteHistory selectHistory(@NonNull Site s) {
         return null;
     }
 
     @Override
     public void insertSiteHistory(@NonNull Site site, @NonNull String url) {
+
+    }
+
+    @Override
+    public long countAllBookmarks() {
+        return 0;
+    }
+
+    @Override
+    public List<SiteBookmark> selectAllBookmarks() {
+        return null;
+    }
+
+    @Override
+    public List<SiteBookmark> selectBookmarks(@NonNull Site s) {
+        return null;
+    }
+
+    @Override
+    public long insertBookmark(@NonNull SiteBookmark bookmark) {
+        return 0;
+    }
+
+    @Override
+    public void insertBookmarks(@NonNull List<SiteBookmark> bookmarks) {
+
+    }
+
+    @Override
+    public void deleteBookmark(long bookmarkId) {
+
+    }
+
+    @Override
+    public void deleteAllBookmarks() {
 
     }
 
@@ -324,7 +450,12 @@ public class HinaDAO implements CollectionDAO {
     }
 
     @Override
-    public Single<List<Long>> getOldStoredBookIds() {
+    public long getDbSizeBytes() {
+        return 0;
+    }
+
+    @Override
+    public Single<List<Long>> selectOldStoredBookIds() {
         return null;
     }
 

@@ -6,7 +6,6 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import me.devsaki.hentoid.HentoidApp;
-import me.devsaki.hentoid.util.Consts;
 import okhttp3.Cache;
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
@@ -56,10 +55,9 @@ public class OkHttpClientSingleton {
     }
 
     private static okhttp3.Response rewriteUserAgentInterceptor(Interceptor.Chain chain) throws IOException {
-        Request request = chain.request()
-                .newBuilder()
-                .header("User-Agent", Consts.USER_AGENT_NEUTRAL)
-                .build();
-        return chain.proceed(request);
+        Request.Builder builder = chain.request().newBuilder();
+        if (null == chain.request().header("User-Agent") && null == chain.request().header("user-agent"))
+            builder.header(HttpHelper.HEADER_USER_AGENT, HttpHelper.getMobileUserAgent(false));
+        return chain.proceed(builder.build());
     }
 }

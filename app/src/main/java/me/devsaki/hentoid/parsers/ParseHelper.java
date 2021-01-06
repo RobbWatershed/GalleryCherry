@@ -1,5 +1,7 @@
 package me.devsaki.hentoid.parsers;
 
+import android.util.Pair;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
@@ -9,6 +11,9 @@ import org.jsoup.nodes.Element;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.annotation.Nonnull;
 
@@ -19,13 +24,18 @@ import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.events.DownloadPreparationEvent;
 import me.devsaki.hentoid.util.AttributeMap;
+import me.devsaki.hentoid.util.ContentHelper;
 import me.devsaki.hentoid.util.Helper;
+import me.devsaki.hentoid.util.network.HttpHelper;
 
 public class ParseHelper {
 
     private ParseHelper() {
         throw new IllegalStateException("Utility class");
     }
+
+    @SuppressWarnings("RegExpRedundantEscape")
+    private static final Pattern SQUARE_BRACKETS = Pattern.compile("\\[[^]]*\\]");
 
     /**
      * Remove counters from given string (e.g. "Futanari (2660)" => "Futanari")
@@ -42,6 +52,21 @@ public class ParseHelper {
         }
 
         return s;
+    }
+
+    /**
+     * Remove all terms between square brackets that are used
+     * to "tag" book titles
+     * (e.g. "[Author] Title [English] [Digital]" => "Title")
+     *
+     * @param s String to clean up
+     * @return String with removed terms
+     */
+    public static String removeTextualTags(String s) {
+        if (null == s || s.isEmpty()) return "";
+
+        Matcher m = SQUARE_BRACKETS.matcher(s);
+        return m.replaceAll("").replace("  ", " ").trim();
     }
 
     /**
@@ -116,9 +141,9 @@ public class ParseHelper {
             @NonNull final String prefix) {
         String name;
         if (null == childElementClass) {
-            name = element.text();
+            name = element.ownText();
         } else {
-            name = element.selectFirst("." + childElementClass).text();
+            name = element.selectFirst("." + childElementClass).ownText();
         }
         name = Helper.removeNonPrintableChars(name);
         name = removeBrackets(name);
@@ -135,7 +160,7 @@ public class ParseHelper {
         ImageFile result = new ImageFile();
 
         int nbMaxDigits = (int) (Math.floor(Math.log10(nbPages)) + 1);
-        String name = String.format(Locale.US, "%0" + nbMaxDigits + "d", order);
+        String name = String.format(Locale.ENGLISH, "%0" + nbMaxDigits + "d", order);
         result.setName(name).setOrder(order).setUrl(imgUrl).setStatus(status);
 
         return result;
@@ -164,12 +189,44 @@ public class ParseHelper {
 
         // Images
         int order = 1;
-        for (String s : imgUrls) result.add(urlToImageFile(s, order++, imgUrls.size(), status));
+        for (String s : imgUrls)
+            result.add(urlToImageFile(s.trim(), order++, imgUrls.size(), status));
 
         return result;
     }
 
     public static void signalProgress(int current, int max) {
         EventBus.getDefault().post(new DownloadPreparationEvent(current, max));
+    }
+
+    public static String getSavedCookieStr(String downloadParams) {
+        Map<String, String> downloadParamsMap = ContentHelper.parseDownloadParams(downloadParams);
+        if (downloadParamsMap.containsKey(HttpHelper.HEADER_COOKIE_KEY))
+            return Helper.protect(downloadParamsMap.get(HttpHelper.HEADER_COOKIE_KEY));
+
+        return "";
+    }
+
+    public static void addSavedCookiesToHeader(String downloadParams, List<Pair<String, String>> headers) {
+        String cookieStr = getSavedCookieStr(downloadParams);
+        if (!cookieStr.isEmpty())
+            headers.add(new Pair<>(HttpHelper.HEADER_COOKIE_KEY, cookieStr));
+    }
+
+    // TODO doc
+    public static String getExtensionFromFormat(Map<String, String> imgFormat, int i) {
+        String format = imgFormat.get((i + 1) + "");
+        if (format != null) {
+            switch (format.charAt(0)) {
+                case 'p':
+                    return "png";
+                case 'g':
+                    return "gif";
+                case 'j':
+                default:
+                    return "jpg";
+            }
+
+        } else return "";
     }
 }

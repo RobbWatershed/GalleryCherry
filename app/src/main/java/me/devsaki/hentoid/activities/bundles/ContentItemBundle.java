@@ -18,6 +18,7 @@ public class ContentItemBundle {
     private static final String KEY_FAV_STATE = "favourite";
     private static final String KEY_READS = "reads";
     private static final String KEY_STATUS = "status";
+    private static final String KEY_READ_COUNT = "read_count";
     private static final String KEY_COVER_URI = "cover_uri";
 
     private ContentItemBundle() {
@@ -43,6 +44,10 @@ public class ContentItemBundle {
 
         public void setReads(long reads) {
             bundle.putLong(KEY_READS, reads);
+        }
+
+        public void setReadPagesCount(long readPagesCount) {
+            bundle.putLong(KEY_READ_COUNT, readPagesCount);
         }
 
         public void setCoverUri(String uri) {
@@ -82,6 +87,12 @@ public class ContentItemBundle {
         @Nullable
         public Long getReads() {
             if (bundle.containsKey(KEY_READS)) return bundle.getLong(KEY_READS);
+            else return null;
+        }
+
+        @Nullable
+        public Long getReadPagesCount() {
+            if (bundle.containsKey(KEY_READ_COUNT)) return bundle.getLong(KEY_READ_COUNT);
             else return null;
         }
 

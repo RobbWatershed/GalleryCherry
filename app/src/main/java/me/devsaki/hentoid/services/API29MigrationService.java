@@ -150,7 +150,7 @@ public class API29MigrationService extends IntentService {
 
         // 2nd pass : scan every book in the library and match actual URIs to it
         dao = new ObjectBoxDAO(this);
-        searchDisposable = dao.getOldStoredBookIds()
+        searchDisposable = dao.selectOldStoredBookIds()
                 .observeOn(Schedulers.from(tasks::add))
                 .subscribe(
                         list -> {
@@ -209,7 +209,8 @@ public class API29MigrationService extends IntentService {
                         if (content.getJsonUri().isEmpty() || !content.getJsonUri().startsWith("content"))
                             content.setJsonUri("");
 
-                        dao.insertContent(content);
+                        //dao.insertContent(content);
+                        ContentHelper.addContent(this, dao, content);
 
                         List<ImageFile> contentImages;
                         if (content.getImageFiles() != null)

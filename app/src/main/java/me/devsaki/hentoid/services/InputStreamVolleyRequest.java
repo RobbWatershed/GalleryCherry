@@ -9,7 +9,7 @@ import java.util.AbstractMap;
 import java.util.HashMap;
 import java.util.Map;
 
-import me.devsaki.hentoid.util.Consts;
+import me.devsaki.hentoid.util.network.HttpHelper;
 
 /**
  * Created by Robb_w on 2018/04
@@ -22,6 +22,7 @@ import me.devsaki.hentoid.util.Consts;
  */
 class InputStreamVolleyRequest extends Request<Object> {
     // Callback listener
+    // byte[] is the response's binary data; Map<String, String> are the response headers
     private final Response.Listener<Map.Entry<byte[], Map<String, String>>> mParseListener;
     private final Map<String, String> headers;
     private final boolean useHentoidAgent;
@@ -61,8 +62,8 @@ class InputStreamVolleyRequest extends Request<Object> {
     @Override
     public Map<String, String> getHeaders() {
         Map<String, String> params = new HashMap<>();
-        params.put("User-Agent", useHentoidAgent ? Consts.USER_AGENT : Consts.USER_AGENT_NEUTRAL);
-        params.put("Accept","*/*"); // Required to pass through cloudflare filtering on some sites
+        params.put(HttpHelper.HEADER_USER_AGENT, HttpHelper.getMobileUserAgent(useHentoidAgent));
+        params.put("Accept", "*/*"); // Required to pass through cloudflare filtering on some sites
         params.putAll(headers);
         return params;
     }

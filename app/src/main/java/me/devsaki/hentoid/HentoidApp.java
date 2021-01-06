@@ -4,7 +4,6 @@ import android.app.Application;
 import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Bitmap;
 import android.os.Build;
 import android.os.Bundle;
 
@@ -15,6 +14,7 @@ import androidx.lifecycle.ProcessLifecycleOwner;
 
 import com.google.android.gms.security.ProviderInstaller;
 import com.google.firebase.analytics.FirebaseAnalytics;
+import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import com.jakewharton.threetenabp.AndroidThreeTen;
 
 import org.threeten.bp.Instant;
@@ -23,13 +23,12 @@ import java.io.IOException;
 
 import io.reactivex.exceptions.UndeliverableException;
 import io.reactivex.plugins.RxJavaPlugins;
-import me.devsaki.hentoid.customssiv.CustomSubsamplingScaleImageView;
 import me.devsaki.hentoid.notification.download.DownloadNotificationChannel;
 import me.devsaki.hentoid.notification.update.UpdateNotificationChannel;
 import me.devsaki.hentoid.services.UpdateCheckService;
 import me.devsaki.hentoid.timber.CrashlyticsTree;
 import me.devsaki.hentoid.util.Preferences;
-import me.devsaki.hentoid.util.ToastUtil;
+import me.devsaki.hentoid.util.network.HttpHelper;
 import timber.log.Timber;
 
 /**
@@ -104,14 +103,12 @@ public class HentoidApp extends Application {
         Preferences.init(this);
         Preferences.performHousekeeping();
 
-        // Image viewer
-        // Needs ARGB_8888 to be able to resize images using RenderScript
-        // (defaults to Bitmap.Config.RGB_565 if not set)
-        CustomSubsamplingScaleImageView.setPreferredBitmapConfig(Bitmap.Config.ARGB_8888);
-
-        // Init version number on first run
+        // Init version number
         if (0 == Preferences.getLastKnownAppVersionCode())
             Preferences.setLastKnownAppVersionCode(BuildConfig.VERSION_CODE);
+
+        // Init HTTP user agents
+        HttpHelper.initUserAgents(this);
 
         // Firebase
         boolean isAnalyticsEnabled = Preferences.isAnalyticsEnabled();
@@ -135,8 +132,11 @@ public class HentoidApp extends Application {
             }
         }
 
+        // Send stats to Firebase
         FirebaseAnalytics.getInstance(this).setUserProperty("color_theme", Integer.toString(Preferences.getColorTheme()));
         FirebaseAnalytics.getInstance(this).setUserProperty("endless", Boolean.toString(Preferences.getEndlessScroll()));
+
+        FirebaseCrashlytics.getInstance().setCustomKey("Library display mode", Preferences.getEndlessScroll() ? "endless" : "paged");
 
         // Plug the lifecycle listener to handle locking
         ProcessLifecycleOwner.get().getLifecycle().addObserver(new LifeCycleListener());

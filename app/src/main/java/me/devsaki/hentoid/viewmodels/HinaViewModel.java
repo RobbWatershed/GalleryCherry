@@ -37,26 +37,25 @@ public class HinaViewModel extends AndroidViewModel {
 
     // Collection data
     private LiveData<PagedList<Content>> currentSource;
-    private LiveData<Map<String, StatusContent>> hinaBooksStatus;
+    private final LiveData<Map<String, StatusContent>> hinaBooksStatus;
     private final MediatorLiveData<PagedList<Content>> libraryPaged = new MediatorLiveData<>();
 
     // Updated whenever a new search is performed
-    private MutableLiveData<Boolean> newSearch = new MutableLiveData<>();
-    private MutableLiveData<Integer> hinaCallStatus = new MutableLiveData<>();
+    private final MutableLiveData<Boolean> newSearch = new MutableLiveData<>();
+    private final MutableLiveData<Integer> hinaCallStatus = new MutableLiveData<>();
 
 
     public HinaViewModel(@NonNull Application application, @NonNull CollectionDAO hinaDAO, @NonNull CollectionDAO hentoidDAO) {
         super(application);
         hinaDao = hinaDAO;
         // Hack to avoid introducing a Consumer<Boolean> argument into CollectionDAO
-        // Should become unnecessary wil Android paging 3
+        // Should become unnecessary with Android paging 3
         ((HinaDAO) hinaDAO).setCompletionCallback(hinaCallStatus::postValue);
         // TODO doc
         ((HinaDAO) hinaDAO).setInterceptor(this::embedLibraryStatus);
         hentoidDao = hentoidDAO;
         searchManager = new ContentSearchManager(hinaDao);
         hinaBooksStatus = hentoidDAO.selectContentUniqueIdStates(Site.HINA);
-
     }
 
     public void onSaveState(Bundle outState) {

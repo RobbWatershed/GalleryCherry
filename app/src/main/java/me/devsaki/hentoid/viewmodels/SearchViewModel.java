@@ -47,7 +47,8 @@ public class SearchViewModel extends ViewModel {
 
     // Sort order for attributes
     // (used as a variable rather than a direct call to Preferences to facilitate unit testing)
-    private int attributeSortOrder;
+    private final int attributeSortOrder;
+    private long selectedGroup = -1;
 
 
     public SearchViewModel(@NonNull CollectionDAO collectionDAO, int attributeSortOrder) {
@@ -60,6 +61,7 @@ public class SearchViewModel extends ViewModel {
     protected void onCleared() {
         filterDisposable.dispose();
         countDisposable.dispose();
+        collectionDAO.cleanup();
         super.onCleared();
     }
 
@@ -102,6 +104,10 @@ public class SearchViewModel extends ViewModel {
         this.attributeTypes = attributeTypes;
     }
 
+    public void setGroup(long groupId) {
+        this.selectedGroup = groupId;
+    }
+
     /**
      * Set and run the query to perform the Attribute search
      *
@@ -112,7 +118,7 @@ public class SearchViewModel extends ViewModel {
     public void setAttributeQuery(String query, int pageNum, int itemsPerPage) {
         filterDisposable.dispose();
         filterDisposable = collectionDAO
-                .getAttributeMasterDataPaged(
+                .selectAttributeMasterDataPaged(
                         attributeTypes,
                         query,
                         selectedAttributes.getValue(),
@@ -193,7 +199,7 @@ public class SearchViewModel extends ViewModel {
     private void updateSelectionResult() {
         if (currentSelectedContentCountInternal != null)
             selectedContentCount.removeSource(currentSelectedContentCountInternal);
-        currentSelectedContentCountInternal = collectionDAO.countBooks("", selectedAttributes.getValue(), false);
+        currentSelectedContentCountInternal = collectionDAO.countBooks("", selectedGroup, selectedAttributes.getValue(), false);
         selectedContentCount.addSource(currentSelectedContentCountInternal, selectedContentCount::setValue);
     }
 }

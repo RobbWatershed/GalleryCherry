@@ -1,7 +1,10 @@
 package me.devsaki.hentoid.enums;
 
+import androidx.annotation.Nullable;
+
 import io.objectbox.converter.PropertyConverter;
 import me.devsaki.hentoid.R;
+import me.devsaki.hentoid.util.network.HttpHelper;
 import timber.log.Timber;
 
 /**
@@ -10,28 +13,28 @@ import timber.log.Timber;
  */
 public enum Site {
 
-    XHAMSTER(0, "XHamster", "https://m.xhamster.com/photos/", "xhamster", R.drawable.ic_menu_xhamster, true, false, false, false),
-    XNXX(1, "XNXX", "https://multi.xnxx.com/", "XNXX", R.drawable.ic_menu_xnxx, true, false, false, false),
-    PORNPICS(2, "Pornpics", "https://www.pornpics.com/", "pornpics", R.drawable.ic_menu_pornpics, true, false, false, false),
-    JPEGWORLD(3, "Jpegworld", "https://www.jpegworld.com/", "jpegworld", R.drawable.ic_menu_jpegworld, true, false, false, false),
-    NEXTPICTUREZ(4, "Nextpicturez", "http://www.nextpicturez.com/", "nextpicturez", R.drawable.ic_menu_nextpicturez, true, false, false, false),
-    HELLPORNO(5, "Hellporno", "https://hellporno.com/albums/", "hellporno", R.drawable.ic_menu_hellporno, true, false, false, false),
-    PORNPICGALLERIES(6, "Pornpicgalleries", "http://pornpicgalleries.com/", "pornpicgalleries", R.drawable.ic_menu_ppg, true, false, false, false),
-    LINK2GALLERIES(7, "Link2galleries", "https://www.link2galleries.com/", "link2galleries", R.drawable.ic_menu_l2g, true, false, false, false),
-    REDDIT(8, "Reddit", "https://www.reddit.com/", "reddit", R.drawable.ic_social_reddit, true, false, false, true),
-    JJGIRLS(9, "JJGirls", "https://jjgirls.com/mobile/", "jjgirls", R.drawable.ic_menu_jjgirls, true, false, true, false),
-    LUSCIOUS(10, "luscious.net", "https://members.luscious.net/porn/", "luscious", R.drawable.ic_menu_luscious, false, false, false, false),
-    FAPALITY(11, "Fapality", "https://fapality.com/photos/", "fapality", R.drawable.ic_menu_fapality, true, false, false, false),
-    HINA(12, "Hina", "https://github.com/ixilia/hina", "hina", R.drawable.ic_menu_hina, true, false, false, false),
-    NONE(98, "none", "", "none", R.drawable.ic_external_library, true, false, false, false); // External library; fallback site
+    XHAMSTER(0, "XHamster", "https://m.xhamster.com/photos/", R.drawable.ic_menu_xhamster),
+    XNXX(1, "XNXX", "https://multi.xnxx.com/", R.drawable.ic_menu_xnxx),
+    PORNPICS(2, "Pornpics", "https://www.pornpics.com/", R.drawable.ic_menu_pornpics),
+    JPEGWORLD(3, "Jpegworld", "https://www.jpegworld.com/", R.drawable.ic_menu_jpegworld),
+    NEXTPICTUREZ(4, "Nextpicturez", "http://www.nextpicturez.com/", R.drawable.ic_menu_nextpicturez),
+    HELLPORNO(5, "Hellporno", "https://hellporno.com/albums/", R.drawable.ic_menu_hellporno, false, false, false, false, false), // Use desktop agent for Hellporno
+    PORNPICGALLERIES(6, "Pornpicgalleries", "http://pornpicgalleries.com/", R.drawable.ic_menu_ppg),
+    LINK2GALLERIES(7, "Link2galleries", "https://www.link2galleries.com/", R.drawable.ic_menu_l2g),
+    REDDIT(8, "Reddit", "https://www.reddit.com/", R.drawable.ic_social_reddit, true, true, false, false, true), // Reddit is treated as a booru source
+    JJGIRLS(9, "JJGirls", "https://jjgirls.com/mobile/", R.drawable.ic_menu_jjgirls, true, true, false, true, false), // JJgirls uses the backup URL mechanism to fill in the gaps of fake image links leading to ads
+    LUSCIOUS(10, "luscious.net", "https://members.luscious.net/porn/", R.drawable.ic_menu_luscious),
+    FAPALITY(11, "Fapality", "https://fapality.com/photos/", R.drawable.ic_menu_fapality),
+    HINA(12, "Hina", "https://github.com/ixilia/hina", R.drawable.ic_menu_hina),
+    NONE(98, "none", "", R.drawable.ic_external_library); // External library; fallback site
 
 
     private final int code;
     private final String description;
     private final String url;
-    private final String uniqueKeyword;
     private final int ico;
-    private final boolean canKnowHentoidAgent;
+    private final boolean useMobileAgent;
+    private final boolean useHentoidAgent;
     private final boolean hasImageProcessing;
     private final boolean hasBackupURLs;
     private final boolean isDanbooru;
@@ -39,21 +42,36 @@ public enum Site {
     Site(int code,
          String description,
          String url,
-         String uniqueKeyword,
          int ico,
-         boolean canKnowHentoidAgent,
+         boolean useMobileAgent,
+         boolean useHentoidAgent,
          boolean hasImageProcessing,
          boolean hasBackupURLs,
          boolean isDanbooru) {
         this.code = code;
         this.description = description;
         this.url = url;
-        this.uniqueKeyword = uniqueKeyword;
         this.ico = ico;
-        this.canKnowHentoidAgent = canKnowHentoidAgent;
+        this.useMobileAgent = useMobileAgent;
+        this.useHentoidAgent = useHentoidAgent;
         this.hasImageProcessing = hasImageProcessing;
         this.hasBackupURLs = hasBackupURLs;
         this.isDanbooru = isDanbooru;
+    }
+
+    Site(int code,
+         String description,
+         String url,
+         int ico) {
+        this.code = code;
+        this.description = description;
+        this.url = url;
+        this.ico = ico;
+        this.useMobileAgent = true;
+        this.useHentoidAgent = false;
+        this.hasImageProcessing = false;
+        this.hasBackupURLs = false;
+        this.isDanbooru = false;
     }
 
     public static Site searchByCode(long code) {
@@ -72,15 +90,17 @@ public enum Site {
         return NONE;
     }
 
+    @Nullable
     public static Site searchByUrl(String url) {
         if (null == url || url.isEmpty()) {
             Timber.w("Invalid url");
             return null;
         }
-        for (Site s : Site.values()) {
-            if (url.contains(s.getUniqueKeyword()))
+
+        for (Site s : Site.values())
+            if (s.code > 0 && HttpHelper.getDomainFromUri(url).equalsIgnoreCase(HttpHelper.getDomainFromUri(s.url)))
                 return s;
-        }
+
         return Site.NONE;
     }
 
@@ -92,10 +112,6 @@ public enum Site {
         return description;
     }
 
-    private String getUniqueKeyword() {
-        return uniqueKeyword;
-    }
-
     public String getUrl() {
         return url;
     }
@@ -104,9 +120,12 @@ public enum Site {
         return ico;
     }
 
+    public boolean useMobileAgent() {
+        return useMobileAgent;
+    }
 
-    public boolean canKnowHentoidAgent() {
-        return canKnowHentoidAgent;
+    public boolean useHentoidAgent() {
+        return useHentoidAgent;
     }
 
     public boolean hasImageProcessing() {
@@ -123,6 +142,13 @@ public enum Site {
 
     public String getFolder() {
         return description;
+    }
+
+    public String getUserAgent() {
+        if (useMobileAgent())
+            return HttpHelper.getMobileUserAgent(useHentoidAgent());
+        else
+            return HttpHelper.getDesktopUserAgent(useHentoidAgent());
     }
 
     public static class SiteConverter implements PropertyConverter<Site, Long> {
