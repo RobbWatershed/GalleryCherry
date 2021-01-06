@@ -40,11 +40,6 @@ public abstract class BaseParser implements ImageListParser {
     protected abstract List<String> parseImages(@NonNull Content content) throws Exception;
 
     @Nullable
-    Document getOnlineDocument(HttpUrl url) throws IOException {
-        return getOnlineDocument(url, null);
-    }
-
-    @Nullable
     Document getOnlineDocument(HttpUrl url, Interceptor interceptor) throws IOException {
         OkHttpClient okHttp;
         if (interceptor != null) okHttp = OkHttpClientSingleton.getInstance(TIMEOUT, interceptor);

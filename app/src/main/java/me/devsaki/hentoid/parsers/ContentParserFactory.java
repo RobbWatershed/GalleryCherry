@@ -11,6 +11,7 @@ import me.devsaki.hentoid.parsers.content.SmartContent;
 import me.devsaki.hentoid.parsers.content.XhamsterContent;
 import me.devsaki.hentoid.parsers.content.XnxxContent;
 import me.devsaki.hentoid.parsers.images.DummyParser;
+import me.devsaki.hentoid.parsers.images.FapalityParser;
 import me.devsaki.hentoid.parsers.images.ImageListParser;
 import me.devsaki.hentoid.parsers.images.LusciousParser;
 import me.devsaki.hentoid.parsers.images.XhamsterParser;
@@ -58,6 +59,8 @@ public class ContentParserFactory {
                 return new XhamsterParser();
             case LUSCIOUS:
                 return new LusciousParser();
+            case FAPALITY:
+                return new FapalityParser();
             default:
                 return new DummyParser();
         }
