@@ -6,7 +6,6 @@ import me.devsaki.hentoid.parsers.content.FapalityContent;
 import me.devsaki.hentoid.parsers.content.HellpornoContent;
 import me.devsaki.hentoid.parsers.content.JjgirlsContent;
 import me.devsaki.hentoid.parsers.content.JpegworldContent;
-import me.devsaki.hentoid.parsers.content.NextpicturezContent;
 import me.devsaki.hentoid.parsers.content.PornPicsContent;
 import me.devsaki.hentoid.parsers.content.SmartContent;
 import me.devsaki.hentoid.parsers.content.XhamsterContent;
@@ -34,8 +33,6 @@ public class ContentParserFactory {
                 return HellpornoContent.class;
             case JPEGWORLD:
                 return JpegworldContent.class;
-            case NEXTPICTUREZ:
-                return NextpicturezContent.class;
             case PORNPICS:
                 return PornPicsContent.class;
             case XHAMSTER:
@@ -48,6 +45,7 @@ public class ContentParserFactory {
                 return FapalityContent.class;
             case REDDIT:
             case LINK2GALLERIES:
+            case NEXTPICTUREZ:
             case PORNPICGALLERIES:
             default:
                 return SmartContent.class;
