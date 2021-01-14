@@ -26,6 +26,7 @@ import me.devsaki.hentoid.activities.sources.AsianSisterActivity;
 import me.devsaki.hentoid.activities.sources.BaseWebActivity;
 import me.devsaki.hentoid.activities.sources.FapalityActivity;
 import me.devsaki.hentoid.activities.sources.HellpornoActivity;
+import me.devsaki.hentoid.activities.sources.Jjgirls2Activity;
 import me.devsaki.hentoid.activities.sources.JjgirlsActivity;
 import me.devsaki.hentoid.activities.sources.JpegworldActivity;
 import me.devsaki.hentoid.activities.sources.Link2GalleriesActivity;
@@ -194,6 +195,7 @@ public class Content implements Serializable {
             case PORNPICGALLERIES:
             case LINK2GALLERIES:
             case NEXTPICTUREZ:
+            case JJGIRLS2:
                 return parts[parts.length - 1];
             case FAPALITY:
                 return parts[parts.length - 2];
@@ -253,6 +255,8 @@ public class Content implements Serializable {
                 return RedditActivity.class;
             case JJGIRLS:
                 return JjgirlsActivity.class;
+            case JJGIRLS2:
+                return Jjgirls2Activity.class;
             case LUSCIOUS:
                 return LusciousActivity.class;
             case FAPALITY:
@@ -299,6 +303,7 @@ public class Content implements Serializable {
             case LINK2GALLERIES:
             case REDDIT: // N/A
             case JJGIRLS:
+            case JJGIRLS2:
                 return url; // Specific case - user can go on any site (smart parser)
             case HELLPORNO:
             case FAPALITY:

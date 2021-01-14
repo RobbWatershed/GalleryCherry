@@ -42,6 +42,7 @@ public class ContentParserFactory {
             case XNXX:
                 return XnxxContent.class;
             case JJGIRLS:
+            case JJGIRLS2:
                 return JjgirlsContent.class;
             case FAPALITY:
                 return FapalityContent.class;

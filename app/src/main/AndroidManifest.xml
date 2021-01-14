@@ -81,6 +81,9 @@
             android:name=".activities.sources.JjgirlsActivity"
             android:configChanges="orientation|screenSize" />
         <activity
+            android:name=".activities.sources.Jjgirls2Activity"
+            android:configChanges="orientation|screenSize" />
+        <activity
             android:name=".activities.sources.LusciousActivity"
             android:configChanges="orientation|screenSize" />
         <activity
@@ -274,6 +277,17 @@
                 <data
                     android:host="asiansister.com"
                     android:pathPattern="/view_"
+                    android:scheme="https" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="jjgirls.com"
+                    android:pathPattern="/pornpics/..*"
                     android:scheme="https" />
             </intent-filter>
         </activity>
