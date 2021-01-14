@@ -87,6 +87,9 @@
             android:name=".activities.sources.FapalityActivity"
             android:configChanges="orientation|screenSize" />
         <activity
+            android:name=".activities.sources.AsianSisterActivity"
+            android:configChanges="orientation|screenSize" />
+        <activity
             android:name=".activities.HinaActivity"
             android:configChanges="orientation|screenSize" />
         <activity
@@ -269,41 +272,8 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data
-                    android:host="hentaifox.com"
-                    android:pathPattern="/gallery/..*/"
-                    android:scheme="https" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <data
-                    android:host="myreadingmanga.info"
-                    android:pathPattern="/..*/"
-                    android:scheme="https" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <data
-                    android:host="manhwahentai.me"
-                    android:pathPattern="/..*/..*"
-                    android:scheme="https" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <data
-                    android:host="imhentai.com"
-                    android:pathPattern="/gallery/..*"
+                    android:host="asiansister.com"
+                    android:pathPattern="/view_"
                     android:scheme="https" />
             </intent-filter>
         </activity>

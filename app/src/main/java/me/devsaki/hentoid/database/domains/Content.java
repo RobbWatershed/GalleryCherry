@@ -22,6 +22,7 @@ import io.objectbox.annotation.Id;
 import io.objectbox.annotation.Transient;
 import io.objectbox.converter.PropertyConverter;
 import io.objectbox.relation.ToMany;
+import me.devsaki.hentoid.activities.sources.AsianSisterActivity;
 import me.devsaki.hentoid.activities.sources.BaseWebActivity;
 import me.devsaki.hentoid.activities.sources.FapalityActivity;
 import me.devsaki.hentoid.activities.sources.HellpornoActivity;
@@ -207,6 +208,12 @@ public class Content implements Serializable {
                 // e.g. /albums/lewd_title_ch_1_3_42116/ -> 42116 is the ID
                 int lastIndex = url.lastIndexOf('_');
                 return url.substring(lastIndex + 1, url.length() - 1);
+            case ASIANSISTER:
+                // ID is the first numeric part of the URL
+                // e.g. /view_51651_stuff_561_58Pn -> 51651 is the ID
+                parts = url.split("_");
+                if (parts.length > 1) return parts[1];
+                else return "";
             default:
                 return "";
         }
@@ -250,6 +257,8 @@ public class Content implements Serializable {
                 return LusciousActivity.class;
             case FAPALITY:
                 return FapalityActivity.class;
+            case ASIANSISTER:
+                return AsianSisterActivity.class;
             default:
                 return BaseWebActivity.class;
         }
@@ -293,6 +302,7 @@ public class Content implements Serializable {
                 return url; // Specific case - user can go on any site (smart parser)
             case HELLPORNO:
             case FAPALITY:
+            case ASIANSISTER:
                 galleryConst = ""; // Site landpage URL already contains the "/albums/" prefix
                 break;
             case PORNPICS:
