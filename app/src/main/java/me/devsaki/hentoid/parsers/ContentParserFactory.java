@@ -5,6 +5,7 @@ import me.devsaki.hentoid.parsers.content.AsianSisterContent;
 import me.devsaki.hentoid.parsers.content.ContentParser;
 import me.devsaki.hentoid.parsers.content.FapalityContent;
 import me.devsaki.hentoid.parsers.content.HellpornoContent;
+import me.devsaki.hentoid.parsers.content.Jjgirls2Content;
 import me.devsaki.hentoid.parsers.content.JjgirlsContent;
 import me.devsaki.hentoid.parsers.content.JpegworldContent;
 import me.devsaki.hentoid.parsers.content.PornPicsContent;
@@ -42,8 +43,9 @@ public class ContentParserFactory {
             case XNXX:
                 return XnxxContent.class;
             case JJGIRLS:
-            case JJGIRLS2:
                 return JjgirlsContent.class;
+            case JJGIRLS2:
+                return Jjgirls2Content.class;
             case FAPALITY:
                 return FapalityContent.class;
             case ASIANSISTER:

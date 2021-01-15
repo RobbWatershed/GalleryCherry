@@ -65,7 +65,7 @@ public class SmartContent implements ContentParser {
         return (imageLinks.size() > 4 || imageElts.size() > 4);
     }
 
-    private void addLinksToImages(List<String> links, List<ImageFile> images, String url) {
+    public static void addLinksToImages(List<String> links, List<ImageFile> images, String url) {
         int order = 1;
         String urlHost = url.substring(0, url.indexOf("/", url.indexOf("://") + 3));
         String urlLocation = url.substring(0, url.lastIndexOf("/") + 1);
