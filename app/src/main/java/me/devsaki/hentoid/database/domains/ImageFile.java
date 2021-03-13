@@ -12,6 +12,7 @@ import io.objectbox.relation.ToOne;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.util.Consts;
 import me.devsaki.hentoid.util.ContentHelper;
+import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.ImageHelper;
 
 /**
@@ -51,6 +52,24 @@ public class ImageFile {
 
 
     public ImageFile() {
+    }
+
+    public ImageFile(@NonNull final ImageFile img) {
+        this.id = img.id;
+        this.order = img.order;
+        this.url = img.url;
+        this.name = img.name;
+        this.fileUri = img.fileUri;
+        this.read = img.read;
+        this.favourite = img.favourite;
+        this.isCover = img.isCover;
+        this.status = img.status;
+        this.content = img.content;
+        this.mimeType = img.mimeType;
+        this.size = img.size;
+        this.downloadParams = img.downloadParams;
+        this.displayOrder = img.displayOrder;
+        this.isBackup = img.isBackup;
     }
 
     public ImageFile(int order, String url, StatusContent status, int maxPages) {
@@ -232,8 +251,13 @@ public class ImageFile {
                 Objects.equals(getUrl(), imageFile.getUrl());
     }
 
+    public long hash64() {
+        return Helper.hash64((id + "." + url).getBytes());
+    }
+
     @Override
     public int hashCode() {
+        // Must be an int32, so we're bound to use Objects.hash
         return Objects.hash(getId(), getUrl());
     }
 }

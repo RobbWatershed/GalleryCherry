@@ -44,7 +44,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Random;
 
 import me.devsaki.hentoid.HentoidApp;
 import me.devsaki.hentoid.R;
@@ -55,7 +54,6 @@ import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.database.domains.QueueRecord;
 import me.devsaki.hentoid.enums.AttributeType;
 import me.devsaki.hentoid.enums.StatusContent;
-import me.devsaki.hentoid.services.ContentQueueManager;
 import me.devsaki.hentoid.ui.BlinkAnimation;
 import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.ImageHelper;
@@ -63,6 +61,7 @@ import me.devsaki.hentoid.util.JsonHelper;
 import me.devsaki.hentoid.util.LanguageHelper;
 import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.util.ThemeHelper;
+import me.devsaki.hentoid.util.download.ContentQueueManager;
 import me.devsaki.hentoid.util.network.HttpHelper;
 import me.devsaki.hentoid.views.CircularProgressView;
 import timber.log.Timber;
@@ -122,7 +121,7 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
         content = null;
         this.viewType = viewType;
         touchHelper = null;
-        setIdentifier(generateIdForPlaceholder());
+        setIdentifier(Helper.generateIdForPlaceholder());
     }
 
     // Constructor for library, online and error item
@@ -133,8 +132,8 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
         this.deleteAction = deleteAction;
         isEmpty = (null == content);
         isSwipeable = (content != null && (!content.getStatus().equals(StatusContent.EXTERNAL) || Preferences.isDeleteExternalLibrary()));
-        if (content != null) setIdentifier(content.hashCode());
-        else setIdentifier(generateIdForPlaceholder());
+        if (content != null) setIdentifier(content.hash64());
+        else setIdentifier(Helper.generateIdForPlaceholder());
     }
 
     // Constructor for queued item
@@ -145,8 +144,8 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
         this.deleteAction = deleteAction;
         isEmpty = (null == content);
 //        setIdentifier(record.id);
-        if (content != null) setIdentifier(content.hashCode());
-        else setIdentifier(generateIdForPlaceholder());
+        if (content != null) setIdentifier(content.hash64());
+        else setIdentifier(Helper.generateIdForPlaceholder());
     }
 
     @Nullable
@@ -195,13 +194,6 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
         if (viewHolder instanceof ContentViewHolder)
             return ((ContentViewHolder) viewHolder).ivReorder;
         else return null;
-    }
-
-    private long generateIdForPlaceholder() {
-        long result = new Random().nextLong();
-        // Make sure nothing collides with an actual ID; nobody has 1M books; it should be fine
-        while (result < 1e6) result = new Random().nextLong();
-        return result;
     }
 
 
@@ -413,9 +405,8 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
 
         private void attachTitle(@NonNull final Content content) {
             CharSequence title;
-            Context context = tvTitle.getContext();
             if (content.getTitle() == null) {
-                title = context.getText(R.string.work_untitled);
+                title = tvTitle.getContext().getText(R.string.work_untitled);
             } else {
                 title = content.getTitle();
             }

@@ -16,6 +16,7 @@ import com.google.android.gms.security.ProviderInstaller;
 import com.google.firebase.analytics.FirebaseAnalytics;
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
 import com.jakewharton.threetenabp.AndroidThreeTen;
+import com.thin.downloadmanager.util.Log;
 
 import org.threeten.bp.Instant;
 
@@ -83,6 +84,8 @@ public class HentoidApp extends Application {
         super.onCreate();
         instance = this;
 
+        Timber.i("Initializing %s", R.string.app_name);
+
         // Fix the SSLHandshake error with okhttp on Android 4.1-4.4 when server only supports TLS1.2
         // see https://github.com/square/okhttp/issues/2372 for more information
         // NB : Takes ~250ms at startup
@@ -136,7 +139,11 @@ public class HentoidApp extends Application {
         FirebaseAnalytics.getInstance(this).setUserProperty("color_theme", Integer.toString(Preferences.getColorTheme()));
         FirebaseAnalytics.getInstance(this).setUserProperty("endless", Boolean.toString(Preferences.getEndlessScroll()));
 
-        FirebaseCrashlytics.getInstance().setCustomKey("Library display mode", Preferences.getEndlessScroll() ? "endless" : "paged");
+        try {
+            FirebaseCrashlytics.getInstance().setCustomKey("Library display mode", Preferences.getEndlessScroll() ? "endless" : "paged");
+        } catch (IllegalStateException e) { // Happens during unit tests
+            Log.e("fail@init Crashlytics", e);
+        }
 
         // Plug the lifecycle listener to handle locking
         ProcessLifecycleOwner.get().getLifecycle().addObserver(new LifeCycleListener());

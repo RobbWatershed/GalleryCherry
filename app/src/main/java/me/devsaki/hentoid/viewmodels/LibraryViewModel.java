@@ -15,6 +15,8 @@ import androidx.paging.PagedList;
 import com.annimon.stream.Stream;
 import com.annimon.stream.function.Consumer;
 
+import org.apache.commons.lang3.tuple.ImmutablePair;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.security.InvalidParameterException;
@@ -41,6 +43,7 @@ import me.devsaki.hentoid.util.FileHelper;
 import me.devsaki.hentoid.util.GroupHelper;
 import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.Preferences;
+import me.devsaki.hentoid.util.download.ContentQueueManager;
 import me.devsaki.hentoid.util.exception.ContentNotRemovedException;
 import me.devsaki.hentoid.util.exception.GroupNotRemovedException;
 import me.devsaki.hentoid.widget.ContentSearchManager;
@@ -301,13 +304,31 @@ public class LibraryViewModel extends AndroidViewModel {
         throw new InvalidParameterException("Invalid ContentId : " + contentId);
     }
 
-    /**
-     * Add the given content to the download queue
-     *
-     * @param content Content to be added to the download queue
-     */
-    public void addContentToQueue(@NonNull final Content content, StatusContent targetImageStatus) {
-        dao.addContentToQueue(content, targetImageStatus);
+    public void redownloadContent(@NonNull final List<Content> contentList, boolean reparseContent, boolean reparseImages, @NonNull final Runnable onSuccess) {
+        // Flag the content as "being deleted" (triggers blink animation)
+        for (Content c : contentList) flagContentDelete(c, true);
+
+        StatusContent targetImageStatus = reparseImages ? StatusContent.ERROR : null;
+
+        compositeDisposable.add(
+                Observable.fromIterable(contentList)
+                        .observeOn(Schedulers.io())
+                        .map(c -> (reparseContent) ? ContentHelper.reparseFromScratch(c) : c)
+                        .map(c -> ContentHelper.purgeFiles(getApplication(), c))
+                        .doOnNext(c -> dao.addContentToQueue(c, targetImageStatus))
+                        .doOnComplete(() -> {
+                            // TODO is there stuff to do on the IO thread ?
+                        })
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe(
+                                v -> {
+                                    if (Preferences.isQueueAutostart())
+                                        ContentQueueManager.getInstance().resumeQueue(getApplication());
+                                    onSuccess.run();
+                                },
+                                Timber::e
+                        )
+        );
     }
 
     /**
@@ -420,10 +441,22 @@ public class LibraryViewModel extends AndroidViewModel {
         List<DocumentFile> files = FileHelper.listFiles(getApplication(), bookFolder, null); // Everything (incl. JSON and thumb) gets into the archive
         if (!files.isEmpty()) {
             // Build destination file
-            String destName = ContentHelper.formatBookFolderName(content) + ".zip";
-            OutputStream destFile = FileHelper.openNewDownloadOutputStream(getApplication(), destName, ArchiveHelper.ZIP_MIME_TYPE);
-            Timber.d("Destination file: %s", destName);
-            ArchiveHelper.zipFiles(getApplication(), files, destFile);
+            ImmutablePair<String, String> bookFolderName = ContentHelper.formatBookFolderName(content);
+            // First try creating the file with the new naming...
+            String destName = bookFolderName.left + ".zip";
+            OutputStream destFile = null;
+            try {
+                try {
+                    destFile = FileHelper.openNewDownloadOutputStream(getApplication(), destName, ArchiveHelper.ZIP_MIME_TYPE);
+                } catch (IOException e) { // ...if it fails, try creating the file with the old sanitized naming
+                    destName = bookFolderName.right + ".zip";
+                    destFile = FileHelper.openNewDownloadOutputStream(getApplication(), destName, ArchiveHelper.ZIP_MIME_TYPE);
+                }
+                Timber.d("Destination file: %s", destName);
+                ArchiveHelper.zipFiles(getApplication(), files, destFile);
+            } finally {
+                if (destFile != null) destFile.close();
+            }
             return content;
         }
         return null;

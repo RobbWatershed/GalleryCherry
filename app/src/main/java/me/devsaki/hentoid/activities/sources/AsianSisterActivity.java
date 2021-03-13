@@ -4,8 +4,8 @@ import me.devsaki.hentoid.enums.Site;
 
 public class AsianSisterActivity extends BaseWebActivity {
 
-    private static final String DOMAIN_FILTER = "asiansister.com";
-    private static final String[] GALLERY_FILTER = {"asiansister.com/view_.*$"};
+    private static final String DOMAIN_FILTER = "asiansister.xxx";
+    private static final String[] GALLERY_FILTER = {"asiansister.xxx/view_.*$"};
 //    private static final String[] DIRTY_ELEMENTS = {".had"};
 
     Site getStartSite() {

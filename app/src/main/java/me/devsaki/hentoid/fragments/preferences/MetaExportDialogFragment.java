@@ -46,8 +46,8 @@ import static androidx.core.view.ViewCompat.requireViewById;
 import static com.google.android.material.snackbar.BaseTransientBottomBar.LENGTH_LONG;
 
 /**
- * Created by Robb on 05/2020
- * Dialog for the library metadata export feature
+ * Created by Robb on 03/2021
+ * Dialog for the settings metadata export feature
  */
 public class MetaExportDialogFragment extends DialogFragment {
 
@@ -202,11 +202,11 @@ public class MetaExportDialogFragment extends DialogFragment {
                 }
             }
 
-            Snackbar.make(rootView, R.string.viewer_copy_success, LENGTH_LONG)
+            Snackbar.make(rootView, R.string.copy_download_folder_success, LENGTH_LONG)
                     .setAction("OPEN FOLDER", v -> FileHelper.openFile(requireContext(), FileHelper.getDownloadsFolder()))
                     .show();
         } catch (IOException | IllegalArgumentException e) {
-            Snackbar.make(rootView, R.string.viewer_copy_fail, LENGTH_LONG).show();
+            Snackbar.make(rootView, R.string.copy_download_folder_fail, LENGTH_LONG).show();
         }
 
         if (dao != null) dao.cleanup();

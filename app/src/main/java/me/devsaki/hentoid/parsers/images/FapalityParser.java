@@ -18,7 +18,7 @@ import me.devsaki.hentoid.parsers.ParseHelper;
 import me.devsaki.hentoid.util.exception.PreparationInterruptedException;
 import me.devsaki.hentoid.util.network.HttpHelper;
 
-public class FapalityParser extends BaseParser {
+public class FapalityParser extends BaseImageListParser {
 
     @Override
     protected List<String> parseImages(@NonNull Content content) throws Exception {

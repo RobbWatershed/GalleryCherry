@@ -73,6 +73,7 @@ import me.devsaki.hentoid.viewholders.IDraggableViewHolder;
 import me.devsaki.hentoid.viewmodels.LibraryViewModel;
 import me.devsaki.hentoid.viewmodels.ViewModelFactory;
 import me.devsaki.hentoid.widget.AutofitGridLayoutManager;
+import me.devsaki.hentoid.widget.FastAdapterPreClickSelectHelper;
 import me.zhanghai.android.fastscroll.FastScrollerBuilder;
 import timber.log.Timber;
 
@@ -121,10 +122,6 @@ public class LibraryGroupsFragment extends Fragment implements ItemTouchCallback
     // ======== VARIABLES
     // Records the system time (ms) when back button has been last pressed (to detect "double back button" event)
     private long backButtonPressed;
-    // Used to ignore native calls to onBookClick right after that book has been deselected
-    private boolean invalidateNextBookClick = false;
-    // TODO doc
-    private int previousSelectedCount = 0;
     // Total number of books in the whole unfiltered library
     private int totalContentCount;
     // Position of top item to memorize or restore (used when activity is destroyed and recreated)
@@ -519,7 +516,7 @@ public class LibraryGroupsFragment extends Fragment implements ItemTouchCallback
 
     private void customBackPress() {
         // If content is selected, deselect it
-        if (!selectExtension.getSelectedItems().isEmpty()) {
+        if (!selectExtension.getSelections().isEmpty()) {
             selectExtension.deselect();
             activity.get().getSelectionToolbar().setVisibility(View.GONE);
             backButtonPressed = 0;
@@ -565,6 +562,10 @@ public class LibraryGroupsFragment extends Fragment implements ItemTouchCallback
             selectExtension.setSelectOnLongClick(true);
             selectExtension.setSelectWithItemUpdate(true);
             selectExtension.setSelectionListener((i, b) -> this.onSelectionChanged());
+
+            FastAdapterPreClickSelectHelper<GroupDisplayItem> helper = new FastAdapterPreClickSelectHelper<>(selectExtension);
+            fastAdapter.setOnPreClickListener(helper::onPreClickListener);
+            fastAdapter.setOnPreLongClickListener(helper::onPreLongClickListener);
         }
 
         // Drag, drop & swiping
@@ -581,7 +582,7 @@ public class LibraryGroupsFragment extends Fragment implements ItemTouchCallback
         }
 
         // Item click listener
-        fastAdapter.setOnClickListener((v, a, i, p) -> onGroupClick(p, i));
+        fastAdapter.setOnClickListener((v, a, i, p) -> onItemClick(p, i));
 
         recyclerView.setAdapter(fastAdapter);
     }
@@ -601,7 +602,7 @@ public class LibraryGroupsFragment extends Fragment implements ItemTouchCallback
                                 GroupDisplayItem.ViewType.LIBRARY :
                                 GroupDisplayItem.ViewType.LIBRARY_GRID;
 
-        List<GroupDisplayItem> groups = Stream.of(result).map(g -> new GroupDisplayItem(g, touchHelper, viewType)).toList();
+        List<GroupDisplayItem> groups = Stream.of(result).map(g -> new GroupDisplayItem(g, touchHelper, viewType)).withoutNulls().distinct().toList();
         FastAdapterDiffUtil.INSTANCE.set(itemAdapter, groups, GROUPITEM_DIFF_CALLBACK);
         new Handler(Looper.getMainLooper()).postDelayed(this::differEndCallback, 150);
 
@@ -659,15 +660,13 @@ public class LibraryGroupsFragment extends Fragment implements ItemTouchCallback
      *
      * @param item GroupDisplayItem that has been clicked on
      */
-    private boolean onGroupClick(int position, @NonNull GroupDisplayItem item) {
-        if (selectExtension.getSelectedItems().isEmpty()) {
+    private boolean onItemClick(int position, @NonNull GroupDisplayItem item) {
+        if (selectExtension.getSelections().isEmpty()) {
             if (item.getGroup() != null && !item.getGroup().isBeingDeleted()) {
                 topItemPosition = position;
                 activity.get().showBooksInGroup(item.getGroup());
             }
             return true;
-        } else if (!invalidateNextBookClick) {
-            selectExtension.toggleSelection(position);
         }
         return false;
     }
@@ -681,17 +680,12 @@ public class LibraryGroupsFragment extends Fragment implements ItemTouchCallback
 
         if (0 == selectedCount) {
             activity.get().getSelectionToolbar().setVisibility(View.GONE);
+            selectExtension.setSelectOnLongClick(true);
         } else {
             long selectedLocalCount = Stream.of(selectedItems).map(GroupDisplayItem::getGroup).withoutNulls().count();
             activity.get().updateSelectionToolbar(selectedCount, selectedLocalCount);
             activity.get().getSelectionToolbar().setVisibility(View.VISIBLE);
         }
-
-        if (1 == selectedCount && 0 == previousSelectedCount) {
-            invalidateNextBookClick = true;
-            new Handler(Looper.getMainLooper()).postDelayed(() -> invalidateNextBookClick = false, 450);
-        }
-        previousSelectedCount = selectedCount;
     }
 
     /**

@@ -1,5 +1,7 @@
 package me.devsaki.hentoid.database.domains;
 
+import android.text.TextUtils;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -10,6 +12,7 @@ import com.annimon.stream.Stream;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +48,7 @@ import me.devsaki.hentoid.util.ArchiveHelper;
 import me.devsaki.hentoid.util.AttributeMap;
 import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.JsonHelper;
+import me.devsaki.hentoid.util.network.HttpHelper;
 import timber.log.Timber;
 
 import static me.devsaki.hentoid.util.JsonHelper.MAP_STRINGS;
@@ -77,18 +81,23 @@ public class Content implements Serializable {
     @Convert(converter = Site.SiteConverter.class, dbType = Long.class)
     private Site site;
     /**
-     * @deprecated Replaced by {@link me.devsaki.hentoid.services.ImportService} methods; class is kept for retrocompatibilty
+     * @deprecated Replaced by {@link me.devsaki.hentoid.workers.ImportWorker} methods; class is kept for retrocompatibilty
      */
     @Deprecated
     private String storageFolder; // Used as pivot for API29 migration; no use after that (replaced by storageUri)
     private String storageUri; // Not exposed because it will vary according to book location -> valued at import
     private boolean favourite;
     private long reads = 0;
-    private long size = 0; // Yes, it _is_ redundant with the contained images' size. ObjectBox can't do thesum in a single Query, so here it is !
     private long lastReadDate;
     private int lastReadPageIndex = 0;
     @Convert(converter = Content.StringMapConverter.class, dbType = String.class)
     private Map<String, String> bookPreferences = new HashMap<>();
+
+    // Aggregated data redundant with the sum of individual data contained in ImageFile
+    // ObjectBox can't do the sum in a single Query, so here it is !
+    private long size = 0;
+    private float readProgress = 0f;
+
     // Temporary during SAVED state only
     private String downloadParams;
     // Temporary during ERROR state only
@@ -150,6 +159,13 @@ public class Content implements Serializable {
         return result;
     }
 
+    public void putAttributes(@NonNull AttributeMap attrs) {
+        if (attributes != null) {
+            attributes.clear();
+            addAttributes(attrs);
+        }
+    }
+
     public Content addAttributes(@NonNull AttributeMap attrs) {
         if (attributes != null) {
             for (Map.Entry<AttributeType, List<Attribute>> entry : attrs.entrySet()) {
@@ -178,6 +194,14 @@ public class Content implements Serializable {
     public String getUniqueSiteId() {
         if (null == uniqueSiteId) uniqueSiteId = computeUniqueSiteId();
         return uniqueSiteId;
+    }
+
+    public void populateUniqueSiteId() {
+        this.uniqueSiteId = computeUniqueSiteId();
+    }
+
+    public void setUniqueSiteId(@NonNull String uniqueSiteId) {
+        this.uniqueSiteId = uniqueSiteId;
     }
 
     private String computeUniqueSiteId() {
@@ -263,6 +287,8 @@ public class Content implements Serializable {
                 return FapalityActivity.class;
             case ASIANSISTER:
                 return AsianSisterActivity.class;
+            case TOONILY:
+                return ToonilyActivity.class;
             default:
                 return BaseWebActivity.class;
         }
@@ -324,6 +350,56 @@ public class Content implements Serializable {
 
     public String getReaderUrl() {
         return getGalleryUrl();
+    }
+
+    /**
+     * Neutralizes the given cover URL to detect duplicate books
+     *
+     * @param url  Cover URL to neutralize
+     * @param site Site the URL is taken from
+     * @return Neutralized cover URL
+     */
+    public static String getNeutralCoverUrlRoot(@NonNull final String url, @NonNull final Site site) {
+        if (url.isEmpty()) return url;
+
+        if (site == Site.MANHWA) {
+            HttpHelper.UriParts parts = new HttpHelper.UriParts(url);
+            // Remove the last part of the filename if it is formatted as "numberxnumber"
+            String[] nameParts = parts.getFileNameNoExt().split("-");
+            String[] lastPartParts = nameParts[nameParts.length - 1].split("x");
+            for (String s : lastPartParts)
+                if (!Helper.isNumeric(s)) return url;
+
+            nameParts = Arrays.copyOf(nameParts, nameParts.length - 1);
+            return parts.getPath() + TextUtils.join("-", nameParts);
+        } else {
+            return url;
+        }
+    }
+
+    public String getCategory() {
+        if (site == Site.FAKKU) {
+            return url.substring(1, url.lastIndexOf('/'));
+        } else {
+            if (attributes != null) {
+                List<Attribute> attributesList = getAttributeMap().get(AttributeType.CATEGORY);
+                if (attributesList != null && !attributesList.isEmpty()) {
+                    return attributesList.get(0).getName();
+                }
+            }
+        }
+
+        return null;
+    }
+
+    public String getUrl() {
+        return (null == url) ? "" : url;
+    }
+
+    public Content setUrl(String url) {
+        this.url = url;
+        populateUniqueSiteId();
+        return this;
     }
 
     public Content populateAuthor() {
@@ -475,7 +551,7 @@ public class Content implements Serializable {
 
     public long getNbDownloadedPages() {
         if (imageFiles != null)
-            return Stream.of(imageFiles).filter(i -> (i.getStatus() == StatusContent.DOWNLOADED || i.getStatus() == StatusContent.EXTERNAL) && !i.isCover()).count();
+            return Stream.of(imageFiles).filter(i -> (i.getStatus() == StatusContent.DOWNLOADED || i.getStatus() == StatusContent.EXTERNAL) && i.isReadable()).count();
         else return 0;
     }
 
@@ -495,6 +571,14 @@ public class Content implements Serializable {
 
     public void computeSize() {
         size = getDownloadedPagesSize();
+    }
+
+    public void computeReadProgress() {
+        readProgress = getReadPagesCount() * 1f / Stream.of(getImageFiles()).withoutNulls().filter(ImageFile::isReadable).count();
+    }
+
+    public float getReadProgress() {
+        return readProgress;
     }
 
     public Site getSite() {
@@ -700,12 +784,13 @@ public class Content implements Serializable {
                 Objects.equals(getUniqueSiteId(), content.getUniqueSiteId());
     }
 
-    public static int hash(long id, String uniqueSiteId) {
+    @Override
+    public int hashCode() {
+        // Must be an int32, so we're bound to use Objects.hash
         return Objects.hash(id, uniqueSiteId);
     }
 
-    @Override
-    public int hashCode() {
-        return hash(getId(), getUniqueSiteId());
+    public long hash64() {
+        return Helper.hash64((id + "." + uniqueSiteId).getBytes());
     }
 }

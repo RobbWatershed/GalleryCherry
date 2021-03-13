@@ -31,6 +31,15 @@ public enum Site {
     NONE(98, "none", "", R.drawable.ic_external_library); // External library; fallback site
 
 
+    private static final Site[] INVISIBLE_SITES = {
+            HENTAICAFE, // Removed as per Fakku request
+            FAKKU, // Old Fakku; kept for retrocompatibility
+            ASMHENTAI_COMICS, // Does not work directly
+            PANDA, // Dropped; kept for retrocompatibility
+            NONE // Technical fallback
+    };
+
+
     private final int code;
     private final String description;
     private final String url;
@@ -39,6 +48,7 @@ public enum Site {
     private final boolean useHentoidAgent;
     private final boolean hasImageProcessing;
     private final boolean hasBackupURLs;
+    private final boolean hasCoverBasedPageUpdates;
     private final boolean isDanbooru;
 
     Site(int code,
@@ -49,6 +59,7 @@ public enum Site {
          boolean useHentoidAgent,
          boolean hasImageProcessing,
          boolean hasBackupURLs,
+         boolean hasCoverBasedPageUpdates
          boolean isDanbooru) {
         this.code = code;
         this.description = description;
@@ -58,6 +69,7 @@ public enum Site {
         this.useHentoidAgent = useHentoidAgent;
         this.hasImageProcessing = hasImageProcessing;
         this.hasBackupURLs = hasBackupURLs;
+        this.hasCoverBasedPageUpdates = hasCoverBasedPageUpdates;
         this.isDanbooru = isDanbooru;
     }
 
@@ -73,6 +85,7 @@ public enum Site {
         this.useHentoidAgent = false;
         this.hasImageProcessing = false;
         this.hasBackupURLs = false;
+        this.hasCoverBasedPageUpdates = false;
         this.isDanbooru = false;
     }
 
@@ -138,9 +151,19 @@ public enum Site {
         return hasBackupURLs;
     }
 
+    public boolean hasCoverBasedPageUpdates() {
+        return hasCoverBasedPageUpdates;
+    }
+
     public boolean isDanbooru() {
         return isDanbooru;
     }
+
+    public boolean isVisible() {
+        for (Site s : INVISIBLE_SITES) if (s.equals(this)) return false;
+        return true;
+    }
+
 
     public String getFolder() {
         return description;

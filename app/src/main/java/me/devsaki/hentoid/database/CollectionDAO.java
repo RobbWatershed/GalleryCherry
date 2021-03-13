@@ -46,7 +46,7 @@ public interface CollectionDAO {
     Content selectContentByStorageUri(@NonNull final String folderUri, boolean onlyFlagged);
 
     @Nullable
-    Content selectContentBySourceAndUrl(@NonNull Site site, @NonNull String url);
+    Content selectContentBySourceAndUrl(@NonNull Site site, @NonNull String contentUrl, @NonNull String coverUrl);
 
     long insertContent(@NonNull final Content content);
 
@@ -161,6 +161,8 @@ public interface CollectionDAO {
 
     void insertImageFile(@NonNull ImageFile img);
 
+    void insertImageFiles(@NonNull List<ImageFile> imgs);
+
     void replaceImageList(long contentId, @NonNull final List<ImageFile> newList);
 
     void updateImageContentStatus(long contentId, StatusContent updateFrom, @NonNull StatusContent updateTo);
@@ -175,7 +177,9 @@ public interface CollectionDAO {
 
     Map<StatusContent, ImmutablePair<Integer, Long>> countProcessedImagesById(long contentId);
 
-    Map<Site, ImmutablePair<Integer, Long>> selectMemoryUsagePerSource();
+    Map<Site, ImmutablePair<Integer, Long>> selectPrimaryMemoryUsagePerSource();
+
+    Map<Site, ImmutablePair<Integer, Long>> selectExternalMemoryUsagePerSource();
 
 
     // QUEUE

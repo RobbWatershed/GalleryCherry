@@ -32,11 +32,7 @@ public class SourcesIntroFragment extends Fragment {
         // Recycler
         List<SiteItem> items = new ArrayList<>();
         for (Site s : Site.values())
-            // We don't want to show these
-            if (
-                    s != Site.NONE           // Technical fallback
-                            && s != Site.HINA        // Harcdoded link to a specific screen
-            ) items.add(new SiteItem(s, true, false));
+            if (s.isVisible()) items.add(new SiteItem(s, true, false));
         itemAdapter.add(items);
 
         FastAdapter<SiteItem> fastAdapter = FastAdapter.with(itemAdapter);

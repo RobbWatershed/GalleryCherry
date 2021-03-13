@@ -14,9 +14,11 @@ import org.threeten.bp.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 
 import javax.annotation.Nullable;
 
@@ -27,6 +29,7 @@ import io.objectbox.android.AndroidObjectBrowser;
 import io.objectbox.query.LazyList;
 import io.objectbox.query.Query;
 import io.objectbox.query.QueryBuilder;
+import io.objectbox.relation.ToMany;
 import me.devsaki.hentoid.BuildConfig;
 import me.devsaki.hentoid.database.domains.Attribute;
 import me.devsaki.hentoid.database.domains.AttributeLocation;
@@ -123,7 +126,7 @@ public class ObjectBoxDB {
 
 
     long insertContent(Content content) {
-        List<Attribute> attributes = content.getAttributes();
+        ToMany<Attribute> attributes = content.getAttributes();
         Box<Attribute> attrBox = store.boxFor(Attribute.class);
         Query<Attribute> attrByUniqueKey = attrBox.query().equal(Attribute_.type, 0).equal(Attribute_.name, "").build();
 
@@ -133,7 +136,7 @@ public class ObjectBoxDB {
             // Watch https://github.com/objectbox/objectbox-java/issues/509 for a lighter solution based on @Unique annotation
             Attribute dbAttr;
             Attribute inputAttr;
-            if (attributes != null)
+            if (attributes != null) {
                 // This transaction may consume a lot of DB readers depending on the number of attributes involved
                 for (int i = 0; i < attributes.size(); i++) {
                     inputAttr = attributes.get(i);
@@ -148,6 +151,7 @@ public class ObjectBoxDB {
                         inputAttr.setName(inputAttr.getName().toLowerCase().trim()); // If new -> normalize the attribute
                     }
                 }
+            }
 
             return store.boxFor(Content.class).put(content);
         });
@@ -305,6 +309,10 @@ public class ObjectBoxDB {
         return store.boxFor(QueueRecord.class).query().order(QueueRecord_.rank).build();
     }
 
+    boolean isContentInQueue(@NonNull final Content c) {
+        return store.boxFor(QueueRecord.class).query().equal(QueueRecord_.contentId, c.getId()).build().count() > 0;
+    }
+
     long selectMaxQueueOrder() {
         return store.boxFor(QueueRecord.class).query().build().property(QueueRecord_.rank).max();
     }
@@ -356,6 +364,12 @@ public class ObjectBoxDB {
         queryBuilder.notEqual(Content_.url, "").equal(Content_.site, site.getCode());
         if (url != null) queryBuilder.equal(Content_.url, url);
         return queryBuilder.build();
+        /*
+                Content result = store.boxFor(Content.class).query().notEqual(Content_.url, "").equal(Content_.url, contentUrl).equal(Content_.site, site.getCode()).build().findFirst();
+        if (null == result && !coverUrlStart.isEmpty())
+            result = store.boxFor(Content.class).query().notEqual(Content_.coverImageUrl, "").startsWith(Content_.coverImageUrl, coverUrlStart).equal(Content_.site, site.getCode()).build().findFirst();
+        return result;
+         */
     }
 
     @Nullable
@@ -366,13 +380,37 @@ public class ObjectBoxDB {
         return queryBuilder.build().findFirst();
     }
 
-    private static long[] getIdsFromAttributes(@NonNull List<Attribute> attrs) {
-        long[] result = new long[attrs.size()];
-        if (!attrs.isEmpty()) {
-            int index = 0;
-            for (Attribute a : attrs) result[index++] = a.getId();
+    private long[] getIdsFromAttributes(@NonNull List<Attribute> attrs) {
+        if (attrs.isEmpty()) return new long[0];
+
+        if (attrs.get(0).isExcluded()) {
+            long[] filteredBooks = selectFilteredContent(attrs, false);
+
+            // Find all content positively matching the given attributes
+            // TODO... but the attrs are already negative ^^"
+            QueryBuilder<Content> query = store.boxFor(Content.class).query();
+            query.in(Content_.status, libraryStatus);
+            query.in(Content_.id, filteredBooks);
+            List<Content> content = query.build().find();
+
+            // Extract sites from them
+            Map<Site, List<Content>> contentPerSite = Stream.of(content).collect(Collectors.groupingBy(Content::getSite));
+            Set<Long> filteredSiteCodes = new HashSet<>();
+            for (Map.Entry<Site, List<Content>> entry : contentPerSite.entrySet()) {
+                Site site = entry.getKey();
+                filteredSiteCodes.add((long) site.getCode());
+            }
+            List<Long> result = new ArrayList<>(filteredSiteCodes);
+
+            return Helper.getPrimitiveLongArrayFromList(result);
+        } else {
+            long[] result = new long[attrs.size()];
+            if (!attrs.isEmpty()) {
+                int index = 0;
+                for (Attribute a : attrs) result[index++] = a.getId();
+            }
+            return result;
         }
-        return result;
     }
 
     private void applySortOrder(
@@ -422,6 +460,8 @@ public class ObjectBoxDB {
                 return Content_.reads;
             case Preferences.Constant.ORDER_FIELD_SIZE:
                 return Content_.size;
+            case Preferences.Constant.ORDER_FIELD_READ_PROGRESS:
+                return Content_.readProgress;
             default:
                 return null;
         }
@@ -696,6 +736,16 @@ public class ObjectBoxDB {
         QueryBuilder<Content> contentFromAttributesQueryBuilder = store.boxFor(Content.class).query();
         contentFromAttributesQueryBuilder.in(Content_.status, libraryStatus);
         if (filterFavourites) contentFromAttributesQueryBuilder.equal(Content_.favourite, true);
+
+        // If first tag is to be excluded, start shrinking the whole database
+        List<Long> idsFull = attrs.get(0).isExcluded()
+                ? Helper.getListFromPrimitiveArray(contentFromAttributesQueryBuilder.build().findIds())
+                : Collections.emptyList();
+
+        contentFromAttributesQueryBuilder = store.boxFor(Content.class).query();
+        contentFromAttributesQueryBuilder.in(Content_.status, libraryStatus);
+        if (filterFavourites) contentFromAttributesQueryBuilder.equal(Content_.favourite, true);
+
         contentFromAttributesQueryBuilder.link(Content_.attributes)
                 .equal(Attribute_.type, 0)
                 .equal(Attribute_.name, "");
@@ -713,11 +763,22 @@ public class ObjectBoxDB {
                 ids = contentFromAttributesQuery.setParameter(Attribute_.type, attr.getType().getCode())
                         .setParameter(Attribute_.name, attr.getName()).findIds();
             }
-            if (results.isEmpty()) results = Helper.getListFromPrimitiveArray(ids);
-            else {
+            if (results.isEmpty()) { // First iteration
+                results = Helper.getListFromPrimitiveArray(ids);
+
+                // If first tag is to be excluded, start trimming results
+                if (attr.isExcluded()) {
+                    idsFull.removeAll(results);
+                    results = idsFull;
+                }
+            } else {
                 // Filter results with newly found IDs (only common IDs should stay)
                 List<Long> idsAsList = Helper.getListFromPrimitiveArray(ids);
-                results.retainAll(idsAsList);
+                // Remove ids that fit the attribute from results
+                if (attr.isExcluded())
+                    results.removeAll(idsAsList);
+                else
+                    results.retainAll(idsAsList);
             }
         }
 
@@ -833,6 +894,9 @@ public class ObjectBoxDB {
             int page,
             int itemsPerPage) {
         long[] filteredContent = selectFilteredContent(attributeFilter, filterFavourites);
+        if (filteredContent.length == 0 && attributeFilter != null && !attributeFilter.isEmpty())
+            return Collections.emptyList();
+
         List<Long> filteredContentAsList = Helper.getListFromPrimitiveArray(filteredContent);
         List<Integer> libraryStatusAsList = Helper.getListFromPrimitiveArray(libraryStatus);
         List<Attribute> result = queryAvailableAttributes(type, filter, filteredContent).find();
@@ -889,8 +953,12 @@ public class ObjectBoxDB {
 
         for (Map.Entry<AttributeType, List<Attribute>> entry : map.entrySet()) {
             AttributeType t = entry.getKey();
-            int size = (null == entry.getValue()) ? 0 : entry.getValue().size();
-            result.append(t.getCode(), size);
+            if (filteredContent.length == 0 && attributeFilter != null)
+                result.append(t.getCode(), 0);
+            else {
+                int size = (null == entry.getValue()) ? 0 : entry.getValue().size();
+                result.append(t.getCode(), size);
+            }
         }
 
         return result;
@@ -958,10 +1026,18 @@ public class ObjectBoxDB {
         return result;
     }
 
-    Map<Site, ImmutablePair<Integer, Long>> selectMemoryUsagePerSource() {
+    Map<Site, ImmutablePair<Integer, Long>> selectPrimaryMemoryUsagePerSource() {
+        return selectMemoryUsagePerSource(new int[]{StatusContent.DOWNLOADED.getCode(), StatusContent.MIGRATED.getCode()});
+    }
+
+    Map<Site, ImmutablePair<Integer, Long>> selectExternalMemoryUsagePerSource() {
+        return selectMemoryUsagePerSource(new int[]{StatusContent.EXTERNAL.getCode()});
+    }
+
+    Map<Site, ImmutablePair<Integer, Long>> selectMemoryUsagePerSource(int[] statusCodes) {
         // Get all downloaded images regardless of the book's status
         QueryBuilder<Content> query = store.boxFor(Content.class).query();
-        query.in(Content_.status, new int[]{StatusContent.DOWNLOADED.getCode(), StatusContent.MIGRATED.getCode()});
+        query.in(Content_.status, statusCodes);
         List<Content> books = query.build().find();
 
         Map<Site, ImmutablePair<Integer, Long>> result = new EnumMap<>(Site.class);
@@ -1011,6 +1087,14 @@ public class ObjectBoxDB {
 
     void insertImageFiles(@NonNull List<ImageFile> imgs) {
         store.boxFor(ImageFile.class).put(imgs);
+    }
+
+    void replaceImageFiles(long contentId, @NonNull final List<ImageFile> newList) {
+        store.runInTx(() -> {
+            deleteImageFiles(contentId);
+            for (ImageFile img : newList) img.setContentId(contentId);
+            insertImageFiles(newList);
+        });
     }
 
     @Nullable
@@ -1197,6 +1281,11 @@ public class ObjectBoxDB {
     /**
      * ONE-SHOT USE QUERIES (MIGRATION & MAINTENANCE)
      */
+
+    List<Content> selectDownloadedContentWithNoReadProgress() {
+        return store.boxFor(Content.class).query().in(Content_.status, libraryStatus).isNull(Content_.readProgress).build().find();
+    }
+
     public Query<Content> selectOldStoredContentQ() {
         QueryBuilder<Content> query = store.boxFor(Content.class).query();
         query.in(Content_.status, new int[]{

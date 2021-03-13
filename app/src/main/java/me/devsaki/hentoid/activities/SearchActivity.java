@@ -6,6 +6,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.util.SparseIntArray;
 import android.view.View;
+import android.widget.CheckBox;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -50,6 +51,7 @@ public class SearchActivity extends BaseActivity {
     // ViewModel of this activity
     private SearchViewModel viewModel;
 
+    private boolean excludeClicked = false;
 
     @Override
     protected void onSaveInstanceState(@NonNull Bundle outState) {
@@ -58,12 +60,13 @@ public class SearchActivity extends BaseActivity {
         SearchActivityBundle.Builder builder = new SearchActivityBundle.Builder();
         builder.setUri(SearchActivityBundle.Builder.buildSearchUri(viewModel.getSelectedAttributesData().getValue()));
         outState.putAll(builder.getBundle());
+        outState.putBoolean("exclude", excludeClicked);
     }
 
     @Override
     protected void onRestoreInstanceState(@NonNull Bundle savedInstanceState) {
         super.onRestoreInstanceState(savedInstanceState);
-
+        excludeClicked = savedInstanceState.getBoolean("exclude");
         Uri searchUri = new SearchActivityBundle.Parser(savedInstanceState).getUri();
         if (searchUri != null) {
             List<Attribute> preSelectedAttributes = SearchActivityBundle.Parser.parseSearchUri(searchUri);
@@ -81,6 +84,7 @@ public class SearchActivity extends BaseActivity {
 
             SearchActivityBundle.Parser parser = new SearchActivityBundle.Parser(intent.getExtras());
             Uri searchUri = parser.getUri();
+            excludeClicked = parser.getExcludeMode();
             if (searchUri != null)
                 preSelectedAttributes = SearchActivityBundle.Parser.parseSearchUri(searchUri);
         }
@@ -94,18 +98,23 @@ public class SearchActivity extends BaseActivity {
 
         // Attribute type buttons
         TextView anyTypeButton = findViewById(R.id.textCategoryAny);
-        anyTypeButton.setOnClickListener(v -> onAttrButtonClick(AttributeType.TAG, AttributeType.ARTIST,
+        anyTypeButton.setOnClickListener(v -> onAttrButtonClick(excludeClicked, AttributeType.TAG, AttributeType.ARTIST,
                 AttributeType.CIRCLE, AttributeType.SERIE, AttributeType.CHARACTER, AttributeType.LANGUAGE)); // Everything but source !
         anyTypeButton.setEnabled(true);
 
         tagTypeButton = findViewById(R.id.textCategoryTag);
-        tagTypeButton.setOnClickListener(v -> onAttrButtonClick(AttributeType.TAG));
+        tagTypeButton.setOnClickListener(v -> onAttrButtonClick(excludeClicked,AttributeType.TAG));
+
 
         modelTypeButton = findViewById(R.id.textCategoryModel);
-        modelTypeButton.setOnClickListener(v -> onAttrButtonClick(AttributeType.MODEL));
+        modelTypeButton.setOnClickListener(v -> onAttrButtonClick(excludeClicked, AttributeType.MODEL));
 
         sourceTypeButton = findViewById(R.id.textCategorySource);
-        sourceTypeButton.setOnClickListener(v -> onAttrButtonClick(AttributeType.SOURCE));
+        sourceTypeButton.setOnClickListener(v -> onAttrButtonClick(excludeClicked, AttributeType.SOURCE));
+
+        CheckBox checkBox = (CheckBox) findViewById(R.id.checkBox);
+        checkBox.setChecked(excludeClicked);
+
 
         searchTags = findViewById(R.id.search_tags);
         LinearLayoutManager llm = new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false);
@@ -144,6 +153,10 @@ public class SearchActivity extends BaseActivity {
         updateAttributeTypeButton(sourceTypeButton, attrCount, AttributeType.SOURCE);
     }
 
+    public void onExcludeClick(View view){
+         excludeClicked = ((CheckBox) view).isChecked();
+    }
+
     /**
      * Update the text of a given attribute type button based on the given SparseIntArray and relevant type(s)
      *
@@ -167,8 +180,8 @@ public class SearchActivity extends BaseActivity {
      *
      * @param attributeTypes Attribute type(s) to select
      */
-    private void onAttrButtonClick(AttributeType... attributeTypes) {
-        SearchBottomSheetFragment.invoke(this, getSupportFragmentManager(), attributeTypes);
+    private void onAttrButtonClick(boolean excludeClicked, AttributeType... attributeTypes) {
+        SearchBottomSheetFragment.invoke(this, getSupportFragmentManager(), attributeTypes, excludeClicked);
     }
 
     /**
@@ -205,7 +218,7 @@ public class SearchActivity extends BaseActivity {
      * @param count Current book count matching the currently selected attributes
      */
     private void onBooksCounted(int count) {
-        if (count > 0) {
+        if (count >= 0) {
             searchButton.setText(getResources().getQuantityString(R.plurals.search_button, count, count));
             searchButton.setVisibility(View.VISIBLE);
         } else {
@@ -222,9 +235,10 @@ public class SearchActivity extends BaseActivity {
         Timber.d("URI :%s", searchUri);
 
         SearchActivityBundle.Builder builder = new SearchActivityBundle.Builder().setUri(searchUri);
+        builder.setExcludeMode(excludeClicked);
+
         Intent returnIntent = new Intent();
         returnIntent.putExtras(builder.getBundle());
-
         setResult(Activity.RESULT_OK, returnIntent);
         finish();
     }

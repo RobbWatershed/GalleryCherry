@@ -5,8 +5,8 @@ import android.graphics.Bitmap;
 import android.graphics.Typeface;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.os.Bundle;
 import android.view.View;
-import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -26,6 +26,7 @@ import java.util.List;
 
 import me.devsaki.hentoid.HentoidApp;
 import me.devsaki.hentoid.R;
+import me.devsaki.hentoid.activities.bundles.ImageItemBundle;
 import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.retrofit.HinaServer;
 import me.devsaki.hentoid.util.Helper;
@@ -66,11 +67,12 @@ public class ImageFileItem extends AbstractItem<ImageFileItem.ImageViewHolder> {
     public ImageFileItem(@NonNull ImageFile image, @ViewType int viewType) {
         this.image = image;
         this.viewType = viewType;
-        setIdentifier(image.hashCode());
+        setIdentifier(image.hash64());
     }
 
+    // Return a copy, not the original instance that has to remain in synch with its visual representation
     public ImageFile getImage() {
-        return image;
+        return new ImageFile(image);
     }
 
     public void setCurrent(boolean current) {
@@ -101,9 +103,11 @@ public class ImageFileItem extends AbstractItem<ImageFileItem.ImageViewHolder> {
 
     public static class ImageViewHolder extends FastAdapter.ViewHolder<ImageFileItem> {
 
+        private static final String HEART_SYMBOL = "❤";
+
         private final TextView pageNumberTxt;
         private final ImageView image;
-        private final ImageButton favouriteBtn;
+        private final ImageView checkedIndicator;
         private final @ViewType
         int viewType;
 
@@ -111,23 +115,27 @@ public class ImageFileItem extends AbstractItem<ImageFileItem.ImageViewHolder> {
             super(view);
             pageNumberTxt = requireViewById(view, R.id.viewer_gallery_pagenumber_text);
             image = requireViewById(view, R.id.viewer_gallery_image);
-            favouriteBtn = requireViewById(view, R.id.viewer_gallery_favourite_btn);
+            checkedIndicator = requireViewById(view, R.id.checked_indicator);
             this.viewType = viewType;
         }
 
 
         @Override
-        public void bindView(@NotNull ImageFileItem item, @NotNull List<?> list) {
-            if (ViewType.LIBRARY == viewType) {
-                String currentBegin = item.isCurrent ? ">" : "";
-                String currentEnd = item.isCurrent ? "<" : "";
-                pageNumberTxt.setText(String.format("%sPage %s%s", currentBegin, item.image.getOrder(), currentEnd));
-                if (item.isCurrent) pageNumberTxt.setTypeface(null, Typeface.BOLD);
-                updateFavourite(item.isFavourite());
-            } else {
-                pageNumberTxt.setVisibility(View.GONE);
-                favouriteBtn.setVisibility(View.GONE);
+        public void bindView(@NotNull ImageFileItem item, @NotNull List<?> payloads) {
+
+            // Payloads are set when the content stays the same but some properties alone change
+            if (!payloads.isEmpty()) {
+                Bundle bundle = (Bundle) payloads.get(0);
+                ImageItemBundle.Parser bundleParser = new ImageItemBundle.Parser(bundle);
+
+                Boolean boolValue = bundleParser.isFavourite();
+                if (boolValue != null) item.image.setFavourite(boolValue);
             }
+
+            updateText(item);
+
+            if (item.isSelected()) checkedIndicator.setVisibility(View.VISIBLE);
+            else checkedIndicator.setVisibility(View.GONE);
 
             String uri = item.image.getFileUri();
             // Hack to display thumbs when retrieving online images from Hina
@@ -140,16 +148,12 @@ public class ImageFileItem extends AbstractItem<ImageFileItem.ImageViewHolder> {
                     .into(image);
         }
 
-        void updateFavourite(boolean isFavourite) {
-            if (isFavourite) {
-                favouriteBtn.setImageResource(R.drawable.ic_fav_full);
-            } else {
-                favouriteBtn.setImageResource(R.drawable.ic_fav_empty);
-            }
-        }
-
-        public View getFavouriteButton() {
-            return favouriteBtn;
+        private void updateText(@NotNull ImageFileItem item) {
+            String currentBegin = item.isCurrent ? ">" : "";
+            String currentEnd = item.isCurrent ? "<" : "";
+            String isFavourite = item.isFavourite() ? HEART_SYMBOL : "";
+            pageNumberTxt.setText(String.format("%sPage %s%s%s", currentBegin, item.image.getOrder(), isFavourite, currentEnd));
+            if (item.isCurrent) pageNumberTxt.setTypeface(null, Typeface.BOLD);
         }
 
         @Override

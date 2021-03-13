@@ -10,6 +10,7 @@ import androidx.preference.PreferenceManager;
 import com.annimon.stream.Stream;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -142,6 +143,48 @@ public final class Preferences {
     public static void unregisterPrefsChangedListener(SharedPreferences.OnSharedPreferenceChangeListener listener) {
         sharedPreferences.unregisterOnSharedPreferenceChangeListener(listener);
     }
+
+    public static Map<String, ?> extractPortableInformation() {
+        Map<String, ?> result = new HashMap<>(sharedPreferences.getAll());
+
+        // Remove non-exportable settings that make no sense on another instance
+        result.remove(Key.FIRST_RUN);
+        result.remove(Key.WELCOME_DONE);
+        result.remove(Key.SD_STORAGE_URI);
+        result.remove(Key.EXTERNAL_LIBRARY_URI);
+        result.remove(Key.LAST_KNOWN_APP_VERSION_CODE);
+
+        return result;
+    }
+
+    public static void importInformation(Map<String, ?> settings) {
+        for (Map.Entry<String, ?> entry : settings.entrySet()) {
+            if (entry.getValue() instanceof Integer) {
+                sharedPreferences.edit()
+                        .putInt(entry.getKey(), (Integer) entry.getValue())
+                        .apply();
+            } else if (entry.getValue() instanceof String) {
+                sharedPreferences.edit()
+                        .putString(entry.getKey(), (String) entry.getValue())
+                        .apply();
+            } else if (entry.getValue() instanceof Boolean) {
+                sharedPreferences.edit()
+                        .putBoolean(entry.getKey(), (Boolean) entry.getValue())
+                        .apply();
+            } else if (entry.getValue() instanceof Float) {
+                sharedPreferences.edit()
+                        .putFloat(entry.getKey(), (Float) entry.getValue())
+                        .apply();
+            } else if (entry.getValue() instanceof Long) {
+                sharedPreferences.edit()
+                        .putLong(entry.getKey(), (Long) entry.getValue())
+                        .apply();
+            }
+        }
+    }
+
+
+    // ======= PROPERTIES GETTERS / SETTERS
 
     public static boolean isFirstRunProcessComplete() {
         return sharedPreferences.getBoolean(Key.WELCOME_DONE, false);
@@ -439,6 +482,10 @@ public final class Preferences {
         return sharedPreferences.getBoolean(Key.VIEWER_HOLD_TO_ZOOM, Default.VIEWER_HOLD_TO_ZOOM);
     }
 
+    public static int getViewerCapTapZoom() {
+        return Integer.parseInt(sharedPreferences.getString(Key.VIEWER_CAP_TAP_ZOOM, Integer.toString(Default.VIEWER_CAP_TAP_ZOOM)) + "");
+    }
+
     public static boolean isViewerAutoRotate() {
         return sharedPreferences.getBoolean(Key.VIEWER_AUTO_ROTATE, Default.VIEWER_AUTO_ROTATE);
     }
@@ -467,6 +514,10 @@ public final class Preferences {
 
     public static int getDownloadLargeOnlyWifiThresholdMB() {
         return Integer.parseInt(sharedPreferences.getString(Key.DL_SIZE_WIFI_THRESHOLD, Integer.toString(Default.DL_SIZE_WIFI_THRESHOLD)) + "");
+    }
+
+    public static int getDownloadLargeOnlyWifiThresholdPages() {
+        return Integer.parseInt(sharedPreferences.getString(Key.DL_PAGES_WIFI_THRESHOLD, Integer.toString(Default.DL_PAGES_WIFI_THRESHOLD)) + "");
     }
 
     public static boolean isDlRetriesActive() {
@@ -567,6 +618,26 @@ public final class Preferences {
                 .apply();
     }
 
+    public static int getViewerDeleteAskMode() {
+        return Integer.parseInt(sharedPreferences.getString(Key.VIEWER_DELETE_ASK_MODE, Integer.toString(Default.VIEWER_DELETE_ASK_MODE)) + "");
+    }
+
+    public static void setViewerDeleteAskMode(int viewerDeleteAskMode) {
+        sharedPreferences.edit()
+                .putString(Key.VIEWER_DELETE_ASK_MODE, Integer.toString(viewerDeleteAskMode))
+                .apply();
+    }
+
+    public static int getViewerDeleteTarget() {
+        return Integer.parseInt(sharedPreferences.getString(Key.VIEWER_DELETE_TARGET, Integer.toString(Default.VIEWER_DELETE_TARGET)) + "");
+    }
+
+    public static void setViewerDeleteTarget(int viewerDeleteTarget) {
+        sharedPreferences.edit()
+                .putString(Key.VIEWER_DELETE_TARGET, Integer.toString(viewerDeleteTarget))
+                .apply();
+    }
+
     public static final class Key {
 
         private Key() {
@@ -629,6 +700,7 @@ public final class Preferences {
         static final String VIEWER_READ_THRESHOLD = "pref_viewer_read_threshold";
         static final String VIEWER_SLIDESHOW_DELAY = "pref_viewer_slideshow_delay";
         public static final String VIEWER_HOLD_TO_ZOOM = "pref_viewer_zoom_holding";
+        public static final String VIEWER_CAP_TAP_ZOOM = "pref_viewer_cap_tap_zoom";
         public static final String VIEWER_AUTO_ROTATE = "pref_viewer_auto_rotate";
         static final String LAST_KNOWN_APP_VERSION_CODE = "last_known_app_version_code";
         public static final String COLOR_THEME = "pref_color_theme";
@@ -636,6 +708,7 @@ public final class Preferences {
         static final String QUEUE_WIFI_ONLY = "pref_queue_wifi_only";
         static final String DL_SIZE_WIFI = "pref_dl_size_wifi";
         static final String DL_SIZE_WIFI_THRESHOLD = "pref_dl_size_wifi_threshold";
+        static final String DL_PAGES_WIFI_THRESHOLD = "pref_dl_pages_wifi_threshold";
         static final String DL_RETRIES_ACTIVE = "pref_dl_retries_active";
         static final String DL_RETRIES_NUMBER = "pref_dl_retries_number";
         static final String DL_RETRIES_MEM_LIMIT = "pref_dl_retries_mem_limit";
@@ -649,6 +722,10 @@ public final class Preferences {
         static final String DB_MAX_SIZE = "db_max_size";
         public static final String GROUPING_DISPLAY = "grouping_display";
         public static final String ARTIST_GROUP_VISIBILITY = "artist_group_visibility";
+        public static final String EXPORT_SETTINGS = "export_settings";
+        public static final String IMPORT_SETTINGS = "import_settings";
+        public static final String VIEWER_DELETE_ASK_MODE = "viewer_delete_ask";
+        public static final String VIEWER_DELETE_TARGET = "viewer_delete_target";
 
         // Deprecated values kept for housekeeping/migration
         static final String ANALYTICS_TRACKING = "pref_analytics_tracking";
@@ -704,12 +781,14 @@ public final class Preferences {
         static final int VIEWER_READ_THRESHOLD = Constant.VIEWER_READ_THRESHOLD_1;
         static final int VIEWER_SLIDESHOW_DELAY = Constant.VIEWER_SLIDESHOW_DELAY_2;
         static final boolean VIEWER_HOLD_TO_ZOOM = false;
+        static final int VIEWER_CAP_TAP_ZOOM = Constant.VIEWER_CAP_TAP_ZOOM_NONE;
         static final boolean VIEWER_AUTO_ROTATE = false;
         public static final int COLOR_THEME = Constant.COLOR_THEME_LIGHT;
         static final boolean QUEUE_AUTOSTART = true;
         static final boolean QUEUE_WIFI_ONLY = false;
         static final boolean DL_SIZE_WIFI = false;
         static final int DL_SIZE_WIFI_THRESHOLD = 40;
+        static final int DL_PAGES_WIFI_THRESHOLD = 999999;
         static final boolean DL_RETRIES_ACTIVE = false;
         static final int DL_RETRIES_NUMBER = 3;
         static final int DL_RETRIES_MEM_LIMIT = 100;
@@ -724,6 +803,8 @@ public final class Preferences {
         static final long DB_MAX_SIZE_KB = 2L * 1024 * 1024; // 2GB
         static final int GROUPING_DISPLAY = Grouping.FLAT.getId();
         static final int ARTIST_GROUP_VISIBILITY = Constant.ARTIST_GROUP_VISIBILITY_ARTISTS_GROUPS;
+        static final int VIEWER_DELETE_ASK_MODE = Constant.VIEWER_DELETE_ASK_AGAIN;
+        static final int VIEWER_DELETE_TARGET = Constant.VIEWER_DELETE_TARGET_PAGE;
     }
 
     // IMPORTANT : Any value change must be mirrored in res/values/array_preferences.xml
@@ -748,6 +829,7 @@ public final class Preferences {
         public static final int ORDER_FIELD_READS = 6;
         public static final int ORDER_FIELD_SIZE = 7;
         public static final int ORDER_FIELD_CHILDREN = 8; // Groups only
+        public static final int ORDER_FIELD_READ_PROGRESS = 9;
         public static final int ORDER_FIELD_CUSTOM = 98;
         public static final int ORDER_FIELD_RANDOM = 99;
 
@@ -815,6 +897,18 @@ public final class Preferences {
         public static final int ARTIST_GROUP_VISIBILITY_ARTISTS = 0;
         public static final int ARTIST_GROUP_VISIBILITY_GROUPS = 1;
         public static final int ARTIST_GROUP_VISIBILITY_ARTISTS_GROUPS = 2;
+
+        public static final int VIEWER_DELETE_ASK_AGAIN = 0;
+        public static final int VIEWER_DELETE_ASK_BOOK = 1;
+        public static final int VIEWER_DELETE_ASK_SESSION = 2;
+
+        public static final int VIEWER_DELETE_TARGET_BOOK = 0;
+        public static final int VIEWER_DELETE_TARGET_PAGE = 1;
+
+        public static final int VIEWER_CAP_TAP_ZOOM_NONE = 0;
+        public static final int VIEWER_CAP_TAP_ZOOM_2X = 2;
+        public static final int VIEWER_CAP_TAP_ZOOM_4X = 4;
+        public static final int VIEWER_CAP_TAP_ZOOM_6X = 6;
 
         // Deprecated values kept for housekeeping/migration
         @Deprecated
