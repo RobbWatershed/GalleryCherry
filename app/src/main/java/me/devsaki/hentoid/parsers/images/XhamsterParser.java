@@ -19,7 +19,7 @@ import okhttp3.Request;
  * Created by avluis on 07/26/2016.
  * Handles parsing of content from Xhamster
  */
-public class XhamsterParser extends BaseParser {
+public class XhamsterParser extends BaseImageListParser {
 
     @Override
     protected List<String> parseImages(Content content) throws IOException {

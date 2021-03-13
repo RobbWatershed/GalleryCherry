@@ -946,7 +946,7 @@ public abstract class BaseWebActivity extends BaseActivity implements WebContent
     private List<ImageFile> doSearchForMoreImages(@NonNull final Content storedContent) {
         List<ImageFile> result = Collections.emptyList();
 
-        ImageListParser parser = ContentParserFactory.getInstance().getImageListParser(storedContent);
+        ImageListParser parser = ContentParserFactory.getInstance().getImageListParser(storedContent.getSite());
         try {
             List<ImageFile> onlineImgs = parser.parseImageList(storedContent);
             if (onlineImgs.isEmpty()) return result;

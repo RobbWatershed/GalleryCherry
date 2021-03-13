@@ -7,6 +7,8 @@ import org.jsoup.nodes.Element;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.annotation.Nonnull;
+
 import me.devsaki.hentoid.database.domains.Attribute;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.ImageFile;
@@ -17,7 +19,7 @@ import me.devsaki.hentoid.parsers.ParseHelper;
 import me.devsaki.hentoid.util.AttributeMap;
 import pl.droidsonroids.jspoon.annotation.Selector;
 
-public class PornPicsContent implements ContentParser {
+public class PornPicsContent extends BaseContentParser {
 
     private String GALLERY_FOLDER = "/galleries/";
 
@@ -33,17 +35,16 @@ public class PornPicsContent implements ContentParser {
     private List<String> imageLinks;
 
 
-    public Content toContent(@NonNull String url) {
-        Content result = new Content();
-
-        result.setSite(Site.PORNPICS);
+    public Content update(@NonNull final Content content, @Nonnull String url) {
+        content.setSite(Site.PORNPICS);
 
         String theUrl = galleryUrl.isEmpty() ? url : galleryUrl;
         int galleryLocation = theUrl.indexOf(GALLERY_FOLDER) + GALLERY_FOLDER.length();
-        result.setUrl(theUrl.substring(galleryLocation));
-        result.setTitle(title);
+        content.setUrl(theUrl.substring(galleryLocation));
+        content.setTitle(title);
 
-        if (null == imageLinks || imageLinks.isEmpty()) return result.setStatus(StatusContent.IGNORED);
+        if (null == imageLinks || imageLinks.isEmpty())
+            return new Content().setStatus(StatusContent.IGNORED);
 
         AttributeMap attributes = new AttributeMap();
 
@@ -59,7 +60,7 @@ public class PornPicsContent implements ContentParser {
         }
 
         ParseHelper.parseAttributes(attributes, AttributeType.TAG, tags, true, Site.PORNPICS);
-        result.addAttributes(attributes);
+        content.addAttributes(attributes);
 
 
         List<ImageFile> images = new ArrayList<>();
@@ -68,10 +69,10 @@ public class PornPicsContent implements ContentParser {
         for (String s : imageLinks) {
             images.add(new ImageFile(order++, s, StatusContent.SAVED, imageLinks.size()));
         }
-        if (images.size() > 0) result.setCoverImageUrl(images.get(0).getUrl());
-        result.setImageFiles(images);
-        result.setQtyPages(images.size());
+        if (images.size() > 0) content.setCoverImageUrl(images.get(0).getUrl());
+        content.setImageFiles(images);
+        content.setQtyPages(images.size());
 
-        return result;
+        return content;
     }
 }

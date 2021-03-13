@@ -6,6 +6,8 @@ import org.jsoup.nodes.Element;
 
 import java.util.List;
 
+import javax.annotation.Nonnull;
+
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.enums.AttributeType;
 import me.devsaki.hentoid.enums.Site;
@@ -13,7 +15,7 @@ import me.devsaki.hentoid.parsers.ParseHelper;
 import me.devsaki.hentoid.util.AttributeMap;
 import pl.droidsonroids.jspoon.annotation.Selector;
 
-public class FapalityContent implements ContentParser {
+public class FapalityContent extends BaseContentParser {
 
     @Selector("h1")
     private List<Element> titles;
@@ -23,12 +25,10 @@ public class FapalityContent implements ContentParser {
     private List<String> thumbs;
 
 
-    public Content toContent(@NonNull String url) {
-        Content result = new Content();
-
-        result.setSite(Site.FAPALITY);
+    public Content update(@NonNull final Content content, @Nonnull String url) {
+        content.setSite(Site.FAPALITY);
         int photosIndex = url.indexOf("/photos/");
-        result.setUrl(url.substring(photosIndex + 8));
+        content.setUrl(url.substring(photosIndex + 8));
 
         String title = "";
         if (titles != null && !titles.isEmpty()) {
@@ -37,15 +37,15 @@ public class FapalityContent implements ContentParser {
             if (titleEnd > -1)
                 title = title.substring(0, title.lastIndexOf(" - "));
         }
-        result.setTitle(title);
+        content.setTitle(title);
 
         AttributeMap attributes = new AttributeMap();
         ParseHelper.parseAttributes(attributes, AttributeType.TAG, tags, true, Site.FAPALITY);
-        result.addAttributes(attributes);
+        content.addAttributes(attributes);
 
-        if (!thumbs.isEmpty()) result.setCoverImageUrl(thumbs.get(0));
-        result.setQtyPages(thumbs.size());
+        if (!thumbs.isEmpty()) content.setCoverImageUrl(thumbs.get(0));
+        content.setQtyPages(thumbs.size());
 
-        return result;
+        return content;
     }
 }

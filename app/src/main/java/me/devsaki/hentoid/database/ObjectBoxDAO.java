@@ -253,12 +253,11 @@ public class ObjectBoxDAO implements CollectionDAO {
 
     @Nullable
     public Content selectContentBySourceAndUrl(@NonNull Site site, @NonNull String contentUrl, @NonNull String coverUrl) {
-        TODO cover
-        return db.selectContentBySourceAndUrlQ(site, contentUrl, Content.getNeutralCoverUrlRoot(coverUrl, site)).findFirst();
+        return db.selectContentBySourceAndUrl(site, contentUrl, Content.getNeutralCoverUrlRoot(coverUrl, site));
     }
 
     public LiveData<Map<String, StatusContent>> selectContentUniqueIdStates(@NonNull final Site site) {
-        ObjectBoxLiveData<Content> livedata = new ObjectBoxLiveData<>(db.selectContentBySourceAndUrlQ(site, null));
+        ObjectBoxLiveData<Content> livedata = new ObjectBoxLiveData<>(db.selectContentBySourceQ(site));
 
         MediatorLiveData<Map<String, StatusContent>> result = new MediatorLiveData<>();
         result.addSource(livedata, v -> result.setValue(Stream.of(v).withoutNulls().collect(Collectors.toMap(

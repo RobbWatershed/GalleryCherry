@@ -359,17 +359,19 @@ public class ObjectBoxDB {
         return store.boxFor(Content.class).get(id);
     }
 
-    public Query<Content> selectContentBySourceAndUrlQ(@NonNull Site site, @Nullable String url) {
+    public Query<Content> selectContentBySourceQ(@NonNull Site site) {
         QueryBuilder<Content> queryBuilder = store.boxFor(Content.class).query();
         queryBuilder.notEqual(Content_.url, "").equal(Content_.site, site.getCode());
-        if (url != null) queryBuilder.equal(Content_.url, url);
         return queryBuilder.build();
-        /*
-                Content result = store.boxFor(Content.class).query().notEqual(Content_.url, "").equal(Content_.url, contentUrl).equal(Content_.site, site.getCode()).build().findFirst();
+    }
+
+    @Nullable
+    Content selectContentBySourceAndUrl(@NonNull Site site, @NonNull String contentUrl, @NonNull String coverUrlStart) {
+        // TODO combine these two queries with an OR
+        Content result = store.boxFor(Content.class).query().notEqual(Content_.url, "").equal(Content_.url, contentUrl).equal(Content_.site, site.getCode()).build().findFirst();
         if (null == result && !coverUrlStart.isEmpty())
             result = store.boxFor(Content.class).query().notEqual(Content_.coverImageUrl, "").startsWith(Content_.coverImageUrl, coverUrlStart).equal(Content_.site, site.getCode()).build().findFirst();
         return result;
-         */
     }
 
     @Nullable

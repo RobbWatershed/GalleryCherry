@@ -53,10 +53,11 @@ import me.devsaki.hentoid.events.UpdateEvent;
 import me.devsaki.hentoid.fragments.library.GalleryDialogFragment;
 import me.devsaki.hentoid.json.UpdateInfo;
 import me.devsaki.hentoid.retrofit.HinaServer;
-import me.devsaki.hentoid.services.ContentQueueManager;
 import me.devsaki.hentoid.ui.BlinkAnimation;
 import me.devsaki.hentoid.util.Debouncer;
+import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.Preferences;
+import me.devsaki.hentoid.util.download.ContentQueueManager;
 import me.devsaki.hentoid.viewholders.ContentItem;
 import me.devsaki.hentoid.viewmodels.HinaViewModel;
 import me.devsaki.hentoid.viewmodels.ViewModelFactory;
@@ -577,7 +578,7 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
 
             for (Map.Entry<String, StatusContent> changedEntry : changes.entrySet()) {
                 Bundle payload = new ContentItemBundle.Builder().setStatus(changedEntry.getValue()).getBundle();
-                fastAdapter.notifyAdapterItemChanged(fastAdapter.getPosition(Content.hash(0L, changedEntry.getKey())), payload);
+                fastAdapter.notifyAdapterItemChanged(fastAdapter.getPosition(Helper.hash64((0 + "." + changedEntry.getKey()).getBytes())), payload);
             }
         }
 

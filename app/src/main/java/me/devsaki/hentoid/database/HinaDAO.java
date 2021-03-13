@@ -75,7 +75,7 @@ public class HinaDAO implements CollectionDAO {
 
     @Nullable
     @Override
-    public Content selectContentBySourceAndUrl(@NonNull Site site, @NonNull String url) {
+    public Content selectContentBySourceAndUrl(@NonNull Site site, @NonNull String contentUrl, @NonNull String coverUrl) {
         return null;
     }
 
@@ -314,6 +314,11 @@ public class HinaDAO implements CollectionDAO {
     }
 
     @Override
+    public void insertImageFiles(@NonNull List<ImageFile> imgs) {
+
+    }
+
+    @Override
     public void replaceImageList(long contentId, @NonNull List<ImageFile> newList) {
 
     }
@@ -349,7 +354,12 @@ public class HinaDAO implements CollectionDAO {
     }
 
     @Override
-    public Map<Site, ImmutablePair<Integer, Long>> selectMemoryUsagePerSource() {
+    public Map<Site, ImmutablePair<Integer, Long>> selectPrimaryMemoryUsagePerSource() {
+        return null;
+    }
+
+    @Override
+    public Map<Site, ImmutablePair<Integer, Long>> selectExternalMemoryUsagePerSource() {
         return null;
     }
 

@@ -7,6 +7,8 @@ import org.jsoup.nodes.Element;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.annotation.Nonnull;
+
 import me.devsaki.hentoid.database.domains.Attribute;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.ImageFile;
@@ -17,11 +19,12 @@ import me.devsaki.hentoid.parsers.ParseHelper;
 import me.devsaki.hentoid.util.AttributeMap;
 import pl.droidsonroids.jspoon.annotation.Selector;
 
-public class HellpornoContent implements ContentParser {
+public class HellpornoContent extends BaseContentParser {
 
     private String GALLERY_FOLDER = "/albums/";
 
-    @Selector(value = "head link[rel='canonical']", attr = "href", defValue = "") // convert desktop to mobile ?
+    @Selector(value = "head link[rel='canonical']", attr = "href", defValue = "")
+    // convert desktop to mobile ?
     private String galleryUrl;
     @Selector("#hp_underheader h3")
     private String title;
@@ -33,14 +36,12 @@ public class HellpornoContent implements ContentParser {
     private List<String> imageLinks;
 
 
-    public Content toContent(@NonNull String url) {
-        Content result = new Content();
-
-        result.setSite(Site.HELLPORNO);
+    public Content update(@NonNull final Content content, @Nonnull String url) {
+        content.setSite(Site.HELLPORNO);
         String theUrl = galleryUrl.isEmpty() ? url : galleryUrl;
         int galleryLocation = theUrl.indexOf(GALLERY_FOLDER) + GALLERY_FOLDER.length();
-        result.setUrl(theUrl.substring(galleryLocation));
-        result.setTitle(title);
+        content.setUrl(theUrl.substring(galleryLocation));
+        content.setTitle(title);
 
         AttributeMap attributes = new AttributeMap();
 
@@ -57,7 +58,7 @@ public class HellpornoContent implements ContentParser {
             Element e = models.get(models.size() - 1);
             attributes.add(new Attribute(AttributeType.MODEL, e.text(), e.attr("href"), Site.HELLPORNO));
         }
-        result.addAttributes(attributes);
+        content.addAttributes(attributes);
 
 
         List<ImageFile> images = new ArrayList<>();
@@ -66,10 +67,10 @@ public class HellpornoContent implements ContentParser {
             for (String s : imageLinks) {
                 images.add(new ImageFile(order++, s, StatusContent.SAVED, imageLinks.size()));
             }
-        if (images.size() > 0) result.setCoverImageUrl(images.get(0).getUrl());
-        result.setQtyPages(images.size());
-        result.setImageFiles(images);
+        if (images.size() > 0) content.setCoverImageUrl(images.get(0).getUrl());
+        content.setQtyPages(images.size());
+        content.setImageFiles(images);
 
-        return result;
+        return content;
     }
 }

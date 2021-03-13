@@ -644,8 +644,6 @@ public class LibraryContentFragment extends Fragment implements ErrorsDialogFrag
             if (null == c) continue;
             if (c.getStatus().equals(StatusContent.EXTERNAL)) {
                 externalContent++;
-            } else if (c.getSite().equals(Site.REDDIT)) {
-                securedContent++;
             } else {
                 contents.add(c);
             }

@@ -18,24 +18,21 @@ public enum Site {
     PORNPICS(2, "Pornpics", "https://www.pornpics.com/", R.drawable.ic_menu_pornpics),
     JPEGWORLD(3, "Jpegworld", "https://www.jpegworld.com/", R.drawable.ic_menu_jpegworld),
     NEXTPICTUREZ(4, "Nextpicturez", "http://www.nextpicturez.com/", R.drawable.ic_menu_nextpicturez),
-    HELLPORNO(5, "Hellporno", "https://hellporno.com/albums/", R.drawable.ic_menu_hellporno, false, false, false, false, false), // Use desktop agent for Hellporno
+    HELLPORNO(5, "Hellporno", "https://hellporno.com/albums/", R.drawable.ic_menu_hellporno, false, false, false, false, false, false), // Use desktop agent for Hellporno
     PORNPICGALLERIES(6, "Pornpicgalleries", "http://pornpicgalleries.com/", R.drawable.ic_menu_ppg),
     LINK2GALLERIES(7, "Link2galleries", "https://www.link2galleries.com/", R.drawable.ic_menu_l2g),
-    REDDIT(8, "Reddit", "https://www.reddit.com/", R.drawable.ic_social_reddit, true, true, false, false, true), // Reddit is treated as a booru source
-    JJGIRLS(9, "JJGirls (Jap)", "https://jjgirls.com/mobile/", R.drawable.ic_menu_jjgirls, true, true, false, true, false), // JJgirls uses the backup URL mechanism to fill in the gaps of fake image links leading to ads
+    REDDIT(8, "Reddit", "https://www.reddit.com/", R.drawable.ic_social_reddit, true, true, false, false, false, true), // Reddit is treated as a booru source
+    JJGIRLS(9, "JJGirls (Jap)", "https://jjgirls.com/mobile/", R.drawable.ic_menu_jjgirls, true, true, false, true, false, false), // JJgirls uses the backup URL mechanism to fill in the gaps of fake image links leading to ads
     LUSCIOUS(10, "luscious.net", "https://members.luscious.net/porn/", R.drawable.ic_menu_luscious),
     FAPALITY(11, "Fapality", "https://fapality.com/photos/", R.drawable.ic_menu_fapality),
     HINA(12, "Hina", "https://github.com/ixilia/hina", R.drawable.ic_menu_hina),
     ASIANSISTER(13, "Asiansister", "https://asiansister.com/", R.drawable.ic_menu_asiansister),
-    JJGIRLS2(14, "JJGirls (Western)", "https://jjgirls.com/pornpics/", R.drawable.ic_menu_jjgirls, true, true, false, true, false), // JJgirls uses the backup URL mechanism to fill in the gaps of fake image links leading to ads
+    JJGIRLS2(14, "JJGirls (Western)", "https://jjgirls.com/pornpics/", R.drawable.ic_menu_jjgirls, true, true, false, true, false, false), // JJgirls uses the backup URL mechanism to fill in the gaps of fake image links leading to ads
     NONE(98, "none", "", R.drawable.ic_external_library); // External library; fallback site
 
 
     private static final Site[] INVISIBLE_SITES = {
-            HENTAICAFE, // Removed as per Fakku request
-            FAKKU, // Old Fakku; kept for retrocompatibility
-            ASMHENTAI_COMICS, // Does not work directly
-            PANDA, // Dropped; kept for retrocompatibility
+            HINA, // Hardcoded link; should not be on display on dynamic sources
             NONE // Technical fallback
     };
 
@@ -59,7 +56,7 @@ public enum Site {
          boolean useHentoidAgent,
          boolean hasImageProcessing,
          boolean hasBackupURLs,
-         boolean hasCoverBasedPageUpdates
+         boolean hasCoverBasedPageUpdates,
          boolean isDanbooru) {
         this.code = code;
         this.description = description;

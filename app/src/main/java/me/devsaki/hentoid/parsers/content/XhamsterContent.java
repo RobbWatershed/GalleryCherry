@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.annotation.Nonnull;
+
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.enums.AttributeType;
 import me.devsaki.hentoid.enums.Site;
@@ -17,7 +19,7 @@ import me.devsaki.hentoid.util.AttributeMap;
 import pl.droidsonroids.jspoon.annotation.Selector;
 import timber.log.Timber;
 
-public class XhamsterContent implements ContentParser {
+public class XhamsterContent extends BaseContentParser {
 
     private String GALLERY_FOLDER = "/photos/gallery/";
 
@@ -33,17 +35,15 @@ public class XhamsterContent implements ContentParser {
     private List<Element> tags;
 
 
-    public Content toContent(@NonNull String url) {
-        Content result = new Content();
-
-        result.setSite(Site.XHAMSTER);
+    public Content update(@NonNull final Content content, @Nonnull String url) {
+        content.setSite(Site.XHAMSTER);
 
         String theUrl = galleryUrl.isEmpty() ? url : galleryUrl;
         int galleryLocation = theUrl.indexOf(GALLERY_FOLDER) + GALLERY_FOLDER.length();
-        result.setUrl(theUrl.substring(galleryLocation));
+        content.setUrl(theUrl.substring(galleryLocation));
         if (thumbs != null)
-            result.setCoverImageUrl(thumbs.isEmpty() ? "" : thumbs.get(0));
-        result.setTitle(title);
+            content.setCoverImageUrl(thumbs.isEmpty() ? "" : thumbs.get(0));
+        content.setTitle(title);
 
         Pattern pattern = Pattern.compile(".* - (\\d+) .*amster.*"); // e.g. "Big bewbs - 50 Pics | xHamster.com"
         Matcher matcher = pattern.matcher(headTitle);
@@ -52,17 +52,17 @@ public class XhamsterContent implements ContentParser {
 
         if (matcher.groupCount() > 0) {
             String results = matcher.group(1);
-            result.setQtyPages(Integer.parseInt(results));
+            content.setQtyPages(Integer.parseInt(results));
         }
 
         AttributeMap attributes = new AttributeMap();
 
         ParseHelper.parseAttributes(attributes, AttributeType.TAG, tags, true, Site.XHAMSTER);
 
-        result.addAttributes(attributes);
+        content.addAttributes(attributes);
 
-        result.setStatus(StatusContent.SAVED);
+        content.setStatus(StatusContent.SAVED);
 
-        return result;
+        return content;
     }
 }

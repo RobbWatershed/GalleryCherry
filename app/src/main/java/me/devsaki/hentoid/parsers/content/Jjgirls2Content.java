@@ -9,6 +9,8 @@ import org.jsoup.nodes.Element;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.annotation.Nonnull;
+
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.enums.AttributeType;
@@ -19,7 +21,7 @@ import pl.droidsonroids.jspoon.annotation.Selector;
 
 import static me.devsaki.hentoid.parsers.content.SmartContent.addLinksToImages;
 
-public class Jjgirls2Content implements ContentParser {
+public class Jjgirls2Content extends BaseContentParser {
 
     @Selector("head title")
     private String title;
@@ -48,29 +50,27 @@ public class Jjgirls2Content implements ContentParser {
             imageLinks.addAll(Stream.of(imageLinksPng).distinct().toList());
     }
 
-    public Content toContent(@NonNull String url) {
-        Content result = new Content();
+    public Content update(@NonNull final Content content, @Nonnull String url) {
+        content.setSite(Site.JJGIRLS2);
 
-        result.setSite(Site.JJGIRLS2);
-
-        result.setUrl(url);
-        result.setTitle(title);
+        content.setUrl(url);
+        content.setTitle(title);
 
         AttributeMap attributes = new AttributeMap();
         // Remove 1st model (sponsor site)
         if (!models.isEmpty()) models.remove(0);
         ParseHelper.parseAttributes(attributes, AttributeType.MODEL, models, true, Site.JJGIRLS2);
         ParseHelper.parseAttributes(attributes, AttributeType.TAG, tags, true, Site.JJGIRLS2);
-        result.addAttributes(attributes);
+        content.addAttributes(attributes);
 
         List<ImageFile> images = new ArrayList<>();
         processImages();
         addLinksToImages(imageLinks, images, url);
-        if (images.size() > 0) result.setCoverImageUrl(images.get(0).getUrl());
+        if (images.size() > 0) content.setCoverImageUrl(images.get(0).getUrl());
 
-        result.setQtyPages(images.size());
-        result.setImageFiles(images);
+        content.setQtyPages(images.size());
+        content.setImageFiles(images);
 
-        return result;
+        return content;
     }
 }

@@ -8,6 +8,8 @@ import org.jsoup.nodes.Element;
 
 import java.util.List;
 
+import javax.annotation.Nonnull;
+
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.enums.AttributeType;
 import me.devsaki.hentoid.enums.Site;
@@ -16,7 +18,7 @@ import me.devsaki.hentoid.parsers.ParseHelper;
 import me.devsaki.hentoid.util.AttributeMap;
 import pl.droidsonroids.jspoon.annotation.Selector;
 
-public class AsianSisterContent implements ContentParser {
+public class AsianSisterContent extends BaseContentParser {
 
     @Selector(value = "h1", defValue = "")
     private String title;
@@ -28,14 +30,12 @@ public class AsianSisterContent implements ContentParser {
     private List<String> thumbs;
 
 
-    public Content toContent(@NonNull String url) {
-        Content result = new Content();
-
-        result.setSite(Site.ASIANSISTER);
-        result.setUrl(url.replace(Site.ASIANSISTER.getUrl(), ""));
+    public Content update(@NonNull final Content content, @Nonnull String url) {
+        content.setSite(Site.ASIANSISTER);
+        content.setUrl(url.replace(Site.ASIANSISTER.getUrl(), ""));
 
         String[] titleParts = title.split("-");
-        result.setTitle(titleParts[0].trim());
+        content.setTitle(titleParts[0].trim());
 
         AttributeMap attributes = new AttributeMap();
         ParseHelper.parseAttributes(attributes, AttributeType.TAG, categoryTags, true, Site.ASIANSISTER);
@@ -46,16 +46,16 @@ public class AsianSisterContent implements ContentParser {
             tags.remove(0);
             ParseHelper.parseAttributes(attributes, AttributeType.TAG, tags, true, Site.ASIANSISTER);
         }
-        result.addAttributes(attributes);
+        content.addAttributes(attributes);
 
         // Remove duplicates
         if (!thumbs.isEmpty()) {
             thumbs = Stream.of(thumbs).distinct().map(s -> s.replace("imageimages", "images")).toList();
-            result.setCoverImageUrl(thumbs.get(0));
-            result.setImageFiles(ParseHelper.urlsToImageFiles(thumbs, thumbs.get(0), StatusContent.SAVED));
+            content.setCoverImageUrl(thumbs.get(0));
+            content.setImageFiles(ParseHelper.urlsToImageFiles(thumbs, thumbs.get(0), StatusContent.SAVED));
         }
-        result.setQtyPages(thumbs.size() - 1); // Minus the cover
+        content.setQtyPages(thumbs.size() - 1); // Minus the cover
 
-        return result;
+        return content;
     }
 }

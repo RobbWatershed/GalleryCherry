@@ -7,6 +7,8 @@ import org.jsoup.nodes.Element;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.annotation.Nonnull;
+
 import me.devsaki.hentoid.database.domains.Attribute;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.ImageFile;
@@ -17,7 +19,7 @@ import me.devsaki.hentoid.parsers.ParseHelper;
 import me.devsaki.hentoid.util.AttributeMap;
 import pl.droidsonroids.jspoon.annotation.Selector;
 
-public class XnxxContent implements ContentParser {
+public class XnxxContent extends BaseContentParser {
 
     private static String PORNSTARS_MARKER = "Pornstars : ";
     private static String TAGS_MARKER = " - Tags : ";
@@ -34,18 +36,16 @@ public class XnxxContent implements ContentParser {
     private List<String> imageLinks;
 
 
-    public Content toContent(@NonNull String url) {
-        Content result = new Content();
-
-        result.setSite(Site.XNXX);
+    public Content update(@NonNull final Content content, @Nonnull String url) {
+        content.setSite(Site.XNXX);
 
         int galleryIndex = title.lastIndexOf("gallery");
         if (galleryIndex > -1)
-            result.setTitle(title.substring(0, title.lastIndexOf("gallery") - 1));
-        else result.setTitle(title);
+            content.setTitle(title.substring(0, title.lastIndexOf("gallery") - 1));
+        else content.setTitle(title);
 
         String theUrl = galleryUrl.isEmpty() ? url : galleryUrl;
-        result.setUrl(theUrl.replace(Site.XNXX.getUrl(), "").replace("gallery/", ""));
+        content.setUrl(theUrl.replace(Site.XNXX.getUrl(), "").replace("gallery/", ""));
 
         AttributeMap attributes = new AttributeMap();
 
@@ -67,7 +67,7 @@ public class XnxxContent implements ContentParser {
         if (tags != null) {
             ParseHelper.parseAttributes(attributes, AttributeType.TAG, tags, true, Site.XNXX);
         }
-        result.addAttributes(attributes);
+        content.addAttributes(attributes);
 
 
         List<ImageFile> images = new ArrayList<>();
@@ -76,10 +76,10 @@ public class XnxxContent implements ContentParser {
         for (String s : imageLinks) {
             images.add(new ImageFile(order++, s, StatusContent.SAVED, imageLinks.size()));
         }
-        if (images.size() > 0) result.setCoverImageUrl(images.get(0).getUrl());
-        result.setImageFiles(images);
-        result.setQtyPages(images.size());
+        if (images.size() > 0) content.setCoverImageUrl(images.get(0).getUrl());
+        content.setImageFiles(images);
+        content.setQtyPages(images.size());
 
-        return result;
+        return content;
     }
 }

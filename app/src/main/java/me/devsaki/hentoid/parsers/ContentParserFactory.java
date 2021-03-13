@@ -67,8 +67,6 @@ public class ContentParserFactory {
                 return new LusciousParser();
             case FAPALITY:
                 return new FapalityParser();
-            case TOONILY:
-                return new ToonilyParser();
             default:
                 return new DummyParser();
         }

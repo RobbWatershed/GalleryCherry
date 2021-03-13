@@ -29,9 +29,9 @@ import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.parsers.ParseHelper;
 import me.devsaki.hentoid.retrofit.RedditOAuthApiServer;
-import me.devsaki.hentoid.services.ContentQueueManager;
 import me.devsaki.hentoid.util.ImageHelper;
 import me.devsaki.hentoid.util.OauthSessionManager;
+import me.devsaki.hentoid.util.download.ContentQueueManager;
 import me.devsaki.hentoid.util.network.HttpHelper;
 import timber.log.Timber;
 
@@ -109,7 +109,7 @@ public class RedditAuthDownloadFragment extends Fragment {
         int newImageNumber = 0;
 
         db = new ObjectBoxDAO(requireContext());
-        Content contentDB = db.selectContentBySourceAndUrl(Site.REDDIT, "");
+        Content contentDB = db.selectContentBySourceAndUrl(Site.REDDIT, "", "");
 
         if (null == contentDB) {    // The book has just been detected -> finalize before saving in DB
 

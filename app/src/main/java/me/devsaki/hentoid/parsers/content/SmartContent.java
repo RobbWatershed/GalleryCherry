@@ -9,6 +9,8 @@ import org.jsoup.nodes.Element;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.annotation.Nonnull;
+
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.enums.Site;
@@ -18,7 +20,7 @@ import okhttp3.HttpUrl;
 import pl.droidsonroids.jspoon.annotation.Selector;
 import timber.log.Timber;
 
-public class SmartContent implements ContentParser {
+public class SmartContent extends BaseContentParser {
 
     @Selector(":root")
     private Element root;
@@ -81,12 +83,10 @@ public class SmartContent implements ContentParser {
         }
     }
 
-    public Content toContent(@NonNull String url) {
-        Content result = new Content();
-
+    public Content update(@NonNull final Content content, @Nonnull String url) {
         processImages();
 
-        result.setSite(Site.NONE); // Temp but needed for the rest of the operations; will be overwritten
+        content.setSite(Site.NONE); // Temp but needed for the rest of the operations; will be overwritten
 
         String theUrl = galleryUrl.isEmpty() ? url : galleryUrl;
 
@@ -94,25 +94,25 @@ public class SmartContent implements ContentParser {
         if (theUrl.startsWith("//")) theUrl = "http:" + theUrl;
         if (!theUrl.isEmpty()) {
             HttpUrl httpUrl = HttpUrl.get(theUrl);
-            result.setUrl(httpUrl.scheme() + "://" + httpUrl.host() + httpUrl.encodedPath());
-        } else result.setUrl("");
+            content.setUrl(httpUrl.scheme() + "://" + httpUrl.host() + httpUrl.encodedPath());
+        } else content.setUrl("");
 
-        if (!isGallery()) return result.setStatus(StatusContent.IGNORED);
+        if (!isGallery()) return new Content().setStatus(StatusContent.IGNORED);
 
-        result.setTitle(title);
+        content.setTitle(title);
 
         AttributeMap attributes = new AttributeMap();
-        result.addAttributes(attributes);
+        content.addAttributes(attributes);
 
         List<ImageFile> images = new ArrayList<>();
 
         if (imageLinks.size() > 4) addLinksToImages(imageLinks, images, url);
         else if (imageElts.size() > 4) addLinksToImages(imageElts, images, url);
-        if (images.size() > 0) result.setCoverImageUrl(images.get(0).getUrl());
+        if (images.size() > 0) content.setCoverImageUrl(images.get(0).getUrl());
 
-        result.setQtyPages(images.size());
-        result.setImageFiles(images);
+        content.setQtyPages(images.size());
+        content.setImageFiles(images);
 
-        return result;
+        return content;
     }
 }

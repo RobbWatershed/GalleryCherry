@@ -1,7 +1,5 @@
 package me.devsaki.hentoid.database.domains;
 
-import android.text.TextUtils;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -12,7 +10,6 @@ import com.annimon.stream.Stream;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,7 +45,6 @@ import me.devsaki.hentoid.util.ArchiveHelper;
 import me.devsaki.hentoid.util.AttributeMap;
 import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.JsonHelper;
-import me.devsaki.hentoid.util.network.HttpHelper;
 import timber.log.Timber;
 
 import static me.devsaki.hentoid.util.JsonHelper.MAP_STRINGS;
@@ -245,14 +241,6 @@ public class Content implements Serializable {
         }
     }
 
-    public void populateUniqueSiteId() {
-        this.uniqueSiteId = computeUniqueSiteId();
-    }
-
-    public void setUniqueSiteId(@NonNull String uniqueId) {
-        this.uniqueSiteId = uniqueId;
-    }
-
     public Class<?> getWebActivityClass() {
         return getWebActivityClass(this.site);
     }
@@ -287,8 +275,6 @@ public class Content implements Serializable {
                 return FapalityActivity.class;
             case ASIANSISTER:
                 return AsianSisterActivity.class;
-            case TOONILY:
-                return ToonilyActivity.class;
             default:
                 return BaseWebActivity.class;
         }
@@ -360,46 +346,7 @@ public class Content implements Serializable {
      * @return Neutralized cover URL
      */
     public static String getNeutralCoverUrlRoot(@NonNull final String url, @NonNull final Site site) {
-        if (url.isEmpty()) return url;
-
-        if (site == Site.MANHWA) {
-            HttpHelper.UriParts parts = new HttpHelper.UriParts(url);
-            // Remove the last part of the filename if it is formatted as "numberxnumber"
-            String[] nameParts = parts.getFileNameNoExt().split("-");
-            String[] lastPartParts = nameParts[nameParts.length - 1].split("x");
-            for (String s : lastPartParts)
-                if (!Helper.isNumeric(s)) return url;
-
-            nameParts = Arrays.copyOf(nameParts, nameParts.length - 1);
-            return parts.getPath() + TextUtils.join("-", nameParts);
-        } else {
-            return url;
-        }
-    }
-
-    public String getCategory() {
-        if (site == Site.FAKKU) {
-            return url.substring(1, url.lastIndexOf('/'));
-        } else {
-            if (attributes != null) {
-                List<Attribute> attributesList = getAttributeMap().get(AttributeType.CATEGORY);
-                if (attributesList != null && !attributesList.isEmpty()) {
-                    return attributesList.get(0).getName();
-                }
-            }
-        }
-
-        return null;
-    }
-
-    public String getUrl() {
-        return (null == url) ? "" : url;
-    }
-
-    public Content setUrl(String url) {
-        this.url = url;
-        populateUniqueSiteId();
-        return this;
+        return url;
     }
 
     public Content populateAuthor() {
