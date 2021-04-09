@@ -13,6 +13,10 @@
     "JJGIRLS2": {
       "hasBackupURLs": true,
       "comment" : "JJgirls uses the backup URL mechanism to fill in the gaps of fake image links leading to ads"
+    },
+    "BABETODAY": {
+      "hasBackupURLs": true,
+      "comment" : "Babe.today uses the backup URL mechanism to fill in the gaps of fake image links leading to ads"
     }
   }
 }

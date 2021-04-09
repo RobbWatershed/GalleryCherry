@@ -24,6 +24,7 @@ import io.objectbox.annotation.Transient;
 import io.objectbox.converter.PropertyConverter;
 import io.objectbox.relation.ToMany;
 import me.devsaki.hentoid.activities.sources.AsianSisterActivity;
+import me.devsaki.hentoid.activities.sources.BabeTodayActivity;
 import me.devsaki.hentoid.activities.sources.BaseWebActivity;
 import me.devsaki.hentoid.activities.sources.FapalityActivity;
 import me.devsaki.hentoid.activities.sources.HellpornoActivity;
@@ -219,6 +220,7 @@ public class Content implements Serializable {
             case LINK2GALLERIES:
             case NEXTPICTUREZ:
             case JJGIRLS2:
+            case BABETODAY:
                 return parts[parts.length - 1];
             case FAPALITY:
                 return parts[parts.length - 2];
@@ -272,6 +274,8 @@ public class Content implements Serializable {
                 return JjgirlsActivity.class;
             case JJGIRLS2:
                 return Jjgirls2Activity.class;
+            case BABETODAY:
+                return BabeTodayActivity.class;
             case LUSCIOUS:
                 return LusciousActivity.class;
             case FAPALITY:
@@ -319,6 +323,7 @@ public class Content implements Serializable {
             case REDDIT: // N/A
             case JJGIRLS:
             case JJGIRLS2:
+            case BABETODAY:
                 return url; // Specific case - user can go on any site (smart parser)
             case HELLPORNO:
             case FAPALITY:
