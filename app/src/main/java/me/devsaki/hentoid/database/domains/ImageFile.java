@@ -1,14 +1,12 @@
 package me.devsaki.hentoid.database.domains;
 
-import androidx.annotation.NonNull;
-
+import java.util.Comparator;
 import java.util.Locale;
 import java.util.Objects;
 
 import io.objectbox.annotation.Convert;
 import io.objectbox.annotation.Entity;
 import io.objectbox.annotation.Id;
-import io.objectbox.annotation.Index;
 import io.objectbox.annotation.Transient;
 import io.objectbox.relation.ToOne;
 import me.devsaki.hentoid.core.Consts;

@@ -20,16 +20,16 @@ public enum Site {
     PORNPICS(2, "Pornpics", "https://www.pornpics.com/", R.drawable.ic_menu_pornpics),
     JPEGWORLD(3, "Jpegworld", "https://www.jpegworld.com/", R.drawable.ic_menu_jpegworld),
     NEXTPICTUREZ(4, "Nextpicturez", "http://www.nextpicturez.com/", R.drawable.ic_menu_nextpicturez),
-    HELLPORNO(5, "Hellporno", "https://hellporno.com/albums/", R.drawable.ic_menu_hellporno, false, false, false, false, false, false), // Use desktop agent for Hellporno
+    HELLPORNO(5, "Hellporno", "https://hellporno.com/albums/", R.drawable.ic_menu_hellporno),
     PORNPICGALLERIES(6, "Pornpicgalleries", "http://pornpicgalleries.com/", R.drawable.ic_menu_ppg),
     LINK2GALLERIES(7, "Link2galleries", "https://www.link2galleries.com/", R.drawable.ic_menu_l2g),
-    REDDIT(8, "Reddit", "https://www.reddit.com/", R.drawable.ic_social_reddit, true, true, false, false, false, true), // Reddit is treated as a booru source
-    JJGIRLS(9, "JJGirls (Jap)", "https://jjgirls.com/mobile/", R.drawable.ic_menu_jjgirls, true, true, false, true, false, false), // JJgirls uses the backup URL mechanism to fill in the gaps of fake image links leading to ads
+    REDDIT(8, "Reddit", "https://www.reddit.com/", R.drawable.ic_social_reddit),
+    JJGIRLS(9, "JJGirls (Jap)", "https://jjgirls.com/mobile/", R.drawable.ic_menu_jjgirls),
     LUSCIOUS(10, "luscious.net", "https://members.luscious.net/porn/", R.drawable.ic_menu_luscious),
     FAPALITY(11, "Fapality", "https://fapality.com/photos/", R.drawable.ic_menu_fapality),
     HINA(12, "Hina", "https://github.com/ixilia/hina", R.drawable.ic_menu_hina),
     ASIANSISTER(13, "Asiansister", "https://asiansister.com/", R.drawable.ic_menu_asiansister),
-    JJGIRLS2(14, "JJGirls (Western)", "https://jjgirls.com/pornpics/", R.drawable.ic_menu_jjgirls, true, true, false, true, false, false), // JJgirls uses the backup URL mechanism to fill in the gaps of fake image links leading to ads
+    JJGIRLS2(14, "JJGirls (Western)", "https://jjgirls.com/pornpics/", R.drawable.ic_menu_jjgirls),
     NONE(98, "none", "", R.drawable.ic_external_library); // External library; fallback site
 
 
@@ -44,23 +44,13 @@ public enum Site {
     private final String url;
     private final int ico;
     // Default values are overridden in sites.json
-    private final boolean useMobileAgent = true;
-    private final boolean useHentoidAgent = false;
-    private final boolean useWebviewAgent = true;
-    private final boolean hasImageProcessing = false;
-    private final boolean hasBackupURLs = false;
-    private final boolean hasCoverBasedPageUpdates = false;
-    private final boolean isDanbooru = false;
-
-    Site(int code,
-         String description,
-         String url,
-         int ico) {
-        this.code = code;
-        this.description = description;
-        this.url = url;
-        this.ico = ico;
-    }
+    private boolean useMobileAgent = true;
+    private boolean useHentoidAgent = false;
+    private boolean useWebviewAgent = true;
+    private boolean hasImageProcessing = false;
+    private boolean hasBackupURLs = false;
+    private boolean hasCoverBasedPageUpdates = false;
+    private boolean isDanbooru = false;
 
     Site(int code,
          String description,
@@ -171,6 +161,7 @@ public enum Site {
         if (jsonSite.hasBackupURLs != null) hasBackupURLs = jsonSite.hasBackupURLs;
         if (jsonSite.hasCoverBasedPageUpdates != null)
             hasCoverBasedPageUpdates = jsonSite.hasCoverBasedPageUpdates;
+        if (jsonSite.isDanbooru != null) isDanbooru = jsonSite.isDanbooru;
     }
 
     public static class SiteConverter implements PropertyConverter<Site, Long> {

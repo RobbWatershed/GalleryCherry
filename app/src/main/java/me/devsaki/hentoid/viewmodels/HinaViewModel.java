@@ -22,6 +22,7 @@ import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.util.Preferences;
+import me.devsaki.hentoid.util.download.ContentQueueManager;
 import me.devsaki.hentoid.widget.ContentSearchManager;
 
 
@@ -200,7 +201,7 @@ public class HinaViewModel extends AndroidViewModel {
      *
      * @param content Content to be added to the download queue
      */
-    public void addContentToQueue(@NonNull final Content content, StatusContent targetImageStatus) {
-        hentoidDao.addContentToQueue(content, targetImageStatus);
+    public void addContentToQueue(@NonNull final Content content, StatusContent targetImageStatus, int addMode) {
+        hentoidDao.addContentToQueue(content, targetImageStatus, addMode, ContentQueueManager.getInstance().isQueueActive());
     }
 }

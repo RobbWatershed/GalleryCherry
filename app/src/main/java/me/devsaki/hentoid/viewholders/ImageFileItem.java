@@ -24,9 +24,9 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.List;
 
-import me.devsaki.hentoid.HentoidApp;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.activities.bundles.ImageItemBundle;
+import me.devsaki.hentoid.core.HentoidApp;
 import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.retrofit.HinaServer;
 import me.devsaki.hentoid.util.Helper;

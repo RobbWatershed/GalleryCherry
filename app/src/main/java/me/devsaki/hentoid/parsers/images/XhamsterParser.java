@@ -53,7 +53,7 @@ public class XhamsterParser extends BaseImageListParser {
     private static okhttp3.Response onIntercept(Interceptor.Chain chain) throws IOException {
         Request.Builder builder = chain.request().newBuilder();
         if (null == chain.request().header("User-Agent") && null == chain.request().header("user-agent"))
-            builder.header(HttpHelper.HEADER_USER_AGENT, HttpHelper.getMobileUserAgent(false));
+            builder.header(HttpHelper.HEADER_USER_AGENT, HttpHelper.getMobileUserAgent(false, false));
         builder.header("x-requested-with", "XMLHttpRequest");
         return chain.proceed(builder.build());
     }

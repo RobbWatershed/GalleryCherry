@@ -165,7 +165,7 @@ public class HinaDAO implements CollectionDAO {
     }
 
     @Override
-    public LiveData<List<Group>> selectGroups(int grouping, @Nullable String query, int orderField, boolean orderDesc, int artistGroupVisibility) {
+    public LiveData<List<Group>> selectGroups(int grouping, @Nullable String query, int orderField, boolean orderDesc, int artistGroupVisibility, boolean groupFavouritesOnly) {
         return null;
     }
 
@@ -374,7 +374,7 @@ public class HinaDAO implements CollectionDAO {
     }
 
     @Override
-    public void addContentToQueue(@NonNull Content content, StatusContent targetImageStatus) {
+    public void addContentToQueue(@NonNull Content content, StatusContent targetImageStatus, int mode, boolean isQueueActive) {
 
     }
 

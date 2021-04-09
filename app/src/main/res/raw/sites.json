@@ -1,40 +1,18 @@
 {
   "sites": {
-    "HITOMI": {
-      "useMobileAgent": false,
-      "comment": "Hitomi needs a desktop agent to properly display gallery images on some devices"
+    "HELLPORNO": {
+      "useMobileAgent": false
     },
-    "NHENTAI": {
-      "useHentoidAgent": true
+    "REDDIT": {
+      "isDanbooru": true
     },
-    "TSUMINO": {
-      "useHentoidAgent": true
+    "JJGIRLS": {
+      "hasBackupURLs": true,
+      "comment" : "JJgirls uses the backup URL mechanism to fill in the gaps of fake image links leading to ads"
     },
-    "HENTAICAFE": {
-      "useHentoidAgent": true
-    },
-    "ASMHENTAI": {
-      "useHentoidAgent": true
-    },
-    "ASMHENTAI_COMICS": {
-      "useHentoidAgent": true
-    },
-    "EHENTAI": {
-      "useHentoidAgent": true,
-      "hasBackupURLs": true
-    },
-    "EXHENTAI": {
-      "hasBackupURLs": true
-    },
-    "FAKKU2": {
-      "hasImageProcessing": true,
-      "useWebviewAgent": false
-    },
-    "MANHWA": {
-      "hasCoverBasedPageUpdates": true
-    },
-    "TOONILY": {
-      "hasCoverBasedPageUpdates": true
+    "JJGIRLS2": {
+      "hasBackupURLs": true,
+      "comment" : "JJgirls uses the backup URL mechanism to fill in the gaps of fake image links leading to ads"
     }
   }
 }

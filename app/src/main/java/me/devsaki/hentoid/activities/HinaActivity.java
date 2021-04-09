@@ -61,8 +61,13 @@ import me.devsaki.hentoid.util.download.ContentQueueManager;
 import me.devsaki.hentoid.viewholders.ContentItem;
 import me.devsaki.hentoid.viewmodels.HinaViewModel;
 import me.devsaki.hentoid.viewmodels.ViewModelFactory;
+import me.devsaki.hentoid.widget.AddQueueMenu;
 import me.zhanghai.android.fastscroll.FastScrollerBuilder;
 import timber.log.Timber;
+
+import static me.devsaki.hentoid.util.Preferences.Constant.QUEUE_NEW_DOWNLOADS_POSITION_ASK;
+import static me.devsaki.hentoid.util.Preferences.Constant.QUEUE_NEW_DOWNLOADS_POSITION_BOTTOM;
+import static me.devsaki.hentoid.util.Preferences.Constant.QUEUE_NEW_DOWNLOADS_POSITION_TOP;
 
 /**
  * Handles hosting of QueueFragment for a single screen.
@@ -602,7 +607,12 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
             downloadDisposable.dispose();
             downloadDisposable = null;
         }
-        viewModel.addContentToQueue(content, null);
+        if (Preferences.getQueueNewDownloadPosition() == QUEUE_NEW_DOWNLOADS_POSITION_ASK) {
+            AddQueueMenu.show(this, recyclerView, this, (position, item) ->
+                    viewModel.addContentToQueue(content, null, (0 == position) ? QUEUE_NEW_DOWNLOADS_POSITION_TOP : QUEUE_NEW_DOWNLOADS_POSITION_BOTTOM)
+            );
+        } else
+            viewModel.addContentToQueue(content, null, Preferences.getQueueNewDownloadPosition());
 
         if (Preferences.isQueueAutostart())
             ContentQueueManager.getInstance().resumeQueue(this);
