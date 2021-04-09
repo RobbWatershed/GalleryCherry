@@ -21,7 +21,7 @@
 
 
     <application
-        android:name=".HentoidApp"
+        android:name=".core.HentoidApp"
         android:allowBackup="false"
         android:extractNativeLibs="true"
         android:icon="@mipmap/ic_launcher"
@@ -254,6 +254,10 @@
 
                 <data
                     android:host="luscious.net"
+                    android:pathPattern="..*/..*"
+                    android:scheme="https" />
+                <data
+                    android:host="members.luscious.net"
                     android:pathPattern="..*/..*"
                     android:scheme="https" />
             </intent-filter>

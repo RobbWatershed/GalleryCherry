@@ -37,7 +37,7 @@ import javax.annotation.Nullable;
 import io.reactivex.Single;
 import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.schedulers.Schedulers;
-import me.devsaki.hentoid.HentoidApp;
+import me.devsaki.hentoid.core.HentoidApp;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.database.CollectionDAO;
 import me.devsaki.hentoid.database.ObjectBoxDAO;
@@ -57,7 +57,7 @@ import me.devsaki.hentoid.notification.download.DownloadSuccessNotification;
 import me.devsaki.hentoid.notification.download.DownloadWarningNotification;
 import me.devsaki.hentoid.parsers.ContentParserFactory;
 import me.devsaki.hentoid.parsers.images.ImageListParser;
-import me.devsaki.hentoid.util.Consts;
+import me.devsaki.hentoid.core.Consts;
 import me.devsaki.hentoid.util.ContentHelper;
 import me.devsaki.hentoid.util.FileHelper;
 import me.devsaki.hentoid.util.ImageHelper;
@@ -733,6 +733,7 @@ public class ContentDownloadWorker extends Worker {
                 HttpHelper.fixUrl(img.getUrl(), site.getUrl()),
                 requestHeaders,
                 site.useHentoidAgent(),
+                site.useWebviewAgent(),
                 result -> onRequestSuccess(result, img, dir, site.hasImageProcessing(), backupUrlFinal, requestHeaders),
                 error -> onRequestError(error, img, dir, backupUrlFinal, requestHeaders));
     }

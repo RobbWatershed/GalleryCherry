@@ -1,9 +1,11 @@
 package me.devsaki.hentoid.enums;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import io.objectbox.converter.PropertyConverter;
 import me.devsaki.hentoid.R;
+import me.devsaki.hentoid.json.JsonSiteSettings;
 import me.devsaki.hentoid.util.network.HttpHelper;
 import timber.log.Timber;
 
@@ -41,33 +43,23 @@ public enum Site {
     private final String description;
     private final String url;
     private final int ico;
-    private final boolean useMobileAgent;
-    private final boolean useHentoidAgent;
-    private final boolean hasImageProcessing;
-    private final boolean hasBackupURLs;
-    private final boolean hasCoverBasedPageUpdates;
-    private final boolean isDanbooru;
+    // Default values are overridden in sites.json
+    private final boolean useMobileAgent = true;
+    private final boolean useHentoidAgent = false;
+    private final boolean useWebviewAgent = true;
+    private final boolean hasImageProcessing = false;
+    private final boolean hasBackupURLs = false;
+    private final boolean hasCoverBasedPageUpdates = false;
+    private final boolean isDanbooru = false;
 
     Site(int code,
          String description,
          String url,
-         int ico,
-         boolean useMobileAgent,
-         boolean useHentoidAgent,
-         boolean hasImageProcessing,
-         boolean hasBackupURLs,
-         boolean hasCoverBasedPageUpdates,
-         boolean isDanbooru) {
+         int ico) {
         this.code = code;
         this.description = description;
         this.url = url;
         this.ico = ico;
-        this.useMobileAgent = useMobileAgent;
-        this.useHentoidAgent = useHentoidAgent;
-        this.hasImageProcessing = hasImageProcessing;
-        this.hasBackupURLs = hasBackupURLs;
-        this.hasCoverBasedPageUpdates = hasCoverBasedPageUpdates;
-        this.isDanbooru = isDanbooru;
     }
 
     Site(int code,
@@ -78,12 +70,6 @@ public enum Site {
         this.description = description;
         this.url = url;
         this.ico = ico;
-        this.useMobileAgent = true;
-        this.useHentoidAgent = false;
-        this.hasImageProcessing = false;
-        this.hasBackupURLs = false;
-        this.hasCoverBasedPageUpdates = false;
-        this.isDanbooru = false;
     }
 
     public static Site searchByCode(long code) {
@@ -140,6 +126,10 @@ public enum Site {
         return useHentoidAgent;
     }
 
+    public boolean useWebviewAgent() {
+        return useWebviewAgent;
+    }
+
     public boolean hasImageProcessing() {
         return hasImageProcessing;
     }
@@ -168,9 +158,19 @@ public enum Site {
 
     public String getUserAgent() {
         if (useMobileAgent())
-            return HttpHelper.getMobileUserAgent(useHentoidAgent());
+            return HttpHelper.getMobileUserAgent(useHentoidAgent(), useWebviewAgent());
         else
-            return HttpHelper.getDesktopUserAgent(useHentoidAgent());
+            return HttpHelper.getDesktopUserAgent(useHentoidAgent(), useWebviewAgent());
+    }
+
+    public void updateFrom(@NonNull final JsonSiteSettings.JsonSite jsonSite) {
+        if (jsonSite.useMobileAgent != null) useMobileAgent = jsonSite.useMobileAgent;
+        if (jsonSite.useHentoidAgent != null) useHentoidAgent = jsonSite.useHentoidAgent;
+        if (jsonSite.useWebviewAgent != null) useWebviewAgent = jsonSite.useWebviewAgent;
+        if (jsonSite.hasImageProcessing != null) hasImageProcessing = jsonSite.hasImageProcessing;
+        if (jsonSite.hasBackupURLs != null) hasBackupURLs = jsonSite.hasBackupURLs;
+        if (jsonSite.hasCoverBasedPageUpdates != null)
+            hasCoverBasedPageUpdates = jsonSite.hasCoverBasedPageUpdates;
     }
 
     public static class SiteConverter implements PropertyConverter<Site, Long> {

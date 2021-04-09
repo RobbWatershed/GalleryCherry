@@ -1,16 +1,15 @@
 package me.devsaki.hentoid.util;
 
-import android.content.ContentProviderClient;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Pair;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.documentfile.provider.DocumentFile;
-import androidx.lifecycle.ProcessLifecycleOwner;
 
 import com.annimon.stream.Stream;
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
@@ -42,8 +41,10 @@ import me.devsaki.hentoid.activities.ImageViewerActivity;
 import me.devsaki.hentoid.activities.UnlockActivity;
 import me.devsaki.hentoid.activities.bundles.BaseWebActivityBundle;
 import me.devsaki.hentoid.activities.bundles.ImageViewerActivityBundle;
+import me.devsaki.hentoid.core.Consts;
 import me.devsaki.hentoid.database.CollectionDAO;
 import me.devsaki.hentoid.database.domains.Attribute;
+import me.devsaki.hentoid.database.domains.AttributeMap;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.Group;
 import me.devsaki.hentoid.database.domains.GroupItem;
@@ -130,7 +131,7 @@ public final class ContentHelper {
     public static void viewContentGalleryPage(@NonNull final Context context, @NonNull Content content, boolean wrapPin) {
         if (content.getSite().equals(Site.NONE)) return;
 
-        Intent intent = new Intent(context, content.getWebActivityClass(content.getSite()));
+        Intent intent = new Intent(context, Content.getWebActivityClass(content.getSite()));
         BaseWebActivityBundle.Builder builder = new BaseWebActivityBundle.Builder();
         builder.setUrl(content.getGalleryUrl());
         intent.putExtras(builder.getBundle());
@@ -393,7 +394,7 @@ public final class ContentHelper {
                             Group group = GroupHelper.getOrCreateNoArtistGroup(context, dao);
                             GroupItem item = new GroupItem(content, group, -1);
                             dao.insertGroupItem(item);
-                        } else
+                        } else {
                             for (Attribute a : artists) { // Add to the artist groups attached to the artists attributes
                                 Group group = a.getGroup().getTarget();
                                 if (null == group) {
@@ -404,6 +405,7 @@ public final class ContentHelper {
                                 }
                                 GroupHelper.addContentToAttributeGroup(dao, group, a, content);
                             }
+                        }
                     }
                 }
         }
@@ -429,15 +431,9 @@ public final class ContentHelper {
                                     },
                                     Timber::e
                             );
-                    /*
-                    if (context instanceof LifecycleOwner) {
-                        Helper.LifecycleRxCleaner cleaner = new Helper.LifecycleRxCleaner(unarchiveDisposable);
-                        ((LifecycleOwner) context).getLifecycle().addObserver(cleaner);
-                    }
-                     */
-                    // Not ideal, but better than attaching it to the calling service that has not enough longevity
-                    Helper.LifecycleRxCleaner cleaner = new Helper.LifecycleRxCleaner(unarchiveDisposable);
-                    ProcessLifecycleOwner.get().getLifecycle().addObserver(cleaner);
+
+                    // Not ideal, but better than attaching it to the calling service that may not have enough longevity
+                    new Helper.LifecycleRxCleaner(unarchiveDisposable).publish();
                 } catch (IOException e) {
                     Timber.w(e);
                 }
@@ -614,7 +610,7 @@ public final class ContentHelper {
      * @return Download directory of the given Site
      */
     @Nullable
-    static DocumentFile getOrCreateSiteDownloadDir(@NonNull Context context, @Nullable ContentProviderClient client, @NonNull Site site) {
+    static DocumentFile getOrCreateSiteDownloadDir(@NonNull Context context, @Nullable FileExplorer explorer, @NonNull Site site) {
         String appUriStr = Preferences.getStorageUri();
         if (appUriStr.isEmpty()) {
             Timber.e("No storage URI defined for the app");
@@ -629,10 +625,10 @@ public final class ContentHelper {
 
         String siteFolderName = site.getFolder();
         DocumentFile siteFolder;
-        if (null == client)
+        if (null == explorer)
             siteFolder = FileHelper.findFolder(context, appFolder, siteFolderName);
         else
-            siteFolder = FileHelper.findFolder(context, appFolder, client, siteFolderName);
+            siteFolder = explorer.findFolder(context, appFolder, siteFolderName);
 
         if (null == siteFolder) // Create
             return appFolder.createDirectory(siteFolderName);
@@ -894,22 +890,22 @@ public final class ContentHelper {
     }
 
     // TODO doc
-    @Nullable
     public static Content reparseFromScratch(@NonNull final Content content) throws IOException {
         return reparseFromScratch(content, content.getGalleryUrl());
     }
 
+    // TODO visual feedback to warn the user about redownload "from scratch" having failed (whenever the original content is returned)
     private static Content reparseFromScratch(@NonNull final Content content, @NonNull final String url) throws IOException {
         Helper.assertNonUiThread();
 
         String readerUrl = content.getReaderUrl();
         List<Pair<String, String>> requestHeadersList = new ArrayList<>();
         requestHeadersList.add(new Pair<>(HttpHelper.HEADER_REFERER_KEY, readerUrl));
-        String cookieStr = HttpHelper.getCookies(url, requestHeadersList, content.getSite().useMobileAgent(), content.getSite().useHentoidAgent());
+        String cookieStr = HttpHelper.getCookies(url, requestHeadersList, content.getSite().useMobileAgent(), content.getSite().useHentoidAgent(), content.getSite().useWebviewAgent());
         if (!cookieStr.isEmpty())
             requestHeadersList.add(new Pair<>(HttpHelper.HEADER_COOKIE_KEY, cookieStr));
 
-        Response response = HttpHelper.getOnlineResource(url, requestHeadersList, content.getSite().useMobileAgent(), content.getSite().useHentoidAgent());
+        Response response = HttpHelper.getOnlineResource(url, requestHeadersList, content.getSite().useMobileAgent(), content.getSite().useHentoidAgent(),content.getSite().useWebviewAgent());
 
         // Scram if the response is a redirection or an error
         if (response.code() >= 300) return content;
@@ -948,15 +944,27 @@ public final class ContentHelper {
     }
 
     // TODO doc
-    public static Content purgeFiles(@NonNull final Context context, @NonNull final Content content) {
+    public static void purgeFiles(@NonNull final Context context, @NonNull final Content content) {
         DocumentFile bookFolder = FileHelper.getFolderFromTreeUriString(context, content.getStorageUri());
-        if (null == bookFolder) return null;
+        if (bookFolder != null) {
+            List<DocumentFile> files = FileHelper.listFiles(context, bookFolder, null); // Remove everything (incl. JSON and thumb)
+            if (!files.isEmpty())
+                for (DocumentFile file : files) file.delete();
+        }
+    }
 
-        List<DocumentFile> files = FileHelper.listFiles(context, bookFolder, null); // Remove everything (incl. JSON and thumb)
-        if (!files.isEmpty())
-            for (DocumentFile file : files) file.delete();
+    public static String formatTags(@NonNull final Content content) {
+        List<Attribute> tagsAttributes = content.getAttributeMap().get(AttributeType.TAG);
+        if (tagsAttributes == null) return "";
 
-        return content;
+        List<String> allTags = new ArrayList<>();
+        for (Attribute attribute : tagsAttributes) {
+            allTags.add(attribute.getName());
+        }
+        if (Build.VERSION.SDK_INT >= 24) {
+            allTags.sort(null);
+        }
+        return android.text.TextUtils.join(", ", allTags);
     }
 
 

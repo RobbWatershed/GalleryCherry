@@ -29,7 +29,7 @@ public class FapalityParser extends BaseImageListParser {
 
         // 1. Scan the gallery page for page viewer URLs
         List<String> pageUrls = new ArrayList<>();
-        Document doc = HttpHelper.getOnlineDocument(content.getGalleryUrl(), headers, Site.FAPALITY.useHentoidAgent());
+        Document doc = HttpHelper.getOnlineDocument(content.getGalleryUrl(), headers, Site.FAPALITY.useHentoidAgent(), Site.MANHWA.useWebviewAgent());
         if (doc != null) {
             List<Element> chapters = doc.select("a[itemprop][href*=com/photos/]");
             for (Element e : chapters) pageUrls.add(e.attr("href"));
@@ -40,7 +40,7 @@ public class FapalityParser extends BaseImageListParser {
         // 2. Open each page URL and get the image data until all images are found
         for (String url : pageUrls) {
             if (processHalted) break;
-            doc = HttpHelper.getOnlineDocument(url, headers, Site.FAPALITY.useHentoidAgent());
+            doc = HttpHelper.getOnlineDocument(url, headers, Site.FAPALITY.useHentoidAgent(), Site.MANHWA.useWebviewAgent());
             if (doc != null) {
                 List<Element> images = doc.select(".simple-content img");
                 result.addAll(Stream.of(images).map(i -> i.attr("src")).filterNot(String::isEmpty).toList());

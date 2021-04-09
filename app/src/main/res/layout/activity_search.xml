@@ -55,6 +55,7 @@
         android:orientation="vertical"
         app:layout_constraintGuide_percent="0.5" />
 
+
     <TextView
         android:id="@+id/textCategoryAny"
         style="@style/SearchCategoryButton"
@@ -65,6 +66,30 @@
         app:layout_constraintEnd_toStartOf="@id/guidelineMiddle"
         app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/textCategoryTag" />
+
+    <TextView
+        android:id="@+id/textCategorySeries"
+        style="@style/SearchCategoryButton"
+        android:layout_marginStart="4dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="4dp"
+        android:text="@string/category_series"
+        app:layout_constraintStart_toEndOf="@id/guidelineMiddle"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/textCategoryLanguage" />
+
+    <TextView
+        android:id="@+id/textCategoryArtist"
+        style="@style/SearchCategoryButton"
+        android:layout_marginStart="4dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        android:text="@string/category_artist"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toEndOf="@id/guidelineMiddle"
         app:layout_constraintTop_toBottomOf="@id/textCategoryTag" />
 
 
