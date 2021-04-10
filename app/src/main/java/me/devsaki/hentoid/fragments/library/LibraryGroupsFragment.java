@@ -480,7 +480,7 @@ public class LibraryGroupsFragment extends Fragment implements ItemTouchCallback
         if (currentPosition > 0 || -1 == topItemPosition) topItemPosition = currentPosition;
 
         outState.putInt(KEY_LAST_LIST_POSITION, topItemPosition);
-        topItemPosition = -1;
+        //topItemPosition = -1;
     }
 
     @Override
@@ -542,7 +542,7 @@ public class LibraryGroupsFragment extends Fragment implements ItemTouchCallback
             return;
         }
 
-        if (!activity.get().collapseSearchMenu()) {
+        if (!activity.get().collapseSearchMenu() && !activity.get().closeLeftDrawer()) {
             // If none of the above and a search filter is on => clear search filter
             if (activity.get().isSearchQueryActive()) {
                 activity.get().setQuery("");
