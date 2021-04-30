@@ -596,7 +596,8 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
      * @param item ContentItem that has been clicked on
      */
     private boolean onBookClick(@NonNull ContentItem item) {
-        GalleryDialogFragment.invoke(this, item.getContent().getUniqueSiteId());
+        if (item.getContent() != null)
+            GalleryDialogFragment.invoke(this, item.getContent().getUniqueSiteId());
 
         return false;
     }
