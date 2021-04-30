@@ -28,7 +28,7 @@ import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.activities.bundles.ImageItemBundle;
 import me.devsaki.hentoid.core.HentoidApp;
 import me.devsaki.hentoid.database.domains.ImageFile;
-import me.devsaki.hentoid.retrofit.HinaServer;
+import me.devsaki.hentoid.retrofit.HinaDetails;
 import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.ImageHelper;
 import me.devsaki.hentoid.util.ThemeHelper;
@@ -140,7 +140,7 @@ public class ImageFileItem extends AbstractItem<ImageFileItem.ImageViewHolder> {
             String uri = item.image.getFileUri();
             // Hack to display thumbs when retrieving online images from Hina
             if (item.image.getDownloadParams().contains("hina-id"))
-                uri = HinaServer.getThumbFor(item.image.getUrl());
+                uri = HinaDetails.getThumbFor(item.image.getUrl());
 
             Glide.with(image)
                     .load(uri)

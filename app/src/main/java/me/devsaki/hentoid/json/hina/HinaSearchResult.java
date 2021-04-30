@@ -1,29 +1,29 @@
 package me.devsaki.hentoid.json.hina;
 
 import com.annimon.stream.Stream;
+import com.squareup.moshi.Json;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 import me.devsaki.hentoid.database.domains.Attribute;
 import me.devsaki.hentoid.database.domains.Content;
-import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.enums.AttributeType;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
-import me.devsaki.hentoid.parsers.ParseHelper;
-import me.devsaki.hentoid.util.ContentHelper;
 
-public class HinaResult {
+public class HinaSearchResult {
 
-    private int maxres;
+    @Json(name = "nbHits")
     private int maxctr;
+    @Json(name = "limit")
+    private int resultsPerPage;
+    @Json(name = "hits")
     private List<HinaGallery> data;
 
 
     public int getMaxPages() {
-        return maxres;
+        return (int) Math.ceil(maxctr * 1f / resultsPerPage);
     }
 
     public int getMaxAlbums() {
@@ -38,21 +38,20 @@ public class HinaResult {
     }
 
     public static class HinaGallery {
-        private String id;
-        private Date time;
-        private String origin;
-        private String name;
-        private String idol;
-        private String edata;
-        private String thumb;
-        private List<String> gliphs;
 
+        @Json(name = "iid")
+        private String id;
+        @Json(name = "Name")
+        private String name;
+        @Json(name = "Edata")
+        private String edata;
+        @Json(name = "poster")
+        private String thumb;
 
         public Content toContent() {
             Content result = new Content();
 
             result.setSite(Site.HINA);
-            result.setUrl(origin);
             result.setTitle(name);
             result.setStatus(StatusContent.ONLINE);
 
@@ -64,19 +63,8 @@ public class HinaResult {
                 for (String attr : edataPartsUnique)
                     attrList.add(new Attribute(AttributeType.TAG, attr, "hina/" + attr, Site.HINA));
             }
-            if (idol != null && !idol.isEmpty() && !idol.equalsIgnoreCase("unknown")) {
-                attrList.add(new Attribute(AttributeType.MODEL, idol, "hina/" + idol, Site.HINA));
-            }
             result.addAttributes(attrList);
-            if (gliphs != null && !gliphs.isEmpty()) {
-                List<ImageFile> imgs = ParseHelper.urlsToImageFiles(gliphs, thumb, StatusContent.SAVED);
-                for (ImageFile i : imgs)
-                    i.setDownloadParams(ContentHelper.makeDownloadParams("hina-id", id));
-                result.setImageFiles(imgs);
-                result.setQtyPages(gliphs.size());
-            } else {
-                result.setCoverImageUrl(thumb);
-            }
+            result.setCoverImageUrl(thumb);
 
             result.populateAuthor();
             result.setUniqueSiteId(id);

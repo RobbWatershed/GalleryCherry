@@ -47,6 +47,15 @@ android {
             rapidapiKey = properties.getProperty("rapidapi.key", "")
         }
         buildConfigField "String", "RAPIDAPI_KEY", rapidapiKey
+
+        def meiliRouter = System.getenv("meili_router")
+        if (null == meiliRouter) {
+            Properties properties = new Properties()
+            properties.load(project.rootProject.file("local.properties").newDataInputStream())
+            meiliRouter = properties.getProperty("meili.router", "")
+        }
+        buildConfigField "String", "MEILI_ROUTER", meiliRouter
+
         def includeObjectBoxBrowser = System.getenv("INCLUDE_OBJECTBOX_BROWSER") ?: "false"
         def includeLeakCanary = System.getenv("INCLUDE_LEAK_CANARY") ?: "false"
 
