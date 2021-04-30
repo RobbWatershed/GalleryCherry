@@ -52,7 +52,7 @@ import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.events.UpdateEvent;
 import me.devsaki.hentoid.fragments.library.GalleryDialogFragment;
 import me.devsaki.hentoid.json.UpdateInfo;
-import me.devsaki.hentoid.retrofit.HinaServer;
+import me.devsaki.hentoid.retrofit.HinaDetails;
 import me.devsaki.hentoid.ui.BlinkAnimation;
 import me.devsaki.hentoid.util.Debouncer;
 import me.devsaki.hentoid.util.Helper;
@@ -428,10 +428,10 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
             @Override
             public void onClick(@NotNull View view, int i, @NotNull FastAdapter<ContentItem> fastAdapter, @NotNull ContentItem item) {
                 if (item.getContent() != null)
-                    downloadDisposable = HinaServer.API.getGallery(
+                    downloadDisposable = HinaDetails.API.getGallery(
                             item.getContent().getUniqueSiteId(),
                             BuildConfig.RAPIDAPI_KEY,
-                            HinaServer.HINA_RAPIDAPI_HOST)
+                            HinaDetails.HINA_RAPIDAPI_HOST)
                             .observeOn(AndroidSchedulers.mainThread())
                             .subscribe(
                                     g -> downloadContent(g.toContent()),
@@ -596,7 +596,8 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
      * @param item ContentItem that has been clicked on
      */
     private boolean onBookClick(@NonNull ContentItem item) {
-        GalleryDialogFragment.invoke(this, item.getContent().getUniqueSiteId());
+        if (item.getContent() != null)
+            GalleryDialogFragment.invoke(this, item.getContent().getUniqueSiteId());
 
         return false;
     }

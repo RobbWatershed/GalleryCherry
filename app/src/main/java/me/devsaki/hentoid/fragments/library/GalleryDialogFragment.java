@@ -22,7 +22,7 @@ import io.reactivex.disposables.Disposable;
 import me.devsaki.hentoid.BuildConfig;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.database.domains.Content;
-import me.devsaki.hentoid.retrofit.HinaServer;
+import me.devsaki.hentoid.retrofit.HinaDetails;
 import me.devsaki.hentoid.viewholders.ImageFileItem;
 import me.zhanghai.android.fastscroll.FastScrollerBuilder;
 import timber.log.Timber;
@@ -88,9 +88,9 @@ public class GalleryDialogFragment extends DialogFragment {
             return true;
         });
 
-        disposable = HinaServer.API.getGallery(id,
+        disposable = HinaDetails.API.getGallery(id,
                 BuildConfig.RAPIDAPI_KEY,
-                HinaServer.HINA_RAPIDAPI_HOST)
+                HinaDetails.HINA_RAPIDAPI_HOST)
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(
                         g -> loadGallery(g.toContent()),

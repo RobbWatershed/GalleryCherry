@@ -14,9 +14,8 @@ import java.util.List;
 
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.CompositeDisposable;
-import me.devsaki.hentoid.BuildConfig;
 import me.devsaki.hentoid.database.domains.Content;
-import me.devsaki.hentoid.retrofit.HinaServer;
+import me.devsaki.hentoid.retrofit.HinaSearch;
 import timber.log.Timber;
 
 public class HinaDataSource extends PositionalDataSource<Content> {
@@ -63,18 +62,15 @@ public class HinaDataSource extends PositionalDataSource<Content> {
             @Nullable PositionalDataSource.LoadInitialCallback<Content> initialCallback,
             @Nullable PositionalDataSource.LoadRangeCallback<Content> callback
     ) {
+        int position = (requestedPage - 1) * pageSize;
         if (!query.isEmpty())
-            compositeDisposable.add(HinaServer.API.search(
-                    requestedPage,
+            compositeDisposable.add(HinaSearch.API.search(
+                    position,
                     pageSize,
-                    query,
-                    BuildConfig.RAPIDAPI_KEY,
-                    HinaServer.HINA_RAPIDAPI_HOST)
+                    query)
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(
                             r -> {
-                                int position = (requestedPage - 1) * pageSize;
-
                                 List<Content> contents = r.getGalleries();
                                 if (interceptor != null) interceptor.accept(contents);
                                 if (initialCallback != null)
@@ -91,11 +87,9 @@ public class HinaDataSource extends PositionalDataSource<Content> {
                     )
             );
         else
-            compositeDisposable.add(HinaServer.API.getLatest(
-                    requestedPage,
-                    pageSize,
-                    BuildConfig.RAPIDAPI_KEY,
-                    HinaServer.HINA_RAPIDAPI_HOST)
+            compositeDisposable.add(HinaSearch.API.getLatest(
+                    position,
+                    pageSize)
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(
                             r -> {

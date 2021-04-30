@@ -8,7 +8,7 @@ import com.squareup.moshi.adapters.Rfc3339DateJsonAdapter;
 import java.util.Date;
 
 import io.reactivex.Single;
-import me.devsaki.hentoid.json.hina.HinaResult;
+import me.devsaki.hentoid.json.hina.HinaDetailsResult;
 import me.devsaki.hentoid.util.network.OkHttpClientSingleton;
 import retrofit2.Retrofit;
 import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
@@ -17,7 +17,7 @@ import retrofit2.http.GET;
 import retrofit2.http.Header;
 import retrofit2.http.Query;
 
-public class HinaServer {
+public class HinaDetails {
 
     public static final String HINA_RAPIDAPI_HOST = "bloom-hina.p.rapidapi.com";
 
@@ -41,7 +41,7 @@ public class HinaServer {
     }
 
     public interface Api {
-
+/*
         @GET("hina")
         Single<HinaResult> getLatest(
                 @Query("page") int page,
@@ -58,9 +58,9 @@ public class HinaServer {
                 @Header("x-rapidapi-key") String rapidApiKey,
                 @Header("x-rapidapi-host") String rapidApiHost
         );
-
+*/
         @GET("hina/payload")
-        Single<HinaResult.HinaGallery> getGallery(
+        Single<HinaDetailsResult.HinaGallery> getGallery(
                 @Query("id") String id,
                 @Header("x-rapidapi-key") String rapidApiKey,
                 @Header("x-rapidapi-host") String rapidApiHost

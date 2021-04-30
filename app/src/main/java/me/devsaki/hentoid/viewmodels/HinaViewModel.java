@@ -123,7 +123,7 @@ public class HinaViewModel extends AndroidViewModel {
         searchManager.clearSelectedSearchTags(); // If user searches in main toolbar, universal search takes over advanced search
         // Clean the search string
         query = query.trim().replace("   ", " ").replace("  ", " ");
-        if (query.length() > 0) query = manageQuotes(query);
+//        if (query.length() > 0) query = manageQuotes(query);
 
         searchManager.setQuery(query);
         newSearch.setValue(true);
