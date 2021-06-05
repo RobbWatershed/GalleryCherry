@@ -25,7 +25,7 @@ public class XhamsterContent extends BaseContentParser {
 
     @Selector(value = "head meta[name='twitter:url']", attr = "content", defValue = "")
     private String galleryUrl;
-    @Selector(value = "img.hidden-thumb-image", attr = "data-src", defValue = "")
+    @Selector(value = "img.thumb", attr = "src", defValue = "")
     private List<String> thumbs;
     @Selector(value = ".page-title h1", defValue = "")
     private String title;
