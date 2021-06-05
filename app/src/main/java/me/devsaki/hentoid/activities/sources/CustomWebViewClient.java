@@ -364,14 +364,17 @@ class CustomWebViewClient extends WebViewClient {
         if (adBlocker.isBlocked(url) || !url.startsWith("http")) {
             return new WebResourceResponse("text/plain", "utf-8", NOTHING);
         } else {
-            if (isGalleryPage(url)) return parseResponse(url, headers, true, false);
-
-            // If we're here to remove "dirty elements", we only do it
-            // on HTML resources (URLs without extension) from the source's main domain
-            if (dirtyElements != null && HttpHelper.getExtensionFromUri(url).isEmpty()) {
+            // Only process HTML resources (URLs without extension) from the source's main domain
+            if (HttpHelper.getExtensionFromUri(url).isEmpty()) {
                 String host = Uri.parse(url).getHost();
-                if (host != null && !isHostNotInRestrictedDomains(host))
-                    return parseResponse(url, headers, false, false);
+                if (host != null && !isHostNotInRestrictedDomains(host)) {
+                    if (isGalleryPage(url)) return parseResponse(url, headers, true, false);
+
+                    // If we're here to remove "dirty elements", we only do it
+                    // on HTML resources (URLs without extension) from the source's main domain
+                    if (dirtyElements != null)
+                        return parseResponse(url, headers, false, false);
+                }
             }
 
             return null;
