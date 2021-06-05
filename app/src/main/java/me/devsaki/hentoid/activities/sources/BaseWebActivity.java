@@ -942,7 +942,7 @@ public abstract class BaseWebActivity extends BaseActivity implements CustomWebV
     private @ContentStatus
     int processContent(@NonNull Content content, boolean quickDownload) {
         Helper.assertNonUiThread();
-        if (content.getUrl().isEmpty() || 0 == content.getQtyPages()) return ContentStatus.UNKNOWN;
+        if (content.getUrl().isEmpty()) return ContentStatus.UNKNOWN;
 
         Timber.i("Content Site, URL : %s, %s", content.getSite().getCode(), content.getUrl());
         String searchUrl = ""; //getStartSite().hasCoverBasedPageUpdates() ? content.getCoverImageUrl() : "";
