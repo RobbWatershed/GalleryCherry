@@ -35,7 +35,7 @@ public class FapalityParser extends BaseImageListParser {
             for (Element e : chapters) pageUrls.add(e.attr("href"));
         }
 
-        progressStart(content.getUrl(), pageUrls.size());
+        progressStart(content.getId(), pageUrls.size());
 
         // 2. Open each page URL and get the image data until all images are found
         for (String url : pageUrls) {

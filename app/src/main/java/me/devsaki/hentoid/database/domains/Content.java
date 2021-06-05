@@ -25,6 +25,7 @@ import io.objectbox.converter.PropertyConverter;
 import io.objectbox.relation.ToMany;
 import me.devsaki.hentoid.activities.sources.AsianSisterActivity;
 import me.devsaki.hentoid.activities.sources.BabeTodayActivity;
+import me.devsaki.hentoid.activities.sources.AllPornComicActivity;
 import me.devsaki.hentoid.activities.sources.BaseWebActivity;
 import me.devsaki.hentoid.activities.sources.FapalityActivity;
 import me.devsaki.hentoid.activities.sources.HellpornoActivity;
@@ -44,8 +45,11 @@ import me.devsaki.hentoid.enums.Grouping;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.util.ArchiveHelper;
+import me.devsaki.hentoid.util.ContentHelper;
 import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.JsonHelper;
+import me.devsaki.hentoid.util.StringHelper;
+import me.devsaki.hentoid.util.network.HttpHelper;
 import timber.log.Timber;
 
 import static me.devsaki.hentoid.util.JsonHelper.MAP_STRINGS;
@@ -86,7 +90,8 @@ public class Content implements Serializable {
     @Deprecated
     private String storageFolder; // Used as pivot for API29 migration; no use after that (replaced by storageUri)
     private String storageUri; // Not exposed because it will vary according to book location -> valued at import
-    private boolean favourite;
+    private boolean favourite = false;
+    private boolean completed = false;
     private long reads = 0;
     private long lastReadDate;
     private int lastReadPageIndex = 0;
@@ -282,6 +287,8 @@ public class Content implements Serializable {
                 return FapalityActivity.class;
             case ASIANSISTER:
                 return AsianSisterActivity.class;
+            case ALLPORNCOMIC:
+                return AllPornComicActivity.class;
             default:
                 return BaseWebActivity.class;
         }
@@ -357,23 +364,8 @@ public class Content implements Serializable {
         return url;
     }
 
-    public Content populateAuthor() {
-        String authorStr = "";
-        AttributeMap attrMap = getAttributeMap();
-        if (attrMap.containsKey(AttributeType.ARTIST) && !attrMap.get(AttributeType.ARTIST).isEmpty())
-            authorStr = attrMap.get(AttributeType.ARTIST).get(0).getName();
-        if ((null == authorStr || authorStr.equals(""))
-                && attrMap.containsKey(AttributeType.CIRCLE)
-                && !attrMap.get(AttributeType.CIRCLE).isEmpty()) // Try and get Circle
-            authorStr = attrMap.get(AttributeType.CIRCLE).get(0).getName();
-
-        if (null == authorStr) authorStr = "";
-        setAuthor(authorStr);
-        return this;
-    }
-
     public String getTitle() {
-        return Helper.protect(title);
+        return StringHelper.protect(title);
     }
 
     public Content setTitle(String title) {
@@ -382,7 +374,7 @@ public class Content implements Serializable {
     }
 
     public String getAuthor() {
-        if (null == author) populateAuthor();
+        if (null == author) author = ContentHelper.formatBookAuthor(this);
         return author;
     }
 
@@ -447,7 +439,9 @@ public class Content implements Serializable {
             for (ImageFile img : images)
                 if (img.isCover()) return img;
         }
-        return new ImageFile(0, getCoverImageUrl(), StatusContent.ONLINE, 1);
+        ImageFile makeupCover = new ImageFile(0, getCoverImageUrl(), StatusContent.ONLINE, 1);
+        makeupCover.setImageHash(Long.MIN_VALUE); // Makeup cover is unhashable
+        return makeupCover;
     }
 
     public String getCoverImageUrl() {
@@ -511,9 +505,11 @@ public class Content implements Serializable {
     }
 
     private long getDownloadedPagesSize() {
-        if (imageFiles != null)
-            return Stream.of(imageFiles).filter(i -> (i.getStatus() == StatusContent.DOWNLOADED || i.getStatus() == StatusContent.EXTERNAL)).collect(Collectors.summingLong(ImageFile::getSize));
-        else return 0;
+        if (imageFiles != null) {
+            Long result = Stream.of(imageFiles).filter(i -> (i.getStatus() == StatusContent.DOWNLOADED || i.getStatus() == StatusContent.EXTERNAL)).collect(Collectors.summingLong(ImageFile::getSize));
+            if (result != null) return result;
+        }
+        return 0;
     }
 
     public long getSize() {
@@ -529,7 +525,16 @@ public class Content implements Serializable {
     }
 
     public void computeReadProgress() {
-        readProgress = getReadPagesCount() * 1f / Stream.of(getImageFiles()).withoutNulls().filter(ImageFile::isReadable).count();
+        if (null == getImageFiles()) {
+            readProgress = 0;
+            return;
+        }
+        long denominator = Stream.of(getImageFiles()).withoutNulls().filter(ImageFile::isReadable).count();
+        if (0 == denominator) {
+            readProgress = 0;
+            return;
+        }
+        readProgress = getReadPagesCount() * 1f / denominator;
     }
 
     public float getReadProgress() {
@@ -549,6 +554,7 @@ public class Content implements Serializable {
     /**
      * @deprecated Replaced by getStorageUri; accessor is kept for API29 migration
      */
+    @SuppressWarnings("deprecation")
     @Deprecated
     public String getStorageFolder() {
         return storageFolder == null ? "" : storageFolder;
@@ -557,6 +563,7 @@ public class Content implements Serializable {
     /**
      * @deprecated Replaced by getStorageUri; accessor is kept for API29 migration
      */
+    @SuppressWarnings("deprecation")
     @Deprecated
     public void resetStorageFolder() {
         storageFolder = "";
@@ -573,6 +580,15 @@ public class Content implements Serializable {
 
     public boolean isFavourite() {
         return favourite;
+    }
+
+    public boolean isCompleted() {
+        return completed;
+    }
+
+    public Content setCompleted(boolean completed) {
+        this.completed = completed;
+        return this;
     }
 
     public Content setFavourite(boolean favourite) {
@@ -730,22 +746,30 @@ public class Content implements Serializable {
         }
     }
 
+    // Hashcode (and by consequence equals) has to take into account fields that get visually updated on the app UI
+    // If not done, FastAdapter's PagedItemListImpl cache won't detect changes to the object
+    // and items won't be visually updated on screen
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Content content = (Content) o;
-        return getId() == content.getId() &&
-                Objects.equals(getUniqueSiteId(), content.getUniqueSiteId());
+        return isFavourite() == content.isFavourite() &&
+                isCompleted() == content.isCompleted() &&
+                getDownloadDate() == content.getDownloadDate() && // To differentiate external books that have to URL
+                getLastReadDate() == content.getLastReadDate() &&
+                isBeingDeleted() == content.isBeingDeleted() &&
+                Objects.equals(getUrl(), content.getUrl()) &&
+                Objects.equals(getCoverImageUrl(), content.getCoverImageUrl()) &&
+                getSite() == content.getSite();
     }
 
     @Override
     public int hashCode() {
-        // Must be an int32, so we're bound to use Objects.hash
-        return Objects.hash(id, uniqueSiteId);
+        return Objects.hash(getUrl(), getCoverImageUrl(), getDownloadDate(), getSite(), isFavourite(), isCompleted(), getLastReadDate(), isBeingDeleted());
     }
 
-    public long hash64() {
+    public long uniqueHash() {
         return Helper.hash64((id + "." + uniqueSiteId).getBytes());
     }
 }

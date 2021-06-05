@@ -67,7 +67,7 @@ public class ImageFileItem extends AbstractItem<ImageFileItem.ImageViewHolder> {
     public ImageFileItem(@NonNull ImageFile image, @ViewType int viewType) {
         this.image = image;
         this.viewType = viewType;
-        setIdentifier(image.hash64());
+        setIdentifier(image.uniqueHash());
     }
 
     // Return a copy, not the original instance that has to remain in synch with its visual representation

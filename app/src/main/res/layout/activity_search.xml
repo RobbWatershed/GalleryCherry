@@ -49,7 +49,7 @@
     </androidx.recyclerview.widget.RecyclerView>
 
     <androidx.constraintlayout.widget.Guideline
-        android:id="@+id/guidelineMiddle"
+        android:id="@+id/guideline_middle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="vertical"
@@ -62,7 +62,7 @@
         android:layout_marginTop="8dp"
         android:layout_marginEnd="4dp"
         android:text="@string/category_any"
-        app:layout_constraintEnd_toStartOf="@id/guidelineMiddle"
+        app:layout_constraintEnd_toStartOf="@id/guideline_middle"
         app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/textCategoryTag" />
@@ -75,7 +75,7 @@
         android:layout_marginEnd="8dp"
         android:text="@string/category_tag"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@id/guidelineMiddle"
+        app:layout_constraintStart_toEndOf="@id/guideline_middle"
         app:layout_constraintTop_toBottomOf="@id/search_tags" />
 
     <TextView
@@ -86,7 +86,7 @@
         android:layout_marginTop="8dp"
         android:layout_marginEnd="8dp"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@id/guidelineMiddle"
+        app:layout_constraintStart_toEndOf="@id/guideline_middle"
         app:layout_constraintTop_toBottomOf="@id/textCategoryTag" />
 
     <TextView
@@ -96,7 +96,7 @@
         android:layout_marginStart="8dp"
         android:layout_marginTop="8dp"
         android:layout_marginEnd="4dp"
-        app:layout_constraintEnd_toStartOf="@id/guidelineMiddle"
+        app:layout_constraintEnd_toStartOf="@id/guideline_middle"
         app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/textCategoryModel" />
@@ -127,6 +127,6 @@
         android:onClick="onExcludeClick"
         android:text="@string/exclude"
         app:layout_constraintBottom_toTopOf="@id/textCategoryAny"
-        app:layout_constraintEnd_toEndOf="@id/guidelineMiddle"
+        app:layout_constraintEnd_toEndOf="@id/guideline_middle"
         app:layout_constraintStart_toStartOf="parent"/>
 </androidx.constraintlayout.widget.ConstraintLayout>

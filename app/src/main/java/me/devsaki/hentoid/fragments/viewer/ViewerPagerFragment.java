@@ -7,14 +7,15 @@ import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.Point;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
 import android.view.WindowManager;
 import android.widget.ImageView;
-import android.widget.SeekBar;
 import android.widget.TextView;
 
 import androidx.annotation.DrawableRes;
@@ -28,8 +29,10 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.LinearSmoothScroller;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.annimon.stream.Stream;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.RequestOptions;
+import com.google.android.material.slider.Slider;
 import com.google.android.material.snackbar.BaseTransientBottomBar;
 import com.google.android.material.snackbar.Snackbar;
 import com.skydoves.submarine.SubmarineItem;
@@ -61,6 +64,7 @@ import me.devsaki.hentoid.databinding.FragmentViewerPagerBinding;
 import me.devsaki.hentoid.events.ProcessEvent;
 import me.devsaki.hentoid.ui.InputDialog;
 import me.devsaki.hentoid.util.Debouncer;
+import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.util.ToastHelper;
 import me.devsaki.hentoid.util.exception.ContentNotRemovedException;
@@ -75,6 +79,11 @@ import timber.log.Timber;
 
 import static java.lang.String.format;
 import static me.devsaki.hentoid.util.Preferences.Constant;
+import static me.devsaki.hentoid.util.Preferences.Constant.VIEWER_SLIDESHOW_DELAY_05;
+import static me.devsaki.hentoid.util.Preferences.Constant.VIEWER_SLIDESHOW_DELAY_1;
+import static me.devsaki.hentoid.util.Preferences.Constant.VIEWER_SLIDESHOW_DELAY_16;
+import static me.devsaki.hentoid.util.Preferences.Constant.VIEWER_SLIDESHOW_DELAY_4;
+import static me.devsaki.hentoid.util.Preferences.Constant.VIEWER_SLIDESHOW_DELAY_8;
 
 // TODO : better document and/or encapsulate the difference between
 //   - paper roll mode (currently used for vertical display)
@@ -150,7 +159,8 @@ public class ViewerPagerFragment extends Fragment implements ViewerBrowseModeDia
                     onShuffleClick();
                     break;
                 case R.id.action_slideshow:
-                    startSlideshow();
+                    binding.controlsOverlay.slideshowDelaySlider.setValue(convertPrefsDelayToSliderPosition(Preferences.getViewerSlideshowDelay()));
+                    binding.controlsOverlay.slideshowDelaySlider.setVisibility(View.VISIBLE);
                     break;
                 case R.id.action_delete_book:
                     if (Constant.VIEWER_DELETE_ASK_AGAIN == Preferences.getViewerDeleteAskMode())
@@ -248,7 +258,7 @@ public class ViewerPagerFragment extends Fragment implements ViewerBrowseModeDia
         setSystemBarsVisible(binding.controlsOverlay.getRoot().getVisibility() == View.VISIBLE); // System bars are visible only if HUD is visible
         if (Preferences.Constant.VIEWER_BROWSE_NONE == Preferences.getViewerBrowseMode())
             ViewerBrowseModeDialogFragment.invoke(this);
-        updatePageDisplay();
+        updatePageControls();
     }
 
     // Make sure position is saved when app is closed by the user
@@ -274,6 +284,8 @@ public class ViewerPagerFragment extends Fragment implements ViewerBrowseModeDia
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onProcessEvent(ProcessEvent event) {
         if (null == binding) return;
+        if (event.processId != R.id.viewer_load) return;
+
         if (ProcessEvent.EventType.PROGRESS == event.eventType) {
             // Empty display until loading is complete
             if (adapter.getItemCount() > 0) adapter.submitList(Collections.emptyList());
@@ -345,38 +357,75 @@ public class ViewerPagerFragment extends Fragment implements ViewerBrowseModeDia
     }
 
     private void initControlsOverlay() {
+        // Slideshow slider
+        Slider slider = binding.controlsOverlay.slideshowDelaySlider;
+        slider.setValueFrom(0);
+        int sliderValue = convertPrefsDelayToSliderPosition(Preferences.getViewerSlideshowDelay());
+        int nbEntries = getResources().getStringArray(R.array.pref_viewer_slideshow_delay_entries).length;
+        nbEntries = Math.max(1, nbEntries - 1);
+        // TODO at some point we'd need to better synch images and book loading to avoid that
+        slider.setValue(Helper.coerceIn(sliderValue, 0, nbEntries));
+        slider.setValueTo(nbEntries);
+        slider.setLabelFormatter(value -> {
+            String[] entries = getResources().getStringArray(R.array.pref_viewer_slideshow_delay_entries);
+            return entries[(int) value];
+        });
+        slider.setOnFocusChangeListener((v, hasFocus) -> {
+                    if (!hasFocus) slider.setVisibility(View.GONE);
+                }
+        );
+        slider.addOnSliderTouchListener(new Slider.OnSliderTouchListener() {
+                                            @Override
+                                            public void onStartTrackingTouch(@NonNull Slider slider) {
+                                                // Nothing
+                                            }
+
+                                            @Override
+                                            public void onStopTrackingTouch(@NonNull Slider slider) {
+                                                Preferences.setViewerSlideshowDelay(convertSliderPositionToPrefsDelay((int) slider.getValue()));
+                                                slider.setVisibility(View.GONE);
+                                                startSlideshow(true);
+                                            }
+                                        }
+        );
+
+
         // Next/previous book
         binding.controlsOverlay.viewerPrevBookBtn.setOnClickListener(v -> previousBook());
         binding.controlsOverlay.viewerNextBookBtn.setOnClickListener(v -> nextBook());
 
-        // Slider and preview
-        binding.controlsOverlay.viewerSeekbar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-                binding.controlsOverlay.imagePreviewLeft.setVisibility(View.VISIBLE);
-                binding.controlsOverlay.imagePreviewCenter.setVisibility(View.VISIBLE);
-                binding.controlsOverlay.imagePreviewRight.setVisibility(View.VISIBLE);
-                binding.recyclerView.setVisibility(View.INVISIBLE);
-            }
+        // Page slider and preview
+        binding.controlsOverlay.pageSlider.addOnSliderTouchListener(new Slider.OnSliderTouchListener() {
+                                                                        @Override
+                                                                        public void onStartTrackingTouch(@NonNull Slider slider) {
+                                                                            binding.controlsOverlay.imagePreviewLeft.setVisibility(View.VISIBLE);
+                                                                            binding.controlsOverlay.imagePreviewCenter.setVisibility(View.VISIBLE);
+                                                                            binding.controlsOverlay.imagePreviewRight.setVisibility(View.VISIBLE);
+                                                                            binding.recyclerView.setVisibility(View.INVISIBLE);
+                                                                        }
 
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-                binding.controlsOverlay.imagePreviewLeft.setVisibility(View.INVISIBLE);
-                binding.controlsOverlay.imagePreviewCenter.setVisibility(View.INVISIBLE);
-                binding.controlsOverlay.imagePreviewRight.setVisibility(View.INVISIBLE);
-                binding.recyclerView.setVisibility(View.VISIBLE);
-            }
+                                                                        @Override
+                                                                        public void onStopTrackingTouch(@NonNull Slider slider) {
+                                                                            binding.controlsOverlay.imagePreviewLeft.setVisibility(View.INVISIBLE);
+                                                                            binding.controlsOverlay.imagePreviewCenter.setVisibility(View.INVISIBLE);
+                                                                            binding.controlsOverlay.imagePreviewRight.setVisibility(View.INVISIBLE);
+                                                                            binding.recyclerView.setVisibility(View.VISIBLE);
+                                                                        }
+                                                                    }
+        );
 
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                if (fromUser) seekToPosition(progress);
-            }
+        binding.controlsOverlay.pageSlider.addOnChangeListener((slider1, value, fromUser) -> {
+            if (fromUser) seekToPosition((int) value);
         });
 
         // Information micro menu
         binding.controlsOverlay.informationMicroMenu.setSubmarineItemClickListener((p, i) -> onInfoMicroMenuClick(p));
-        binding.controlsOverlay.informationMicroMenu.addSubmarineItem(new SubmarineItem(ContextCompat.getDrawable(requireContext(), R.drawable.ic_book)));
-        binding.controlsOverlay.informationMicroMenu.addSubmarineItem(new SubmarineItem(ContextCompat.getDrawable(requireContext(), R.drawable.ic_page)));
+        binding.controlsOverlay.informationMicroMenu.addSubmarineItem(
+                new SubmarineItem(ContextCompat.getDrawable(requireContext(), R.drawable.ic_book)/*, null, getResources().getString(R.string.book_details)*/)
+        );
+        binding.controlsOverlay.informationMicroMenu.addSubmarineItem(
+                new SubmarineItem(ContextCompat.getDrawable(requireContext(), R.drawable.ic_page)/*, null, getResources().getString(R.string.page_details)*/)
+        );
         binding.controlsOverlay.viewerInfoBtn.setOnClickListener(v -> {
             binding.controlsOverlay.favouriteMicroMenu.dips();
             binding.controlsOverlay.informationMicroMenu.floats();
@@ -392,6 +441,19 @@ public class ViewerPagerFragment extends Fragment implements ViewerBrowseModeDia
 
         // Gallery
         binding.controlsOverlay.viewerGalleryBtn.setOnClickListener(v -> displayGallery(false));
+    }
+
+    private int convertPrefsDelayToSliderPosition(int prefsDelay) {
+        List<Integer> prefsValues = Stream.of(getResources().getStringArray(R.array.pref_viewer_slideshow_delay_values)).map(Integer::parseInt).toList();
+        for (int i = 0; i < prefsValues.size(); i++)
+            if (prefsValues.get(i) == prefsDelay) return i;
+
+        return 0;
+    }
+
+    private int convertSliderPositionToPrefsDelay(int sliderPosition) {
+        List<Integer> prefsValues = Stream.of(getResources().getStringArray(R.array.pref_viewer_slideshow_delay_values)).map(Integer::parseInt).toList();
+        return prefsValues.get(sliderPosition);
     }
 
     /**
@@ -457,8 +519,19 @@ public class ViewerPagerFragment extends Fragment implements ViewerBrowseModeDia
 
         SubmarineView favMenu = binding.controlsOverlay.favouriteMicroMenu;
         favMenu.clearAllSubmarineItems();
-        favMenu.addSubmarineItem(new SubmarineItem(ContextCompat.getDrawable(requireContext(), isContentFavourite ? R.drawable.ic_book_fav : R.drawable.ic_book)));
-        favMenu.addSubmarineItem(new SubmarineItem(ContextCompat.getDrawable(requireContext(), isPageFavourite ? R.drawable.ic_page_fav : R.drawable.ic_page)));
+        favMenu.addSubmarineItem(
+                new SubmarineItem(
+                        ContextCompat.getDrawable(requireContext(), isContentFavourite ? R.drawable.ic_book_fav : R.drawable.ic_book)/*,
+                        null,
+                        getResources().getString(R.string.book_favourite_toggle)*/
+                )
+        );
+        favMenu.addSubmarineItem(
+                new SubmarineItem(ContextCompat.getDrawable(requireContext(), isPageFavourite ? R.drawable.ic_page_fav : R.drawable.ic_page)/*,
+                        null,
+                        getResources().getString(R.string.page_favourite_toggle)*/
+                )
+        );
         favMenu.floats();
     }
 
@@ -488,16 +561,14 @@ public class ViewerPagerFragment extends Fragment implements ViewerBrowseModeDia
     }
 
     private void onPageFavouriteSuccess(Boolean newState) {
-        // TODO display something more graphical (heart / heartbreak)
         ToastHelper.toast(newState ? R.string.page_favourite_success : R.string.page_unfavourite_success);
-        isPageFavourite = !isPageFavourite;
+        isPageFavourite = newState;
         updateFavouriteButtonIcon();
     }
 
     private void onBookFavouriteSuccess(Boolean newState) {
-        // TODO display something more graphical (heart / heartbreak)
         ToastHelper.toast(newState ? R.string.book_favourite_success : R.string.book_unfavourite_success);
-        isContentFavourite = !isContentFavourite;
+        isContentFavourite = newState;
         updateFavouriteButtonIcon();
     }
 
@@ -527,15 +598,17 @@ public class ViewerPagerFragment extends Fragment implements ViewerBrowseModeDia
     private void differEndCallback() {
         if (null == binding) return;
 
-        maxPosition = adapter.getItemCount() - 1;
-        binding.controlsOverlay.viewerSeekbar.setMax(maxPosition);
+        // TODO at some point we'd need to better synch images and book loading to avoid that
+        maxPosition = Math.max(1, adapter.getItemCount() - 1);
+        binding.controlsOverlay.pageSlider.setValue(Helper.coerceIn(binding.controlsOverlay.pageSlider.getValue(), 0, maxPosition));
+        binding.controlsOverlay.pageSlider.setValueTo(maxPosition);
 
         // Can't access the gallery when there's no page to display
         if (maxPosition > -1) binding.controlsOverlay.viewerGalleryBtn.setVisibility(View.VISIBLE);
         else binding.controlsOverlay.viewerGalleryBtn.setVisibility(View.GONE);
 
         if (targetStartingIndex > -1) applyStartingIndex(targetStartingIndex);
-        else updatePageDisplay();
+        else updatePageControls();
 
         isComputingImageList = false;
     }
@@ -546,8 +619,8 @@ public class ViewerPagerFragment extends Fragment implements ViewerBrowseModeDia
      * @param startingIndex Book's starting image index
      */
     private void onStartingIndexChanged(Integer startingIndex) {
-        if (!isComputingImageList) applyStartingIndex(startingIndex);
-        else targetStartingIndex = startingIndex;
+        if (!isComputingImageList) applyStartingIndex(startingIndex); // Return from gallery screen
+        else targetStartingIndex = startingIndex; // Loading a new book
     }
 
     private void applyStartingIndex(int startingIndex) {
@@ -642,27 +715,28 @@ public class ViewerPagerFragment extends Fragment implements ViewerBrowseModeDia
                 isScrollLTR = false;
             adapter.setScrollLTR(isScrollLTR);
             hidePendingMicroMenus();
+
+            // Resets zoom if we're using horizontal (independent pages) mode
+            if (Preferences.Constant.VIEWER_ORIENTATION_HORIZONTAL == Preferences.getContentOrientation(bookPreferences))
+                adapter.resetScaleAtPosition(scrollPosition);
         }
 
         imageIndex = scrollPosition;
         ImageFile currentImage = adapter.getImageAt(imageIndex);
         if (currentImage != null) {
+            Preferences.setViewerCurrentPageNum(currentImage.getOrder());
             viewModel.markPageAsRead(currentImage.getOrder());
             isPageFavourite = currentImage.isFavourite();
         }
 
-        // Resets zoom if we're using horizontal (independent pages) mode
-        if (Preferences.Constant.VIEWER_ORIENTATION_HORIZONTAL == Preferences.getContentOrientation(bookPreferences))
-            adapter.resetScaleAtPosition(scrollPosition);
-
-        updatePageDisplay();
+        updatePageControls();
         updateFavouriteButtonIcon();
     }
 
     /**
      * Update the display of page position controls (text and bar)
      */
-    private void updatePageDisplay() {
+    private void updatePageControls() {
         ImageFile img = adapter.getImageAt(imageIndex);
         if (null == img) {
             Timber.w("No image at position %s", imageIndex);
@@ -676,7 +750,7 @@ public class ViewerPagerFragment extends Fragment implements ViewerBrowseModeDia
         pageMaxNumber.setText(maxPage);
         binding.viewerPagenumberText.setText(format("%s / %s", pageNum, maxPage));
 
-        binding.controlsOverlay.viewerSeekbar.setProgress(imageIndex);
+        binding.controlsOverlay.pageSlider.setValue(imageIndex);
     }
 
     /**
@@ -693,7 +767,7 @@ public class ViewerPagerFragment extends Fragment implements ViewerBrowseModeDia
         else binding.controlsOverlay.viewerNextBookBtn.setVisibility(View.VISIBLE);
 
         maxPageNumber = content.getQtyPages();
-        updatePageDisplay();
+        updatePageControls();
     }
 
     /**
@@ -805,11 +879,11 @@ public class ViewerPagerFragment extends Fragment implements ViewerBrowseModeDia
         if (Constant.VIEWER_DIRECTION_LTR == direction) {
             pageCurrentNumber = binding.controlsOverlay.viewerPagerLeftTxt;
             pageMaxNumber = binding.controlsOverlay.viewerPagerRightTxt;
-            binding.controlsOverlay.viewerSeekbar.setRotationY(0);
+            binding.controlsOverlay.pageSlider.setRotationY(0);
         } else if (Constant.VIEWER_DIRECTION_RTL == direction) {
             pageCurrentNumber = binding.controlsOverlay.viewerPagerRightTxt;
             pageMaxNumber = binding.controlsOverlay.viewerPagerLeftTxt;
-            binding.controlsOverlay.viewerSeekbar.setRotationY(180);
+            binding.controlsOverlay.pageSlider.setRotationY(180);
         }
         pageMaxNumber.setOnClickListener(null);
         pageCurrentNumber.setOnClickListener(v -> InputDialog.invokeNumberInputDialog(requireActivity(), R.string.goto_page, this::goToPage));
@@ -1081,11 +1155,18 @@ public class ViewerPagerFragment extends Fragment implements ViewerBrowseModeDia
      */
     private void setSystemBarsVisible(boolean visible) {
         int uiOptions;
-        // TODO wait until androidx.core is out of alpha and use WindowCompat (see https://stackoverflow.com/questions/62643517/immersive-fullscreen-on-android-11)
+        Window window = requireActivity().getWindow();
+        WindowManager.LayoutParams params = window.getAttributes();
+        // TODO use androidx.core 1.6.0-beta01+ & WindowCompat (see https://stackoverflow.com/questions/62643517/immersive-fullscreen-on-android-11)
+        // TODO prepare to fiddle with paddings and margins : https://stackoverflow.com/questions/57293449/go-edge-to-edge-on-android-correctly-with-windowinsets
         if (visible) {
             uiOptions = View.SYSTEM_UI_FLAG_LAYOUT_STABLE
                     | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
                     | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN;
+            // Revert to default regarding notch area
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT;
+            }
         } else {
             uiOptions = View.SYSTEM_UI_FLAG_IMMERSIVE
                     // Set the content to appear under the system bars so that the
@@ -1096,20 +1177,21 @@ public class ViewerPagerFragment extends Fragment implements ViewerBrowseModeDia
                     // Hide the nav bar and status bar
                     | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                     | View.SYSTEM_UI_FLAG_FULLSCREEN;
+            // Always display around the notch area
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+            }
         }
 
         // Defensive programming here because crash reports show that getView() sometimes is null
         // (just don't ask me why...)
         View v = getView();
         if (v != null) v.setSystemUiVisibility(uiOptions);
+        window.setAttributes(params);
     }
 
     private void onGetMaxDimensions(Point maxDimensions) {
         adapter.setMaxDimensions(maxDimensions.x, maxDimensions.y);
-    }
-
-    private void startSlideshow() {
-        startSlideshow(true);
     }
 
     private void startSlideshow(boolean showToast) {
@@ -1121,19 +1203,19 @@ public class ViewerPagerFragment extends Fragment implements ViewerBrowseModeDia
         int delayMs;
 
         switch (delayPref) {
-            case Constant.VIEWER_SLIDESHOW_DELAY_05:
+            case VIEWER_SLIDESHOW_DELAY_05:
                 delayMs = 500;
                 break;
-            case Constant.VIEWER_SLIDESHOW_DELAY_1:
+            case VIEWER_SLIDESHOW_DELAY_1:
                 delayMs = 1000;
                 break;
-            case Constant.VIEWER_SLIDESHOW_DELAY_4:
+            case VIEWER_SLIDESHOW_DELAY_4:
                 delayMs = 4 * 1000;
                 break;
-            case Constant.VIEWER_SLIDESHOW_DELAY_8:
+            case VIEWER_SLIDESHOW_DELAY_8:
                 delayMs = 8 * 1000;
                 break;
-            case Constant.VIEWER_SLIDESHOW_DELAY_16:
+            case VIEWER_SLIDESHOW_DELAY_16:
                 delayMs = 16 * 1000;
                 break;
             default:

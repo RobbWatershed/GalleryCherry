@@ -3,24 +3,27 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    tools:context=".activities.DuplicateDetectorActivity">
 
     <androidx.appcompat.widget.Toolbar
-        android:id="@+id/licenses_toolbar"
+        android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="?colorPrimary"
         android:elevation="@dimen/toolbar_layout_elevation"
+        app:menu="@menu/duplicate_detector_menu"
         android:minHeight="?android:attr/actionBarSize"
         app:layout_constraintTop_toTopOf="parent"
         app:navigationIcon="@drawable/ic_arrow_back"
-        app:title="Licenses"
-        tools:targetApi="lollipop" />
+        app:title="@string/tools_duplicate_detector_title"
+        tools:ignore="UnusedAttribute" />
 
-    <WebView
-        android:id="@+id/licenses_web_view"
+    <androidx.viewpager2.widget.ViewPager2
+        android:id="@+id/duplicates_pager"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/licenses_toolbar" />
+        app:layout_constraintTop_toBottomOf="@id/toolbar" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>
