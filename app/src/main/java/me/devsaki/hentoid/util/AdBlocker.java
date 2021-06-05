@@ -81,7 +81,7 @@ public class AdBlocker {
     /**
      * Add an element to current URL whitelist
      *
-     * @param filter Filter to addAll to local whitelist
+     * @param filter Filter to add to local whitelist
      */
     public void addUrlWhitelist(String... filter) {
         for (String s : filter)
