@@ -120,7 +120,6 @@ public class RedditAuthDownloadFragment extends Fragment {
             Timber.d("Reddit : new content created (%s pages)", newImages.size());
             currentContent = new Content().setSite(Site.REDDIT).setUrl("").setTitle("Reddit");
             currentContent.setStatus(StatusContent.SAVED);
-            currentContent.populateAuthor();
             db.insertContent(currentContent);
             imageSet = newImages;
             newImageNumber = newImages.size() - 1; // Don't count the cover

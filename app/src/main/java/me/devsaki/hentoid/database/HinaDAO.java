@@ -10,12 +10,14 @@ import androidx.paging.PagedList;
 import com.annimon.stream.function.Consumer;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.Map;
 
 import javax.annotation.Nullable;
 
+import io.reactivex.Observable;
 import io.reactivex.Single;
 import io.reactivex.disposables.CompositeDisposable;
 import me.devsaki.hentoid.database.domains.Attribute;
@@ -76,6 +78,11 @@ public class HinaDAO implements CollectionDAO {
     @Nullable
     @Override
     public Content selectContentBySourceAndUrl(@NonNull Site site, @NonNull String contentUrl, @NonNull String coverUrl) {
+        return null;
+    }
+
+    @Override
+    public List<Content> searchTitlesWith(@NonNull @NotNull String word, int[] contentStatusCodes) {
         return null;
     }
 
@@ -237,27 +244,52 @@ public class HinaDAO implements CollectionDAO {
     }
 
     @Override
-    public Single<List<Content>> selectStoredBooks(boolean nonFavouriteOnly, boolean includeQueued) {
+    public List<Content> selectStoredContent(boolean nonFavouriteOnly, boolean includeQueued, int orderField, boolean orderDesc) {
         return null;
     }
 
     @Override
-    public Single<List<Long>> selectRecentBookIds(long groupId, int orderField, boolean orderDesc, boolean bookFavouritesOnly, boolean pageFavouritesOnly) {
+    public long countStoredContent(boolean nonFavouriteOnly, boolean includeQueued) {
+        return 0;
+    }
+
+    @Override
+    public Observable<Content> streamContentWithUnhashedCovers() {
         return null;
     }
 
     @Override
-    public Single<List<Long>> searchBookIds(String query, long groupId, List<Attribute> metadata, int orderField, boolean orderDesc, boolean bookFavouritesOnly, boolean pageFavouritesOnly) {
+    public List<Content> selectContentWithUnhashedCovers() {
         return null;
     }
 
     @Override
-    public Single<List<Long>> searchBookIdsUniversal(String query, long groupId, int orderField, boolean orderDesc, boolean bookFavouritesOnly, boolean pageFavouritesOnly) {
+    public long countContentWithUnhashedCovers() {
+        return 0;
+    }
+
+    @Override
+    public void streamStoredContent(boolean nonFavouritesOnly, boolean includeQueued, int orderField, boolean orderDesc, Consumer<Content> consumer) {
+
+    }
+
+    @Override
+    public Single<List<Long>> selectRecentBookIds(long groupId, int orderField, boolean orderDesc, boolean bookFavouritesOnly, boolean pageFavouritesOnly, boolean bookCompletedOnly, boolean bookNotCompletedOnly) {
         return null;
     }
 
     @Override
-    public LiveData<PagedList<Content>> selectRecentBooks(long groupId, int orderField, boolean orderDesc, boolean favouritesOnly, boolean loadAll) {
+    public Single<List<Long>> searchBookIds(String query, long groupId, List<Attribute> metadata, int orderField, boolean orderDesc, boolean bookFavouritesOnly, boolean pageFavouritesOnly, boolean bookCompletedOnly, boolean bookNotCompletedOnly) {
+        return null;
+    }
+
+    @Override
+    public Single<List<Long>> searchBookIdsUniversal(String query, long groupId, int orderField, boolean orderDesc, boolean bookFavouritesOnly, boolean pageFavouritesOnly, boolean bookCompletedOnly, boolean bookNotCompletedOnly) {
+        return null;
+    }
+
+    @Override
+    public LiveData<PagedList<Content>> selectRecentBooks(long groupId, int orderField, boolean orderDesc, boolean favouritesOnly, boolean loadAll, boolean bookCompletedOnly, boolean bookNotCompletedOnly) {
         PagedList.Config config = (new PagedList.Config.Builder())
                 .setEnablePlaceholders(true)
                 .setInitialLoadSizeHint(20)
@@ -268,12 +300,12 @@ public class HinaDAO implements CollectionDAO {
     }
 
     @Override
-    public LiveData<PagedList<Content>> searchBooks(String query, long groupId, List<Attribute> metadata, int orderField, boolean orderDesc, boolean favouritesOnly, boolean loadAll) {
+    public LiveData<PagedList<Content>> searchBooks(String query, long groupId, List<Attribute> metadata, int orderField, boolean orderDesc, boolean favouritesOnly, boolean loadAll, boolean bookCompletedOnly, boolean bookNotCompletedOnly) {
         return null;
     }
 
     @Override
-    public LiveData<PagedList<Content>> searchBooksUniversal(String query, long groupId, int orderField, boolean orderDesc, boolean favouritesOnly, boolean loadAll) {
+    public LiveData<PagedList<Content>> searchBooksUniversal(String query, long groupId, int orderField, boolean orderDesc, boolean favouritesOnly, boolean loadAll, boolean bookCompletedOnly, boolean bookNotCompletedOnly) {
         PagedList.Config config = (new PagedList.Config.Builder())
                 .setEnablePlaceholders(true)
                 .setInitialLoadSizeHint(20)
@@ -299,7 +331,7 @@ public class HinaDAO implements CollectionDAO {
     }
 
     @Override
-    public LiveData<Integer> countBooks(String query, long groupId, List<Attribute> metadata, boolean favouritesOnly) {
+    public LiveData<Integer> countBooks(String query, long groupId, List<Attribute> metadata, boolean favouritesOnly, boolean bookCompletedOnly, boolean bookNotCompletedOnly) {
         return null;
     }
 
@@ -369,7 +401,17 @@ public class HinaDAO implements CollectionDAO {
     }
 
     @Override
-    public LiveData<List<QueueRecord>> selectQueueContent() {
+    public List<QueueRecord> selectQueue(String query) {
+        return null;
+    }
+
+    @Override
+    public LiveData<List<QueueRecord>> selectQueueLive() {
+        return null;
+    }
+
+    @Override
+    public LiveData<List<QueueRecord>> selectQueueLive(String query) {
         return null;
     }
 
@@ -399,7 +441,7 @@ public class HinaDAO implements CollectionDAO {
     }
 
     @Override
-    public Single<AttributeQueryResult> selectAttributeMasterDataPaged(@NonNull List<AttributeType> types, String filter, List<Attribute> attrs, boolean filterFavourites, int page, int booksPerPage, int orderStyle) {
+    public Single<AttributeQueryResult> selectAttributeMasterDataPaged(@NonNull @NotNull List<AttributeType> types, String filter, List<Attribute> attrs, boolean filterFavourites, boolean bookCompletedOnly, boolean bookNotCompletedOnly, int page, int booksPerPage, int orderStyle) {
         return null;
     }
 

@@ -41,7 +41,7 @@
     },
     {
       "id": "2:5880334030341287801",
-      "lastPropertyId": "25:4398158716835923955",
+      "lastPropertyId": "26:3908693512208639109",
       "name": "Content",
       "properties": [
         {
@@ -181,6 +181,12 @@
           "name": "readProgress",
           "type": 7,
           "flags": 4
+        },
+        {
+          "id": "26:3908693512208639109",
+          "name": "completed",
+          "type": 1,
+          "flags": 4
         }
       ],
       "relations": [
@@ -193,7 +199,7 @@
     },
     {
       "id": "3:2849837771881495731",
-      "lastPropertyId": "14:1355428212451361742",
+      "lastPropertyId": "15:2581221224006671026",
       "name": "ImageFile",
       "properties": [
         {
@@ -269,6 +275,12 @@
           "id": "14:1355428212451361742",
           "name": "read",
           "type": 1,
+          "flags": 4
+        },
+        {
+          "id": "15:2581221224006671026",
+          "name": "imageHash",
+          "type": 6,
           "flags": 4
         }
       ],
@@ -594,9 +606,65 @@
         }
       ],
       "relations": []
+    },
+    {
+      "id": "14:2317951050427231470",
+      "lastPropertyId": "8:5081170490753146682",
+      "name": "DuplicateEntry",
+      "properties": [
+        {
+          "id": "1:4992400536868118575",
+          "name": "referenceId",
+          "type": 6,
+          "flags": 4
+        },
+        {
+          "id": "2:5895613663089769889",
+          "name": "referenceSize",
+          "type": 6,
+          "flags": 4
+        },
+        {
+          "id": "3:559301115884356156",
+          "name": "duplicateId",
+          "type": 6,
+          "flags": 4
+        },
+        {
+          "id": "4:4638400598414097741",
+          "name": "duplicateSize",
+          "type": 6,
+          "flags": 4
+        },
+        {
+          "id": "5:6204478230397474330",
+          "name": "titleScore",
+          "type": 7,
+          "flags": 4
+        },
+        {
+          "id": "6:772853147321194358",
+          "name": "coverScore",
+          "type": 7,
+          "flags": 4
+        },
+        {
+          "id": "7:3381086306086268907",
+          "name": "artistScore",
+          "type": 7,
+          "flags": 4
+        },
+        {
+          "id": "8:5081170490753146682",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        }
+      ],
+      "relations": []
     }
   ],
-  "lastEntityId": "13:8139968826293412870",
+  "lastEntityId": "14:2317951050427231470",
   "lastIndexId": "17:4594431538590131849",
   "lastRelationId": "3:1412032361666532056",
   "lastSequenceId": "0:0",

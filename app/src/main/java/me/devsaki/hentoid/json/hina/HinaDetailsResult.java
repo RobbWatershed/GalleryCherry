@@ -78,7 +78,6 @@ public class HinaDetailsResult {
                 result.setCoverImageUrl(thumb);
             }
 
-            result.populateAuthor();
             result.setUniqueSiteId(id);
             return result;
         }

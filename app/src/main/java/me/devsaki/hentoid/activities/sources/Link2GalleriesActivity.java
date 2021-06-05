@@ -18,6 +18,6 @@ public class Link2GalleriesActivity extends BaseWebActivity {
 
     @Override
     protected CustomWebViewClient getWebClient() {
-        return new CustomWebViewClient(GALLERY_FILTER, this);
+        return new CustomWebViewClient(getStartSite(), GALLERY_FILTER, this);
     }
 }

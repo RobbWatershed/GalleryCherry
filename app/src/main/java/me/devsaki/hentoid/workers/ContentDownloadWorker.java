@@ -2,6 +2,7 @@ package me.devsaki.hentoid.workers;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.webkit.MimeTypeMap;
 
 import androidx.annotation.NonNull;
@@ -37,6 +38,8 @@ import javax.annotation.Nullable;
 import io.reactivex.Single;
 import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.schedulers.Schedulers;
+import me.devsaki.hentoid.R;
+import me.devsaki.hentoid.core.Consts;
 import me.devsaki.hentoid.core.HentoidApp;
 import me.devsaki.hentoid.database.CollectionDAO;
 import me.devsaki.hentoid.database.ObjectBoxDAO;

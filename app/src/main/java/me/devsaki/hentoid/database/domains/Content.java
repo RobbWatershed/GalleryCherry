@@ -25,7 +25,6 @@ import io.objectbox.converter.PropertyConverter;
 import io.objectbox.relation.ToMany;
 import me.devsaki.hentoid.activities.sources.AsianSisterActivity;
 import me.devsaki.hentoid.activities.sources.BabeTodayActivity;
-import me.devsaki.hentoid.activities.sources.AllPornComicActivity;
 import me.devsaki.hentoid.activities.sources.BaseWebActivity;
 import me.devsaki.hentoid.activities.sources.FapalityActivity;
 import me.devsaki.hentoid.activities.sources.HellpornoActivity;
@@ -49,7 +48,6 @@ import me.devsaki.hentoid.util.ContentHelper;
 import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.JsonHelper;
 import me.devsaki.hentoid.util.StringHelper;
-import me.devsaki.hentoid.util.network.HttpHelper;
 import timber.log.Timber;
 
 import static me.devsaki.hentoid.util.JsonHelper.MAP_STRINGS;
@@ -287,8 +285,6 @@ public class Content implements Serializable {
                 return FapalityActivity.class;
             case ASIANSISTER:
                 return AsianSisterActivity.class;
-            case ALLPORNCOMIC:
-                return AllPornComicActivity.class;
             default:
                 return BaseWebActivity.class;
         }

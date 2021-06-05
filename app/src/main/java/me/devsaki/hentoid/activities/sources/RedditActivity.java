@@ -71,8 +71,8 @@ public class RedditActivity extends BaseWebActivity {
 
 
     private class RedditWebViewClient extends CustomWebViewClient {
-        RedditWebViewClient(String[] filteredUrl, WebContentListener listener) {
-            super(filteredUrl, listener);
+        RedditWebViewClient(String[] filteredUrl, CustomWebActivity activity) {
+            super(Site.REDDIT, filteredUrl, activity);
             preventAugmentedBrowser = true;
         }
 

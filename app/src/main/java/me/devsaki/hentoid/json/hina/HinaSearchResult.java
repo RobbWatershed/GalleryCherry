@@ -66,7 +66,6 @@ public class HinaSearchResult {
             result.addAttributes(attrList);
             result.setCoverImageUrl(thumb);
 
-            result.populateAuthor();
             result.setUniqueSiteId(id);
             return result;
         }
