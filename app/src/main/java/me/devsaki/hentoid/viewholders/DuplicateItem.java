@@ -94,7 +94,7 @@ public class DuplicateItem extends AbstractItem<DuplicateItem.ContentViewHolder>
         int remainingSpacePx = screenWidthPx % gridHorizontalWidthPx;
         ITEM_HORIZONTAL_MARGIN_PX = remainingSpacePx / (nbItems * 2);
 
-        Bitmap bmp = BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_cherry_icon);
+        Bitmap bmp = BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_cherry_outline);
         int tintColor = ThemeHelper.getColor(context, R.color.light_gray);
         Drawable d = new BitmapDrawable(context.getResources(), tintBitmap(bmp, tintColor));
 

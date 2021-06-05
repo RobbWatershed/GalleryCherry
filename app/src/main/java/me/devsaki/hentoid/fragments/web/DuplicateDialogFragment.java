@@ -49,7 +49,7 @@ public final class DuplicateDialogFragment extends DialogFragment {
     static {
         Context context = HentoidApp.getInstance();
 
-        Bitmap bmp = BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_cherry_icon);
+        Bitmap bmp = BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_cherry_outline);
         int tintColor = ThemeHelper.getColor(context, R.color.light_gray);
         Drawable d = new BitmapDrawable(context.getResources(), tintBitmap(bmp, tintColor));
 
