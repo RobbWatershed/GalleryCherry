@@ -36,7 +36,6 @@
         android:layout_width="24dp"
         android:layout_height="24dp"
         android:layout_margin="8dp"
-        android:onClick="onAlertCloseClick"
         android:src="@drawable/ic_cancel"
         app:layout_constraintEnd_toEndOf="@id/web_alert_txt"
         app:layout_constraintTop_toTopOf="@id/web_alert_txt"

@@ -227,6 +227,9 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
         llm = (LinearLayoutManager) recyclerView.getLayoutManager();
         new FastScrollerBuilder(recyclerView).build();
 
+        View alertCloseButton = findViewById(R.id.web_alert_close_btn);
+        alertCloseButton.setOnClickListener(this::onAlertCloseClick);
+
         initPagingMethod();
     }
 

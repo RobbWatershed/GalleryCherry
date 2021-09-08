@@ -51,7 +51,7 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/web_alert_txt"
-            tools:listitem="@layout/item_library" />
+            tools:listitem="@layout/item_library_content" />
 
         <TextView
             android:id="@+id/hina_loading_txt"
