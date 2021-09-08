@@ -1,5 +1,13 @@
 package me.devsaki.hentoid.json;
 
+import androidx.annotation.NonNull;
+
+import com.annimon.stream.Optional;
+import com.annimon.stream.Stream;
+
+import java.util.List;
+
+import me.devsaki.hentoid.database.domains.Chapter;
 import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.enums.StatusContent;
 
@@ -7,6 +15,7 @@ class JsonImageFile {
 
     private Integer order;
     private String url;
+    private String pageUrl;
     private String name;
     private boolean isCover;
     private boolean favourite;
@@ -15,6 +24,8 @@ class JsonImageFile {
     private String mimeType;
     private long pHash;
 
+    private int chapterOrder = -1;
+
     private JsonImageFile() {
     }
 
@@ -22,6 +33,7 @@ class JsonImageFile {
         JsonImageFile result = new JsonImageFile();
         result.order = f.getOrder();
         result.url = f.getUrl();
+        result.pageUrl = f.getPageUrl();
         result.name = f.getName();
         result.status = f.getStatus();
         result.isCover = f.isCover();
@@ -29,17 +41,26 @@ class JsonImageFile {
         result.isRead = f.isRead();
         result.mimeType = f.getMimeType();
         result.pHash = f.getImageHash();
+        if (f.getChapter() != null && f.getChapter().getTarget() != null)
+            result.chapterOrder = f.getChapter().getTarget().getOrder();
         return result;
     }
 
-    ImageFile toEntity(int maxPages) {
-        ImageFile result = new ImageFile(order, url, status, maxPages);
+    ImageFile toEntity(int maxPages, @NonNull List<Chapter> chapters) {
+        ImageFile result = ImageFile.fromImageUrl(order, url, status, maxPages);
+        if (url.isEmpty()) result = ImageFile.fromPageUrl(order, pageUrl, status, maxPages);
         result.setName(name);
         result.setIsCover(isCover);
         result.setFavourite(favourite);
         result.setRead(isRead);
         result.setMimeType(mimeType);
         result.setImageHash(pHash);
+
+        if (!chapters.isEmpty() && chapterOrder > -1) {
+            Optional<Chapter> chapter = Stream.of(chapters).filter(c -> c.getOrder().equals(chapterOrder)).findFirst();
+            if (chapter.isPresent()) result.setChapter(chapter.get());
+        }
+
         return result;
     }
 }

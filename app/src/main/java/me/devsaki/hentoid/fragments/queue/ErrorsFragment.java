@@ -23,8 +23,6 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.annimon.stream.Stream;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
-import com.google.android.material.snackbar.BaseTransientBottomBar;
-import com.google.android.material.snackbar.Snackbar;
 import com.mikepenz.fastadapter.FastAdapter;
 import com.mikepenz.fastadapter.adapters.ItemAdapter;
 import com.mikepenz.fastadapter.diff.FastAdapterDiffUtil;
@@ -33,6 +31,9 @@ import com.mikepenz.fastadapter.listeners.ClickEventHook;
 import com.mikepenz.fastadapter.select.SelectExtension;
 import com.mikepenz.fastadapter.swipe.SimpleSwipeDrawerCallback;
 
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.ref.WeakReference;
@@ -45,6 +46,7 @@ import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.activities.QueueActivity;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.enums.StatusContent;
+import me.devsaki.hentoid.events.ProcessEvent;
 import me.devsaki.hentoid.fragments.DeleteProgressDialogFragment;
 import me.devsaki.hentoid.fragments.library.ErrorsDialogFragment;
 import me.devsaki.hentoid.util.ContentHelper;
@@ -52,7 +54,6 @@ import me.devsaki.hentoid.util.Debouncer;
 import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.ThemeHelper;
 import me.devsaki.hentoid.util.ToastHelper;
-import me.devsaki.hentoid.util.exception.ContentNotRemovedException;
 import me.devsaki.hentoid.viewholders.ContentItem;
 import me.devsaki.hentoid.viewholders.ISwipeableViewHolder;
 import me.devsaki.hentoid.viewmodels.QueueViewModel;
@@ -107,6 +108,12 @@ public class ErrorsFragment extends Fragment implements ItemTouchCallback, Error
         activity = new WeakReference<>((QueueActivity) requireActivity());
 
         listRefreshDebouncer = new Debouncer<>(context, 75, this::onRecyclerUpdated);
+    }
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        if (!EventBus.getDefault().isRegistered(this)) EventBus.getDefault().register(this);
     }
 
     @Override
@@ -220,6 +227,7 @@ public class ErrorsFragment extends Fragment implements ItemTouchCallback, Error
 
     @Override
     public void onDestroy() {
+        if (EventBus.getDefault().isRegistered(this)) EventBus.getDefault().unregister(this);
         compositeDisposable.clear();
         super.onDestroy();
     }
@@ -233,7 +241,7 @@ public class ErrorsFragment extends Fragment implements ItemTouchCallback, Error
             return true;
         });
 
-        MenuItem cancelAllMenu = activity.getToolbar().getMenu().findItem(R.id.action_cancel_all);
+        MenuItem cancelAllMenu = activity.getToolbar().getMenu().findItem(R.id.action_cancel_all_errors);
         cancelAllMenu.setOnMenuItemClickListener(item -> {
             onCancelAllClick();
             return true;
@@ -406,8 +414,9 @@ public class ErrorsFragment extends Fragment implements ItemTouchCallback, Error
             if (selectExtension.getSelections().isEmpty())
                 selectionToolbar.setVisibility(View.GONE);
         }
-
-        viewModel.remove(Stream.of(item.getContent()).toList(), this::onDeleteError, this::onDeleteComplete);
+        Content content = item.getContent();
+        if (content != null)
+            viewModel.remove(Stream.of(content).toList());
     }
 
     private void onDeleteBooks(@NonNull List<Content> c) {
@@ -415,34 +424,25 @@ public class ErrorsFragment extends Fragment implements ItemTouchCallback, Error
             isDeletingAll = true;
             DeleteProgressDialogFragment.invoke(getParentFragmentManager(), getResources().getString(R.string.cancel_queue_progress));
         }
-        viewModel.remove(c, this::onDeleteError, this::onDeleteComplete);
+        viewModel.remove(c);
     }
 
     private void doCancelAll() {
         isDeletingAll = true;
         DeleteProgressDialogFragment.invoke(getParentFragmentManager(), getResources().getString(R.string.cancel_queue_progress));
-        viewModel.removeAll(this::onDeleteError, this::onDeleteComplete);
+        viewModel.removeAll();
+    }
+
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    public void onProcessEvent(ProcessEvent event) {
+        // Filter on cancel complete event
+        if (R.id.generic_delete != event.processId) return;
+        if (event.eventType == ProcessEvent.EventType.COMPLETE) onDeleteComplete();
     }
 
     private void onDeleteComplete() {
         isDeletingAll = false;
         viewModel.refresh();
-        if (null == selectExtension || selectExtension.getSelections().isEmpty())
-            selectionToolbar.setVisibility(View.GONE);
-    }
-
-    /**
-     * Callback for the failure of the "delete item" action
-     */
-    private void onDeleteError(Throwable t) {
-        isDeletingAll = false;
-        viewModel.refresh();
-        Timber.e(t);
-        if (t instanceof ContentNotRemovedException) {
-            ContentNotRemovedException e = (ContentNotRemovedException) t;
-            String message = (null == e.getMessage()) ? "Content removal failed" : e.getMessage();
-            Snackbar.make(recyclerView, message, BaseTransientBottomBar.LENGTH_LONG).show();
-        }
         if (null == selectExtension || selectExtension.getSelections().isEmpty())
             selectionToolbar.setVisibility(View.GONE);
     }

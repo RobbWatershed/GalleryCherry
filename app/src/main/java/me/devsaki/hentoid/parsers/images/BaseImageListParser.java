@@ -1,11 +1,14 @@
 package me.devsaki.hentoid.parsers.images;
 
+import android.util.Pair;
 import android.webkit.URLUtil;
 
 import androidx.annotation.NonNull;
 
 import com.annimon.stream.Optional;
 
+import org.apache.commons.lang3.NotImplementedException;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.jsoup.Jsoup;
@@ -17,12 +20,15 @@ import java.util.Map;
 
 import javax.annotation.Nullable;
 
+import me.devsaki.hentoid.database.domains.Chapter;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.events.DownloadEvent;
 import me.devsaki.hentoid.parsers.ParseHelper;
 import me.devsaki.hentoid.util.network.OkHttpClientSingleton;
+import me.devsaki.hentoid.util.exception.EmptyResultException;
+import me.devsaki.hentoid.util.exception.LimitReachedException;
 import okhttp3.HttpUrl;
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
@@ -67,7 +73,8 @@ public abstract class BaseImageListParser implements ImageListParser {
         List<ImageFile> result;
         try {
             List<String> imgUrls = parseImages(content);
-            result = ParseHelper.urlsToImageFiles(imgUrls, content.getCoverImageUrl(), StatusContent.SAVED);
+            result = ParseHelper.urlsToImageFiles(imgUrls, content.getCoverImageUrl(), StatusContent.SAVED, null);
+            ParseHelper.setDownloadParams(result, content.getSite().getUrl());
         } finally {
             EventBus.getDefault().unregister(this);
         }
@@ -77,8 +84,14 @@ public abstract class BaseImageListParser implements ImageListParser {
         return result;
     }
 
-    public Optional<ImageFile> parseBackupUrl(@NonNull String url, @NonNull Map<String, String> requestHeaders, int order, int maxPages) {
-        return Optional.of(new ImageFile(order, url, StatusContent.SAVED, maxPages));
+    public Optional<ImageFile> parseBackupUrl(@NonNull String url, @NonNull Map<String, String> requestHeaders, int order, int maxPages, Chapter chapter) {
+        ImageFile img = ImageFile.fromImageUrl(order, url, StatusContent.SAVED, maxPages);
+        if (chapter != null) img.setChapter(chapter);
+        return Optional.of(img);
+    }
+
+    public ImmutablePair<String, Optional<String>> parseImagePage(@NonNull String url, @NonNull List<Pair<String, String>> requestHeaders) throws IOException, LimitReachedException, EmptyResultException {
+        throw new NotImplementedException();
     }
 
     void progressStart(long contentId, int maxSteps) {

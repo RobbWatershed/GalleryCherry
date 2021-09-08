@@ -53,6 +53,8 @@ public enum Site {
     private boolean hasBackupURLs = false;
     private boolean hasCoverBasedPageUpdates = false;
     private boolean isDanbooru = false;
+    private boolean useCloudflare = false;
+    private boolean simulateHumanReading = false;
 
     Site(int code,
          String description,
@@ -138,6 +140,10 @@ public enum Site {
         return isDanbooru;
     }
 
+    public boolean isUseCloudflare() { return useCloudflare; }
+
+    public boolean isSimulateHumanReading() { return simulateHumanReading; }
+
     public boolean isVisible() {
         for (Site s : INVISIBLE_SITES) if (s.equals(this)) return false;
         return true;
@@ -164,6 +170,10 @@ public enum Site {
         if (jsonSite.hasCoverBasedPageUpdates != null)
             hasCoverBasedPageUpdates = jsonSite.hasCoverBasedPageUpdates;
         if (jsonSite.isDanbooru != null) isDanbooru = jsonSite.isDanbooru;
+        if (jsonSite.useCloudflare != null)
+            useCloudflare = jsonSite.useCloudflare;
+        if (jsonSite.simulateHumanReading != null)
+            simulateHumanReading = jsonSite.simulateHumanReading;
     }
 
     public static class SiteConverter implements PropertyConverter<Site, Long> {

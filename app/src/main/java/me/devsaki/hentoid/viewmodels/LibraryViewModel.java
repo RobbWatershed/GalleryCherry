@@ -1,5 +1,7 @@
 package me.devsaki.hentoid.viewmodels;
 
+import static me.devsaki.hentoid.util.GroupHelper.moveBook;
+
 import android.app.Application;
 import android.os.Bundle;
 
@@ -11,7 +13,11 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MediatorLiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.paging.PagedList;
+import androidx.work.ExistingWorkPolicy;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.WorkManager;
 
+import com.annimon.stream.Optional;
 import com.annimon.stream.Stream;
 import com.annimon.stream.function.Consumer;
 
@@ -20,8 +26,8 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.security.InvalidParameterException;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import io.reactivex.Completable;
 import io.reactivex.Observable;
@@ -29,6 +35,8 @@ import io.reactivex.Single;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.schedulers.Schedulers;
+import me.devsaki.hentoid.R;
+import me.devsaki.hentoid.core.Consts;
 import me.devsaki.hentoid.database.CollectionDAO;
 import me.devsaki.hentoid.database.domains.Attribute;
 import me.devsaki.hentoid.database.domains.Content;
@@ -43,10 +51,12 @@ import me.devsaki.hentoid.util.FileHelper;
 import me.devsaki.hentoid.util.GroupHelper;
 import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.Preferences;
+import me.devsaki.hentoid.util.RandomSeedSingleton;
 import me.devsaki.hentoid.util.download.ContentQueueManager;
-import me.devsaki.hentoid.util.exception.ContentNotRemovedException;
-import me.devsaki.hentoid.util.exception.GroupNotRemovedException;
+import me.devsaki.hentoid.util.exception.EmptyResultException;
 import me.devsaki.hentoid.widget.ContentSearchManager;
+import me.devsaki.hentoid.workers.DeleteWorker;
+import me.devsaki.hentoid.workers.data.DeleteData;
 import timber.log.Timber;
 
 
@@ -80,7 +90,7 @@ public class LibraryViewModel extends AndroidViewModel {
         dao = collectionDAO;
         searchManager = new ContentSearchManager(dao);
         totalContent = dao.countAllBooks();
-        isCustomGroupingAvailable.postValue(dao.countGroupsFor(Grouping.CUSTOM) > 0);
+        refreshCustomGroupingAvailable();
     }
 
     public void onSaveState(Bundle outState) {
@@ -223,8 +233,8 @@ public class LibraryViewModel extends AndroidViewModel {
     /**
      * Toggle the books favourite filter
      */
-    public void toggleContentFavouriteFilter() {
-        searchManager.setFilterBookFavourites(!searchManager.isFilterBookFavourites());
+    public void setContentFavouriteFilter(boolean value) {
+        searchManager.setFilterBookFavourites(value);
         newSearch.setValue(true);
         doSearchContent();
     }
@@ -371,33 +381,154 @@ public class LibraryViewModel extends AndroidViewModel {
             @NonNull final List<Content> contentList,
             boolean reparseContent,
             boolean reparseImages,
-            int addMode,
-            @NonNull final Runnable onSuccess) {
+            int position,
+            @NonNull final Consumer<Integer> onSuccess,
+            @NonNull final Consumer<Throwable> onError) {
         // Flag the content as "being deleted" (triggers blink animation)
         for (Content c : contentList) flagContentDelete(c, true);
 
         StatusContent targetImageStatus = reparseImages ? StatusContent.ERROR : null;
+        AtomicInteger errorCount = new AtomicInteger(0);
 
         compositeDisposable.add(
                 Observable.fromIterable(contentList)
                         .observeOn(Schedulers.io())
-                        .map(c -> (reparseContent) ? ContentHelper.reparseFromScratch(c) : c)
-                        .map(c -> {
-                            if (reparseImages) ContentHelper.purgeFiles(getApplication(), c);
-                            return c;
+                        .map(c -> (reparseContent) ? ContentHelper.reparseFromScratch(c) : Optional.of(c))
+                        .doOnNext(c -> {
+                            if (c.isPresent()) {
+                                Content content = c.get();
+                                // Non-blocking performance bottleneck; run in a dedicated worker
+                                // TODO if the purge is extremely long, that worker might still be working while downloads are happening on these same books
+                                if (reparseImages) purgeItem(content);
+                                dao.addContentToQueue(
+                                        content, targetImageStatus, position,
+                                        ContentQueueManager.getInstance().isQueueActive());
+                            } else {
+                                errorCount.incrementAndGet();
+                                onError.accept(new EmptyResultException("Content unreachable"));
+                            }
                         })
-                        .doOnNext(c -> dao.addContentToQueue(c, targetImageStatus, addMode, ContentQueueManager.getInstance().isQueueActive()))
+                        .observeOn(AndroidSchedulers.mainThread())
                         .doOnComplete(() -> {
-                            // TODO is there stuff to do on the IO thread ?
+                            if (Preferences.isQueueAutostart())
+                                ContentQueueManager.getInstance().resumeQueue(getApplication());
+                            onSuccess.accept(contentList.size() - errorCount.get());
+                        })
+                        .subscribe(
+                                v -> { // Nothing; feedback is done through LiveData
+                                },
+                                onError::accept
+                        )
+        );
+    }
+
+    public void downloadContent(
+            @NonNull final List<Content> contentList,
+            int position,
+            @NonNull final Consumer<Integer> onSuccess,
+            @NonNull final Consumer<Throwable> onError) {
+        // Flag the content as "being deleted" (triggers blink animation)
+        for (Content c : contentList) flagContentDelete(c, true);
+
+        AtomicInteger nbErrors = new AtomicInteger(0);
+        compositeDisposable.add(
+                Observable.fromIterable(contentList)
+                        .observeOn(Schedulers.io())
+                        .map(c -> {
+                            // Reparse content from scratch if images KO
+                            if (!ContentHelper.isDownloadable(c)) {
+                                Timber.d("Pages unreachable; reparsing content");
+                                // Reparse content itself
+                                Optional<Content> newContent = ContentHelper.reparseFromScratch(c);
+                                if (newContent.isEmpty()) flagContentDelete(c, false);
+                                return newContent;
+                            }
+                            return Optional.of(c);
+                        })
+                        .doOnNext(c -> {
+                            if (c.isPresent()) {
+                                c.get().setDownloadMode(Content.DownloadMode.DOWNLOAD);
+                                dao.addContentToQueue(
+                                        c.get(), StatusContent.SAVED, position,
+                                        ContentQueueManager.getInstance().isQueueActive());
+                            } else {
+                                nbErrors.incrementAndGet();
+                                onError.accept(new EmptyResultException("Content unreachable"));
+                            }
+                        })
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .doOnComplete(() -> {
+                            if (Preferences.isQueueAutostart())
+                                ContentQueueManager.getInstance().resumeQueue(getApplication());
+                            onSuccess.accept(contentList.size() - nbErrors.get());
                         })
                         .observeOn(AndroidSchedulers.mainThread())
                         .subscribe(
-                                v -> {
-                                    if (Preferences.isQueueAutostart())
-                                        ContentQueueManager.getInstance().resumeQueue(getApplication());
-                                    onSuccess.run();
+                                v -> { // Nothing; feedback is done through LiveData
                                 },
-                                Timber::e
+                                onError::accept
+                        )
+        );
+    }
+
+    public void streamContent(@NonNull final List<Content> contentList,
+                              @NonNull final Consumer<Throwable> onError) {
+
+        // Flag the content as "being deleted" (triggers blink animation)
+        for (Content c : contentList) flagContentDelete(c, true);
+
+        compositeDisposable.add(
+                Observable.fromIterable(contentList)
+                        .observeOn(Schedulers.io())
+                        .map(c -> {
+                            Timber.d("Checking pages availability");
+                            // Reparse content from scratch if images KO
+                            if (!ContentHelper.isDownloadable(c)) {
+                                Timber.d("Pages unreachable; reparsing content");
+                                // Reparse content itself
+                                Optional<Content> newContent = ContentHelper.reparseFromScratch(c);
+                                if (newContent.isEmpty()) {
+                                    flagContentDelete(c, false);
+                                    return newContent;
+                                } else {
+                                    Content reparsedContent = newContent.get();
+                                    // Reparse pages
+                                    List<ImageFile> newImages = ContentHelper.fetchImageURLs(reparsedContent, StatusContent.ONLINE);
+                                    dao.replaceImageList(reparsedContent.getId(), newImages);
+                                    return Optional.of(reparsedContent.setImageFiles(newImages));
+                                }
+                            }
+                            return Optional.of(c);
+                        })
+                        .doOnNext(c -> {
+                            if (c.isPresent()) {
+                                Content dbContent = dao.selectContent(c.get().getId());
+                                if (null == dbContent) return;
+                                // Non-blocking performance bottleneck; scheduled in a dedicated worker
+                                purgeItem(c.get());
+                                dbContent.setDownloadMode(Content.DownloadMode.STREAM);
+                                List<ImageFile> imgs = dbContent.getImageFiles();
+                                if (imgs != null) {
+                                    for (ImageFile img : imgs) {
+                                        img.setFileUri("");
+                                        img.setSize(0);
+                                        img.setStatus(StatusContent.ONLINE);
+                                    }
+                                    dao.insertImageFiles(imgs);
+                                }
+                                dbContent.forceSize(0);
+                                dbContent.setIsBeingDeleted(false);
+                                dao.insertContent(dbContent);
+                                ContentHelper.updateContentJson(getApplication(), dbContent);
+                            } else {
+                                onError.accept(new EmptyResultException("Content unreachable"));
+                            }
+                        })
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe(
+                                v -> { // Nothing; feedback is done through LiveData
+                                },
+                                onError::accept
                         )
         );
     }
@@ -417,78 +548,40 @@ public class LibraryViewModel extends AndroidViewModel {
      * Delete the given list of content
      *
      * @param contents List of content to be deleted
-     * @param onError  Callback to run when an error occurs
      */
     public void deleteItems(
             @NonNull final List<Content> contents,
             @NonNull final List<Group> groups,
-            boolean deleteGroupsOnly,
-            Consumer<Object> onProgress,
-            Runnable onSuccess,
-            Consumer<Throwable> onError) {
-        // Flag the content as "being deleted" (triggers blink animation)
-        for (Content c : contents) flagContentDelete(c, true);
-        // TODO do the same blinking effect for groups ?
+            boolean deleteGroupsOnly) {
+        DeleteData.Builder builder = new DeleteData.Builder();
+        if (!contents.isEmpty())
+            builder.setContentIds(Stream.of(contents).map(Content::getId).toList());
+        if (!groups.isEmpty())
+            builder.setGroupIds(Stream.of(groups).map(Group::getId).toList());
+        builder.setDeleteGroupsOnly(deleteGroupsOnly);
 
-        // First chain contents, then groups (to be sure to delete empty groups only)
-        List<Object> items = new ArrayList<>();
-        items.addAll(contents);
-        items.addAll(groups);
-
-        compositeDisposable.add(
-                Observable.fromIterable(items)
-                        .observeOn(Schedulers.io())
-                        .map(i -> doDeleteItem(i, deleteGroupsOnly))
-                        .doOnComplete(() -> {
-                            if (!groups.isEmpty()) {
-                                isCustomGroupingAvailable.postValue(dao.countGroupsFor(Grouping.CUSTOM) > 0);
-                                GroupHelper.updateGroupsJson(getApplication(), dao);
-                            }
-                        })
-                        .observeOn(AndroidSchedulers.mainThread())
-                        .subscribe(
-                                onProgress::accept,
-                                onError::accept,
-                                onSuccess::run
-                        )
+        WorkManager workManager = WorkManager.getInstance(getApplication());
+        workManager.enqueueUniqueWork(
+                Integer.toString(R.id.delete_service),
+                ExistingWorkPolicy.APPEND_OR_REPLACE,
+                new OneTimeWorkRequest.Builder(DeleteWorker.class).setInputData(builder.getData()).build()
         );
     }
 
-    private Object doDeleteItem(@NonNull final Object item, boolean deleteGroupsOnly) throws Exception {
-        if (item instanceof Content) return doDeleteContent((Content) item);
-        else if (item instanceof Group) return doDeleteGroup((Group) item, deleteGroupsOnly);
-        else return null;
+    public void purgeItem(@NonNull final Content content) {
+        DeleteData.Builder builder = new DeleteData.Builder();
+        builder.setContentPurgeIds(Stream.of(content).map(Content::getId).toList());
+
+        WorkManager workManager = WorkManager.getInstance(getApplication());
+        workManager.enqueueUniqueWork(
+                Integer.toString(R.id.delete_service),
+                ExistingWorkPolicy.APPEND_OR_REPLACE,
+                new OneTimeWorkRequest.Builder(DeleteWorker.class).setInputData(builder.getData()).build()
+        );
     }
 
-    /**
-     * Delete the given content
-     *
-     * @param content Content to be deleted
-     * @return Content that has been deleted
-     * @throws ContentNotRemovedException When any issue occurs during removal
-     */
-    private Content doDeleteContent(@NonNull final Content content) throws ContentNotRemovedException {
-        Helper.assertNonUiThread();
-        try {
-            // Check if given content still exists in DB
-            Content theContent = dao.selectContent(content.getId());
-
-            if (theContent != null) {
-                ContentHelper.removeContent(getApplication(), dao, theContent);
-                Timber.d("Removed item: %s from db and file system.", theContent.getTitle());
-                return theContent;
-            }
-            throw new ContentNotRemovedException(content, "Error when trying to delete : invalid ContentId " + content.getId());
-        } catch (ContentNotRemovedException cnre) {
-            Timber.e(cnre, "Error when trying to delete %s", content.getId());
-            throw cnre;
-        } catch (Exception e) {
-            Timber.e(e, "Error when trying to delete %s", content.getId());
-            throw new ContentNotRemovedException(content, "Error when trying to delete " + content.getId() + " : " + e.getMessage(), e);
-        }
-    }
-
-    public void archiveContents(@NonNull final List<Content> contentList, Consumer<Content> onProgress, Runnable onSuccess, Consumer<Throwable> onError) {
+    public void archiveContents(@NonNull final List<Content> contentList, Consumer<
+            Content> onProgress, Runnable onSuccess, Consumer<Throwable> onError) {
         Timber.d("Building file list for %s books", contentList.size());
 
         compositeDisposable.add(
@@ -544,7 +637,8 @@ public class LibraryViewModel extends AndroidViewModel {
         if (localGroup != null) localGroup.picture.setAndPutTarget(cover);
     }
 
-    public void saveContentPositions(@NonNull final List<Content> orderedContent, @NonNull final Runnable onSuccess) {
+    public void saveContentPositions(@NonNull final List<Content> orderedContent,
+                                     @NonNull final Runnable onSuccess) {
         compositeDisposable.add(
                 Completable.fromRunnable(() -> doSaveContentPositions(orderedContent))
                         .subscribeOn(Schedulers.io())
@@ -599,7 +693,8 @@ public class LibraryViewModel extends AndroidViewModel {
         }
     }
 
-    public void newGroup(@NonNull final Grouping grouping, @NonNull final String newGroupName, @NonNull final Runnable onNameExists) {
+    public void newGroup(@NonNull final Grouping grouping, @NonNull final String newGroupName,
+                         @NonNull final Runnable onNameExists) {
         // Check if the group already exists
         List<Group> localGroups = getGroups().getValue();
         if (null == localGroups) return;
@@ -613,7 +708,7 @@ public class LibraryViewModel extends AndroidViewModel {
                             .subscribeOn(Schedulers.io())
                             .observeOn(Schedulers.io())
                             .doOnComplete(() -> {
-                                isCustomGroupingAvailable.postValue(dao.countGroupsFor(Grouping.CUSTOM) > 0);
+                                refreshCustomGroupingAvailable();
                                 GroupHelper.updateGroupsJson(getApplication(), dao);
                             })
                             .observeOn(AndroidSchedulers.mainThread())
@@ -626,7 +721,8 @@ public class LibraryViewModel extends AndroidViewModel {
         }
     }
 
-    public void renameGroup(@NonNull final Group group, @NonNull final String newGroupName, @NonNull final Runnable onNameExists) {
+    public void renameGroup(@NonNull final Group group, @NonNull final String newGroupName,
+                            @NonNull final Runnable onNameExists) {
         // Check if the group already exists
         List<Group> localGroups = getGroups().getValue();
         if (null == localGroups) return;
@@ -641,7 +737,7 @@ public class LibraryViewModel extends AndroidViewModel {
                             .subscribeOn(Schedulers.io())
                             .observeOn(Schedulers.io())
                             .doOnComplete(() -> {
-                                isCustomGroupingAvailable.postValue(dao.countGroupsFor(Grouping.CUSTOM) > 0);
+                                refreshCustomGroupingAvailable();
                                 GroupHelper.updateGroupsJson(getApplication(), dao);
                             })
                             .observeOn(AndroidSchedulers.mainThread())
@@ -651,49 +747,6 @@ public class LibraryViewModel extends AndroidViewModel {
                                     Timber::e
                             )
             );
-        }
-    }
-
-    /**
-     * Delete the given group
-     * WARNING : If the group contains GroupItems, it will be ignored
-     * This method is aimed to be used to delete empty groups when using Custom grouping
-     *
-     * @param group Group to be deleted
-     * @return Group that has been deleted
-     * @throws GroupNotRemovedException When any issue occurs during removal
-     */
-    private Group doDeleteGroup(@NonNull final Group group, boolean deleteGroupsOnly) throws GroupNotRemovedException {
-        Helper.assertNonUiThread();
-
-        try {
-            // Check if given content still exists in DB
-            Group theGroup = dao.selectGroup(group.id);
-            if (theGroup != null) {
-                // Reassign group for contained items
-                if (deleteGroupsOnly) {
-                    List<Content> containedContentList = theGroup.getContents();
-                    for (Content c : containedContentList) {
-                        Content movedContent = doMoveBook(c, null);
-                        ContentHelper.updateContentJson(getApplication(), movedContent);
-                    }
-                    theGroup = dao.selectGroup(group.id);
-                }
-                if (theGroup != null) {
-                    if (!theGroup.items.isEmpty())
-                        throw new GroupNotRemovedException(group, "Group is not empty");
-                    dao.deleteGroup(theGroup.id);
-                    Timber.d("Removed group: %s from db.", theGroup.name);
-                    return theGroup;
-                }
-            }
-            throw new GroupNotRemovedException(group, "Error when trying to delete : invalid group ID " + group.id);
-        } catch (GroupNotRemovedException gnre) {
-            Timber.e(gnre, "Error when trying to delete %s", group.id);
-            throw gnre;
-        } catch (Exception e) {
-            Timber.e(e, "Error when trying to delete %s", group.id);
-            throw new GroupNotRemovedException(group, "Error when trying to delete " + group.id + " : " + e.getMessage(), e);
         }
     }
 
@@ -745,21 +798,23 @@ public class LibraryViewModel extends AndroidViewModel {
         throw new InvalidParameterException("Invalid GroupId : " + groupId);
     }
 
-    public void moveBooksToNew(long[] bookIds, String newGroupName, @NonNull final Runnable onSuccess) {
+    public void moveBooksToNew(long[] bookIds, String newGroupName,
+                               @NonNull final Runnable onSuccess) {
         Group newGroup = new Group(Grouping.CUSTOM, newGroupName.trim(), -1);
         newGroup.id = dao.insertGroup(newGroup);
         moveBooks(bookIds, newGroup, onSuccess);
     }
 
-    public void moveBooks(long[] bookIds, @Nullable final Group group, @NonNull final Runnable onSuccess) {
+    public void moveBooks(long[] bookIds, @Nullable final Group group,
+                          @NonNull final Runnable onSuccess) {
         compositeDisposable.add(
                 Observable.fromIterable(Helper.getListFromPrimitiveArray(bookIds))
                         .observeOn(Schedulers.io())
                         .map(dao::selectContent)
-                        .map(c -> doMoveBook(c, group))
+                        .map(c -> moveBook(c, group, dao))
                         .doOnNext(c -> ContentHelper.updateContentJson(getApplication(), c))
                         .doOnComplete(() -> {
-                            isCustomGroupingAvailable.postValue(dao.countGroupsFor(Grouping.CUSTOM) > 0);
+                            refreshCustomGroupingAvailable();
                             GroupHelper.updateGroupsJson(getApplication(), dao);
                         })
                         .observeOn(AndroidSchedulers.mainThread())
@@ -770,68 +825,19 @@ public class LibraryViewModel extends AndroidViewModel {
         );
     }
 
-    private Content doMoveBook(@NonNull final Content content, @Nullable final Group group) {
-        Helper.assertNonUiThread();
-        // Get all groupItems of the given content for custom grouping
-        List<GroupItem> groupItems = dao.selectGroupItems(content.getId(), Grouping.CUSTOM);
-
-        if (!groupItems.isEmpty()) {
-            // Update the cover of the old groups if they used a picture from the book that is being moved
-            for (GroupItem gi : groupItems) {
-                Group g = gi.group.getTarget();
-                if (g != null && !g.picture.isNull()) {
-                    ImageFile groupCover = g.picture.getTarget();
-                    if (groupCover.getContent().getTargetId() == content.getId()) {
-                        updateGroupCover(g, content.getId());
-                    }
-                }
-            }
-
-            // Delete them all
-            dao.deleteGroupItems(Stream.of(groupItems).map(gi -> gi.id).toList());
-        }
-
-        // Create the new links from the given content to the target group
-        if (group != null) {
-            GroupItem newGroupItem = new GroupItem(content, group, -1);
-            // Use this syntax because content will be persisted on JSON right after that
-            content.groupItems.add(newGroupItem);
-            // Commit new link to the DB
-            content.groupItems.applyChangesToDb();
-
-            // Add a picture to the target group if it didn't have one
-            if (group.picture.isNull())
-                group.picture.setAndPutTarget(content.getCover());
-        }
-
-        return content;
+    public void refreshCustomGroupingAvailable() {
+        isCustomGroupingAvailable.postValue(dao.countGroupsFor(Grouping.CUSTOM) > 0);
     }
-
-    private void updateGroupCover(@NonNull final Group g, long contentIdToRemove) {
-        List<Content> groupsContents = g.getContents();
-
-        // Empty group cover if there's just one content inside
-        if (1 == groupsContents.size() && groupsContents.get(0).getId() == contentIdToRemove) {
-            g.picture.setAndPutTarget(null);
-            return;
-        }
-
-        // Choose 1st valid content cover
-        for (Content c : groupsContents)
-            if (c.getId() != contentIdToRemove) {
-                ImageFile cover = c.getCover();
-                if (cover.getId() > -1) {
-                    g.picture.setAndPutTarget(cover);
-                    return;
-                }
-            }
-    }
-
 
     public void resetCompletedFilter() {
         if (searchManager.isFilterBookCompleted())
             toggleCompletedFilter();
         else if (searchManager.isFilterBookNotCompleted())
             toggleNotCompletedFilter();
+    }
+
+    public void shuffleContent() {
+        RandomSeedSingleton.getInstance().renewSeed(Consts.SEED_CONTENT);
+        dao.shuffleContent();
     }
 }

@@ -1,5 +1,8 @@
 package me.devsaki.hentoid.database.domains;
 
+import android.text.TextUtils;
+
+import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -9,6 +12,8 @@ import com.annimon.stream.Stream;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -47,6 +52,7 @@ import me.devsaki.hentoid.util.ArchiveHelper;
 import me.devsaki.hentoid.util.ContentHelper;
 import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.JsonHelper;
+import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.util.StringHelper;
 import timber.log.Timber;
 
@@ -59,6 +65,13 @@ import static me.devsaki.hentoid.util.JsonHelper.MAP_STRINGS;
 @SuppressWarnings("UnusedReturnValue")
 @Entity
 public class Content implements Serializable {
+
+    @IntDef({DownloadMode.DOWNLOAD, DownloadMode.STREAM})
+    @Retention(RetentionPolicy.SOURCE)
+    public @interface DownloadMode {
+        int DOWNLOAD = Preferences.Constant.DL_ACTION_DL_PAGES; // Download images
+        int STREAM = Preferences.Constant.DL_ACTION_STREAM; // Saves the book for on-demande viewing
+    }
 
     @Id
     private long id;
@@ -79,6 +92,8 @@ public class Content implements Serializable {
     private ToMany<ImageFile> imageFiles;
     @Backlink(to = "content")
     public ToMany<GroupItem> groupItems;
+    @Backlink(to = "content")
+    private ToMany<Chapter> chapters;
     @Index
     @Convert(converter = Site.SiteConverter.class, dbType = Long.class)
     private Site site;
@@ -95,6 +110,9 @@ public class Content implements Serializable {
     private int lastReadPageIndex = 0;
     @Convert(converter = Content.StringMapConverter.class, dbType = String.class)
     private Map<String, String> bookPreferences = new HashMap<>();
+
+    private @DownloadMode
+    int downloadMode;
 
     // Aggregated data redundant with the sum of individual data contained in ImageFile
     // ObjectBox can't do the sum in a single Query, so here it is !
@@ -342,7 +360,7 @@ public class Content implements Serializable {
                 break;
         }
 
-        return site.getUrl() + galleryConst + url;
+        return site.getUrl() + (galleryConst + url).replace("//", "/");
     }
 
     public String getReaderUrl() {
@@ -435,7 +453,7 @@ public class Content implements Serializable {
             for (ImageFile img : images)
                 if (img.isCover()) return img;
         }
-        ImageFile makeupCover = new ImageFile(0, getCoverImageUrl(), StatusContent.ONLINE, 1);
+        ImageFile makeupCover = ImageFile.fromImageUrl(0, getCoverImageUrl(), StatusContent.ONLINE, 1);
         makeupCover.setImageHash(Long.MIN_VALUE); // Makeup cover is unhashable
         return makeupCover;
     }
@@ -496,13 +514,13 @@ public class Content implements Serializable {
 
     public long getNbDownloadedPages() {
         if (imageFiles != null)
-            return Stream.of(imageFiles).filter(i -> (i.getStatus() == StatusContent.DOWNLOADED || i.getStatus() == StatusContent.EXTERNAL) && i.isReadable()).count();
+            return Stream.of(imageFiles).filter(i -> (i.getStatus() == StatusContent.DOWNLOADED || i.getStatus() == StatusContent.EXTERNAL || i.getStatus() == StatusContent.ONLINE) && i.isReadable()).count();
         else return 0;
     }
 
     private long getDownloadedPagesSize() {
         if (imageFiles != null) {
-            Long result = Stream.of(imageFiles).filter(i -> (i.getStatus() == StatusContent.DOWNLOADED || i.getStatus() == StatusContent.EXTERNAL)).collect(Collectors.summingLong(ImageFile::getSize));
+            Long result = Stream.of(imageFiles).filter(i -> (i.getStatus() == StatusContent.DOWNLOADED || i.getStatus() == StatusContent.EXTERNAL || i.getStatus() == StatusContent.ONLINE)).collect(Collectors.summingLong(ImageFile::getSize));
             if (result != null) return result;
         }
         return 0;
@@ -722,6 +740,27 @@ public class Content implements Serializable {
         readPagesCount = count;
     }
 
+    @Nullable
+    public ToMany<Chapter> getChapters() {
+        return chapters;
+    }
+
+    public void setChapters(List<Chapter> chapters) {
+        // We do want to compare array references, not content
+        if (chapters != null && chapters != this.chapters) {
+            this.chapters.clear();
+            this.chapters.addAll(chapters);
+        }
+    }
+
+    public int getDownloadMode() {
+        return downloadMode;
+    }
+
+    public Content setDownloadMode(int downloadMode) {
+        this.downloadMode = downloadMode;
+        return this;
+    }
 
     public static class StringMapConverter implements PropertyConverter<Map<String, String>, String> {
         @Override
@@ -752,7 +791,8 @@ public class Content implements Serializable {
         Content content = (Content) o;
         return isFavourite() == content.isFavourite() &&
                 isCompleted() == content.isCompleted() &&
-                getDownloadDate() == content.getDownloadDate() && // To differentiate external books that have to URL
+                getDownloadDate() == content.getDownloadDate() && // To differentiate external books that have no URL
+                getSize() == content.getSize() && // To differentiate external books that have no URL
                 getLastReadDate() == content.getLastReadDate() &&
                 isBeingDeleted() == content.isBeingDeleted() &&
                 Objects.equals(getUrl(), content.getUrl()) &&
@@ -762,7 +802,7 @@ public class Content implements Serializable {
 
     @Override
     public int hashCode() {
-        return Objects.hash(getUrl(), getCoverImageUrl(), getDownloadDate(), getSite(), isFavourite(), isCompleted(), getLastReadDate(), isBeingDeleted());
+        return Objects.hash(getUrl(), getCoverImageUrl(), getDownloadDate(), getSize(), getSite(), isFavourite(), isCompleted(), getLastReadDate(), isBeingDeleted());
     }
 
     public long uniqueHash() {

@@ -322,13 +322,15 @@
                 android:value=".activities.LibraryActivity" />
         </activity>
 
-        <service android:name=".services.UpdateCheckService" />
+        <!-- Services -->
 
-        <service android:name=".services.UpdateDownloadService" />
+        <service android:name=".services.UpdateCheckService" />
 
         <service android:name=".services.ExternalImportService" />
 
         <service android:name=".services.API29MigrationService" />
+
+        <!-- Receivers -->
 
         <receiver android:name=".receiver.DownloadNotificationDeleteReceiver" />
 
@@ -338,9 +340,9 @@
 
         <receiver android:name=".receiver.DuplicateNotificationStopReceiver" />
 
-        <receiver android:name=".receiver.InstallRunReceiver" />
+        <receiver android:name=".receiver.AppUpdateDownloadReceiver" />
 
-        <receiver android:name=".receiver.InstallCompletedReceiver" />
+        <!-- Providers -->
 
         <provider
             android:name="androidx.core.content.FileProvider"

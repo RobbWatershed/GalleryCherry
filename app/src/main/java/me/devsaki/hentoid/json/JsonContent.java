@@ -13,6 +13,7 @@ import java.util.Map;
 
 import me.devsaki.hentoid.database.CollectionDAO;
 import me.devsaki.hentoid.database.domains.Attribute;
+import me.devsaki.hentoid.database.domains.Chapter;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.ErrorRecord;
 import me.devsaki.hentoid.database.domains.Group;
@@ -41,10 +42,12 @@ public class JsonContent {
     private long reads;
     private long lastReadDate;
     private int lastReadPageIndex;
+    private int downloadMode;
     private Map<String, String> bookPreferences = new HashMap<>();
 
     private Map<AttributeType, List<JsonAttribute>> attributes;
     private final List<JsonImageFile> imageFiles = new ArrayList<>();
+    private final List<JsonChapter> chapters = new ArrayList<>();
     private final List<JsonErrorRecord> errorRecords = new ArrayList<>();
     private final List<JsonGroupItem> groups = new ArrayList<>();
 
@@ -88,12 +91,17 @@ public class JsonContent {
         result.lastReadDate = c.getLastReadDate();
         result.lastReadPageIndex = c.getLastReadPageIndex();
         result.bookPreferences = c.getBookPreferences();
+        result.downloadMode = c.getDownloadMode();
 
         result.attributes = new EnumMap<>(AttributeType.class);
         for (Attribute a : c.getAttributes()) {
             JsonAttribute attr = JsonAttribute.fromEntity(a, c.getSite());
             result.addAttribute(attr);
         }
+
+        if (c.getChapters() != null)
+            for (Chapter chp : c.getChapters())
+                result.chapters.add(JsonChapter.fromEntity(chp));
 
         if (keepImages && c.getImageFiles() != null)
             for (ImageFile img : c.getImageFiles())
@@ -132,7 +140,9 @@ public class JsonContent {
         result.setLastReadDate(lastReadDate);
         result.setLastReadPageIndex(lastReadPageIndex);
         result.setBookPreferences(bookPreferences);
+        result.setDownloadMode(downloadMode);
 
+        // ATTRIBUTES
         if (attributes != null) {
             result.clearAttributes();
             for (List<JsonAttribute> jsonAttrList : attributes.values()) {
@@ -143,23 +153,33 @@ public class JsonContent {
                 result.addAttributes(attrList);
             }
         }
-        if (imageFiles != null) {
-            List<ImageFile> imgs = Stream.of(imageFiles).map(i -> i.toEntity(imageFiles.size())).toList();
-            // Fix empty covers
-            Optional<ImageFile> cover = Stream.of(imgs).filter(ImageFile::isCover).findFirst();
-            if (cover.isEmpty() || cover.get().getUrl().isEmpty()) ImportHelper.createCover(imgs);
 
-            result.setImageFiles(imgs);
 
-            // Fix books with incorrect QtyPages that may exist in old JSONs
-            if (qtyPages <= 0) result.setQtyPages(imageFiles.size());
-        }
-        if (errorRecords != null) {
-            List<ErrorRecord> errs = new ArrayList<>();
-            for (JsonErrorRecord err : errorRecords) errs.add(err.toEntity());
-            result.setErrorLog(errs);
-        }
-        if (groups != null && dao != null)
+        // CHAPTERS
+        List<Chapter> chps = new ArrayList<>();
+        for (JsonChapter chp : chapters) chps.add(chp.toEntity());
+        result.setChapters(chps);
+
+
+        // IMAGES
+        List<ImageFile> imgs = Stream.of(imageFiles).map(i -> i.toEntity(imageFiles.size(), chps)).toList();
+        // Fix empty covers
+        Optional<ImageFile> cover = Stream.of(imgs).filter(ImageFile::isCover).findFirst();
+        if (cover.isEmpty() || cover.get().getUrl().isEmpty()) ImportHelper.createCover(imgs);
+
+        result.setImageFiles(imgs);
+
+        // Fix books with incorrect QtyPages that may exist in old JSONs
+        if (qtyPages <= 0) result.setQtyPages(imageFiles.size());
+
+
+        // ERROR RECORDS
+        List<ErrorRecord> errs = new ArrayList<>();
+        for (JsonErrorRecord err : errorRecords) errs.add(err.toEntity());
+        result.setErrorLog(errs);
+
+        // GROUPS
+        if (dao != null) {
             for (JsonGroupItem gi : groups) {
                 Group group = dao.selectGroupByName(gi.getGroupingId(), gi.getGroupName());
                 if (group != null) // Group already exists
@@ -170,6 +190,7 @@ public class JsonContent {
                     result.groupItems.add(gi.toEntity(result, newGroup));
                 }
             }
+        }
 
         result.populateUniqueSiteId();
         result.computeSize();
