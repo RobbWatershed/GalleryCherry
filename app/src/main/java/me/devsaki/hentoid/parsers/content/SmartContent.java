@@ -79,11 +79,11 @@ public class SmartContent extends BaseContentParser {
                 else
                     s = urlLocation + s;
             }
-            images.add(new ImageFile(order++, s, StatusContent.SAVED, links.size()));
+            images.add(ImageFile.fromImageUrl(order++, s, StatusContent.SAVED, links.size()));
         }
     }
 
-    public Content update(@NonNull final Content content, @Nonnull String url) {
+    public Content update(@NonNull final Content content, @Nonnull String url, boolean updateImages) {
         processImages();
 
         content.setSite(Site.NONE); // Temp but needed for the rest of the operations; will be overwritten
@@ -104,14 +104,16 @@ public class SmartContent extends BaseContentParser {
         AttributeMap attributes = new AttributeMap();
         content.addAttributes(attributes);
 
-        List<ImageFile> images = new ArrayList<>();
+        if (updateImages) {
+            List<ImageFile> images = new ArrayList<>();
 
-        if (imageLinks.size() > 4) addLinksToImages(imageLinks, images, url);
-        else if (imageElts.size() > 4) addLinksToImages(imageElts, images, url);
-        if (images.size() > 0) content.setCoverImageUrl(images.get(0).getUrl());
+            if (imageLinks.size() > 4) addLinksToImages(imageLinks, images, url);
+            else if (imageElts.size() > 4) addLinksToImages(imageElts, images, url);
+            if (images.size() > 0) content.setCoverImageUrl(images.get(0).getUrl());
 
-        content.setQtyPages(images.size());
-        content.setImageFiles(images);
+            content.setQtyPages(images.size());
+            content.setImageFiles(images);
+        }
 
         return content;
     }

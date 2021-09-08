@@ -41,7 +41,7 @@
     },
     {
       "id": "2:5880334030341287801",
-      "lastPropertyId": "26:3908693512208639109",
+      "lastPropertyId": "27:5557374039012158673",
       "name": "Content",
       "properties": [
         {
@@ -187,6 +187,12 @@
           "name": "completed",
           "type": 1,
           "flags": 4
+        },
+        {
+          "id": "27:5557374039012158673",
+          "name": "downloadMode",
+          "type": 5,
+          "flags": 4
         }
       ],
       "relations": [
@@ -199,7 +205,7 @@
     },
     {
       "id": "3:2849837771881495731",
-      "lastPropertyId": "15:2581221224006671026",
+      "lastPropertyId": "17:4397926401487728779",
       "name": "ImageFile",
       "properties": [
         {
@@ -282,6 +288,19 @@
           "name": "imageHash",
           "type": 6,
           "flags": 4
+        },
+        {
+          "id": "16:8840907152959868045",
+          "name": "pageUrl",
+          "type": 9
+        },
+        {
+          "id": "17:4397926401487728779",
+          "name": "chapterId",
+          "indexId": "19:1732001395358521849",
+          "type": 11,
+          "flags": 1548,
+          "relationTarget": "Chapter"
         }
       ],
       "relations": []
@@ -662,10 +681,68 @@
         }
       ],
       "relations": []
+    },
+    {
+      "id": "15:4147939537309004926",
+      "lastPropertyId": "5:6267903497058705207",
+      "name": "Chapter",
+      "properties": [
+        {
+          "id": "1:6396469220529993010",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:6052894945816207869",
+          "name": "order",
+          "type": 5,
+          "flags": 2
+        },
+        {
+          "id": "3:3326965256348243518",
+          "name": "url",
+          "type": 9
+        },
+        {
+          "id": "4:4275781742232509603",
+          "name": "name",
+          "type": 9
+        },
+        {
+          "id": "5:6267903497058705207",
+          "name": "contentId",
+          "indexId": "18:4435769488245482164",
+          "type": 11,
+          "flags": 1548,
+          "relationTarget": "Content"
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "16:5351865710215352208",
+      "lastPropertyId": "2:1257382365928635139",
+      "name": "ShuffleRecord",
+      "properties": [
+        {
+          "id": "1:3025056977177647151",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:1257382365928635139",
+          "name": "contentId",
+          "type": 6,
+          "flags": 2
+        }
+      ],
+      "relations": []
     }
   ],
-  "lastEntityId": "14:2317951050427231470",
-  "lastIndexId": "17:4594431538590131849",
+  "lastEntityId": "16:5351865710215352208",
+  "lastIndexId": "19:1732001395358521849",
   "lastRelationId": "3:1412032361666532056",
   "lastSequenceId": "0:0",
   "modelVersion": 5,

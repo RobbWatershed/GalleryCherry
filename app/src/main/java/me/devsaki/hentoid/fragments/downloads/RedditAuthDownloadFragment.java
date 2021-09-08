@@ -125,7 +125,7 @@ public class RedditAuthDownloadFragment extends Fragment {
             newImageNumber = newImages.size() - 1; // Don't count the cover
         } else { // TODO duplicated code with BaseWebActivity
             // Create a new image set based on saved Urls, ignoring the cover that should already be there
-            List<ImageFile> newImages = ParseHelper.urlsToImageFiles(savedUrls, StatusContent.SAVED);
+            List<ImageFile> newImages = ParseHelper.urlsToImageFiles(savedUrls, null, StatusContent.SAVED);
             // Ignore the images that are already contained in the central booru book
             List<ImageFile> existingImages = contentDB.getImageFiles();
             if (existingImages != null) {

@@ -1,5 +1,7 @@
 package me.devsaki.hentoid.parsers.content;
 
+import static me.devsaki.hentoid.parsers.content.SmartContent.addLinksToImages;
+
 import androidx.annotation.NonNull;
 
 import com.annimon.stream.Stream;
@@ -18,8 +20,6 @@ import me.devsaki.hentoid.enums.AttributeType;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.parsers.ParseHelper;
 import pl.droidsonroids.jspoon.annotation.Selector;
-
-import static me.devsaki.hentoid.parsers.content.SmartContent.addLinksToImages;
 
 public class Jjgirls2Content extends BaseContentParser {
 
@@ -50,7 +50,7 @@ public class Jjgirls2Content extends BaseContentParser {
             imageLinks.addAll(Stream.of(imageLinksPng).distinct().toList());
     }
 
-    public Content update(@NonNull final Content content, @Nonnull String url) {
+    public Content update(@NonNull final Content content, @Nonnull String url, boolean updateImages) {
         content.setSite(Site.JJGIRLS2);
 
         content.setUrl(url);
@@ -63,13 +63,15 @@ public class Jjgirls2Content extends BaseContentParser {
         ParseHelper.parseAttributes(attributes, AttributeType.TAG, tags, true, Site.JJGIRLS2);
         content.addAttributes(attributes);
 
-        List<ImageFile> images = new ArrayList<>();
-        processImages();
-        addLinksToImages(imageLinks, images, url);
-        if (images.size() > 0) content.setCoverImageUrl(images.get(0).getUrl());
+        if (updateImages) {
+            List<ImageFile> images = new ArrayList<>();
+            processImages();
+            addLinksToImages(imageLinks, images, url);
+            if (images.size() > 0) content.setCoverImageUrl(images.get(0).getUrl());
 
-        content.setQtyPages(images.size());
-        content.setImageFiles(images);
+            content.setQtyPages(images.size());
+            content.setImageFiles(images);
+        }
 
         return content;
     }

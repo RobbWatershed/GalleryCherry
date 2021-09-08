@@ -25,7 +25,7 @@ public class FapalityContent extends BaseContentParser {
     private List<String> thumbs;
 
 
-    public Content update(@NonNull final Content content, @Nonnull String url) {
+    public Content update(@NonNull final Content content, @Nonnull String url, boolean updateImages) {
         content.setSite(Site.FAPALITY);
         int photosIndex = url.indexOf("/photos/");
         content.setUrl(url.substring(photosIndex + 8));
@@ -43,8 +43,10 @@ public class FapalityContent extends BaseContentParser {
         ParseHelper.parseAttributes(attributes, AttributeType.TAG, tags, true, Site.FAPALITY);
         content.addAttributes(attributes);
 
-        if (!thumbs.isEmpty()) content.setCoverImageUrl(thumbs.get(0));
-        content.setQtyPages(thumbs.size());
+        if (updateImages) {
+            if (!thumbs.isEmpty()) content.setCoverImageUrl(thumbs.get(0));
+            content.setQtyPages(thumbs.size());
+        }
 
         return content;
     }

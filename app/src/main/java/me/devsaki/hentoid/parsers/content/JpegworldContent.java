@@ -32,7 +32,7 @@ public class JpegworldContent extends BaseContentParser {
     private List<String> imageLinks;
 
 
-    public Content update(@NonNull final Content content, @Nonnull String url) {
+    public Content update(@NonNull final Content content, @Nonnull String url, boolean updateImages) {
         content.setSite(Site.JPEGWORLD);
 
         String theUrl = galleryUrl.isEmpty() ? url : galleryUrl;
@@ -44,21 +44,23 @@ public class JpegworldContent extends BaseContentParser {
         ParseHelper.parseAttributes(attributes, AttributeType.TAG, tags, true, Site.JPEGWORLD);
         content.addAttributes(attributes);
 
-        List<ImageFile> images = new ArrayList<>();
-        int order = 1;
-        String[] parts;
-        for (String s : imageLinks) {
-            StringBuilder hiResLink = new StringBuilder();
-            parts = s.split("/");
-            for (int i = 0; i < parts.length; i++) {
-                if (i != parts.length - 2)
-                    hiResLink.append(parts[i]).append((i < parts.length - 1) ? "/" : "");
+        if (updateImages) {
+            List<ImageFile> images = new ArrayList<>();
+            int order = 1;
+            String[] parts;
+            for (String s : imageLinks) {
+                StringBuilder hiResLink = new StringBuilder();
+                parts = s.split("/");
+                for (int i = 0; i < parts.length; i++) {
+                    if (i != parts.length - 2)
+                        hiResLink.append(parts[i]).append((i < parts.length - 1) ? "/" : "");
+                }
+                images.add(ImageFile.fromImageUrl(order++, hiResLink.toString().replace("/thumbs/", "/galleries/"), StatusContent.SAVED, imageLinks.size()));
             }
-            images.add(new ImageFile(order++, hiResLink.toString().replace("/thumbs/", "/galleries/"), StatusContent.SAVED, imageLinks.size()));
+            if (images.size() > 0) content.setCoverImageUrl(images.get(0).getUrl());
+            content.setImageFiles(images);
+            content.setQtyPages(images.size());
         }
-        if (images.size() > 0) content.setCoverImageUrl(images.get(0).getUrl());
-        content.setImageFiles(images);
-        content.setQtyPages(images.size());
 
         return content;
     }

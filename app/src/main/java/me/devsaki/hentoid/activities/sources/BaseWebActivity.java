@@ -976,7 +976,7 @@ public abstract class BaseWebActivity extends BaseActivity implements CustomWebV
         boolean isInQueue = (contentDB != null && ContentHelper.isInQueue(contentDB.getStatus()));
 
         // Danbooru sites have a single book that allows incremental downloads
-        if (isInCollection && content.getSite().isDanbooru()) isInCollection = false;
+        if (isInCollection && onlineContent.getSite().isDanbooru()) isInCollection = false;
 
         if (!isInCollection && !isInQueue) {
             if (Preferences.isDownloadDuplicateAsk() && !onlineContent.getCoverImageUrl().isEmpty()) {
@@ -1026,9 +1026,9 @@ public abstract class BaseWebActivity extends BaseActivity implements CustomWebV
                 ContentHelper.addContent(this, objectBoxDAO, onlineContent);
             } else {
                 // Add new pages to current content with a proper index, and save them
-                if (content.getSite().isDanbooru()) { // TODO duplicated code with RedditAuthDownloadFragment
+                if (onlineContent.getSite().isDanbooru()) { // TODO duplicated code with RedditAuthDownloadFragment
                     // Ignore the images that are already contained in the central booru book
-                    List<ImageFile> newImages = content.getImageFiles();
+                    List<ImageFile> newImages = onlineContent.getImageFiles();
                     List<ImageFile> existingImages = contentDB.getImageFiles();
                     if (newImages != null && existingImages != null) {
                         newImages.removeAll(existingImages);

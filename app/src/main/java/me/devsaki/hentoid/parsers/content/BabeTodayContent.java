@@ -48,7 +48,7 @@ public class BabeTodayContent extends BaseContentParser {
             imageLinks.addAll(Stream.of(imageLinksPng).distinct().toList());
     }
 
-    public Content update(@NonNull final Content content, @Nonnull String url) {
+    public Content update(@NonNull final Content content, @Nonnull String url, boolean updateImages) {
         content.setSite(Site.BABETODAY);
 
         content.setUrl(url);
@@ -60,13 +60,15 @@ public class BabeTodayContent extends BaseContentParser {
         ParseHelper.parseAttributes(attributes, AttributeType.TAG, tags, true, Site.BABETODAY);
         content.addAttributes(attributes);
 
-        List<ImageFile> images = new ArrayList<>();
-        processImages();
-        addLinksToImages(imageLinks, images, url);
-        if (images.size() > 0) content.setCoverImageUrl(images.get(0).getUrl());
+        if (updateImages) {
+            List<ImageFile> images = new ArrayList<>();
+            processImages();
+            addLinksToImages(imageLinks, images, url);
+            if (images.size() > 0) content.setCoverImageUrl(images.get(0).getUrl());
 
-        content.setQtyPages(images.size());
-        content.setImageFiles(images);
+            content.setQtyPages(images.size());
+            content.setImageFiles(images);
+        }
 
         return content;
     }

@@ -1,5 +1,6 @@
 package me.devsaki.hentoid.parsers;
 
+import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.parsers.content.AsianSisterContent;
 import me.devsaki.hentoid.parsers.content.BabeTodayContent;
@@ -60,6 +61,10 @@ public class ContentParserFactory {
             default:
                 return SmartContent.class;
         }
+    }
+
+    public ImageListParser getImageListParser(Content content) {
+        return (null == content) ? new DummyParser() : getImageListParser(content.getSite());
     }
 
     public ImageListParser getImageListParser(Site site) {

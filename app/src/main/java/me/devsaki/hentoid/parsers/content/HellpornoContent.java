@@ -36,7 +36,7 @@ public class HellpornoContent extends BaseContentParser {
     private List<String> imageLinks;
 
 
-    public Content update(@NonNull final Content content, @Nonnull String url) {
+    public Content update(@NonNull final Content content, @Nonnull String url, boolean updateImages) {
         content.setSite(Site.HELLPORNO);
         String theUrl = galleryUrl.isEmpty() ? url : galleryUrl;
         int galleryLocation = theUrl.indexOf(GALLERY_FOLDER) + GALLERY_FOLDER.length();
@@ -60,16 +60,17 @@ public class HellpornoContent extends BaseContentParser {
         }
         content.addAttributes(attributes);
 
-
-        List<ImageFile> images = new ArrayList<>();
-        int order = 1;
-        if (imageLinks != null)
-            for (String s : imageLinks) {
-                images.add(new ImageFile(order++, s, StatusContent.SAVED, imageLinks.size()));
-            }
-        if (images.size() > 0) content.setCoverImageUrl(images.get(0).getUrl());
-        content.setQtyPages(images.size());
-        content.setImageFiles(images);
+        if (updateImages) {
+            List<ImageFile> images = new ArrayList<>();
+            int order = 1;
+            if (imageLinks != null)
+                for (String s : imageLinks) {
+                    images.add(ImageFile.fromImageUrl(order++, s, StatusContent.SAVED, imageLinks.size()));
+                }
+            if (images.size() > 0) content.setCoverImageUrl(images.get(0).getUrl());
+            content.setQtyPages(images.size());
+            content.setImageFiles(images);
+        }
 
         return content;
     }

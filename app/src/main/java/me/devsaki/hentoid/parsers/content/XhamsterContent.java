@@ -35,7 +35,7 @@ public class XhamsterContent extends BaseContentParser {
     private List<Element> tags;
 
 
-    public Content update(@NonNull final Content content, @Nonnull String url) {
+    public Content update(@NonNull final Content content, @Nonnull String url, boolean updateImages) {
         content.setSite(Site.XHAMSTER);
 
         String theUrl = galleryUrl.isEmpty() ? url : galleryUrl;

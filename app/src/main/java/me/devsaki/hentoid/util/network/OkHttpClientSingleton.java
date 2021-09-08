@@ -28,7 +28,7 @@ public class OkHttpClientSingleton {
     }
 
     public static OkHttpClient getInstance(int connectTimeout, int ioTimeout) {
-        int key = (connectTimeout * 100) + ioTimeout;
+        String key = Integer.toString((connectTimeout * 100) + ioTimeout);
         if (null == OkHttpClientSingleton.instance.get(key)) {
             synchronized (OkHttpClientSingleton.class) {
                 if (null == OkHttpClientSingleton.instance.get(key)) {
@@ -41,7 +41,6 @@ public class OkHttpClientSingleton {
                             .readTimeout(ioTimeout, TimeUnit.MILLISECONDS)
                             .writeTimeout(ioTimeout, TimeUnit.MILLISECONDS)
                             .cache(new Cache(HentoidApp.getInstance().getCacheDir(), CACHE_SIZE));
-
 
                     OkHttpClientSingleton.instance.put(key, clientBuilder.build());
                 }

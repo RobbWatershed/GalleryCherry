@@ -30,7 +30,7 @@ public class AsianSisterContent extends BaseContentParser {
     private List<String> thumbs;
 
 
-    public Content update(@NonNull final Content content, @Nonnull String url) {
+    public Content update(@NonNull final Content content, @Nonnull String url, boolean updateImages) {
         content.setSite(Site.ASIANSISTER);
         content.setUrl(url.replace(Site.ASIANSISTER.getUrl(), ""));
 
@@ -49,12 +49,14 @@ public class AsianSisterContent extends BaseContentParser {
         content.addAttributes(attributes);
 
         // Remove duplicates
-        if (!thumbs.isEmpty()) {
-            thumbs = Stream.of(thumbs).distinct().map(s -> s.replace("imageimages", "images")).toList();
-            content.setCoverImageUrl(thumbs.get(0));
-            content.setImageFiles(ParseHelper.urlsToImageFiles(thumbs, thumbs.get(0), StatusContent.SAVED));
+        if (updateImages) {
+            if (!thumbs.isEmpty()) {
+                thumbs = Stream.of(thumbs).distinct().map(s -> s.replace("imageimages", "images")).toList();
+                content.setCoverImageUrl(thumbs.get(0));
+                content.setImageFiles(ParseHelper.urlsToImageFiles(thumbs, thumbs.get(0), StatusContent.SAVED));
+            }
+            content.setQtyPages(thumbs.size() - 1); // Minus the cover
         }
-        content.setQtyPages(thumbs.size() - 1); // Minus the cover
 
         return content;
     }

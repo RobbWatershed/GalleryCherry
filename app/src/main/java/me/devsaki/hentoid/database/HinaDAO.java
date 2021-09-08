@@ -17,7 +17,6 @@ import java.util.Map;
 
 import javax.annotation.Nullable;
 
-import io.reactivex.Observable;
 import io.reactivex.Single;
 import io.reactivex.disposables.CompositeDisposable;
 import me.devsaki.hentoid.database.domains.Attribute;
@@ -117,6 +116,16 @@ public class HinaDAO implements CollectionDAO {
     }
 
     @Override
+    public void clearDownloadParams(long contentId) {
+
+    }
+
+    @Override
+    public void shuffleContent() {
+
+    }
+
+    @Override
     public long countAllInternalBooks(boolean favsOnly) {
         return 0;
     }
@@ -169,6 +178,11 @@ public class HinaDAO implements CollectionDAO {
     @Override
     public void deleteAllExternalBooks() {
 
+    }
+
+    @Override
+    public List<Group> selectGroups(long[] groupIds) {
+        return null;
     }
 
     @Override
@@ -251,11 +265,6 @@ public class HinaDAO implements CollectionDAO {
     @Override
     public long countStoredContent(boolean nonFavouriteOnly, boolean includeQueued) {
         return 0;
-    }
-
-    @Override
-    public Observable<Content> streamContentWithUnhashedCovers() {
-        return null;
     }
 
     @Override

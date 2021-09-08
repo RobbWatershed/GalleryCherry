@@ -36,7 +36,7 @@ public class XnxxContent extends BaseContentParser {
     private List<String> imageLinks;
 
 
-    public Content update(@NonNull final Content content, @Nonnull String url) {
+    public Content update(@NonNull final Content content, @Nonnull String url, boolean updateImages) {
         content.setSite(Site.XNXX);
 
         int galleryIndex = title.lastIndexOf("gallery");
@@ -69,16 +69,17 @@ public class XnxxContent extends BaseContentParser {
         }
         content.addAttributes(attributes);
 
+        if (updateImages) {
+            List<ImageFile> images = new ArrayList<>();
 
-        List<ImageFile> images = new ArrayList<>();
-
-        int order = 1;
-        for (String s : imageLinks) {
-            images.add(new ImageFile(order++, s, StatusContent.SAVED, imageLinks.size()));
+            int order = 1;
+            for (String s : imageLinks) {
+                images.add(ImageFile.fromImageUrl(order++, s, StatusContent.SAVED, imageLinks.size()));
+            }
+            if (images.size() > 0) content.setCoverImageUrl(images.get(0).getUrl());
+            content.setImageFiles(images);
+            content.setQtyPages(images.size());
         }
-        if (images.size() > 0) content.setCoverImageUrl(images.get(0).getUrl());
-        content.setImageFiles(images);
-        content.setQtyPages(images.size());
 
         return content;
     }
