@@ -21,14 +21,17 @@ import timber.log.Timber;
 
 public class XhamsterContent extends BaseContentParser {
 
-    private String GALLERY_FOLDER = "/photos/gallery/";
+    private static final String GALLERY_FOLDER = "/photos/gallery/";
+    private static final Pattern TITLE_NUMBER_PATTERN = Pattern.compile(".* - (\\d+) .*amster.*"); // e.g. "Big bewbs - 50 Pics | xHamster.com"
 
     @Selector(value = "head meta[name='twitter:url']", attr = "content", defValue = "")
     private String galleryUrl;
     @Selector(value = "img.thumb", attr = "src", defValue = "")
     private List<String> thumbs;
-    @Selector(value = ".page-title h1", defValue = "")
-    private String title;
+    @Selector(value = "h1.page-title", defValue = "")
+    private String title1;
+    @Selector(value = "head [property=og:title]", attr = "content", defValue = "")
+    private String title2;
     @Selector("head title")
     private String headTitle;
     @Selector(value = ".categories_of_pictures .categories-container__item")
@@ -43,16 +46,21 @@ public class XhamsterContent extends BaseContentParser {
         content.setUrl(theUrl.substring(galleryLocation));
         if (thumbs != null)
             content.setCoverImageUrl(thumbs.isEmpty() ? "" : thumbs.get(0));
-        content.setTitle(title);
+        if (!title1.isEmpty())
+            content.setTitle(title1);
+        else
+            content.setTitle(title2);
 
-        Pattern pattern = Pattern.compile(".* - (\\d+) .*amster.*"); // e.g. "Big bewbs - 50 Pics | xHamster.com"
-        Matcher matcher = pattern.matcher(headTitle);
+        if (updateImages) {
+            Matcher matcher = TITLE_NUMBER_PATTERN.matcher(headTitle);
 
-        Timber.d("Match found? %s", matcher.find());
+            Timber.d("Match found? %s", matcher.find());
 
-        if (matcher.groupCount() > 0) {
-            String results = matcher.group(1);
-            content.setQtyPages(Integer.parseInt(results));
+            if (matcher.groupCount() > 0) {
+                String results = matcher.group(1);
+                if (results != null)
+                    content.setQtyPages(Integer.parseInt(results));
+            }
         }
 
         AttributeMap attributes = new AttributeMap();
