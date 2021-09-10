@@ -2,7 +2,6 @@ package me.devsaki.hentoid.util;
 
 import static me.devsaki.hentoid.util.FileExplorer.createNameFilterEquals;
 
-import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.app.usage.StorageStatsManager;
 import android.content.ActivityNotFoundException;
@@ -149,17 +148,15 @@ public class FileHelper {
      * @param volumeId Volume ID to get the path from
      * @return Human-readable access path of the given volume ID
      */
-    @SuppressLint("ObsoleteSdkInt")
     @Nullable
     private static String getVolumePath(@NonNull Context context, final String volumeId) {
         try {
-            // StorageVolume exist since API21, but only visible since API24
+            // StorageVolume exists since API21, but is only visible since API24
             StorageManager mStorageManager =
                     (StorageManager) context.getSystemService(Context.STORAGE_SERVICE);
             Class<?> storageVolumeClazz = Class.forName("android.os.storage.StorageVolume");
             Method getVolumeList = mStorageManager.getClass().getMethod("getVolumeList");
             Method getUuid = storageVolumeClazz.getMethod("getUuid");
-            @SuppressWarnings("JavaReflectionMemberAccess") Method getPath = storageVolumeClazz.getMethod("getPath");
             Method isPrimary = storageVolumeClazz.getMethod("isPrimary");
             Object result = getVolumeList.invoke(mStorageManager);
             if (null == result) return null;
@@ -167,22 +164,56 @@ public class FileHelper {
             final int length = Array.getLength(result);
             for (int i = 0; i < length; i++) {
                 Object storageVolumeElement = Array.get(result, i);
-                String uuid = (String) getUuid.invoke(storageVolumeElement);
-                Boolean primary = (Boolean) isPrimary.invoke(storageVolumeElement);
+                if (storageVolumeElement != null) {
+                    String uuid = StringHelper.protect((String) getUuid.invoke(storageVolumeElement));
+                    Boolean primary = (Boolean) isPrimary.invoke(storageVolumeElement);
+                    if (null == primary) primary = false;
 
-                // primary volume?
-                if (primary != null && primary && PRIMARY_VOLUME_NAME.equals(volumeId))
-                    return (String) getPath.invoke(storageVolumeElement);
-
-                // other volumes?
-                if (uuid != null && uuid.equals(volumeId))
-                    return (String) getPath.invoke(storageVolumeElement);
+                    if (volumeIdMatch(uuid, primary, volumeId))
+                        return getVolumePath(storageVolumeElement);
+                }
             }
             // not found.
             return null;
-        } catch (Exception ex) {
+        } catch (Exception e) {
+            Timber.w(e);
             return null;
         }
+    }
+
+    /**
+     * Returns the human-readable access path of the root of the given storage volume
+     *
+     * @param storageVolume android.os.storage.StorageVolume to return the path from
+     * @return Human-readable access path of the root of the given storage volume; empty string if not found
+     */
+    @SuppressWarnings("JavaReflectionMemberAccess") // Access to getPathFile is limited to API<30
+    private static String getVolumePath(@NonNull Object storageVolume) {
+        String path = "";
+        String absolutePath = "";
+        String canonicalPath = "";
+        try {
+            File pathFile;
+            Class<?> storageVolumeClazz = Class.forName("android.os.storage.StorageVolume");
+            if (Build.VERSION.SDK_INT < 30) {
+                Method getPathFile = storageVolumeClazz.getMethod("getPathFile"); // Removed in API30
+                pathFile = (File) getPathFile.invoke(storageVolume);
+            } else {
+                Method getDirectory = storageVolumeClazz.getMethod("getDirectory");
+                pathFile = (File) getDirectory.invoke(storageVolume);
+            }
+
+            if (pathFile != null) {
+                path = pathFile.getPath();
+                absolutePath = pathFile.getAbsolutePath();
+                canonicalPath = pathFile.getCanonicalPath();
+            }
+        } catch (Exception e) {
+            Timber.w(e);
+        }
+        if (path.isEmpty() && absolutePath.isEmpty()) return canonicalPath;
+        if (path.isEmpty()) return absolutePath;
+        return path;
     }
 
     /**
@@ -826,12 +857,18 @@ public class FileHelper {
          * @param f       Folder to get the figures from
          */
         public MemoryUsageFigures(@NonNull Context context, @NonNull DocumentFile f) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                init26(context, f);
-            }
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || 0 == totalMemBytes) {
-                Timber.v("MemoryUsageFigures using legacy mode");
-                init21(context, f);
+            if (Build.VERSION.SDK_INT >= 26) init26(context, f);
+            if (0 == totalMemBytes) init21(context, f);
+            if (0 == totalMemBytes) initLegacy(context, f);
+        }
+
+        // Old way of measuring memory (inaccurate on certain devices)
+        private void initLegacy(@NonNull Context context, @NonNull DocumentFile f) {
+            String fullPath = getFullPathFromTreeUri(context, f.getUri()); // Oh so dirty !!
+            if (fullPath != null) {
+                File file = new File(fullPath);
+                this.freeMemBytes = file.getFreeSpace(); // should actually have been getUsableSpace
+                this.totalMemBytes = file.getTotalSpace();
             }
         }
 
@@ -854,11 +891,15 @@ public class FileHelper {
             String volumeId = getVolumeIdFromUri(f.getUri());
             StorageManager mgr = (StorageManager) context.getSystemService(Context.STORAGE_SERVICE);
 
+            Timber.v("init26 URI=%s; Tree volume ID=%s", f.getUri(), volumeId);
+
             for (StorageVolume v : mgr.getStorageVolumes()) {
-                Timber.v(">> %s %s", v.getUuid(), volumeId);
+                Timber.v("Storage volume ID %s", v.getUuid());
+
                 if (volumeIdMatch(v, StringHelper.protect(volumeId))) {
                     if (v.isPrimary()) {
                         Timber.v(">> %s PRIMARY", v.getUuid());
+
                         // Special processing for primary volume
                         UUID uuid = StorageManager.UUID_DEFAULT;
                         try {
@@ -871,14 +912,18 @@ public class FileHelper {
                         }
                     } else {
                         Timber.v(">> %s NOT PRIMARY", v.getUuid());
+
                         // StorageStatsManager doesn't work for volumes other than the primary volume since
                         // the "UUID" available for non-primary volumes is not acceptable to
                         // StorageStatsManager. We must revert to statvfs(path) for non-primary volumes.
                         try {
-                            StructStatVfs stats = Os.statvfs(getVolumePath(context, v.getUuid()));
-                            long blockSize = stats.f_bsize;
-                            totalMemBytes = stats.f_blocks * blockSize;
-                            freeMemBytes = stats.f_bavail * blockSize;
+                            String volumePath = getVolumePath(v);
+                            if (!volumePath.isEmpty()) {
+                                StructStatVfs stats = Os.statvfs(volumePath);
+                                long blockSize = stats.f_bsize;
+                                totalMemBytes = stats.f_blocks * blockSize;
+                                freeMemBytes = stats.f_bavail * blockSize;
+                            }
                         } catch (Exception e) { // On some devices, Os.statvfs can throw other exceptions than ErrnoException
                             Timber.e(e);
                         }
@@ -886,12 +931,6 @@ public class FileHelper {
                     break;
                 }
             }
-        }
-
-        @TargetApi(26)
-        private boolean volumeIdMatch(@NonNull final StorageVolume volume, @NonNull final String treeId) {
-            if (StringHelper.protect(volume.getUuid()).equals(treeId)) return true;
-            else return (volume.isPrimary() && treeId.equals(PRIMARY_VOLUME_NAME));
         }
 
         /**
@@ -914,6 +953,17 @@ public class FileHelper {
         public double getfreeUsageMb() {
             return freeMemBytes * 1.0 / (1024 * 1024);
         }
+    }
+
+    // TODO doc
+    @TargetApi(26)
+    private static boolean volumeIdMatch(@NonNull final StorageVolume volume, @NonNull final String treeVolumeId) {
+        return volumeIdMatch(StringHelper.protect(volume.getUuid()), volume.isPrimary(), treeVolumeId);
+    }
+
+    private static boolean volumeIdMatch(@NonNull final String volumeUuid, boolean isVolumePrimary, @NonNull final String treeVolumeId) {
+        if (volumeUuid.equals(treeVolumeId.replace("/", ""))) return true;
+        else return (isVolumePrimary && treeVolumeId.equals(PRIMARY_VOLUME_NAME));
     }
 
     /**
