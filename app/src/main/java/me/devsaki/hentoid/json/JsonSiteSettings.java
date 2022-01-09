@@ -16,5 +16,7 @@ public class JsonSiteSettings {
         public Boolean isDanbooru = null;
         public Boolean useCloudflare = null;
         public Boolean simulateHumanReading = null;
+        public Integer parallelDownloadCap = null;
+        public Integer requestsCapPerSecond = null;
     }
 }

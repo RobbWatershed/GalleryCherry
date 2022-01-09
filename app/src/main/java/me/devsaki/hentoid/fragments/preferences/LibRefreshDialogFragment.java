@@ -1,5 +1,7 @@
 package me.devsaki.hentoid.fragments.preferences;
 
+import static androidx.core.view.ViewCompat.requireViewById;
+
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -42,10 +44,7 @@ import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.workers.ImportWorker;
 import timber.log.Timber;
 
-import static androidx.core.view.ViewCompat.requireViewById;
-
 /**
- * Created by Robb on 11/2018
  * Launcher dialog for the following features :
  * - Set download folder
  * - Library refresh
@@ -169,7 +168,7 @@ public class LibRefreshDialogFragment extends DialogFragment {
                     .subscribe(
                             res -> {
                                 if (ImportHelper.ProcessFolderResult.KO_INVALID_FOLDER == res || ImportHelper.ProcessFolderResult.KO_CREATE_FAIL == res || ImportHelper.ProcessFolderResult.KO_APP_FOLDER == res || ImportHelper.ProcessFolderResult.KO_DOWNLOAD_FOLDER == res)
-                                    dismiss();
+                                    dismissAllowingStateLoss();
                             },
                             Timber::w
                     )
@@ -187,7 +186,7 @@ public class LibRefreshDialogFragment extends DialogFragment {
                     .subscribe(
                             res -> {
                                 if (ImportHelper.ProcessFolderResult.KO_INVALID_FOLDER == res || ImportHelper.ProcessFolderResult.KO_CREATE_FAIL == res || ImportHelper.ProcessFolderResult.OK_EMPTY_FOLDER == res)
-                                    dismiss();
+                                    dismissAllowingStateLoss();
                             },
                             Timber::w
                     )
@@ -246,7 +245,7 @@ public class LibRefreshDialogFragment extends DialogFragment {
                         .subscribeOn(io.reactivex.schedulers.Schedulers.io())
                         .observeOn(AndroidSchedulers.mainThread())
                         .subscribe(
-                                this::onScanHentoidFolderResult,
+                                this::onScanHentoidFolderResult, // TODO - Potential issue where the fragment is not attached to Context anymore when that line is run
                                 Timber::w
                         );
                 break;
@@ -267,7 +266,7 @@ public class LibRefreshDialogFragment extends DialogFragment {
         importDisposable.dispose();
         switch (resultCode) {
             case ImportHelper.ProcessFolderResult.OK_EMPTY_FOLDER:
-                dismiss();
+                dismissAllowingStateLoss();
                 break;
             case ImportHelper.ProcessFolderResult.OK_LIBRARY_DETECTED:
                 // Hentoid folder is finally selected at this point -> Update UI
@@ -374,7 +373,7 @@ public class LibRefreshDialogFragment extends DialogFragment {
             } else if (ImportWorker.STEP_4_QUEUE_FINAL == event.step) {
                 step4check.setVisibility(View.VISIBLE);
                 isServiceGracefulClose = true;
-                dismiss();
+                dismissAllowingStateLoss();
             }
         }
     }
@@ -389,7 +388,7 @@ public class LibRefreshDialogFragment extends DialogFragment {
         if (event.service != R.id.import_service) return;
         if (!isServiceGracefulClose) {
             Snackbar.make(rootView, R.string.import_unexpected, BaseTransientBottomBar.LENGTH_LONG).show();
-            new Handler(Looper.getMainLooper()).postDelayed(this::dismiss, 3000);
+            new Handler(Looper.getMainLooper()).postDelayed(this::dismissAllowingStateLoss, 3000);
         }
     }
 }

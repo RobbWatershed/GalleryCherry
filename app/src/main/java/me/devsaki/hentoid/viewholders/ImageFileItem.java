@@ -15,14 +15,20 @@ import androidx.annotation.NonNull;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.RequestOptions;
+import com.bumptech.glide.signature.ObjectKey;
 import com.mikepenz.fastadapter.FastAdapter;
+import com.mikepenz.fastadapter.IExpandable;
+import com.mikepenz.fastadapter.IParentItem;
+import com.mikepenz.fastadapter.ISubItem;
 import com.mikepenz.fastadapter.items.AbstractItem;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.List;
+import java.util.Locale;
 
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.activities.bundles.ImageItemBundle;
@@ -48,7 +54,11 @@ public class ImageFileItem extends AbstractItem<ImageFileItem.ImageViewHolder> {
     private final ImageFile image;
     private final @ViewType
     int viewType;
+    private final Chapter chapter;
+    private final boolean showChapter;
     private boolean isCurrent;
+    private boolean expanded = false;
+
     private static final RequestOptions glideRequestOptions;
 
 
@@ -64,9 +74,14 @@ public class ImageFileItem extends AbstractItem<ImageFileItem.ImageViewHolder> {
                 .placeholder(d);
     }
 
-    public ImageFileItem(@NonNull ImageFile image, @ViewType int viewType) {
+    public ImageFileItem(@NonNull ImageFile image, boolean showChapter, @ViewType int viewType) {
         this.image = image;
-        this.viewType = viewType;
+            this.viewType = viewType;
+        if (image.getLinkedChapter() != null)
+            this.chapter = image.getLinkedChapter();
+        else
+            this.chapter = new Chapter(1, "", "Chapter 1"); // Default display when nothing is set
+        this.showChapter = showChapter;
         setIdentifier(image.uniqueHash());
     }
 
@@ -81,6 +96,10 @@ public class ImageFileItem extends AbstractItem<ImageFileItem.ImageViewHolder> {
 
     public boolean isFavourite() {
         return image.isFavourite();
+    }
+
+    public int getChapterOrder() {
+        return chapter.getOrder();
     }
 
 
@@ -100,6 +119,48 @@ public class ImageFileItem extends AbstractItem<ImageFileItem.ImageViewHolder> {
         return R.id.gallery_image;
     }
 
+    @Override
+    public boolean isAutoExpanding() {
+        return true;
+    }
+
+    @Override
+    public boolean isExpanded() {
+        return expanded;
+    }
+
+    @Override
+    public void setExpanded(boolean b) {
+        expanded = b;
+    }
+
+    @NonNull
+    @Override
+    public List<ISubItem<?>> getSubItems() {
+        return Collections.emptyList();
+    }
+
+    @Override
+    public void setSubItems(@NonNull List<ISubItem<?>> list) {
+        // Nothing
+    }
+
+    @Nullable
+    @Override
+    public IParentItem<?> getParent() {
+        return null;
+    }
+
+    @Override
+    public void setParent(@Nullable IParentItem<?> iParentItem) {
+        // Nothing
+    }
+
+    @Override
+    public int getLevel() {
+        return 1;
+    }
+
 
     public static class ImageViewHolder extends FastAdapter.ViewHolder<ImageFileItem> {
 
@@ -110,6 +171,7 @@ public class ImageFileItem extends AbstractItem<ImageFileItem.ImageViewHolder> {
         private final ImageView checkedIndicator;
         private final @ViewType
         int viewType;
+        private final TextView chapterOverlay;
 
         ImageViewHolder(@NonNull View view, @ViewType int viewType) {
             super(view);
@@ -117,6 +179,7 @@ public class ImageFileItem extends AbstractItem<ImageFileItem.ImageViewHolder> {
             image = requireViewById(view, R.id.viewer_gallery_image);
             checkedIndicator = requireViewById(view, R.id.checked_indicator);
             this.viewType = viewType;
+            chapterOverlay = requireViewById(view, R.id.chapter_overlay);
         }
 
 
@@ -130,10 +193,14 @@ public class ImageFileItem extends AbstractItem<ImageFileItem.ImageViewHolder> {
 
                 Boolean boolValue = bundleParser.isFavourite();
                 if (boolValue != null) item.image.setFavourite(boolValue);
+
+                Integer intValue = bundleParser.getChapterOrder();
+                if (intValue != null) item.chapter.setOrder(intValue);
             }
 
             updateText(item);
 
+            // Checkmark
             if (item.isSelected()) checkedIndicator.setVisibility(View.VISIBLE);
             else checkedIndicator.setVisibility(View.GONE);
 
@@ -142,8 +209,24 @@ public class ImageFileItem extends AbstractItem<ImageFileItem.ImageViewHolder> {
             if (item.image.getDownloadParams().contains("hina-id"))
                 uri = HinaDetails.getThumbFor(item.image.getUrl());
 
+            // Chapter overlay
+            if (item.showChapter) {
+                String chapterText = String.format(Locale.ENGLISH, "Chp %d", item.chapter.getOrder());
+                if (item.chapter.getOrder() == Integer.MAX_VALUE)
+                    chapterText = ""; // Don't show temp values
+                chapterOverlay.setText(chapterText);
+                chapterOverlay.setBackgroundColor(
+                        chapterOverlay.getResources().getColor(
+                                (0 == item.chapter.getOrder() % 2) ? R.color.black_opacity_50 : R.color.white_opacity_25
+                        )
+                );
+                chapterOverlay.setVisibility(View.VISIBLE);
+            } else chapterOverlay.setVisibility(View.GONE);
+
+            // Image
             Glide.with(image)
                     .load(uri)
+                    .signature(new ObjectKey(item.image.uniqueHash()))
                     .apply(glideRequestOptions)
                     .into(image);
         }

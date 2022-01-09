@@ -1,5 +1,9 @@
 package me.devsaki.hentoid.activities;
 
+import static android.content.Intent.ACTION_SEND;
+import static android.content.Intent.ACTION_VIEW;
+import static android.content.Intent.EXTRA_TEXT;
+
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -13,12 +17,7 @@ import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.util.ContentHelper;
 import timber.log.Timber;
 
-import static android.content.Intent.ACTION_SEND;
-import static android.content.Intent.ACTION_VIEW;
-import static android.content.Intent.EXTRA_TEXT;
-
 /**
- * Created by avluis on 05/11/2016.
  * Responsible for resolving intents and sending them where appropriate
  * <p>
  * Manages how the app receives a "share" intent
@@ -79,6 +78,10 @@ public class IntentActivity extends AppCompatActivity {
             Timber.d("Cannot parse path");
             return;
         }
+
+        // Cleanup double /'s
+        if (site.getUrl().endsWith("/") && parsedPath.startsWith("/") && parsedPath.length() > 1)
+            parsedPath = parsedPath.substring(1);
 
         Content content = new Content();
         content.setSite(site);

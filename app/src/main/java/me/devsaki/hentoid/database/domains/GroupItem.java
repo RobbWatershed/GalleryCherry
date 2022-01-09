@@ -1,6 +1,7 @@
 package me.devsaki.hentoid.database.domains;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import io.objectbox.annotation.Entity;
 import io.objectbox.annotation.Id;
@@ -15,8 +16,8 @@ public class GroupItem {
     public ToOne<Group> group;
     public int order;
 
-    public GroupItem() {
-    }  // Required for ObjectBox to work
+    public GroupItem() { // Required by ObjectBox when an alternate constructor exists
+    }
 
     public GroupItem(@NonNull final Content content, @NonNull final Group group, int order) {
         this.content.setTarget(content);
@@ -24,8 +25,19 @@ public class GroupItem {
         this.order = order;
     }
 
+    public GroupItem(long contentId, @NonNull final Group group, int order) {
+        this.content.setTargetId(contentId);
+        this.group.setTarget(group);
+        this.order = order;
+    }
+
+    @Nullable
     public Content getContent() {
-        return content.getTarget();
+        return content.isResolved() ? content.getTarget() : null;
+    }
+
+    public Group getGroup() {
+        return group.getTarget();
     }
 
     public long getContentId() {

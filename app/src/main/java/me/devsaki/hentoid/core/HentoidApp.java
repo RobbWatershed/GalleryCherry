@@ -1,12 +1,16 @@
 package me.devsaki.hentoid.core;
 
+import static android.app.ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND;
+import static android.app.ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE;
+
 import android.app.ActivityManager;
 import android.app.Application;
 import android.os.Bundle;
 
-import androidx.lifecycle.Lifecycle;
+import androidx.annotation.NonNull;
+import androidx.lifecycle.DefaultLifecycleObserver;
 import androidx.lifecycle.LifecycleObserver;
-import androidx.lifecycle.OnLifecycleEvent;
+import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.ProcessLifecycleOwner;
 
 import com.google.firebase.analytics.FirebaseAnalytics;
@@ -26,11 +30,7 @@ import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.util.network.HttpHelper;
 import timber.log.Timber;
 
-import static android.app.ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND;
-import static android.app.ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE;
-
 /**
- * Created by DevSaki on 20/05/2015.
  * Initializes required components:
  * Database, Bitmap Cache, Update checks, etc.
  */
@@ -40,8 +40,12 @@ public class HentoidApp extends Application {
 
     private static Application instance;
 
-    public static Application getInstance() {
+    public static synchronized Application getInstance() {
         return instance;
+    }
+
+    private static synchronized void setInstance(@NonNull Application value) {
+        instance = value;
     }
 
 
@@ -83,7 +87,7 @@ public class HentoidApp extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
-        instance = this;
+        setInstance(this);
 
         Timber.i("Initializing %s", R.string.app_name);
 
@@ -144,7 +148,7 @@ public class HentoidApp extends Application {
      * Listener used to auto-lock the app when it goes to background
      * and the PIN lock is enabled
      */
-    public static class LifeCycleListener implements LifecycleObserver {
+    public static class LifeCycleListener implements DefaultLifecycleObserver, LifecycleObserver {
 
         private static boolean enabled = true;
 
@@ -156,11 +160,10 @@ public class HentoidApp extends Application {
             enabled = false;
         }
 
-
-        @OnLifecycleEvent(Lifecycle.Event.ON_STOP)
-        private void onMoveToBackground() {
+        @Override
+        public void onStop(@NonNull LifecycleOwner owner) {
             Timber.d("App moving to background");
-            if (enabled && !Preferences.getAppLockPin().isEmpty() && Preferences.isLockOnAppRestore()) {
+            if (enabled && isUnlocked && !Preferences.getAppLockPin().isEmpty() && Preferences.isLockOnAppRestore()) {
                 HentoidApp.setUnlocked(false);
                 HentoidApp.setLockInstant(Instant.now().toEpochMilli());
             }

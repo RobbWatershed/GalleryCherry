@@ -1,5 +1,8 @@
 package me.devsaki.hentoid.fragments.tools;
 
+import static androidx.core.view.ViewCompat.requireViewById;
+import static com.google.android.material.snackbar.BaseTransientBottomBar.LENGTH_LONG;
+
 import android.graphics.PorterDuff;
 import android.os.Build;
 import android.os.Bundle;
@@ -19,8 +22,7 @@ import androidx.fragment.app.FragmentManager;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.switchmaterial.SwitchMaterial;
 
-import org.apache.commons.io.IOUtils;
-
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -33,20 +35,18 @@ import io.reactivex.disposables.Disposable;
 import io.reactivex.disposables.Disposables;
 import io.reactivex.schedulers.Schedulers;
 import me.devsaki.hentoid.R;
+import me.devsaki.hentoid.core.ContextXKt;
 import me.devsaki.hentoid.database.CollectionDAO;
 import me.devsaki.hentoid.database.ObjectBoxDAO;
 import me.devsaki.hentoid.enums.Grouping;
 import me.devsaki.hentoid.json.JsonContentCollection;
 import me.devsaki.hentoid.util.FileHelper;
+import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.JsonHelper;
 import me.devsaki.hentoid.util.ThemeHelper;
 import timber.log.Timber;
 
-import static androidx.core.view.ViewCompat.requireViewById;
-import static com.google.android.material.snackbar.BaseTransientBottomBar.LENGTH_LONG;
-
 /**
- * Created by Robb on 03/2021
  * Dialog for the settings metadata export feature
  */
 public class MetaExportDialogFragment extends DialogFragment {
@@ -111,6 +111,12 @@ public class MetaExportDialogFragment extends DialogFragment {
             bookmarksChk.setVisibility(View.VISIBLE);
         }
 
+        // Open library transfer FAQ
+        requireViewById(rootView, R.id.export_file_help1_text)
+                .setOnClickListener(v -> ContextXKt.startBrowserActivity(requireActivity(), getResources().getString(R.string.export_faq_url)));
+        requireViewById(rootView, R.id.info_img)
+                .setOnClickListener(v -> ContextXKt.startBrowserActivity(requireActivity(), getResources().getString(R.string.export_faq_url)));
+
         runBtn = requireViewById(rootView, R.id.export_run_btn);
         runBtn.setEnabled(false);
         if (0 == nbLibraryBooks + nbLibraryBooks) runBtn.setVisibility(View.GONE);
@@ -119,7 +125,6 @@ public class MetaExportDialogFragment extends DialogFragment {
     }
 
     // Gray out run button if no option is selected
-    // TODO create a custom style to visually gray out the run button when it's disabled
     private void refreshDisplay() {
         runBtn.setEnabled(queueChk.isChecked() || libraryChk.isChecked() || bookmarksChk.isChecked());
         favsChk.setVisibility(libraryChk.isChecked() ? View.VISIBLE : View.GONE);
@@ -197,8 +202,8 @@ public class MetaExportDialogFragment extends DialogFragment {
 
         try {
             try (OutputStream newDownload = FileHelper.openNewDownloadOutputStream(requireContext(), targetFileName, JsonHelper.JSON_MIME_TYPE)) {
-                try (InputStream input = IOUtils.toInputStream(json, StandardCharsets.UTF_8)) {
-                    FileHelper.copy(input, newDownload);
+                try (InputStream input = new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))) {
+                    Helper.copy(input, newDownload);
                 }
             }
 
@@ -211,6 +216,6 @@ public class MetaExportDialogFragment extends DialogFragment {
 
         if (dao != null) dao.cleanup();
         // Dismiss after 3s, for the user to be able to see and use the snackbar
-        new Handler(Looper.getMainLooper()).postDelayed(this::dismiss, 3000);
+        new Handler(Looper.getMainLooper()).postDelayed(this::dismissAllowingStateLoss, 3000);
     }
 }

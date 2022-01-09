@@ -6,6 +6,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.annimon.stream.Collectors;
+import com.annimon.stream.Optional;
 import com.annimon.stream.Stream;
 
 import org.greenrobot.eventbus.EventBus;
@@ -15,7 +16,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -151,7 +151,9 @@ public class ParseHelper {
         if (null == childElementClass) {
             name = element.ownText();
         } else {
-            name = element.selectFirst("." + childElementClass).ownText();
+            Element e = element.selectFirst("." + childElementClass);
+            if (e != null) name = e.ownText();
+            else name = "";
         }
         name = StringHelper.removeNonPrintableChars(name);
         name = removeBrackets(name);
@@ -181,8 +183,7 @@ public class ParseHelper {
         ImageFile result = new ImageFile();
 
         int nbMaxDigits = (int) (Math.floor(Math.log10(maxPages)) + 1);
-        String name = String.format(Locale.ENGLISH, "%0" + nbMaxDigits + "d", order);
-        result.setName(name).setOrder(order).setUrl(imgUrl).setStatus(status);
+        result.setOrder(order).setUrl(imgUrl).setStatus(status).computeName(nbMaxDigits);
         if (chapter != null) result.setChapter(chapter);
 
         return result;
@@ -220,15 +221,17 @@ public class ParseHelper {
         List<ImageFile> result = new ArrayList<>();
 
         int order = initialOrder;
-        for (String s : imgUrls)
+        // Remove duplicates before creationg the ImageFiles
+        List<String> imgUrlsUnique = Stream.of(imgUrls).distinct().toList();
+        for (String s : imgUrlsUnique)
             result.add(urlToImageFile(s.trim(), order++, maxPages, status, chapter));
 
         return result;
     }
 
 
-    public static void signalProgress(long contentId, int current, int max) {
-        EventBus.getDefault().post(new DownloadPreparationEvent(contentId, current, max));
+    public static void signalProgress(long contentId, long storedId, int current, int max) {
+        EventBus.getDefault().post(new DownloadPreparationEvent(contentId, storedId, current, max));
     }
 
     public static String getSavedCookieStr(String downloadParams) {
@@ -299,7 +302,7 @@ public class ParseHelper {
         return (parts[parts.length - 1].isEmpty()) ? parts[parts.length - 2] : parts[parts.length - 1];
     }
 
-    public static List<Chapter> getExtraChapters(
+    public static List<Chapter> getExtraChaptersbyUrl(
             @NonNull List<Chapter> storedChapters,
             @NonNull List<Chapter> detectedChapters
     ) {
@@ -317,5 +320,54 @@ public class ParseHelper {
             }
         }
         return Stream.of(result).sortBy(Chapter::getOrder).toList();
+    }
+
+    public static List<String> getExtraChaptersbyId(
+            @NonNull List<Chapter> storedChapters,
+            @NonNull List<String> detectedIds
+    ) {
+        List<String> result = new ArrayList<>();
+        Set<String> storedIds = new HashSet<>();
+        for (Chapter c : storedChapters) storedIds.add(c.getUniqueId());
+
+        for (String detectedId : detectedIds) {
+            if (!storedIds.contains(detectedId)) {
+                result.add(detectedId);
+            }
+        }
+        return result;
+    }
+
+    public static int getMaxImageOrder(@NonNull List<Chapter> storedChapters) {
+        if (!storedChapters.isEmpty()) {
+            Optional<Integer> optOrder = Stream.of(storedChapters)
+                    .map(Chapter::getImageFiles)
+                    .withoutNulls()
+                    .flatMap(Stream::of)
+                    .map(ImageFile::getOrder)
+                    .max(Integer::compareTo);
+            if (optOrder.isPresent()) return optOrder.get();
+        }
+        return 0;
+    }
+
+    public static int getMaxChapterOrder(@NonNull List<Chapter> storedChapters) {
+        if (!storedChapters.isEmpty()) {
+            Optional<Integer> optOrder = Stream.of(storedChapters)
+                    .withoutNulls()
+                    .map(Chapter::getOrder)
+                    .max(Integer::compareTo);
+            if (optOrder.isPresent()) return optOrder.get();
+        }
+        return 0;
+    }
+
+    public static String getImgSrc(Element e) {
+        String result = e.attr("data-src").trim();
+        if (result.isEmpty()) result = e.attr("data-lazy-src").trim();
+        if (result.isEmpty()) result = e.attr("data-lazysrc").trim();
+        if (result.isEmpty()) result = e.attr("src").trim();
+        if (result.isEmpty()) result = e.attr("data-cfsrc").trim(); // Cloudflare-served image
+        return result;
     }
 }

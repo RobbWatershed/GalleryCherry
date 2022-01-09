@@ -13,7 +13,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Created by avluis on 06/05/2016.
  * String-related utility class
  */
 public final class StringHelper {
@@ -160,12 +159,32 @@ public final class StringHelper {
         return /*cleanMultipleSpaces(*/result.toString().trim()/*)*/;
     }
 
-    // TODO doc
-    public static String removeDigits(String s) {
+    /**
+     * Remove all digits (0-9; not punctuation) from the given string
+     *
+     * @param s String to remove digits from
+     * @return Given string sripped from all its digits
+     */
+    public static String removeDigits(@NonNull final String s) {
         StringBuilder result = new StringBuilder();
         for (int i = 0; i < s.length(); i++) {
             char c = s.charAt(i);
             if (!Character.isDigit(c)) result.append(c);
+        }
+        return result.toString().trim();
+    }
+
+    /**
+     * Remove all non-digits (0-9; not punctuation) from the given string
+     *
+     * @param s String to keep digits from
+     * @return Digits from the given string, in their original order
+     */
+    public static String keepDigits(@NonNull final String s) {
+        StringBuilder result = new StringBuilder();
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (Character.isDigit(c)) result.append(c);
         }
         return result.toString().trim();
     }

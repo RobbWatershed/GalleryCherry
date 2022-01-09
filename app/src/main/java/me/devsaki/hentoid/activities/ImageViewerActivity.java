@@ -1,5 +1,7 @@
 package me.devsaki.hentoid.activities;
 
+import static me.devsaki.hentoid.util.PermissionHelper.RQST_STORAGE_PERMISSION;
+
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.KeyEvent;
@@ -16,17 +18,25 @@ import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.util.ToastHelper;
 import me.devsaki.hentoid.viewmodels.ImageViewerViewModel;
 import me.devsaki.hentoid.viewmodels.ViewModelFactory;
-import me.devsaki.hentoid.widget.VolumeKeyListener;
-
-import static me.devsaki.hentoid.util.PermissionHelper.RQST_STORAGE_PERMISSION;
+import me.devsaki.hentoid.widget.ViewerKeyListener;
 
 
 public class ImageViewerActivity extends BaseActivity {
 
-    public static boolean isRunning = false;
+    private static boolean isRunning = false;
 
-    private VolumeKeyListener volumeKeyListener = null;
+    private ViewerKeyListener viewerKeyListener = null;
     private ImageViewerViewModel viewModel = null;
+
+
+    private static synchronized void setRunning(boolean value) {
+        isRunning = value;
+    }
+
+    public static synchronized boolean isRunning() {
+        return isRunning;
+    }
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,7 +62,8 @@ public class ImageViewerActivity extends BaseActivity {
 
         if (null == viewModel.getContent().getValue()) { // ViewModel hasn't loaded anything yet (fresh start)
             Bundle searchParams = parser.getSearchParams();
-            if (searchParams != null) viewModel.loadFromSearchParams(contentId, pageNumber, searchParams);
+            if (searchParams != null)
+                viewModel.loadFromSearchParams(contentId, pageNumber, searchParams);
             else viewModel.loadFromContent(contentId, pageNumber);
         }
 
@@ -67,7 +78,8 @@ public class ImageViewerActivity extends BaseActivity {
 
         if (null == savedInstanceState) {
             Fragment fragment;
-            if (Preferences.isViewerOpenBookInGalleryMode()) fragment = new ViewerGalleryFragment();
+            if (Preferences.isViewerOpenBookInGalleryMode() || parser.isForceShowGallery())
+                fragment = new ViewerGalleryFragment();
             else fragment = new ViewerPagerFragment();
 
             getSupportFragmentManager()
@@ -79,12 +91,12 @@ public class ImageViewerActivity extends BaseActivity {
         if (!Preferences.getRecentVisibility())
             getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
 
-        isRunning = true;
+        setRunning(true);
     }
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-        if (volumeKeyListener != null) return volumeKeyListener.onKey(null, keyCode, event);
+        if (viewerKeyListener != null) return viewerKeyListener.onKey(null, keyCode, event);
         else return super.onKeyDown(keyCode, event);
     }
 
@@ -95,18 +107,18 @@ public class ImageViewerActivity extends BaseActivity {
             Preferences.setViewerDeleteAskMode(Preferences.Constant.VIEWER_DELETE_ASK_AGAIN);
             Preferences.setViewerCurrentPageNum(-1);
             Preferences.setViewerCurrentContent(-1);
-            isRunning = false;
+            setRunning(false);
         }
         super.onStop();
     }
 
-    public void registerKeyListener(VolumeKeyListener listener) {
+    public void registerKeyListener(ViewerKeyListener listener) {
         takeKeyEvents(true);
-        this.volumeKeyListener = listener;
+        this.viewerKeyListener = listener;
     }
 
     public void unregisterKeyListener() {
-        if (volumeKeyListener != null) volumeKeyListener.clear();
-        volumeKeyListener = null;
+        if (viewerKeyListener != null) viewerKeyListener.clear();
+        viewerKeyListener = null;
     }
 }

@@ -21,7 +21,6 @@ import me.devsaki.hentoid.enums.Site;
 import timber.log.Timber;
 
 /**
- * Created by DevSaki on 09/05/2015.
  * Attribute builder
  */
 @Entity
@@ -42,15 +41,15 @@ public class Attribute {
     @Transient
     private boolean excluded = false;
     @Transient
-    private int count;
+    private int count = 0;
     @Transient
     private int externalId = 0;
     @Backlink(to = "attributes") // backed by the to-many relation in Content
     public ToMany<Content> contents;
 
 
-    public Attribute() {
-    } // No-arg constructor required by ObjectBox
+    public Attribute() { // Required by ObjectBox when an alternate constructor exists
+    }
 
     public Attribute(@Nonnull AttributeType type, @Nonnull String name) {
         this.type = type;

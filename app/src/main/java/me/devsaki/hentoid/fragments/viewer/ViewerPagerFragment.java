@@ -82,14 +82,14 @@ import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.util.ThemeHelper;
 import me.devsaki.hentoid.util.ToastHelper;
-import me.devsaki.hentoid.util.exception.ContentNotRemovedException;
+import me.devsaki.hentoid.util.exception.ContentNotProcessedException;
 import me.devsaki.hentoid.viewmodels.ImageViewerViewModel;
 import me.devsaki.hentoid.viewmodels.ViewModelFactory;
 import me.devsaki.hentoid.widget.OnZoneTapListener;
 import me.devsaki.hentoid.widget.PageSnapWidget;
 import me.devsaki.hentoid.widget.PrefetchLinearLayoutManager;
 import me.devsaki.hentoid.widget.ScrollPositionListener;
-import me.devsaki.hentoid.widget.VolumeKeyListener;
+import me.devsaki.hentoid.widget.ViewerKeyListener;
 import timber.log.Timber;
 
 // TODO : better document and/or encapsulate the difference between
@@ -161,6 +161,7 @@ public class ViewerPagerFragment extends Fragment implements ViewerBrowseModeDia
         onUpdatePageNumDisplay();
 
         // Top bar controls
+        Helper.tryShowMenuIcons(requireActivity(), binding.controlsOverlay.viewerPagerToolbar.getMenu());
         binding.controlsOverlay.viewerPagerToolbar.setNavigationOnClickListener(v -> onBackClick());
         binding.controlsOverlay.viewerPagerToolbar.setOnMenuItemClickListener(clickedMenuItem -> {
             switch (clickedMenuItem.getItemId()) {
@@ -261,10 +262,13 @@ public class ViewerPagerFragment extends Fragment implements ViewerBrowseModeDia
         if (!EventBus.getDefault().isRegistered(this)) EventBus.getDefault().register(this);
 
         ((ImageViewerActivity) requireActivity()).registerKeyListener(
-                new VolumeKeyListener()
+                new ViewerKeyListener()
                         .setOnVolumeDownListener(this::previousPage)
                         .setOnVolumeUpListener(this::nextPage)
-                        .setOnBackListener(this::onBackClick));
+                        .setOnKeyLeftListener(this::onLeftTap)
+                        .setOnKeyRightListener(this::onRightTap)
+                        .setOnBackListener(this::onBackClick)
+        );
     }
 
     @Override
@@ -349,12 +353,14 @@ public class ViewerPagerFragment extends Fragment implements ViewerBrowseModeDia
         });
         binding.recyclerView.setLongTapListener(ev -> false);
 
-        OnZoneTapListener onHorizontalZoneTapListener = new OnZoneTapListener(binding.recyclerView)
+        int tapZoneScale = Preferences.isViewerTapToTurn2x() ? 2 : 1;
+
+        OnZoneTapListener onHorizontalZoneTapListener = new OnZoneTapListener(binding.recyclerView, tapZoneScale)
                 .setOnLeftZoneTapListener(this::onLeftTap)
                 .setOnRightZoneTapListener(this::onRightTap)
                 .setOnMiddleZoneTapListener(this::onMiddleTap);
 
-        OnZoneTapListener onVerticalZoneTapListener = new OnZoneTapListener(binding.recyclerView)
+        OnZoneTapListener onVerticalZoneTapListener = new OnZoneTapListener(binding.recyclerView, 1)
                 .setOnMiddleZoneTapListener(this::onMiddleTap);
 
         binding.recyclerView.setTapListener(onVerticalZoneTapListener);       // For paper roll mode (vertical)
@@ -457,14 +463,14 @@ public class ViewerPagerFragment extends Fragment implements ViewerBrowseModeDia
             binding.controlsOverlay.favouriteMicroMenu.dips();
             binding.controlsOverlay.informationMicroMenu.floats();
         });
-        binding.controlsOverlay.informationMicroMenu.setSubmarineCircleClickListener(() -> binding.controlsOverlay.informationMicroMenu.dips());
+        binding.controlsOverlay.informationMicroMenu.setSubmarineCircleClickListener(binding.controlsOverlay.favouriteMicroMenu::dips);
 
         // Favourite micro menu
         updateFavouriteButtonIcon();
 
         binding.controlsOverlay.favouriteMicroMenu.setSubmarineItemClickListener((p, i) -> onFavouriteMicroMenuClick(p));
         binding.controlsOverlay.viewerFavouriteActionBtn.setOnClickListener(v -> onFavouriteMicroMenuOpen());
-        binding.controlsOverlay.favouriteMicroMenu.setSubmarineCircleClickListener(() -> binding.controlsOverlay.favouriteMicroMenu.dips());
+        binding.controlsOverlay.favouriteMicroMenu.setSubmarineCircleClickListener(binding.controlsOverlay.favouriteMicroMenu::dips);
 
         // Gallery
         binding.controlsOverlay.viewerGalleryBtn.setOnClickListener(v -> displayGallery());
@@ -587,13 +593,13 @@ public class ViewerPagerFragment extends Fragment implements ViewerBrowseModeDia
         binding.controlsOverlay.favouriteMicroMenu.dips();
     }
 
-    private void onPageFavouriteSuccess(Boolean newState) {
+    private void onPageFavouriteSuccess(boolean newState) {
         ToastHelper.toast(newState ? R.string.page_favourite_success : R.string.page_unfavourite_success);
         isPageFavourite = newState;
         updateFavouriteButtonIcon();
     }
 
-    private void onBookFavouriteSuccess(Boolean newState) {
+    private void onBookFavouriteSuccess(boolean newState) {
         ToastHelper.toast(newState ? R.string.book_favourite_success : R.string.book_unfavourite_success);
         isContentFavourite = newState;
         updateFavouriteButtonIcon();
@@ -728,8 +734,8 @@ public class ViewerPagerFragment extends Fragment implements ViewerBrowseModeDia
      */
     private void onDeleteError(Throwable t) {
         Timber.e(t);
-        if (t instanceof ContentNotRemovedException) {
-            ContentNotRemovedException e = (ContentNotRemovedException) t;
+        if (t instanceof ContentNotProcessedException) {
+            ContentNotProcessedException e = (ContentNotProcessedException) t;
             String message = (null == e.getMessage()) ? "Content removal failed" : e.getMessage();
             Snackbar.make(binding.recyclerView, message, BaseTransientBottomBar.LENGTH_LONG).show();
         }

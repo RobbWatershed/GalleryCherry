@@ -3,6 +3,7 @@ package me.devsaki.hentoid.ui;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.res.Configuration;
+import android.text.InputFilter;
 import android.text.InputType;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
@@ -30,6 +31,7 @@ public class InputDialog {
         EditText input = new EditText(context);
         input.setInputType(InputType.TYPE_CLASS_NUMBER);
         input.setRawInputType(Configuration.KEYBOARD_12KEY);
+        input.setFilters(new InputFilter[]{new InputFilter.LengthFilter(9)}); // We don't expect any number longer than 9 chars (999 million)
 
         DialogInterface.OnClickListener onOk = (dialog, whichButton) -> {
             if (input.getText().length() > 0)
@@ -51,14 +53,15 @@ public class InputDialog {
             @NonNull final Context context,
             final @StringRes int message,
             @NonNull final Consumer<String> onResult) {
-        invokeInputDialog(context, message, null, onResult);
+        invokeInputDialog(context, message, null, onResult, null);
     }
 
     public static void invokeInputDialog(
             @NonNull final Context context,
             final @StringRes int message,
             @Nullable final String text,
-            @NonNull final Consumer<String> onResult) {
+            @NonNull final Consumer<String> onResult,
+            @Nullable final Runnable onCancelled) {
         EditText input = new EditText(context);
         if (text != null) input.setText(text);
         input.setInputType(InputType.TYPE_CLASS_TEXT);
@@ -74,6 +77,7 @@ public class InputDialog {
         DialogInterface.OnClickListener onCancel = (dialog, whichButton) -> {
             InputMethodManager imm = (InputMethodManager) context.getSystemService(Context.INPUT_METHOD_SERVICE);
             imm.toggleSoftInput(0, 0);
+            if (onCancelled != null) onCancelled.run();
         };
 
         showDialog(context, message, input, onOk, onCancel);

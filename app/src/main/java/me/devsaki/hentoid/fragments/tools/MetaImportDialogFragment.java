@@ -1,5 +1,8 @@
 package me.devsaki.hentoid.fragments.tools;
 
+import static androidx.core.view.ViewCompat.requireViewById;
+import static com.google.android.material.snackbar.BaseTransientBottomBar.LENGTH_LONG;
+
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -38,6 +41,7 @@ import io.reactivex.disposables.Disposable;
 import io.reactivex.disposables.Disposables;
 import io.reactivex.schedulers.Schedulers;
 import me.devsaki.hentoid.R;
+import me.devsaki.hentoid.core.Consts;
 import me.devsaki.hentoid.database.CollectionDAO;
 import me.devsaki.hentoid.database.ObjectBoxDAO;
 import me.devsaki.hentoid.database.domains.Content;
@@ -49,7 +53,6 @@ import me.devsaki.hentoid.enums.Grouping;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.json.JsonContentCollection;
-import me.devsaki.hentoid.core.Consts;
 import me.devsaki.hentoid.util.ContentHelper;
 import me.devsaki.hentoid.util.FileHelper;
 import me.devsaki.hentoid.util.GroupHelper;
@@ -59,11 +62,7 @@ import me.devsaki.hentoid.util.JsonHelper;
 import me.devsaki.hentoid.util.Preferences;
 import timber.log.Timber;
 
-import static androidx.core.view.ViewCompat.requireViewById;
-import static com.google.android.material.snackbar.BaseTransientBottomBar.LENGTH_LONG;
-
 /**
- * Created by Robb on 05/2020
  * Dialog for the library metadata import feature
  */
 public class MetaImportDialogFragment extends DialogFragment {
@@ -208,7 +207,6 @@ public class MetaImportDialogFragment extends DialogFragment {
     }
 
     // Gray out run button if no option is selected
-    // TODO create a custom style to visually gray out the button when it's disabled
     private void refreshDisplay() {
         runBtn.setEnabled(queueChk.isChecked() || libraryChk.isChecked() || bookmarksChk.isChecked());
     }
@@ -341,8 +339,7 @@ public class MetaImportDialogFragment extends DialogFragment {
         }
         // If no local storage found for the book, it goes in the errors queue (except if it already was in progress)
         if (!filesFound) {
-            if (!c.getStatus().equals(StatusContent.DOWNLOADING) && !c.getStatus().equals(StatusContent.PAUSED))
-                c.setStatus(StatusContent.ERROR);
+            if (!ContentHelper.isInQueue(c.getStatus())) c.setStatus(StatusContent.ERROR);
             List<ErrorRecord> errors = new ArrayList<>();
             errors.add(new ErrorRecord(ErrorType.IMPORT, "", "Book", "No local images found when importing - Please redownload", Instant.now()));
             c.setErrorLog(errors);
@@ -403,6 +400,6 @@ public class MetaImportDialogFragment extends DialogFragment {
             Snackbar.make(rootView, getResources().getQuantityString(R.plurals.import_result_bookmarks, nbBookmarksSuccess, nbBookmarksSuccess), LENGTH_LONG).show();
 
         // Dismiss after 3s, for the user to be able to see the snackbar
-        new Handler(Looper.getMainLooper()).postDelayed(this::dismiss, 3000);
+        new Handler(Looper.getMainLooper()).postDelayed(this::dismissAllowingStateLoss, 3000);
     }
 }

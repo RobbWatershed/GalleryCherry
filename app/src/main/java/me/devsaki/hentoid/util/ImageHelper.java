@@ -1,5 +1,7 @@
 package me.devsaki.hentoid.util;
 
+import static android.graphics.Bitmap.Config.ARGB_8888;
+
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -16,16 +18,19 @@ import androidx.annotation.DrawableRes;
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 
+import com.waynejo.androidndkgif.GifEncoder;
+
+import org.apache.commons.lang3.tuple.ImmutablePair;
+
+import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-import static android.graphics.Bitmap.Config.ARGB_8888;
-
 /**
- * Created by Robb on 07/2020
  * Generic utility class
  */
 public final class ImageHelper {
@@ -139,6 +144,12 @@ public final class ImageHelper {
         }
     }
 
+    public static byte[] BitmapToWebp(@NonNull Bitmap bitmap) {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        bitmap.compress(Bitmap.CompressFormat.WEBP, 100, output);
+        return output.toByteArray();
+    }
+
     /**
      * Tint the given Bitmap with the given color
      *
@@ -220,5 +231,46 @@ public final class ImageHelper {
         } finally {
             workStream2.close();
         }
+    }
+
+    public static Uri assembleGif(
+            @NonNull Context context,
+            @NonNull File folder, // GIF encoder only work with paths...
+            @NonNull List<ImmutablePair<Uri, Integer>> frames) throws IOException, IllegalArgumentException {
+        if (frames.isEmpty()) throw new IllegalArgumentException("No frames given");
+
+        int width;
+        int height;
+        try (InputStream is = FileHelper.getInputStream(context, frames.get(0).left)) {
+            Bitmap b = BitmapFactory.decodeStream(is);
+            width = b.getWidth();
+            height = b.getHeight();
+        }
+
+        String path = new File(folder, "tmp.gif").getAbsolutePath();
+        GifEncoder gifEncoder = new GifEncoder();
+        try {
+            gifEncoder.init(width, height, path, GifEncoder.EncodingType.ENCODING_TYPE_NORMAL_LOW_MEMORY);
+
+            for (ImmutablePair<Uri, Integer> frame : frames) {
+                try (InputStream is = FileHelper.getInputStream(context, frame.left)) {
+                    final BitmapFactory.Options options = new BitmapFactory.Options();
+                    options.inPreferredConfig = Bitmap.Config.ARGB_8888;
+
+                    Bitmap b = BitmapFactory.decodeStream(is, null, options);
+                    if (null == b) continue;
+
+                    try {
+                        gifEncoder.encodeFrame(b, 100);
+                    } finally {
+                        b.recycle();
+                    }
+                }
+            }
+        } finally {
+            gifEncoder.close();
+        }
+
+        return Uri.fromFile(new File(path));
     }
 }

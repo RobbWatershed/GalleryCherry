@@ -38,8 +38,9 @@ import me.devsaki.hentoid.activities.bundles.ImageViewerActivityBundle;
 import me.devsaki.hentoid.core.HentoidApp;
 import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.util.FileHelper;
+import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.ThemeHelper;
-import me.devsaki.hentoid.util.exception.ContentNotRemovedException;
+import me.devsaki.hentoid.util.exception.ContentNotProcessedException;
 import me.devsaki.hentoid.viewmodels.ImageViewerViewModel;
 import me.devsaki.hentoid.viewmodels.ViewModelFactory;
 import timber.log.Timber;
@@ -239,7 +240,7 @@ public class ViewerBottomImageFragment extends BottomSheetDialogFragment {
 
             try (OutputStream newDownload = FileHelper.openNewDownloadOutputStream(requireContext(), targetFileName, image.getMimeType())) {
                 try (InputStream input = FileHelper.getInputStream(requireContext(), fileUri)) {
-                    FileHelper.copy(input, newDownload);
+                    Helper.copy(input, newDownload);
                 }
             }
 
@@ -307,8 +308,8 @@ public class ViewerBottomImageFragment extends BottomSheetDialogFragment {
      */
     private void onDeleteError(Throwable t) {
         Timber.e(t);
-        if (t instanceof ContentNotRemovedException) {
-            ContentNotRemovedException e = (ContentNotRemovedException) t;
+        if (t instanceof ContentNotProcessedException) {
+            ContentNotProcessedException e = (ContentNotProcessedException) t;
             String message = (null == e.getMessage()) ? "File removal failed" : e.getMessage();
             Snackbar.make(rootView, message, BaseTransientBottomBar.LENGTH_LONG).show();
         }

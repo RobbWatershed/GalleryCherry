@@ -1,21 +1,28 @@
 package me.devsaki.hentoid.util;
 
+import static android.content.Context.CLIPBOARD_SERVICE;
+
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.res.Configuration;
+import android.graphics.drawable.InsetDrawable;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Pair;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 
 import androidx.annotation.DimenRes;
 import androidx.annotation.NonNull;
+import androidx.appcompat.view.menu.MenuBuilder;
 import androidx.documentfile.provider.DocumentFile;
-import androidx.lifecycle.Lifecycle;
+import androidx.lifecycle.DefaultLifecycleObserver;
 import androidx.lifecycle.LifecycleObserver;
-import androidx.lifecycle.OnLifecycleEvent;
+import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.ProcessLifecycleOwner;
 
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
@@ -24,7 +31,9 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
@@ -34,16 +43,14 @@ import javax.annotation.Nonnull;
 
 import io.reactivex.disposables.Disposable;
 import io.whitfin.siphash.SipHasher;
+import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.core.Consts;
 import me.devsaki.hentoid.database.CollectionDAO;
 import me.devsaki.hentoid.database.domains.SiteBookmark;
 import me.devsaki.hentoid.json.JsonContentCollection;
 import timber.log.Timber;
 
-import static android.content.Context.CLIPBOARD_SERVICE;
-
 /**
- * Created by avluis on 06/05/2016.
  * Generic utility class
  */
 public final class Helper {
@@ -78,6 +85,12 @@ public final class Helper {
         return list;
     }
 
+    public static Set<Long> getSetFromPrimitiveArray(long[] input) {
+        Set<Long> list = new HashSet<>(input.length);
+        for (long n : input) list.add(n);
+        return list;
+    }
+
     /**
      * Create a Collections.List from the given array of primitive values
      *
@@ -90,13 +103,19 @@ public final class Helper {
         return list;
     }
 
+    public static Set<Integer> getSetFromPrimitiveArray(int[] input) {
+        Set<Integer> list = new HashSet<>(input.length);
+        for (int n : input) list.add(n);
+        return list;
+    }
+
     /**
      * Create an array of primitive types from the given List of values
      *
      * @param input List of values to transform
      * @return Given values as an array of primitive types
      */
-    public static long[] getPrimitiveLongArrayFromList(List<Long> input) {
+    public static long[] getPrimitiveArrayFromList(List<Long> input) {
         long[] ret = new long[input.size()];
         Iterator<Long> iterator = input.iterator();
         for (int i = 0; i < ret.length; i++) {
@@ -105,7 +124,7 @@ public final class Helper {
         return ret;
     }
 
-    public static int[] getPrimitiveLongArrayFromInt(Set<Integer> input) {
+    public static int[] getPrimitiveArrayFromSet(Set<Integer> input) {
         int[] ret = new int[input.size()];
         Iterator<Integer> iterator = input.iterator();
         for (int i = 0; i < ret.length; i++) {
@@ -139,11 +158,7 @@ public final class Helper {
         List<InputStream> result = new ArrayList<>();
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-
-        byte[] buffer = new byte[1024];
-        int len;
-        while ((len = stream.read(buffer)) > -1) baos.write(buffer, 0, len);
-        baos.flush();
+        copy(stream, baos);
 
         for (int i = 0; i < numberDuplicates; i++)
             result.add(new ByteArrayInputStream(baos.toByteArray()));
@@ -227,12 +242,22 @@ public final class Helper {
             return mStr + ":" + sStr;
     }
 
-    // TODO doc
+    /**
+     * Indicate whether the given View's context is usable by Glide
+     *
+     * @param view View whose Context to test
+     * @return True if the given View's context is usable by Glide; false if not
+     */
     public static boolean isValidContextForGlide(final View view) {
         return isValidContextForGlide(view.getContext());
     }
 
-    // TODO doc
+    /**
+     * Indicate whether the given Context is usable by Glide
+     *
+     * @param context Context to test
+     * @return True if the given Context is usable by Glide; false if not
+     */
     public static boolean isValidContextForGlide(final Context context) {
         if (context == null) {
             return false;
@@ -244,12 +269,24 @@ public final class Helper {
         return true;
     }
 
-    // TODO doc
+    /**
+     * Build an 64-bit SIP hash from the given data
+     *
+     * @param data Data to hash
+     * @return Hash built from the given data
+     */
     public static long hash64(@NonNull final byte[] data) {
         return SipHasher.hash(SIP_KEY, data);
     }
 
-    // TODO doc
+    /**
+     * Compute the weighted average of the given operands
+     * - Left part is the value
+     * - Right part is the coefficient
+     *
+     * @param operands List of (value, coefficient) pairs
+     * @return Weigthed average of the given operands; 0 if uncomputable
+     */
     public static float weightedAverage(List<Pair<Float, Float>> operands) {
         if (operands.isEmpty()) return 0;
 
@@ -262,8 +299,27 @@ public final class Helper {
         return (denominator > 0) ? numerator / denominator : 0;
     }
 
-    // TODO doc
-    public static class LifecycleRxCleaner implements LifecycleObserver {
+    /**
+     * Copy all data from the given InputStream to the given OutputStream
+     *
+     * @param in  InputStream to read data from
+     * @param out OutputStream to write data to
+     * @throws IOException If something horrible happens during I/O
+     */
+    public static void copy(@NonNull InputStream in, @NonNull OutputStream out) throws IOException {
+        // Transfer bytes from in to out
+        byte[] buf = new byte[FileHelper.FILE_IO_BUFFER_SIZE];
+        int len;
+        while ((len = in.read(buf)) > 0) {
+            out.write(buf, 0, len);
+        }
+        out.flush();
+    }
+
+    /**
+     * Cleans the given Disposable as soon as the attached Lifecycle is destroyed
+     */
+    public static class LifecycleRxCleaner implements DefaultLifecycleObserver, LifecycleObserver {
 
         private final Disposable disposable;
 
@@ -271,8 +327,8 @@ public final class Helper {
             this.disposable = disposable;
         }
 
-        @OnLifecycleEvent(Lifecycle.Event.ON_DESTROY)
-        private void onDestroy() {
+        @Override
+        public void onDestroy(@NonNull LifecycleOwner owner) {
             disposable.dispose();
         }
 
@@ -282,12 +338,52 @@ public final class Helper {
         }
     }
 
-    // TODO doc
+    /**
+     * Generate an ID for a RecyclerView ViewHolder without any ID to assign to
+     *
+     * @return Generated ID
+     */
     public static long generateIdForPlaceholder() {
         long result = new Random().nextLong();
         // Make sure nothing collides with an actual ID; nobody has 1M books; it should be fine
         while (result < 1e6) result = new Random().nextLong();
         return result;
+    }
+
+    /**
+     * Try to enrich the given Menu to make its associated icons displayable
+     * Fails silently (with a log) if not possible
+     * Inspired by https://material.io/components/menus/android#dropdown-menus
+     *
+     * @param context Context to use
+     * @param menu    Menu to display
+     */
+    @SuppressLint("RestrictedApi")
+    public static void tryShowMenuIcons(@NonNull Context context, @NonNull Menu menu) {
+        try {
+            if (menu instanceof MenuBuilder) {
+                MenuBuilder builder = (MenuBuilder) menu;
+                builder.setOptionalIconsVisible(true);
+                int iconMarginPx = (int) context.getResources().getDimension(R.dimen.icon_margin);
+                for (MenuItem item : builder.getVisibleItems()) {
+                    if (item.getIcon() != null)
+                        item.setIcon(new InsetDrawable(item.getIcon(), iconMarginPx, 0, iconMarginPx, 0));
+                }
+            }
+        } catch (Exception e) {
+            Timber.i(e);
+        }
+    }
+
+    // TODO doc
+    public static void pause(int millis) {
+        assertNonUiThread();
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            Timber.w(e);
+            Thread.currentThread().interrupt();
+        }
     }
 
     /**

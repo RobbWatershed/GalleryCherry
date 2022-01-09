@@ -7,14 +7,13 @@ import io.objectbox.relation.ToOne;
 @Entity
 public class QueueRecord {
 
-
     @Id
     public long id;
     private ToOne<Content> content;
     private int rank;
 
-    public QueueRecord() {
-    }  // Required for ObjectBox to work
+    public QueueRecord() { // Required by ObjectBox when an alternate constructor exists
+    }
 
     public QueueRecord(long id, int order) {
         content.setTargetId(id);
@@ -35,9 +34,5 @@ public class QueueRecord {
 
     public void setRank(int rank) {
         this.rank = rank;
-    }
-
-    public int getDownloadMode() {
-        return content.getTarget().getDownloadMode();
     }
 }

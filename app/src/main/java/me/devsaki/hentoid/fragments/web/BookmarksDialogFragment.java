@@ -1,5 +1,7 @@
 package me.devsaki.hentoid.fragments.web;
 
+import static androidx.core.view.ViewCompat.requireViewById;
+
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.os.Bundle;
@@ -47,8 +49,7 @@ import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.ToastHelper;
 import me.devsaki.hentoid.viewholders.IDraggableViewHolder;
 import me.devsaki.hentoid.viewholders.TextItem;
-
-import static androidx.core.view.ViewCompat.requireViewById;
+import me.devsaki.hentoid.widget.FastAdapterPreClickSelectHelper;
 
 public final class BookmarksDialogFragment extends DialogFragment implements ItemTouchCallback {
 
@@ -60,6 +61,7 @@ public final class BookmarksDialogFragment extends DialogFragment implements Ite
     private Toolbar selectionToolbar;
     private MenuItem editMenu;
     private MenuItem copyMenu;
+    private MenuItem homeMenu;
     private RecyclerView recyclerView;
     private MaterialButton bookmarkCurrentBtn;
 
@@ -123,7 +125,9 @@ public final class BookmarksDialogFragment extends DialogFragment implements Ite
                     }
                 }
         ).subscribeOn(Schedulers.io())
-                .subscribe(() -> disposable.dispose());
+                .subscribe(() -> {
+                    if (disposable != null) disposable.dispose();
+                });
         super.onDestroy();
     }
 
@@ -149,7 +153,12 @@ public final class BookmarksDialogFragment extends DialogFragment implements Ite
             selectExtension.setSelectable(true);
             selectExtension.setMultiSelect(true);
             selectExtension.setSelectOnLongClick(true);
+            selectExtension.setSelectWithItemUpdate(true);
             selectExtension.setSelectionListener((i, b) -> this.onSelectionChanged());
+
+            FastAdapterPreClickSelectHelper<TextItem<SiteBookmark>> helper = new FastAdapterPreClickSelectHelper<>(selectExtension);
+            fastAdapter.setOnPreClickListener(helper::onPreClickListener);
+            fastAdapter.setOnPreLongClickListener(helper::onPreLongClickListener);
         }
 
         recyclerView = requireViewById(rootView, R.id.bookmarks_list);
@@ -163,11 +172,20 @@ public final class BookmarksDialogFragment extends DialogFragment implements Ite
         recyclerView.setAdapter(fastAdapter);
 
         fastAdapter.setOnClickListener((v, a, i, p) -> onItemClick(i));
+        fastAdapter.addEventHook(
+                new TextItem.DragHandlerTouchEvent<>(
+                        position -> {
+                            RecyclerView.ViewHolder vh = recyclerView.findViewHolderForAdapterPosition(position);
+                            if (vh != null) touchHelper.startDrag(vh);
+                        }
+                )
+        );
 
         selectionToolbar = requireViewById(rootView, R.id.toolbar);
         selectionToolbar.setOnMenuItemClickListener(this::selectionToolbarOnItemClicked);
         editMenu = selectionToolbar.getMenu().findItem(R.id.action_edit);
         copyMenu = selectionToolbar.getMenu().findItem(R.id.action_copy);
+        homeMenu = selectionToolbar.getMenu().findItem(R.id.action_home);
 
         bookmarkCurrentBtn = requireViewById(rootView, R.id.bookmark_current_btn);
         Optional<SiteBookmark> currentBookmark = Stream.of(bookmarks).filter(b -> SiteBookmark.urlsAreSame(b.getUrl(), url)).findFirst();
@@ -189,7 +207,7 @@ public final class BookmarksDialogFragment extends DialogFragment implements Ite
     private List<SiteBookmark> reloadBookmarks(CollectionDAO dao) {
         List<SiteBookmark> bookmarks;
         bookmarks = dao.selectBookmarks(site);
-        itemAdapter.set(Stream.of(bookmarks).map(s -> new TextItem<>(s.getTitle(), s, false, true, touchHelper)).toList());
+        itemAdapter.set(Stream.of(bookmarks).map(b -> new TextItem<>(b.getTitle(), b, true, true, b.isHomepage(), touchHelper)).toList());
         return bookmarks;
     }
 
@@ -207,6 +225,7 @@ public final class BookmarksDialogFragment extends DialogFragment implements Ite
         } else {
             editMenu.setVisible(1 == selectedCount);
             copyMenu.setVisible(1 == selectedCount);
+            homeMenu.setVisible(1 == selectedCount);
             selectionToolbar.setVisibility(View.VISIBLE);
         }
     }
@@ -263,6 +282,9 @@ public final class BookmarksDialogFragment extends DialogFragment implements Ite
             case R.id.action_delete:
                 purgeSelectedItems();
                 break;
+            case R.id.action_home:
+                toggleHomeSelectedItem();
+                break;
             default:
                 selectionToolbar.setVisibility(View.GONE);
                 return false;
@@ -278,11 +300,10 @@ public final class BookmarksDialogFragment extends DialogFragment implements Ite
         Context context = getActivity();
         if (1 == selectedItems.size() && context != null) {
             SiteBookmark b = Stream.of(selectedItems).findFirst().get().getTag();
-            if (b != null)
-                if (Helper.copyPlainTextToClipboard(context, b.getUrl())) {
-                    ToastHelper.toast(context, R.string.web_url_clipboard);
-                    selectionToolbar.setVisibility(View.INVISIBLE);
-                }
+            if (b != null && Helper.copyPlainTextToClipboard(context, b.getUrl())) {
+                ToastHelper.toast(context, R.string.web_url_clipboard);
+                selectionToolbar.setVisibility(View.INVISIBLE);
+            }
         }
     }
 
@@ -294,7 +315,8 @@ public final class BookmarksDialogFragment extends DialogFragment implements Ite
         if (1 == selectedItems.size()) {
             SiteBookmark b = Stream.of(selectedItems).findFirst().get().getTag();
             if (b != null)
-                InputDialog.invokeInputDialog(requireActivity(), R.string.group_edit_name, b.getTitle(), this::onEditTitle);
+                InputDialog.invokeInputDialog(requireActivity(), R.string.group_edit_name, b.getTitle(),
+                        this::onEditTitle, () -> selectExtension.deselect(selectExtension.getSelections()));
         }
     }
 
@@ -338,6 +360,37 @@ public final class BookmarksDialogFragment extends DialogFragment implements Ite
                     }
                     reloadBookmarks(dao);
                     fastAdapter.notifyAdapterDataSetChanged();
+                    selectionToolbar.setVisibility(View.INVISIBLE);
+                } finally {
+                    dao.cleanup();
+                }
+            }
+        }
+    }
+
+    /**
+     * Callback for the "toggle as welcome page" action button
+     */
+    private void toggleHomeSelectedItem() {
+        Set<TextItem<SiteBookmark>> selectedItems = selectExtension.getSelectedItems();
+        Context context = getActivity();
+        if (1 == selectedItems.size() && context != null) {
+            List<SiteBookmark> selectedContent = Stream.of(selectedItems).map(TextItem::getTag).withoutNulls().toList();
+            if (!selectedContent.isEmpty()) {
+                SiteBookmark selectedBookmark = selectedContent.get(0);
+                CollectionDAO dao = new ObjectBoxDAO(context);
+                try {
+                    List<SiteBookmark> bookmarks = dao.selectBookmarks(site);
+                    for (SiteBookmark b : bookmarks) {
+                        if (b.id == selectedBookmark.id) b.setHomepage(!b.isHomepage());
+                        else b.setHomepage(false);
+                    }
+                    dao.insertBookmarks(bookmarks);
+                    reloadBookmarks(dao);
+                    fastAdapter.notifyAdapterDataSetChanged();
+
+                    selectExtension.setSelectOnLongClick(true);
+                    selectExtension.deselect(selectExtension.getSelections());
                     selectionToolbar.setVisibility(View.INVISIBLE);
                 } finally {
                     dao.cleanup();

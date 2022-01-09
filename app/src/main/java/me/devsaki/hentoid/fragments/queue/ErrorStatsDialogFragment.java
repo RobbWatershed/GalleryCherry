@@ -38,7 +38,6 @@ import me.devsaki.hentoid.util.ToastHelper;
 import static androidx.core.view.ViewCompat.requireViewById;
 
 /**
- * Created by Robb on 11/2018
  * Info dialog for download errors details
  */
 public class ErrorStatsDialogFragment extends DialogFragment {
@@ -128,13 +127,13 @@ public class ErrorStatsDialogFragment extends DialogFragment {
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onDownloadEvent(DownloadEvent event) {
-        if (event.eventType == DownloadEvent.EV_COMPLETE) {
+        if (event.eventType == DownloadEvent.Type.EV_COMPLETE) {
             details.setText(R.string.download_complete);
             previousNbErrors = 0;
-        } else if (event.eventType == DownloadEvent.EV_CANCEL) {
+        } else if (event.eventType == DownloadEvent.Type.EV_CANCEL) {
             details.setText(R.string.download_cancelled);
             previousNbErrors = 0;
-        } else if ((event.eventType == DownloadEvent.EV_PROGRESS)
+        } else if ((event.eventType == DownloadEvent.Type.EV_PROGRESS)
                 && (event.pagesKO > previousNbErrors)
                 && (event.content != null)) {
             currentId = event.content.getId();
@@ -161,7 +160,7 @@ public class ErrorStatsDialogFragment extends DialogFragment {
         List<LogHelper.LogEntry> log = new ArrayList<>();
 
         LogHelper.LogInfo errorLogInfo = new LogHelper.LogInfo();
-        errorLogInfo.setLogName("Error");
+        errorLogInfo.setHeaderName("Error");
         errorLogInfo.setFileName("error_log" + content.getId());
         errorLogInfo.setNoDataMessage("No error detected.");
         errorLogInfo.setEntries(log);

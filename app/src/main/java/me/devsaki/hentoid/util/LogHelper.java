@@ -12,6 +12,10 @@ import com.annimon.stream.Stream;
 
 import org.threeten.bp.Instant;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -19,6 +23,7 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 
 import me.devsaki.hentoid.BuildConfig;
+import me.devsaki.hentoid.core.HentoidApp;
 import timber.log.Timber;
 
 /**
@@ -59,6 +64,13 @@ public class LogHelper {
             this.isError = false;
         }
 
+        public LogEntry(@NonNull String message, boolean isError) {
+            this.timestamp = Instant.now();
+            this.message = message;
+            this.chapter = 1;
+            this.isError = isError;
+        }
+
         public LogEntry(@NonNull String message, int chapter, boolean isError) {
             this.timestamp = Instant.now();
             this.message = message;
@@ -89,6 +101,13 @@ public class LogHelper {
         private String header = "";
         private List<LogEntry> entries = Collections.emptyList();
 
+        public LogInfo() {
+        }
+
+        public LogInfo(@NonNull String fileName) {
+            this.fileName = fileName;
+        }
+
         /**
          * Set the log file name, without the extension
          *
@@ -102,11 +121,11 @@ public class LogHelper {
         /**
          * Set display name of the log, for use in its header
          *
-         * @param logName Display name
+         * @param headerName Display name
          */
-        public void setLogName(@NonNull String logName) {
-            this.logName = logName;
-            if (this.fileName.isEmpty()) this.fileName = logName;
+        public void setHeaderName(@NonNull String headerName) {
+            this.logName = headerName;
+            if (this.fileName.isEmpty()) this.fileName = headerName;
         }
 
         /**
@@ -136,6 +155,34 @@ public class LogHelper {
         public void setEntries(@NonNull List<LogEntry> entries) {
             this.entries = entries;
         }
+
+        /**
+         * Add the given message as a log entry
+         *
+         * @param message Message to add as a log entry
+         */
+        public void addEntry(@NonNull String message) {
+            if (entries.isEmpty()) entries = new ArrayList<>();
+            entries.add(new LogEntry(message));
+        }
+
+        /**
+         * Add the given message as a log entry
+         *
+         * @param message    Message to add as a log entry
+         * @param formatArgs Formatting arguments
+         */
+        public void addEntry(@NonNull String message, Object... formatArgs) {
+            if (entries.isEmpty()) entries = new ArrayList<>();
+            entries.add(new LogEntry(message, formatArgs));
+        }
+
+        /**
+         * Clear all log entries
+         */
+        public void clear() {
+            entries.clear();
+        }
     }
 
     /**
@@ -154,11 +201,12 @@ public class LogHelper {
             logStr.append("No activity to report - ").append(info.noDataMessage).append(LINE_SEPARATOR);
         else {
             // Log beginning, end and duration
+            // Unfortunately, Comparator.comparing is API24...
             Instant beginning = Stream.of(info.entries).withoutNulls().min((a, b) -> a.timestamp.compareTo(b.timestamp)).get().timestamp;
             Instant end = Stream.of(info.entries).withoutNulls().max((a, b) -> a.timestamp.compareTo(b.timestamp)).get().timestamp;
             long durationMs = end.toEpochMilli() - beginning.toEpochMilli();
-            logStr.append("Start : ").append(beginning.toString()).append(LINE_SEPARATOR);
-            logStr.append("End : ").append(end.toString()).append(" (").append(Helper.formatDuration(durationMs)).append(")").append(LINE_SEPARATOR);
+            logStr.append("Start : ").append(beginning).append(LINE_SEPARATOR);
+            logStr.append("End : ").append(end).append(" (").append(Helper.formatDuration(durationMs)).append(")").append(LINE_SEPARATOR);
             logStr.append("-----").append(LINE_SEPARATOR);
 
             // Log header
@@ -194,14 +242,20 @@ public class LogHelper {
             logFileName += ".txt";
             String log = buildLog(logInfo);
 
-            // Save it
+            // Save the log; use primary folder by default
             DocumentFile folder = FileHelper.getFolderFromTreeUriString(context, Preferences.getStorageUri());
-            if (null == folder) return null;
-
-            DocumentFile logDocumentFile = FileHelper.findOrCreateDocumentFile(context, folder, "text/plain", logFileName);
-            if (logDocumentFile != null)
-                FileHelper.saveBinary(context, logDocumentFile.getUri(), log.getBytes());
-            return logDocumentFile;
+            if (folder != null) {
+                DocumentFile logDocumentFile = FileHelper.findOrCreateDocumentFile(context, folder, "text/plain", logFileName);
+                if (logDocumentFile != null)
+                    FileHelper.saveBinary(context, logDocumentFile.getUri(), log.getBytes());
+                return logDocumentFile;
+            } else { // If it fails, use device's "download" folder (panic mode)
+                try (OutputStream newDownload = FileHelper.openNewDownloadOutputStream(HentoidApp.getInstance(), logFileName, "text/plain");) {
+                    try (InputStream input = new ByteArrayInputStream(log.getBytes())) {
+                        Helper.copy(input, newDownload);
+                    }
+                }
+            }
         } catch (Exception e) {
             Timber.e(e);
         }

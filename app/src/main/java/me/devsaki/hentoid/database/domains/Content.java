@@ -1,5 +1,7 @@
 package me.devsaki.hentoid.database.domains;
 
+import static me.devsaki.hentoid.util.JsonHelper.MAP_STRINGS;
+
 import android.text.TextUtils;
 
 import androidx.annotation.IntDef;
@@ -38,9 +40,11 @@ import me.devsaki.hentoid.activities.sources.JjgirlsActivity;
 import me.devsaki.hentoid.activities.sources.JpegworldActivity;
 import me.devsaki.hentoid.activities.sources.Link2GalleriesActivity;
 import me.devsaki.hentoid.activities.sources.LusciousActivity;
+import me.devsaki.hentoid.activities.sources.Manhwa18Activity;
 import me.devsaki.hentoid.activities.sources.NextpicturezActivity;
 import me.devsaki.hentoid.activities.sources.PornPicGalleriesActivity;
 import me.devsaki.hentoid.activities.sources.PornPicsActivity;
+import me.devsaki.hentoid.activities.sources.PixivActivity;
 import me.devsaki.hentoid.activities.sources.RedditActivity;
 import me.devsaki.hentoid.activities.sources.XhamsterActivity;
 import me.devsaki.hentoid.activities.sources.XnxxActivity;
@@ -56,10 +60,7 @@ import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.util.StringHelper;
 import timber.log.Timber;
 
-import static me.devsaki.hentoid.util.JsonHelper.MAP_STRINGS;
-
 /**
- * Created by DevSaki on 09/05/2015.
  * Content builder
  */
 @SuppressWarnings("UnusedReturnValue")
@@ -108,6 +109,7 @@ public class Content implements Serializable {
     private long reads = 0;
     private long lastReadDate;
     private int lastReadPageIndex = 0;
+    private boolean manuallyMerged = false;
     @Convert(converter = Content.StringMapConverter.class, dbType = String.class)
     private Map<String, String> bookPreferences = new HashMap<>();
 
@@ -148,8 +150,10 @@ public class Content implements Serializable {
     private int readPagesCount = -1;  // Read pages count fed by payload; only useful to update list display
     @Transient
     private String archiveLocationUri;  // Only used when importing external archives
+    @Transient
+    private boolean updatedProperties = false;  // Only used when using ImageListParsers to indicate the passed Content has been updated
 
-    public Content() {
+    public Content() { // Required by ObjectBox when an alternate constructor exists
     }
 
 
@@ -165,7 +169,7 @@ public class Content implements Serializable {
         this.attributes.clear();
     }
 
-    public void putAttributes(List<Attribute> attributes) {
+    public void putAttributes(Collection<Attribute> attributes) {
         // We do want to compare array references, not content
         if (attributes != null && attributes != this.attributes) {
             this.attributes.clear();
@@ -303,6 +307,10 @@ public class Content implements Serializable {
                 return FapalityActivity.class;
             case ASIANSISTER:
                 return AsianSisterActivity.class;
+            case PIXIV:
+                return PixivActivity.class;
+            case MANHWA18:
+                return Manhwa18Activity.class;
             default:
                 return BaseWebActivity.class;
         }
@@ -753,6 +761,10 @@ public class Content implements Serializable {
         }
     }
 
+    public void clearChapters() {
+        this.chapters.clear();
+    }
+
     public int getDownloadMode() {
         return downloadMode;
     }
@@ -760,6 +772,22 @@ public class Content implements Serializable {
     public Content setDownloadMode(int downloadMode) {
         this.downloadMode = downloadMode;
         return this;
+    }
+
+    public boolean isManuallyMerged() {
+        return manuallyMerged;
+    }
+
+    public void setManuallyMerged(boolean manuallyMerged) {
+        this.manuallyMerged = manuallyMerged;
+    }
+
+    public boolean isUpdatedProperties() {
+        return updatedProperties;
+    }
+
+    public void setUpdatedProperties(boolean updatedProperties) {
+        this.updatedProperties = updatedProperties;
     }
 
     public static class StringMapConverter implements PropertyConverter<Map<String, String>, String> {
@@ -797,12 +825,13 @@ public class Content implements Serializable {
                 isBeingDeleted() == content.isBeingDeleted() &&
                 Objects.equals(getUrl(), content.getUrl()) &&
                 Objects.equals(getCoverImageUrl(), content.getCoverImageUrl()) &&
-                getSite() == content.getSite();
+                getSite() == content.getSite() &&
+                getTitle().equals(content.getTitle());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getUrl(), getCoverImageUrl(), getDownloadDate(), getSize(), getSite(), isFavourite(), isCompleted(), getLastReadDate(), isBeingDeleted());
+        return Objects.hash(getUrl(), getCoverImageUrl(), getDownloadDate(), getSize(), getSite(), isFavourite(), isCompleted(), getLastReadDate(), isBeingDeleted(), getTitle());
     }
 
     public long uniqueHash() {

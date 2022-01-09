@@ -20,6 +20,7 @@ public class DeleteData {
     private static final String KEY_GROUP_IDS = "groupIds";
     private static final String KEY_QUEUE_IDS = "queueIds";
     private static final String KEY_DELETE_GROUPS_ONLY = "deleteGroupsOnly";
+    private static final String KEY_DELETE_ALL_CONTENT_EXCEPT_FAVS = "deleteAllContentExceptFavs";
 
     private DeleteData() {
         throw new UnsupportedOperationException();
@@ -30,23 +31,27 @@ public class DeleteData {
         private final Data.Builder builder = new Data.Builder();
 
         public void setContentIds(List<Long> value) {
-            builder.putLongArray(KEY_CONTENT_IDS, Helper.getPrimitiveLongArrayFromList(value));
+            builder.putLongArray(KEY_CONTENT_IDS, Helper.getPrimitiveArrayFromList(value));
         }
 
         public void setContentPurgeIds(List<Long> value) {
-            builder.putLongArray(KEY_CONTENT_PURGE_IDS, Helper.getPrimitiveLongArrayFromList(value));
+            builder.putLongArray(KEY_CONTENT_PURGE_IDS, Helper.getPrimitiveArrayFromList(value));
         }
 
         public void setGroupIds(List<Long> value) {
-            builder.putLongArray(KEY_GROUP_IDS, Helper.getPrimitiveLongArrayFromList(value));
+            builder.putLongArray(KEY_GROUP_IDS, Helper.getPrimitiveArrayFromList(value));
         }
 
         public void setQueueIds(List<Long> value) {
-            builder.putLongArray(KEY_QUEUE_IDS, Helper.getPrimitiveLongArrayFromList(value));
+            builder.putLongArray(KEY_QUEUE_IDS, Helper.getPrimitiveArrayFromList(value));
         }
 
         public void setDeleteGroupsOnly(boolean value) {
             builder.putBoolean(KEY_DELETE_GROUPS_ONLY, value);
+        }
+
+        public void setDeleteAllContentExceptFavs(boolean value) {
+            builder.putBoolean(KEY_DELETE_ALL_CONTENT_EXCEPT_FAVS, value);
         }
 
         public Data getData() {
@@ -88,6 +93,10 @@ public class DeleteData {
 
         public boolean isDeleteGroupsOnly() {
             return data.getBoolean(KEY_DELETE_GROUPS_ONLY, false);
+        }
+
+        public boolean isDeleteAllContentExceptFavs() {
+            return data.getBoolean(KEY_DELETE_ALL_CONTENT_EXCEPT_FAVS, false);
         }
     }
 }

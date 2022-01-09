@@ -1,5 +1,7 @@
 package me.devsaki.hentoid.fragments.queue;
 
+import static androidx.core.view.ViewCompat.requireViewById;
+
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.os.Bundle;
@@ -47,8 +49,7 @@ import me.devsaki.hentoid.activities.QueueActivity;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.events.ProcessEvent;
-import me.devsaki.hentoid.fragments.DeleteProgressDialogFragment;
-import me.devsaki.hentoid.fragments.library.ErrorsDialogFragment;
+import me.devsaki.hentoid.fragments.ProgressDialogFragment;
 import me.devsaki.hentoid.util.ContentHelper;
 import me.devsaki.hentoid.util.Debouncer;
 import me.devsaki.hentoid.util.Helper;
@@ -62,10 +63,7 @@ import me.devsaki.hentoid.widget.FastAdapterPreClickSelectHelper;
 import me.zhanghai.android.fastscroll.FastScrollerBuilder;
 import timber.log.Timber;
 
-import static androidx.core.view.ViewCompat.requireViewById;
-
 /**
- * Created by Robb on 04/2020
  * Presents the list of downloads with errors
  */
 public class ErrorsFragment extends Fragment implements ItemTouchCallback, ErrorsDialogFragment.Parent, SimpleSwipeDrawerCallback.ItemSwipeCallback {
@@ -233,21 +231,20 @@ public class ErrorsFragment extends Fragment implements ItemTouchCallback, Error
     }
 
     private void initToolbar() {
-        if (!(requireActivity() instanceof QueueActivity)) return;
-        QueueActivity activity = (QueueActivity) requireActivity();
-        MenuItem redownloadAllMenu = activity.getToolbar().getMenu().findItem(R.id.action_redownload_all);
+        QueueActivity queueActivity = activity.get();
+        MenuItem redownloadAllMenu = queueActivity.getToolbar().getMenu().findItem(R.id.action_redownload_all);
         redownloadAllMenu.setOnMenuItemClickListener(item -> {
             onRedownloadAllClick();
             return true;
         });
 
-        MenuItem cancelAllMenu = activity.getToolbar().getMenu().findItem(R.id.action_cancel_all_errors);
+        MenuItem cancelAllMenu = queueActivity.getToolbar().getMenu().findItem(R.id.action_cancel_all_errors);
         cancelAllMenu.setOnMenuItemClickListener(item -> {
             onCancelAllClick();
             return true;
         });
 
-        MenuItem invertMenu = activity.getToolbar().getMenu().findItem(R.id.action_invert_queue);
+        MenuItem invertMenu = queueActivity.getToolbar().getMenu().findItem(R.id.action_invert_queue);
         invertMenu.setOnMenuItemClickListener(item -> {
             viewModel.invertQueue();
             return true;
@@ -255,10 +252,9 @@ public class ErrorsFragment extends Fragment implements ItemTouchCallback, Error
     }
 
     private void initSelectionToolbar() {
-        if (!(requireActivity() instanceof QueueActivity)) return;
-        QueueActivity activity = (QueueActivity) requireActivity();
+        QueueActivity queueActivity = activity.get();
 
-        selectionToolbar = activity.getSelectionToolbar();
+        selectionToolbar = queueActivity.getSelectionToolbar();
         selectionToolbar.setNavigationOnClickListener(v -> {
             selectExtension.deselect(selectExtension.getSelections());
             selectionToolbar.setVisibility(View.GONE);
@@ -282,6 +278,13 @@ public class ErrorsFragment extends Fragment implements ItemTouchCallback, Error
                 break;
             case R.id.action_download_scratch:
                 askRedownloadSelectedScratch();
+                keepToolbar = true;
+                break;
+            case R.id.action_select_all:
+                // Make certain _everything_ is properly selected (selectExtension.select() as doesn't get everything the 1st time it's called)
+                int count = 0;
+                while (selectExtension.getSelections().size() < itemAdapter.getAdapterItemCount() && ++count < 5)
+                    selectExtension.select(Stream.range(0, itemAdapter.getAdapterItemCount()).toList());
                 keepToolbar = true;
                 break;
             default:
@@ -399,7 +402,7 @@ public class ErrorsFragment extends Fragment implements ItemTouchCallback, Error
     private boolean onItemClick(ContentItem item) {
         if (null == selectExtension || selectExtension.getSelections().isEmpty()) {
             Content c = item.getContent();
-            if (c != null && !ContentHelper.openHentoidViewer(requireContext(), c, -1, null))
+            if (c != null && !ContentHelper.openHentoidViewer(requireContext(), c, -1, null, false))
                 ToastHelper.toast(R.string.err_no_content);
 
             return true;
@@ -422,21 +425,21 @@ public class ErrorsFragment extends Fragment implements ItemTouchCallback, Error
     private void onDeleteBooks(@NonNull List<Content> c) {
         if (c.size() > 2) {
             isDeletingAll = true;
-            DeleteProgressDialogFragment.invoke(getParentFragmentManager(), getResources().getString(R.string.cancel_queue_progress));
+            ProgressDialogFragment.invoke(getParentFragmentManager(), getResources().getString(R.string.cancel_queue_progress), getResources().getString(R.string.books));
         }
         viewModel.remove(c);
     }
 
     private void doCancelAll() {
         isDeletingAll = true;
-        DeleteProgressDialogFragment.invoke(getParentFragmentManager(), getResources().getString(R.string.cancel_queue_progress));
+        ProgressDialogFragment.invoke(getParentFragmentManager(), getResources().getString(R.string.cancel_queue_progress), getResources().getString(R.string.books));
         viewModel.removeAll();
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onProcessEvent(ProcessEvent event) {
         // Filter on cancel complete event
-        if (R.id.generic_delete != event.processId) return;
+        if (R.id.generic_progress != event.processId) return;
         if (event.eventType == ProcessEvent.EventType.COMPLETE) onDeleteComplete();
     }
 

@@ -111,7 +111,16 @@ public final class GroupHelper {
         return true;
     }
 
-    public static Content moveBook(@NonNull final Content content, @Nullable final Group group, @NonNull final CollectionDAO dao) {
+    /**
+     * Move the given Content to the given custom Group
+     * NB : A Content can only be affected to one single custom group; moving it to multiple groups will only remember the last one
+     *
+     * @param content Content to move
+     * @param group   Custom group to move the content to
+     * @param dao     DAO to use
+     * @return Updated Content
+     */
+    public static Content moveContentToCustomGroup(@NonNull final Content content, @Nullable final Group group, @NonNull final CollectionDAO dao) {
         Helper.assertNonUiThread();
         // Get all groupItems of the given content for custom grouping
         List<GroupItem> groupItems = dao.selectGroupItems(content.getId(), Grouping.CUSTOM);
@@ -123,7 +132,7 @@ public final class GroupHelper {
                 if (g != null && !g.picture.isNull()) {
                     ImageFile groupCover = g.picture.getTarget();
                     if (groupCover.getContent().getTargetId() == content.getId()) {
-                        updateGroupCover(g, content.getId());
+                        updateGroupCover(g, content.getId(), dao);
                     }
                 }
             }
@@ -148,9 +157,16 @@ public final class GroupHelper {
         return content;
     }
 
-
-    private static void updateGroupCover(@NonNull final Group g, long contentIdToRemove) {
-        List<Content> groupsContents = g.getContents();
+    /**
+     * Update the given Group's cover according to the removed Content ID
+     * NB : This method does _not_ remove any Content from the given Group
+     *
+     * @param g                 Group to update the cover from
+     * @param contentIdToRemove Content ID removed from the given Group
+     * @param dao               DAO to use
+     */
+    private static void updateGroupCover(@NonNull final Group g, long contentIdToRemove, @NonNull CollectionDAO dao) {
+        List<Content> groupsContents = dao.selectContent(Helper.getPrimitiveArrayFromList(g.getContentIds()));
 
         // Empty group cover if there's just one content inside
         if (1 == groupsContents.size() && groupsContents.get(0).getId() == contentIdToRemove) {

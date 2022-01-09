@@ -40,7 +40,6 @@ import com.mikepenz.fastadapter.utils.DragDropUtil;
 
 import org.jetbrains.annotations.NotNull;
 
-import java.io.IOException;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.ArrayList;
@@ -52,6 +51,7 @@ import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.activities.bundles.ContentItemBundle;
 import me.devsaki.hentoid.core.HentoidApp;
 import me.devsaki.hentoid.database.domains.Attribute;
+import me.devsaki.hentoid.database.domains.Chapter;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.database.domains.QueueRecord;
@@ -67,7 +67,6 @@ import me.devsaki.hentoid.util.ThemeHelper;
 import me.devsaki.hentoid.util.download.ContentQueueManager;
 import me.devsaki.hentoid.util.network.HttpHelper;
 import me.devsaki.hentoid.views.CircularProgressView;
-import timber.log.Timber;
 
 public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> implements IExtendedDraggable, ISwipeable {
 
@@ -95,7 +94,7 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
 
     // Drag, drop & swipe
     private final ItemTouchHelper touchHelper;
-    private boolean isSwipeable = true;
+    private final boolean isSwipeable;
 
 
     static {
@@ -118,11 +117,12 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
 
     // Constructor for empty placeholder
     public ContentItem(@ViewType int viewType) {
-        isEmpty = true;
         content = null;
         isSearchActive = false;
         this.viewType = viewType;
         touchHelper = null;
+        isEmpty = true;
+        isSwipeable = true;
         setIdentifier(Helper.generateIdForPlaceholder());
     }
 
@@ -155,6 +155,7 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
         this.touchHelper = touchHelper;
         this.deleteAction = deleteAction;
         isEmpty = (null == content);
+        isSwipeable = true;
 //        setIdentifier(record.id);
         if (content != null) setIdentifier(content.uniqueHash());
         else setIdentifier(Helper.generateIdForPlaceholder());
@@ -192,6 +193,11 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
     @Override
     public boolean isSwipeable() {
         return isSwipeable;
+    }
+
+    @Override
+    public boolean isDirectionSupported(int i) {
+        return (ItemTouchHelper.LEFT == i);
     }
 
     @org.jetbrains.annotations.Nullable
@@ -233,6 +239,10 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
         private ImageView ivExternal;
         private CircularProgressView readingProgress;
         private ImageView ivCompleted;
+        private ImageView ivChapters;
+        private TextView tvChapters;
+        private ImageView ivStorage;
+        private TextView tvStorage;
 
         // Specific to Queued content
         private ProgressBar progressBar;
@@ -269,6 +279,10 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
                 ivExternal = itemView.findViewById(R.id.ivExternal);
                 tvSeries = requireViewById(itemView, R.id.tvSeries);
                 tvTags = requireViewById(itemView, R.id.tvTags);
+                ivChapters = itemView.findViewById(R.id.ivChapters);
+                tvChapters = itemView.findViewById(R.id.tvChapters);
+                ivStorage = itemView.findViewById(R.id.ivStorage);
+                tvStorage = itemView.findViewById(R.id.tvStorage);
                 ivCompleted = requireViewById(itemView, R.id.ivCompleted);
                 readingProgress = requireViewById(itemView, R.id.reading_progress);
             } else if (viewType == ViewType.ONLINE) {
@@ -317,6 +331,8 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
                 if (status != null) item.content.setStatus(status);
                 String stringValue = bundleParser.getCoverUri();
                 if (stringValue != null) item.content.getCover().setFileUri(stringValue);
+                stringValue = bundleParser.getTitle();
+                if (stringValue != null) item.content.setTitle(stringValue);
             }
             debugStr = "objectBox ID=" + item.content.getId() + "; site ID=" + item.content.getUniqueSiteId() + "; hashCode=" + item.content.hashCode();
 
@@ -345,7 +361,7 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
                 attachReadingProgress(item.content);
             if (tvArtist != null) attachArtist(item.content);
             if (tvSeries != null) attachSeries(item.content);
-            if (tvPages != null) attachPages(item.content, item.viewType);
+            if (tvPages != null) attachMetrics(item.content, item.viewType);
             if (tvTags != null) attachTags(item.content);
             attachButtons(item);
 
@@ -389,42 +405,31 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
 
             ivCover.setVisibility(View.VISIBLE);
             // Use content's cookies to load image (useful for ExHentai when viewing queue screen)
-            if (thumbLocation.startsWith("http")
-                    && content.getDownloadParams() != null
-                    && content.getDownloadParams().length() > 2 // Avoid empty and "{}"
-                    && content.getDownloadParams().contains(HttpHelper.HEADER_COOKIE_KEY)) {
+            if (thumbLocation.startsWith("http")) {
+                String cookieStr = null;
+                String referer = null;
 
-                Map<String, String> downloadParams = null;
-                try {
-                    downloadParams = JsonHelper.jsonToObject(content.getDownloadParams(), JsonHelper.MAP_STRINGS);
-                } catch (IOException e) {
-                    Timber.w(e);
+                // Quickly skip JSON deserialization if there are no cookies in downloadParams
+                String downloadParamsStr = content.getDownloadParams();
+                if (downloadParamsStr != null && downloadParamsStr.contains(HttpHelper.HEADER_COOKIE_KEY)) {
+                    Map<String, String> downloadParams = ContentHelper.parseDownloadParams(downloadParamsStr);
+                    cookieStr = downloadParams.get(HttpHelper.HEADER_COOKIE_KEY);
+                    referer = downloadParams.get(HttpHelper.HEADER_REFERER_KEY);
                 }
+                if (null == cookieStr) cookieStr = HttpHelper.getCookies(content.getGalleryUrl());
+                if (null == referer) referer = content.getGalleryUrl();
 
-                if (downloadParams != null && downloadParams.containsKey(HttpHelper.HEADER_COOKIE_KEY)) {
-                    String cookiesStr = downloadParams.get(HttpHelper.HEADER_COOKIE_KEY);
-                    String userAgent = content.getSite().getUserAgent();
-                    if (cookiesStr != null) {
-                        LazyHeaders.Builder builder = new LazyHeaders.Builder()
-                                .addHeader(HttpHelper.HEADER_COOKIE_KEY, cookiesStr)
-                                .addHeader(HttpHelper.HEADER_USER_AGENT, userAgent);
+                LazyHeaders.Builder builder = new LazyHeaders.Builder()
+                        .addHeader(HttpHelper.HEADER_COOKIE_KEY, cookieStr)
+                        .addHeader(HttpHelper.HEADER_REFERER_KEY, referer)
+                        .addHeader(HttpHelper.HEADER_USER_AGENT, content.getSite().getUserAgent());
 
-                        GlideUrl glideUrl = new GlideUrl(thumbLocation, builder.build());
-                        Glide.with(ivCover)
-                                .load(glideUrl)
-                                .apply(glideRequestOptions)
-                                .into(ivCover);
-                        return;
-                    }
-                }
-            }
-
-            if (thumbLocation.startsWith("http"))
+                GlideUrl glideUrl = new GlideUrl(thumbLocation, builder.build());
                 Glide.with(ivCover)
-                        .load(thumbLocation)
+                        .load(glideUrl)
                         .apply(glideRequestOptions)
                         .into(ivCover);
-            else
+            } else
                 Glide.with(ivCover)
                         .load(Uri.parse(thumbLocation))
                         .apply(glideRequestOptions)
@@ -489,7 +494,7 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
             }
         }
 
-        private void attachPages(@NonNull final Content content, @ViewType int viewType) {
+        private void attachMetrics(@NonNull final Content content, @ViewType int viewType) {
             tvPages.setVisibility(0 == content.getQtyPages() ? View.INVISIBLE : View.VISIBLE);
             Context context = tvPages.getContext();
 
@@ -504,11 +509,31 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
                         template = context.getString(R.string.work_pages_queue, nbPages, "");
                 } else
                     template = context.getString(R.string.work_pages_queue, nbPages, "");
+                tvPages.setText(template);
             } else { // Library
-                template = context.getResources().getString(R.string.work_pages_library, content.getNbDownloadedPages(), content.getSize() * 1.0 / (1024 * 1024));
-            }
+                tvPages.setText(String.format(Locale.ENGLISH, "%d", content.getNbDownloadedPages()));
 
-            tvPages.setText(template);
+                if (tvChapters != null) {
+                    List<Chapter> chapters = content.getChapters();
+                    int chapterVisibility = (null == chapters || chapters.isEmpty()) ? View.GONE : View.VISIBLE;
+                    ivChapters.setVisibility(chapterVisibility);
+                    tvChapters.setVisibility(chapterVisibility);
+                    if (chapterVisibility == View.VISIBLE) {
+                        if (content.isManuallyMerged())
+                            ivChapters.setImageResource(R.drawable.ic_action_merge);
+                        else ivChapters.setImageResource(R.drawable.ic_chapter);
+                        tvChapters.setText(String.format(Locale.ENGLISH, "%d", chapters.size()));
+                    }
+                }
+
+                if (tvStorage != null) {
+                    int storageVisibility = content.getDownloadMode() == Content.DownloadMode.STREAM ? View.GONE : View.VISIBLE;
+                    ivStorage.setVisibility(storageVisibility);
+                    tvStorage.setVisibility(storageVisibility);
+                    if (storageVisibility == View.VISIBLE)
+                        tvStorage.setText(context.getString(R.string.library_metrics_storage, content.getSize() / (1024.0 * 1024.0)));
+                }
+            }
         }
 
         private void attachTags(@NonNull final Content content) {
@@ -678,6 +703,7 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
             // Nothing
         }
 
+        @NonNull
         @Override
         public String toString() {
             return super.toString() + " " + debugStr;

@@ -13,12 +13,13 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.annotation.Nullable;
 
-import io.reactivex.Observable;
 import io.reactivex.Single;
 import me.devsaki.hentoid.database.domains.Attribute;
+import me.devsaki.hentoid.database.domains.Chapter;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.ErrorRecord;
 import me.devsaki.hentoid.database.domains.Group;
@@ -51,6 +52,8 @@ public interface CollectionDAO {
 
     @Nullable
     Content selectContentBySourceAndUrl(@NonNull Site site, @NonNull String contentUrl, @NonNull String coverUrl);
+
+    Set<String> selectAllSourceUrls(@NonNull Site site);
 
     List<Content> searchTitlesWith(@NonNull final String word, int[] contentStatusCodes);
 
@@ -103,11 +106,14 @@ public interface CollectionDAO {
 
     void deleteAllExternalBooks();
 
-    // Groups
+
+    // GROUPS
 
     List<Group> selectGroups(long[] groupIds);
 
-    LiveData<List<Group>> selectGroups(int grouping, @Nullable String query, int orderField, boolean orderDesc, int artistGroupVisibility, boolean groupFavouritesOnly);
+    LiveData<List<Group>> selectGroupsLive(int grouping, @Nullable String query, int orderField, boolean orderDesc, int artistGroupVisibility, boolean groupFavouritesOnly);
+
+    List<Group> selectGroups(int grouping, int subType);
 
     List<Group> selectGroups(int grouping);
 
@@ -118,8 +124,6 @@ public interface CollectionDAO {
     Group selectGroupByName(int grouping, @NonNull final String name);
 
     long countGroupsFor(Grouping grouping);
-
-    LiveData<Integer> countLiveGroupsFor(@NonNull final Grouping grouping);
 
     long insertGroup(Group group);
 
@@ -141,6 +145,8 @@ public interface CollectionDAO {
     // High-level queries (internal and external locations)
 
     List<Content> selectStoredContent(boolean nonFavouriteOnly, boolean includeQueued, int orderField, boolean orderDesc);
+
+    List<Long> selectStoredContentIds(boolean nonFavouritesOnly, boolean includeQueued, int orderField, boolean orderDesc);
 
     long countStoredContent(boolean nonFavouriteOnly, boolean includeQueued);
 
@@ -194,7 +200,9 @@ public interface CollectionDAO {
 
     ImageFile selectImageFile(long id);
 
-    LiveData<List<ImageFile>> selectDownloadedImagesFromContent(long id);
+    LiveData<List<ImageFile>> selectDownloadedImagesFromContentLive(long id);
+
+    List<ImageFile> selectDownloadedImagesFromContent(long id);
 
     Map<StatusContent, ImmutablePair<Integer, Long>> countProcessedImagesById(long contentId);
 
@@ -240,6 +248,17 @@ public interface CollectionDAO {
     Single<SparseIntArray> countAttributesPerType(List<Attribute> filter);
 
 
+    // CHAPTERS
+
+    List<Chapter> selectChapters(long contentId);
+
+    void insertChapters(@NonNull final List<Chapter> chapters);
+
+    void deleteChapters(@NonNull final Content content);
+
+    void deleteChapter(@NonNull final Chapter chapter);
+
+
     // SITE HISTORY
 
     SiteHistory selectHistory(@NonNull Site s);
@@ -254,6 +273,9 @@ public interface CollectionDAO {
     List<SiteBookmark> selectAllBookmarks();
 
     List<SiteBookmark> selectBookmarks(@NonNull Site s);
+
+    @Nullable
+    SiteBookmark selectHomepage(@NonNull Site s);
 
     long insertBookmark(@NonNull SiteBookmark bookmark);
 

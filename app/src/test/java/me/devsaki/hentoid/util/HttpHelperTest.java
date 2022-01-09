@@ -19,10 +19,9 @@ public class HttpHelperTest {
         assertEquals("ext", HttpHelper.getExtensionFromUri("http://aa.bb/a/u.ext?k.ext2"));
     }
 
-    @Test
     public void getDomainFromUri() {
-        /* android.net.Uri is a stub when running unit tests :(
-        assertEquals("domain.com", HttpHelper.getDomainFromUri("http://domain.ext/aaa?ooo"));
+        /* Unfortunately, android.net.Uri is a stub when running unit tests :(
+        assertEquals("domain.ext", HttpHelper.getDomainFromUri("http://domain.ext/aaa?ooo"));
         assertEquals("domain.com", HttpHelper.getDomainFromUri("http://www.domain.com/u.ext"));
         assertEquals("domain.com", HttpHelper.getDomainFromUri("www.domain.com/aa/u.1.ext"));
          */

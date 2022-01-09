@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.view.View
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.commit
 import androidx.lifecycle.ViewModelProvider
@@ -13,40 +14,45 @@ import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceScreen
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.snackbar.BaseTransientBottomBar
+import com.google.android.material.snackbar.Snackbar
 import io.reactivex.Single
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposables
 import io.reactivex.schedulers.Schedulers
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.activities.DrawerEditActivity
 import me.devsaki.hentoid.activities.PinPreferenceActivity
 import me.devsaki.hentoid.core.startLocalActivity
 import me.devsaki.hentoid.core.withArguments
 import me.devsaki.hentoid.database.ObjectBoxDAO
-import me.devsaki.hentoid.fragments.DeleteProgressDialogFragment
-import me.devsaki.hentoid.services.ExternalImportService
+import me.devsaki.hentoid.fragments.ProgressDialogFragment
 import me.devsaki.hentoid.services.UpdateCheckService
 import me.devsaki.hentoid.util.FileHelper
 import me.devsaki.hentoid.util.Preferences
 import me.devsaki.hentoid.util.ThemeHelper
 import me.devsaki.hentoid.util.ToastHelper
+import me.devsaki.hentoid.util.network.OkHttpClientSingleton
 import me.devsaki.hentoid.viewmodels.PreferencesViewModel
 import me.devsaki.hentoid.viewmodels.ViewModelFactory
+import me.devsaki.hentoid.workers.ExternalImportWorker
 import me.devsaki.hentoid.workers.ImportWorker
 import me.devsaki.hentoid.workers.UpdateDownloadWorker
 
 
-class PreferenceFragment : PreferenceFragmentCompat(),
+class PreferencesFragment : PreferenceFragmentCompat(),
     SharedPreferences.OnSharedPreferenceChangeListener {
 
     lateinit var viewModel: PreferencesViewModel
-    private var rootView: View? = null
 
     companion object {
         private const val KEY_ROOT = "root"
 
-        fun newInstance(rootKey: String?): PreferenceFragment {
-            val fragment = PreferenceFragment()
+        fun newInstance(rootKey: String?): PreferencesFragment {
+            val fragment = PreferencesFragment()
             if (rootKey != null) {
                 val args = Bundle()
                 args.putCharSequence(KEY_ROOT, rootKey)
@@ -68,7 +74,6 @@ class PreferenceFragment : PreferenceFragmentCompat(),
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        rootView = view
         val vmFactory = ViewModelFactory(requireActivity().application)
         viewModel =
             ViewModelProvider(requireActivity(), vmFactory)[PreferencesViewModel::class.java]
@@ -83,7 +88,6 @@ class PreferenceFragment : PreferenceFragmentCompat(),
     override fun onDestroy() {
         preferenceScreen.sharedPreferences
             .unregisterOnSharedPreferenceChangeListener(this)
-        rootView = null // Avoid leaks
         super.onDestroy()
     }
 
@@ -103,6 +107,7 @@ class PreferenceFragment : PreferenceFragmentCompat(),
             Preferences.Key.SETTINGS_FOLDER,
             Preferences.Key.SD_STORAGE_URI -> onHentoidFolderChanged()
             Preferences.Key.EXTERNAL_LIBRARY_URI -> onExternalFolderChanged()
+            Preferences.Key.BROWSER_DNS_OVER_HTTPS -> onDoHChanged()
         }
     }
 
@@ -113,7 +118,7 @@ class PreferenceFragment : PreferenceFragmentCompat(),
                 true
             }
             Preferences.Key.EXTERNAL_LIBRARY -> {
-                if (ExternalImportService.isRunning()) {
+                if (ExternalImportWorker.isRunning(requireContext())) {
                     ToastHelper.toast(R.string.pref_import_running)
                 } else {
                     LibRefreshDialogFragment.invoke(parentFragmentManager, false, true, true)
@@ -185,7 +190,7 @@ class PreferenceFragment : PreferenceFragmentCompat(),
         }
 
     override fun onNavigateToScreen(preferenceScreen: PreferenceScreen) {
-        val preferenceFragment = PreferenceFragment().withArguments {
+        val preferenceFragment = PreferencesFragment().withArguments {
             putString(ARG_PREFERENCE_ROOT, preferenceScreen.key)
         }
 
@@ -231,6 +236,25 @@ class PreferenceFragment : PreferenceFragmentCompat(),
         ThemeHelper.applyTheme(requireActivity() as AppCompatActivity)
     }
 
+    private fun onDoHChanged() {
+        if (Preferences.getDnsOverHttps() > -1 && listView != null) {
+            val snack = Snackbar.make(
+                listView,
+                R.string.doh_warning,
+                BaseTransientBottomBar.LENGTH_INDEFINITE
+            )
+            snack.view.findViewById<TextView>(com.google.android.material.R.id.snackbar_text).maxLines =
+                5
+            snack.setAction("OK") { snack.dismiss() }
+            snack.show()
+        }
+        runBlocking {
+            launch(Dispatchers.Default) {
+                OkHttpClientSingleton.reset()
+            }
+        }
+    }
+
     private fun populateMemoryUsage() {
         val folder =
             FileHelper.getFolderFromTreeUriString(requireContext(), Preferences.getStorageUri())
@@ -247,38 +271,43 @@ class PreferenceFragment : PreferenceFragmentCompat(),
         val dao = ObjectBoxDAO(activity)
         var searchDisposable = Disposables.empty()
 
-        searchDisposable = Single.fromCallable { dao.selectStoredContent(true, false, -1, false) }
-            .subscribeOn(Schedulers.io())
-            .observeOn(AndroidSchedulers.mainThread())
-            .subscribe { list ->
-                MaterialAlertDialogBuilder(
-                    requireContext(),
-                    ThemeHelper.getIdForCurrentTheme(requireContext(), R.style.Theme_Light_Dialog)
-                )
-                    .setIcon(R.drawable.ic_warning)
-                    .setCancelable(false)
-                    .setTitle(R.string.app_name)
-                    .setMessage(getString(R.string.pref_ask_delete_all_except_favs, list.size))
-                    .setPositiveButton(
-                        R.string.yes
-                    ) { dialog1: DialogInterface, _: Int ->
-                        dao.cleanup()
-                        dialog1.dismiss()
-                        searchDisposable.dispose()
-                        DeleteProgressDialogFragment.invoke(
-                            parentFragmentManager,
-                            resources.getString(R.string.delete_title)
+        searchDisposable =
+            Single.fromCallable { dao.selectStoredContentIds(true, false, -1, false) }
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe { list ->
+                    MaterialAlertDialogBuilder(
+                        requireContext(),
+                        ThemeHelper.getIdForCurrentTheme(
+                            requireContext(),
+                            R.style.Theme_Light_Dialog
                         )
-                        viewModel.deleteItems(list)
-                    }
-                    .setNegativeButton(
-                        R.string.no
-                    ) { dialog12: DialogInterface, _: Int ->
-                        dao.cleanup()
-                        dialog12.dismiss()
-                    }
-                    .create()
-                    .show()
-            }
+                    )
+                        .setIcon(R.drawable.ic_warning)
+                        .setCancelable(false)
+                        .setTitle(R.string.app_name)
+                        .setMessage(getString(R.string.pref_ask_delete_all_except_favs, list.size))
+                        .setPositiveButton(
+                            R.string.yes
+                        ) { dialog1: DialogInterface, _: Int ->
+                            dao.cleanup()
+                            dialog1.dismiss()
+                            searchDisposable.dispose()
+                            ProgressDialogFragment.invoke(
+                                parentFragmentManager,
+                                resources.getString(R.string.delete_title),
+                                resources.getString(R.string.books)
+                            )
+                            viewModel.deleteAllItemsExceptFavourites()
+                        }
+                        .setNegativeButton(
+                            R.string.no
+                        ) { dialog12: DialogInterface, _: Int ->
+                            dao.cleanup()
+                            dialog12.dismiss()
+                        }
+                        .create()
+                        .show()
+                }
     }
 }

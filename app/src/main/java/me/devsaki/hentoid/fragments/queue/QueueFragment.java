@@ -1,5 +1,7 @@
 package me.devsaki.hentoid.fragments.queue;
 
+import static androidx.core.view.ViewCompat.requireViewById;
+
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
@@ -70,10 +72,11 @@ import me.devsaki.hentoid.events.DownloadEvent;
 import me.devsaki.hentoid.events.DownloadPreparationEvent;
 import me.devsaki.hentoid.events.ProcessEvent;
 import me.devsaki.hentoid.events.ServiceDestroyedEvent;
-import me.devsaki.hentoid.fragments.DeleteProgressDialogFragment;
+import me.devsaki.hentoid.fragments.ProgressDialogFragment;
 import me.devsaki.hentoid.ui.BlinkAnimation;
 import me.devsaki.hentoid.util.ContentHelper;
 import me.devsaki.hentoid.util.Debouncer;
+import me.devsaki.hentoid.util.FileHelper;
 import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.PermissionHelper;
 import me.devsaki.hentoid.util.Preferences;
@@ -94,10 +97,7 @@ import me.devsaki.hentoid.widget.FastAdapterPreClickSelectHelper;
 import me.zhanghai.android.fastscroll.FastScrollerBuilder;
 import timber.log.Timber;
 
-import static androidx.core.view.ViewCompat.requireViewById;
-
 /**
- * Created by avluis on 04/10/2016.
  * Presents the list of works currently downloading to the user.
  */
 public class QueueFragment extends Fragment implements ItemTouchCallback, SimpleSwipeDrawerCallback.ItemSwipeCallback {
@@ -211,8 +211,8 @@ public class QueueFragment extends Fragment implements ItemTouchCallback, Simple
         dlPreparationProgressBar = requireViewById(rootView, R.id.queueDownloadPreparationProgressBar);
 
         // Both queue control buttons actually just need to send a signal that will be processed accordingly by whom it may concern
-        btnStart.setOnClickListener(v -> EventBus.getDefault().post(new DownloadEvent(DownloadEvent.EV_UNPAUSE)));
-        btnPause.setOnClickListener(v -> EventBus.getDefault().post(new DownloadEvent(DownloadEvent.EV_PAUSE)));
+        btnStart.setOnClickListener(v -> EventBus.getDefault().post(new DownloadEvent(DownloadEvent.Type.EV_UNPAUSE)));
+        btnPause.setOnClickListener(v -> EventBus.getDefault().post(new DownloadEvent(DownloadEvent.Type.EV_PAUSE)));
 
         // Book list
         recyclerView = requireViewById(rootView, R.id.queue_list);
@@ -296,10 +296,9 @@ public class QueueFragment extends Fragment implements ItemTouchCallback, Simple
     }
 
     private void initToolbar() {
-        if (!(requireActivity() instanceof QueueActivity)) return;
-        QueueActivity activity = (QueueActivity) requireActivity();
+        QueueActivity queueActivity = activity.get();
 
-        MenuItem searchMenu = activity.getToolbar().getMenu().findItem(R.id.action_search);
+        MenuItem searchMenu = queueActivity.getToolbar().getMenu().findItem(R.id.action_search);
         searchMenu.setOnActionExpandListener(new MenuItem.OnActionExpandListener() {
             @Override
             public boolean onMenuItemActionExpand(MenuItem item) {
@@ -351,7 +350,7 @@ public class QueueFragment extends Fragment implements ItemTouchCallback, Simple
             }
         });
 
-        MenuItem cancelAllMenu = activity.getToolbar().getMenu().findItem(R.id.action_cancel_all);
+        MenuItem cancelAllMenu = queueActivity.getToolbar().getMenu().findItem(R.id.action_cancel_all);
         cancelAllMenu.setOnMenuItemClickListener(item -> {
             // Don't do anything if the queue is empty
             if (0 == itemAdapter.getAdapterItemCount()) return true;
@@ -375,17 +374,17 @@ public class QueueFragment extends Fragment implements ItemTouchCallback, Simple
                         .show();
             return true;
         });
-        MenuItem settingsMenu = activity.getToolbar().getMenu().findItem(R.id.action_queue_prefs);
+        MenuItem settingsMenu = queueActivity.getToolbar().getMenu().findItem(R.id.action_queue_prefs);
         settingsMenu.setOnMenuItemClickListener(item -> {
             onSettingsClick();
             return true;
         });
-        MenuItem invertMenu = activity.getToolbar().getMenu().findItem(R.id.action_invert_queue);
+        MenuItem invertMenu = queueActivity.getToolbar().getMenu().findItem(R.id.action_invert_queue);
         invertMenu.setOnMenuItemClickListener(item -> {
             viewModel.invertQueue();
             return true;
         });
-        errorStatsMenu = activity.getToolbar().getMenu().findItem(R.id.action_error_stats);
+        errorStatsMenu = queueActivity.getToolbar().getMenu().findItem(R.id.action_error_stats);
         errorStatsMenu.setOnMenuItemClickListener(item -> {
             showErrorStats();
             return true;
@@ -490,6 +489,46 @@ public class QueueFragment extends Fragment implements ItemTouchCallback, Simple
         Timber.v("Event received : %s", event.eventType);
         errorStatsMenu.setVisible(event.pagesKO > 0);
 
+        displayMotive(event);
+
+        switch (event.eventType) {
+            case DownloadEvent.Type.EV_PREPARATION:
+                updateControlBar(event.step, event.log);
+                break;
+            case DownloadEvent.Type.EV_PROGRESS:
+                updateProgress(event.pagesOK, event.pagesKO, event.pagesTotal, event.getNumberRetries(), event.downloadedSizeB, false);
+                break;
+            case DownloadEvent.Type.EV_UNPAUSE:
+                ContentQueueManager.getInstance().unpauseQueue();
+                ObjectBoxDB db = ObjectBoxDB.getInstance(requireActivity());
+                db.updateContentStatus(StatusContent.PAUSED, StatusContent.DOWNLOADING);
+                ContentQueueManager.getInstance().resumeQueue(requireActivity());
+                updateProgressFirstItem(false);
+                update(event.eventType);
+                break;
+            case DownloadEvent.Type.EV_SKIP:
+                // Books switch / display handled directly by the adapter
+                queueInfo.setText("");
+                dlPreparationProgressBar.setVisibility(View.GONE);
+                break;
+            case DownloadEvent.Type.EV_COMPLETE:
+                dlPreparationProgressBar.setVisibility(View.GONE);
+                if (0 == itemAdapter.getAdapterItemCount()) errorStatsMenu.setVisible(false);
+                update(event.eventType);
+                break;
+            case DownloadEvent.Type.EV_PAUSE:
+            case DownloadEvent.Type.EV_CANCEL:
+            case DownloadEvent.Type.EV_INTERRUPT_CONTENT:
+            default:
+                // Don't update the UI if it is in the process of canceling all items
+                if (isCancelingAll) return;
+                dlPreparationProgressBar.setVisibility(View.GONE);
+                updateProgressFirstItem(true);
+                update(event.eventType);
+        }
+    }
+
+    private void displayMotive(@NonNull final DownloadEvent event) {
         // Display motive, if any
         @StringRes int motiveMsg;
         switch (event.motive) {
@@ -500,8 +539,9 @@ public class QueueFragment extends Fragment implements ItemTouchCallback, Simple
                 motiveMsg = R.string.paused_no_wifi;
                 break;
             case DownloadEvent.Motive.NO_STORAGE:
-                motiveMsg = R.string.paused_no_storage;
-                break;
+                String spaceLeft = FileHelper.formatHumanReadableSize(event.downloadedSizeB);
+                Snackbar.make(recyclerView, getString(R.string.paused_no_storage, spaceLeft), BaseTransientBottomBar.LENGTH_SHORT).show();
+                return;
             case DownloadEvent.Motive.NO_DOWNLOAD_FOLDER:
                 motiveMsg = R.string.paused_no_dl_folder;
                 break;
@@ -521,35 +561,34 @@ public class QueueFragment extends Fragment implements ItemTouchCallback, Simple
         }
         if (motiveMsg != -1)
             Snackbar.make(recyclerView, getString(motiveMsg), BaseTransientBottomBar.LENGTH_SHORT).show();
+    }
 
-        switch (event.eventType) {
-            case DownloadEvent.EV_PROGRESS:
-                updateProgress(event.pagesOK, event.pagesKO, event.pagesTotal, event.getNumberRetries(), event.downloadedSizeB, false);
-                break;
-            case DownloadEvent.EV_UNPAUSE:
-                ContentQueueManager.getInstance().unpauseQueue();
-                ObjectBoxDB db = ObjectBoxDB.getInstance(requireActivity());
-                db.updateContentStatus(StatusContent.PAUSED, StatusContent.DOWNLOADING);
-                ContentQueueManager.getInstance().resumeQueue(requireActivity());
-                updateProgressFirstItem(false);
-                update(event.eventType);
-                break;
-            case DownloadEvent.EV_SKIP:
-                // Books switch / display handled directly by the adapter
-                queueInfo.setText("");
-                dlPreparationProgressBar.setVisibility(View.GONE);
-                break;
-            case DownloadEvent.EV_COMPLETE:
-                dlPreparationProgressBar.setVisibility(View.GONE);
-                if (0 == itemAdapter.getAdapterItemCount()) errorStatsMenu.setVisible(false);
-                update(event.eventType);
-                break;
-            default: // EV_PAUSE, EV_CANCEL
-                // Don't update the UI if it is in the process of canceling all items
-                if (isCancelingAll) return;
-                dlPreparationProgressBar.setVisibility(View.GONE);
-                updateProgressFirstItem(true);
-                update(event.eventType);
+    private String formatStep(@DownloadEvent.Step int step, String log) {
+        String standardMsg = activity.get().getResources().getString(formatStep(step));
+        if (log != null) return standardMsg + " " + log;
+        else return standardMsg;
+    }
+
+    private @StringRes
+    int formatStep(@DownloadEvent.Step int step) {
+        switch (step) {
+            case DownloadEvent.Step.INIT:
+                return R.string.step_init;
+            case DownloadEvent.Step.PROCESS_IMG:
+                return R.string.step_prepare_img;
+            case DownloadEvent.Step.FETCH_IMG:
+                return R.string.step_fetch_img;
+            case DownloadEvent.Step.PREPARE_FOLDER:
+                return R.string.step_prepare_folder;
+            case DownloadEvent.Step.PREPARE_DOWNLOAD:
+                return R.string.step_prepare_download;
+            case DownloadEvent.Step.SAVE_QUEUE:
+                return R.string.step_save_queue;
+            case DownloadEvent.Step.START_DOWNLOAD:
+                return R.string.step_start_download;
+            case DownloadEvent.Step.NONE:
+            default: // NONE
+                return R.string.empty;
         }
     }
 
@@ -655,9 +694,9 @@ public class QueueFragment extends Fragment implements ItemTouchCallback, Simple
      * @param eventType Event type that triggered the update, if any (See types described in DownloadEvent); -1 if none
      */
     private void update(int eventType) {
-        int bookDiff = (eventType == DownloadEvent.EV_CANCEL) ? 1 : 0; // Cancel event means a book will be removed very soon from the queue
+        int bookDiff = (eventType == DownloadEvent.Type.EV_CANCEL) ? 1 : 0; // Cancel event means a book will be removed very soon from the queue
         isEmpty = (0 == itemAdapter.getAdapterItemCount() - bookDiff);
-        isPaused = (!isEmpty && (eventType == DownloadEvent.EV_PAUSE || ContentQueueManager.getInstance().isQueuePaused() || !ContentQueueManager.getInstance().isQueueActive()));
+        isPaused = (!isEmpty && (eventType == DownloadEvent.Type.EV_PAUSE || ContentQueueManager.getInstance().isQueuePaused() || !ContentQueueManager.getInstance().isQueueActive()));
         updateControlBar();
     }
 
@@ -726,6 +765,10 @@ public class QueueFragment extends Fragment implements ItemTouchCallback, Simple
     }
 
     private void updateControlBar() {
+        updateControlBar(DownloadEvent.Step.NONE, null);
+    }
+
+    private void updateControlBar(@DownloadEvent.Step int preparationStep, String log) {
         boolean isActive = (!isEmpty && !isPaused);
 
         Timber.d("Queue state : E/P/A > %s/%s/%s -- %s elements", isEmpty, isPaused, isActive, itemAdapter.getAdapterItemCount());
@@ -734,7 +777,11 @@ public class QueueFragment extends Fragment implements ItemTouchCallback, Simple
         mEmptyText.setVisibility(isEmpty ? View.VISIBLE : View.GONE);
 
         // Update control bar status
-        queueInfo.setText(isPreparingDownload && !isEmpty ? R.string.queue_preparing : R.string.queue_empty2);
+        if (isPreparingDownload && !isEmpty) {
+            queueInfo.setText(R.string.queue_preparing);
+        } else {
+            queueInfo.setText(formatStep(preparationStep, log));
+        }
 
         if (isActive) {
             btnPause.setVisibility(View.VISIBLE);
@@ -794,7 +841,7 @@ public class QueueFragment extends Fragment implements ItemTouchCallback, Simple
                 c = new ObjectBoxDAO(requireContext()).selectContent(c.getId());
 
             if (c != null) {
-                if (!ContentHelper.openHentoidViewer(requireContext(), c, -1, null))
+                if (!ContentHelper.openHentoidViewer(requireContext(), c, -1, null, false))
                     ToastHelper.toast(R.string.err_no_content);
                 return true;
             } else return false;
@@ -817,21 +864,21 @@ public class QueueFragment extends Fragment implements ItemTouchCallback, Simple
     private void onCancelBooks(@NonNull List<Content> c) {
         if (c.size() > 2) {
             isCancelingAll = true;
-            DeleteProgressDialogFragment.invoke(getParentFragmentManager(), getResources().getString(R.string.cancel_queue_progress));
+            ProgressDialogFragment.invoke(getParentFragmentManager(), getResources().getString(R.string.cancel_queue_progress), getResources().getString(R.string.books));
         }
         viewModel.cancel(c);
     }
 
     private void onCancelAll() {
         isCancelingAll = true;
-        DeleteProgressDialogFragment.invoke(getParentFragmentManager(), getResources().getString(R.string.cancel_queue_progress));
+        ProgressDialogFragment.invoke(getParentFragmentManager(), getResources().getString(R.string.cancel_queue_progress), getResources().getString(R.string.books));
         viewModel.cancelAll();
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onProcessEvent(ProcessEvent event) {
         // Filter on cancel complete event
-        if (R.id.generic_delete != event.processId) return;
+        if (R.id.generic_progress != event.processId) return;
         if (event.eventType == ProcessEvent.EventType.COMPLETE) onCancelComplete();
     }
 
@@ -934,10 +981,9 @@ public class QueueFragment extends Fragment implements ItemTouchCallback, Simple
     }
 
     private void initSelectionToolbar() {
-        if (!(requireActivity() instanceof QueueActivity)) return;
-        QueueActivity activity = (QueueActivity) requireActivity();
+        QueueActivity queueActivity = activity.get();
 
-        selectionToolbar = activity.getSelectionToolbar();
+        selectionToolbar = queueActivity.getSelectionToolbar();
         selectionToolbar.setNavigationOnClickListener(v -> {
             selectExtension.deselect(selectExtension.getSelections());
             selectionToolbar.setVisibility(View.GONE);
@@ -970,6 +1016,13 @@ public class QueueFragment extends Fragment implements ItemTouchCallback, Simple
                 break;
             case R.id.action_download_scratch:
                 askRedownloadSelectedScratch();
+                keepToolbar = true;
+                break;
+            case R.id.action_select_all:
+                // Make certain _everything_ is properly selected (selectExtension.select() as doesn't get everything the 1st time it's called)
+                int count = 0;
+                while (selectExtension.getSelections().size() < itemAdapter.getAdapterItemCount() && ++count < 5)
+                    selectExtension.select(Stream.range(0, itemAdapter.getAdapterItemCount()).toList());
                 keepToolbar = true;
                 break;
             default:

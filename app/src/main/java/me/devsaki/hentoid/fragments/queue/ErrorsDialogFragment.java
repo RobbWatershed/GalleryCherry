@@ -1,4 +1,4 @@
-package me.devsaki.hentoid.fragments.library;
+package me.devsaki.hentoid.fragments.queue;
 
 import android.content.Context;
 import android.os.Bundle;
@@ -28,7 +28,6 @@ import me.devsaki.hentoid.util.LogHelper;
 import me.devsaki.hentoid.util.ToastHelper;
 
 /**
- * Created by Robb on 11/2018
  * Info dialog for download errors details
  */
 public class ErrorsDialogFragment extends DialogFragment {
@@ -126,7 +125,7 @@ public class ErrorsDialogFragment extends DialogFragment {
         List<LogHelper.LogEntry> log = new ArrayList<>();
 
         LogHelper.LogInfo errorLogInfo = new LogHelper.LogInfo();
-        errorLogInfo.setLogName("Error");
+        errorLogInfo.setHeaderName("Error");
         errorLogInfo.setFileName("error_log" + content.getId());
         errorLogInfo.setNoDataMessage("No error detected.");
         errorLogInfo.setEntries(log);

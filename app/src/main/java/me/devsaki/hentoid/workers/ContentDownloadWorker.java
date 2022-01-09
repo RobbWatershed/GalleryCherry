@@ -2,10 +2,7 @@ package me.devsaki.hentoid.workers;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
-import android.graphics.Rect;
+import android.net.Uri;
 import android.util.Pair;
 import android.webkit.MimeTypeMap;
 
@@ -30,6 +27,7 @@ import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.threeten.bp.Instant;
 
+import java.io.File;
 import java.io.IOException;
 import java.security.InvalidParameterException;
 import java.util.ArrayList;
@@ -38,6 +36,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.annotation.Nullable;
 
@@ -61,6 +60,7 @@ import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.events.DownloadEvent;
 import me.devsaki.hentoid.events.DownloadReviveEvent;
 import me.devsaki.hentoid.json.JsonContent;
+import me.devsaki.hentoid.json.sources.PixivIllustMetadata;
 import me.devsaki.hentoid.notification.action.UserActionNotification;
 import me.devsaki.hentoid.notification.download.DownloadErrorNotification;
 import me.devsaki.hentoid.notification.download.DownloadProgressNotification;
@@ -68,13 +68,16 @@ import me.devsaki.hentoid.notification.download.DownloadSuccessNotification;
 import me.devsaki.hentoid.notification.download.DownloadWarningNotification;
 import me.devsaki.hentoid.parsers.ContentParserFactory;
 import me.devsaki.hentoid.parsers.images.ImageListParser;
+import me.devsaki.hentoid.util.ArchiveHelper;
 import me.devsaki.hentoid.util.ContentHelper;
 import me.devsaki.hentoid.util.FileHelper;
+import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.ImageHelper;
 import me.devsaki.hentoid.util.JsonHelper;
 import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.util.StringHelper;
 import me.devsaki.hentoid.util.download.ContentQueueManager;
+import me.devsaki.hentoid.util.download.DownloadHelper;
 import me.devsaki.hentoid.util.download.RequestQueueManager;
 import me.devsaki.hentoid.util.exception.AccountException;
 import me.devsaki.hentoid.util.exception.CaptchaException;
@@ -99,8 +102,12 @@ public class ContentDownloadWorker extends BaseWorker {
     // DAO is full scope to avoid putting try / finally's everywhere and be sure to clear it upon worker stop
     private final CollectionDAO dao;
 
-    private boolean downloadCanceled;                       // True if a Cancel event has been processed; false by default
-    private boolean downloadSkipped;                        // True if a Skip event has been processed; false by default
+    // True if a Cancel event has been processed; false by default
+    private final AtomicBoolean downloadCanceled = new AtomicBoolean(false);
+    // True if a Skip event has been processed; false by default
+    private final AtomicBoolean downloadSkipped = new AtomicBoolean(false);
+    // downloadCanceled || downloadSkipped
+    private final AtomicBoolean downloadInterrupted = new AtomicBoolean(false);
     private boolean isCloudFlareBlocked;
 
     private final NotificationManager userActionNotificationManager;
@@ -132,7 +139,8 @@ public class ContentDownloadWorker extends BaseWorker {
     @Override
     void onInterrupt() {
         requestQueueManager.cancelQueue();
-        downloadCanceled = true;
+        downloadCanceled.set(true);
+        downloadInterrupted.set(true);
     }
 
     @Override
@@ -153,7 +161,7 @@ public class ContentDownloadWorker extends BaseWorker {
     private void iterateQueue() {
         // Process these here to avoid initializing notifications for downloads that will never start
         if (ContentQueueManager.getInstance().isQueuePaused()) {
-            Timber.w("Queue is paused. Download aborted.");
+            Timber.i("Queue is paused. Download aborted.");
             return;
         }
 
@@ -180,50 +188,56 @@ public class ContentDownloadWorker extends BaseWorker {
 
         Context context = getApplicationContext();
 
+        EventBus.getDefault().post(DownloadEvent.fromPreparationStep(DownloadEvent.Step.INIT));
+
         // Clear previously created requests
         compositeDisposable.clear();
 
         // Check if queue has been paused
         if (ContentQueueManager.getInstance().isQueuePaused()) {
-            Timber.w("Queue is paused. Download aborted.");
+            Timber.i("Queue is paused. Download aborted.");
             return new ImmutablePair<>(QueuingResult.QUEUE_END, null);
         }
 
         @NetworkHelper.Connectivity int connectivity = NetworkHelper.getConnectivity(context);
         // Check for network connectivity
         if (NetworkHelper.Connectivity.NO_INTERNET == connectivity) {
-            Timber.w("No internet connection available. Queue paused.");
-            EventBus.getDefault().post(new DownloadEvent(DownloadEvent.EV_PAUSE, DownloadEvent.Motive.NO_INTERNET));
+            Timber.i("No internet connection available. Queue paused.");
+            EventBus.getDefault().post(DownloadEvent.fromPauseMotive(DownloadEvent.Motive.NO_INTERNET));
             return new ImmutablePair<>(QueuingResult.QUEUE_END, null);
         }
 
         // Check for wifi if wifi-only mode is on
         if (Preferences.isQueueWifiOnly() && NetworkHelper.Connectivity.WIFI != connectivity) {
-            Timber.w("No wi-fi connection available. Queue paused.");
-            EventBus.getDefault().post(new DownloadEvent(DownloadEvent.EV_PAUSE, DownloadEvent.Motive.NO_WIFI));
+            Timber.i("No wi-fi connection available. Queue paused.");
+            EventBus.getDefault().post(DownloadEvent.fromPauseMotive(DownloadEvent.Motive.NO_WIFI));
             return new ImmutablePair<>(QueuingResult.QUEUE_END, null);
         }
 
         // Check for download folder existence, available free space and credentials
         if (Preferences.getStorageUri().trim().isEmpty()) {
-            Timber.w("No download folder set"); // May happen if user has skipped it during the intro
-            EventBus.getDefault().post(new DownloadEvent(DownloadEvent.EV_PAUSE, DownloadEvent.Motive.NO_DOWNLOAD_FOLDER));
+            Timber.i("No download folder set"); // May happen if user has skipped it during the intro
+            EventBus.getDefault().post(DownloadEvent.fromPauseMotive(DownloadEvent.Motive.NO_DOWNLOAD_FOLDER));
             return new ImmutablePair<>(QueuingResult.QUEUE_END, null);
         }
+
         DocumentFile rootFolder = FileHelper.getFolderFromTreeUriString(context, Preferences.getStorageUri());
         if (null == rootFolder) {
-            Timber.w("Download folder has not been found. Please select it again."); // May happen if the folder has been moved or deleted after it has been selected
-            EventBus.getDefault().post(new DownloadEvent(DownloadEvent.EV_PAUSE, DownloadEvent.Motive.DOWNLOAD_FOLDER_NOT_FOUND));
+            Timber.i("Download folder has not been found. Please select it again."); // May happen if the folder has been moved or deleted after it has been selected
+            EventBus.getDefault().post(DownloadEvent.fromPauseMotive(DownloadEvent.Motive.DOWNLOAD_FOLDER_NOT_FOUND));
             return new ImmutablePair<>(QueuingResult.QUEUE_END, null);
         }
-        if (-2 == FileHelper.createNoMedia(context, rootFolder)) {
-            Timber.w("Insufficient credentials on download folder. Please select it again.");
-            EventBus.getDefault().post(new DownloadEvent(DownloadEvent.EV_PAUSE, DownloadEvent.Motive.DOWNLOAD_FOLDER_NO_CREDENTIALS));
+
+        if (!FileHelper.isUriPermissionPersisted(context.getContentResolver(), rootFolder.getUri())) {
+            Timber.i("Insufficient credentials on download folder. Please select it again.");
+            EventBus.getDefault().post(DownloadEvent.fromPauseMotive(DownloadEvent.Motive.DOWNLOAD_FOLDER_NO_CREDENTIALS));
             return new ImmutablePair<>(QueuingResult.QUEUE_END, null);
         }
-        if (new FileHelper.MemoryUsageFigures(context, rootFolder).getfreeUsageMb() < 2) {
-            Timber.w("Device very low on storage space (<2 MB). Queue paused.");
-            EventBus.getDefault().post(new DownloadEvent(DownloadEvent.EV_PAUSE, DownloadEvent.Motive.NO_STORAGE));
+
+        long spaceLeftBytes = new FileHelper.MemoryUsageFigures(context, rootFolder).getfreeUsageBytes();
+        if (spaceLeftBytes < 2L * 1024 * 1024) {
+            Timber.i("Device very low on storage space (<2 MB). Queue paused.");
+            EventBus.getDefault().post(DownloadEvent.fromPauseMotive(DownloadEvent.Motive.NO_STORAGE, spaceLeftBytes));
             return new ImmutablePair<>(QueuingResult.QUEUE_END, null);
         }
 
@@ -232,43 +246,47 @@ public class ContentDownloadWorker extends BaseWorker {
         // Check if there is a first item to process
         List<QueueRecord> queue = dao.selectQueue();
         if (queue.isEmpty()) {
-            Timber.w("Queue is empty. Download aborted.");
+            Timber.i("Queue is empty. Download aborted.");
             return new ImmutablePair<>(QueuingResult.QUEUE_END, null);
         }
 
         Content content = queue.get(0).getContent().getTarget();
-        @Content.DownloadMode int downloadMode = queue.get(0).getDownloadMode();
 
         if (null == content) {
-            Timber.w("Content is unavailable. Download aborted.");
+            Timber.i("Content is unavailable. Download aborted.");
             dao.deleteQueue(0);
             content = new Content().setId(queue.get(0).getContent().getTargetId()); // Must supply content ID to the event for the UI to update properly
-            EventBus.getDefault().post(new DownloadEvent(content, DownloadEvent.EV_COMPLETE, 0, 0, 0, 0));
+            EventBus.getDefault().post(new DownloadEvent(content, DownloadEvent.Type.EV_COMPLETE, 0, 0, 0, 0));
             notificationManager.notify(new DownloadErrorNotification());
             return new ImmutablePair<>(QueuingResult.CONTENT_SKIPPED, null);
         }
 
         if (StatusContent.DOWNLOADED == content.getStatus()) {
-            Timber.w("Content is already downloaded. Download aborted.");
+            Timber.i("Content is already downloaded. Download aborted.");
             dao.deleteQueue(0);
-            EventBus.getDefault().post(new DownloadEvent(content, DownloadEvent.EV_COMPLETE, 0, 0, 0, 0));
+            EventBus.getDefault().post(new DownloadEvent(content, DownloadEvent.Type.EV_COMPLETE, 0, 0, 0, 0));
             notificationManager.notify(new DownloadErrorNotification(content));
             return new ImmutablePair<>(QueuingResult.CONTENT_SKIPPED, null);
         }
 
-        downloadCanceled = false;
-        downloadSkipped = false;
+        downloadCanceled.set(false);
+        downloadSkipped.set(false);
+        downloadInterrupted.set(false);
         isCloudFlareBlocked = false;
+        @Content.DownloadMode int downloadMode = content.getDownloadMode();
         dao.deleteErrorRecords(content.getId());
 
-        boolean hasError = false;
-        int nbErrors = 0;
         // == PREPARATION PHASE ==
         // Parse images from the site (using image list parser)
         //   - Case 1 : If no image is present => parse all images
         //   - Case 2 : If all images are in ERROR state => re-parse all images
         //   - Case 3 : If some images are in ERROR state and the site has backup URLs
         //     => re-parse images with ERROR state using their order as reference
+        boolean hasError = false;
+        int nbErrors = 0;
+
+        EventBus.getDefault().post(DownloadEvent.fromPreparationStep(DownloadEvent.Step.PROCESS_IMG));
+
         List<ImageFile> images = content.getImageFiles();
         if (null == images)
             images = new ArrayList<>();
@@ -281,6 +299,7 @@ public class ContentDownloadWorker extends BaseWorker {
                 || nbErrors == images.size()
                 || (nbErrors > 0 && content.getSite().hasBackupURLs())
         ) {
+            EventBus.getDefault().post(DownloadEvent.fromPreparationStep(DownloadEvent.Step.FETCH_IMG));
             try {
                 List<ImageFile> newImages = ContentHelper.fetchImageURLs(content, targetImageStatus);
                 // Cases 1 and 2 : Replace existing images with the parsed images
@@ -297,6 +316,8 @@ public class ContentDownloadWorker extends BaseWorker {
                     }
                 }
 
+                if (content.isUpdatedProperties()) dao.insertContent(content);
+
                 // Manually insert new images (without using insertContent)
                 long contentId = content.getId();
                 dao.replaceImageList(contentId, images);
@@ -305,24 +326,24 @@ public class ContentDownloadWorker extends BaseWorker {
                 if (null == content)
                     return new ImmutablePair<>(QueuingResult.CONTENT_SKIPPED, null);
             } catch (CaptchaException cpe) {
-                Timber.w(cpe, "A captcha has been found while parsing %s. Download aborted.", content.getTitle());
+                Timber.i(cpe, "A captcha has been found while parsing %s. Download aborted.", content.getTitle());
                 logErrorRecord(content.getId(), ErrorType.CAPTCHA, content.getUrl(), CONTENT_PART_IMAGE_LIST, "Captcha found. Please go back to the site, browse a book and solve the captcha.");
                 hasError = true;
             } catch (AccountException ae) {
                 String description = String.format("Your %s account does not allow to download the book %s. %s. Download aborted.", content.getSite().getDescription(), content.getTitle(), ae.getMessage());
-                Timber.w(ae, description);
+                Timber.i(ae, description);
                 logErrorRecord(content.getId(), ErrorType.ACCOUNT, content.getUrl(), CONTENT_PART_IMAGE_LIST, description);
                 hasError = true;
             } catch (LimitReachedException lre) {
                 String description = String.format("The bandwidth limit has been reached while parsing %s. %s. Download aborted.", content.getTitle(), lre.getMessage());
-                Timber.w(lre, description);
+                Timber.i(lre, description);
                 logErrorRecord(content.getId(), ErrorType.SITE_LIMIT, content.getUrl(), CONTENT_PART_IMAGE_LIST, description);
                 hasError = true;
             } catch (PreparationInterruptedException ie) {
                 Timber.i(ie, "Preparation of %s interrupted", content.getTitle());
                 // not an error
             } catch (EmptyResultException ere) {
-                Timber.w(ere, "No images have been found while parsing %s. Download aborted.", content.getTitle());
+                Timber.i(ere, "No images have been found while parsing %s. Download aborted.", content.getTitle());
                 logErrorRecord(content.getId(), ErrorType.PARSING, content.getUrl(), CONTENT_PART_IMAGE_LIST, "No images have been found. Error = " + ere.getMessage());
                 hasError = true;
             } catch (Exception e) {
@@ -342,14 +363,16 @@ public class ContentDownloadWorker extends BaseWorker {
 
         if (hasError) {
             moveToErrors(content.getId());
-            EventBus.getDefault().post(new DownloadEvent(content, DownloadEvent.EV_COMPLETE, 0, 0, 0, 0));
+            EventBus.getDefault().post(new DownloadEvent(content, DownloadEvent.Type.EV_COMPLETE, 0, 0, 0, 0));
             return new ImmutablePair<>(QueuingResult.CONTENT_FAILED, content);
         }
 
         // In case the download has been canceled while in preparation phase
         // NB : No log of any sort because this is normal behaviour
-        if (downloadCanceled || downloadSkipped)
+        if (downloadInterrupted.get())
             return new ImmutablePair<>(QueuingResult.CONTENT_SKIPPED, null);
+
+        EventBus.getDefault().post(DownloadEvent.fromPreparationStep(DownloadEvent.Step.PREPARE_FOLDER));
 
         // Create destination folder for images to be downloaded
         DocumentFile dir = ContentHelper.getOrCreateContentDownloadDir(getApplicationContext(), content);
@@ -388,25 +411,35 @@ public class ContentDownloadWorker extends BaseWorker {
 
         // == DOWNLOAD PHASE ==
 
+        EventBus.getDefault().post(DownloadEvent.fromPreparationStep(DownloadEvent.Step.PREPARE_DOWNLOAD));
+
         // Wait a delay corresponding to book browsing if we're between two sources with "simulate human reading"
         if (content.getSite().isSimulateHumanReading() && requestQueueManager.isSimulateHumanReading()) {
             int delayMs = 3000 + new Random().nextInt(2000);
-            try {
-                Thread.sleep(delayMs);
-            } catch (InterruptedException e) {
-                Timber.w(e);
-                Thread.currentThread().interrupt();
-            }
+            Helper.pause(delayMs);
         }
 
+        if (content.getSite().getParallelDownloadCap() > 0 &&
+                (requestQueueManager.getDownloadThreadCount() > content.getSite().getParallelDownloadCap()
+                        || -1 == requestQueueManager.getDownloadThreadCount())
+        ) {
+            Timber.d("Setting parallel downloads count to %s", content.getSite().getParallelDownloadCap());
+            requestQueueManager.setDownloadThreadCount(getApplicationContext(), content.getSite().getParallelDownloadCap());
+        }
+        if (0 == content.getSite().getParallelDownloadCap() && requestQueueManager.getDownloadThreadCount() > -1) {
+            Timber.d("Resetting parallel downloads count to default");
+            requestQueueManager.setDownloadThreadCount(getApplicationContext(), -1);
+        }
         requestQueueManager.setSimulateHumanReading(content.getSite().isSimulateHumanReading());
+        requestQueueManager.setNbRequestsPerSecond(content.getSite().getRequestsCapPerSecond());
 
         // In case the download has been canceled while in preparation phase
         // NB : No log of any sort because this is normal behaviour
-        if (downloadCanceled || downloadSkipped)
+        if (downloadInterrupted.get())
             return new ImmutablePair<>(QueuingResult.CONTENT_SKIPPED, null);
 
         List<ImageFile> pagesToParse = new ArrayList<>();
+        List<ImageFile> ugoirasToDownload = new ArrayList<>();
 
         // Queue image download requests
         for (ImageFile img : images) {
@@ -430,6 +463,8 @@ public class ContentDownloadWorker extends BaseWorker {
                 if (img.isCover() && images.size() > 1) img.setBackupUrl(images.get(1).getUrl());
 
                 if (img.needsPageParsing()) pagesToParse.add(img);
+                else if (img.getDownloadParams().contains(ContentHelper.KEY_DL_PARAMS_UGOIRA_FRAMES))
+                    ugoirasToDownload.add(img);
                 else requestQueueManager.queueRequest(buildImageDownloadRequest(img, dir, content));
             }
         }
@@ -449,10 +484,28 @@ public class ContentDownloadWorker extends BaseWorker {
             );
         }
 
+        // Parse ugoiras for images
+        if (!ugoirasToDownload.isEmpty()) {
+            final Site siteFinal = content.getSite();
+            compositeDisposable.add(
+                    Observable.fromIterable(ugoirasToDownload)
+                            .observeOn(Schedulers.io())
+                            .subscribe(
+                                    img -> downloadAndUnzipUgoira(img, dir, siteFinal),
+                                    t -> {
+                                        // Nothing; just exit the Rx chain
+                                    }
+                            )
+            );
+        }
+
+        EventBus.getDefault().post(DownloadEvent.fromPreparationStep(DownloadEvent.Step.SAVE_QUEUE));
 
         if (ContentHelper.updateQueueJson(getApplicationContext(), dao))
-            Timber.i("Queue JSON successfully saved");
-        else Timber.w("Queue JSON saving failed");
+            Timber.i(context.getString(R.string.queue_json_saved));
+        else Timber.w(context.getString(R.string.queue_json_failed));
+
+        EventBus.getDefault().post(DownloadEvent.fromPreparationStep(DownloadEvent.Step.START_DOWNLOAD));
 
         return new ImmutablePair<>(QueuingResult.CONTENT_FOUND, content);
     }
@@ -501,7 +554,7 @@ public class ContentDownloadWorker extends BaseWorker {
             }
 
             notificationManager.notify(new DownloadProgressNotification(content.getTitle(), progress, totalPages, (int) sizeDownloadedMB, (int) estimateBookSizeMB, avgSpeedKbps));
-            EventBus.getDefault().post(new DownloadEvent(content, DownloadEvent.EV_PROGRESS, pagesOK, pagesKO, totalPages, sizeDownloadedBytes));
+            EventBus.getDefault().post(new DownloadEvent(content, DownloadEvent.Type.EV_PROGRESS, pagesOK, pagesKO, totalPages, sizeDownloadedBytes));
 
             // If the "skip large downloads on mobile data" is on, skip if needed
             if (Preferences.isDownloadLargeOnlyWifi() &&
@@ -514,24 +567,18 @@ public class ContentDownloadWorker extends BaseWorker {
                     // Move the book to the errors queue and signal it as skipped
                     logErrorRecord(content.getId(), ErrorType.WIFI, content.getUrl(), "Book", "");
                     moveToErrors(content.getId());
-                    EventBus.getDefault().post(new DownloadEvent(DownloadEvent.EV_SKIP));
+                    EventBus.getDefault().post(new DownloadEvent(DownloadEvent.Type.EV_SKIP));
                 }
             }
 
             // We're polling the DB because we can't observe LiveData from a background service
-            try {
-                //noinspection BusyWait
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                Timber.w(e);
-                Thread.currentThread().interrupt();
-            }
+            Helper.pause(1000);
         }
-        while (!isDone && !downloadCanceled && !downloadSkipped && !contentQueueManager.isQueuePaused());
+        while (!isDone && !downloadInterrupted.get() && !contentQueueManager.isQueuePaused());
 
         if (contentQueueManager.isQueuePaused()) {
             Timber.d("Content download paused : %s [%s]", content.getTitle(), content.getId());
-            if (downloadCanceled) notificationManager.cancel();
+            if (downloadCanceled.get()) notificationManager.cancel();
         } else {
             // NB : no need to supply the Content itself as it has not been updated during the loop
             completeDownload(content.getId(), content.getTitle(), pagesOK, pagesKO, sizeDownloadedBytes);
@@ -554,7 +601,7 @@ public class ContentDownloadWorker extends BaseWorker {
             return;
         }
 
-        if (!downloadCanceled && !downloadSkipped) {
+        if (!downloadInterrupted.get()) {
             List<ImageFile> images = content.getImageFiles();
             if (null == images) images = Collections.emptyList();
             int nbImages = (int) Stream.of(images).filter(i -> !i.isCover()).count(); // Don't count the cover
@@ -659,18 +706,19 @@ public class ContentDownloadWorker extends BaseWorker {
 
                 // Signals current download as completed
                 Timber.d("CompleteActivity : OK = %s; KO = %s", pagesOK, pagesKO);
-                EventBus.getDefault().post(new DownloadEvent(content, DownloadEvent.EV_COMPLETE, pagesOK, pagesKO, nbImages, sizeDownloadedBytes));
+                EventBus.getDefault().post(new DownloadEvent(content, DownloadEvent.Type.EV_COMPLETE, pagesOK, pagesKO, nbImages, sizeDownloadedBytes));
 
-                if (ContentHelper.updateQueueJson(getApplicationContext(), dao))
-                    Timber.i("Queue JSON successfully saved");
-                else Timber.w("Queue JSON saving failed");
+                Context context = getApplicationContext();
+                if (ContentHelper.updateQueueJson(context, dao))
+                    Timber.i(context.getString(R.string.queue_json_saved));
+                else Timber.w(context.getString(R.string.queue_json_failed));
 
                 // Tracking Event (Download Completed)
                 HentoidApp.trackDownloadEvent("Completed");
             } else {
                 Timber.w("completeDownload : Directory %s does not exist - JSON not saved", content.getStorageUri());
             }
-        } else if (downloadCanceled) {
+        } else if (downloadCanceled.get()) {
             Timber.d("Content download canceled: %s [%s]", title, contentId);
             notificationManager.cancel();
         } else {
@@ -689,19 +737,7 @@ public class ContentDownloadWorker extends BaseWorker {
         String pageUrl = HttpHelper.fixUrl(img.getPageUrl(), site.getUrl());
 
         // Apply image download parameters
-        Map<String, String> requestHeaders = new HashMap<>();
-        String cookieStr = null;
-        Map<String, String> downloadParams = ContentHelper.parseDownloadParams(img.getDownloadParams());
-        if (!downloadParams.isEmpty()) {
-            if (downloadParams.containsKey(HttpHelper.HEADER_COOKIE_KEY))
-                cookieStr = downloadParams.get(HttpHelper.HEADER_COOKIE_KEY);
-            if (downloadParams.containsKey(HttpHelper.HEADER_REFERER_KEY)) {
-                String value = downloadParams.get(HttpHelper.HEADER_REFERER_KEY);
-                if (value != null) requestHeaders.put(HttpHelper.HEADER_REFERER_KEY, value);
-            }
-        }
-        if (null == cookieStr) cookieStr = HttpHelper.getCookies(pageUrl);
-        requestHeaders.put(HttpHelper.HEADER_COOKIE_KEY, cookieStr);
+        Map<String, String> requestHeaders = getRequestHeaders(pageUrl, img.getDownloadParams());
 
         try {
             List<Pair<String, String>> reqHeaders = HttpHelper.webkitRequestHeadersToOkHttpHeaders(requestHeaders, img.getPageUrl());
@@ -713,22 +749,22 @@ public class ContentDownloadWorker extends BaseWorker {
             // Queue the picture
             requestQueueManager.queueRequest(buildImageDownloadRequest(img, dir, content));
         } catch (UnsupportedOperationException | IllegalArgumentException e) {
-            Timber.w(e, "Could not read image from page %s", img.getPageUrl());
-            updateImageStatusUri(img, false, "");
+            Timber.i(e, "Could not read image from page %s", img.getPageUrl());
+            updateImageProperties(img, false, "");
             logErrorRecord(content.getId(), ErrorType.PARSING, img.getPageUrl(), "Page " + img.getName(), "Could not read image from page " + img.getPageUrl() + " " + e.getMessage());
         } catch (IOException ioe) {
-            Timber.w(ioe, "Could not read page data from %s", img.getPageUrl());
-            updateImageStatusUri(img, false, "");
+            Timber.i(ioe, "Could not read page data from %s", img.getPageUrl());
+            updateImageProperties(img, false, "");
             logErrorRecord(content.getId(), ErrorType.IO, img.getPageUrl(), "Page " + img.getName(), "Could not read page data from " + img.getPageUrl() + " " + ioe.getMessage());
         } catch (LimitReachedException lre) {
             String description = String.format("The bandwidth limit has been reached while parsing %s. %s. Download aborted.", content.getTitle(), lre.getMessage());
-            Timber.w(lre, description);
-            updateImageStatusUri(img, false, "");
+            Timber.i(lre, description);
+            updateImageProperties(img, false, "");
             logErrorRecord(content.getId(), ErrorType.SITE_LIMIT, content.getUrl(), "Page " + img.getName(), description);
             throw lre;
         } catch (EmptyResultException ere) {
-            Timber.w(ere, "No images have been found while parsing %s", content.getTitle());
-            updateImageStatusUri(img, false, "");
+            Timber.i(ere, "No images have been found while parsing %s", content.getTitle());
+            updateImageProperties(img, false, "");
             logErrorRecord(content.getId(), ErrorType.PARSING, img.getPageUrl(), "Page " + img.getName(), "No images have been found. Error = " + ere.getMessage());
         }
     }
@@ -742,19 +778,7 @@ public class ContentDownloadWorker extends BaseWorker {
         String imageUrl = HttpHelper.fixUrl(img.getUrl(), site.getUrl());
 
         // Apply image download parameters
-        Map<String, String> requestHeaders = new HashMap<>();
-        String cookieStr = null;
-        Map<String, String> downloadParams = ContentHelper.parseDownloadParams(img.getDownloadParams());
-        if (!downloadParams.isEmpty()) {
-            if (downloadParams.containsKey(HttpHelper.HEADER_COOKIE_KEY))
-                cookieStr = downloadParams.get(HttpHelper.HEADER_COOKIE_KEY);
-            if (downloadParams.containsKey(HttpHelper.HEADER_REFERER_KEY)) {
-                String value = downloadParams.get(HttpHelper.HEADER_REFERER_KEY);
-                if (value != null) requestHeaders.put(HttpHelper.HEADER_REFERER_KEY, value);
-            }
-        }
-        if (null == cookieStr) cookieStr = HttpHelper.getCookies(imageUrl);
-        requestHeaders.put(HttpHelper.HEADER_COOKIE_KEY, cookieStr);
+        Map<String, String> requestHeaders = getRequestHeaders(imageUrl, img.getDownloadParams());
 
         final String backupUrlFinal = HttpHelper.fixUrl(img.getBackupUrl(), site.getUrl());
 
@@ -764,7 +788,7 @@ public class ContentDownloadWorker extends BaseWorker {
                 requestHeaders,
                 site.useHentoidAgent(),
                 site.useWebviewAgent(),
-                result -> onImageRequestSuccess(result, img, dir, site.hasImageProcessing(), backupUrlFinal, requestHeaders),
+                result -> onImageRequestSuccess(result, img, dir, backupUrlFinal, requestHeaders),
                 error -> onRequestError(error, content, img, dir, backupUrlFinal, requestHeaders));
     }
 
@@ -772,33 +796,32 @@ public class ContentDownloadWorker extends BaseWorker {
             Map.Entry<byte[], Map<String, String>> result,
             @NonNull ImageFile img,
             @NonNull DocumentFile dir,
-            boolean hasImageProcessing,
             @NonNull String backupUrl,
             @NonNull Map<String, String> requestHeaders) {
         try {
             if (result != null) {
-                DocumentFile imgFile = processAndSaveImage(img, dir, result.getValue().get(HttpHelper.HEADER_CONTENT_TYPE), result.getKey(), hasImageProcessing);
+                DocumentFile imgFile = processAndSaveImage(img, dir, result.getValue().get(HttpHelper.HEADER_CONTENT_TYPE), result.getKey());
                 if (imgFile != null)
-                    updateImageStatusUri(img, true, imgFile.getUri().toString());
+                    updateImageProperties(img, true, imgFile.getUri().toString());
             } else {
-                updateImageStatusUri(img, false, "");
+                updateImageProperties(img, false, "");
                 logErrorRecord(img.getContent().getTargetId(), ErrorType.NETWORKING, img.getUrl(), img.getName(), "No picture (result is null)");
             }
         } catch (UnsupportedContentException e) {
-            Timber.w(e);
+            Timber.i(e);
             if (!backupUrl.isEmpty()) tryUsingBackupUrl(img, dir, backupUrl, requestHeaders);
             else {
-                Timber.w("No backup URL found - aborting this image");
-                updateImageStatusUri(img, false, "");
+                Timber.d("No backup URL found - aborting this image");
+                updateImageProperties(img, false, "");
                 logErrorRecord(img.getContent().getTargetId(), ErrorType.UNDEFINED, img.getUrl(), "Picture " + img.getName(), e.getMessage());
             }
         } catch (InvalidParameterException e) {
-            Timber.w(e, "Processing error - Image %s not processed properly", img.getUrl());
-            updateImageStatusUri(img, false, "");
+            Timber.i(e, "Processing error - Image %s not processed properly", img.getUrl());
+            updateImageProperties(img, false, "");
             logErrorRecord(img.getContent().getTargetId(), ErrorType.IMG_PROCESSING, img.getUrl(), "Picture " + img.getName(), "Download params : " + img.getDownloadParams());
         } catch (IOException | IllegalArgumentException e) {
-            Timber.w(e, "I/O error - Image %s not saved in dir %s", img.getUrl(), dir.getUri());
-            updateImageStatusUri(img, false, "");
+            Timber.i(e, "I/O error - Image %s not saved in dir %s", img.getUrl(), dir.getUri());
+            updateImageProperties(img, false, "");
             logErrorRecord(img.getContent().getTargetId(), ErrorType.IO, img.getUrl(), "Picture " + img.getName(), "Save failed in dir " + dir.getUri() + " " + e.getMessage());
         }
     }
@@ -835,14 +858,14 @@ public class ContentDownloadWorker extends BaseWorker {
             cause = "Network parse error";
         }
 
-        Timber.w(error);
+        Timber.d(error);
 
-        updateImageStatusUri(img, false, "");
+        updateImageProperties(img, false, "");
         logErrorRecord(content.getId(), ErrorType.NETWORKING, img.getUrl(), img.getName(), cause + "; HTTP statusCode=" + statusCode + "; message=" + message);
         // Handle cloudflare blocks
         if (content.getSite().isUseCloudflare() && 503 == statusCode && !isCloudFlareBlocked) {
             isCloudFlareBlocked = true; // prevent associated events & notifs to be fired more than once
-            EventBus.getDefault().post(new DownloadEvent(DownloadEvent.EV_PAUSE, DownloadEvent.Motive.STALE_CREDENTIALS));
+            EventBus.getDefault().post(DownloadEvent.fromPauseMotive(DownloadEvent.Motive.STALE_CREDENTIALS));
             dao.clearDownloadParams(content.getId());
 
             final String cfCookie = StringHelper.protect(HttpHelper.parseCookies(HttpHelper.getCookies(img.getUrl())).get(Consts.CLOUDFLARE_COOKIE));
@@ -864,7 +887,7 @@ public class ContentDownloadWorker extends BaseWorker {
 
         Site site = content.getSite();
         ImageListParser parser = ContentParserFactory.getInstance().getImageListParser(site);
-        Chapter chp = (img.getChapter() != null) ? img.getChapter().getTarget() : null;
+        Chapter chp = img.getLinkedChapter();
 
         // per Volley behaviour, this method is called on the UI thread
         // -> need to create a new thread to do a network call
@@ -876,7 +899,7 @@ public class ContentDownloadWorker extends BaseWorker {
                                 imageFile -> processBackupImage(imageFile.orElse(null), img, dir, content),
                                 throwable ->
                                 {
-                                    updateImageStatusUri(img, false, "");
+                                    updateImageProperties(img, false, "");
                                     logErrorRecord(img.getContent().getTargetId(), ErrorType.NETWORKING, img.getUrl(), img.getName(), "Cannot process backup image : message=" + throwable.getMessage());
                                     Timber.e(throwable, "Error processing backup image.");
                                 }
@@ -914,8 +937,7 @@ public class ContentDownloadWorker extends BaseWorker {
     private DocumentFile processAndSaveImage(@NonNull ImageFile img,
                                              @NonNull DocumentFile dir,
                                              @Nullable String contentType,
-                                             byte[] binaryContent,
-                                             boolean hasImageProcessing) throws IOException, UnsupportedContentException {
+                                             byte[] binaryContent) throws IOException, UnsupportedContentException {
 
         if (!dir.exists()) {
             // NB : Should not raise an exception here because that's what happens when some previously queued downloads are completed
@@ -924,13 +946,6 @@ public class ContentDownloadWorker extends BaseWorker {
             return null;
         }
 
-        byte[] processedBinaryContent = null;
-        if (hasImageProcessing && !img.getName().equals(Consts.THUMB_FILE_NAME)) {
-            if (img.getDownloadParams() != null && !img.getDownloadParams().isEmpty())
-                processedBinaryContent = processImage(img.getDownloadParams(), binaryContent);
-            else throw new InvalidParameterException("No processing parameters found");
-        }
-        binaryContent = (null == processedBinaryContent) ? binaryContent : processedBinaryContent;
         img.setSize((null == binaryContent) ? 0 : binaryContent.length);
 
         // Determine the extension of the file
@@ -941,7 +956,7 @@ public class ContentDownloadWorker extends BaseWorker {
         if (img.getSize() < 1024 && binaryContent != null) {
             mimeType = ImageHelper.getMimeTypeFromPictureBinary(binaryContent);
             if (mimeType.isEmpty() || mimeType.equals(ImageHelper.MIME_IMAGE_GENERIC)) {
-                Timber.w("Small non-image data received from %s", img.getUrl());
+                Timber.i("Small non-image data received from %s", img.getUrl());
                 throw new UnsupportedContentException(String.format("Small non-image data received from %s - data not processed", img.getUrl()));
             }
             fileExt = FileHelper.getExtensionFromMimeType(mimeType);
@@ -1005,13 +1020,13 @@ public class ContentDownloadWorker extends BaseWorker {
     }
 
     /**
-     * Update given image status in DB
+     * Update given image properties in DB
      *
      * @param img     Image to update
      * @param success True if download is successful; false if download failed
      */
-    private void updateImageStatusUri(@NonNull ImageFile img, boolean success,
-                                      @NonNull String uriStr) {
+    private void updateImageProperties(@NonNull ImageFile img, boolean success,
+                                       @NonNull String uriStr) {
         img.setStatus(success ? StatusContent.DOWNLOADED : StatusContent.ERROR);
         img.setFileUri(uriStr);
         if (success) img.setDownloadParams("");
@@ -1027,22 +1042,24 @@ public class ContentDownloadWorker extends BaseWorker {
     @Subscribe
     public void onDownloadEvent(DownloadEvent event) {
         switch (event.eventType) {
-            case DownloadEvent.EV_PAUSE:
+            case DownloadEvent.Type.EV_PAUSE:
                 dao.updateContentStatus(StatusContent.DOWNLOADING, StatusContent.PAUSED);
                 requestQueueManager.cancelQueue();
                 ContentQueueManager.getInstance().pauseQueue();
                 notificationManager.cancel();
                 break;
-            case DownloadEvent.EV_CANCEL:
+            case DownloadEvent.Type.EV_CANCEL:
                 requestQueueManager.cancelQueue();
-                downloadCanceled = true;
+                downloadCanceled.set(true);
+                downloadInterrupted.set(true);
                 // Tracking Event (Download Canceled)
                 HentoidApp.trackDownloadEvent("Cancelled");
                 break;
-            case DownloadEvent.EV_SKIP:
+            case DownloadEvent.Type.EV_SKIP:
                 dao.updateContentStatus(StatusContent.DOWNLOADING, StatusContent.PAUSED);
                 requestQueueManager.cancelQueue();
-                downloadSkipped = true;
+                downloadSkipped.set(true);
+                downloadInterrupted.set(true);
                 // Tracking Event (Download Skipped)
                 HentoidApp.trackDownloadEvent("Skipped");
                 break;
@@ -1051,10 +1068,28 @@ public class ContentDownloadWorker extends BaseWorker {
         }
     }
 
+    // TODO doc
+    private Map<String, String> getRequestHeaders(@NonNull final String url, @NonNull final String downloadParamsStr) {
+        Map<String, String> result = new HashMap<>();
+        String cookieStr = null;
+        Map<String, String> downloadParams = ContentHelper.parseDownloadParams(downloadParamsStr);
+        if (!downloadParams.isEmpty()) {
+            if (downloadParams.containsKey(HttpHelper.HEADER_COOKIE_KEY))
+                cookieStr = downloadParams.get(HttpHelper.HEADER_COOKIE_KEY);
+            if (downloadParams.containsKey(HttpHelper.HEADER_REFERER_KEY)) {
+                String value = downloadParams.get(HttpHelper.HEADER_REFERER_KEY);
+                if (value != null) result.put(HttpHelper.HEADER_REFERER_KEY, value);
+            }
+        }
+        if (null == cookieStr) cookieStr = HttpHelper.getCookies(url);
+        result.put(HttpHelper.HEADER_COOKIE_KEY, cookieStr);
+        return result;
+    }
+
     private void logErrorRecord(long contentId, ErrorType type, String url, String
             contentPart, String description) {
-        ErrorRecord record = new ErrorRecord(contentId, type, url, contentPart, description, Instant.now());
-        if (contentId > 0) dao.insertErrorRecord(record);
+        ErrorRecord downloadRecord = new ErrorRecord(contentId, type, url, contentPart, description, Instant.now());
+        if (contentId > 0) dao.insertErrorRecord(downloadRecord);
     }
 
     private void moveToErrors(long contentId) {
@@ -1067,9 +1102,10 @@ public class ContentDownloadWorker extends BaseWorker {
         dao.deleteQueue(content);
         HentoidApp.trackDownloadEvent("Error");
 
-        if (ContentHelper.updateQueueJson(getApplicationContext(), dao))
-            Timber.i("Queue JSON successfully saved");
-        else Timber.w("Queue JSON saving failed");
+        Context context = getApplicationContext();
+        if (ContentHelper.updateQueueJson(context, dao))
+            Timber.i(context.getString(R.string.queue_json_saved));
+        else Timber.w(context.getString(R.string.queue_json_failed));
 
         notificationManager.notify(new DownloadErrorNotification(content));
     }

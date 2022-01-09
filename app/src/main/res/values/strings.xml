@@ -12,6 +12,9 @@
     <string name="goto_page">Go to page…</string>
     <string name="confirm">Confirm</string>
     <string name="please_wait">Please wait…</string>
+    <string name="books">books</string>
+    <string name="pages">pages</string>
+    <string name="files">files</string>
     <string name="undo">Undo</string>
     <string name="pause">Pause</string>
     <string name="stop">Stop</string>
@@ -19,6 +22,8 @@
     <string name="cancel">Cancel</string>
     <string name="cancel_all">Cancel all</string>
     <string name="menu_completed_single">Completed</string>
+    <string name="service_running">Service is already running</string>
+    <string name="empty" />
 
     <!-- Activities -->
     <string name="title_activity_api29_migration">API 29 migration</string>
@@ -84,12 +89,12 @@
     </plurals>
     <string name="invert_queue">Invert queue</string>
     <string name="redownload_all">Redownload all</string>
+    <string name="cancel_all_errors">Cancel all errors</string>
     <string name="canceled">Canceled</string>
     <string name="move_top">Move to top</string>
     <string name="move_up">Move up</string>
     <string name="move_down">Move down</string>
     <string name="move_bottom">Move to bottom</string>
-    <string name="queue_empty2" />
     <string name="queue_paused">Queue paused</string>
     <string name="queue_preparing">Preparing download</string>
     <string name="queue_dl">Downloading %s</string>
@@ -101,11 +106,18 @@
     <string name="confirm_redownload_all">You are about to redownload %d items. Continue ?</string>
     <string name="paused_no_internet">Cannot download - No internet</string>
     <string name="paused_no_wifi">Cannot download - No WiFi</string>
-    <string name="paused_no_storage">Cannot download - Low on storage. Free space or change download folder location</string>
+    <string name="paused_no_storage">Cannot download - Low on storage (%s left). Free space or change download folder location</string>
     <string name="paused_no_dl_folder">Cannot download - No download folder. Use app settings to select one</string>
     <string name="paused_dl_folder_not_found">Cannot download - Download folder not found. Use app settings to select one</string>
     <string name="paused_dl_folder_credentials">Cannot download - Insufficient credentials on download folder. Use app settings to reselect it</string>
     <string name="paused_dl_stale_online_credentials">Cannot download - Stale Cookies or credentials. Use the notification to regenerate them</string>
+    <string name="step_init">Initializing</string>
+    <string name="step_prepare_img">Preparing images</string>
+    <string name="step_fetch_img">Fetching images</string>
+    <string name="step_prepare_folder">Preparing download folder</string>
+    <string name="step_prepare_download">Preparing download chain</string>
+    <string name="step_save_queue">Saving queue</string>
+    <string name="step_start_download">Download chain started !</string>
     <string name="help_swipe_cancel">You can cancel downloads by swiping them to the left</string>
     <string name="redownloaded_error">An issue happened while redownloading - canceled</string>
     <plurals name="redownloaded_scratch">
@@ -117,6 +129,8 @@
     <string name="notification_action_title">User action needed</string>
     <string name="notification_action_dl_revive">Tap here to reactivate your download</string>
     <string name="revive_wait">Please stay on this screen while your download is revived</string>
+    <string name="queue_json_saved">Queue JSON successfully saved</string>
+    <string name="queue_json_failed">Queue JSON saving failed</string>
 
     <!-- TextViews -->
     <string name="work_untitled" translatable="false">[No data]</string>
@@ -125,6 +139,7 @@
     <string name="work_model">Model: %s</string>
     <string name="work_pages_queue">Pages: %1$s%2$s</string>
     <string name="work_pages_library">%1$d pages / "%2$.1f MB</string>
+    <string name="library_metrics_storage">%.0f MB</string>
 
     <!-- Refresh library -->
     <string name="refresh_title">Refresh library</string>
@@ -141,6 +156,7 @@
 
     <!-- Delete all except favs -->
     <string name="delete_title">Delete all except favourites</string>
+    <string name="generic_progress">%1$d / %2$d %3$s</string>
     <string name="book_progress">%1$d / %2$d books</string>
     <string name="group_progress">%1$d / %2$d groups</string>
 
@@ -193,7 +209,9 @@
         <item quantity="one">Export bookmarks (%d item)</item>
         <item quantity="other">Export bookmarks (%d items)</item>
     </plurals>
-    <string name="export_warning">Books are exported without images.\nYou will have to download them again upon restore if the images folder is not present.</string>
+    <string name="export_warning1">Exporting metadata is meant to create a list of your books in JSON format.\nIt is not meant for moving your collection to your PC or your SD card.\nTap here to learn how to do that.</string>
+    <string name="export_warning2">Books are exported without images.\nYou will have to download them again upon restore if the images folder is not present.</string>
+    <string name="export_faq_url">https://github.com/avluis/Hentoid/wiki/FAQ#Lib-2</string>
     <string name="export_run">RUN EXPORT</string>
 
     <string name="import_settings_title">Import settings</string>
@@ -226,8 +244,8 @@
 
     <!-- Memory usage -->
     <string name="memory_title">Memory usage</string>
-    <string name="memory_total">Total : %.2f GB</string>
-    <string name="memory_free">Free : %.2f GB</string>
+    <string name="memory_total">Total : %s</string>
+    <string name="memory_free">Free : %s</string>
     <string name="memory_hentoid_main">GalleryCherry (primary) : %s</string>
     <string name="memory_hentoid_ext">GalleryCherry (external) : %s</string>
     <string name="memory_database">Database : %1$s (%2$.1f%% full)</string>
@@ -263,14 +281,15 @@
     <string name="filter_not_completed">Show not completed only</string>
     <plurals name="ask_delete_multiple">
         <item quantity="one">Are you sure you wish to delete the selected item ?</item>
-        <item quantity="other">Are you sure you wish to delete the %d selected items ?</item>
+        <item quantity="other">Are you sure you wish to delete the selected %d items ?</item>
     </plurals>
     <plurals name="ask_archive_multiple">
         <item quantity="one">Are you sure you wish to archive the selected item ?</item>
-        <item quantity="other">Are you sure you wish to archive the selected items ?</item>
+        <item quantity="other">Are you sure you wish to archive the selected %d items ?</item>
     </plurals>
     <string name="new_group_name">Name of the new group ?</string>
     <string name="group_edit_name">Edit group name</string>
+    <string name="book_edit_title">Edit book title</string>
     <string name="delete_progress">Deleting books</string>
     <string name="purge_progress">Purging books</string>
     <string name="cancel_queue_progress">Canceling queue items</string>
@@ -305,7 +324,8 @@
     <string name="book_artist">Artist: In this book there are so many artists crammed in one place that one display line definitely can\'t contain them all</string>
     <string name="book_pages_queue">Pages: 1234; estimated 125 MB</string>
     <string name="book_pages_library">1234 pages / 1125 MB</string>
-    <string name="book_tags">""tag1, tag2, tag3, etc.</string>
+    <string name="book_pages_library2">1234 pages / 30 chapters / 1125 MB [Merged]</string>
+    <string name="book_tags">tag1, tag2, tag3, etc.</string>
     <plurals name="number_of_book_search_results">
         <item quantity="one">%d/%d result</item>
         <item quantity="other">%d/%d results</item>
@@ -378,6 +398,9 @@
     <string name="group_new_name">New custom group name</string>
     <string name="group_remove">Detach from current group</string>
     <string name="group_name_exists">Group with that name already exists!</string>
+    <string name="group_rename_forbidden">Renaming that group is forbidden!</string>
+    <string name="group_name_empty">Group name is empty!</string>
+    <string name="group_not_selected">Group has not been selected!</string>
     <plurals name="group_delete_selected_group">
         <item quantity="one">Delete group only</item>
         <item quantity="other">Delete groups only</item>
@@ -391,6 +414,18 @@
         <item quantity="other">Delete groups + books</item>
     </plurals>
     <string name="group_delete_nothing">Nothing to delete - check "Allow deleting external content" to change that</string>
+    <!-- Merge & split -->
+    <string name="merge_merge">Merge</string>
+    <string name="merge_progress">Merging books…</string>
+    <string name="split_progress">Splitting book…</string>
+    <string name="merge_split">Split</string>
+    <string name="new_title">New title</string>
+    <string name="merge_delete_after_merging">Delete these books after merging</string>
+    <string name="split_select_help">Hold and drag to select\nEach selected chapter creates one new book</string>
+    <string name="split_no_chapters">No chapters created yet :-(</string>
+    <string name="split_create_chapters">Create chapters</string>
+    <string name="merge_success">Content merged successfuly</string>
+    <string name="split_success">Content split successfuly</string>
     <!-- Groups -->
     <string name="groups_flat">All books</string>
     <string name="groups_by_artist">By Artist</string>
@@ -487,9 +522,9 @@
     <string name="bookmark_current">Bookmark current page</string>
     <string name="unbookmark_current">Remove bookmark on current page</string>
     <string name="bookmark_copy_url">Copy bookmark URL to clipboard</string>
+    <string name="bookmark_toggle_welcome">Toggle bookmark URL as welcome page</string>
     <string name="alert_unwanted_tags">This book is tagged with %s</string>
     <string name="bookmark_homepage">Homepage</string>
-    <string name="no_extra_page">No extra pages found</string>
     <!-- Web browser (site specifics) -->
     <string name="help_web_fakku_account">Please use or create a legit Fakku account.\nHentoid won\'t work without.</string>
     <string name="help_web_fakku_premium">That book can\'t be viewed with your current Fakku access.</string>
@@ -545,7 +580,6 @@
     <string name="previous_book_help">Previous book</string>
     <string name="next_book_help">Next book</string>
     <string name="gallery_help">Book gallery</string>
-    <string name="gallery_fav_help">Book gallery / favourites only</string>
     <string name="page_fav_help">Mark/unmark page as favourite</string>
     <string name="page_copy_help">Copy page to the Android Downloads folder</string>
     <string name="page_share_help">Share page using another app</string>
@@ -572,7 +606,11 @@
     <string name="viewer_fix">Fix download error</string>
     <string name="viewer_reload_page">Reload page</string>
     <string name="viewer_reparse_book">Reparse book</string>
-
+    <string name="menu_edit_chapters">Edit chapters</string>
+    <string name="gallery_edit_chapters_help">To create or remove a chapter, tap its first page</string>
+    <string name="gallery_clear_chapters">Clear all chapters</string>
+    <string name="gallery_add_remove_chapters">Add &amp; remove chapters</string>
+    <string name="renaming_progress">Renaming files…</string>
 
     <!-- Changelog -->
     <string name="view_changelog">View changelog</string>
@@ -616,6 +654,7 @@
     <string name="duplicate_notif_complete_desc">%d duplicates detected successfully</string>
     <string name="duplicate_empty_first_use">Nothing to display - Run a new duplicate search</string>
     <string name="duplicate_processing">Duplicate detection in progress</string>
+    <string name="duplicate_detail_title">%d duplicates</string>
     <string name="duplicate_empty_no_result">No duplicates found</string>
     <string name="duplicate_keep">Keep</string>
     <string name="duplicate_delete">Delete</string>

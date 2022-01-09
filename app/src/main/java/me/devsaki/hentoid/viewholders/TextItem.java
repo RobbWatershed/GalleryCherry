@@ -1,6 +1,10 @@
 package me.devsaki.hentoid.viewholders;
 
+import static androidx.core.view.ViewCompat.requireViewById;
+
+import android.graphics.Typeface;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -9,9 +13,11 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.annimon.stream.function.Consumer;
 import com.mikepenz.fastadapter.FastAdapter;
 import com.mikepenz.fastadapter.drag.IExtendedDraggable;
 import com.mikepenz.fastadapter.items.AbstractItem;
+import com.mikepenz.fastadapter.listeners.TouchEventHook;
 import com.mikepenz.fastadapter.ui.utils.FastAdapterUIUtils;
 import com.mikepenz.fastadapter.utils.DragDropUtil;
 
@@ -24,14 +30,14 @@ import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.util.StringHelper;
 import me.devsaki.hentoid.util.ThemeHelper;
 
-import static androidx.core.view.ViewCompat.requireViewById;
-
 public class TextItem<T> extends AbstractItem<TextItem.TextViewHolder<T>> implements IExtendedDraggable {
 
     private final String text;
     private final T tag;
     private final boolean centered;
     private final boolean draggable;
+    private final boolean reformatCase;
+    private final boolean isHighlighted;
     private final ItemTouchHelper touchHelper;
 
 
@@ -41,14 +47,18 @@ public class TextItem<T> extends AbstractItem<TextItem.TextViewHolder<T>> implem
         this.centered = centered;
         this.draggable = false;
         this.touchHelper = null;
+        this.reformatCase = true;
+        this.isHighlighted = false;
     }
 
-    public TextItem(String text, T tag, boolean centered, boolean draggable, ItemTouchHelper touchHelper) {
+    public TextItem(String text, T tag, boolean draggable, boolean reformatCase, boolean isHighlighted, ItemTouchHelper touchHelper) {
         this.text = text;
         this.tag = tag;
-        this.centered = centered;
+        this.centered = false;
         this.draggable = draggable;
         this.touchHelper = touchHelper;
+        this.reformatCase = reformatCase;
+        this.isHighlighted = isHighlighted;
     }
 
     @Nullable
@@ -57,7 +67,13 @@ public class TextItem<T> extends AbstractItem<TextItem.TextViewHolder<T>> implem
         return tag;
     }
 
-    public String getText() { return text; }
+    public String getText() {
+        return text;
+    }
+
+    private String getDisplayText() {
+        return reformatCase ? StringHelper.capitalizeString(text) : text;
+    }
 
     @Override
     public boolean isDraggable() {
@@ -98,11 +114,13 @@ public class TextItem<T> extends AbstractItem<TextItem.TextViewHolder<T>> implem
 
         private final View rootView;
         private final TextView title;
+        private final ImageView checkedIndicator;
         private final ImageView dragHandle;
 
         TextViewHolder(View view) {
             super(view);
             rootView = view;
+            checkedIndicator = view.findViewById(R.id.checked_indicator);
             dragHandle = view.findViewById(R.id.item_handle);
             title = requireViewById(view, R.id.item_txt);
             int color = ThemeHelper.getColor(view.getContext(), R.color.secondary_light);
@@ -117,8 +135,14 @@ public class TextItem<T> extends AbstractItem<TextItem.TextViewHolder<T>> implem
                 DragDropUtil.bindDragHandle(this, item);
             }
 
-            title.setText(StringHelper.capitalizeString(item.text));
+            if (item.isSelected()) checkedIndicator.setVisibility(View.VISIBLE);
+            else checkedIndicator.setVisibility(View.GONE);
+
+            title.setText(item.getDisplayText());
             if (item.centered) title.setGravity(Gravity.CENTER);
+
+            if (item.isHighlighted) title.setTypeface(null, Typeface.BOLD);
+            else title.setTypeface(null, Typeface.NORMAL);
         }
 
         @Override
@@ -134,6 +158,30 @@ public class TextItem<T> extends AbstractItem<TextItem.TextViewHolder<T>> implem
         @Override
         public void onDropped() {
             rootView.setBackgroundColor(ThemeHelper.getColor(rootView.getContext(), R.color.transparent));
+        }
+    }
+
+    public static class DragHandlerTouchEvent<T> extends TouchEventHook<TextItem<T>> {
+
+        private final Consumer<Integer> action;
+
+        public DragHandlerTouchEvent(@NonNull Consumer<Integer> action) {
+            this.action = action;
+        }
+
+        @Nullable
+        @Override
+        public View onBind(@NonNull RecyclerView.ViewHolder viewHolder) {
+            return (viewHolder instanceof TextViewHolder<?>) ? ((TextViewHolder<?>) viewHolder).dragHandle : null;
+        }
+
+        @Override
+        public boolean onTouch(@NonNull View view, @NonNull MotionEvent motionEvent, int position, @NonNull FastAdapter<TextItem<T>> fastAdapter, @NonNull TextItem<T> item) {
+            if (motionEvent.getAction() == MotionEvent.ACTION_DOWN) {
+                action.accept(position);
+                return true;
+            }
+            return false;
         }
     }
 }

@@ -58,6 +58,9 @@ public class HttpHelper {
     public static String defaultChromeAgent = null;
     public static int defaultChromeVersion = -1;
 
+    // Error messages
+    public static final String AGENT_INIT_ISSUE = "Call initUserAgents first to initialize them !";
+
 
     static {
         // Can't be done on the variable initializer as Set.of is only available since API R
@@ -125,13 +128,13 @@ public class HttpHelper {
     public static Response getOnlineResource(@NonNull String url, @Nullable List<Pair<String, String>> headers, boolean useMobileAgent, boolean useHentoidAgent, boolean useWebviewAgent) throws IOException {
         Request.Builder requestBuilder = buildRequest(url, headers, useMobileAgent, useHentoidAgent, useWebviewAgent);
         Request request = requestBuilder.get().build();
-        return OkHttpClientSingleton.getInstance(DEFAULT_REQUEST_TIMEOUT).newCall(request).execute();
+        return OkHttpClientSingleton.getInstance().newCall(request).execute();
     }
 
     public static Response getOnlineResourceFast(@NonNull String url, @Nullable List<Pair<String, String>> headers, boolean useMobileAgent, boolean useHentoidAgent, boolean useWebviewAgent) throws IOException {
         Request.Builder requestBuilder = buildRequest(url, headers, useMobileAgent, useHentoidAgent, useWebviewAgent);
         Request request = requestBuilder.get().build();
-        return OkHttpClientSingleton.getInstance(2000,10000).newCall(request).execute();
+        return OkHttpClientSingleton.getInstance(2000, 10000).newCall(request).execute();
     }
 
     /**
@@ -154,7 +157,7 @@ public class HttpHelper {
             @NonNull final String mimeType) throws IOException {
         Request.Builder requestBuilder = buildRequest(url, headers, useMobileAgent, useHentoidAgent, useWebviewAgent);
         Request request = requestBuilder.post(RequestBody.create(body, MediaType.parse(mimeType))).build();
-        return OkHttpClientSingleton.getInstance(DEFAULT_REQUEST_TIMEOUT).newCall(request).execute();
+        return OkHttpClientSingleton.getInstance().newCall(request).execute();
     }
 
     /**
@@ -298,16 +301,20 @@ public class HttpHelper {
     }
 
     /**
-     * Extract the domain from the given URI
+     * Extract and return the main domain from the given URI
      *
      * @param uriStr URI to parse, in String form
-     * @return Domain of the URI; null if no domain found
+     * @return Main domain of the given URI (i.e. without any subdomain); null if no domain found
      */
     public static String getDomainFromUri(@NonNull String uriStr) {
-        Uri uri = Uri.parse(uriStr);
-        String result = uri.getHost();
-        if (result != null && result.startsWith("www")) result = result.substring(4);
-        return (null == result) ? "" : result;
+        String result = Uri.parse(uriStr).getHost();
+        if (null == result) return "";
+
+        String[] parts = result.split("\\.");
+        // Domain without extension
+        if (1 == parts.length) return parts[0];
+        // Main domain and extension
+        return parts[parts.length - 2] + "." + parts[parts.length - 1];
     }
 
     /**
@@ -469,7 +476,12 @@ public class HttpHelper {
      * @param useWebviewAgent True if webview user agent should be used
      * @return Raw cookies string for the given URL
      */
-    public static String getCookies(@NonNull String url, @Nullable List<Pair<String, String>> headers, boolean useMobileAgent, boolean useHentoidAgent, boolean useWebviewAgent) {
+    public static String getCookies(
+            @NonNull String url,
+            @Nullable List<Pair<String, String>> headers,
+            boolean useMobileAgent,
+            boolean useHentoidAgent,
+            boolean useWebviewAgent) {
         String result = getCookies(url);
         if (result != null) return result;
         else return peekCookies(url, headers, useMobileAgent, useHentoidAgent, useWebviewAgent);
@@ -546,7 +558,7 @@ public class HttpHelper {
      */
     public static String getDesktopUserAgent(boolean withHentoid, boolean withWebview) {
         if (null == defaultChromeAgent)
-            throw new RuntimeException("Call initUserAgents first to initialize them !");
+            throw new RuntimeException(AGENT_INIT_ISSUE);
         String result = String.format(DESKTOP_USER_AGENT_PATTERN, defaultChromeAgent);
         if (withHentoid) result += " Hentoid/v" + BuildConfig.VERSION_NAME;
         if (!withWebview) result = cleanWebViewAgent(result);
@@ -561,7 +573,7 @@ public class HttpHelper {
      */
     public static String getDefaultUserAgent(boolean withHentoid, boolean withWebview) {
         if (null == defaultUserAgent)
-            throw new RuntimeException("Call initUserAgents first to initialize them !");
+            throw new RuntimeException(AGENT_INIT_ISSUE);
         String result = defaultUserAgent;
         if (withHentoid) result += " Hentoid/v" + BuildConfig.VERSION_NAME;
         if (!withWebview) result = cleanWebViewAgent(result);
@@ -592,10 +604,13 @@ public class HttpHelper {
      */
     public static int getChromeVersion() {
         if (-1 == defaultChromeVersion)
-            throw new RuntimeException("Call initUserAgents first to initialize them !");
+            throw new RuntimeException(AGENT_INIT_ISSUE);
         return defaultChromeVersion;
     }
 
+    /**
+     * Class to parse and manipulate Uri parts
+     */
     public static class UriParts {
         private String path;
         private String fileName;

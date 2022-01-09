@@ -56,7 +56,7 @@ public abstract class BaseWorker extends Worker {
         return false;
     }
 
-    public BaseWorker(
+    protected BaseWorker(
             @NonNull Context context,
             @NonNull WorkerParameters parameters,
             @IdRes int serviceId,
@@ -116,7 +116,7 @@ public abstract class BaseWorker extends Worker {
 
             LogHelper.LogInfo logInfo = new LogHelper.LogInfo();
             logInfo.setFileName(logName);
-            logInfo.setLogName(logName);
+            logInfo.setHeaderName(logName);
             logInfo.setEntries(logs);
             LogHelper.writeLog(HentoidApp.getInstance(), logInfo);
         }
@@ -130,8 +130,8 @@ public abstract class BaseWorker extends Worker {
     @NonNull
     @Override
     public Result doWork() {
-        ensureLongRunning();
         try {
+            ensureLongRunning();
             getToWork(getInputData());
         } catch (Exception e) {
             if (logs != null)
