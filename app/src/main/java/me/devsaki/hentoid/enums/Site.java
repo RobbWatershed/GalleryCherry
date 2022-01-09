@@ -24,7 +24,7 @@ public enum Site {
     LINK2GALLERIES(7, "Link2galleries", "https://www.link2galleries.com/", R.drawable.ic_menu_l2g),
     REDDIT(8, "Reddit", "https://www.reddit.com/", R.drawable.ic_social_reddit),
     JJGIRLS(9, "JJGirls (Jap)", "https://jjgirls.com/mobile/", R.drawable.ic_menu_jjgirls),
-    LUSCIOUS(10, "luscious.net", "https://members.luscious.net/porn/", R.drawable.ic_menu_luscious),
+    LUSCIOUS(10, "luscious.net", "https://members.luscious.net/porn/", R.drawable.ic_site_luscious),
     FAPALITY(11, "Fapality", "https://fapality.com/photos/", R.drawable.ic_menu_fapality),
     HINA(12, "Hina", "https://github.com/ixilia/hina", R.drawable.ic_menu_hina),
     ASIANSISTER(13, "Asiansister", "https://asiansister.com/", R.drawable.ic_menu_asiansister),

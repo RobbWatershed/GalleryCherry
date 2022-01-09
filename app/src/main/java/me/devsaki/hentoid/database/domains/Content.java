@@ -2,8 +2,6 @@ package me.devsaki.hentoid.database.domains;
 
 import static me.devsaki.hentoid.util.JsonHelper.MAP_STRINGS;
 
-import android.text.TextUtils;
-
 import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -17,6 +15,7 @@ import java.io.Serializable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,11 +39,9 @@ import me.devsaki.hentoid.activities.sources.JjgirlsActivity;
 import me.devsaki.hentoid.activities.sources.JpegworldActivity;
 import me.devsaki.hentoid.activities.sources.Link2GalleriesActivity;
 import me.devsaki.hentoid.activities.sources.LusciousActivity;
-import me.devsaki.hentoid.activities.sources.Manhwa18Activity;
 import me.devsaki.hentoid.activities.sources.NextpicturezActivity;
 import me.devsaki.hentoid.activities.sources.PornPicGalleriesActivity;
 import me.devsaki.hentoid.activities.sources.PornPicsActivity;
-import me.devsaki.hentoid.activities.sources.PixivActivity;
 import me.devsaki.hentoid.activities.sources.RedditActivity;
 import me.devsaki.hentoid.activities.sources.XhamsterActivity;
 import me.devsaki.hentoid.activities.sources.XnxxActivity;
@@ -307,10 +304,6 @@ public class Content implements Serializable {
                 return FapalityActivity.class;
             case ASIANSISTER:
                 return AsianSisterActivity.class;
-            case PIXIV:
-                return PixivActivity.class;
-            case MANHWA18:
-                return Manhwa18Activity.class;
             default:
                 return BaseWebActivity.class;
         }

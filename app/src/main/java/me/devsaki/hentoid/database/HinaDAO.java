@@ -14,12 +14,14 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.annotation.Nullable;
 
 import io.reactivex.Single;
 import io.reactivex.disposables.CompositeDisposable;
 import me.devsaki.hentoid.database.domains.Attribute;
+import me.devsaki.hentoid.database.domains.Chapter;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.ErrorRecord;
 import me.devsaki.hentoid.database.domains.Group;
@@ -77,6 +79,11 @@ public class HinaDAO implements CollectionDAO {
     @Nullable
     @Override
     public Content selectContentBySourceAndUrl(@NonNull Site site, @NonNull String contentUrl, @NonNull String coverUrl) {
+        return null;
+    }
+
+    @Override
+    public Set<String> selectAllSourceUrls(@NonNull Site site) {
         return null;
     }
 
@@ -186,7 +193,12 @@ public class HinaDAO implements CollectionDAO {
     }
 
     @Override
-    public LiveData<List<Group>> selectGroups(int grouping, @Nullable String query, int orderField, boolean orderDesc, int artistGroupVisibility, boolean groupFavouritesOnly) {
+    public LiveData<List<Group>> selectGroupsLive(int grouping, @androidx.annotation.Nullable String query, int orderField, boolean orderDesc, int artistGroupVisibility, boolean groupFavouritesOnly) {
+        return null;
+    }
+
+    @Override
+    public List<Group> selectGroups(int grouping, int subType) {
         return null;
     }
 
@@ -210,11 +222,6 @@ public class HinaDAO implements CollectionDAO {
     @Override
     public long countGroupsFor(Grouping grouping) {
         return 0;
-    }
-
-    @Override
-    public LiveData<Integer> countLiveGroupsFor(@NonNull Grouping grouping) {
-        return null;
     }
 
     @Override
@@ -259,6 +266,11 @@ public class HinaDAO implements CollectionDAO {
 
     @Override
     public List<Content> selectStoredContent(boolean nonFavouriteOnly, boolean includeQueued, int orderField, boolean orderDesc) {
+        return null;
+    }
+
+    @Override
+    public List<Long> selectStoredContentIds(boolean nonFavouritesOnly, boolean includeQueued, int orderField, boolean orderDesc) {
         return null;
     }
 
@@ -385,7 +397,12 @@ public class HinaDAO implements CollectionDAO {
     }
 
     @Override
-    public LiveData<List<ImageFile>> selectDownloadedImagesFromContent(long id) {
+    public LiveData<List<ImageFile>> selectDownloadedImagesFromContentLive(long id) {
+        return null;
+    }
+
+    @Override
+    public List<ImageFile> selectDownloadedImagesFromContent(long id) {
         return null;
     }
 
@@ -460,6 +477,26 @@ public class HinaDAO implements CollectionDAO {
     }
 
     @Override
+    public List<Chapter> selectChapters(long contentId) {
+        return null;
+    }
+
+    @Override
+    public void insertChapters(@NonNull List<Chapter> chapters) {
+
+    }
+
+    @Override
+    public void deleteChapters(@NonNull Content content) {
+
+    }
+
+    @Override
+    public void deleteChapter(@NonNull Chapter chapter) {
+
+    }
+
+    @Override
     public SiteHistory selectHistory(@NonNull Site s) {
         return null;
     }
@@ -481,6 +518,12 @@ public class HinaDAO implements CollectionDAO {
 
     @Override
     public List<SiteBookmark> selectBookmarks(@NonNull Site s) {
+        return null;
+    }
+
+    @androidx.annotation.Nullable
+    @Override
+    public SiteBookmark selectHomepage(@NonNull Site s) {
         return null;
     }
 

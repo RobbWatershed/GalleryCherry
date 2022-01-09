@@ -1,5 +1,8 @@
 package me.devsaki.hentoid.viewholders;
 
+import static androidx.core.view.ViewCompat.requireViewById;
+import static me.devsaki.hentoid.util.ImageHelper.tintBitmap;
+
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Typeface;
@@ -27,22 +30,21 @@ import org.jetbrains.annotations.Nullable;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.activities.bundles.ImageItemBundle;
 import me.devsaki.hentoid.core.HentoidApp;
+import me.devsaki.hentoid.database.domains.Chapter;
 import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.retrofit.HinaDetails;
 import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.ImageHelper;
 import me.devsaki.hentoid.util.ThemeHelper;
 
-import static androidx.core.view.ViewCompat.requireViewById;
-import static me.devsaki.hentoid.util.ImageHelper.tintBitmap;
-
-public class ImageFileItem extends AbstractItem<ImageFileItem.ImageViewHolder> {
+public class ImageFileItem extends AbstractItem<ImageFileItem.ImageViewHolder> implements IExpandable<ImageFileItem.ImageViewHolder>, INestedItem<ImageFileItem.ImageViewHolder> {
 
     @IntDef({ViewType.LIBRARY, ViewType.ONLINE})
     @Retention(RetentionPolicy.SOURCE)
@@ -76,7 +78,7 @@ public class ImageFileItem extends AbstractItem<ImageFileItem.ImageViewHolder> {
 
     public ImageFileItem(@NonNull ImageFile image, boolean showChapter, @ViewType int viewType) {
         this.image = image;
-            this.viewType = viewType;
+        this.viewType = viewType;
         if (image.getLinkedChapter() != null)
             this.chapter = image.getLinkedChapter();
         else

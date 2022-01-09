@@ -29,5 +29,7 @@ public final class CustomGlideModule extends AppGlideModule {
         OkHttpUrlLoader.Factory factory = new OkHttpUrlLoader.Factory(client);
 
         glide.getRegistry().replace(GlideUrl.class, InputStream.class, factory);
+
+//        registry.append(GlideUrl.class, InputStream.class, new OkHttpUrlLoader.Factory(OkHttpClientSingleton.getInstance(20 * 1000, 20 * 1000)));
     }
 }

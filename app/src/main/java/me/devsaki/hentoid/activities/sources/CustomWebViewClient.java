@@ -350,7 +350,7 @@ class CustomWebViewClient extends WebViewClient {
         isPageLoading.set(false);
         // Specific to Cherry : due to redirections, the correct page URLs are those visible from onPageFinished
         // Launch on a new thread to avoid crashes
-        if (isGalleryPage(url) && !isHtmlLoaded) parseResponseAsync(url, false);
+        if (isGalleryPage(url) && !isHtmlLoaded.get()) parseResponseAsync(url, false);
         isHtmlLoaded.set(false); // Reset for the next page
         activity.onPageFinished(isResultsPage(StringHelper.protect(url)), isGalleryPage(url));
     }
@@ -391,11 +391,7 @@ class CustomWebViewClient extends WebViewClient {
         } else if (isMarkDownloaded() && url.contains("hentoid-checkmark")) {
             return new WebResourceResponse(ImageHelper.MIME_IMAGE_WEBP, "utf-8", new ByteArrayInputStream(checkmark));
         } else {
-            // Only process HTML resources (URLs without extension) from the source's main domain
-            if (HttpHelper.getExtensionFromUri(url).isEmpty()) {
-                String host = Uri.parse(url).getHost();
-                if (host != null && !isHostNotInRestrictedDomains(host)) {
-                    if (isGalleryPage(url)) return parseResponse(url, headers, true, false);
+            if (isGalleryPage(url)) return parseResponse(url, headers, true, false);
             else if (BuildConfig.DEBUG) Timber.v("WebView : not gallery %s", url);
 
             // If we're here to remove "dirty elements" or mark downloaded books, we only do it

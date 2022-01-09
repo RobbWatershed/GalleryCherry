@@ -26,14 +26,14 @@
           "name": "type",
           "indexId": "7:689427048355118025",
           "type": 5,
-          "flags": 10
+          "flags": 8
         },
         {
           "id": "6:7243944355386742663",
           "name": "groupId",
           "indexId": "11:1792916775778498540",
           "type": 11,
-          "flags": 1548,
+          "flags": 520,
           "relationTarget": "Group"
         }
       ],
@@ -41,7 +41,7 @@
     },
     {
       "id": "2:5880334030341287801",
-      "lastPropertyId": "27:5557374039012158673",
+      "lastPropertyId": "28:3615090040498443472",
       "name": "Content",
       "properties": [
         {
@@ -75,34 +75,31 @@
         {
           "id": "6:7062308019963509495",
           "name": "qtyPages",
-          "type": 5,
-          "flags": 2
+          "type": 5
         },
         {
           "id": "7:7301578355206155477",
           "name": "uploadDate",
-          "type": 6,
-          "flags": 4
+          "type": 6
         },
         {
           "id": "8:1827842303404521643",
           "name": "downloadDate",
-          "type": 6,
-          "flags": 4
+          "type": 6
         },
         {
           "id": "9:2429762886376715363",
           "name": "status",
           "indexId": "16:8486805772549581676",
           "type": 5,
-          "flags": 10
+          "flags": 8
         },
         {
           "id": "10:5174313231174202310",
           "name": "site",
           "indexId": "17:4594431538590131849",
           "type": 6,
-          "flags": 10
+          "flags": 8
         },
         {
           "id": "11:6249972361468615650",
@@ -112,20 +109,17 @@
         {
           "id": "12:3838124773804113972",
           "name": "favourite",
-          "type": 1,
-          "flags": 4
+          "type": 1
         },
         {
           "id": "13:4211894395290313595",
           "name": "reads",
-          "type": 6,
-          "flags": 4
+          "type": 6
         },
         {
           "id": "14:4722516447694741314",
           "name": "lastReadDate",
-          "type": 6,
-          "flags": 4
+          "type": 6
         },
         {
           "id": "15:7783986187434244415",
@@ -140,14 +134,12 @@
         {
           "id": "17:903347587815260256",
           "name": "lastReadPageIndex",
-          "type": 5,
-          "flags": 4
+          "type": 5
         },
         {
           "id": "18:9117635469382092615",
           "name": "isBeingDeleted",
-          "type": 1,
-          "flags": 4
+          "type": 1
         },
         {
           "id": "19:326862264253525250",
@@ -167,32 +159,32 @@
         {
           "id": "23:3749951275729277284",
           "name": "size",
-          "type": 6,
-          "flags": 4
+          "type": 6
         },
         {
           "id": "24:4070559330294064696",
           "name": "isFlaggedForDeletion",
-          "type": 1,
-          "flags": 4
+          "type": 1
         },
         {
           "id": "25:4398158716835923955",
           "name": "readProgress",
-          "type": 7,
-          "flags": 4
+          "type": 7
         },
         {
           "id": "26:3908693512208639109",
           "name": "completed",
-          "type": 1,
-          "flags": 4
+          "type": 1
         },
         {
           "id": "27:5557374039012158673",
           "name": "downloadMode",
-          "type": 5,
-          "flags": 4
+          "type": 5
+        },
+        {
+          "id": "28:3615090040498443472",
+          "name": "manuallyMerged",
+          "type": 1
         }
       ],
       "relations": [
@@ -217,8 +209,7 @@
         {
           "id": "2:4786164809804019689",
           "name": "order",
-          "type": 5,
-          "flags": 2
+          "type": 5
         },
         {
           "id": "3:8847017078500757224",
@@ -233,15 +224,14 @@
         {
           "id": "5:7613843228223628057",
           "name": "status",
-          "type": 5,
-          "flags": 2
+          "type": 5
         },
         {
           "id": "6:6745828261307358394",
           "name": "contentId",
           "indexId": "4:7771600038559568217",
           "type": 11,
-          "flags": 1548,
+          "flags": 520,
           "relationTarget": "Content"
         },
         {
@@ -252,8 +242,7 @@
         {
           "id": "9:3938664550318760597",
           "name": "favourite",
-          "type": 1,
-          "flags": 4
+          "type": 1
         },
         {
           "id": "10:3487836165282536542",
@@ -268,26 +257,22 @@
         {
           "id": "12:7916378603458666917",
           "name": "isCover",
-          "type": 1,
-          "flags": 4
+          "type": 1
         },
         {
           "id": "13:1477195053744048071",
           "name": "size",
-          "type": 6,
-          "flags": 4
+          "type": 6
         },
         {
           "id": "14:1355428212451361742",
           "name": "read",
-          "type": 1,
-          "flags": 4
+          "type": 1
         },
         {
           "id": "15:2581221224006671026",
           "name": "imageHash",
-          "type": 6,
-          "flags": 4
+          "type": 6
         },
         {
           "id": "16:8840907152959868045",
@@ -299,7 +284,7 @@
           "name": "chapterId",
           "indexId": "19:1732001395358521849",
           "type": 11,
-          "flags": 1548,
+          "flags": 520,
           "relationTarget": "Chapter"
         }
       ],
@@ -319,15 +304,14 @@
         {
           "id": "2:1320640807096340636",
           "name": "rank",
-          "type": 5,
-          "flags": 4
+          "type": 5
         },
         {
           "id": "3:5421570333026902379",
           "name": "contentId",
           "indexId": "3:6276640449349847797",
           "type": 11,
-          "flags": 1548,
+          "flags": 520,
           "relationTarget": "Content"
         }
       ],
@@ -347,8 +331,7 @@
         {
           "id": "2:4100011129763730697",
           "name": "site",
-          "type": 6,
-          "flags": 2
+          "type": 6
         },
         {
           "id": "3:1589781357027616630",
@@ -360,7 +343,7 @@
           "name": "attributeId",
           "indexId": "8:5756463807096430367",
           "type": 11,
-          "flags": 1548,
+          "flags": 520,
           "relationTarget": "Attribute"
         }
       ],
@@ -380,8 +363,7 @@
         {
           "id": "2:97618489394466159",
           "name": "type",
-          "type": 5,
-          "flags": 2
+          "type": 5
         },
         {
           "id": "3:5266874309167836641",
@@ -403,14 +385,13 @@
           "name": "contentId",
           "indexId": "9:6133215885572986701",
           "type": 11,
-          "flags": 1548,
+          "flags": 520,
           "relationTarget": "Content"
         },
         {
           "id": "7:4253269476811170807",
           "name": "timestamp",
-          "type": 6,
-          "flags": 2
+          "type": 6
         }
       ],
       "relations": []
@@ -429,8 +410,7 @@
         {
           "id": "2:5353276152909025850",
           "name": "site",
-          "type": 6,
-          "flags": 2
+          "type": 6
         },
         {
           "id": "3:4809257946112424925",
@@ -442,8 +422,7 @@
         {
           "id": "4:6582258112320432098",
           "name": "lastAccessDate",
-          "type": 6,
-          "flags": 4
+          "type": 6
         }
       ],
       "relations": []
@@ -462,8 +441,7 @@
         {
           "id": "2:2598163424519726670",
           "name": "site",
-          "type": 6,
-          "flags": 2
+          "type": 6
         },
         {
           "id": "3:943886692037235189",
@@ -487,8 +465,9 @@
         {
           "id": "2:1070925771587726322",
           "name": "grouping",
+          "indexId": "20:3130390886966780545",
           "type": 5,
-          "flags": 2
+          "flags": 8
         },
         {
           "id": "3:7116933833541949371",
@@ -498,58 +477,50 @@
         {
           "id": "4:6438034027906514651",
           "name": "subtype",
-          "type": 5,
-          "flags": 4
+          "type": 5
         },
         {
           "id": "5:6185607893351148501",
           "name": "order",
-          "type": 5,
-          "flags": 4
+          "type": 5
         },
         {
           "id": "6:2347517562836289567",
           "name": "hasCustomBookOrder",
-          "type": 1,
-          "flags": 4
+          "type": 1
         },
         {
           "id": "7:5024966380044991745",
           "name": "propertyMin",
-          "type": 5,
-          "flags": 4
+          "type": 5
         },
         {
           "id": "8:8491657471526481761",
           "name": "propertyMax",
-          "type": 5,
-          "flags": 4
+          "type": 5
         },
         {
           "id": "9:4961732107659471415",
           "name": "isBeingDeleted",
-          "type": 1,
-          "flags": 4
+          "type": 1
         },
         {
           "id": "10:6996017220312427233",
           "name": "isFlaggedForDeletion",
-          "type": 1,
-          "flags": 4
+          "type": 1
         },
         {
           "id": "11:2714132596517852303",
           "name": "pictureId",
           "indexId": "12:3676140790825548115",
           "type": 11,
-          "flags": 1548,
+          "flags": 520,
           "relationTarget": "ImageFile"
         },
         {
           "id": "12:7645654721463495126",
           "name": "favourite",
-          "type": 1,
-          "flags": 4
+          "type": 1
         }
       ],
       "relations": []
@@ -568,15 +539,14 @@
         {
           "id": "2:3533618246212606078",
           "name": "order",
-          "type": 5,
-          "flags": 4
+          "type": 5
         },
         {
           "id": "3:8472463385672967575",
           "name": "contentId",
           "indexId": "13:4549482948065497870",
           "type": 11,
-          "flags": 1548,
+          "flags": 520,
           "relationTarget": "Content"
         },
         {
@@ -584,7 +554,7 @@
           "name": "groupId",
           "indexId": "14:379087842301470944",
           "type": 11,
-          "flags": 1548,
+          "flags": 520,
           "relationTarget": "Group"
         }
       ],
@@ -592,7 +562,7 @@
     },
     {
       "id": "13:8139968826293412870",
-      "lastPropertyId": "5:2848523055317548086",
+      "lastPropertyId": "6:8611916820057875503",
       "name": "SiteBookmark",
       "properties": [
         {
@@ -604,8 +574,7 @@
         {
           "id": "2:4490981471401909099",
           "name": "site",
-          "type": 6,
-          "flags": 2
+          "type": 6
         },
         {
           "id": "3:3716864438715910248",
@@ -620,8 +589,12 @@
         {
           "id": "5:2848523055317548086",
           "name": "order",
-          "type": 5,
-          "flags": 4
+          "type": 5
+        },
+        {
+          "id": "6:8611916820057875503",
+          "name": "isHomepage",
+          "type": 1
         }
       ],
       "relations": []
@@ -634,44 +607,37 @@
         {
           "id": "1:4992400536868118575",
           "name": "referenceId",
-          "type": 6,
-          "flags": 4
+          "type": 6
         },
         {
           "id": "2:5895613663089769889",
           "name": "referenceSize",
-          "type": 6,
-          "flags": 4
+          "type": 6
         },
         {
           "id": "3:559301115884356156",
           "name": "duplicateId",
-          "type": 6,
-          "flags": 4
+          "type": 6
         },
         {
           "id": "4:4638400598414097741",
           "name": "duplicateSize",
-          "type": 6,
-          "flags": 4
+          "type": 6
         },
         {
           "id": "5:6204478230397474330",
           "name": "titleScore",
-          "type": 7,
-          "flags": 4
+          "type": 7
         },
         {
           "id": "6:772853147321194358",
           "name": "coverScore",
-          "type": 7,
-          "flags": 4
+          "type": 7
         },
         {
           "id": "7:3381086306086268907",
           "name": "artistScore",
-          "type": 7,
-          "flags": 4
+          "type": 7
         },
         {
           "id": "8:5081170490753146682",
@@ -684,7 +650,7 @@
     },
     {
       "id": "15:4147939537309004926",
-      "lastPropertyId": "5:6267903497058705207",
+      "lastPropertyId": "6:3977005787503725198",
       "name": "Chapter",
       "properties": [
         {
@@ -696,8 +662,7 @@
         {
           "id": "2:6052894945816207869",
           "name": "order",
-          "type": 5,
-          "flags": 2
+          "type": 5
         },
         {
           "id": "3:3326965256348243518",
@@ -714,8 +679,13 @@
           "name": "contentId",
           "indexId": "18:4435769488245482164",
           "type": 11,
-          "flags": 1548,
+          "flags": 520,
           "relationTarget": "Content"
+        },
+        {
+          "id": "6:3977005787503725198",
+          "name": "uniqueId",
+          "type": 9
         }
       ],
       "relations": []
@@ -734,15 +704,14 @@
         {
           "id": "2:1257382365928635139",
           "name": "contentId",
-          "type": 6,
-          "flags": 2
+          "type": 6
         }
       ],
       "relations": []
     }
   ],
   "lastEntityId": "16:5351865710215352208",
-  "lastIndexId": "19:1732001395358521849",
+  "lastIndexId": "20:3130390886966780545",
   "lastRelationId": "3:1412032361666532056",
   "lastSequenceId": "0:0",
   "modelVersion": 5,

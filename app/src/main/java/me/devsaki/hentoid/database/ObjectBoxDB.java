@@ -426,7 +426,7 @@ public class ObjectBoxDB {
 
     public Query<Content> selectContentBySourceQ(@NonNull Site site) {
         QueryBuilder<Content> queryBuilder = store.boxFor(Content.class).query();
-        queryBuilder.notEqual(Content_.url, "").equal(Content_.site, site.getCode());
+        queryBuilder.notEqual(Content_.url, "", QueryBuilder.StringOrder.CASE_INSENSITIVE).equal(Content_.site, site.getCode());
         return queryBuilder.build();
     }
 
@@ -1319,7 +1319,7 @@ public class ObjectBoxDB {
     @Nullable
     public LandingRecord selectLandingRecord(@NonNull Site site, @NonNull String url) {
         if (!url.isEmpty())
-            return store.boxFor(LandingRecord.class).query().equal(LandingRecord_.url, url).equal(LandingRecord_.site, site.getCode()).build().findFirst();
+            return store.boxFor(LandingRecord.class).query().equal(LandingRecord_.url, url, QueryBuilder.StringOrder.CASE_INSENSITIVE).equal(LandingRecord_.site, site.getCode()).build().findFirst();
         else return null;
     }
 

@@ -1070,7 +1070,7 @@ public abstract class BaseWebActivity extends BaseActivity implements CustomWebV
                         existingImages.addAll(newImages);
                         contentDB.setImageFiles(existingImages);
                         contentDB.setQtyPages(existingImages.size());
-                        objectBoxDAO.insertContent(contentDB);
+                        dao.insertContent(contentDB);
                     }
                 }
                 currentContent = contentDB;
@@ -1361,10 +1361,6 @@ public abstract class BaseWebActivity extends BaseActivity implements CustomWebV
             StringBuilder sb = new StringBuilder();
             if (Preferences.isBrowserMarkDownloaded())
                 FileHelper.getAssetAsString(getAssets(), "downloaded.css", sb);
-            if (getStartSite().equals(Site.NHENTAI) && Preferences.isBrowserNhentaiInvisibleBlacklist())
-                FileHelper.getAssetAsString(getAssets(), "nhentai_invisible_blacklist.css", sb);
-            if (getStartSite().equals(Site.IMHENTAI))
-                FileHelper.getAssetAsString(getAssets(), "imhentai.css", sb);
             customCss = sb.toString();
         }
         return customCss;

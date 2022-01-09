@@ -2,7 +2,6 @@ package me.devsaki.hentoid.workers;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.net.Uri;
 import android.util.Pair;
 import android.webkit.MimeTypeMap;
 
@@ -27,7 +26,6 @@ import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.threeten.bp.Instant;
 
-import java.io.File;
 import java.io.IOException;
 import java.security.InvalidParameterException;
 import java.util.ArrayList;
@@ -60,7 +58,6 @@ import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.events.DownloadEvent;
 import me.devsaki.hentoid.events.DownloadReviveEvent;
 import me.devsaki.hentoid.json.JsonContent;
-import me.devsaki.hentoid.json.sources.PixivIllustMetadata;
 import me.devsaki.hentoid.notification.action.UserActionNotification;
 import me.devsaki.hentoid.notification.download.DownloadErrorNotification;
 import me.devsaki.hentoid.notification.download.DownloadProgressNotification;
@@ -68,7 +65,6 @@ import me.devsaki.hentoid.notification.download.DownloadSuccessNotification;
 import me.devsaki.hentoid.notification.download.DownloadWarningNotification;
 import me.devsaki.hentoid.parsers.ContentParserFactory;
 import me.devsaki.hentoid.parsers.images.ImageListParser;
-import me.devsaki.hentoid.util.ArchiveHelper;
 import me.devsaki.hentoid.util.ContentHelper;
 import me.devsaki.hentoid.util.FileHelper;
 import me.devsaki.hentoid.util.Helper;
@@ -77,7 +73,6 @@ import me.devsaki.hentoid.util.JsonHelper;
 import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.util.StringHelper;
 import me.devsaki.hentoid.util.download.ContentQueueManager;
-import me.devsaki.hentoid.util.download.DownloadHelper;
 import me.devsaki.hentoid.util.download.RequestQueueManager;
 import me.devsaki.hentoid.util.exception.AccountException;
 import me.devsaki.hentoid.util.exception.CaptchaException;
@@ -439,7 +434,6 @@ public class ContentDownloadWorker extends BaseWorker {
             return new ImmutablePair<>(QueuingResult.CONTENT_SKIPPED, null);
 
         List<ImageFile> pagesToParse = new ArrayList<>();
-        List<ImageFile> ugoirasToDownload = new ArrayList<>();
 
         // Queue image download requests
         for (ImageFile img : images) {
@@ -463,8 +457,6 @@ public class ContentDownloadWorker extends BaseWorker {
                 if (img.isCover() && images.size() > 1) img.setBackupUrl(images.get(1).getUrl());
 
                 if (img.needsPageParsing()) pagesToParse.add(img);
-                else if (img.getDownloadParams().contains(ContentHelper.KEY_DL_PARAMS_UGOIRA_FRAMES))
-                    ugoirasToDownload.add(img);
                 else requestQueueManager.queueRequest(buildImageDownloadRequest(img, dir, content));
             }
         }
@@ -477,21 +469,6 @@ public class ContentDownloadWorker extends BaseWorker {
                             .observeOn(Schedulers.io())
                             .subscribe(
                                     img -> parsePageforImage(img, dir, contentFinal),
-                                    t -> {
-                                        // Nothing; just exit the Rx chain
-                                    }
-                            )
-            );
-        }
-
-        // Parse ugoiras for images
-        if (!ugoirasToDownload.isEmpty()) {
-            final Site siteFinal = content.getSite();
-            compositeDisposable.add(
-                    Observable.fromIterable(ugoirasToDownload)
-                            .observeOn(Schedulers.io())
-                            .subscribe(
-                                    img -> downloadAndUnzipUgoira(img, dir, siteFinal),
                                     t -> {
                                         // Nothing; just exit the Rx chain
                                     }

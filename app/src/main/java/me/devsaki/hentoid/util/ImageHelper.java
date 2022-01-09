@@ -12,6 +12,7 @@ import android.graphics.PorterDuffColorFilter;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.VectorDrawable;
+import android.net.Uri;
 
 import androidx.annotation.ColorInt;
 import androidx.annotation.DrawableRes;
@@ -129,7 +130,7 @@ public final class ImageHelper {
     }
 
     // TODO make dimensions variable
-    private static Bitmap getBitmapFromVectorDrawable(@NonNull final Context context, @DrawableRes int drawableId) {
+    public static Bitmap getBitmapFromVectorDrawable(@NonNull final Context context, @DrawableRes int drawableId) {
         Drawable d = ContextCompat.getDrawable(context, drawableId);
 
         if (d != null) {

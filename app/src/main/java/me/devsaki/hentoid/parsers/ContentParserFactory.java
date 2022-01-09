@@ -75,10 +75,6 @@ public class ContentParserFactory {
                 return new LusciousParser();
             case FAPALITY:
                 return new FapalityParser();
-            case PIXIV:
-                return new PixivParser();
-            case MANHWA18:
-                return new Manhwa18Parser();
             default:
                 return new DummyParser();
         }

@@ -106,7 +106,7 @@ public class GalleryDialogFragment extends DialogFragment {
         FastAdapterDiffUtil.INSTANCE.set(itemAdapter,
                 Stream.of(content.getImageFiles())
                         .filterNot(i -> i.getName().equalsIgnoreCase("thumb"))
-                        .map(i -> new ImageFileItem(i, ImageFileItem.ViewType.ONLINE))
+                        .map(i -> new ImageFileItem(i, false, ImageFileItem.ViewType.ONLINE))
                         .toList()
         );
     }

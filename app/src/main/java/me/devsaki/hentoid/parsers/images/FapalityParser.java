@@ -35,11 +35,11 @@ public class FapalityParser extends BaseImageListParser {
             for (Element e : chapters) pageUrls.add(e.attr("href"));
         }
 
-        progressStart(content.getId(), pageUrls.size());
+        progressStart(content, null, pageUrls.size());
 
         // 2. Open each page URL and get the image data until all images are found
         for (String url : pageUrls) {
-            if (processHalted) break;
+            if (processHalted.get()) break;
             doc = HttpHelper.getOnlineDocument(url, headers, Site.FAPALITY.useHentoidAgent(), Site.FAPALITY.useWebviewAgent());
             if (doc != null) {
                 List<Element> images = doc.select(".simple-content img");
@@ -50,7 +50,7 @@ public class FapalityParser extends BaseImageListParser {
         progressComplete();
 
         // If the process has been halted manually, the result is incomplete and should not be returned as is
-        if (processHalted) throw new PreparationInterruptedException();
+        if (processHalted.get()) throw new PreparationInterruptedException();
 
         return result;
     }
