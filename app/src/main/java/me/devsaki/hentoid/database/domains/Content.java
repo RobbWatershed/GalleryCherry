@@ -356,6 +356,8 @@ public class Content implements Serializable {
             case JPEGWORLD:
                 galleryConst = "galleries/";
                 break;
+            case LUSCIOUS:
+                return site.getUrl().replace("/porn/","") + url;
             default:
                 galleryConst = "gallery/";
                 break;
