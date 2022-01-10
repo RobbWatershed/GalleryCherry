@@ -34,6 +34,7 @@ public enum Site {
 
 
     private static final Site[] INVISIBLE_SITES = {
+            HELLPORNO, // Removed their pictures section
             HINA, // Hardcoded link; should not be on display on dynamic sources
             JJGIRLS2, // Abandoned in favour of babe.today
             NONE // Technical fallback
