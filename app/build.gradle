@@ -30,12 +30,28 @@ android {
         jvmTarget = JavaVersion.VERSION_1_8
     }
     defaultConfig {
-        applicationId "me.devsaki.hentoid"
+        applicationId "me.devsaki.cherry"
         minSdkVersion 21
         //noinspection ExpiringTargetSdkVersion
         targetSdkVersion 31
         versionCode 130 // is updated automatically by BitRise; only used when building locally
-        versionName '1.15.17'
+        versionName '1.12.0'
+
+        def rapidapiKey = System.getenv("rapidapi_key")
+        if (null == rapidapiKey) {
+            Properties properties = new Properties()
+            properties.load(project.rootProject.file("local.properties").newDataInputStream())
+            rapidapiKey = properties.getProperty("rapidapi.key", "")
+        }
+        buildConfigField "String", "RAPIDAPI_KEY", rapidapiKey
+
+        def meiliRouter = System.getenv("meili_router")
+        if (null == meiliRouter) {
+            Properties properties = new Properties()
+            properties.load(project.rootProject.file("local.properties").newDataInputStream())
+            meiliRouter = properties.getProperty("meili.router", "")
+        }
+        buildConfigField "String", "MEILI_ROUTER", meiliRouter
 
         def includeObjectBoxBrowser = System.getenv("INCLUDE_OBJECTBOX_BROWSER") ?: "false"
         def includeLeakCanary = System.getenv("INCLUDE_LEAK_CANARY") ?: "false"
@@ -57,7 +73,7 @@ android {
             applicationIdSuffix ".debug"
             versionNameSuffix "-DEBUG"
 
-            buildConfigField 'String', 'UPDATE_URL', '"https://raw.githubusercontent.com/avluis/Hentoid/dev/app/"'
+            buildConfigField 'String', 'UPDATE_URL', '"https://raw.githubusercontent.com/RobbWatershed/GalleryCherry/dev/app/"'
 
             proguardFile 'proguard-rules-debug.pro'
         }
@@ -65,7 +81,7 @@ android {
             debuggable false
             minifyEnabled true
 
-            buildConfigField 'String', 'UPDATE_URL', '"https://raw.githubusercontent.com/avluis/Hentoid/master/app/"'
+            buildConfigField 'String', 'UPDATE_URL', '"https://raw.githubusercontent.com/RobbWatershed/GalleryCherry/master/app/"'
 
             proguardFile 'proguard-rules-release.pro'
             testProguardFile 'proguard-rules-test.pro'
@@ -186,7 +202,7 @@ dependencies {
     // Specific UI layout for tag mosaic : github.com/google/flexbox-layout
     implementation 'com.google.android.flexbox:flexbox:3.0.0'
 
-    def auto_about_version = '8.9.1'
+    def auto_about_version = '8.9.4'
     implementation "com.mikepenz:aboutlibraries-core:$auto_about_version"
     implementation "com.mikepenz:aboutlibraries:$auto_about_version"
 
@@ -293,13 +309,13 @@ dependencies {
 
 sonarqube {
     properties {
-        property "sonar.projectKey", "RobbWatershed_hentoid-sonar"
+        property "sonar.projectKey", "RobbWatershed_GalleryCherry"
         property "sonar.organization", "robbwatershed-github"
         property "sonar.host.url", "https://sonarcloud.io"
         property "sonar.language", "java"
         property "sonar.sources", "src/main/"
         property "sonar.sourceEncoding", "UTF-8"
-        property "sonar.login", "3d0dc80792bad95f0193e7ed626cf090ac83e208"
+        property "sonar.login", "7bd8f2c4d82122f3261f244bd86403bedceea072"
     }
 }
 

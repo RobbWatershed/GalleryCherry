@@ -5,7 +5,6 @@ import static me.devsaki.hentoid.util.ImageHelper.tintBitmap;
 
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.PorterDuff;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
@@ -57,11 +56,12 @@ import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.database.domains.QueueRecord;
 import me.devsaki.hentoid.enums.AttributeType;
-import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.ui.BlinkAnimation;
 import me.devsaki.hentoid.util.ContentHelper;
 import me.devsaki.hentoid.util.Helper;
+import me.devsaki.hentoid.util.ImageHelper;
+import me.devsaki.hentoid.util.JsonHelper;
 import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.util.ThemeHelper;
 import me.devsaki.hentoid.util.download.ContentQueueManager;
@@ -73,7 +73,7 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
     private static final int ITEM_HORIZONTAL_MARGIN_PX;
     private static final RequestOptions glideRequestOptions;
 
-    @IntDef({ViewType.LIBRARY, ViewType.LIBRARY_GRID, ViewType.LIBRARY_EDIT, ViewType.QUEUE, ViewType.ERRORS})
+    @IntDef({ViewType.LIBRARY, ViewType.LIBRARY_GRID, ViewType.LIBRARY_EDIT, ViewType.QUEUE, ViewType.ERRORS, ViewType.ONLINE})
     @Retention(RetentionPolicy.SOURCE)
     public @interface ViewType {
         int LIBRARY = 0;
@@ -81,6 +81,7 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
         int LIBRARY_EDIT = 2;
         int QUEUE = 3;
         int ERRORS = 4;
+        int ONLINE = 5;
     }
 
     private final Content content;
@@ -105,7 +106,7 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
         int remainingSpacePx = screenWidthPx % gridHorizontalWidthPx;
         ITEM_HORIZONTAL_MARGIN_PX = remainingSpacePx / (nbItems * 2);
 
-        Bitmap bmp = BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_hentoid_trans);
+        Bitmap bmp = ImageHelper.getBitmapFromResource(context, R.drawable.ic_cherry_icon);
         int tintColor = ThemeHelper.getColor(context, R.color.light_gray);
         Drawable d = new BitmapDrawable(context.getResources(), tintBitmap(bmp, tintColor));
 
@@ -125,7 +126,7 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
         setIdentifier(Helper.generateIdForPlaceholder());
     }
 
-    // Constructor for library and error item
+    // Constructor for library, online and error item
     public ContentItem(
             Content content,
             @Nullable ItemTouchHelper touchHelper,
@@ -173,7 +174,8 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
 
     @Override
     public int getLayoutRes() {
-        if (ViewType.LIBRARY == viewType) return R.layout.item_library_content;
+        if (ViewType.LIBRARY == viewType || ViewType.ONLINE == viewType)
+            return R.layout.item_library_content;
         else if (ViewType.LIBRARY_GRID == viewType) return R.layout.item_library_content_grid;
         else return R.layout.item_queue;
     }
@@ -283,6 +285,11 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
                 tvStorage = itemView.findViewById(R.id.tvStorage);
                 ivCompleted = requireViewById(itemView, R.id.ivCompleted);
                 readingProgress = requireViewById(itemView, R.id.reading_progress);
+            } else if (viewType == ViewType.ONLINE) {
+                ivFavourite = itemView.findViewById(R.id.ivFavourite);
+                ivExternal = itemView.findViewById(R.id.ivExternal);
+                tvTags = requireViewById(itemView, R.id.tvTags);
+                ivRedownload = itemView.findViewById(R.id.ivRedownload);
             } else if (viewType == ViewType.LIBRARY_GRID) {
                 ivNew = itemView.findViewById(R.id.lineNew);
                 ivFavourite = itemView.findViewById(R.id.ivFavourite);
@@ -306,7 +313,7 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
             }
 
             // Payloads are set when the content stays the same but some properties alone change
-            if (!payloads.isEmpty()) {
+            if (!payloads.isEmpty() && payloads.get(0) instanceof Bundle) {
                 Bundle bundle = (Bundle) payloads.get(0);
                 ContentItemBundle.Parser bundleParser = new ContentItemBundle.Parser(bundle);
 
@@ -320,6 +327,8 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
                 if (longValue != null) item.content.setReads(longValue);
                 longValue = bundleParser.getReadPagesCount();
                 if (longValue != null) item.content.setReadPagesCount(longValue.intValue());
+                StatusContent status = bundleParser.getStatus();
+                if (status != null) item.content.setStatus(status);
                 String stringValue = bundleParser.getCoverUri();
                 if (stringValue != null) item.content.getCover().setFileUri(stringValue);
                 stringValue = bundleParser.getTitle();
@@ -543,13 +552,12 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
             if (null == content) return;
 
             // Source icon
-            Site site = content.getSite();
-            if (site != null && !site.equals(Site.NONE)) {
-                int img = site.getIco();
-                ivSite.setImageResource(img);
-                ivSite.setVisibility(View.VISIBLE);
+            if (content.isUrlBrowsable()) ivSite.setVisibility(View.VISIBLE);
+            else ivSite.setVisibility(View.GONE);
+            if (content.getSite() != null) {
+                ivSite.setImageResource(content.getSite().getIco());
             } else {
-                ivSite.setVisibility(View.GONE);
+                ivSite.setImageResource(R.drawable.ic_cherry);
             }
 
             if (deleteButton != null) {
@@ -569,6 +577,13 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
             } else if (ViewType.ERRORS == item.viewType) {
                 ivRedownload.setVisibility(View.VISIBLE);
                 ivError.setVisibility(View.VISIBLE);
+            } else if (ViewType.ONLINE == item.viewType) {
+                ivExternal.setVisibility(View.GONE);
+                ivFavourite.setVisibility(View.GONE);
+                if (content.getStatus().equals(StatusContent.ONLINE))
+                    ivRedownload.setVisibility(View.VISIBLE);
+                else
+                    ivRedownload.setVisibility(View.GONE);
             } else if (ViewType.LIBRARY == item.viewType || ViewType.LIBRARY_GRID == item.viewType) {
                 ivExternal.setVisibility(content.getStatus().equals(StatusContent.EXTERNAL) ? View.VISIBLE : View.GONE);
                 if (content.isFavourite()) {

@@ -10,9 +10,12 @@ import com.squareup.moshi.Moshi;
 import com.squareup.moshi.Types;
 import com.squareup.moshi.adapters.Rfc3339DateJsonAdapter;
 
+import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.lang.reflect.Type;
 import java.util.Date;
@@ -134,7 +137,7 @@ public class JsonHelper {
      * @param <K>    Type of the given object
      * @throws IOException If anything happens during file I/O
      */
-    private static <K> void updateJson(K object, Type type, @Nonnull OutputStream output) throws IOException {
+    static <K> void updateJson(K object, Type type, @Nonnull OutputStream output) throws IOException {
         byte[] bytes = serializeToJson(object, type).getBytes();
         output.write(bytes);
         if (output instanceof FileOutputStream) FileHelper.sync((FileOutputStream) output);
@@ -167,6 +170,50 @@ public class JsonHelper {
      */
     public static <T> T jsonToObject(@NonNull final Context context, @NonNull DocumentFile f, Type type) throws IOException {
         return jsonToObject(FileHelper.readFileAsString(context, f), type);
+    }
+
+    public static <T> T jsonToObject(File f, Class<T> type) throws IOException {
+        return jsonToObject(readJsonString(f), type);
+    }
+
+    private static String readJsonString(@NonNull File f) {
+        StringBuilder json = new StringBuilder();
+        String sCurrentLine;
+        boolean isFirst = true;
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(FileHelper.getInputStream(f)))) {
+            while ((sCurrentLine = br.readLine()) != null) {
+                if (isFirst) {
+                    // Strip UTF-8 BOMs if any
+                    if (sCurrentLine.charAt(0) == '\uFEFF')
+                        sCurrentLine = sCurrentLine.substring(1);
+                    isFirst = false;
+                }
+                json.append(sCurrentLine);
+            }
+        } catch (IOException | IllegalArgumentException e) {
+            Timber.e(e, "Error while reading %s", f.getAbsolutePath());
+        }
+        return json.toString();
+    }
+
+    private static String readJsonString(@NonNull final Context context, @NonNull DocumentFile f) {
+        StringBuilder json = new StringBuilder();
+        String sCurrentLine;
+        boolean isFirst = true;
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(FileHelper.getInputStream(context, f)))) {
+            while ((sCurrentLine = br.readLine()) != null) {
+                if (isFirst) {
+                    // Strip UTF-8 BOMs if any
+                    if (sCurrentLine.charAt(0) == '\uFEFF')
+                        sCurrentLine = sCurrentLine.substring(1);
+                    isFirst = false;
+                }
+                json.append(sCurrentLine);
+            }
+        } catch (IOException | IllegalArgumentException e) {
+            Timber.e(e, "Error while reading %s", f.getUri().toString());
+        }
+        return json.toString();
     }
 
     /**

@@ -52,6 +52,7 @@ public abstract class BaseImageListParser implements ImageListParser {
             throw new IllegalArgumentException("Invalid gallery URL : " + readerUrl);
 
         Timber.d("Gallery URL: %s", readerUrl);
+        onlineContent.populateUniqueSiteId();
 
         EventBus.getDefault().register(this);
 

@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/library_toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?colorPrimary"
+        android:elevation="@dimen/toolbar_layout_elevation"
+        android:minHeight="?android:attr/actionBarSize"
+        app:layout_constraintTop_toTopOf="parent"
+        app:menu="@menu/hina_menu"
+        app:navigationIcon="@drawable/ic_arrow_back" />
+
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/library_selection_toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?colorPrimary"
+        android:elevation="@dimen/toolbar_layout_elevation"
+        android:minHeight="?android:attr/actionBarSize"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:menu="@menu/library_selection_menu"
+        app:navigationIcon="@drawable/ic_arrow_back" />
+
+    <include layout="@layout/include_library_search_sort_bar" />
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/advanced_search_background">
+
+        <include layout="@layout/include_source_alert_bar" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/library_list"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:clipToPadding="false"
+            android:paddingStart="@dimen/default_cardview_margin"
+            android:paddingTop="@dimen/default_cardview_margin"
+            android:paddingEnd="@dimen/default_cardview_margin"
+            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/web_alert_txt"
+            tools:listitem="@layout/item_library_content" />
+
+        <TextView
+            android:id="@+id/hina_loading_txt"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:background="@color/black_opacity_50"
+            android:gravity="center"
+            android:text="@string/hina_loading"
+            android:textColor="@color/white_opacity_66"
+            android:textSize="@dimen/text_header_4"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="@id/library_list"
+            app:layout_constraintTop_toTopOf="@id/library_list"
+            tools:visibility="visible" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -9,7 +9,9 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
+import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.VectorDrawable;
 import android.net.Uri;
 
 import androidx.annotation.ColorInt;
@@ -116,6 +118,18 @@ public final class ImageHelper {
      * @param drawableId Drawable ID to get the Bitmap from
      * @return Given drawable ID rendered into a Bitmap
      */
+    public static Bitmap getBitmapFromResource(@NonNull Context context, @DrawableRes int drawableId) {
+        Drawable drawable = ContextCompat.getDrawable(context, drawableId);
+        if (drawable instanceof BitmapDrawable) {
+            return ((BitmapDrawable) drawable).getBitmap();
+        } else if (drawable instanceof VectorDrawable) {
+            return getBitmapFromVectorDrawable(context, drawableId);
+        } else {
+            throw new IllegalArgumentException("unsupported drawable type");
+        }
+    }
+
+    // TODO make dimensions variable
     public static Bitmap getBitmapFromVectorDrawable(@NonNull final Context context, @DrawableRes int drawableId) {
         Drawable d = ContextCompat.getDrawable(context, drawableId);
 
@@ -144,7 +158,7 @@ public final class ImageHelper {
      * @param color  Color to use as tint
      * @return Given Bitmap tinted with the given color
      */
-    public static Bitmap tintBitmap(Bitmap bitmap, @ColorInt int color) {
+    public static Bitmap tintBitmap(@NonNull Bitmap bitmap, @ColorInt int color) {
         Paint p = new Paint();
         p.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_IN));
         Bitmap b = Bitmap.createBitmap(bitmap.getWidth(), bitmap.getHeight(), ARGB_8888);

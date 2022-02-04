@@ -10,6 +10,7 @@ import androidx.paging.DataSource;
 import androidx.paging.LivePagedListBuilder;
 import androidx.paging.PagedList;
 
+import com.annimon.stream.Collectors;
 import com.annimon.stream.Optional;
 import com.annimon.stream.Stream;
 import com.annimon.stream.function.Consumer;
@@ -17,6 +18,7 @@ import com.annimon.stream.function.Consumer;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -304,6 +306,19 @@ public class ObjectBoxDAO implements CollectionDAO {
     @Override
     public List<Content> searchTitlesWith(@NonNull String word, int[] contentStatusCodes) {
         return db.selectContentWithTitle(word, contentStatusCodes);
+    }
+
+    public LiveData<Map<String, StatusContent>> selectContentUniqueIdStates(@NonNull final Site site) {
+        ObjectBoxLiveData<Content> livedata = new ObjectBoxLiveData<>(db.selectContentBySourceQ(site));
+
+        MediatorLiveData<Map<String, StatusContent>> result = new MediatorLiveData<>();
+        result.addSource(livedata, v -> result.setValue(Stream.of(v).withoutNulls().collect(Collectors.toMap(
+                Content::getUniqueSiteId,
+                Content::getStatus,
+                (a, b) -> a, // In case of duplicate keys, keep the first entry
+                HashMap::new))));
+
+        return result;
     }
 
     @Nullable
@@ -710,6 +725,11 @@ public class ObjectBoxDAO implements CollectionDAO {
         int index = 1;
         for (QueueRecord qr : queue) qr.setRank(index++);
         db.updateQueue(queue);
+    }
+
+    @Override
+    public void insertQueue(long contentId, int order) {
+        db.insertQueue(contentId, order);
     }
 
     private List<Long> contentIdSearch(

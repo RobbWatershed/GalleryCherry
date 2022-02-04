@@ -50,6 +50,8 @@ import me.devsaki.hentoid.database.domains.GroupItem_;
 import me.devsaki.hentoid.database.domains.Group_;
 import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.database.domains.ImageFile_;
+import me.devsaki.hentoid.database.domains.LandingRecord;
+import me.devsaki.hentoid.database.domains.LandingRecord_;
 import me.devsaki.hentoid.database.domains.MyObjectBox;
 import me.devsaki.hentoid.database.domains.QueueRecord;
 import me.devsaki.hentoid.database.domains.QueueRecord_;
@@ -337,6 +339,10 @@ public class ObjectBoxDB {
         }
     }
 
+    public List<QueueRecord> selectQueue() {
+        return store.boxFor(QueueRecord.class).query().order(QueueRecord_.rank).build().find();
+    }
+
     List<Content> selectQueueContents() {
         List<Content> result = new ArrayList<>();
         List<QueueRecord> queueRecords = selectQueueRecordsQ(null).find();
@@ -416,6 +422,12 @@ public class ObjectBoxDB {
     @Nullable
     List<Content> selectContentById(List<Long> id) {
         return store.boxFor(Content.class).get(id);
+    }
+
+    public Query<Content> selectContentBySourceQ(@NonNull Site site) {
+        QueryBuilder<Content> queryBuilder = store.boxFor(Content.class).query();
+        queryBuilder.notEqual(Content_.url, "", QueryBuilder.StringOrder.CASE_INSENSITIVE).equal(Content_.site, site.getCode());
+        return queryBuilder.build();
     }
 
     @Nullable
@@ -1300,6 +1312,26 @@ public class ObjectBoxDB {
         return store.boxFor(SiteHistory.class).query().equal(SiteHistory_.site, s.getCode()).build().findFirst();
     }
 
+    public void insertLandingRecord(LandingRecord record) {
+        store.boxFor(LandingRecord.class).put(record);
+    }
+
+    @Nullable
+    public LandingRecord selectLandingRecord(@NonNull Site site, @NonNull String url) {
+        if (!url.isEmpty())
+            return store.boxFor(LandingRecord.class).query().equal(LandingRecord_.url, url, QueryBuilder.StringOrder.CASE_INSENSITIVE).equal(LandingRecord_.site, site.getCode()).build().findFirst();
+        else return null;
+    }
+
+    @Nullable
+    public List<LandingRecord> selectLandingRecords(@NonNull Site s) {
+        return store.boxFor(LandingRecord.class).query().equal(LandingRecord_.site, s.getCode()).sort(LandingRecord.DATE_COMPARATOR_DESC).build().find();
+    }
+
+    public void deleteAllLandingRecords() {
+        store.boxFor(LandingRecord.class).removeAll();
+    }
+
     Query<SiteBookmark> selectBookmarksQ(@Nullable Site s) {
         QueryBuilder<SiteBookmark> qb = store.boxFor(SiteBookmark.class).query();
         if (s != null) qb.equal(SiteBookmark_.site, s.getCode());
@@ -1491,6 +1523,10 @@ public class ObjectBoxDB {
     List<Content> selectDownloadedContentWithNoSize() {
         return store.boxFor(Content.class).query().in(Content_.status, libraryStatus).isNull(Content_.size).build().find();
     }
+
+    /**
+     * ONE-SHOT USE QUERIES (MIGRATION & MAINTENANCE)
+     */
 
     List<Content> selectDownloadedContentWithNoReadProgress() {
         return store.boxFor(Content.class).query().in(Content_.status, libraryStatus).isNull(Content_.readProgress).build().find();

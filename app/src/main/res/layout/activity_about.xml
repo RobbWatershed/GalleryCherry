@@ -35,7 +35,7 @@
                 android:id="@+id/appLogo"
                 android:layout_width="@dimen/about_ic_hentoid_width"
                 android:layout_height="@dimen/about_ic_hentoid_height"
-                android:src="@drawable/ic_hentoid"
+                android:src="@drawable/ic_cherry"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
                 tools:ignore="ContentDescription" />
@@ -69,7 +69,6 @@
                 android:layout_height="@dimen/about_ic_icons_height"
                 android:cropToPadding="true"
                 android:src="@drawable/ic_social_discord"
-                app:layout_constraintBottom_toTopOf="@id/redditIcon"
                 app:layout_constraintStart_toEndOf="@id/appLogo"
                 app:layout_constraintTop_toBottomOf="@id/githubIcon"
                 tools:ignore="ContentDescription" />
@@ -85,58 +84,34 @@
                 app:layout_constraintStart_toEndOf="@id/discordIcon"
                 app:layout_constraintTop_toTopOf="@id/discordIcon" />
 
-            <ImageView
-                android:id="@+id/redditIcon"
-                android:layout_width="@dimen/about_ic_icons_width"
-                android:layout_height="@dimen/about_ic_icons_height"
-                android:cropToPadding="true"
-                android:src="@drawable/ic_social_reddit"
-                app:layout_constraintStart_toEndOf="@id/appLogo"
-                app:layout_constraintTop_toBottomOf="@id/discordIcon"
-                tools:ignore="ContentDescription" />
-
-            <TextView
-                android:id="@+id/redditText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="5dp"
-                android:text="@string/about_reddit"
-                android:textSize="@dimen/about_ic_icons_textSize"
-                app:layout_constraintBottom_toBottomOf="@id/redditIcon"
-                app:layout_constraintStart_toEndOf="@id/redditIcon"
-                app:layout_constraintTop_toTopOf="@id/redditIcon" />
-
             <TextView
                 android:id="@+id/changelogButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
                 android:layout_marginTop="8dp"
-                android:layout_marginStart="5dp"
                 android:text="@string/view_changelog"
                 android:textColor="?attr/colorSecondary"
                 android:textSize="@dimen/about_textSize"
                 android:textStyle="bold"
                 app:layout_constraintStart_toEndOf="@id/appLogo"
-                app:layout_constraintTop_toBottomOf="@id/redditIcon" />
+                app:layout_constraintTop_toBottomOf="@id/discordIcon" />
 
             <TextView
                 android:id="@+id/tv_version_name"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
                 android:layout_marginTop="16dp"
-                android:layout_marginEnd="16dp"
                 android:textSize="@dimen/about_textSize"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/appLogo"
-                tools:text="Hentoid X.X.X (bbb)" />
+                tools:text="GalleryCherry X.X.X (bbb)" />
 
             <TextView
                 android:id="@+id/tv_chrome_version_name"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp"
                 android:textSize="@dimen/about_textSize"
                 app:layout_constraintEnd_toEndOf="parent"
@@ -151,8 +126,8 @@
                 android:layout_marginTop="16dp"
                 android:text="@string/about1"
                 android:textSize="@dimen/about_textSize"
-                app:layout_constraintEnd_toEndOf="@id/tv_version_name"
-                app:layout_constraintStart_toStartOf="@id/tv_chrome_version_name"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/tv_chrome_version_name" />
 
             <TextView
@@ -162,8 +137,8 @@
                 android:layout_marginTop="16dp"
                 android:text="@string/personalDataStatement1"
                 android:textSize="@dimen/about_textSize"
-                app:layout_constraintEnd_toEndOf="@id/aboutText1"
-                app:layout_constraintStart_toStartOf="@id/aboutText1"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/aboutText1" />
 
             <TextView
@@ -208,5 +183,4 @@
         </androidx.constraintlayout.widget.ConstraintLayout>
 
     </ScrollView>
-
 </androidx.constraintlayout.widget.ConstraintLayout>

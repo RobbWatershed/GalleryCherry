@@ -12,6 +12,7 @@ import android.content.res.ColorStateList;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.drawable.Animatable;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -232,6 +233,8 @@ public abstract class BaseWebActivity extends BaseActivity implements CustomWebV
     protected abstract CustomWebViewClient getWebClient();
 
     abstract Site getStartSite();
+
+    abstract boolean allowMixedContent();
 
 
     @Override
@@ -539,7 +542,7 @@ public abstract class BaseWebActivity extends BaseActivity implements CustomWebV
 
                 if (url != null && !url.isEmpty() && webClient.isGalleryPage(url)) {
                     // Launch on a new thread to avoid crashes
-                    webClient.parseResponseAsync(url);
+                    webClient.parseResponseAsync(url, true);
                     return true;
                 } else {
                     return false;
@@ -564,6 +567,10 @@ public abstract class BaseWebActivity extends BaseActivity implements CustomWebV
         webSettings.setUseWideViewPort(true);
         webSettings.setJavaScriptEnabled(true);
         webSettings.setLoadWithOverviewMode(true);
+
+        if (allowMixedContent() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        }
 
         if (fetchHandler != null)
             webView.addJavascriptInterface(new FetchHandler(fetchHandler), "fetchHandler");
@@ -863,7 +870,7 @@ public abstract class BaseWebActivity extends BaseActivity implements CustomWebV
 
         if (null == currentContent) return;
 
-        if (!isDownloadPlus && StatusContent.DOWNLOADED == currentContent.getStatus()) {
+        if (!isDownloadPlus && StatusContent.DOWNLOADED == currentContent.getStatus() && !currentContent.getSite().isDanbooru()) {
             ToastHelper.toast(R.string.already_downloaded);
             if (!quickDownload) setActionMode(ActionMode.READ);
             return;
@@ -993,6 +1000,9 @@ public abstract class BaseWebActivity extends BaseActivity implements CustomWebV
         boolean isInCollection = (contentDB != null && ContentHelper.isInLibrary(contentDB.getStatus()));
         boolean isInQueue = (contentDB != null && ContentHelper.isInQueue(contentDB.getStatus()));
 
+        // Danbooru sites have a single book that allows incremental downloads
+        if (isInCollection && onlineContent.getSite().isDanbooru()) isInCollection = false;
+
         if (!isInCollection && !isInQueue) {
             if (Preferences.isDownloadDuplicateAsk() && !onlineContent.getCoverImageUrl().isEmpty()) {
                 // Index the content's cover picture
@@ -1041,6 +1051,28 @@ public abstract class BaseWebActivity extends BaseActivity implements CustomWebV
                 onlineContent.setStatus(StatusContent.SAVED);
                 ContentHelper.addContent(this, dao, onlineContent);
             } else {
+                // Add new pages to current content with a proper index, and save them
+                if (onlineContent.getSite().isDanbooru()) { // TODO duplicated code with RedditAuthDownloadFragment
+                    // Ignore the images that are already contained in the central booru book
+                    List<ImageFile> newImages = onlineContent.getImageFiles();
+                    List<ImageFile> existingImages = contentDB.getImageFiles();
+                    if (newImages != null && existingImages != null) {
+                        newImages.removeAll(existingImages);
+                        // Reindex new images according to their future position in the existing album
+                        int maxOrder = Stream.of(existingImages).max(ImageFile.ORDER_COMPARATOR).mapToInt(ImageFile::getOrder).getAsInt();
+                        for (ImageFile img : newImages) {
+                            img.setOrder(++maxOrder);
+                            img.computeNameFromOrder();
+                        }
+
+                        // Save new images to DB
+                        // TODO is that the right place to do that ?
+                        existingImages.addAll(newImages);
+                        contentDB.setImageFiles(existingImages);
+                        contentDB.setQtyPages(existingImages.size());
+                        dao.insertContent(contentDB);
+                    }
+                }
                 currentContent = contentDB;
             }
         } else {
@@ -1329,10 +1361,6 @@ public abstract class BaseWebActivity extends BaseActivity implements CustomWebV
             StringBuilder sb = new StringBuilder();
             if (Preferences.isBrowserMarkDownloaded())
                 FileHelper.getAssetAsString(getAssets(), "downloaded.css", sb);
-            if (getStartSite().equals(Site.NHENTAI) && Preferences.isBrowserNhentaiInvisibleBlacklist())
-                FileHelper.getAssetAsString(getAssets(), "nhentai_invisible_blacklist.css", sb);
-            if (getStartSite().equals(Site.IMHENTAI))
-                FileHelper.getAssetAsString(getAssets(), "imhentai.css", sb);
             customCss = sb.toString();
         }
         return customCss;

@@ -961,6 +961,17 @@ public final class ContentHelper {
         return result;
     }
 
+    public static String makeDownloadParams(String... downloadParamsArgs) {
+        if (downloadParamsArgs.length % 2 > 0)
+            throw new IllegalArgumentException("download params should be called in pairs");
+
+        Map<String, String> downloadParams = new HashMap<>();
+        for (int i = 0; i < downloadParamsArgs.length; i += 2)
+            downloadParams.put(downloadParamsArgs[i], downloadParamsArgs[i + 1]);
+
+        return JsonHelper.serializeToJson(downloadParams, JsonHelper.MAP_STRINGS);
+    }
+
     /**
      * Update the given content's properties by parsing its webpage
      *

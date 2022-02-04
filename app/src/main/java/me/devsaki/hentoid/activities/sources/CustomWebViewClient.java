@@ -111,6 +111,8 @@ class CustomWebViewClient extends WebViewClient {
     private final AtomicBoolean isPageLoading = new AtomicBoolean(false);
     // Loading state of the HTML code of the current webpage (used to trigger the action button)
     private final AtomicBoolean isHtmlLoaded = new AtomicBoolean(false);
+    // Flag to automatically prevent augmented browser to be used
+    boolean preventAugmentedBrowser = false;
 
     protected final AdBlocker adBlocker;
 
@@ -249,7 +251,8 @@ class CustomWebViewClient extends WebViewClient {
      * false if the webview has to handle the display (OkHttp will be used as a 2nd request for parsing)
      */
     private boolean canUseSingleOkHttpRequest() {
-        return (Preferences.isBrowserAugmented()
+        return (!preventAugmentedBrowser
+                && Preferences.isBrowserAugmented()
                 && (HttpHelper.getChromeVersion() < 45 || HttpHelper.getChromeVersion() > 71)
         );
     }
@@ -345,6 +348,9 @@ class CustomWebViewClient extends WebViewClient {
     public void onPageFinished(WebView view, String url) {
         if (BuildConfig.DEBUG) Timber.v("WebView : page finished %s", url);
         isPageLoading.set(false);
+        // Specific to Cherry : due to redirections, the correct page URLs are those visible from onPageFinished
+        // Launch on a new thread to avoid crashes
+        if (isGalleryPage(url) && !isHtmlLoaded.get()) parseResponseAsync(url, false);
         isHtmlLoaded.set(false); // Reset for the next page
         activity.onPageFinished(isResultsPage(StringHelper.protect(url)), isGalleryPage(url));
     }
@@ -427,9 +433,9 @@ class CustomWebViewClient extends WebViewClient {
      *
      * @param urlStr URL of the page to parse
      */
-    void parseResponseAsync(@NonNull String urlStr) {
+    void parseResponseAsync(@NonNull String urlStr, boolean isQuickDownload) {
         compositeDisposable.add(
-                Completable.fromCallable(() -> parseResponse(urlStr, null, true, true))
+                Completable.fromCallable(() -> parseResponse(urlStr, null, true, isQuickDownload))
                         .subscribeOn(Schedulers.io())
                         .observeOn(AndroidSchedulers.mainThread())
                         .subscribe(() -> {
@@ -562,6 +568,8 @@ class CustomWebViewClient extends WebViewClient {
         if (content.getStatus() != null && content.getStatus().equals(StatusContent.IGNORED))
             return content;
 
+        content.setSite(site); // useful for smart content parser who doesn't know that
+
         // Save useful download params for future use during download
         Map<String, String> params;
         if (content.getDownloadParams().length() > 2) // Params already contain values
@@ -572,6 +580,7 @@ class CustomWebViewClient extends WebViewClient {
         params.put(HttpHelper.HEADER_REFERER_KEY, content.getSite().getUrl());
 
         content.setDownloadParams(JsonHelper.serializeToJson(params, JsonHelper.MAP_STRINGS));
+        content.populateUniqueSiteId();
         isHtmlLoaded.set(true);
 
         return content;

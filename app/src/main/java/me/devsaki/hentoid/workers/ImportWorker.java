@@ -28,25 +28,20 @@ import me.devsaki.hentoid.core.Consts;
 import me.devsaki.hentoid.database.CollectionDAO;
 import me.devsaki.hentoid.database.DuplicatesDAO;
 import me.devsaki.hentoid.database.ObjectBoxDAO;
-import me.devsaki.hentoid.database.domains.Attribute;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.ErrorRecord;
 import me.devsaki.hentoid.database.domains.Group;
 import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.database.domains.QueueRecord;
 import me.devsaki.hentoid.database.domains.SiteBookmark;
-import me.devsaki.hentoid.enums.AttributeType;
 import me.devsaki.hentoid.enums.ErrorType;
 import me.devsaki.hentoid.enums.Grouping;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.events.DownloadEvent;
 import me.devsaki.hentoid.events.ProcessEvent;
-import me.devsaki.hentoid.json.ContentV1;
-import me.devsaki.hentoid.json.DoujinBuilder;
 import me.devsaki.hentoid.json.JsonContent;
 import me.devsaki.hentoid.json.JsonContentCollection;
-import me.devsaki.hentoid.json.URLBuilder;
 import me.devsaki.hentoid.notification.import_.ImportCompleteNotification;
 import me.devsaki.hentoid.notification.import_.ImportProgressNotification;
 import me.devsaki.hentoid.notification.import_.ImportStartNotification;
@@ -531,125 +526,9 @@ public class ImportWorker extends BaseWorker {
         Optional<DocumentFile> file = Stream.of(bookFiles).filter(f -> StringHelper.protect(f.getName()).equals(Consts.JSON_FILE_NAME_V2)).findFirst();
         if (file.isPresent()) return importJsonV2(context, file.get(), folder, dao);
 
-        file = Stream.of(bookFiles).filter(f -> StringHelper.protect(f.getName()).equals(Consts.JSON_FILE_NAME)).findFirst();
-        if (file.isPresent()) return importJsonV1(context, file.get(), folder);
-
-        file = Stream.of(bookFiles).filter(f -> StringHelper.protect(f.getName()).equals(Consts.JSON_FILE_NAME_OLD)).findFirst();
-        if (file.isPresent()) return importJsonLegacy(context, file.get(), folder);
+        Timber.w("Book folder %s : no JSON file found !", folder.getUri());
 
         return null;
-    }
-
-    @SuppressWarnings({"deprecation", "squid:CallToDeprecatedMethod"})
-    private static List<Attribute> from(List<URLBuilder> urlBuilders, Site site) {
-        List<Attribute> attributes = null;
-        if (urlBuilders == null) {
-            return null;
-        }
-        if (!urlBuilders.isEmpty()) {
-            attributes = new ArrayList<>();
-            for (URLBuilder urlBuilder : urlBuilders) {
-                Attribute attribute = from(urlBuilder, AttributeType.TAG, site);
-                if (attribute != null) {
-                    attributes.add(attribute);
-                }
-            }
-        }
-
-        return attributes;
-    }
-
-    @SuppressWarnings({"deprecation", "squid:CallToDeprecatedMethod"})
-    private static Attribute from(URLBuilder urlBuilder, AttributeType type, Site site) {
-        if (urlBuilder == null) {
-            return null;
-        }
-        try {
-            if (urlBuilder.getDescription() == null) {
-                throw new ParseException("Problems loading attribute v2.");
-            }
-
-            return new Attribute(type, urlBuilder.getDescription(), urlBuilder.getId(), site);
-        } catch (Exception e) {
-            Timber.e(e, "Parsing URL to attribute");
-            return null;
-        }
-    }
-
-    @CheckResult
-    @SuppressWarnings({"deprecation", "squid:CallToDeprecatedMethod"})
-    private Content importJsonLegacy(
-            @NonNull final Context context,
-            @NonNull final DocumentFile json,
-            @NonNull final DocumentFile parentFolder) throws ParseException {
-        try {
-            DoujinBuilder doujinBuilder =
-                    JsonHelper.jsonToObject(context, json, DoujinBuilder.class);
-            ContentV1 content = new ContentV1();
-            content.setUrl(doujinBuilder.getId());
-            content.setHtmlDescription(doujinBuilder.getDescription());
-            content.setTitle(doujinBuilder.getTitle());
-            content.setSeries(from(doujinBuilder.getSeries(),
-                    AttributeType.SERIE, content.getSite()));
-            Attribute artist = from(doujinBuilder.getArtist(),
-                    AttributeType.ARTIST, content.getSite());
-            List<Attribute> artists = null;
-            if (artist != null) {
-                artists = new ArrayList<>(1);
-                artists.add(artist);
-            }
-
-            content.setArtists(artists);
-            content.setCoverImageUrl(doujinBuilder.getUrlImageTitle());
-            content.setQtyPages(doujinBuilder.getQtyPages());
-            Attribute translator = from(doujinBuilder.getTranslator(),
-                    AttributeType.TRANSLATOR, content.getSite());
-            List<Attribute> translators = null;
-            if (translator != null) {
-                translators = new ArrayList<>(1);
-                translators.add(translator);
-            }
-            content.setTranslators(translators);
-            content.setTags(from(doujinBuilder.getLstTags(), content.getSite()));
-            content.setLanguage(from(doujinBuilder.getLanguage(), AttributeType.LANGUAGE, content.getSite()));
-
-            content.setMigratedStatus();
-            content.setDownloadDate(Instant.now().toEpochMilli());
-            Content contentV2 = content.toV2Content();
-
-            contentV2.setStorageUri(parentFolder.getUri().toString());
-
-            DocumentFile newJson = JsonHelper.jsonToFile(context, JsonContent.fromEntity(contentV2), JsonContent.class, parentFolder);
-            contentV2.setJsonUri(newJson.getUri().toString());
-
-            return contentV2;
-        } catch (IOException | JsonDataException e) {
-            Timber.e(e, "Error reading JSON (old) file");
-            throw new ParseException("Error reading JSON (old) file : " + e.getMessage());
-        }
-    }
-
-    @CheckResult
-    @SuppressWarnings({"deprecation", "squid:CallToDeprecatedMethod"})
-    private Content importJsonV1(@NonNull final Context context, @NonNull final DocumentFile json, @NonNull final DocumentFile parentFolder) throws ParseException {
-        try {
-            ContentV1 content = JsonHelper.jsonToObject(context, json, ContentV1.class);
-            if (content.getStatus() != StatusContent.DOWNLOADED
-                    && content.getStatus() != StatusContent.ERROR) {
-                content.setMigratedStatus();
-            }
-            Content contentV2 = content.toV2Content();
-
-            contentV2.setStorageUri(parentFolder.getUri().toString());
-
-            DocumentFile newJson = JsonHelper.jsonToFile(context, JsonContent.fromEntity(contentV2), JsonContent.class, parentFolder);
-            contentV2.setJsonUri(newJson.getUri().toString());
-
-            return contentV2;
-        } catch (IOException | JsonDataException e) {
-            Timber.e(e, "Error reading JSON (v1) file");
-            throw new ParseException("Error reading JSON (v1) file : " + e.getMessage());
-        }
     }
 
     @CheckResult

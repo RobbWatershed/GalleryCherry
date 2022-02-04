@@ -28,7 +28,7 @@ class DownloadProgressNotification(
         val message = String.format("%d%s MB  @ %d KBps", sizeDownloadedMB, total, avgSpeedKbps)
 
         return NotificationCompat.Builder(context, DownloadNotificationChannel.ID)
-            .setSmallIcon(R.drawable.ic_hentoid_shape)
+            .setSmallIcon(R.drawable.ic_cherry_icon)
             .setContentTitle(title)
             .setContentText(message)
             .setContentInfo(progressString)

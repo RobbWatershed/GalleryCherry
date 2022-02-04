@@ -95,51 +95,11 @@ public class IntentActivity extends AppCompatActivity {
         if (null == toParse) return null;
 
         switch (site) {
-            case HITOMI:
-                int titleIdSeparatorIndex = toParse.lastIndexOf('-');
-                if (-1 == titleIdSeparatorIndex) {
-                    return toParse.substring(toParse.lastIndexOf('/')); // Input uses old gallery URL format
-                } else
-                    return "/" + toParse.substring(toParse.lastIndexOf('-') + 1); // Reconstitute old gallery URL format
-            case NHENTAI:
-                return toParse.replace("/g", "");
-            case TSUMINO:
-                return toParse.replace("/entry", "");
-            case ASMHENTAI:
-            case ASMHENTAI_COMICS:
-                return toParse.replace("/g", "") + "/"; // '/' required
-            case HENTAICAFE:
-                String path = data.toString();
-                return path.contains("/?p=") ? path.replace(Site.HENTAICAFE.getUrl(), "") : toParse;
-            case PURURIN:
-                return toParse.replace("/gallery", "") + "/";
-            case EHENTAI:
-            case EXHENTAI:
-                return toParse.replace("g/", "");
-            case FAKKU2:
-                return toParse.replace("/hentai", "");
-            case NEXUS:
-                return toParse.replace("/view", "");
-            case HBROWSE:
-                return toParse.substring(1);
-            case IMHENTAI:
-            case HENTAIFOX:
-                return toParse.replace("/gallery", "");
-            case PORNCOMIX:
-                return data.toString();
-            case MUSES:
-            case DOUJINS:
-            case LUSCIOUS:
-            case HENTAI2READ:
-            case MRM:
-            case MANHWA:
-            case TOONILY:
-            case ALLPORNCOMIC:
-            case PIXIV:
-            case MANHWA18:
-                return toParse;
+            case XHAMSTER:
+                int galleryIndex = toParse.indexOf("/gallery/");
+                return toParse.substring(galleryIndex + 9);
             default:
-                return null;
+                return toParse;
         }
     }
 }

@@ -48,67 +48,55 @@
             android:name=".activities.Api29MigrationActivity"
             android:label="@string/title_activity_api29_migration" />
         <activity
-            android:name=".activities.sources.HitomiActivity"
+            android:name=".activities.sources.XhamsterActivity"
             android:configChanges="orientation|screenSize" />
         <activity
-            android:name=".activities.sources.NhentaiActivity"
+            android:name=".activities.sources.XnxxActivity"
             android:configChanges="orientation|screenSize" />
         <activity
-            android:name=".activities.sources.TsuminoActivity"
+            android:name=".activities.sources.PornPicsActivity"
             android:configChanges="orientation|screenSize" />
         <activity
-            android:name=".activities.sources.ASMHentaiActivity"
+            android:name=".activities.sources.JpegworldActivity"
             android:configChanges="orientation|screenSize" />
         <activity
-            android:name=".activities.sources.PururinActivity"
+            android:name=".activities.sources.NextpicturezActivity"
             android:configChanges="orientation|screenSize" />
         <activity
-            android:name=".activities.sources.EHentaiActivity"
+            android:name=".activities.sources.HellpornoActivity"
             android:configChanges="orientation|screenSize" />
         <activity
-            android:name=".activities.sources.MusesActivity"
+            android:name=".activities.sources.PornPicGalleriesActivity"
             android:configChanges="orientation|screenSize" />
         <activity
-            android:name=".activities.sources.DoujinsActivity"
+            android:name=".activities.sources.Link2GalleriesActivity"
+            android:configChanges="orientation|screenSize" />
+        <activity
+            android:name=".activities.sources.RedditActivity"
+            android:configChanges="orientation|screenSize" />
+        <activity
+            android:name=".activities.sources.RedditLaunchActivity"
+            android:configChanges="orientation|screenSize" />
+        <activity
+            android:name=".activities.sources.JjgirlsActivity"
+            android:configChanges="orientation|screenSize" />
+        <activity
+            android:name=".activities.sources.Jjgirls2Activity"
+            android:configChanges="orientation|screenSize" />
+        <activity
+            android:name=".activities.sources.BabeTodayActivity"
             android:configChanges="orientation|screenSize" />
         <activity
             android:name=".activities.sources.LusciousActivity"
             android:configChanges="orientation|screenSize" />
         <activity
-            android:name=".activities.sources.ExHentaiActivity"
+            android:name=".activities.sources.FapalityActivity"
             android:configChanges="orientation|screenSize" />
         <activity
-            android:name=".activities.sources.PorncomixActivity"
+            android:name=".activities.sources.AsianSisterActivity"
             android:configChanges="orientation|screenSize" />
         <activity
-            android:name=".activities.sources.HbrowseActivity"
-            android:configChanges="orientation|screenSize" />
-        <activity
-            android:name=".activities.sources.Hentai2ReadActivity"
-            android:configChanges="orientation|screenSize" />
-        <activity
-            android:name=".activities.sources.HentaifoxActivity"
-            android:configChanges="orientation|screenSize" />
-        <activity
-            android:name=".activities.sources.MrmActivity"
-            android:configChanges="orientation|screenSize" />
-        <activity
-            android:name=".activities.sources.ManhwaActivity"
-            android:configChanges="orientation|screenSize" />
-        <activity
-            android:name=".activities.sources.ImhentaiActivity"
-            android:configChanges="orientation|screenSize" />
-        <activity
-            android:name=".activities.sources.ToonilyActivity"
-            android:configChanges="orientation|screenSize" />
-        <activity
-            android:name=".activities.sources.AllPornComicActivity"
-            android:configChanges="orientation|screenSize" />
-        <activity
-            android:name=".activities.sources.PixivActivity"
-            android:configChanges="orientation|screenSize" />
-        <activity
-            android:name=".activities.sources.Manhwa18Activity"
+            android:name=".activities.HinaActivity"
             android:configChanges="orientation|screenSize" />
         <activity
             android:name=".activities.LibraryActivity"
@@ -197,23 +185,8 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data
-                    android:host="hitomi.la"
-                    android:pathPattern="..*/..*"
-                    android:scheme="https" />
-                <data
-                    android:host="www.hitomi.la"
-                    android:pathPattern="..*/..*"
-                    android:scheme="https" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <data
-                    android:host="nhentai.net"
-                    android:pathPrefix="/g/"
+                    android:host="xhamster.com"
+                    android:pathPrefix="/photos"
                     android:scheme="https" />
                 <data
                     android:host="www.nhentai.net"
@@ -227,40 +200,7 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data
-                    android:host="www.tsumino.com"
-                    android:pathPrefix="/entry/"
-                    android:scheme="https" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <data
-                    android:host="asmhentai.com"
-                    android:pathPrefix="/g"
-                    android:scheme="https" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <data
-                    android:host="comics.asmhentai.com"
-                    android:pathPrefix="/g"
-                    android:scheme="https" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <data
-                    android:host="pururin.to"
+                    android:host="multi.xnxx.com"
                     android:pathPrefix="/gallery"
                     android:scheme="https" />
             </intent-filter>
@@ -271,8 +211,8 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data
-                    android:host="e-hentai.org"
-                    android:pathPrefix="/g/"
+                    android:host="pornpics.com"
+                    android:pathPrefix="/galleries"
                     android:scheme="https" />
             </intent-filter>
             <intent-filter>
@@ -282,8 +222,8 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data
-                    android:host="exhentai.org"
-                    android:pathPrefix="/g/"
+                    android:host="jpegworld.com"
+                    android:pathPrefix="/galleries"
                     android:scheme="https" />
             </intent-filter>
             <intent-filter>
@@ -293,18 +233,30 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data
-                    android:host="8muses.com"
-                    android:pathPrefix="/comics/album/"
-                    android:scheme="https" />
+                    android:host="nextpicturez.com"
+                    android:pathPrefix="/gallery"
+                    android:scheme="http" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
 
                 <data
-                    android:host="www.8muses.com"
-                    android:pathPrefix="/comics/album/"
-                    android:scheme="https" />
+                    android:host="young-whores.net"
+                    android:pathPrefix="/gallery"
+                    android:scheme="http" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
 
                 <data
-                    android:host="comics.8muses.com"
-                    android:pathPrefix="/comics/album/"
+                    android:host="hellporno.com"
+                    android:pathPrefix="/albums"
                     android:scheme="https" />
             </intent-filter>
             <intent-filter>
@@ -314,8 +266,8 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data
-                    android:host="doujins.com"
-                    android:pathPattern="..*/..*"
+                    android:host="jjgirls.com"
+                    android:pathPattern="/..*/..*/..*/"
                     android:scheme="https" />
             </intent-filter>
             <intent-filter>
@@ -348,20 +300,8 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data
-                    android:host="porncomixonline.net"
-                    android:pathPattern="..*/.*"
-                    android:scheme="https" />
-                <data
-                    android:host="porncomixonline.com"
-                    android:pathPattern="..*/.*"
-                    android:scheme="https" />
-                <data
-                    android:host="www.porncomixonline.net"
-                    android:pathPattern="..*/.*"
-                    android:scheme="https" />
-                <data
-                    android:host="www.porncomixonline.com"
-                    android:pathPattern="..*/.*"
+                    android:host="fapality.com"
+                    android:pathPattern="/photos"
                     android:scheme="https" />
             </intent-filter>
             <intent-filter>
@@ -371,8 +311,8 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data
-                    android:host="www.hbrowse.com"
-                    android:pathPattern="/..*/..*"
+                    android:host="asiansister.com"
+                    android:pathPattern="/view_"
                     android:scheme="https" />
             </intent-filter>
             <intent-filter>
@@ -382,82 +322,8 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data
-                    android:host="hentai2read.com"
-                    android:pathPattern="/..*/"
-                    android:scheme="https" />
-                <data
-                    android:host="hentai2read.com"
-                    android:pathPattern="/..*/..*"
-                    android:scheme="https" />
-                <data
-                    android:host="hentai2read.com"
-                    android:pathPattern="/..*/..*/..*"
-                    android:scheme="https" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <data
-                    android:host="hentaifox.com"
-                    android:pathPattern="/gallery/..*/"
-                    android:scheme="https" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <data
-                    android:host="myreadingmanga.info"
-                    android:pathPattern="/..*/"
-                    android:scheme="https" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <data
-                    android:host="manhwahentai.me"
-                    android:pathPattern="/..*/..*"
-                    android:scheme="https" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <data
-                    android:host="imhentai.com"
-                    android:pathPattern="/gallery/..*"
-                    android:scheme="https" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <data
-                    android:host="toonily.com"
-                    android:pathPattern="/..*/..*"
-                    android:scheme="https" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <data
-                    android:host="allporncomic.com"
-                    android:pathPattern="/porncomic/..*/"
+                    android:host="jjgirls.com"
+                    android:pathPattern="/pornpics/..*"
                     android:scheme="https" />
             </intent-filter>
             <intent-filter>
@@ -549,6 +415,9 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
+        <meta-data
+            android:name="io.fabric.ApiKey"
+            android:value="50ca85b53f91d01825ed7b8fea4ecd30134f448c" />
     </application>
 
 </manifest>

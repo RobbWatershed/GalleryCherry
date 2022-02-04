@@ -2,52 +2,23 @@ package me.devsaki.hentoid.parsers;
 
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.enums.Site;
-import me.devsaki.hentoid.parsers.content.ASMHentaiContent;
-import me.devsaki.hentoid.parsers.content.AllPornComicContent;
+import me.devsaki.hentoid.parsers.content.AsianSisterContent;
+import me.devsaki.hentoid.parsers.content.BabeTodayContent;
 import me.devsaki.hentoid.parsers.content.ContentParser;
-import me.devsaki.hentoid.parsers.content.DoujinsContent;
-import me.devsaki.hentoid.parsers.content.DummyContent;
-import me.devsaki.hentoid.parsers.content.EhentaiContent;
-import me.devsaki.hentoid.parsers.content.ExhentaiContent;
-import me.devsaki.hentoid.parsers.content.HbrowseContent;
-import me.devsaki.hentoid.parsers.content.Hentai2ReadContent;
-import me.devsaki.hentoid.parsers.content.HentaifoxContent;
-import me.devsaki.hentoid.parsers.content.HitomiContent;
-import me.devsaki.hentoid.parsers.content.ImhentaiContent;
-import me.devsaki.hentoid.parsers.content.LusciousContent;
-import me.devsaki.hentoid.parsers.content.Manhwa18Content;
-import me.devsaki.hentoid.parsers.content.ManhwaContent;
-import me.devsaki.hentoid.parsers.content.MrmContent;
-import me.devsaki.hentoid.parsers.content.MusesContent;
-import me.devsaki.hentoid.parsers.content.NhentaiContent;
-import me.devsaki.hentoid.parsers.content.PixivContent;
-import me.devsaki.hentoid.parsers.content.PorncomixContent;
-import me.devsaki.hentoid.parsers.content.PururinContent;
-import me.devsaki.hentoid.parsers.content.ToonilyContent;
-import me.devsaki.hentoid.parsers.content.TsuminoContent;
-import me.devsaki.hentoid.parsers.images.ASMHentaiParser;
-import me.devsaki.hentoid.parsers.images.AllPornComicParser;
-import me.devsaki.hentoid.parsers.images.DoujinsParser;
+import me.devsaki.hentoid.parsers.content.FapalityContent;
+import me.devsaki.hentoid.parsers.content.HellpornoContent;
+import me.devsaki.hentoid.parsers.content.Jjgirls2Content;
+import me.devsaki.hentoid.parsers.content.JjgirlsContent;
+import me.devsaki.hentoid.parsers.content.JpegworldContent;
+import me.devsaki.hentoid.parsers.content.PornPicsContent;
+import me.devsaki.hentoid.parsers.content.SmartContent;
+import me.devsaki.hentoid.parsers.content.XhamsterContent;
+import me.devsaki.hentoid.parsers.content.XnxxContent;
 import me.devsaki.hentoid.parsers.images.DummyParser;
-import me.devsaki.hentoid.parsers.images.EHentaiParser;
-import me.devsaki.hentoid.parsers.images.ExHentaiParser;
-import me.devsaki.hentoid.parsers.images.HbrowseParser;
-import me.devsaki.hentoid.parsers.images.Hentai2ReadParser;
-import me.devsaki.hentoid.parsers.images.HentaifoxParser;
-import me.devsaki.hentoid.parsers.images.HitomiParser;
+import me.devsaki.hentoid.parsers.images.FapalityParser;
 import me.devsaki.hentoid.parsers.images.ImageListParser;
-import me.devsaki.hentoid.parsers.images.ImhentaiParser;
 import me.devsaki.hentoid.parsers.images.LusciousParser;
-import me.devsaki.hentoid.parsers.images.Manhwa18Parser;
-import me.devsaki.hentoid.parsers.images.ManhwaParser;
-import me.devsaki.hentoid.parsers.images.MrmParser;
-import me.devsaki.hentoid.parsers.images.MusesParser;
-import me.devsaki.hentoid.parsers.images.NhentaiParser;
-import me.devsaki.hentoid.parsers.images.PixivParser;
-import me.devsaki.hentoid.parsers.images.PorncomixParser;
-import me.devsaki.hentoid.parsers.images.PururinParser;
-import me.devsaki.hentoid.parsers.images.ToonilyParser;
-import me.devsaki.hentoid.parsers.images.TsuminoParser;
+import me.devsaki.hentoid.parsers.images.XhamsterParser;
 
 public class ContentParserFactory {
 
@@ -63,51 +34,32 @@ public class ContentParserFactory {
 
     public Class<? extends ContentParser> getContentParserClass(Site site) {
         switch (site) {
-            case NHENTAI:
-                return NhentaiContent.class;
-            case ASMHENTAI:
-            case ASMHENTAI_COMICS:
-                return ASMHentaiContent.class;
-            case HITOMI:
-                return HitomiContent.class;
-            case TSUMINO:
-                return TsuminoContent.class;
-            case PURURIN:
-                return PururinContent.class;
-            case MUSES:
-                return MusesContent.class;
-            case DOUJINS:
-                return DoujinsContent.class;
-            case PORNCOMIX:
-                return PorncomixContent.class;
-            case HBROWSE:
-                return HbrowseContent.class;
-            case HENTAI2READ:
-                return Hentai2ReadContent.class;
-            case HENTAIFOX:
-                return HentaifoxContent.class;
-            case MRM:
-                return MrmContent.class;
-            case MANHWA:
-                return ManhwaContent.class;
-            case IMHENTAI:
-                return ImhentaiContent.class;
-            case EHENTAI:
-                return EhentaiContent.class;
-            case EXHENTAI:
-                return ExhentaiContent.class;
-            case LUSCIOUS:
-                return LusciousContent.class;
-            case TOONILY:
-                return ToonilyContent.class;
-            case ALLPORNCOMIC:
-                return AllPornComicContent.class;
-            case PIXIV:
-                return PixivContent.class;
-            case MANHWA18:
-                return Manhwa18Content.class;
+            case HELLPORNO:
+                return HellpornoContent.class;
+            case JPEGWORLD:
+                return JpegworldContent.class;
+            case PORNPICS:
+                return PornPicsContent.class;
+            case XHAMSTER:
+                return XhamsterContent.class;
+            case XNXX:
+                return XnxxContent.class;
+            case JJGIRLS:
+                return JjgirlsContent.class;
+            case JJGIRLS2:
+                return Jjgirls2Content.class;
+            case BABETODAY:
+                return BabeTodayContent.class;
+            case FAPALITY:
+                return FapalityContent.class;
+            case ASIANSISTER:
+                return AsianSisterContent.class;
+            case REDDIT:
+            case LINK2GALLERIES:
+            case NEXTPICTUREZ:
+            case PORNPICGALLERIES:
             default:
-                return DummyContent.class;
+                return SmartContent.class;
         }
     }
 
@@ -117,49 +69,12 @@ public class ContentParserFactory {
 
     public ImageListParser getImageListParser(Site site) {
         switch (site) {
-            case ASMHENTAI:
-            case ASMHENTAI_COMICS:
-                return new ASMHentaiParser();
-            case HITOMI:
-                return new HitomiParser();
-            case TSUMINO:
-                return new TsuminoParser();
-            case PURURIN:
-                return new PururinParser();
-            case EHENTAI:
-                return new EHentaiParser();
-            case EXHENTAI:
-                return new ExHentaiParser();
+            case XHAMSTER:
+                return new XhamsterParser();
             case LUSCIOUS:
                 return new LusciousParser();
-            case PORNCOMIX:
-                return new PorncomixParser();
-            case MUSES:
-                return new MusesParser();
-            case NHENTAI:
-                return new NhentaiParser();
-            case DOUJINS:
-                return new DoujinsParser();
-            case HBROWSE:
-                return new HbrowseParser();
-            case HENTAI2READ:
-                return new Hentai2ReadParser();
-            case HENTAIFOX:
-                return new HentaifoxParser();
-            case MRM:
-                return new MrmParser();
-            case MANHWA:
-                return new ManhwaParser();
-            case IMHENTAI:
-                return new ImhentaiParser();
-            case TOONILY:
-                return new ToonilyParser();
-            case ALLPORNCOMIC:
-                return new AllPornComicParser();
-            case PIXIV:
-                return new PixivParser();
-            case MANHWA18:
-                return new Manhwa18Parser();
+            case FAPALITY:
+                return new FapalityParser();
             default:
                 return new DummyParser();
         }

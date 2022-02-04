@@ -1,7 +1,7 @@
 <resources>
     <!-- Generic usage -->
-    <string name="app_name">Hentoid</string>
-    <string name="app_id">me.devsaki.hentoid</string>
+    <string name="app_name">GalleryCherry</string>
+    <string name="app_id">me.devsaki.cherry</string>
     <string name="app_intro">Welcome</string>
     <string name="yes">Yes</string> <!-- because Android default "OK" value for "yes" key is nonsense -->
     <string name="no">No</string>   <!-- because Android default "Cancel" value for "no" key is nonsense -->
@@ -35,12 +35,12 @@
     <string name="title_activity_search">Advanced Search</string>
 
     <!-- API29 migration / library refresh screen -->
-    <string name="api29_migration_title">Hentoid v12\nFile management update</string>
-    <string name="api29_migration_subtitle">Hentoid is updating your collection.\nIt may require a few minutes.</string>
-    <string name="api29_migration_location">Current Hentoid folder location\n%s</string>
-    <string name="api29_migration_step1">Hentoid folder</string>
+    <string name="api29_migration_title">GalleryCherry v1.6\nFile management update</string>
+    <string name="api29_migration_subtitle">GalleryCherry is updating your collection.\nIt may require a few minutes.</string>
+    <string name="api29_migration_location">Current app folder location\n%s</string>
+    <string name="api29_migration_step1">GalleryCherry folder</string>
     <string name="api29_migration_step1_external">External folder</string>
-    <string name="api29_migration_step1_select">Select Hentoid folder</string>
+    <string name="api29_migration_step1_select">Select app folder</string>
     <string name="api29_migration_step1_select_external">Select external folder</string>
     <string name="api29_migration_step2">Scan site folders</string>
     <string name="api29_migration_step3_init">Library scan starting…</string>
@@ -136,6 +136,7 @@
     <string name="work_untitled" translatable="false">[No data]</string>
     <string name="work_series">Series: %s</string>
     <string name="work_artist">Artist: %s</string>
+    <string name="work_model">Model: %s</string>
     <string name="work_pages_queue">Pages: %1$s%2$s</string>
     <string name="work_pages_library">%1$d pages / "%2$.1f MB</string>
     <string name="library_metrics_storage">%.0f MB</string>
@@ -144,7 +145,7 @@
     <string name="refresh_title">Refresh library</string>
     <string name="refresh_caption">Automatically refresh library data by rescanning files and folders.</string>
     <string name="refresh_options">Cleanup options</string>
-    <string name="refresh_location_internal">Hentoid library</string>
+    <string name="refresh_location_internal">GalleryCherry library</string>
     <string name="refresh_location_external">External library</string>
     <string name="refresh_options_rename">Rename all folders according to the current naming and max length preference</string>
     <string name="refresh_options_remove">Remove folders where…</string>
@@ -225,12 +226,15 @@
     <string name="import_invalid">Invalid folder selected - please select another one</string>
     <string name="import_app_folder">You cannot select the app folder as an external folder - please select another one</string>
     <string name="import_download_folder">You shouldn\'t select your device\'s download folder - please create or select another one</string>
-    <string name="import_create_fail">Hentoid folder creation failed - please select another location</string>
+    <string name="import_create_fail">App folder creation failed - please select another location</string>
     <string name="import_other">Import has stopped</string>
     <string name="import_unexpected">Import has stopped unexpectedly</string>
+    <string name="cleanup_folders">Do you want to cleanup your library while refreshing ?\nCleanup removes all empty folders and renames the others according to the current naming and max length preference.</string>
+    <string name="action_refresh">Just refresh</string>
+    <string name="action_refresh_cleanup">Refresh and cleanup</string>
     <string name="task_done">Task complete - see details in the log</string>
     <string name="content_not_found">Error - content not found</string>
-    <string name="contents_detected">Hentoid has recognized an existing library in this location.\nDo you want to import this library?</string>
+    <string name="contents_detected">GalleryCherry has recognized an existing library in this location.\nDo you want to import this library?</string>
     <string name="starting_import">Starting import…</string>
     <string name="importing_library">Importing Library</string>
     <string name="importing_please_wait">Importing, please wait…</string>
@@ -242,8 +246,8 @@
     <string name="memory_title">Memory usage</string>
     <string name="memory_total">Total : %s</string>
     <string name="memory_free">Free : %s</string>
-    <string name="memory_hentoid_main">Hentoid (primary) : %s</string>
-    <string name="memory_hentoid_ext">Hentoid (external) : %s</string>
+    <string name="memory_hentoid_main">GalleryCherry (primary) : %s</string>
+    <string name="memory_hentoid_ext">GalleryCherry (external) : %s</string>
     <string name="memory_database">Database : %1$s (%2$.1f%% full)</string>
     <string name="memory_details">View details (primary)</string>
 
@@ -326,8 +330,28 @@
         <item quantity="one">%d/%d result</item>
         <item quantity="other">%d/%d results</item>
     </plurals>
+
+    <!-- Reddit -->
+    <string name="landing_history_title">Type or select subreddit</string>
+    <string name="reddit_navigate">Navigate</string>
+    <string name="reddit_dl">Download</string>
+    <string name="reddit_noauth">You are not authenticated !</string>
+    <string name="reddit_noauth_explanation">You need to sign in with Reddit to be able to downloads images in your saved posts.</string>
+    <string name="reddit_noauth_action">SIGN IN WITH REDDIT</string>
+    <string name="reddit_auth">You are authenticated</string>
+    <string name="reddit_auth_img_count">%s new items to download</string>
+    <string name="reddit_auth_noimg">No new items to download</string>
+    <string name="reddit_auth_img_note">Note : Animated pictures hosted by gfycat are not supported by GalleryCherry</string>
+    <string name="reddit_auth_action">DOWNLOAD</string>
+
+    <!-- Hina -->
+    <string name="hina_loading">Loading…</string>
+    <string name="hina_loading_failed">Loading failed - Please try another search</string>
+    <string name="hina_no_results">No results found</string>
+    <string name="hina_no_library">Hina access failed !</string>
+
     <string name="reset">Permissions have been reset.\nResetting app.</string>
-    <string name="restart_needed">"Changes will be applied after Hentoid is restarted"</string>
+    <string name="restart_needed">"Changes will be applied after GalleryCherry is restarted"</string>
     <plurals name="redownload_confirm">
         <item quantity="one">Redownload selected book from scratch ?</item>
         <item quantity="other">Redownload selected books from scratch ?</item>
@@ -452,7 +476,7 @@
     <string name="alert_red">The download button is currently broken for this site.\n%s</string>
     <string name="alert_grey">This site currently has serious stability issues. The app has nothing to do about it. Please try again later.</string>
     <string name="alert_black">This site is currently unavailable for real. The app has nothing to do about it. Please try again later.</string>
-    <string name="alert_wip">The Hentoid dev team is working on a fix. You will be notified by the app when a new version is ready.</string>
+    <string name="alert_wip">The GalleryCherry dev team is working on a fix. You will be notified by the app when a new version is ready.</string>
     <string name="alert_fix_available">A fix is available on the latest version of the app. Please update.</string>
 
     <!-- App Lock -->
@@ -470,15 +494,15 @@
     <string name="pin_lock_on_restore">Lock when restored\nfrom background</string>
 
     <!-- About Activity -->
-    <string name="about1"><b>Hentoid</b> is a Doujinshi &amp; H-Manga archiving app. Hentoid was originally created by <b>Cesar Arasaki</b>.</string>
-    <string name="personalDataStatement1"><b>PERSONAL DATA PRIVACY STATEMENT</b>\n\nHentoid is a free and open-source software maintained by the Hentoid Community (join us on Discord - see link above)</string>
-    <string name="personalDataStatement2">Hentoid collects the following personal data and sends them to Google for processing through the firebase library :\n  - Session ID\n  - IP address</string>
+    <string name="about1"><b>GalleryCherry</b> is a XXX galleries archiving app. GalleryCherry is a fork from Hentoid, originally created by <b>Cesar Arasaki</b>.</string>
+    <string name="personalDataStatement1"><b>PERSONAL DATA PRIVACY STATEMENT</b>\n\GalleryCherry is a free and open-source software maintained by the GalleryCherry Community (join us on Discord - see link above)</string>
+    <string name="personalDataStatement2">GalleryCherry collects the following personal data and sends them to Google for processing through the firebase library :\n  - Session ID\n  - IP address</string>
     <string name="personalDataStatement3">The abovementioned data is removed from Firebase live and backup system within 180 days (see https://firebase.google.com/support/privacy/ for more details)\n\nNo other personal data is collected nor sent to any other party.</string>
     <string name="about_github" translatable="false"><u>GitHub</u></string>
+    <string name="about_github_wiki_url" translatable="false">https://github.com/RobbWatershed/GalleryCherry/wiki</string>
     <string name="about_discord" translatable="false"><u>Discord</u></string>
-    <string name="about_reddit" translatable="false"><u>Reddit</u></string>
     <string name="about_licenses">Display Licenses</string>
-    <string name="about_app_version">Hentoid ver: %1$s (%2$d)</string>
+    <string name="about_app_version">GalleryCherry ver: %1$s (%2$d)</string>
     <string name="about_chrome_version">Chrome v%1$d</string>
 
     <!-- Web browser -->
@@ -517,6 +541,7 @@
     <string name="category_series">Series (%1$d)</string>
     <string name="category_language">Language (%1$d)</string>
     <string name="category_source">Source (%1$d)</string>
+    <string name="category_model">Model (%1$d)</string>
     <plurals name="search_button">
         <item quantity="one">%s Result found</item>
         <item quantity="other">%s Results found</item>

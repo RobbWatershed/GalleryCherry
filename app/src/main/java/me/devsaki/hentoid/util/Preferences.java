@@ -978,8 +978,8 @@ public final class Preferences {
         static final int DL_BLOCKED_TAGS_BEHAVIOUR = Constant.DL_TAG_BLOCKING_BEHAVIOUR_DONT_QUEUE;
         static final boolean DL_HITOMI_WEBP = true;
         static final boolean CHECK_UPDATES = true;
-        // Default menu in v1.9.x
-        static final Site[] DEFAULT_SITES = new Site[]{Site.NHENTAI, Site.HITOMI, Site.ASMHENTAI, Site.TSUMINO, Site.PURURIN, Site.EHENTAI, Site.FAKKU2, Site.NEXUS, Site.MUSES, Site.DOUJINS};
+        // Default menu in v1.3.x
+        static final Site[] DEFAULT_SITES = new Site[]{Site.XHAMSTER, Site.XNXX, Site.PORNPICS, Site.JPEGWORLD, Site.NEXTPICTUREZ, Site.HELLPORNO, Site.PORNPICGALLERIES, Site.LINK2GALLERIES, Site.REDDIT, Site.JJGIRLS, Site.FAPALITY};
         static final String ACTIVE_SITES = TextUtils.join(",", Stream.of(DEFAULT_SITES).map(Site::getCode).toList());
         static final boolean LOCK_ON_APP_RESTORE = false;
         static final int LOCK_TIMER = Constant.LOCK_TIMER_30S;

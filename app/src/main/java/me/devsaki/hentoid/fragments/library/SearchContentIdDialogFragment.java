@@ -69,17 +69,7 @@ public class SearchContentIdDialogFragment extends DialogFragment {
             // Not possible for Pururin, e-hentai, exhentai
             List<Site> sites = new ArrayList<>();
             if (foundSitesList != null) {
-                if (!foundSitesList.contains(Site.HITOMI.getCode())) sites.add(Site.HITOMI);
-                if (!foundSitesList.contains(Site.NHENTAI.getCode())) sites.add(Site.NHENTAI);
-                if (!foundSitesList.contains(Site.ASMHENTAI.getCode())) sites.add(Site.ASMHENTAI);
-                if (!foundSitesList.contains(Site.ASMHENTAI_COMICS.getCode()))
-                    sites.add(Site.ASMHENTAI_COMICS);
-                if (!foundSitesList.contains(Site.TSUMINO.getCode())) sites.add(Site.TSUMINO);
-                if (!foundSitesList.contains(Site.LUSCIOUS.getCode())) sites.add(Site.LUSCIOUS);
-                if (!foundSitesList.contains(Site.HBROWSE.getCode())) sites.add(Site.HBROWSE);
-                if (!foundSitesList.contains(Site.HENTAIFOX.getCode())) sites.add(Site.HENTAIFOX);
-                if (!foundSitesList.contains(Site.IMHENTAI.getCode())) sites.add(Site.IMHENTAI);
-                if (!foundSitesList.contains(Site.PIXIV.getCode())) sites.add(Site.PIXIV);
+//            if (!foundSitesList.contains(Site.TSUMINO.getCode())) sites.add(Site.TSUMINO);
             }
             ItemAdapter<TextItem<Site>> itemAdapter = new ItemAdapter<>();
             itemAdapter.set(Stream.of(sites).map(s -> new TextItem<>(s.getDescription(), s, true)).toList());
@@ -95,27 +85,8 @@ public class SearchContentIdDialogFragment extends DialogFragment {
 
     private static String getUrlFromId(Site site, String id) {
         switch (site) {
-            case HITOMI:
-                return site.getUrl() + "/galleries/" + id + ".html";
-            case NHENTAI:
-            case ASMHENTAI:
-            case ASMHENTAI_COMICS:
-                return site.getUrl() + "/g/" + id + "/";
-            case IMHENTAI:
-            case HENTAIFOX:
-                return site.getUrl() + "/gallery/" + id + "/";
-            case HENTAICAFE:
-                return site.getUrl() + "/hc.fyi/" + id;
-            case TSUMINO:
-                return site.getUrl() + "/entry/" + id;
-            case NEXUS:
-                return site.getUrl() + "/view/" + id;
             case LUSCIOUS:
-                return site.getUrl().replace("manga", "albums") + id + "/";
-            case HBROWSE:
-                return site.getUrl() + id + "/c00001";
-            case PIXIV:
-                return site.getUrl() + "artworks/" + id;
+                return site.getUrl().replace("porn", "albums") + id + "/";
             default:
                 return site.getUrl();
         }

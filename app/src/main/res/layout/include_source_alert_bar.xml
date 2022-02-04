@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:parentTag="androidx.constraintlayout.widget.ConstraintLayout">
+
+    <TextView
+        android:id="@+id/web_alert_txt"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?colorSecondary"
+        android:minHeight="64dp"
+        android:paddingStart="64dp"
+        android:paddingTop="8dp"
+        android:paddingEnd="64dp"
+        android:paddingBottom="8dp"
+        android:text=""
+        android:textStyle="bold"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="@string/importing_please_wait" />
+
+    <ImageView
+        android:id="@+id/web_alert_icon"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_margin="8dp"
+        android:src="@drawable/ic_nuclear"
+        app:layout_constraintStart_toStartOf="@id/web_alert_txt"
+        app:layout_constraintTop_toTopOf="@id/web_alert_txt"
+        app:tint="@color/white_opacity_66"
+        tools:ignore="ContentDescription" />
+
+    <ImageView
+        android:id="@+id/web_alert_close_btn"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:layout_margin="8dp"
+        android:src="@drawable/ic_cancel"
+        app:layout_constraintEnd_toEndOf="@id/web_alert_txt"
+        app:layout_constraintTop_toTopOf="@id/web_alert_txt"
+        tools:ignore="ContentDescription" />
+
+    <androidx.constraintlayout.widget.Group
+        android:id="@+id/web_alert_group"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        app:constraint_referenced_ids="web_alert_icon,web_alert_txt,web_alert_close_btn"
+        tools:visibility="visible" />
+</merge>

@@ -123,7 +123,7 @@ public class AdBlocker {
     /**
      * Add an element to current URL whitelist
      *
-     * @param filter Filter to addAll to local whitelist
+     * @param filter Filter to add to local whitelist
      */
     public void addJsUrlWhitelist(String... filter) {
         Collections.addAll(localUrlWhitelist, filter);

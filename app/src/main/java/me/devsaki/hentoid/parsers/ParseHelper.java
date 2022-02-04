@@ -51,9 +51,8 @@ public class ParseHelper {
      * @param s String to clean up
      * @return String with removed brackets
      */
-    public static String removeBrackets(String s) {
+    private static String removeBrackets(String s) {
         if (null == s || s.isEmpty()) return "";
-
         int bracketPos = s.lastIndexOf('(');
         if (bracketPos > 1 && ' ' == s.charAt(bracketPos - 1)) bracketPos--;
         if (bracketPos > -1) {
@@ -192,7 +191,7 @@ public class ParseHelper {
 
     public static List<ImageFile> urlsToImageFiles(
             @Nonnull List<String> imgUrls,
-            @NonNull String coverUrl,
+            String coverUrl,
             @NonNull final StatusContent status
     ) {
         return urlsToImageFiles(imgUrls, coverUrl, status, null);
@@ -200,13 +199,13 @@ public class ParseHelper {
 
     public static List<ImageFile> urlsToImageFiles(
             @Nonnull List<String> imgUrls,
-            @NonNull String coverUrl,
+            String coverUrl,
             @NonNull final StatusContent status,
             final Chapter chapter
     ) {
         List<ImageFile> result = new ArrayList<>();
 
-        result.add(ImageFile.newCover(coverUrl, status));
+        if (coverUrl != null) result.add(ImageFile.newCover(coverUrl, status));
         result.addAll(urlsToImageFiles(imgUrls, 1, status, chapter, imgUrls.size()));
 
         return result;

@@ -2,8 +2,6 @@ package me.devsaki.hentoid.database.domains;
 
 import static me.devsaki.hentoid.util.JsonHelper.MAP_STRINGS;
 
-import android.text.TextUtils;
-
 import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -17,7 +15,6 @@ import java.io.Serializable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -32,28 +29,22 @@ import io.objectbox.annotation.Index;
 import io.objectbox.annotation.Transient;
 import io.objectbox.converter.PropertyConverter;
 import io.objectbox.relation.ToMany;
-import me.devsaki.hentoid.activities.sources.ASMHentaiActivity;
-import me.devsaki.hentoid.activities.sources.AllPornComicActivity;
+import me.devsaki.hentoid.activities.sources.AsianSisterActivity;
+import me.devsaki.hentoid.activities.sources.BabeTodayActivity;
 import me.devsaki.hentoid.activities.sources.BaseWebActivity;
-import me.devsaki.hentoid.activities.sources.DoujinsActivity;
-import me.devsaki.hentoid.activities.sources.EHentaiActivity;
-import me.devsaki.hentoid.activities.sources.ExHentaiActivity;
-import me.devsaki.hentoid.activities.sources.HbrowseActivity;
-import me.devsaki.hentoid.activities.sources.Hentai2ReadActivity;
-import me.devsaki.hentoid.activities.sources.HentaifoxActivity;
-import me.devsaki.hentoid.activities.sources.HitomiActivity;
-import me.devsaki.hentoid.activities.sources.ImhentaiActivity;
+import me.devsaki.hentoid.activities.sources.FapalityActivity;
+import me.devsaki.hentoid.activities.sources.HellpornoActivity;
+import me.devsaki.hentoid.activities.sources.Jjgirls2Activity;
+import me.devsaki.hentoid.activities.sources.JjgirlsActivity;
+import me.devsaki.hentoid.activities.sources.JpegworldActivity;
+import me.devsaki.hentoid.activities.sources.Link2GalleriesActivity;
 import me.devsaki.hentoid.activities.sources.LusciousActivity;
-import me.devsaki.hentoid.activities.sources.Manhwa18Activity;
-import me.devsaki.hentoid.activities.sources.ManhwaActivity;
-import me.devsaki.hentoid.activities.sources.MrmActivity;
-import me.devsaki.hentoid.activities.sources.MusesActivity;
-import me.devsaki.hentoid.activities.sources.NhentaiActivity;
-import me.devsaki.hentoid.activities.sources.PixivActivity;
-import me.devsaki.hentoid.activities.sources.PorncomixActivity;
-import me.devsaki.hentoid.activities.sources.PururinActivity;
-import me.devsaki.hentoid.activities.sources.ToonilyActivity;
-import me.devsaki.hentoid.activities.sources.TsuminoActivity;
+import me.devsaki.hentoid.activities.sources.NextpicturezActivity;
+import me.devsaki.hentoid.activities.sources.PornPicGalleriesActivity;
+import me.devsaki.hentoid.activities.sources.PornPicsActivity;
+import me.devsaki.hentoid.activities.sources.RedditActivity;
+import me.devsaki.hentoid.activities.sources.XhamsterActivity;
+import me.devsaki.hentoid.activities.sources.XnxxActivity;
 import me.devsaki.hentoid.enums.AttributeType;
 import me.devsaki.hentoid.enums.Grouping;
 import me.devsaki.hentoid.enums.Site;
@@ -64,7 +55,6 @@ import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.JsonHelper;
 import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.util.StringHelper;
-import me.devsaki.hentoid.util.network.HttpHelper;
 import timber.log.Timber;
 
 /**
@@ -224,7 +214,8 @@ public class Content implements Serializable {
     }
 
     public String getUniqueSiteId() {
-        return this.uniqueSiteId;
+        if (null == uniqueSiteId) uniqueSiteId = computeUniqueSiteId();
+        return uniqueSiteId;
     }
 
     public void populateUniqueSiteId() {
@@ -236,238 +227,93 @@ public class Content implements Serializable {
     }
 
     private String computeUniqueSiteId() {
-        String[] paths;
-
         if (null == url) return "";
 
+        String[] parts = url.split("/");
         switch (site) {
-            case FAKKU:
-                return url.substring(url.lastIndexOf('/') + 1);
-            case EHENTAI:
-            case EXHENTAI:
-            case PURURIN:
-                paths = url.split("/");
-                return (paths.length > 1) ? paths[1] : paths[0];
-            case MRM:
-            case HBROWSE:
-                return url.split("/")[0];
-            case HITOMI:
-                paths = url.split("/");
-                String expression = (paths.length > 1) ? paths[1] : paths[0];
-                return expression.replace(".html", "");
-            case ASMHENTAI:
-            case ASMHENTAI_COMICS:
-            case NHENTAI:
-            case PANDA:
-            case TSUMINO:
-                return url.replace("/", "");
-            case MUSES:
-                return url.replace("/comics/album/", "").replace("/", ".");
-            case FAKKU2:
-            case HENTAIFOX:
-            case PORNCOMIX:
-            case MANHWA:
-            case TOONILY:
-            case IMHENTAI:
-            case ALLPORNCOMIC:
-                paths = url.split("/");
-                return paths[paths.length - 1];
-            case DOUJINS:
-                // ID is the last numeric part of the URL
-                // e.g. lewd-title-ch-1-3-42116 -> 42116 is the ID
-                int lastIndex = url.lastIndexOf('-');
-                return url.substring(lastIndex + 1);
+            case XHAMSTER:
+                return url.substring(url.lastIndexOf("-") + 1);
+            case XNXX:
+                if (parts.length > 0) return parts[0];
+                else return "";
+            case PORNPICS:
+            case HELLPORNO:
+            case PORNPICGALLERIES:
+            case LINK2GALLERIES:
+            case NEXTPICTUREZ:
+            case JJGIRLS2:
+            case BABETODAY:
+                return parts[parts.length - 1];
+            case FAPALITY:
+                return parts[parts.length - 2];
+            case JPEGWORLD:
+                return url.substring(url.lastIndexOf("-") + 1, url.lastIndexOf("."));
+            case REDDIT:
+                return "reddit"; // One single book
+            case JJGIRLS:
+                return parts[parts.length - 2] + "/" + parts[parts.length - 1];
             case LUSCIOUS:
                 // ID is the last numeric part of the URL
                 // e.g. /albums/lewd_title_ch_1_3_42116/ -> 42116 is the ID
-                lastIndex = url.lastIndexOf('_');
+                int lastIndex = url.lastIndexOf('_');
                 return url.substring(lastIndex + 1, url.length() - 1);
-            case PIXIV:
-                // - If artworks, ID is the artwork ID
-                // - If not, ID is the whole URL
-                if (url.contains("artworks")) return url.substring(url.lastIndexOf('/') + 1);
-                else return url;
+            case ASIANSISTER:
+                // ID is the first numeric part of the URL
+                // e.g. /view_51651_stuff_561_58Pn -> 51651 is the ID
+                parts = url.split("_");
+                if (parts.length > 1) return parts[1];
+                else return "";
             default:
                 return "";
         }
     }
 
-    /**
-     * @deprecated Used for upgrade purposes from old versions
-     */
-    @Deprecated
-    public String getOldUniqueSiteId() {
-        String[] paths;
-        switch (site) {
-            case FAKKU:
-                return url.substring(url.lastIndexOf('/') + 1);
-            case PURURIN:
-                paths = url.split("/");
-                return paths[2].replace(".html", "") + "-" + paths[1];
-            case HITOMI:
-                paths = url.split("/");
-                return paths[1].replace(".html", "") + "-" +
-                        title.replaceAll("[^a-zA-Z0-9.-]", "_");
-            case ASMHENTAI:
-            case ASMHENTAI_COMICS:
-            case NHENTAI:
-            case PANDA:
-            case EHENTAI:
-            case EXHENTAI:
-            case TSUMINO:
-                return url.replace("/", "") + "-" + site.getDescription();
-            default:
-                return null;
-        }
+    public Class<?> getWebActivityClass() {
+        return getWebActivityClass(this.site);
     }
 
     public static Class<? extends AppCompatActivity> getWebActivityClass(Site site) {
         switch (site) {
-            case HITOMI:
-                return HitomiActivity.class;
-            case NHENTAI:
-                return NhentaiActivity.class;
-            case ASMHENTAI:
-            case ASMHENTAI_COMICS:
-                return ASMHentaiActivity.class;
-            case TSUMINO:
-                return TsuminoActivity.class;
-            case PURURIN:
-                return PururinActivity.class;
-            case EHENTAI:
-                return EHentaiActivity.class;
-            case EXHENTAI:
-                return ExHentaiActivity.class;
-            case MUSES:
-                return MusesActivity.class;
-            case DOUJINS:
-                return DoujinsActivity.class;
+            case XHAMSTER:
+                return XhamsterActivity.class;
+            case XNXX:
+                return XnxxActivity.class;
+            case PORNPICS:
+                return PornPicsActivity.class;
+            case JPEGWORLD:
+                return JpegworldActivity.class;
+            case NEXTPICTUREZ:
+                return NextpicturezActivity.class;
+            case HELLPORNO:
+                return HellpornoActivity.class;
+            case PORNPICGALLERIES:
+                return PornPicGalleriesActivity.class;
+            case LINK2GALLERIES:
+                return Link2GalleriesActivity.class;
+            case REDDIT:
+                return RedditActivity.class;
+            case JJGIRLS:
+                return JjgirlsActivity.class;
+            case JJGIRLS2:
+                return Jjgirls2Activity.class;
+            case BABETODAY:
+                return BabeTodayActivity.class;
             case LUSCIOUS:
                 return LusciousActivity.class;
-            case PORNCOMIX:
-                return PorncomixActivity.class;
-            case HBROWSE:
-                return HbrowseActivity.class;
-            case HENTAI2READ:
-                return Hentai2ReadActivity.class;
-            case HENTAIFOX:
-                return HentaifoxActivity.class;
-            case MRM:
-                return MrmActivity.class;
-            case MANHWA:
-                return ManhwaActivity.class;
-            case IMHENTAI:
-                return ImhentaiActivity.class;
-            case TOONILY:
-                return ToonilyActivity.class;
-            case ALLPORNCOMIC:
-                return AllPornComicActivity.class;
-            case PIXIV:
-                return PixivActivity.class;
-            case MANHWA18:
-                return Manhwa18Activity.class;
+            case FAPALITY:
+                return FapalityActivity.class;
+            case ASIANSISTER:
+                return AsianSisterActivity.class;
             default:
                 return BaseWebActivity.class;
         }
     }
 
-    public String getGalleryUrl() {
-        String galleryConst;
-        switch (site) {
-            case HENTAIFOX:
-            case PURURIN:
-            case IMHENTAI:
-                galleryConst = "/gallery";
-                break;
-            case HITOMI:
-                galleryConst = "/galleries";
-                break;
-            case ASMHENTAI:
-            case ASMHENTAI_COMICS:
-            case EHENTAI:           // Won't work because of the temporary key
-            case EXHENTAI:          // Won't work because of the temporary key
-            case NHENTAI:
-                galleryConst = "/g";
-                break;
-            case TSUMINO:
-                galleryConst = "/entry";
-                break;
-            case FAKKU2:
-                galleryConst = "/hentai/";
-                break;
-            case LUSCIOUS:
-                return site.getUrl().replace("/manga/", "") + url;
-            case PORNCOMIX:
-                return url;
-            default:
-                galleryConst = "";
-        }
-
-        return site.getUrl() + (galleryConst + url).replace("//", "/");
-    }
-
-    public String getReaderUrl() {
-        switch (site) {
-            case HITOMI:
-                return site.getUrl() + "/reader" + url;
-            case TSUMINO:
-                return site.getUrl() + "/Read/Index" + url;
-            case ASMHENTAI:
-                return site.getUrl() + "/gallery" + url + "1/";
-            case ASMHENTAI_COMICS:
-                return site.getUrl() + "/gallery" + url;
-            case PURURIN:
-                return site.getUrl() + "/read/" + url.substring(1).replace("/", "/01/");
-            case FAKKU2:
-                return getGalleryUrl() + "/read/page/1";
-            case MUSES:
-                return site.getUrl().replace("album", "picture") + "/1";
-            case LUSCIOUS:
-                return getGalleryUrl() + "read/";
-            case PORNCOMIX:
-                if (getGalleryUrl().contains("/manga")) return getGalleryUrl() + "/p/1/";
-                else return getGalleryUrl() + "#&gid=1&pid=1";
-            case HENTAIFOX:
-                return site.getUrl() + "g" + url;
-            default:
-                return getGalleryUrl();
-        }
-    }
-
-    /**
-     * Neutralizes the given cover URL to detect duplicate books
-     *
-     * @param url  Cover URL to neutralize
-     * @param site Site the URL is taken from
-     * @return Neutralized cover URL
-     */
-    public static String getNeutralCoverUrlRoot(@NonNull final String url, @NonNull final Site site) {
-        if (url.isEmpty()) return url;
-
-        if (site == Site.MANHWA) {
-            HttpHelper.UriParts parts = new HttpHelper.UriParts(url);
-            // Remove the last part of the filename if it is formatted as "numberxnumber"
-            String[] nameParts = parts.getFileNameNoExt().split("-");
-            String[] lastPartParts = nameParts[nameParts.length - 1].split("x");
-            for (String s : lastPartParts)
-                if (!StringHelper.isNumeric(s)) return url;
-
-            nameParts = Arrays.copyOf(nameParts, nameParts.length - 1);
-            return parts.getPath() + TextUtils.join("-", nameParts);
-        } else {
-            return url;
-        }
-    }
-
     public String getCategory() {
-        if (site == Site.FAKKU) {
-            return url.substring(1, url.lastIndexOf('/'));
-        } else {
-            if (attributes != null) {
-                List<Attribute> attributesList = getAttributeMap().get(AttributeType.CATEGORY);
-                if (attributesList != null && !attributesList.isEmpty()) {
-                    return attributesList.get(0).getName();
-                }
+        if (attributes != null) {
+            List<Attribute> attributesList = getAttributeMap().get(AttributeType.CATEGORY);
+            if (attributesList != null && !attributesList.isEmpty()) {
+                return attributesList.get(0).getName();
             }
         }
 
@@ -480,8 +326,59 @@ public class Content implements Serializable {
 
     public Content setUrl(String url) {
         this.url = url;
-        populateUniqueSiteId();
+        computeUniqueSiteId();
         return this;
+    }
+
+    public boolean isUrlBrowsable() {
+        if (url != null) {
+            return !site.equals(Site.NONE) && !site.equals(Site.HINA);
+        }
+        return false;
+    }
+
+    public String getGalleryUrl() {
+        String galleryConst;
+        switch (site) {
+            case PORNPICGALLERIES:
+            case LINK2GALLERIES:
+            case REDDIT: // N/A
+            case JJGIRLS:
+            case JJGIRLS2:
+            case BABETODAY:
+                return url; // Specific case - user can go on any site (smart parser)
+            case HELLPORNO:
+            case FAPALITY:
+            case ASIANSISTER:
+                galleryConst = ""; // Site landpage URL already contains the "/albums/" prefix
+                break;
+            case PORNPICS:
+            case JPEGWORLD:
+                galleryConst = "galleries/";
+                break;
+            case LUSCIOUS:
+                return site.getUrl().replace("/porn/","") + url;
+            default:
+                galleryConst = "gallery/";
+                break;
+        }
+
+        return site.getUrl() + (galleryConst + url).replace("//", "/");
+    }
+
+    public String getReaderUrl() {
+        return getGalleryUrl();
+    }
+
+    /**
+     * Neutralizes the given cover URL to detect duplicate books
+     *
+     * @param url  Cover URL to neutralize
+     * @param site Site the URL is taken from
+     * @return Neutralized cover URL
+     */
+    public static String getNeutralCoverUrlRoot(@NonNull final String url, @NonNull final Site site) {
+        return url;
     }
 
     public String getTitle() {

@@ -44,7 +44,7 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             tools:ignore="ContentDescription"
-            tools:src="@drawable/ic_hentoid_trans"
+            tools:src="@drawable/ic_cherry_icon"
             tools:tint="@color/light_gray" />
 
         <ImageView
@@ -112,7 +112,7 @@
             android:clickable="true"
             android:focusable="true"
             android:padding="8dp"
-            android:src="@drawable/ic_hentoid_shape"
+            android:src="@drawable/ic_menu_home"
             android:tooltipText="@string/view_source_help"
             app:layout_constraintTop_toBottomOf="@id/view_details"
             app:layout_constraintBottom_toBottomOf="parent"

@@ -1,5 +1,6 @@
 package me.devsaki.hentoid.database.domains;
 
+import java.util.Comparator;
 import java.util.Locale;
 import java.util.Objects;
 
@@ -158,6 +159,10 @@ public class ImageFile {
         return this;
     }
 
+    public void computeNameFromOrder() {
+        name = String.format(Locale.US, "%03d", order);
+    }
+
     public StatusContent getStatus() {
         return status;
     }
@@ -304,6 +309,8 @@ public class ImageFile {
 
         return result;
     }
+
+    public static final Comparator<ImageFile> ORDER_COMPARATOR = (a, b) -> a.getOrder().compareTo(b.getOrder());
 
     public boolean needsPageParsing() {
         return (pageUrl != null && !pageUrl.isEmpty() && (null == url || url.isEmpty()));

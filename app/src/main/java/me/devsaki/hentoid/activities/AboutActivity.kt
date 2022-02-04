@@ -35,7 +35,7 @@ class AboutActivity : BaseActivity() {
             it.appLogo.setOnClickListener { startBrowserActivity(Consts.URL_GITHUB_WIKI) }
             it.githubText.setOnClickListener { startBrowserActivity(Consts.URL_GITHUB) }
             it.discordText.setOnClickListener { startBrowserActivity(Consts.URL_DISCORD) }
-            it.redditText.setOnClickListener { startBrowserActivity(Consts.URL_REDDIT) }
+//            it.redditText.setOnClickListener { startBrowserActivity(Consts.URL_REDDIT) }
 
             it.tvVersionName.text = getString(
                 R.string.about_app_version,

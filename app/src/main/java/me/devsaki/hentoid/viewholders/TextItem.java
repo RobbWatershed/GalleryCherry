@@ -41,7 +41,7 @@ public class TextItem<T> extends AbstractItem<TextItem.TextViewHolder<T>> implem
     private final ItemTouchHelper touchHelper;
 
 
-    public TextItem(String text, T tag, boolean centered) {
+    public TextItem(@NonNull String text, T tag, boolean centered) {
         this.text = text;
         this.tag = tag;
         this.centered = centered;

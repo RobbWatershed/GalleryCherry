@@ -44,7 +44,7 @@
             app:layout_constraintTop_toBottomOf="@id/pbDownload"
             app:layout_constraintTop_toTopOf="parent"
             tools:ignore="ContentDescription"
-            tools:src="@drawable/ic_hentoid_trans"
+            tools:src="@drawable/ic_cherry_outline"
             tools:tint="@color/light_gray" />
 
         <ImageView
@@ -187,7 +187,7 @@
             android:clickable="true"
             android:focusable="true"
             android:padding="8dp"
-            android:src="@drawable/ic_hentoid_shape"
+            android:src="@drawable/ic_menu_hellporno"
             android:tooltipText="@string/view_source_help"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@id/queueTopBtn"

@@ -2,7 +2,6 @@ package me.devsaki.hentoid.workers;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.net.Uri;
 import android.util.Pair;
 import android.webkit.MimeTypeMap;
 
@@ -27,7 +26,6 @@ import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.threeten.bp.Instant;
 
-import java.io.File;
 import java.io.IOException;
 import java.security.InvalidParameterException;
 import java.util.ArrayList;
@@ -60,7 +58,6 @@ import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.events.DownloadEvent;
 import me.devsaki.hentoid.events.DownloadReviveEvent;
 import me.devsaki.hentoid.json.JsonContent;
-import me.devsaki.hentoid.json.sources.PixivIllustMetadata;
 import me.devsaki.hentoid.notification.action.UserActionNotification;
 import me.devsaki.hentoid.notification.download.DownloadErrorNotification;
 import me.devsaki.hentoid.notification.download.DownloadProgressNotification;
@@ -68,7 +65,6 @@ import me.devsaki.hentoid.notification.download.DownloadSuccessNotification;
 import me.devsaki.hentoid.notification.download.DownloadWarningNotification;
 import me.devsaki.hentoid.parsers.ContentParserFactory;
 import me.devsaki.hentoid.parsers.images.ImageListParser;
-import me.devsaki.hentoid.util.ArchiveHelper;
 import me.devsaki.hentoid.util.ContentHelper;
 import me.devsaki.hentoid.util.FileHelper;
 import me.devsaki.hentoid.util.Helper;
@@ -77,7 +73,6 @@ import me.devsaki.hentoid.util.JsonHelper;
 import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.util.StringHelper;
 import me.devsaki.hentoid.util.download.ContentQueueManager;
-import me.devsaki.hentoid.util.download.DownloadHelper;
 import me.devsaki.hentoid.util.download.RequestQueueManager;
 import me.devsaki.hentoid.util.exception.AccountException;
 import me.devsaki.hentoid.util.exception.CaptchaException;
@@ -292,7 +287,6 @@ public class ContentDownloadWorker extends BaseWorker {
             images = new ArrayList<>();
         else
             images = new ArrayList<>(images); // Safe copy of the original list
-
         for (ImageFile img : images) if (img.getStatus().equals(StatusContent.ERROR)) nbErrors++;
         StatusContent targetImageStatus = (downloadMode == Content.DownloadMode.DOWNLOAD) ? StatusContent.SAVED : StatusContent.ONLINE;
 
@@ -440,7 +434,6 @@ public class ContentDownloadWorker extends BaseWorker {
             return new ImmutablePair<>(QueuingResult.CONTENT_SKIPPED, null);
 
         List<ImageFile> pagesToParse = new ArrayList<>();
-        List<ImageFile> ugoirasToDownload = new ArrayList<>();
 
         // Queue image download requests
         for (ImageFile img : images) {
@@ -464,8 +457,6 @@ public class ContentDownloadWorker extends BaseWorker {
                 if (img.isCover() && images.size() > 1) img.setBackupUrl(images.get(1).getUrl());
 
                 if (img.needsPageParsing()) pagesToParse.add(img);
-                else if (img.getDownloadParams().contains(ContentHelper.KEY_DL_PARAMS_UGOIRA_FRAMES))
-                    ugoirasToDownload.add(img);
                 else requestQueueManager.queueRequest(buildImageDownloadRequest(img, dir, content));
             }
         }
@@ -478,21 +469,6 @@ public class ContentDownloadWorker extends BaseWorker {
                             .observeOn(Schedulers.io())
                             .subscribe(
                                     img -> parsePageforImage(img, dir, contentFinal),
-                                    t -> {
-                                        // Nothing; just exit the Rx chain
-                                    }
-                            )
-            );
-        }
-
-        // Parse ugoiras for images
-        if (!ugoirasToDownload.isEmpty()) {
-            final Site siteFinal = content.getSite();
-            compositeDisposable.add(
-                    Observable.fromIterable(ugoirasToDownload)
-                            .observeOn(Schedulers.io())
-                            .subscribe(
-                                    img -> downloadAndUnzipUgoira(img, dir, siteFinal),
                                     t -> {
                                         // Nothing; just exit the Rx chain
                                     }
@@ -609,7 +585,7 @@ public class ContentDownloadWorker extends BaseWorker {
 
             boolean hasError = false;
             // Set error state if less pages than initially detected - More than 10% difference in number of pages
-            if (content.getQtyPages() > 0 && nbImages < content.getQtyPages() && Math.abs(nbImages - content.getQtyPages()) > content.getQtyPages() * 0.1) {
+            if (content.getQtyPages() > 0 && !content.getSite().isDanbooru() && nbImages < content.getQtyPages() && Math.abs(nbImages - content.getQtyPages()) > content.getQtyPages() * 0.1) {
                 String errorMsg = String.format("The number of images found (%s) does not match the book's number of pages (%s)", nbImages, content.getQtyPages());
                 logErrorRecord(contentId, ErrorType.PARSING, content.getGalleryUrl(), "pages", errorMsg);
                 hasError = true;
@@ -921,92 +897,8 @@ public class ContentDownloadWorker extends BaseWorker {
         } else Timber.w("Failed to parse backup URL");
     }
 
-    // TODO doc
-    private void downloadAndUnzipUgoira(
-            @NonNull final ImageFile img,
-            @NonNull final DocumentFile dir,
-            @NonNull final Site site) {
-        boolean isError = false;
-        String errorMsg = "";
-
-        File ugoiraCacheFolder = FileHelper.getOrCreateCacheFolder(getApplicationContext(), Consts.UGOIRA_CACHE_FOLDER + File.separator + img.getId());
-        if (ugoiraCacheFolder != null) {
-            String targetFileName = img.getName();
-            try {
-                // == Download archive
-                ImmutablePair<File, String> result = DownloadHelper.downloadToFile(
-                        site,
-                        img.getUrl(),
-                        img.getOrder(),
-                        HttpHelper.webkitRequestHeadersToOkHttpHeaders(getRequestHeaders(img.getUrl(), img.getDownloadParams()), img.getUrl()),
-                        ugoiraCacheFolder,
-                        targetFileName,
-                        ArchiveHelper.ZIP_MIME_TYPE,
-                        downloadInterrupted,
-                        null
-                );
-
-                // == Extract all frames
-                ArchiveHelper.extractArchiveEntries(
-                        getApplicationContext(),
-                        Uri.fromFile(result.left),
-                        null, // Extract everything
-                        ugoiraCacheFolder,
-                        null,
-                        downloadInterrupted,
-                        null
-                );
-
-                // == Build the GIF using download params and extracted pics
-                List<ImmutablePair<Uri, Integer>> frames = new ArrayList<>();
-
-                // Get frame information
-                Map<String, String> downloadParams = ContentHelper.parseDownloadParams(img.getDownloadParams());
-                String ugoiraFramesStr = downloadParams.get(ContentHelper.KEY_DL_PARAMS_UGOIRA_FRAMES);
-                List<Pair<String, Integer>> ugoiraFrames = JsonHelper.jsonToObject(ugoiraFramesStr, PixivIllustMetadata.UGOIRA_FRAMES_TYPE);
-
-                // Map frame name to the downloaded file
-                for (Pair<String, Integer> frame : ugoiraFrames) {
-                    File[] files = ugoiraCacheFolder.listFiles(pathname -> pathname.getName().endsWith(frame.first));
-                    if (files != null && files.length > 0) {
-                        frames.add(new ImmutablePair<>(Uri.fromFile(files[0]), frame.second));
-                    }
-                }
-
-                // Assemble the GIF
-                Uri ugoiraGifFile = ImageHelper.assembleGif(
-                        getApplicationContext(),
-                        ugoiraCacheFolder,
-                        frames
-                );
-
-                // Save it to the book folder
-                Uri finalImgUri = FileHelper.copyFile(
-                        getApplicationContext(),
-                        ugoiraGifFile,
-                        dir.getUri(),
-                        ImageHelper.MIME_IMAGE_GIF,
-                        img.getName() + ".gif"
-                );
-                if (finalImgUri != null) {
-                    img.setMimeType(ImageHelper.MIME_IMAGE_GIF);
-                    img.setSize(FileHelper.fileSizeFromUri(getApplicationContext(), ugoiraGifFile));
-                    updateImageProperties(img, true, finalImgUri.toString());
-                } else
-                    throw new IOException("Couldn't copy result ugoira file");
-            } catch (Exception e) {
-                Timber.w(e);
-                isError = true;
-                errorMsg = e.getMessage();
-            } finally {
-                if (!ugoiraCacheFolder.delete())
-                    Timber.w("Couldn't delete ugoira folder %s", ugoiraCacheFolder.getAbsolutePath());
-            }
-            if (isError) {
-                updateImageProperties(img, false, "");
-                logErrorRecord(img.getContent().getTargetId(), ErrorType.IMG_PROCESSING, img.getUrl(), img.getName(), errorMsg);
-            }
-        }
+    private static byte[] processImage(String downloadParamsStr, byte[] binaryContent) throws InvalidParameterException {
+        return binaryContent;
     }
 
     /**

@@ -407,7 +407,7 @@ public class ViewerGalleryFragment extends Fragment implements ItemTouchCallback
                 if (chpImgs != null) {
                     for (ImageFile img : chpImgs) {
                         if (img.isReadable()) {
-                            ImageFileItem holder = new ImageFileItem(img, false);
+                            ImageFileItem holder = new ImageFileItem(img, false, ImageFileItem.ViewType.LIBRARY);
                             imgs.add(holder);
                         }
                     }
@@ -427,7 +427,7 @@ public class ViewerGalleryFragment extends Fragment implements ItemTouchCallback
 
                 List<ImageFileItem> imgs = new ArrayList<>();
                 for (ImageFile img : chapterlessImages) {
-                    ImageFileItem holder = new ImageFileItem(img, false);
+                    ImageFileItem holder = new ImageFileItem(img, false, ImageFileItem.ViewType.LIBRARY);
                     imgs.add(holder);
                 }
                 expandableItem.getSubItems().addAll(imgs);
@@ -438,7 +438,7 @@ public class ViewerGalleryFragment extends Fragment implements ItemTouchCallback
         } else { // Classic gallery
             List<ImageFileItem> imgs = new ArrayList<>();
             for (ImageFile img : images) {
-                ImageFileItem holder = new ImageFileItem(img, editMode == EditMode.ADD_CHAPTER);
+                ImageFileItem holder = new ImageFileItem(img, editMode == EditMode.ADD_CHAPTER, ImageFileItem.ViewType.LIBRARY);
                 if (startIndex == img.getDisplayOrder()) holder.setCurrent(true);
                 imgs.add(holder);
             }

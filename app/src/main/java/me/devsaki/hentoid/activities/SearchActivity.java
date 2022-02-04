@@ -35,13 +35,10 @@ import static java.lang.String.format;
  */
 public class SearchActivity extends BaseActivity {
 
-    // Buttons for each attribute type
     private TextView tagTypeButton;
-    private TextView artistTypeButton;
-    private TextView seriesTypeButton;
-    private TextView characterTypeButton;
-    private TextView languageTypeButton;
+    private TextView modelTypeButton;
     private TextView sourceTypeButton;
+
 
     // Book search button at the bottom of screen
     private TextView searchButton;
@@ -108,17 +105,8 @@ public class SearchActivity extends BaseActivity {
         tagTypeButton.setOnClickListener(v -> onAttrButtonClick(excludeClicked,AttributeType.TAG));
 
 
-        artistTypeButton = findViewById(R.id.textCategoryArtist);
-        artistTypeButton.setOnClickListener(v -> onAttrButtonClick(excludeClicked, AttributeType.ARTIST, AttributeType.CIRCLE));
-
-        seriesTypeButton = findViewById(R.id.textCategorySeries);
-        seriesTypeButton.setOnClickListener(v -> onAttrButtonClick(excludeClicked, AttributeType.SERIE));
-
-        characterTypeButton = findViewById(R.id.textCategoryCharacter);
-        characterTypeButton.setOnClickListener(v -> onAttrButtonClick(excludeClicked, AttributeType.CHARACTER));
-
-        languageTypeButton = findViewById(R.id.textCategoryLanguage);
-        languageTypeButton.setOnClickListener(v -> onAttrButtonClick(excludeClicked, AttributeType.LANGUAGE));
+        modelTypeButton = findViewById(R.id.textCategoryModel);
+        modelTypeButton.setOnClickListener(v -> onAttrButtonClick(excludeClicked, AttributeType.MODEL));
 
         sourceTypeButton = findViewById(R.id.textCategorySource);
         sourceTypeButton.setOnClickListener(v -> onAttrButtonClick(excludeClicked, AttributeType.SOURCE));
@@ -161,10 +149,7 @@ public class SearchActivity extends BaseActivity {
      */
     private void onQueryUpdated(@NonNull final SparseIntArray attrCount) {
         updateAttributeTypeButton(tagTypeButton, attrCount, AttributeType.TAG);
-        updateAttributeTypeButton(artistTypeButton, attrCount, AttributeType.ARTIST, AttributeType.CIRCLE);
-        updateAttributeTypeButton(seriesTypeButton, attrCount, AttributeType.SERIE);
-        updateAttributeTypeButton(characterTypeButton, attrCount, AttributeType.CHARACTER);
-        updateAttributeTypeButton(languageTypeButton, attrCount, AttributeType.LANGUAGE);
+        updateAttributeTypeButton(modelTypeButton, attrCount, AttributeType.MODEL);
         updateAttributeTypeButton(sourceTypeButton, attrCount, AttributeType.SOURCE);
     }
 

@@ -171,6 +171,8 @@ public interface CollectionDAO {
 
     LiveData<PagedList<Content>> searchBooksUniversal(String query, long groupId, int orderField, boolean orderDesc, boolean favouritesOnly, boolean loadAll, boolean bookCompletedOnly, boolean bookNotCompletedOnly);
 
+    LiveData<Map<String, StatusContent>> selectContentUniqueIdStates(@NonNull final Site site);
+
 
     LiveData<List<Content>> selectErrorContent();
 
@@ -220,6 +222,8 @@ public interface CollectionDAO {
     LiveData<List<QueueRecord>> selectQueueLive(String query);
 
     void addContentToQueue(@NonNull final Content content, StatusContent targetImageStatus, @ContentHelper.QueuePosition int position, boolean isQueueActive);
+
+    void insertQueue(long contentId, int order);
 
     void updateQueue(@NonNull List<QueueRecord> queue);
 

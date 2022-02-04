@@ -12,7 +12,7 @@ class UpdateProgressNotification(private val progress: Int = INDETERMINATE) : No
 
     override fun onCreateNotification(context: Context): android.app.Notification =
         NotificationCompat.Builder(context, UpdateNotificationChannel.ID)
-            .setSmallIcon(R.drawable.ic_hentoid_shape)
+            .setSmallIcon(R.drawable.ic_cherry_icon)
             .setContentTitle(context.resources.getText(R.string.downloading_update))
             .setProgress(100, progress, progress == INDETERMINATE)
             .setOnlyAlertOnce(true)

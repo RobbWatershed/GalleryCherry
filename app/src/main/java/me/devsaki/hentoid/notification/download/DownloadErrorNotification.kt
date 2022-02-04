@@ -26,7 +26,7 @@ class DownloadErrorNotification : Notification {
 
     override fun onCreateNotification(context: Context): android.app.Notification =
         NotificationCompat.Builder(context, DownloadNotificationChannel.ID)
-            .setSmallIcon(R.drawable.ic_hentoid_shape)
+            .setSmallIcon(R.drawable.ic_cherry_icon)
             .setContentTitle(context.getString(R.string.download_error))
             .setContentText(content?.title)
             .setContentIntent(getDefaultIntent(context))

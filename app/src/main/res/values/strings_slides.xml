@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Slide 01 -->
-    <string name="slide_01_header">Welcome to Hentoid!</string>
-    <string name="slide_01_text">Hentoid is a Doujinshi\n&amp; H-Manga archiving app.</string>
+    <string name="slide_01_header">Welcome to GalleryCherry!</string>
+    <string name="slide_01_text">GalleryCherry is a XXX galleries\n archiving app.</string>
     <!-- Slide 02 -->
     <string name="slide_02_header">Permissions</string>
     <string name="slide_02_text">We need to ask for your permission to store files on your device.</string>
     <!-- Slide 04 -->
     <string name="slide_04_header">Library</string>
-    <string name="slide_04_text">Hentoid requires a dedicated folder for storing your media.</string>
+    <string name="slide_04_text">GalleryCherry requires a dedicated folder for storing your media.</string>
     <string name="slide_04_skip">Skip</string>
     <string name="slide_04_skip_title">Skip?</string>
     <string name="slide_04_skip_msg">You won\'t be able to download if you skip this step.\nIn order to download, you\'ll have to set the download folder through the app settings.</string>

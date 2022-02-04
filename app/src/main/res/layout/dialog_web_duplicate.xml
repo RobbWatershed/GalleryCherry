@@ -39,7 +39,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/subtitle"
         tools:ignore="ContentDescription"
-        tools:src="@drawable/ic_hentoid_trans"
+        tools:src="@drawable/ic_cherry_icon"
         tools:tint="@color/light_gray" />
 
     <ImageView
@@ -108,7 +108,7 @@
         android:background="@color/transparent"
         android:clickable="true"
         android:focusable="true"
-        android:src="@drawable/ic_site_nhentai"
+        android:src="@drawable/ic_menu_home"
         android:tooltipText="@string/view_source_help"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvPages"

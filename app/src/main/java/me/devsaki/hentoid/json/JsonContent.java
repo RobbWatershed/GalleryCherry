@@ -34,6 +34,7 @@ public class JsonContent {
     private Integer qtyPages;
     private long uploadDate;
     private long downloadDate;
+    private String uniqueSiteId;
     private StatusContent status;
     private Site site;
     private boolean favourite;
@@ -82,6 +83,7 @@ public class JsonContent {
         result.qtyPages = c.getQtyPages();
         result.uploadDate = c.getUploadDate();
         result.downloadDate = c.getDownloadDate();
+        result.uniqueSiteId = c.getUniqueSiteId();
         result.status = c.getStatus();
         result.site = c.getSite();
         result.favourite = c.isFavourite();
@@ -132,6 +134,7 @@ public class JsonContent {
         result.setQtyPages(qtyPages);
         result.setUploadDate(uploadDate);
         result.setDownloadDate(downloadDate);
+        result.setUniqueSiteId(uniqueSiteId);
         result.setStatus(status);
         result.setFavourite(favourite);
         result.setCompleted(completed);

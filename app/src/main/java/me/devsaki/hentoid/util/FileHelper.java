@@ -321,6 +321,10 @@ public class FileHelper {
         return context.getContentResolver().openInputStream(target.getUri());
     }
 
+    public static InputStream getInputStream(@NonNull final File target) throws IOException {
+        return FileUtils.openInputStream(target);
+    }
+
     /**
      * Create an InputStream opened the file at the given Uri
      *

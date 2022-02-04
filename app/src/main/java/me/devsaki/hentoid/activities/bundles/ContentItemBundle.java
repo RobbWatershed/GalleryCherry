@@ -5,6 +5,8 @@ import android.os.Bundle;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+import me.devsaki.hentoid.enums.StatusContent;
+
 /**
  * Helper class to transfer payload data to {@link me.devsaki.hentoid.viewholders.ContentItem}
  * through a Bundle
@@ -15,6 +17,7 @@ public class ContentItemBundle {
     private static final String KEY_DELETE_PROCESSING = "is_being_deleted";
     private static final String KEY_FAV_STATE = "favourite";
     private static final String KEY_READS = "reads";
+    private static final String KEY_STATUS = "status";
     private static final String KEY_READ_COUNT = "read_count";
     private static final String KEY_COVER_URI = "cover_uri";
     private static final String KEY_COMPL_STATE = "completed";
@@ -34,6 +37,11 @@ public class ContentItemBundle {
 
         public void setIsFavourite(boolean isFavourite) {
             bundle.putBoolean(KEY_FAV_STATE, isFavourite);
+        }
+
+        public Builder setStatus(StatusContent status) {
+            bundle.putInt(KEY_STATUS, status.getCode());
+            return this;
         }
 
         public void setIsCompleted(boolean isCompleted) {
@@ -102,6 +110,13 @@ public class ContentItemBundle {
         @Nullable
         public Long getReadPagesCount() {
             if (bundle.containsKey(KEY_READ_COUNT)) return bundle.getLong(KEY_READ_COUNT);
+            else return null;
+        }
+
+        @Nullable
+        public StatusContent getStatus() {
+            if (bundle.containsKey(KEY_STATUS))
+                return StatusContent.searchByCode(bundle.getInt(KEY_STATUS));
             else return null;
         }
 

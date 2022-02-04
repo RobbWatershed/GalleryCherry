@@ -14,44 +14,29 @@ import timber.log.Timber;
  */
 public enum Site {
 
-    // NOTE : to maintain compatiblity with saved JSON files and prefs, do _not_ edit either existing names or codes
-    FAKKU(0, "Fakku", "https://www.fakku.net", R.drawable.ic_site_fakku), // Legacy support for old fakku archives
-    PURURIN(1, "Pururin", "https://pururin.to", R.drawable.ic_site_pururin),
-    HITOMI(2, "hitomi", "https://hitomi.la", R.drawable.ic_site_hitomi),
-    NHENTAI(3, "nhentai", "https://nhentai.net", R.drawable.ic_site_nhentai),
-    TSUMINO(4, "tsumino", "https://www.tsumino.com", R.drawable.ic_site_tsumino),
-    HENTAICAFE(5, "hentaicafe", "https://hentai.cafe", R.drawable.ic_site_hentaicafe),
-    ASMHENTAI(6, "asmhentai", "https://asmhentai.com", R.drawable.ic_site_asmhentai),
-    ASMHENTAI_COMICS(7, "asmhentai comics", "https://comics.asmhentai.com", R.drawable.ic_site_asmcomics),
-    EHENTAI(8, "e-hentai", "https://e-hentai.org", R.drawable.ic_site_ehentai),
-    FAKKU2(9, "Fakku", "https://www.fakku.net", R.drawable.ic_site_fakku),
-    NEXUS(10, "Hentai Nexus", "https://hentainexus.com", R.drawable.ic_site_nexus),
-    MUSES(11, "8Muses", "https://www.8muses.com", R.drawable.ic_site_8muses),
-    DOUJINS(12, "doujins.com", "https://doujins.com/", R.drawable.ic_site_doujins),
-    LUSCIOUS(13, "luscious.net", "https://members.luscious.net/manga/", R.drawable.ic_site_luscious),
-    EXHENTAI(14, "exhentai", "https://exhentai.org", R.drawable.ic_site_exhentai),
-    PORNCOMIX(15, "porncomixonline", "https://www.porncomixonline.net/", R.drawable.ic_site_porncomix),
-    HBROWSE(16, "Hbrowse", "https://www.hbrowse.com/", R.drawable.ic_site_hbrowse),
-    HENTAI2READ(17, "Hentai2Read", "https://hentai2read.com/", R.drawable.ic_site_hentai2read),
-    HENTAIFOX(18, "Hentaifox", "https://hentaifox.com", R.drawable.ic_site_hentaifox),
-    MRM(19, "MyReadingManga", "https://myreadingmanga.info/", R.drawable.ic_site_mrm),
-    MANHWA(20, "ManwhaHentai", "https://manhwahentai.me/", R.drawable.ic_site_manhwa),
-    IMHENTAI(21, "Imhentai", "https://imhentai.xxx", R.drawable.ic_site_imhentai),
-    TOONILY(22, "Toonily", "https://toonily.com/", R.drawable.ic_site_toonily),
-    ALLPORNCOMIC(23, "Allporncomic", "https://allporncomic.com/", R.drawable.ic_site_allporncomic),
-    PIXIV(24, "Pixiv", "https://www.pixiv.net/", R.drawable.ic_site_pixiv),
-    MANHWA18(25, "Manhwa18", "https://manhwa18.com/", R.drawable.ic_site_manhwa18),
-    NONE(98, "none", "", R.drawable.ic_external_library), // External library; fallback site
-    PANDA(99, "panda", "https://www.mangapanda.com", R.drawable.ic_site_panda); // Safe-for-work/wife/gf option; not used anymore and kept here for retrocompatibility
+    XHAMSTER(0, "XHamster", "https://m.xhamster.com/photos/", R.drawable.ic_menu_xhamster),
+    XNXX(1, "XNXX", "https://multi.xnxx.com/", R.drawable.ic_menu_xnxx),
+    PORNPICS(2, "Pornpics", "https://www.pornpics.com/", R.drawable.ic_menu_pornpics),
+    JPEGWORLD(3, "Jpegworld", "https://www.jpegworld.com/", R.drawable.ic_menu_jpegworld),
+    NEXTPICTUREZ(4, "Nextpicturez", "http://www.nextpicturez.com/", R.drawable.ic_menu_nextpicturez),
+    HELLPORNO(5, "Hellporno", "https://hellporno.com/albums/", R.drawable.ic_menu_hellporno),
+    PORNPICGALLERIES(6, "Pornpicgalleries", "http://pornpicgalleries.com/", R.drawable.ic_menu_ppg),
+    LINK2GALLERIES(7, "Link2galleries", "https://www.link2galleries.com/", R.drawable.ic_menu_l2g),
+    REDDIT(8, "Reddit", "https://www.reddit.com/", R.drawable.ic_social_reddit),
+    JJGIRLS(9, "JJGirls (Jap)", "https://jjgirls.com/mobile/", R.drawable.ic_menu_jjgirls),
+    LUSCIOUS(10, "luscious.net", "https://members.luscious.net/porn/", R.drawable.ic_site_luscious),
+    FAPALITY(11, "Fapality", "https://fapality.com/photos/", R.drawable.ic_menu_fapality),
+    HINA(12, "Hina", "https://github.com/ixilia/hina", R.drawable.ic_menu_hina),
+    ASIANSISTER(13, "Asiansister", "https://asiansister.com/", R.drawable.ic_menu_asiansister),
+    JJGIRLS2(14, "JJGirls (Western)", "https://jjgirls.com/pornpics/", R.drawable.ic_menu_jjgirls),
+    BABETODAY(15, "Babe.today", "https://babe.today/", R.drawable.ic_menu_jjgirls),
+    NONE(98, "none", "", R.drawable.ic_external_library); // External library; fallback site
 
 
     private static final Site[] INVISIBLE_SITES = {
-            NEXUS, // Dead
-            HENTAICAFE, // Removed as per Fakku request
-            FAKKU, // Old Fakku; kept for retrocompatibility
-            FAKKU2, // Dropped after Fakku decided to flag downloading accounts and IPs
-            ASMHENTAI_COMICS, // Does not work directly
-            PANDA, // Dropped; kept for retrocompatibility
+            HELLPORNO, // Removed their pictures section
+            HINA, // Hardcoded link; should not be on display on dynamic sources
+            JJGIRLS2, // Abandoned in favour of babe.today
             NONE // Technical fallback
     };
 
@@ -60,13 +45,14 @@ public enum Site {
     private final String description;
     private final String url;
     private final int ico;
-    // Default values overridden in sites.json
+    // Default values are overridden in sites.json
     private boolean useMobileAgent = true;
     private boolean useHentoidAgent = false;
     private boolean useWebviewAgent = true;
     private boolean hasImageProcessing = false;
     private boolean hasBackupURLs = false;
     private boolean hasCoverBasedPageUpdates = false;
+    private boolean isDanbooru = false;
     private boolean useCloudflare = false;
     private boolean simulateHumanReading = false;
     private int requestsCapPerSecond = -1;
@@ -152,6 +138,10 @@ public enum Site {
         return hasCoverBasedPageUpdates;
     }
 
+    public boolean isDanbooru() {
+        return isDanbooru;
+    }
+
     public boolean isUseCloudflare() {
         return useCloudflare;
     }
@@ -173,11 +163,9 @@ public enum Site {
         return true;
     }
 
+
     public String getFolder() {
-        if (this == FAKKU)
-            return "Downloads";
-        else
-            return description;
+        return description;
     }
 
     public String getUserAgent() {
@@ -195,6 +183,7 @@ public enum Site {
         if (jsonSite.hasBackupURLs != null) hasBackupURLs = jsonSite.hasBackupURLs;
         if (jsonSite.hasCoverBasedPageUpdates != null)
             hasCoverBasedPageUpdates = jsonSite.hasCoverBasedPageUpdates;
+        if (jsonSite.isDanbooru != null) isDanbooru = jsonSite.isDanbooru;
         if (jsonSite.useCloudflare != null)
             useCloudflare = jsonSite.useCloudflare;
         if (jsonSite.simulateHumanReading != null)

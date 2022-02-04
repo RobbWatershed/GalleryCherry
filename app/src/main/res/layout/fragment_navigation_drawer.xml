@@ -20,7 +20,7 @@
         android:layout_width="match_parent"
         android:layout_height="@dimen/drawer_image_height"
         android:padding="12dp"
-        android:src="@drawable/ic_hentoid"
+        android:src="@drawable/ic_cherry"
         app:layout_constraintBottom_toTopOf="@id/drawer_list"
         app:layout_constraintTop_toTopOf="parent"
         tools:ignore="ContentDescription" />

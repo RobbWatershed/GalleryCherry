@@ -16,7 +16,7 @@ import retrofit2.http.GET;
 
 public class GithubServer {
 
-    private static final String GITHUB_BASE_URL = "https://api.github.com/repos/avluis/Hentoid/";
+    private static final String GITHUB_BASE_URL = "https://api.github.com/repos/RobbWatershed/GalleryCherry/";
 
     private static final Moshi moshi = new Moshi.Builder()
             .add(Date.class, new Rfc3339DateJsonAdapter())
