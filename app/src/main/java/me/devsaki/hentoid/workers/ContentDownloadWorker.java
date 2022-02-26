@@ -72,7 +72,6 @@ import me.devsaki.hentoid.util.JsonHelper;
 import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.util.StringHelper;
 import me.devsaki.hentoid.util.download.ContentQueueManager;
-import me.devsaki.hentoid.util.download.DownloadHelper;
 import me.devsaki.hentoid.util.download.RequestOrder;
 import me.devsaki.hentoid.util.download.RequestQueueManager;
 import me.devsaki.hentoid.util.exception.AccountException;
@@ -467,23 +466,25 @@ public class ContentDownloadWorker extends BaseWorker {
                         img.setBackupUrl(images.get(1).getUrl());
 
                     if (img.needsPageParsing()) pagesToParse.add(img);
-                    else requestQueueManager.queueRequest(buildImageDownloadRequest(img, dir, content));
+                    else
+                        requestQueueManager.queueRequest(buildImageDownloadRequest(img, dir, content));
+                }
             }
-        }
 
-        // Parse pages for images
-        if (!pagesToParse.isEmpty()) {
-            final Content contentFinal = content;
-            compositeDisposable.add(
-                    Observable.fromIterable(pagesToParse)
-                            .observeOn(Schedulers.io())
-                            .subscribe(
-                                    img -> parsePageforImage(img, dir, contentFinal),
-                                    t -> {
-                                        // Nothing; just exit the Rx chain
-                                    }
-                            )
-            );
+            // Parse pages for images
+            if (!pagesToParse.isEmpty()) {
+                final Content contentFinal = content;
+                compositeDisposable.add(
+                        Observable.fromIterable(pagesToParse)
+                                .observeOn(Schedulers.io())
+                                .subscribe(
+                                        img -> parsePageforImage(img, dir, contentFinal),
+                                        t -> {
+                                            // Nothing; just exit the Rx chain
+                                        }
+                                )
+                );
+            }
         }
 
         EventBus.getDefault().post(DownloadEvent.fromPreparationStep(DownloadEvent.Step.SAVE_QUEUE));

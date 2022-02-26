@@ -5,7 +5,6 @@ import android.content.res.Resources;
 
 import androidx.annotation.NonNull;
 
-import com.annimon.stream.Optional;
 import com.annimon.stream.Stream;
 
 import org.apache.commons.lang3.tuple.ImmutableTriple;
@@ -126,62 +125,6 @@ public class DatabaseMaintenance {
             db.closeThreadResources();
             emitter.onComplete();
         }
-    }
-
-    private static void cleanPropertiesOneShot3(@NonNull final Context context, ObservableEmitter<Float> emitter) {
-        ObjectBoxDB db = ObjectBoxDB.getInstance(context);
-        try {
-            // Update URLs from deprecated Hitomi image covers
-            Timber.i("Upgrading Hitomi covers : start");
-            List<Content> contents = db.selectContentWithOldHitomiCovers();
-            Timber.i("Upgrading Hitomi covers : %s books detected", contents.size());
-            int max = contents.size();
-            float pos = 1;
-            for (Content c : contents) {
-                String url = c.getCoverImageUrl().replace("/smallbigtn/", "/webpbigtn/").replace(".jpg", ".webp");
-                c.setCoverImageUrl(url);
-                db.insertContent(c);
-                emitter.onNext(pos++ / max);
-            }
-            Timber.i("Upgrading Hitomi covers : done");
-        } finally {
-            db.closeThreadResources();
-            emitter.onComplete();
-        }
-    }
-
-    private static void cleanPropertiesOneShot4(@NonNull final Context context, ObservableEmitter<Float> emitter) {
-        ObjectBoxDB db = ObjectBoxDB.getInstance(context);
-        try {
-            // Update URLs from deprecated Hitomi image covers
-            Timber.i("Fixing M18 covers : start");
-            List<Content> contents = db.selectDownloadedM18Books();
-            contents = Stream.of(contents).filter(DatabaseMaintenance::isM18WrongCover).toList();
-            Timber.i("Fixing M18 covers : %s books detected", contents.size());
-            int max = contents.size();
-            float pos = 1;
-            for (Content c : contents) {
-                List<ImageFile> images = c.getImageFiles();
-                if (null != images) {
-                    ImageFile newCover = ImageFile.newCover(c.getCoverImageUrl(), StatusContent.ONLINE).setContentId(c.getId());
-                    images.add(0, newCover);
-                    images.get(1).setIsCover(false);
-                    db.insertImageFiles(images);
-                }
-                emitter.onNext(pos++ / max);
-            }
-            Timber.i("Fixing M18 covers : done");
-        } finally {
-            db.closeThreadResources();
-            emitter.onComplete();
-        }
-    }
-
-    private static boolean isM18WrongCover(@NonNull Content c) {
-        List<ImageFile> images = c.getImageFiles();
-        if (null == images || images.isEmpty()) return false;
-        Optional<ImageFile> cover = Stream.of(images).filter(ImageFile::isCover).findFirst();
-        return (cover.isEmpty() || (cover.get().getOrder() == 1 && !cover.get().getUrl().equals(c.getCoverImageUrl())));
     }
 
     private static void renameEmptyChapters(@NonNull final Context context, ObservableEmitter<Float> emitter) {

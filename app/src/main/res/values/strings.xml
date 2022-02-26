@@ -50,7 +50,7 @@
     <!-- API29 migration / library refresh screen -->
     <string name="api29_migration_title">GalleryCherry v1.6\nFile management update</string>
     <string name="api29_migration_subtitle">GalleryCherry is updating your collection.\nIt may require a few minutes.</string>
-    <string name="api29_migration_location">Current app folder location\n<x:g example="/storage/emulated/0/Hentoid" id="path">%s</x:g></string>
+    <string name="api29_migration_location">Current app folder location\n<x:g example="/storage/emulated/0/Cherry" id="path">%s</x:g></string>
     <string name="api29_migration_step1">GalleryCherry folder</string>
     <string name="api29_migration_step1_external">External folder</string>
     <string name="api29_migration_step1_select">Select app folder</string>
@@ -59,7 +59,7 @@
     <string name="api29_migration_step3_init">Scanning library…</string>
     <string name="api29_migration_step3">Scan library (<x:g example="1" id="number">%1$d</x:g> / <x:g example="7" id="total">%2$d</x:g>)</string>
     <string name="api29_migration_step4_init">Importing queue…</string>
-    <string name="api29_migration_select_folder">Please select an existing Hentoid folder. Its location is displayed on screen.</string>
+    <string name="api29_migration_select_folder">Please select an existing GalleryCherry folder. Its location is displayed on screen.</string>
     <string name="api29_migration_allow_write">Please allow write permission</string>
 
     <!-- Library screen toolbar -->
@@ -165,7 +165,7 @@
     <string name="queue_bottom_bar_speed" tools:ignore="MissingTranslation"><x:g example="/102.4" id="formatted_speed_kbps">%d</x:g> KBps</string>
     <string name="download_notif_speed" tools:ignore="MissingTranslation"><x:g example="3.88" id="size_dled">%1$d</x:g><x:g example="/14.56" id="formatted_estimated_total">%2$s</x:g> MB @ <x:g example="102.4" id="speed_kbps">%3$d</x:g> KBps</string>
     <string name="download_notif_failed">Download failed</string>
-    <string name="download_notif_failed_details">Cannot download <x:g example="Cool H-Manga" id="book_name">%1$s</x:g>: unable to create folder <x:g example="/storage/emulated/0/Hentoid/nhentai/coolhmanga" id="path">%2$s</x:g>. Please check your Hentoid folder and retry downloading using the \'!\' button.</string>
+    <string name="download_notif_failed_details">Cannot download <x:g example="Cool H-Manga" id="book_name">%1$s</x:g>: unable to create folder <x:g example="/storage/emulated/0/Cherry/nhentai/coolhmanga" id="path">%2$s</x:g>. Please check your GalleryCherry folder and retry downloading using the \'!\' button.</string>
 
     <!-- TextViews -->
     <string name="work_series">Series: <x:g example="original" id="series">%s</x:g></string>
@@ -329,7 +329,7 @@
     <string name="log_import_external">External library import/refresh</string>
     <string name="log_import">Primary library import/refresh</string>
     <string name="log_cleanup">Primary library cleanup</string>
-    <string name="log_api29_migration">Library migration from Hentoid v1.11</string>
+    <string name="log_api29_migration">Library migration from GalleryCherry v1.11</string>
 
     <!-- Errors -->
     <string name="error_write_permission">You don\'t have permission to write in that folder, try another folder.</string>
@@ -584,9 +584,7 @@
     <string name="personalDataStatement1"><b>PERSONAL DATA PRIVACY STATEMENT</b>\n\GalleryCherry is a free and open-source software maintained by the GalleryCherry Community (join us on Discord - see link above)</string>
     <string name="personalDataStatement2">GalleryCherry collects the following personal data and sends them to Google for processing through the firebase library:\n  - Session ID\n  - IP address</string>
     <string name="personalDataStatement3">The abovementioned data is removed from Firebase live and backup system within 180 days (see https://firebase.google.com/support/privacy/ for more details)\n\nNo other personal data is collected nor sent to any other party.</string>
-    <string name="about_github" translatable="false"><u>GitHub</u></string>
     <string name="about_github_wiki_url" translatable="false">https://github.com/RobbWatershed/GalleryCherry/wiki</string>
-    <string name="about_discord" translatable="false"><u>Discord</u></string>
     <string name="about_licenses">Display Licenses</string>
     <string name="about_app_version" tools:ignore="MissingTranslation">GalleryCherry v<x:g example="1.15.20" id="ver_name">%1$s</x:g> (<x:g example="130" id="ver_code">%2$d</x:g>)</string>
     <string name="about_chrome_version" tools:ignore="MissingTranslation">Chrome v<x:g example="98" id="chrome_ver">%1$d</x:g></string>
@@ -640,6 +638,7 @@
     <string name="object_series">Series</string>
     <string name="object_language">Language</string>
     <string name="object_source">Source</string>
+    <string name="object_model">Model</string>
     <string name="object_uploader">Uploader</string>
     <string name="object_circle">Circle</string>
     <string name="object_category">Category</string>

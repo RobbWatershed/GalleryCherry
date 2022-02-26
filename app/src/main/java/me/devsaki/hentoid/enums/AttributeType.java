@@ -27,8 +27,8 @@ public enum AttributeType {
     CHARACTER(8, R.string.object_character, R.drawable.ic_attribute_character),
     CATEGORY(9, R.string.object_category, R.drawable.ic_site_fakku),
     // Attributes displayed on screen and stored elsewhere
-    SOURCE(10, R.string.object_source, R.drawable.ic_attribute_source);
-    MODEL(11, R.string.object_model, ", R.drawable.ic_attribute_character);
+    SOURCE(10, R.string.object_source, R.drawable.ic_attribute_source),
+    MODEL(11, R.string.object_model, R.drawable.ic_attribute_character);
 
     private final int code;
     private final @StringRes

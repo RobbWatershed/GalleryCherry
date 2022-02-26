@@ -51,7 +51,7 @@ import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.events.UpdateEvent;
 import me.devsaki.hentoid.fragments.library.GalleryDialogFragment;
-import me.devsaki.hentoid.json.UpdateInfo;
+import me.devsaki.hentoid.json.core.UpdateInfo;
 import me.devsaki.hentoid.retrofit.HinaDetails;
 import me.devsaki.hentoid.ui.BlinkAnimation;
 import me.devsaki.hentoid.util.Debouncer;
@@ -613,10 +613,10 @@ public class HinaActivity extends BaseActivity implements GalleryDialogFragment.
         }
         if (Preferences.getQueueNewDownloadPosition() == QUEUE_NEW_DOWNLOADS_POSITION_ASK) {
             AddQueueMenu.show(this, recyclerView, this, (position, item) ->
-                    viewModel.addContentToQueue(content, null, (0 == position) ? QUEUE_NEW_DOWNLOADS_POSITION_TOP : QUEUE_NEW_DOWNLOADS_POSITION_BOTTOM)
+                    viewModel.addContentToQueue(this, content, null, (0 == position) ? QUEUE_NEW_DOWNLOADS_POSITION_TOP : QUEUE_NEW_DOWNLOADS_POSITION_BOTTOM)
             );
         } else
-            viewModel.addContentToQueue(content, null, Preferences.getQueueNewDownloadPosition());
+            viewModel.addContentToQueue(this, content, null, Preferences.getQueueNewDownloadPosition());
 
         if (Preferences.isQueueAutostart())
             ContentQueueManager.getInstance().resumeQueue(this);

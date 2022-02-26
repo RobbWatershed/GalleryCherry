@@ -321,8 +321,8 @@
     </string-array>
 
     <!-- Strings: Main: Generic Usage -->
-    <string name="app_name" translatable="false">Hentoid</string>
-    <string name="app_id" translatable="false">me.devsaki.hentoid</string>
+    <string name="app_name" translatable="false">GalleryCherry</string>
+    <string name="app_id" translatable="false">me.devsaki.cherry</string>
     <string name="error" translatable="false">Error</string>
     <string name="empty_string" translatable="false"/>
     <!-- Strings: Main: TextViews -->

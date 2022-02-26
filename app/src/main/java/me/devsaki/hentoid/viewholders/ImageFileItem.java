@@ -76,11 +76,7 @@ public class ImageFileItem extends AbstractItem<ImageFileItem.ImageViewHolder> i
         final Transformation<Bitmap> centerInside = new CenterInside();
         glideRequestOptions = new RequestOptions()
                 .optionalTransform(centerInside)
-                .optionalTransform(WebpDrawable.class, new WebpDrawableTransformation(centerInside));
-    }
-
-        glideRequestOptions = new RequestOptions()
-                .centerInside()
+                .optionalTransform(WebpDrawable.class, new WebpDrawableTransformation(centerInside))
                 .placeholder(d);
     }
 

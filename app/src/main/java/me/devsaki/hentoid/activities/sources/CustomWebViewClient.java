@@ -443,11 +443,11 @@ class CustomWebViewClient extends WebViewClient {
     /**
      * Process the given webpage in a background thread (used by quick download)
      *
-     * @param url URL of the page to parse
+     * @param urlStr URL of the page to parse
      */
     void parseResponseAsync(@NonNull String urlStr, boolean isQuickDownload) {
         compositeDisposable.add(
-                Completable.fromCallable(() -> parseResponse(url, null, true, isQuickDownload))
+                Completable.fromCallable(() -> parseResponse(urlStr, null, true, isQuickDownload))
                         .subscribeOn(Schedulers.io())
                         .observeOn(AndroidSchedulers.mainThread())
                         .subscribe(() -> {

@@ -1,6 +1,7 @@
 package me.devsaki.hentoid.viewmodels;
 
 import android.app.Application;
+import android.content.Context;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
@@ -201,7 +202,7 @@ public class HinaViewModel extends AndroidViewModel {
      *
      * @param content Content to be added to the download queue
      */
-    public void addContentToQueue(@NonNull final Content content, StatusContent targetImageStatus, int addMode) {
-        hentoidDao.addContentToQueue(content, targetImageStatus, addMode, ContentQueueManager.getInstance().isQueueActive());
+    public void addContentToQueue(@NonNull Context context, @NonNull final Content content, StatusContent targetImageStatus, int addMode) {
+        hentoidDao.addContentToQueue(content, targetImageStatus, addMode, ContentQueueManager.getInstance().isQueueActive(context));
     }
 }

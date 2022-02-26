@@ -31,9 +31,7 @@ import me.devsaki.hentoid.core.withArguments
 import me.devsaki.hentoid.database.ObjectBoxDAO
 import me.devsaki.hentoid.fragments.ProgressDialogFragment
 import me.devsaki.hentoid.retrofit.GithubServer
-import me.devsaki.hentoid.retrofit.sources.EHentaiServer
 import me.devsaki.hentoid.retrofit.sources.LusciousServer
-import me.devsaki.hentoid.retrofit.sources.PixivServer
 import me.devsaki.hentoid.services.UpdateCheckService
 import me.devsaki.hentoid.util.FileHelper
 import me.devsaki.hentoid.util.Preferences
@@ -259,9 +257,7 @@ class PreferencesFragment : PreferenceFragmentCompat(),
                     .resetRequestQueue(requireContext(), true)
                 // Reset all retrofit clients
                 GithubServer.init()
-                EHentaiServer.init()
                 LusciousServer.init()
-                PixivServer.init()
             }
         }
     }

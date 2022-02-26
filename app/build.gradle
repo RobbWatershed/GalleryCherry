@@ -62,7 +62,7 @@ android {
         proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
 
         // Only include complete translations
-        resConfigs 'en', 'ru', 'it'
+        resConfigs 'en'
 
         renderscriptTargetApi 21
         renderscriptSupportModeEnabled false
