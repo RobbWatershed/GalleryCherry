@@ -1,9 +1,11 @@
 package me.devsaki.hentoid.database;
 
 import android.content.Context;
+import android.content.res.Resources;
 
 import androidx.annotation.NonNull;
 
+import com.annimon.stream.Optional;
 import com.annimon.stream.Stream;
 
 import org.apache.commons.lang3.tuple.ImmutableTriple;
@@ -16,7 +18,9 @@ import io.objectbox.query.Query;
 import io.reactivex.Observable;
 import io.reactivex.ObservableEmitter;
 import io.reactivex.functions.BiConsumer;
+import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.database.domains.Attribute;
+import me.devsaki.hentoid.database.domains.Chapter;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.Group;
 import me.devsaki.hentoid.database.domains.GroupItem;
@@ -41,9 +45,11 @@ public class DatabaseMaintenance {
         List<Observable<Float>> result = new ArrayList<>();
         result.add(createObservableFrom(context, DatabaseMaintenance::setDefaultPropertiesOneShot));
         result.add(createObservableFrom(context, DatabaseMaintenance::cleanContent));
+        result.add(createObservableFrom(context, DatabaseMaintenance::renameEmptyChapters));
         result.add(createObservableFrom(context, DatabaseMaintenance::computeContentSize));
         result.add(createObservableFrom(context, DatabaseMaintenance::createGroups));
         result.add(createObservableFrom(context, DatabaseMaintenance::computeReadingProgress));
+        result.add(createObservableFrom(context, DatabaseMaintenance::reattachGroupCovers));
         return result;
     }
 
@@ -116,6 +122,83 @@ public class DatabaseMaintenance {
                 emitter.onNext(pos++ / max);
             }
             Timber.i("Clearing temporary books : done");
+        } finally {
+            db.closeThreadResources();
+            emitter.onComplete();
+        }
+    }
+
+    private static void cleanPropertiesOneShot3(@NonNull final Context context, ObservableEmitter<Float> emitter) {
+        ObjectBoxDB db = ObjectBoxDB.getInstance(context);
+        try {
+            // Update URLs from deprecated Hitomi image covers
+            Timber.i("Upgrading Hitomi covers : start");
+            List<Content> contents = db.selectContentWithOldHitomiCovers();
+            Timber.i("Upgrading Hitomi covers : %s books detected", contents.size());
+            int max = contents.size();
+            float pos = 1;
+            for (Content c : contents) {
+                String url = c.getCoverImageUrl().replace("/smallbigtn/", "/webpbigtn/").replace(".jpg", ".webp");
+                c.setCoverImageUrl(url);
+                db.insertContent(c);
+                emitter.onNext(pos++ / max);
+            }
+            Timber.i("Upgrading Hitomi covers : done");
+        } finally {
+            db.closeThreadResources();
+            emitter.onComplete();
+        }
+    }
+
+    private static void cleanPropertiesOneShot4(@NonNull final Context context, ObservableEmitter<Float> emitter) {
+        ObjectBoxDB db = ObjectBoxDB.getInstance(context);
+        try {
+            // Update URLs from deprecated Hitomi image covers
+            Timber.i("Fixing M18 covers : start");
+            List<Content> contents = db.selectDownloadedM18Books();
+            contents = Stream.of(contents).filter(DatabaseMaintenance::isM18WrongCover).toList();
+            Timber.i("Fixing M18 covers : %s books detected", contents.size());
+            int max = contents.size();
+            float pos = 1;
+            for (Content c : contents) {
+                List<ImageFile> images = c.getImageFiles();
+                if (null != images) {
+                    ImageFile newCover = ImageFile.newCover(c.getCoverImageUrl(), StatusContent.ONLINE).setContentId(c.getId());
+                    images.add(0, newCover);
+                    images.get(1).setIsCover(false);
+                    db.insertImageFiles(images);
+                }
+                emitter.onNext(pos++ / max);
+            }
+            Timber.i("Fixing M18 covers : done");
+        } finally {
+            db.closeThreadResources();
+            emitter.onComplete();
+        }
+    }
+
+    private static boolean isM18WrongCover(@NonNull Content c) {
+        List<ImageFile> images = c.getImageFiles();
+        if (null == images || images.isEmpty()) return false;
+        Optional<ImageFile> cover = Stream.of(images).filter(ImageFile::isCover).findFirst();
+        return (cover.isEmpty() || (cover.get().getOrder() == 1 && !cover.get().getUrl().equals(c.getCoverImageUrl())));
+    }
+
+    private static void renameEmptyChapters(@NonNull final Context context, ObservableEmitter<Float> emitter) {
+        ObjectBoxDB db = ObjectBoxDB.getInstance(context);
+        try {
+            // Update URLs from deprecated Hitomi image covers
+            Timber.i("Empying empty chapters : start");
+            List<Chapter> chapters = db.selecChaptersEmptyName();
+            Timber.i("Empying empty chapters : %s chapters detected", chapters.size());
+            int max = chapters.size();
+            float pos = 1;
+            for (Chapter c : chapters) {
+                c.setName("Chapter " + (c.getOrder() + 1)); // 0-indexed
+                emitter.onNext(pos++ / max);
+            }
+            db.insertChapters(chapters);
+            Timber.i("Empying empty chapters : done");
         } finally {
             db.closeThreadResources();
             emitter.onComplete();
@@ -213,6 +296,7 @@ public class DatabaseMaintenance {
             Timber.i("Create non-existing groupings : %s non-existing groupings detected", groupingsToProcess.size());
             int bookInsertCount = 0;
             List<ImmutableTriple<Group, Attribute, List<Long>>> toInsert = new ArrayList<>();
+            Resources res = context.getResources();
             for (Grouping g : groupingsToProcess) {
                 if (g.equals(Grouping.ARTIST)) {
                     List<Attribute> artists = db.selectAvailableAttributes(AttributeType.ARTIST, null, null, false, Preferences.Constant.SEARCH_ORDER_ATTRIBUTES_ALPHABETIC, 0, 0, false, false);
@@ -222,38 +306,38 @@ public class DatabaseMaintenance {
                         Group group = new Group(Grouping.ARTIST, a.getName(), order++);
                         group.setSubtype(a.getType().equals(AttributeType.ARTIST) ? Preferences.Constant.ARTIST_GROUP_VISIBILITY_ARTISTS : Preferences.Constant.ARTIST_GROUP_VISIBILITY_GROUPS);
                         if (!a.contents.isEmpty())
-                            group.picture.setTarget(a.contents.get(0).getCover());
+                            group.coverContent.setTarget(a.contents.get(0));
                         bookInsertCount += a.contents.size();
 
                         toInsert.add(new ImmutableTriple<>(group, a, Stream.of(a.contents).map(Content::getId).toList()));
                     }
                 } else if (g.equals(Grouping.DL_DATE)) {
-                    Group group = new Group(Grouping.DL_DATE, "Today", 1);
+                    Group group = new Group(Grouping.DL_DATE, res.getString(R.string.group_today), 1);
                     group.propertyMin = 0;
                     group.propertyMax = 1;
                     toInsert.add(new ImmutableTriple<>(group, null, Collections.emptyList()));
-                    group = new Group(Grouping.DL_DATE, "Last 7 days", 2);
+                    group = new Group(Grouping.DL_DATE, res.getString(R.string.group_7), 2);
                     group.propertyMin = 1;
                     group.propertyMax = 8;
                     toInsert.add(new ImmutableTriple<>(group, null, Collections.emptyList()));
-                    group = new Group(Grouping.DL_DATE, "Last 30 days", 3);
+                    group = new Group(Grouping.DL_DATE, res.getString(R.string.group_30), 3);
                     group.propertyMin = 8;
                     group.propertyMax = 31;
                     toInsert.add(new ImmutableTriple<>(group, null, Collections.emptyList()));
-                    group = new Group(Grouping.DL_DATE, "Last 60 days", 4);
+                    group = new Group(Grouping.DL_DATE, res.getString(R.string.group_60), 4);
                     group.propertyMin = 31;
                     group.propertyMax = 61;
                     toInsert.add(new ImmutableTriple<>(group, null, Collections.emptyList()));
-                    group = new Group(Grouping.DL_DATE, "Last year", 5);
+                    group = new Group(Grouping.DL_DATE, res.getString(R.string.group_year), 5);
                     group.propertyMin = 61;
                     group.propertyMax = 366;
                     toInsert.add(new ImmutableTriple<>(group, null, Collections.emptyList()));
-                    group = new Group(Grouping.DL_DATE, "A long time ago", 6);
+                    group = new Group(Grouping.DL_DATE, res.getString(R.string.group_long), 6);
                     group.propertyMin = 366;
                     group.propertyMax = 9999999;
                     toInsert.add(new ImmutableTriple<>(group, null, Collections.emptyList()));
                 } else if (g.equals(Grouping.CUSTOM)) {
-                    Group group = new Group(Grouping.CUSTOM, "Ungrouped", 1).setSubtype(1);
+                    Group group = new Group(Grouping.CUSTOM, res.getString(R.string.group_no_group), 1).setSubtype(1);
                     toInsert.add(new ImmutableTriple<>(group, null, Collections.emptyList()));
                 }
             }
@@ -293,6 +377,30 @@ public class DatabaseMaintenance {
                 emitter.onNext(pos++ / max);
             }
             Timber.i("Computing downloaded content read progress : done");
+        } finally {
+            db.closeThreadResources();
+            emitter.onComplete();
+        }
+    }
+
+    private static void reattachGroupCovers(@NonNull final Context context, ObservableEmitter<Float> emitter) {
+        ObjectBoxDB db = ObjectBoxDB.getInstance(context);
+        try {
+            // Compute missing downloaded Content size according to underlying ImageFile sizes
+            Timber.i("Reattaching group covers : start");
+            List<Group> groups = db.selecGroupsWithNoCoverContent();
+            Timber.i("Reattaching group covers : %s groups detected", groups.size());
+            int max = groups.size();
+            float pos = 1;
+            for (Group g : groups) {
+                List<Long> contentIds = g.getContentIds();
+                if (!contentIds.isEmpty()) {
+                    g.coverContent.setTargetId(contentIds.get(0));
+                    db.insertGroup(g);
+                }
+                emitter.onNext(pos++ / max);
+            }
+            Timber.i("Reattaching group covers : done");
         } finally {
             db.closeThreadResources();
             emitter.onComplete();

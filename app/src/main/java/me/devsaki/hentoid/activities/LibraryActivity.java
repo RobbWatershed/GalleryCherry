@@ -312,7 +312,7 @@ public class LibraryActivity extends BaseActivity {
         initSelectionToolbar();
         initUI();
         updateToolbar();
-        updateSelectionToolbar(0, 0, 0);
+        updateSelectionToolbar(0, 0, 0, 0);
 
         onCreated();
         sortCommandsAutoHide = new Debouncer<>(this, 3000, this::hideSearchSortBar);
@@ -436,7 +436,7 @@ public class LibraryActivity extends BaseActivity {
                 enableCurrentFragment();
                 hideSearchSortBar(false);
                 updateToolbar();
-                updateSelectionToolbar(0, 0, 0);
+                updateSelectionToolbar(0, 0, 0, 0);
             }
         });
         viewPager.setAdapter(pagerAdapter);
@@ -745,7 +745,7 @@ public class LibraryActivity extends BaseActivity {
             case Preferences.Key.COLOR_THEME:
             case Preferences.Key.LIBRARY_DISPLAY:
                 // Restart the app with the library activity on top
-                Intent intent = getIntent();
+                Intent intent = new Intent(this, LibraryActivity.class);
                 intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
                         | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                 finish();
@@ -798,6 +798,12 @@ public class LibraryActivity extends BaseActivity {
             isGroupFavsChecked = false;
             favsMenu.setChecked(false);
             updateFavouriteFilter();
+
+            if (isGroupDisplayed() && selectedGrouping.equals(Grouping.ARTIST)) {
+                showArtistsGroupsButton.setVisibility(View.VISIBLE);
+            } else {
+                showArtistsGroupsButton.setVisibility(View.GONE);
+            }
 
             // Reset custom book ordering if reverting to a grouping where that doesn't apply
             if (!selectedGrouping.canReorderBooks()
@@ -862,7 +868,7 @@ public class LibraryActivity extends BaseActivity {
     public void updateTitle(long totalSelectedCount, long totalCount) {
         String title;
         if (totalSelectedCount == totalCount)
-            title = totalCount + " items";
+            title = getResources().getQuantityString(R.plurals.number_of_items, (int) totalSelectedCount, (int) totalSelectedCount);
         else {
             title = getResources().getQuantityString(R.plurals.number_of_book_search_results, (int) totalSelectedCount, (int) totalSelectedCount, totalCount);
         }
@@ -952,10 +958,10 @@ public class LibraryActivity extends BaseActivity {
     public void updateSelectionToolbar(
             long selectedTotalCount,
             long selectedLocalCount,
-            long selectedStreamedCount) {
+            long selectedStreamedCount,
+            long selectedExternalCount) {
         boolean isMultipleSelection = selectedTotalCount > 1;
         long selectedDownloadedCount = selectedLocalCount - selectedStreamedCount;
-        long selectedExternalCount = selectedTotalCount - selectedLocalCount;
         selectionToolbar.setTitle(getResources().getQuantityString(R.plurals.items_selected, (int) selectedTotalCount, (int) selectedTotalCount));
 
         if (isGroupDisplayed()) {
@@ -988,7 +994,7 @@ public class LibraryActivity extends BaseActivity {
                     (selectedLocalCount > 1 && 0 == selectedStreamedCount && 0 == selectedExternalCount)
                             || (selectedStreamedCount > 1 && 0 == selectedLocalCount && 0 == selectedExternalCount)
                             || (selectedExternalCount > 1 && 0 == selectedLocalCount && 0 == selectedStreamedCount)
-            ); // Can only merge downloaded or streamed content together
+            ); // Can only merge downloaded, streamed or non-archive external content together
             splitMenu.setVisible(!isMultipleSelection && 1 == selectedLocalCount);
         }
     }
@@ -1031,7 +1037,7 @@ public class LibraryActivity extends BaseActivity {
                 .setPositiveButton(R.string.yes,
                         (dialog, which) -> {
                             selectExtension.deselect(selectExtension.getSelections());
-                            viewModel.deleteItems(contents, groups, false);
+                            viewModel.deleteItems(contents, groups, false, onSuccess);
                         })
                 .setNegativeButton(R.string.no,
                         (dialog, which) -> selectExtension.deselect(selectExtension.getSelections()))
@@ -1050,7 +1056,7 @@ public class LibraryActivity extends BaseActivity {
         if (nbGroups > 0)
             msg += getResources().getQuantityString(R.plurals.delete_success_groups, nbGroups, nbGroups);
         if (nbContent > 0) {
-            if (!msg.isEmpty()) msg += " and ";
+            if (!msg.isEmpty()) msg += " & ";
             msg += getResources().getQuantityString(R.plurals.delete_success_books, nbContent, nbContent);
         }
         msg += " " + getResources().getString(R.string.delete_success);
@@ -1096,7 +1102,7 @@ public class LibraryActivity extends BaseActivity {
     private void onContentArchiveSuccess() {
         archiveNotificationManager.notify(new ArchiveCompleteNotification(archiveProgress, false));
         Snackbar.make(viewPager, getResources().getQuantityString(R.plurals.archive_success, archiveProgress, archiveProgress), LENGTH_LONG)
-                .setAction("OPEN FOLDER", v -> FileHelper.openFile(this, FileHelper.getDownloadsFolder()))
+                .setAction(R.string.open_folder, v -> FileHelper.openFile(this, FileHelper.getDownloadsFolder()))
                 .show();
     }
 

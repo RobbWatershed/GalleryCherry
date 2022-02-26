@@ -46,6 +46,8 @@ public class ImageFile {
     // Temporary attributes during SAVED state only; no need to expose them for JSON persistence
     private String downloadParams = "";
 
+    // WARNING : Update copy constructor when adding attributes
+
 
     // Runtime attributes; no need to expose them nor to persist them
 
@@ -58,6 +60,9 @@ public class ImageFile {
     // Has the image been read from a backup URL ? (download-time only)
     @Transient
     private boolean isBackup = false;
+
+    // WARNING : Update copy constructor when adding attributes
+
 
     public ImageFile() { // Required by ObjectBox when an alternate constructor exists
     }
@@ -79,6 +84,7 @@ public class ImageFile {
         this.size = img.size;
         this.imageHash = img.imageHash;
         this.downloadParams = img.downloadParams;
+
         this.displayOrder = img.displayOrder;
         this.backupUrl = img.backupUrl;
         this.isBackup = img.isBackup;
@@ -241,8 +247,9 @@ public class ImageFile {
         return this;
     }
 
-    public void setContentId(long contentId) {
+    public ImageFile setContentId(long contentId) {
         this.content.setTargetId(contentId);
+        return this;
     }
 
     public long getSize() {
@@ -329,16 +336,18 @@ public class ImageFile {
                 && Objects.equals(getPageUrl(), imageFile.getPageUrl())
                 && Objects.equals(getFileUri(), imageFile.getFileUri())
                 && Objects.equals(getOrder(), imageFile.getOrder())
-                && Objects.equals(isCover(), imageFile.isCover()); // Sometimes the thumb picture has the same URL as the 1st page
+                && Objects.equals(isCover(), imageFile.isCover()) // Sometimes the thumb picture has the same URL as the 1st page
+                && isFavourite() == imageFile.isFavourite()
+                && chapter.getTargetId() == imageFile.chapter.getTargetId();
     }
 
     @Override
     public int hashCode() {
         // Must be an int32, so we're bound to use Objects.hash
-        return Objects.hash(getId(), getPageUrl(), getUrl(), getFileUri(), getOrder(), isCover());
+        return Objects.hash(getId(), getPageUrl(), getUrl(), getFileUri(), getOrder(), isCover(), isFavourite(), chapter.getTargetId());
     }
 
     public long uniqueHash() {
-        return Helper.hash64((id + "." + pageUrl + "." + url + "." + order + "." + isCover).getBytes());
+        return Helper.hash64((id + "." + pageUrl + "." + url + "." + order + "." + isCover + "." + favourite + "." + chapter.getTargetId()).getBytes());
     }
 }

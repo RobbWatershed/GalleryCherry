@@ -1,7 +1,6 @@
 package me.devsaki.hentoid.fragments;
 
 import static androidx.core.view.ViewCompat.requireViewById;
-import static java.lang.String.format;
 
 import android.app.Activity;
 import android.app.SearchManager;
@@ -39,6 +38,7 @@ import me.devsaki.hentoid.database.domains.Attribute;
 import me.devsaki.hentoid.enums.AttributeType;
 import me.devsaki.hentoid.ui.BlinkAnimation;
 import me.devsaki.hentoid.util.Debouncer;
+import me.devsaki.hentoid.util.LanguageHelper;
 import me.devsaki.hentoid.util.StringHelper;
 import me.devsaki.hentoid.util.ThemeHelper;
 import me.devsaki.hentoid.viewmodels.SearchViewModel;
@@ -144,7 +144,7 @@ public class SearchBottomSheetFragment extends BottomSheetDialogFragment {
 
         // Image that displays current metadata type title (e.g. "Character search")
         TextView tagWaitTitle = requireViewById(rootView, R.id.tag_wait_title);
-        tagWaitTitle.setText(format("%s search", StringHelper.capitalizeString(mainAttr.getDisplayName())));
+        tagWaitTitle.setText(getString(R.string.search_category, StringHelper.capitalizeString(getString(mainAttr.getDisplayName()))));
 
         tagWaitPanel = requireViewById(rootView, R.id.tag_wait_panel);
         tagWaitMessage = requireViewById(rootView, R.id.tag_wait_description);
@@ -161,8 +161,8 @@ public class SearchBottomSheetFragment extends BottomSheetDialogFragment {
 
         tagSearchView = requireViewById(rootView, R.id.tag_filter);
         tagSearchView.setSearchableInfo(getSearchableInfo(requireActivity())); // Associate searchable configuration with the SearchView
-        List<String> attrTypesNames = Stream.of(selectedAttributeTypes).map(AttributeType::getDisplayName).toList();
-        tagSearchView.setQueryHint("Search " + android.text.TextUtils.join(", ", attrTypesNames));
+        List<String> attrTypesNames = Stream.of(selectedAttributeTypes).map(AttributeType::getDisplayName).map(this::getString).toList();
+        tagSearchView.setQueryHint(getResources().getString(R.string.search_prompt, android.text.TextUtils.join(", ", attrTypesNames)));
         tagSearchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String s) {
@@ -250,6 +250,12 @@ public class SearchBottomSheetFragment extends BottomSheetDialogFragment {
 
         // Remove selected attributes from the result set
         results.attributes.removeAll(selectedAttributes);
+
+        // Translate language names if present
+        if (!results.attributes.isEmpty() && results.attributes.get(0).getType().equals(AttributeType.LANGUAGE)) {
+            for (Attribute a : results.attributes)
+                a.setName(LanguageHelper.getLocalNameFromLanguage(requireContext(), a.getName()));
+        }
 
         mTotalSelectedCount = results.totalSelectedAttributes/* - selectedAttributes.size()*/;
         if (clearOnSuccess) attributeAdapter.clear();

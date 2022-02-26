@@ -5,7 +5,7 @@ import androidx.annotation.Nullable;
 
 import io.objectbox.converter.PropertyConverter;
 import me.devsaki.hentoid.R;
-import me.devsaki.hentoid.json.JsonSiteSettings;
+import me.devsaki.hentoid.json.core.JsonSiteSettings;
 import me.devsaki.hentoid.util.network.HttpHelper;
 import timber.log.Timber;
 
@@ -54,7 +54,6 @@ public enum Site {
     private boolean hasCoverBasedPageUpdates = false;
     private boolean isDanbooru = false;
     private boolean useCloudflare = false;
-    private boolean simulateHumanReading = false;
     private int requestsCapPerSecond = -1;
     private int parallelDownloadCap = 0;
 
@@ -146,10 +145,6 @@ public enum Site {
         return useCloudflare;
     }
 
-    public boolean isSimulateHumanReading() {
-        return simulateHumanReading;
-    }
-
     public int getRequestsCapPerSecond() {
         return requestsCapPerSecond;
     }
@@ -186,8 +181,6 @@ public enum Site {
         if (jsonSite.isDanbooru != null) isDanbooru = jsonSite.isDanbooru;
         if (jsonSite.useCloudflare != null)
             useCloudflare = jsonSite.useCloudflare;
-        if (jsonSite.simulateHumanReading != null)
-            simulateHumanReading = jsonSite.simulateHumanReading;
         if (jsonSite.parallelDownloadCap != null)
             parallelDownloadCap = jsonSite.parallelDownloadCap;
         if (jsonSite.requestsCapPerSecond != null)

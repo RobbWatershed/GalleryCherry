@@ -26,7 +26,7 @@ import java.util.Map;
 
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.activities.PrefsActivity;
-import me.devsaki.hentoid.activities.bundles.PrefsActivityBundle;
+import me.devsaki.hentoid.activities.bundles.PrefsBundle;
 import me.devsaki.hentoid.util.Preferences;
 
 public final class ViewerPrefsDialogFragment extends DialogFragment {
@@ -98,12 +98,12 @@ public final class ViewerPrefsDialogFragment extends DialogFragment {
         String[] renderingModes = getResources().getStringArray(R.array.pref_viewer_rendering_entries);
         List<String> renderingItems = new ArrayList<>();
         // App pref
-        renderingItems.add(res.getString(R.string.use_app_prefs, renderingModes[Preferences.isViewerSmoothRendering() ? 1 : 0].replace(" (default)", "")));
+        renderingItems.add(res.getString(R.string.use_app_prefs, renderingModes[Preferences.isViewerSmoothRendering() ? 1 : 0].replace(" (" + getString(R.string._default) + ")", "")));
         // Available prefs
         for (int i = 0; i < renderingModes.length; i++) {
             // No smooth mode for Android 5
             if (1 == i && Build.VERSION.SDK_INT < Build.VERSION_CODES.M) continue;
-            renderingItems.add(renderingModes[i].replace(" (default)", ""));
+            renderingItems.add(renderingModes[i].replace(" (" + getString(R.string._default) + ")", ""));
         }
 
         PowerSpinnerView renderSpin = rootView.findViewById(R.id.book_prefs_rendering_spin);
@@ -120,9 +120,9 @@ public final class ViewerPrefsDialogFragment extends DialogFragment {
         appSettingsBtn.setOnClickListener(v -> {
             Intent intent = new Intent(requireActivity(), PrefsActivity.class);
 
-            PrefsActivityBundle.Builder builder = new PrefsActivityBundle.Builder();
-            builder.setIsViewerPrefs(true);
-            intent.putExtras(builder.getBundle());
+            PrefsBundle prefsBundle = new PrefsBundle();
+            prefsBundle.setViewerPrefs(true);
+            intent.putExtras(prefsBundle.toBundle());
 
             requireContext().startActivity(intent);
         });

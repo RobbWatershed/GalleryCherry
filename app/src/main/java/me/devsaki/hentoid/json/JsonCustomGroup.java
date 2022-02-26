@@ -9,6 +9,9 @@ class JsonCustomGroup {
 
     private String name;
     private Integer order;
+    private Integer subtype;
+    private Boolean favourite;
+    private Boolean hasCustomBookOrder;
 
     private JsonCustomGroup() {
     }
@@ -17,10 +20,16 @@ class JsonCustomGroup {
         JsonCustomGroup result = new JsonCustomGroup();
         result.name = g.name;
         result.order = g.order;
+        result.subtype = g.subtype;
+        result.favourite = g.favourite;
+        result.hasCustomBookOrder = g.hasCustomBookOrder;
         return result;
     }
 
     Group toEntity(@NonNull final Grouping grouping) {
-        return new Group(grouping, name, order);
+        return new Group(grouping, name, order)
+                .setSubtype((null == subtype) ? 0 : subtype)
+                .setFavourite(null != favourite && favourite)
+                .setHasCustomBookOrder(null != hasCustomBookOrder && hasCustomBookOrder);
     }
 }

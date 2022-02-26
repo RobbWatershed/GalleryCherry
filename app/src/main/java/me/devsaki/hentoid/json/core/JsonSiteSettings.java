@@ -1,4 +1,4 @@
-package me.devsaki.hentoid.json;
+package me.devsaki.hentoid.json.core;
 
 import java.util.Map;
 
@@ -15,7 +15,6 @@ public class JsonSiteSettings {
         public Boolean hasCoverBasedPageUpdates = null;
         public Boolean isDanbooru = null;
         public Boolean useCloudflare = null;
-        public Boolean simulateHumanReading = null;
         public Integer parallelDownloadCap = null;
         public Integer requestsCapPerSecond = null;
     }

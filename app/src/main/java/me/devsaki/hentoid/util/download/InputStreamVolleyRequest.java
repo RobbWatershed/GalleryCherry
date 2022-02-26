@@ -1,4 +1,6 @@
-package me.devsaki.hentoid.util.network;
+package me.devsaki.hentoid.util.download;
+
+import androidx.annotation.NonNull;
 
 import com.android.volley.NetworkResponse;
 import com.android.volley.Request;
@@ -9,6 +11,8 @@ import java.util.AbstractMap;
 import java.util.HashMap;
 import java.util.Map;
 
+import me.devsaki.hentoid.util.network.HttpHelper;
+
 /**
  * Specific Volley Request intended at transmitting :
  * - content as byte array
@@ -16,7 +20,7 @@ import java.util.Map;
  * <p>
  * to the download callback routine
  */
-public class InputStreamVolleyRequest extends Request<Object> {
+public class InputStreamVolleyRequest<T> extends Request<T> {
     // Callback listener
     // byte[] is the response's binary data; Map<String, String> are the response headers
     private final Response.Listener<Map.Entry<byte[], Map<String, String>>> mParseListener;
@@ -25,37 +29,29 @@ public class InputStreamVolleyRequest extends Request<Object> {
     private final boolean useWebviewAgent;
 
 
-    public InputStreamVolleyRequest(
-            int method,
-            String mUrl,
-            Map<String, String> headers,
-            boolean useHentoidAgent,
-            boolean useWebviewAgent,
-            Response.Listener<Map.Entry<byte[], Map<String, String>>> parseListener,
-            Response.ErrorListener errorListener) {
-        super(method, mUrl, errorListener);
-        this.headers = headers;
-        this.useHentoidAgent = useHentoidAgent;
-        this.useWebviewAgent = useWebviewAgent;
+    public InputStreamVolleyRequest(@NonNull RequestOrder order) {
+        super(order.getMethod(), order.getUrl(), error -> order.getErrorListener().accept(error));
+        this.headers = order.getHeaders();
+        this.useHentoidAgent = order.isUseHentoidAgent();
+        this.useWebviewAgent = order.isUseWebviewAgent();
         // this request would never use cache.
         setShouldCache(false);
-        mParseListener = parseListener;
+        setTag(order);
+        mParseListener = response -> order.getParseListener().accept(response);
     }
 
     @Override
-    protected void deliverResponse(Object response) {
+    protected void deliverResponse(T response) {
         // Nothing; all the work is done in Volley's worker thread, since it is time consuming (picture saving + DB operations)
     }
 
     @Override
-    protected Response<Object> parseNetworkResponse(NetworkResponse response) {
-        //Initialise local responseHeaders map with response headers received
-        Map<String, String> responseHeaders = response.headers;
+    protected Response<T> parseNetworkResponse(NetworkResponse response) {
+        // Initialise local responseHeaders map with response headers received
+        mParseListener.onResponse(new AbstractMap.SimpleEntry<>(response.data, response.headers));
 
-        mParseListener.onResponse(new AbstractMap.SimpleEntry<>(response.data, responseHeaders));
-
-        //Pass the response data here
-        return Response.success(response.data, HttpHeaderParser.parseCacheHeaders(response));
+        // Pass the response data here
+        return Response.success(null, HttpHeaderParser.parseCacheHeaders(response));
     }
 
     @Override

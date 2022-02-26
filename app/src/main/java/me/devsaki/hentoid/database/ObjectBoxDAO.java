@@ -414,7 +414,7 @@ public class ObjectBoxDAO implements CollectionDAO {
 
     @Override
     public List<Group> selectGroups(int grouping) {
-        return db.selectGroupsQ(grouping, null, 0, false, Preferences.Constant.ARTIST_GROUP_VISIBILITY_ARTISTS_GROUPS, false).find();
+        return db.selectGroupsQ(grouping, null, 0, false, -1, false).find();
     }
 
     @Override
@@ -430,7 +430,10 @@ public class ObjectBoxDAO implements CollectionDAO {
             boolean orderDesc,
             int artistGroupVisibility,
             boolean groupFavouritesOnly) {
-        LiveData<List<Group>> livedata = new ObjectBoxLiveData<>(db.selectGroupsQ(grouping, query, orderField, orderDesc, artistGroupVisibility, groupFavouritesOnly));
+        // Artist / group visibility filter is only relevant when the selected grouping is "By Artist"
+        int subType = (grouping == Grouping.ARTIST.getId()) ? artistGroupVisibility : -1;
+
+        LiveData<List<Group>> livedata = new ObjectBoxLiveData<>(db.selectGroupsQ(grouping, query, orderField, orderDesc, subType, groupFavouritesOnly));
         LiveData<List<Group>> workingData = livedata;
 
         // Download date grouping : groups are empty as they are dynamically populated
@@ -484,7 +487,7 @@ public class ObjectBoxDAO implements CollectionDAO {
     private Group enrichGroupWithItemsByDlDate(@NonNull final Group g, int minDays, int maxDays) {
         List<GroupItem> items = selectGroupItemsByDlDate(g, minDays, maxDays);
         g.setItems(items);
-        if (!items.isEmpty()) g.picture.setTarget(items.get(0).content.getTarget().getCover());
+        if (!items.isEmpty()) g.coverContent.setTarget(items.get(0).content.getTarget());
 
         return g;
     }
@@ -560,9 +563,9 @@ public class ObjectBoxDAO implements CollectionDAO {
             item.order = db.getMaxGroupItemOrderFor(item.getGroupId()) + 1;
 
         // If target group doesn't have a cover, get the corresponding Content's
-        ToOne<ImageFile> groupCover = item.group.getTarget().picture;
-        if (!groupCover.isResolvedAndNotNull())
-            groupCover.setAndPutTarget(item.content.getTarget().getCover());
+        ToOne<Content> groupCoverContent = item.group.getTarget().coverContent;
+        if (!groupCoverContent.isResolvedAndNotNull())
+            groupCoverContent.setAndPutTarget(item.content.getTarget());
 
         return db.insertGroupItem(item);
     }
@@ -580,10 +583,10 @@ public class ObjectBoxDAO implements CollectionDAO {
         // Check if one of the GroupItems to delete is linked to the content that contains the group's cover picture
         List<GroupItem> groupItems = db.selectGroupItems(Helper.getPrimitiveArrayFromList(groupItemIds));
         for (GroupItem gi : groupItems) {
-            ToOne<ImageFile> groupPicture = gi.group.getTarget().picture;
+            ToOne<Content> groupCoverContent = gi.group.getTarget().coverContent;
             // If so, remove the cover picture
-            if (groupPicture.isResolvedAndNotNull() && groupPicture.getTarget().getContent().getTargetId() == gi.content.getTargetId())
-                gi.group.getTarget().picture.setAndPutTarget(null);
+            if (groupCoverContent.isResolvedAndNotNull() && groupCoverContent.getTargetId() == gi.content.getTargetId())
+                gi.group.getTarget().coverContent.setAndPutTarget(null);
         }
 
         db.deleteGroupItems(Helper.getPrimitiveArrayFromList(groupItemIds));

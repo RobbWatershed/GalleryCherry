@@ -96,9 +96,7 @@ public class HttpHelper {
     @Nullable
     public static Document getOnlineDocument(String url, List<Pair<String, String>> headers, boolean useHentoidAgent, boolean useWebviewAgent) throws IOException {
         ResponseBody resource = getOnlineResource(url, headers, true, useHentoidAgent, useWebviewAgent).body();
-        if (resource != null) {
-            return Jsoup.parse(resource.string());
-        }
+        if (resource != null) return Jsoup.parse(resource.string());
         return null;
     }
 
@@ -132,9 +130,13 @@ public class HttpHelper {
     }
 
     public static Response getOnlineResourceFast(@NonNull String url, @Nullable List<Pair<String, String>> headers, boolean useMobileAgent, boolean useHentoidAgent, boolean useWebviewAgent) throws IOException {
+        return getOnlineResourceFast(url, headers, useMobileAgent, useHentoidAgent, useWebviewAgent, true);
+    }
+
+    public static Response getOnlineResourceFast(@NonNull String url, @Nullable List<Pair<String, String>> headers, boolean useMobileAgent, boolean useHentoidAgent, boolean useWebviewAgent, boolean followRedirects) throws IOException {
         Request.Builder requestBuilder = buildRequest(url, headers, useMobileAgent, useHentoidAgent, useWebviewAgent);
         Request request = requestBuilder.get().build();
-        return OkHttpClientSingleton.getInstance(2000, 10000).newCall(request).execute();
+        return OkHttpClientSingleton.getInstance(2000, 10000, followRedirects).newCall(request).execute();
     }
 
     /**
@@ -580,13 +582,20 @@ public class HttpHelper {
         return result;
     }
 
+    /**
+     * Remove all references to webview in the given user agent
+     *
+     * @param agent User agent to clean from webview references
+     * @return User agent cleaned from webview references
+     */
     public static String cleanWebViewAgent(@NonNull final String agent) {
         String result = agent;
         int buildIndex = result.indexOf(" Build/");
         if (buildIndex > -1) {
             int closeIndex = result.indexOf(")", buildIndex);
             int separatorIndex = result.indexOf(";", buildIndex);
-            int firstIndex = Math.min(closeIndex, separatorIndex);
+            int firstIndex = closeIndex;
+            if (separatorIndex > -1) firstIndex = Math.min(closeIndex, separatorIndex);
             result = result.substring(0, buildIndex) + result.substring(firstIndex);
         }
         int versionIndex = result.indexOf(" Version/");

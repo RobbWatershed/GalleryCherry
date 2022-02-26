@@ -2,6 +2,8 @@ package me.devsaki.hentoid.util.network;
 
 import android.util.SparseArray;
 
+import androidx.annotation.NonNull;
+
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
@@ -29,15 +31,15 @@ public class OkHttpClientSingleton {
     }
 
     public static OkHttpClient getInstance() {
-        return getInstance(HttpHelper.DEFAULT_REQUEST_TIMEOUT, HttpHelper.DEFAULT_REQUEST_TIMEOUT);
+        return getInstance(HttpHelper.DEFAULT_REQUEST_TIMEOUT, HttpHelper.DEFAULT_REQUEST_TIMEOUT, true);
     }
 
-    public static OkHttpClient getInstance(int connectTimeout, int ioTimeout) {
-        int key = (connectTimeout * 100) + ioTimeout;
+    public static OkHttpClient getInstance(int connectTimeout, int ioTimeout, boolean followRedirects) {
+        int key = (connectTimeout * 100) + ioTimeout + (followRedirects ? 1 : 0);
         if (null == instance.get(key)) {
             synchronized (OkHttpClientSingleton.class) {
                 if (null == instance.get(key)) {
-                    instance.put(key, buildClient(connectTimeout, ioTimeout));
+                    instance.put(key, buildClient(connectTimeout, ioTimeout, followRedirects));
                 }
             }
         }
@@ -45,7 +47,7 @@ public class OkHttpClientSingleton {
     }
 
     public static void reset() {
-        Helper.assertNonUiThread(); // Closing network operations shouldn't happen on the UI thread either
+        Helper.assertNonUiThread(); // Closing network operations shouldn't happen on the UI thread
         synchronized (OkHttpClientSingleton.class) {
             int size = instance.size();
             for (int i = 0; i < size; i++) {
@@ -71,7 +73,7 @@ public class OkHttpClientSingleton {
                 .build();
     }
 
-    private static OkHttpClient buildClient(int connectTimeout, int ioTimeout) {
+    private static OkHttpClient buildClient(int connectTimeout, int ioTimeout, boolean followRedirects) {
         if (null == instance.get(0)) {
             synchronized (OkHttpClientSingleton.class) {
                 if (null == instance.get(0)) {
@@ -83,6 +85,7 @@ public class OkHttpClientSingleton {
 
         // Set custom delays
         OkHttpClient.Builder result = primaryClient.newBuilder()
+                .followRedirects(followRedirects)
                 .connectTimeout(connectTimeout, TimeUnit.MILLISECONDS)
                 .readTimeout(ioTimeout, TimeUnit.MILLISECONDS)
                 .writeTimeout(ioTimeout, TimeUnit.MILLISECONDS);
@@ -101,6 +104,7 @@ public class OkHttpClientSingleton {
         return result.build();
     }
 
+    @NonNull
     private static okhttp3.Response rewriteUserAgentInterceptor(Interceptor.Chain chain) throws IOException {
         Request.Builder builder = chain.request().newBuilder();
         // If not specified, all requests are done with the device's mobile user-agent, without the Hentoid string

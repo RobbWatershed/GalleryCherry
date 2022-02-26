@@ -1,4 +1,4 @@
-package me.devsaki.hentoid.util.network;
+package me.devsaki.hentoid.util.download;
 
 import com.android.volley.AuthFailureError;
 import com.android.volley.Header;
@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import me.devsaki.hentoid.util.network.OkHttpClientSingleton;
 import okhttp3.Call;
 import okhttp3.Headers;
 import okhttp3.MediaType;
@@ -34,8 +35,8 @@ public class VolleyOkHttp3Stack extends BaseHttpStack {
     private final OkHttpClient client;
     private static final RequestBody EMPTY_REQUEST = RequestBody.create(new byte[0]);
 
-    public VolleyOkHttp3Stack(int timeoutMs) {
-        client = OkHttpClientSingleton.getInstance(timeoutMs, timeoutMs);
+    public VolleyOkHttp3Stack(int connectTimeoutMs, int ioTimeoutMs) {
+        client = OkHttpClientSingleton.getInstance(connectTimeoutMs, ioTimeoutMs, true);
     }
 
     private static void setConnectionParametersForRequest(okhttp3.Request.Builder builder, Request<?> request)

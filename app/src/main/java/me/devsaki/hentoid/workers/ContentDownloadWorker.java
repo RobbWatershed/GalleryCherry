@@ -33,7 +33,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.annotation.Nullable;
@@ -73,6 +72,8 @@ import me.devsaki.hentoid.util.JsonHelper;
 import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.util.StringHelper;
 import me.devsaki.hentoid.util.download.ContentQueueManager;
+import me.devsaki.hentoid.util.download.DownloadHelper;
+import me.devsaki.hentoid.util.download.RequestOrder;
 import me.devsaki.hentoid.util.download.RequestQueueManager;
 import me.devsaki.hentoid.util.exception.AccountException;
 import me.devsaki.hentoid.util.exception.CaptchaException;
@@ -82,7 +83,6 @@ import me.devsaki.hentoid.util.exception.PreparationInterruptedException;
 import me.devsaki.hentoid.util.exception.UnsupportedContentException;
 import me.devsaki.hentoid.util.network.DownloadSpeedCalculator;
 import me.devsaki.hentoid.util.network.HttpHelper;
-import me.devsaki.hentoid.util.network.InputStreamVolleyRequest;
 import me.devsaki.hentoid.util.network.NetworkHelper;
 import me.devsaki.hentoid.util.notification.Notification;
 import me.devsaki.hentoid.util.notification.NotificationManager;
@@ -93,6 +93,9 @@ public class ContentDownloadWorker extends BaseWorker {
     private enum QueuingResult {
         CONTENT_FOUND, CONTENT_SKIPPED, CONTENT_FAILED, QUEUE_END
     }
+
+    private static final int IDLE_THRESHOLD = 20; // seconds; should be higher than the connect + I/O timeout defined in RequestQueueManager
+    private static final int LOW_NETWORK_THRESHOLD = 10; // KBps
 
     // DAO is full scope to avoid putting try / finally's everywhere and be sure to clear it upon worker stop
     private final CollectionDAO dao;
@@ -106,7 +109,7 @@ public class ContentDownloadWorker extends BaseWorker {
     private boolean isCloudFlareBlocked;
 
     private final NotificationManager userActionNotificationManager;
-    private final RequestQueueManager<Object> requestQueueManager;
+    private final RequestQueueManager requestQueueManager;
     protected final CompositeDisposable compositeDisposable = new CompositeDisposable();
 
     // Download speed calculator
@@ -144,8 +147,10 @@ public class ContentDownloadWorker extends BaseWorker {
         compositeDisposable.clear();
 
         if (dao != null) dao.cleanup();
+    }
 
-        ContentQueueManager.getInstance().setInactive();
+    public static boolean isRunning(@NonNull Context context) {
+        return isRunning(context, R.id.download_service);
     }
 
     @Override
@@ -314,12 +319,7 @@ public class ContentDownloadWorker extends BaseWorker {
                 if (content.isUpdatedProperties()) dao.insertContent(content);
 
                 // Manually insert new images (without using insertContent)
-                long contentId = content.getId();
-                dao.replaceImageList(contentId, images);
-                // Get updated Content with the generated ID of new images
-                content = dao.selectContent(contentId);
-                if (null == content)
-                    return new ImmutablePair<>(QueuingResult.CONTENT_SKIPPED, null);
+                dao.replaceImageList(content.getId(), images);
             } catch (CaptchaException cpe) {
                 Timber.i(cpe, "A captcha has been found while parsing %s. Download aborted.", content.getTitle());
                 logErrorRecord(content.getId(), ErrorType.CAPTCHA, content.getUrl(), CONTENT_PART_IMAGE_LIST, "Captcha found. Please go back to the site, browse a book and solve the captcha.");
@@ -342,8 +342,6 @@ public class ContentDownloadWorker extends BaseWorker {
                 logErrorRecord(content.getId(), ErrorType.PARSING, content.getUrl(), CONTENT_PART_IMAGE_LIST, "No images have been found. Error = " + ere.getMessage());
                 hasError = true;
             } catch (Exception e) {
-                if (null == content)
-                    return new ImmutablePair<>(QueuingResult.CONTENT_SKIPPED, null);
                 Timber.w(e, "An exception has occurred while parsing %s. Download aborted.", content.getTitle());
                 logErrorRecord(content.getId(), ErrorType.PARSING, content.getUrl(), CONTENT_PART_IMAGE_LIST, e.getMessage());
                 hasError = true;
@@ -355,6 +353,11 @@ public class ContentDownloadWorker extends BaseWorker {
             if (downloadMode == Content.DownloadMode.STREAM)
                 dao.updateImageContentStatus(content.getId(), null, StatusContent.ONLINE);
         }
+
+        // Get updated Content with the udpated ID and status of new images
+        content = dao.selectContent(content.getId());
+        if (null == content)
+            return new ImmutablePair<>(QueuingResult.CONTENT_SKIPPED, null);
 
         if (hasError) {
             moveToErrors(content.getId());
@@ -394,38 +397,46 @@ public class ContentDownloadWorker extends BaseWorker {
         // Don't count the cover thumbnail in the number of pages
         if (0 == content.getQtyPages()) content.setQtyPages(images.size() - 1);
         content.setStatus(StatusContent.DOWNLOADING);
+        // Mark the cover for downloading when saving a streamed book
+        if (downloadMode == Content.DownloadMode.STREAM)
+            content.getCover().setStatus(StatusContent.SAVED);
         dao.insertContent(content);
-
-        if (downloadMode == Content.DownloadMode.STREAM) {
-            completeDownload(content.getId(), content.getTitle(), images.size(), 0, 0);
-            return new ImmutablePair<>(QueuingResult.CONTENT_SKIPPED, content);
-        }
 
         HentoidApp.trackDownloadEvent("Added");
         Timber.i("Downloading '%s' [%s]", content.getTitle(), content.getId());
+
+        // Wait until the end of purge if the content is being purged (e.g. redownload from scratch)
+        boolean isBeingDeleted = content.isBeingDeleted();
+        if (isBeingDeleted)
+            EventBus.getDefault().post(DownloadEvent.fromPreparationStep(DownloadEvent.Step.WAIT_PURGE));
+        while (content.isBeingDeleted()) {
+            Timber.d("Waiting for purge to complete");
+            content = dao.selectContent(content.getId());
+            if (null == content)
+                return new ImmutablePair<>(QueuingResult.CONTENT_SKIPPED, null);
+            Helper.pause(1000);
+            if (downloadInterrupted.get()) break;
+        }
+        if (isBeingDeleted && !downloadInterrupted.get())
+            Timber.d("Purge completed; resuming download");
+
 
         // == DOWNLOAD PHASE ==
 
         EventBus.getDefault().post(DownloadEvent.fromPreparationStep(DownloadEvent.Step.PREPARE_DOWNLOAD));
 
-        // Wait a delay corresponding to book browsing if we're between two sources with "simulate human reading"
-        if (content.getSite().isSimulateHumanReading() && requestQueueManager.isSimulateHumanReading()) {
-            int delayMs = 3000 + new Random().nextInt(2000);
-            Helper.pause(delayMs);
-        }
-
+        // Set up downloader constraints
         if (content.getSite().getParallelDownloadCap() > 0 &&
-                (requestQueueManager.getDownloadThreadCount() > content.getSite().getParallelDownloadCap()
-                        || -1 == requestQueueManager.getDownloadThreadCount())
+                (requestQueueManager.getDownloadThreadCap() > content.getSite().getParallelDownloadCap()
+                        || -1 == requestQueueManager.getDownloadThreadCap())
         ) {
             Timber.d("Setting parallel downloads count to %s", content.getSite().getParallelDownloadCap());
-            requestQueueManager.setDownloadThreadCount(getApplicationContext(), content.getSite().getParallelDownloadCap());
+            requestQueueManager.initUsingDownloadThreadCount(getApplicationContext(), content.getSite().getParallelDownloadCap(), true);
         }
-        if (0 == content.getSite().getParallelDownloadCap() && requestQueueManager.getDownloadThreadCount() > -1) {
+        if (0 == content.getSite().getParallelDownloadCap() && requestQueueManager.getDownloadThreadCap() > -1) {
             Timber.d("Resetting parallel downloads count to default");
-            requestQueueManager.setDownloadThreadCount(getApplicationContext(), -1);
+            requestQueueManager.initUsingDownloadThreadCount(getApplicationContext(), -1, true);
         }
-        requestQueueManager.setSimulateHumanReading(content.getSite().isSimulateHumanReading());
         requestQueueManager.setNbRequestsPerSecond(content.getSite().getRequestsCapPerSecond());
 
         // In case the download has been canceled while in preparation phase
@@ -435,29 +446,28 @@ public class ContentDownloadWorker extends BaseWorker {
 
         List<ImageFile> pagesToParse = new ArrayList<>();
 
-        // Queue image download requests
-        for (ImageFile img : images) {
-            if (img.getStatus().equals(StatusContent.SAVED)) {
-                // Enrich download params just in case
-                Map<String, String> downloadParams;
-                if (img.getDownloadParams().length() > 2)
-                    downloadParams = ContentHelper.parseDownloadParams(img.getDownloadParams());
-                else
-                    downloadParams = new HashMap<>();
-                // Add referer if unset
-                if (!downloadParams.containsKey(HttpHelper.HEADER_REFERER_KEY))
-                    downloadParams.put(HttpHelper.HEADER_REFERER_KEY, content.getGalleryUrl());
-                // Add cookies if unset or if the site needs fresh cookies
-                if (!downloadParams.containsKey(HttpHelper.HEADER_COOKIE_KEY) || content.getSite().isUseCloudflare())
-                    downloadParams.put(HttpHelper.HEADER_COOKIE_KEY, HttpHelper.getCookies(img.getUrl()));
+        // Just get the cover if we're in a streamed download
+        if (downloadMode == Content.DownloadMode.STREAM) {
+            Optional<ImageFile> coverOptional = Stream.of(images).filter(ImageFile::isCover).findFirst();
+            if (coverOptional.isPresent()) {
+                ImageFile cover = coverOptional.get();
+                enrichImageDownloadParams(cover, content);
+                requestQueueManager.queueRequest(buildImageDownloadRequest(cover, dir, content));
+            }
+        } else { // Regular downloads
 
-                img.setDownloadParams(JsonHelper.serializeToJson(downloadParams, JsonHelper.MAP_STRINGS));
+            // Queue image download requests
+            for (ImageFile img : images) {
+                if (img.getStatus().equals(StatusContent.SAVED)) {
 
-                // Set the 1st image of the list as a backup in case the cover URL is stale (might happen when restarting old downloads)
-                if (img.isCover() && images.size() > 1) img.setBackupUrl(images.get(1).getUrl());
+                    enrichImageDownloadParams(img, content);
 
-                if (img.needsPageParsing()) pagesToParse.add(img);
-                else requestQueueManager.queueRequest(buildImageDownloadRequest(img, dir, content));
+                    // Set the 1st image of the list as a backup in case the cover URL is stale (might happen when restarting old downloads)
+                    if (img.isCover() && images.size() > 1)
+                        img.setBackupUrl(images.get(1).getUrl());
+
+                    if (img.needsPageParsing()) pagesToParse.add(img);
+                    else requestQueueManager.queueRequest(buildImageDownloadRequest(img, dir, content));
             }
         }
 
@@ -487,6 +497,23 @@ public class ContentDownloadWorker extends BaseWorker {
         return new ImmutablePair<>(QueuingResult.CONTENT_FOUND, content);
     }
 
+    private void enrichImageDownloadParams(@NonNull ImageFile img, @NonNull Content content) {
+        // Enrich download params just in case
+        Map<String, String> downloadParams;
+        if (img.getDownloadParams().length() > 2)
+            downloadParams = ContentHelper.parseDownloadParams(img.getDownloadParams());
+        else
+            downloadParams = new HashMap<>();
+        // Add referer if unset
+        if (!downloadParams.containsKey(HttpHelper.HEADER_REFERER_KEY))
+            downloadParams.put(HttpHelper.HEADER_REFERER_KEY, content.getGalleryUrl());
+        // Add cookies if unset or if the site needs fresh cookies
+        if (!downloadParams.containsKey(HttpHelper.HEADER_COOKIE_KEY) || content.getSite().isUseCloudflare())
+            downloadParams.put(HttpHelper.HEADER_COOKIE_KEY, HttpHelper.getCookies(img.getUrl()));
+
+        img.setDownloadParams(JsonHelper.serializeToJson(downloadParams, JsonHelper.MAP_STRINGS));
+    }
+
     /**
      * Watch download progress
      * <p>
@@ -498,40 +525,75 @@ public class ContentDownloadWorker extends BaseWorker {
         boolean isDone;
         int pagesOK = 0;
         int pagesKO = 0;
-        long sizeDownloadedBytes = 0;
+        long downloadedBytes = 0;
+
+        boolean firstPageDownloaded = false;
+        int deltaPages = 0;
+        int nbDeltaZeroPages = 0;
+        long networkBytes = 0;
+        long deltaNetworkBytes;
+        int nbDeltaLowNetwork = 0;
 
         List<ImageFile> images = content.getImageFiles();
-        int totalPages = (null == images) ? 0 : images.size();
+        // Compute total downloadable pages; online (stream) pages do not count
+        int totalPages = (null == images) ? 0 : (int) Stream.of(images).filter(i -> !i.getStatus().equals(StatusContent.ONLINE)).count();
 
         ContentQueueManager contentQueueManager = ContentQueueManager.getInstance();
         do {
             Map<StatusContent, ImmutablePair<Integer, Long>> statuses = dao.countProcessedImagesById(content.getId());
             ImmutablePair<Integer, Long> status = statuses.get(StatusContent.DOWNLOADED);
+
+            // Measure idle time since last iteration
             if (status != null) {
+                deltaPages = status.left - pagesOK;
+                if (deltaPages == 0) nbDeltaZeroPages++;
+                else {
+                    firstPageDownloaded = true;
+                    nbDeltaZeroPages = 0;
+                }
                 pagesOK = status.left;
-                sizeDownloadedBytes = status.right;
+                downloadedBytes = status.right;
             }
             status = statuses.get(StatusContent.ERROR);
             if (status != null)
                 pagesKO = status.left;
 
-            double sizeDownloadedMB = sizeDownloadedBytes / (1024.0 * 1024);
+            double downloadedMB = downloadedBytes / (1024.0 * 1024);
             int progress = pagesOK + pagesKO;
             isDone = progress == totalPages;
-            Timber.d("Progress: OK:%d size:%dMB - KO:%d - Total:%d", pagesOK, (int) sizeDownloadedMB, pagesKO, totalPages);
+            Timber.d("Progress: OK:%d size:%dMB - KO:%d - Total:%d", pagesOK, (int) downloadedMB, pagesKO, totalPages);
 
             // Download speed and size estimation
-            downloadSpeedCalculator.addSampleNow(NetworkHelper.getIncomingNetworkUsage(getApplicationContext()));
+            long networkBytesNow = NetworkHelper.getIncomingNetworkUsage(getApplicationContext());
+            deltaNetworkBytes = networkBytesNow - networkBytes;
+            if (deltaNetworkBytes < 1024 * LOW_NETWORK_THRESHOLD && firstPageDownloaded)
+                nbDeltaLowNetwork++; // LOW_NETWORK_THRESHOLD KBps threshold once download has started
+            else nbDeltaLowNetwork = 0;
+            networkBytes = networkBytesNow;
+            downloadSpeedCalculator.addSampleNow(networkBytes);
             int avgSpeedKbps = (int) downloadSpeedCalculator.getAvgSpeedKbps();
+
+            Timber.d("deltaPages: %d / deltaNetworkBytes: %s", deltaPages, FileHelper.formatHumanReadableSize(deltaNetworkBytes, getApplicationContext().getResources()));
+            Timber.d("nbDeltaZeroPages: %d / nbDeltaLowNetwork: %d", nbDeltaZeroPages, nbDeltaLowNetwork);
+
+            // Restart request queue when the queue has idled for too long
+            // Idle = very low download speed _AND_ no new pages downloaded
+            if (nbDeltaLowNetwork > IDLE_THRESHOLD && nbDeltaZeroPages > IDLE_THRESHOLD) {
+                nbDeltaLowNetwork = 0;
+                nbDeltaZeroPages = 0;
+                Timber.d("Inactivity detected ====> restarting request queue");
+                //requestQueueManager.restartRequestQueue();
+                requestQueueManager.resetRequestQueue(getApplicationContext(), false);
+            }
 
             double estimateBookSizeMB = -1;
             if (pagesOK > 3 && progress > 0 && totalPages > 0) {
-                estimateBookSizeMB = sizeDownloadedMB / (progress * 1.0 / totalPages);
+                estimateBookSizeMB = downloadedMB / (progress * 1.0 / totalPages);
                 Timber.v("Estimate book size calculated for wifi check : %s MB", estimateBookSizeMB);
             }
 
-            notificationManager.notify(new DownloadProgressNotification(content.getTitle(), progress, totalPages, (int) sizeDownloadedMB, (int) estimateBookSizeMB, avgSpeedKbps));
-            EventBus.getDefault().post(new DownloadEvent(content, DownloadEvent.Type.EV_PROGRESS, pagesOK, pagesKO, totalPages, sizeDownloadedBytes));
+            notificationManager.notify(new DownloadProgressNotification(content.getTitle(), progress, totalPages, (int) downloadedMB, (int) estimateBookSizeMB, avgSpeedKbps));
+            EventBus.getDefault().post(new DownloadEvent(content, DownloadEvent.Type.EV_PROGRESS, pagesOK, pagesKO, totalPages, downloadedBytes));
 
             // If the "skip large downloads on mobile data" is on, skip if needed
             if (Preferences.isDownloadLargeOnlyWifi() &&
@@ -558,7 +620,7 @@ public class ContentDownloadWorker extends BaseWorker {
             if (downloadCanceled.get()) notificationManager.cancel();
         } else {
             // NB : no need to supply the Content itself as it has not been updated during the loop
-            completeDownload(content.getId(), content.getTitle(), pagesOK, pagesKO, sizeDownloadedBytes);
+            completeDownload(content.getId(), content.getTitle(), pagesOK, pagesKO, downloadedBytes);
         }
     }
 
@@ -746,7 +808,7 @@ public class ContentDownloadWorker extends BaseWorker {
         }
     }
 
-    private Request<Object> buildImageDownloadRequest(
+    private RequestOrder buildImageDownloadRequest(
             @NonNull final ImageFile img,
             @NonNull final DocumentFile dir,
             @NonNull final Content content) {
@@ -759,7 +821,7 @@ public class ContentDownloadWorker extends BaseWorker {
 
         final String backupUrlFinal = HttpHelper.fixUrl(img.getBackupUrl(), site.getUrl());
 
-        return new InputStreamVolleyRequest(
+        return new RequestOrder(
                 Request.Method.GET,
                 imageUrl,
                 requestHeaders,
@@ -810,6 +872,10 @@ public class ContentDownloadWorker extends BaseWorker {
             @NonNull DocumentFile dir,
             @NonNull String backupUrl,
             @NonNull Map<String, String> requestHeaders) {
+
+        // If the queue is being reset, ignore the error
+        if (requestQueueManager.isInit()) return;
+
         // Try with the backup URL, if it exists and if the current image isn't a backup itself
         if (!img.isBackup() && !backupUrl.isEmpty()) {
             tryUsingBackupUrl(img, dir, backupUrl, requestHeaders);

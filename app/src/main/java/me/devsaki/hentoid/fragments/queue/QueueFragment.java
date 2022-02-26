@@ -51,7 +51,6 @@ import org.jetbrains.annotations.NotNull;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -62,12 +61,10 @@ import io.reactivex.schedulers.Schedulers;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.activities.PrefsActivity;
 import me.devsaki.hentoid.activities.QueueActivity;
-import me.devsaki.hentoid.activities.bundles.PrefsActivityBundle;
+import me.devsaki.hentoid.activities.bundles.PrefsBundle;
 import me.devsaki.hentoid.database.ObjectBoxDAO;
-import me.devsaki.hentoid.database.ObjectBoxDB;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.QueueRecord;
-import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.events.DownloadEvent;
 import me.devsaki.hentoid.events.DownloadPreparationEvent;
 import me.devsaki.hentoid.events.ProcessEvent;
@@ -499,10 +496,7 @@ public class QueueFragment extends Fragment implements ItemTouchCallback, Simple
                 updateProgress(event.pagesOK, event.pagesKO, event.pagesTotal, event.getNumberRetries(), event.downloadedSizeB, false);
                 break;
             case DownloadEvent.Type.EV_UNPAUSE:
-                ContentQueueManager.getInstance().unpauseQueue();
-                ObjectBoxDB db = ObjectBoxDB.getInstance(requireActivity());
-                db.updateContentStatus(StatusContent.PAUSED, StatusContent.DOWNLOADING);
-                ContentQueueManager.getInstance().resumeQueue(requireActivity());
+                viewModel.unpauseQueue();
                 updateProgressFirstItem(false);
                 update(event.eventType);
                 break;
@@ -539,7 +533,7 @@ public class QueueFragment extends Fragment implements ItemTouchCallback, Simple
                 motiveMsg = R.string.paused_no_wifi;
                 break;
             case DownloadEvent.Motive.NO_STORAGE:
-                String spaceLeft = FileHelper.formatHumanReadableSize(event.downloadedSizeB);
+                String spaceLeft = FileHelper.formatHumanReadableSize(event.downloadedSizeB, getResources());
                 Snackbar.make(recyclerView, getString(R.string.paused_no_storage, spaceLeft), BaseTransientBottomBar.LENGTH_SHORT).show();
                 return;
             case DownloadEvent.Motive.NO_DOWNLOAD_FOLDER:
@@ -584,11 +578,13 @@ public class QueueFragment extends Fragment implements ItemTouchCallback, Simple
                 return R.string.step_prepare_download;
             case DownloadEvent.Step.SAVE_QUEUE:
                 return R.string.step_save_queue;
+            case DownloadEvent.Step.WAIT_PURGE:
+                return R.string.step_wait_purge;
             case DownloadEvent.Step.START_DOWNLOAD:
                 return R.string.step_start_download;
             case DownloadEvent.Step.NONE:
             default: // NONE
-                return R.string.empty;
+                return R.string.empty_string;
         }
     }
 
@@ -662,14 +658,14 @@ public class QueueFragment extends Fragment implements ItemTouchCallback, Simple
                 // Update information bar
                 StringBuilder message = new StringBuilder();
                 String processedPagesFmt = StringHelper.formatIntAsStr(pagesOKDisplay, String.valueOf(totalPagesDisplay).length());
-                message.append(processedPagesFmt).append("/").append(totalPagesDisplay).append(" processed");
+                message.append(getResources().getString(R.string.queue_bottom_bar_processed, processedPagesFmt, totalPagesDisplay));
                 if (pagesKO > 0)
-                    message.append(" (").append(pagesKO).append(" errors)");
+                    message.append(" ").append(getResources().getQuantityString(R.plurals.queue_bottom_bar_errors, pagesKO, pagesKO));
                 if (numberRetries > 0)
-                    message.append(" [ retry").append(numberRetries).append("/").append(Preferences.getDlRetriesNumber()).append("]");
+                    message.append(" ").append(getResources().getString(R.string.queue_bottom_bar_retry, numberRetries, Preferences.getDlRetriesNumber()));
                 int avgSpeedKbps = (int) downloadSpeedCalculator.getAvgSpeedKbps();
                 if (avgSpeedKbps > 0)
-                    message.append(String.format(Locale.ENGLISH, " @ %d KBps", avgSpeedKbps));
+                    message.append(" @ ").append(getResources().getString(R.string.queue_bottom_bar_speed, avgSpeedKbps));
 
                 queueInfo.setText(message.toString());
                 isPreparingDownload = false;
@@ -696,14 +692,14 @@ public class QueueFragment extends Fragment implements ItemTouchCallback, Simple
     private void update(int eventType) {
         int bookDiff = (eventType == DownloadEvent.Type.EV_CANCEL) ? 1 : 0; // Cancel event means a book will be removed very soon from the queue
         isEmpty = (0 == itemAdapter.getAdapterItemCount() - bookDiff);
-        isPaused = (!isEmpty && (eventType == DownloadEvent.Type.EV_PAUSE || ContentQueueManager.getInstance().isQueuePaused() || !ContentQueueManager.getInstance().isQueueActive()));
+        isPaused = (!isEmpty && (eventType == DownloadEvent.Type.EV_PAUSE || ContentQueueManager.getInstance().isQueuePaused() || !ContentQueueManager.getInstance().isQueueActive(requireActivity())));
         updateControlBar();
     }
 
     private void onQueueChanged(List<QueueRecord> result) {
         Timber.d(">>Queue changed ! Size=%s", result.size());
         isEmpty = (result.isEmpty());
-        isPaused = (!isEmpty && (ContentQueueManager.getInstance().isQueuePaused() || !ContentQueueManager.getInstance().isQueueActive()));
+        isPaused = (!isEmpty && (ContentQueueManager.getInstance().isQueuePaused() || !ContentQueueManager.getInstance().isQueueActive(requireActivity())));
 
         // Don't process changes while everything is being canceled, it usually kills the UI as too many changes are processed at the same time
         if (isCancelingAll && !isEmpty) return;
@@ -823,7 +819,7 @@ public class QueueFragment extends Fragment implements ItemTouchCallback, Simple
             if (null == content) return;
 
             // Hack to update the 1st visible card even though it is controlled by the PagedList
-            ContentItem.ContentViewHolder.updateProgress(content, requireViewById(rootView, R.id.item_card), 0, isPausedevent);
+            ContentItem.ContentViewHolder.updateProgress(content, requireViewById(rootView, R.id.item_card), 0, isPausedevent, ContentQueueManager.getInstance().isQueueActive(requireActivity()));
         }
     }
 
@@ -864,14 +860,14 @@ public class QueueFragment extends Fragment implements ItemTouchCallback, Simple
     private void onCancelBooks(@NonNull List<Content> c) {
         if (c.size() > 2) {
             isCancelingAll = true;
-            ProgressDialogFragment.invoke(getParentFragmentManager(), getResources().getString(R.string.cancel_queue_progress), getResources().getString(R.string.books));
+            ProgressDialogFragment.invoke(getParentFragmentManager(), getResources().getString(R.string.cancel_queue_progress), R.plurals.book);
         }
         viewModel.cancel(c);
     }
 
     private void onCancelAll() {
         isCancelingAll = true;
-        ProgressDialogFragment.invoke(getParentFragmentManager(), getResources().getString(R.string.cancel_queue_progress), getResources().getString(R.string.books));
+        ProgressDialogFragment.invoke(getParentFragmentManager(), getResources().getString(R.string.cancel_queue_progress), R.plurals.book);
         viewModel.cancelAll();
     }
 
@@ -969,9 +965,9 @@ public class QueueFragment extends Fragment implements ItemTouchCallback, Simple
     private void onSettingsClick() {
         Intent intent = new Intent(requireActivity(), PrefsActivity.class);
 
-        PrefsActivityBundle.Builder builder = new PrefsActivityBundle.Builder();
-        builder.setIsDownloaderPrefs(true);
-        intent.putExtras(builder.getBundle());
+        PrefsBundle prefsBundle = new PrefsBundle();
+        prefsBundle.setDownloaderPrefs(true);
+        intent.putExtras(prefsBundle.toBundle());
 
         requireContext().startActivity(intent);
     }

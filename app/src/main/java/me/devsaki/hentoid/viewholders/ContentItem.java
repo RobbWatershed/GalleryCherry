@@ -28,8 +28,12 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.annimon.stream.Stream;
 import com.annimon.stream.function.Consumer;
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.integration.webp.decoder.WebpDrawable;
+import com.bumptech.glide.integration.webp.decoder.WebpDrawableTransformation;
+import com.bumptech.glide.load.Transformation;
 import com.bumptech.glide.load.model.GlideUrl;
 import com.bumptech.glide.load.model.LazyHeaders;
+import com.bumptech.glide.load.resource.bitmap.CenterInside;
 import com.bumptech.glide.request.RequestOptions;
 import com.mikepenz.fastadapter.FastAdapter;
 import com.mikepenz.fastadapter.drag.IExtendedDraggable;
@@ -110,8 +114,10 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
         int tintColor = ThemeHelper.getColor(context, R.color.light_gray);
         Drawable d = new BitmapDrawable(context.getResources(), tintBitmap(bmp, tintColor));
 
+        final Transformation<Bitmap> centerInside = new CenterInside();
         glideRequestOptions = new RequestOptions()
-                .centerInside()
+                .optionalTransform(centerInside)
+                .optionalTransform(WebpDrawable.class, new WebpDrawableTransformation(centerInside))
                 .error(d);
     }
 
@@ -367,7 +373,7 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
 
 
             if (progressBar != null)
-                updateProgress(item.content, baseLayout, getAbsoluteAdapterPosition(), false);
+                updateProgress(item.content, baseLayout, getAbsoluteAdapterPosition(), false, ContentQueueManager.getInstance().isQueueActive(baseLayout.getContext()));
             if (ivReorder != null)
                 DragDropUtil.bindDragHandle(this, item);
         }
@@ -503,12 +509,13 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
                 String nbPages = content.getQtyPages() + "";
                 if (viewType == ViewType.ERRORS) {
                     long nbMissingPages = content.getQtyPages() - content.getNbDownloadedPages();
-                    if (nbMissingPages > 0)
-                        template = context.getString(R.string.work_pages_queue, nbPages, " (" + nbMissingPages + " missing)");
-                    else
-                        template = context.getString(R.string.work_pages_queue, nbPages, "");
+                    if (nbMissingPages > 0) {
+                        String missingStr = " " + context.getResources().getQuantityString(R.plurals.work_pages_missing, (int) nbMissingPages, nbMissingPages);
+                        template = context.getResources().getString(R.string.work_pages_queue, nbPages, missingStr);
+                    } else
+                        template = context.getResources().getString(R.string.work_pages_queue, nbPages, "");
                 } else
-                    template = context.getString(R.string.work_pages_queue, nbPages, "");
+                    template = context.getResources().getString(R.string.work_pages_queue, nbPages, "");
                 tvPages.setText(template);
             } else { // Library
                 tvPages.setText(String.format(Locale.ENGLISH, "%d", content.getNbDownloadedPages()));
@@ -585,7 +592,15 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
                 else
                     ivRedownload.setVisibility(View.GONE);
             } else if (ViewType.LIBRARY == item.viewType || ViewType.LIBRARY_GRID == item.viewType) {
-                ivExternal.setVisibility(content.getStatus().equals(StatusContent.EXTERNAL) ? View.VISIBLE : View.GONE);
+                if (content.getStatus().equals(StatusContent.EXTERNAL)) {
+                    if (content.isArchive())
+                        ivExternal.setImageResource(R.drawable.ic_archive);
+                    else
+                        ivExternal.setImageResource(R.drawable.ic_folder_full);
+                    ivExternal.setVisibility(View.VISIBLE);
+                } else
+                    ivExternal.setVisibility(View.GONE);
+
                 if (content.isFavourite()) {
                     ivFavourite.setImageResource(R.drawable.ic_fav_full);
                 } else {
@@ -594,8 +609,8 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
             }
         }
 
-        public static void updateProgress(@NonNull final Content content, @NonNull View rootCardView, int position, boolean isPausedEvent) {
-            boolean isQueueReady = ContentQueueManager.getInstance().isQueueActive() && !ContentQueueManager.getInstance().isQueuePaused() && !isPausedEvent;
+        public static void updateProgress(@NonNull final Content content, @NonNull View rootCardView, int position, boolean isPausedEvent, boolean isContentQueueActive) {
+            boolean isQueueReady = isContentQueueActive && !ContentQueueManager.getInstance().isQueuePaused() && !isPausedEvent;
             boolean isFirstItem = (0 == position);
             ProgressBar pb = rootCardView.findViewById(R.id.pbDownload);
 
@@ -625,7 +640,7 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
                         String pagesText = tvPages.getText().toString();
                         int separator = pagesText.indexOf(";");
                         if (separator > -1) pagesText = pagesText.substring(0, separator);
-                        pagesText = pagesText + String.format(Locale.ENGLISH, "; estimated %.1f MB", content.getBookSizeEstimate() / (1024 * 1024));
+                        pagesText = pagesText + "; " + pb.getContext().getResources().getString(R.string.queue_content_size_estimate, content.getBookSizeEstimate() / (1024 * 1024));
                         tvPages.setText(pagesText);
                     }
                 } else {

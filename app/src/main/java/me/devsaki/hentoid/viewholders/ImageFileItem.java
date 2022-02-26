@@ -17,6 +17,10 @@ import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.integration.webp.decoder.WebpDrawable;
+import com.bumptech.glide.integration.webp.decoder.WebpDrawableTransformation;
+import com.bumptech.glide.load.Transformation;
+import com.bumptech.glide.load.resource.bitmap.CenterInside;
 import com.bumptech.glide.request.RequestOptions;
 import com.bumptech.glide.signature.ObjectKey;
 import com.mikepenz.fastadapter.FastAdapter;
@@ -32,7 +36,6 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.activities.bundles.ImageItemBundle;
@@ -63,13 +66,18 @@ public class ImageFileItem extends AbstractItem<ImageFileItem.ImageViewHolder> i
 
     private static final RequestOptions glideRequestOptions;
 
-
     static {
         Context context = HentoidApp.getInstance();
         int tintColor = ThemeHelper.getColor(context, R.color.light_gray);
 
         Bitmap bmp = ImageHelper.getBitmapFromResource(context, R.drawable.ic_cherry_icon);
         Drawable d = new BitmapDrawable(context.getResources(), tintBitmap(bmp, tintColor));
+
+        final Transformation<Bitmap> centerInside = new CenterInside();
+        glideRequestOptions = new RequestOptions()
+                .optionalTransform(centerInside)
+                .optionalTransform(WebpDrawable.class, new WebpDrawableTransformation(centerInside));
+    }
 
         glideRequestOptions = new RequestOptions()
                 .centerInside()
@@ -82,7 +90,7 @@ public class ImageFileItem extends AbstractItem<ImageFileItem.ImageViewHolder> i
         if (image.getLinkedChapter() != null)
             this.chapter = image.getLinkedChapter();
         else
-            this.chapter = new Chapter(1, "", "Chapter 1"); // Default display when nothing is set
+            this.chapter = new Chapter(1, "", ""); // Default display when nothing is set
         this.showChapter = showChapter;
         setIdentifier(image.uniqueHash());
     }
@@ -213,7 +221,7 @@ public class ImageFileItem extends AbstractItem<ImageFileItem.ImageViewHolder> i
 
             // Chapter overlay
             if (item.showChapter) {
-                String chapterText = String.format(Locale.ENGLISH, "Chp %d", item.chapter.getOrder());
+                String chapterText = checkedIndicator.getContext().getResources().getString(R.string.gallery_display_chapter, item.chapter.getOrder());
                 if (item.chapter.getOrder() == Integer.MAX_VALUE)
                     chapterText = ""; // Don't show temp values
                 chapterOverlay.setText(chapterText);
@@ -237,7 +245,7 @@ public class ImageFileItem extends AbstractItem<ImageFileItem.ImageViewHolder> i
             String currentBegin = item.isCurrent ? ">" : "";
             String currentEnd = item.isCurrent ? "<" : "";
             String isFavourite = item.isFavourite() ? HEART_SYMBOL : "";
-            pageNumberTxt.setText(String.format("%sPage %s%s%s", currentBegin, item.image.getOrder(), isFavourite, currentEnd));
+            pageNumberTxt.setText(pageNumberTxt.getResources().getString(R.string.gallery_display_page, currentBegin, item.image.getOrder(), isFavourite, currentEnd));
             if (item.isCurrent) pageNumberTxt.setTypeface(null, Typeface.BOLD);
         }
 
