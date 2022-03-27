@@ -1,5 +1,7 @@
 package me.devsaki.hentoid.activities;
 
+import static java.lang.String.format;
+
 import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
@@ -28,8 +30,6 @@ import me.devsaki.hentoid.viewmodels.SearchViewModel;
 import me.devsaki.hentoid.viewmodels.ViewModelFactory;
 import timber.log.Timber;
 
-import static java.lang.String.format;
-
 /**
  * Activity for the advanced search screen
  */
@@ -57,8 +57,8 @@ public class SearchActivity extends BaseActivity {
     protected void onSaveInstanceState(@NonNull Bundle outState) {
         super.onSaveInstanceState(outState);
 
-        SearchActivityBundle.Builder builder = new SearchActivityBundle.Builder();
-        builder.setUri(SearchActivityBundle.Builder.buildSearchUri(viewModel.getSelectedAttributesData().getValue()));
+        SearchActivityBundle builder = new SearchActivityBundle();
+        builder.setUri(SearchActivityBundle.Companion.buildSearchUri(viewModel.getSelectedAttributesData().getValue()).toString());
         outState.putAll(builder.getBundle());
         outState.putBoolean("exclude", excludeClicked);
     }
@@ -67,9 +67,9 @@ public class SearchActivity extends BaseActivity {
     protected void onRestoreInstanceState(@NonNull Bundle savedInstanceState) {
         super.onRestoreInstanceState(savedInstanceState);
         excludeClicked = savedInstanceState.getBoolean("exclude");
-        Uri searchUri = new SearchActivityBundle.Parser(savedInstanceState).getUri();
+        Uri searchUri = Uri.parse(new SearchActivityBundle(savedInstanceState).getUri());
         if (searchUri != null) {
-            List<Attribute> preSelectedAttributes = SearchActivityBundle.Parser.parseSearchUri(searchUri);
+            List<Attribute> preSelectedAttributes = SearchActivityBundle.Companion.parseSearchUri(searchUri);
             viewModel.setSelectedAttributes(preSelectedAttributes);
         }
     }
@@ -81,11 +81,11 @@ public class SearchActivity extends BaseActivity {
         Intent intent = getIntent();
         List<Attribute> preSelectedAttributes = null;
         if (intent != null && intent.getExtras() != null) {
-            SearchActivityBundle.Parser parser = new SearchActivityBundle.Parser(intent.getExtras());
-            Uri searchUri = parser.getUri();
+            SearchActivityBundle parser = new SearchActivityBundle(intent.getExtras());
+            Uri searchUri = Uri.parse(parser.getUri());
             excludeClicked = parser.getExcludeMode();
             if (searchUri != null)
-                preSelectedAttributes = SearchActivityBundle.Parser.parseSearchUri(searchUri);
+                preSelectedAttributes = SearchActivityBundle.Companion.parseSearchUri(searchUri);
         }
 
         setContentView(R.layout.activity_search);
@@ -102,7 +102,7 @@ public class SearchActivity extends BaseActivity {
         anyTypeButton.setEnabled(true);
 
         tagTypeButton = findViewById(R.id.textCategoryTag);
-        tagTypeButton.setOnClickListener(v -> onAttrButtonClick(excludeClicked,AttributeType.TAG));
+        tagTypeButton.setOnClickListener(v -> onAttrButtonClick(excludeClicked, AttributeType.TAG));
 
 
         modelTypeButton = findViewById(R.id.textCategoryModel);
@@ -153,8 +153,8 @@ public class SearchActivity extends BaseActivity {
         updateAttributeTypeButton(sourceTypeButton, attrCount, AttributeType.SOURCE);
     }
 
-    public void onExcludeClick(View view){
-         excludeClicked = ((CheckBox) view).isChecked();
+    public void onExcludeClick(View view) {
+        excludeClicked = ((CheckBox) view).isChecked();
     }
 
     /**
@@ -231,10 +231,11 @@ public class SearchActivity extends BaseActivity {
      * Transmit the search query to the library screen and close the advanced search screen
      */
     private void searchBooks() {
-        Uri searchUri = SearchActivityBundle.Builder.buildSearchUri(viewModel.getSelectedAttributesData().getValue());
+        Uri searchUri = SearchActivityBundle.Companion.buildSearchUri(viewModel.getSelectedAttributesData().getValue());
         Timber.d("URI :%s", searchUri);
 
-        SearchActivityBundle.Builder builder = new SearchActivityBundle.Builder().setUri(searchUri);
+        SearchActivityBundle builder = new SearchActivityBundle();
+        builder.setUri(searchUri.toString());
         builder.setExcludeMode(excludeClicked);
 
         Intent returnIntent = new Intent();
