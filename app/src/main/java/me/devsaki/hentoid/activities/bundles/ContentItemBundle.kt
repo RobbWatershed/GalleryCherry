@@ -22,6 +22,8 @@ class ContentItemBundle(val bundle: Bundle = Bundle()) {
 
     var readPagesCount by bundle.int()
 
+    var status by bundle.int()
+
     var coverUri by bundle.string()
 
     var title by bundle.string()

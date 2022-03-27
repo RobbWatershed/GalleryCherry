@@ -37,6 +37,7 @@ public enum Site {
             HELLPORNO, // Removed their pictures section
             HINA, // Hardcoded link; should not be on display on dynamic sources
             JJGIRLS2, // Abandoned in favour of babe.today
+            HINA, // Dead service
             NONE // Technical fallback
     };
 

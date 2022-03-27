@@ -65,7 +65,6 @@ import me.devsaki.hentoid.ui.BlinkAnimation;
 import me.devsaki.hentoid.util.ContentHelper;
 import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.ImageHelper;
-import me.devsaki.hentoid.util.JsonHelper;
 import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.util.ThemeHelper;
 import me.devsaki.hentoid.util.download.ContentQueueManager;
@@ -333,7 +332,7 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
                 if (longValue != null) item.content.setReads(longValue);
                 Integer intValue = bundleParser.getReadPagesCount();
                 if (intValue != null) item.content.setReadPagesCount(intValue);
-                StatusContent status = bundleParser.getStatus();
+                StatusContent status = StatusContent.searchByCode(bundleParser.getStatus());
                 if (status != null) item.content.setStatus(status);
                 String stringValue = bundleParser.getCoverUri();
                 if (stringValue != null) item.content.getCover().setFileUri(stringValue);

@@ -41,7 +41,7 @@
     },
     {
       "id": "2:5880334030341287801",
-      "lastPropertyId": "28:3615090040498443472",
+      "lastPropertyId": "29:2362560534739372565",
       "name": "Content",
       "properties": [
         {
@@ -185,6 +185,11 @@
           "id": "28:3615090040498443472",
           "name": "manuallyMerged",
           "type": 1
+        },
+        {
+          "id": "29:2362560534739372565",
+          "name": "downloadCompletionDate",
+          "type": 6
         }
       ],
       "relations": [
@@ -650,7 +655,7 @@
     },
     {
       "id": "15:4147939537309004926",
-      "lastPropertyId": "6:3977005787503725198",
+      "lastPropertyId": "7:7927789007458768896",
       "name": "Chapter",
       "properties": [
         {
@@ -686,6 +691,11 @@
           "id": "6:3977005787503725198",
           "name": "uniqueId",
           "type": 9
+        },
+        {
+          "id": "7:7927789007458768896",
+          "name": "uploadDate",
+          "type": 6
         }
       ],
       "relations": []
