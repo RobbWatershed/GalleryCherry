@@ -297,7 +297,7 @@ public class HttpHelper {
      * @param uri Location of the file
      * @return Extension of the file located at the given URI, without the leading '.'
      */
-    public static String getExtensionFromUri(String uri) {
+    public static String getExtensionFromUri(@NonNull String uri) {
         UriParts parts = new UriParts(uri);
         return parts.getExtension();
     }
@@ -626,7 +626,7 @@ public class HttpHelper {
         private String extension;
         private String query;
 
-        public UriParts(String uri) {
+        public UriParts(@NonNull String uri) {
             String theUri = uri.toLowerCase();
             String uriNoParams = theUri;
 

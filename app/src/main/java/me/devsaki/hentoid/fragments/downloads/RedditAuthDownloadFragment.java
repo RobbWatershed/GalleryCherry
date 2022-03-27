@@ -102,7 +102,7 @@ public class RedditAuthDownloadFragment extends Fragment {
         }
 
         // Remove duplicates and unsupported files from saved URLs
-        savedUrls = Stream.of(savedUrls).distinct().filter(this::isImageSupported).toList();
+        savedUrls = Stream.of(savedUrls).distinct().withoutNulls().filter(this::isImageSupported).toList();
         // Reverse the list as Reddit puts most recent first and Hentoid does the opposite
         Collections.reverse(savedUrls);
 

@@ -30,7 +30,7 @@ public class RedditUserSavedPosts {
 
         if (container != null && container.roots != null)
             for (SavedPostsDataRoot root : container.roots)
-                if (root.post != null)
+                if (root.post != null && root.post.url != null)
                     result.add(root.post.url);
 
         return result;
