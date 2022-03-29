@@ -1,6 +1,6 @@
 {
-  "updateURL": "https://github.com/RobbWatershed/GalleryCherry/releases/download/v1.12.0/cherry1120-226.apk",
-  "versionCode": "226",
+  "updateURL": "https://github.com/RobbWatershed/GalleryCherry/releases/download/v1.12.1/cherry1121-236.apk",
+  "versionCode": "236",
   "updateURL.beta": "https://cdn.discordapp.com/attachments/528851212406358017/603112905008873472/cherry12277-debug.apk",
   "versionCode.beta": "77",
   "sourceAlerts":[
@@ -8,7 +8,7 @@
     {"sourceName":"NEXTPICTUREZ", "status":"RED", "fixedByBuild":"187" },
     {"sourceName":"HELLPORNO", "status":"RED", "fixedByBuild":"187" },
     {"sourceName":"FAPALITY", "status":"RED", "fixedByBuild":"187" },
-    {"sourceName":"HINA", "status":"RED"}
+    {"sourceName":"HINA", "status":"BLACK"}
   ],
   "sourceAlerts.beta":[
     {"sourceName":"EXAMPLE", "status":"RED", "fixedByBuild":"100" },
