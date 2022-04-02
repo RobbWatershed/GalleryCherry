@@ -37,21 +37,7 @@ android {
         versionCode 130 // is updated automatically by BitRise; only used when building locally
         versionName '1.12.2'
 
-        def rapidapiKey = System.getenv("rapidapi_key")
-        if (null == rapidapiKey) {
-            Properties properties = new Properties()
-            properties.load(project.rootProject.file("local.properties").newDataInputStream())
-            rapidapiKey = properties.getProperty("rapidapi.key", "")
-        }
-        buildConfigField "String", "RAPIDAPI_KEY", rapidapiKey
-
-        def meiliRouter = System.getenv("meili_router")
-        if (null == meiliRouter) {
-            Properties properties = new Properties()
-            properties.load(project.rootProject.file("local.properties").newDataInputStream())
-            meiliRouter = properties.getProperty("meili.router", "")
-        }
-        buildConfigField "String", "MEILI_ROUTER", meiliRouter
+        buildConfigField 'String', 'GITHUB_API_URL', '"https://api.github.com/repos/RobbWatershed/GalleryCherry/"'
 
         def includeObjectBoxBrowser = System.getenv("INCLUDE_OBJECTBOX_BROWSER") ?: "false"
         def includeLeakCanary = System.getenv("INCLUDE_LEAK_CANARY") ?: "false"
