@@ -16,6 +16,7 @@ import me.devsaki.hentoid.enums.AttributeType;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.parsers.ParseHelper;
+import me.devsaki.hentoid.util.ImageHelper;
 import pl.droidsonroids.jspoon.annotation.Selector;
 
 public class AsianSisterContent extends BaseContentParser {
@@ -51,7 +52,7 @@ public class AsianSisterContent extends BaseContentParser {
         // Remove duplicates
         if (updateImages) {
             if (!thumbs.isEmpty()) {
-                thumbs = Stream.of(thumbs).distinct().map(s -> s.replace("imageimages", "images")).toList();
+                thumbs = Stream.of(thumbs).distinct().map(s -> s.replace("imageimages", "images").trim()).filter(ImageHelper::isSupportedImage).toList();
                 content.setCoverImageUrl(thumbs.get(0));
                 content.setImageFiles(ParseHelper.urlsToImageFiles(thumbs, thumbs.get(0), StatusContent.SAVED));
             }
