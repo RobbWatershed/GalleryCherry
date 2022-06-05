@@ -21,7 +21,7 @@ aboutLibraries {
 }
 
 android {
-    compileSdkVersion 31
+    compileSdkVersion 32
     compileOptions {
         targetCompatibility JavaVersion.VERSION_1_8
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -32,8 +32,7 @@ android {
     defaultConfig {
         applicationId "me.devsaki.cherry"
         minSdkVersion 21
-        //noinspection ExpiringTargetSdkVersion
-        targetSdkVersion 31
+        targetSdkVersion 32
         versionCode 130 // is updated automatically by BitRise; only used when building locally
         versionName '1.12.3'
 
@@ -45,10 +44,12 @@ android {
         buildConfigField "boolean", "INCLUDE_OBJECTBOX_BROWSER", includeObjectBoxBrowser
         buildConfigField "boolean", "INCLUDE_LEAK_CANARY", includeLeakCanary
 
+        buildConfigField 'String', 'GITHUB_API_URL', '"https://api.github.com/repos/avluis/Hentoid/"'
+
         proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        resConfigs 'en'
 
         // Only include complete translations
-        resConfigs 'en'
 
         renderscriptTargetApi 21
         renderscriptSupportModeEnabled false
@@ -92,6 +93,7 @@ android {
         informational 'MissingTranslation'
         informational 'ExtraTranslation'
     }
+    namespace 'me.devsaki.hentoid'
 }
 
 dependencies {
@@ -106,11 +108,11 @@ dependencies {
      * TESTING
      */
     testImplementation 'junit:junit:4.13.2'
-    testImplementation 'org.mockito:mockito-core:4.4.0'
+    testImplementation 'org.mockito:mockito-core:4.5.1'
     testImplementation 'androidx.test:core:1.4.0'
     testImplementation 'io.kotlintest:kotlintest-assertions:3.4.2'
     testImplementation "androidx.arch.core:core-testing:2.1.0"
-    testImplementation 'org.robolectric:robolectric:4.7.3'
+    testImplementation 'org.robolectric:robolectric:4.8.1'
     // Auto Timber trees that redirect logs to the JUnit output
     testImplementation 'net.lachlanmckee:timber-junit-rule:1.0.1'
     androidTestImplementation 'androidx.test:runner:1.4.0'
@@ -123,7 +125,7 @@ dependencies {
     // Support libraries
     implementation 'androidx.recyclerview:recyclerview:1.2.1'
     implementation 'androidx.appcompat:appcompat:1.4.1'
-    implementation 'com.google.android.material:material:1.6.0-alpha02'
+    implementation 'com.google.android.material:material:1.6.0-rc01'
     implementation 'androidx.preference:preference:1.1.1'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.3'
     implementation 'androidx.paging:paging-runtime:2.1.2'
@@ -147,7 +149,7 @@ dependencies {
      * MEDIA
      */
     // Image loader: github.com/bumptech/glide
-    def glide_version = '4.13.1'
+    def glide_version = '4.13.2'
     implementation "com.github.bumptech.glide:glide:$glide_version"
     annotationProcessor "com.github.bumptech.glide:compiler:$glide_version"
     kapt "com.github.bumptech.glide:compiler:$glide_version"

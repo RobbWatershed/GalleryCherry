@@ -31,6 +31,8 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
+import timber.log.Timber;
+
 /**
  * Generic utility class
  */
@@ -113,21 +115,45 @@ public final class ImageHelper {
         else return MIME_IMAGE_GENERIC;
     }
 
-    // If format is supported by Android, true if animated (animated GIF, APNG, animated WEBP); false if not
-    // TODO complete doc
-    boolean isImageAnimated(byte[] binary) {
-        if (binary.length < 400) return false;
+    /**
+     * Analyze the given binary picture header to try and detect if the picture is animated.
+     * If the format is supported by the app, returns true if animated (animated GIF, APNG, animated WEBP); false if not
+     *
+     * @param data Binary picture file header (400 bytes minimum)
+     * @return True if the format is animated and supported by the app
+     */
+    boolean isImageAnimated(byte[] data) {
+        if (data.length < 400) return false;
 
-        switch (getMimeTypeFromPictureBinary(binary)) {
+        switch (getMimeTypeFromPictureBinary(data)) {
             case MIME_IMAGE_APNG:
                 return true;
             case MIME_IMAGE_GIF:
-                return FileHelper.findSequencePosition(binary, 0, "NETSCAPE".getBytes(CHARSET_LATIN_1), 400) > -1;
+                return FileHelper.findSequencePosition(data, 0, "NETSCAPE".getBytes(CHARSET_LATIN_1), 400) > -1;
             case MIME_IMAGE_WEBP:
-                return FileHelper.findSequencePosition(binary, 0, "ANIM".getBytes(CHARSET_LATIN_1), 400) > -1;
+                return FileHelper.findSequencePosition(data, 0, "ANIM".getBytes(CHARSET_LATIN_1), 400) > -1;
             default:
                 return false;
         }
+    }
+
+    /**
+     * Try to detect the mime-type of the picture file at the given URI
+     *
+     * @param context Context to use
+     * @param uri     URI of the picture file to detect the mime-type for
+     * @return Mime-type of the picture file at the given URI; MIME_IMAGE_GENERIC if no Mime-type detected
+     */
+    public static String getMimeTypeFromUri(@NonNull Context context, @NonNull Uri uri) {
+        String result = MIME_IMAGE_GENERIC;
+        byte[] buffer = new byte[12];
+        try (InputStream is = FileHelper.getInputStream(context, uri)) {
+            if (buffer.length == is.read(buffer))
+                result = getMimeTypeFromPictureBinary(buffer);
+        } catch (IOException e) {
+            Timber.w(e);
+        }
+        return result;
     }
 
     /**
@@ -292,5 +318,108 @@ public final class ImageHelper {
         }
 
         return Uri.fromFile(new File(path));
+    }
+
+    /**
+     * @param bitmap                the Bitmap to be scaled
+     * @param threshold             the maxium dimension (either width or height) of the scaled bitmap
+     * @param isNecessaryToKeepOrig is it necessary to keep the original bitmap? If not recycle the original bitmap to prevent memory leak.
+     */
+    public static Bitmap getScaledDownBitmap(@NonNull Bitmap bitmap, int threshold, boolean isNecessaryToKeepOrig) {
+        int width = bitmap.getWidth();
+        int height = bitmap.getHeight();
+        int newWidth = width;
+        int newHeight = height;
+
+        if (width > height && width > threshold) {
+            newWidth = threshold;
+            newHeight = (int) (height * (float) newWidth / width);
+        }
+
+        if (width > height && width <= threshold) {
+            //the bitmap is already smaller than our required dimension, no need to resize it
+            return bitmap;
+        }
+
+        if (width < height && height > threshold) {
+            newHeight = threshold;
+            newWidth = (int) (width * (float) newHeight / height);
+        }
+
+        if (width < height && height <= threshold) {
+            //the bitmap is already smaller than our required dimension, no need to resize it
+            return bitmap;
+        }
+
+        if (width == height && width > threshold) {
+            newWidth = threshold;
+            newHeight = newWidth;
+        }
+
+        if (width == height && width <= threshold) {
+            //the bitmap is already smaller than our required dimension, no need to resize it
+            return bitmap;
+        }
+
+        return getResizedBitmap(bitmap, newWidth, newHeight, isNecessaryToKeepOrig);
+    }
+
+    private static Bitmap getResizedBitmap(Bitmap bm, int newWidth, int newHeight, boolean isNecessaryToKeepOrig) {
+        int width = bm.getWidth();
+        int height = bm.getHeight();
+        float scaleWidth = ((float) newWidth) / width;
+        float scaleHeight = ((float) newHeight) / height;
+
+        Bitmap resizedBitmap = resizeBitmap(bm, Math.min(scaleHeight, scaleWidth));
+
+        if (!isNecessaryToKeepOrig) {
+            bm.recycle();
+        }
+        return resizedBitmap;
+    }
+
+    static Bitmap resizeBitmap(@NonNull final Bitmap src, float targetScale) {
+        ImmutablePair<Integer, Float> resizeParams = computeResizeParams(targetScale);
+        Timber.d(">> resizing successively to scale %s", resizeParams.right);
+        return successiveResize(src, resizeParams.left);
+    }
+
+    /**
+     * Compute resizing parameters according to the given target scale
+     *
+     * @param targetScale target scale of the image to display (% of the raw dimensions)
+     * @return Pair containing
+     * - First : Number of half-resizes to perform
+     * - Second : Corresponding scale
+     */
+    private static ImmutablePair<Integer, Float> computeResizeParams(final float targetScale) {
+        float resultScale = 1f;
+        int nbResize = 0;
+
+        // Resize when approaching the target scale by 1/3 because there may already be artifacts displayed at that point
+        // (seen with full-res pictures resized to 65% with Android's default bilinear filtering)
+        for (int i = 1; i < 10; i++) if (targetScale < Math.pow(0.5, i) * 1.33) nbResize++;
+        if (nbResize > 0) resultScale = (float) Math.pow(0.5, nbResize);
+
+        return new ImmutablePair<>(nbResize, resultScale);
+    }
+
+    static Bitmap successiveResize(@NonNull final Bitmap src, int resizeNum) {
+        if (0 == resizeNum) return src;
+
+        int srcWidth = src.getWidth();
+        int srcHeight = src.getHeight();
+        Bitmap output = src;
+        for (int i = 0; i < resizeNum; i++) {
+            srcWidth /= 2;
+            srcHeight /= 2;
+            Bitmap temp = Bitmap.createScaledBitmap(output, srcWidth, srcHeight, true);
+            if (i != 0) { // don't recycle the src bitmap
+                output.recycle();
+            }
+            output = temp;
+        }
+
+        return output;
     }
 }

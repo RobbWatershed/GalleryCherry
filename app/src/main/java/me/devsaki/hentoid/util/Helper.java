@@ -11,7 +11,6 @@ import android.content.res.Configuration;
 import android.graphics.drawable.InsetDrawable;
 import android.os.Handler;
 import android.os.Looper;
-import android.util.Pair;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -19,12 +18,15 @@ import android.view.View;
 import androidx.annotation.DimenRes;
 import androidx.annotation.NonNull;
 import androidx.appcompat.view.menu.MenuBuilder;
+import androidx.core.util.Pair;
 import androidx.documentfile.provider.DocumentFile;
 import androidx.lifecycle.DefaultLifecycleObserver;
 import androidx.lifecycle.LifecycleObserver;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.ProcessLifecycleOwner;
 
+import com.google.android.material.slider.LabelFormatter;
+import com.google.android.material.slider.Slider;
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
 
 import org.threeten.bp.Instant;
@@ -40,6 +42,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -56,6 +61,7 @@ import io.reactivex.functions.Consumer;
 import io.whitfin.siphash.SipHasher;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.core.Consts;
+import me.devsaki.hentoid.core.HentoidApp;
 import me.devsaki.hentoid.database.CollectionDAO;
 import me.devsaki.hentoid.database.domains.SiteBookmark;
 import me.devsaki.hentoid.json.JsonContentCollection;
@@ -438,6 +444,7 @@ public final class Helper {
         return 0;
     }
 
+    // https://www.threeten.org/threetenbp/apidocs/org/threeten/bp/format/DateTimeFormatter.html#ofPattern(java.lang.String)
     public static long parseDateToEpoch(@NonNull String date, @NonNull String pattern) {
         final String dateClean = date.trim().replaceAll("(?<=\\d)(st|nd|rd|th)", "");
         final DateTimeFormatter formatter = new DateTimeFormatterBuilder()
@@ -485,5 +492,39 @@ public final class Helper {
             return false;
         }
         return true;
+    }
+
+    public static void logException(Throwable t) {
+        List<LogHelper.LogEntry> log = new ArrayList<>();
+        log.add(new LogHelper.LogEntry(StringHelper.protect(t.getMessage())));
+        log.add(new LogHelper.LogEntry(Helper.getStackTraceString(t)));
+
+        LogHelper.LogInfo logInfo = new LogHelper.LogInfo();
+        logInfo.setEntries(log);
+        logInfo.setHeaderName("latest-crash");
+        LogHelper.writeLog(HentoidApp.getInstance(), logInfo);
+    }
+
+    public static String getStackTraceString(Throwable t) {
+        // Don't replace this with Log.getStackTraceString() - it hides
+        // UnknownHostException, which is not what we want.
+        StringWriter sw = new StringWriter(256);
+        PrintWriter pw = new PrintWriter(sw, false);
+        t.printStackTrace(pw);
+        pw.flush();
+        return sw.toString();
+    }
+
+    // Hack waiting for https://github.com/material-components/material-components-android/issues/2726
+    public static void removeLabels(@NonNull Slider slider) {
+        slider.setLabelBehavior(LabelFormatter.LABEL_GONE);
+        try {
+            @SuppressWarnings("ConstantConditions")
+            Method ensureLabelsRemoved = slider.getClass().getSuperclass().getDeclaredMethod("ensureLabelsRemoved");
+            ensureLabelsRemoved.setAccessible(true);
+            ensureLabelsRemoved.invoke(slider);
+        } catch (Exception e) {
+            Timber.w(e);
+        }
     }
 }

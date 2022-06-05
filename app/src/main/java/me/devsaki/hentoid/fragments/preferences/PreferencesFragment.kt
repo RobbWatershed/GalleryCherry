@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.view.View
+import android.webkit.CookieManager
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.commit
@@ -188,6 +189,10 @@ class PreferencesFragment : PreferenceFragmentCompat(),
                 onCheckUpdatePrefClick()
                 true
             }
+            Preferences.Key.BROWSER_CLEAR_COOKIES -> {
+                onClearCookies()
+                true
+            }
             else -> super.onPreferenceTreeClick(preference)
         }
 
@@ -259,6 +264,20 @@ class PreferencesFragment : PreferenceFragmentCompat(),
                 GithubServer.init()
                 LusciousServer.init()
             }
+        }
+    }
+
+    private fun onClearCookies() {
+        CookieManager.getInstance().removeAllCookies {
+            var caption = R.string.pref_browser_clear_cookies_ok
+            if (!it) caption = R.string.pref_browser_clear_cookies_ko
+
+            val snack = Snackbar.make(
+                listView,
+                caption,
+                BaseTransientBottomBar.LENGTH_SHORT
+            )
+            snack.show()
         }
     }
 

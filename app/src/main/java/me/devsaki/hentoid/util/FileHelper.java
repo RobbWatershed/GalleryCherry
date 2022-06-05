@@ -43,8 +43,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.lang.reflect.Array;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
@@ -67,6 +68,7 @@ public class FileHelper {
 
     private static final String PRIMARY_VOLUME_NAME = "primary"; // DocumentsContract.PRIMARY_VOLUME_NAME
     private static final String NOMEDIA_FILE_NAME = ".nomedia";
+    private static final String TEST_FILE_NAME = "delete.me";
 
     private static final String ILLEGAL_FILENAME_CHARS = "[\"*/:<>\\?\\\\|]"; // https://cs.android.com/android/platform/superproject/+/master:frameworks/base/core/java/android/os/FileUtils.java;l=972?q=isValidFatFilenameChar
 
@@ -147,6 +149,7 @@ public class FileHelper {
      * @param volumeId Volume ID to get the path from
      * @return Human-readable access path of the given volume ID
      */
+    @SuppressWarnings("unchecked")
     @Nullable
     private static String getVolumePath(@NonNull Context context, final String volumeId) {
         try {
@@ -157,19 +160,28 @@ public class FileHelper {
             Method getVolumeList = mStorageManager.getClass().getMethod("getVolumeList");
             Method getUuid = storageVolumeClazz.getMethod("getUuid");
             Method isPrimary = storageVolumeClazz.getMethod("isPrimary");
-            Object result = getVolumeList.invoke(mStorageManager);
-            if (null == result) return null;
 
-            final int length = Array.getLength(result);
-            for (int i = 0; i < length; i++) {
-                Object storageVolumeElement = Array.get(result, i);
-                if (storageVolumeElement != null) {
-                    String uuid = StringHelper.protect((String) getUuid.invoke(storageVolumeElement));
-                    Boolean primary = (Boolean) isPrimary.invoke(storageVolumeElement);
+            List<StorageVolume> result;
+            Object resTmp = getVolumeList.invoke(mStorageManager);
+            if (null == resTmp) result = Collections.emptyList();
+            else result = Arrays.asList((StorageVolume[]) resTmp);
+
+            // getRecentStorageVolumes (API30+) can detect USB storage on certain devices where getVolumeList can't
+            if (Build.VERSION.SDK_INT >= 30) {
+                Method getRecentVolumeList = mStorageManager.getClass().getMethod("getRecentStorageVolumes");
+                List<StorageVolume> rvlResult = (ArrayList<StorageVolume>) getRecentVolumeList.invoke(mStorageManager);
+                if (null == rvlResult) rvlResult = Collections.emptyList();
+
+                result = (result.size() > rvlResult.size()) ? result : rvlResult;
+            }
+
+            for (StorageVolume volume : result) {
+                if (volume != null) {
+                    String uuid = StringHelper.protect((String) getUuid.invoke(volume));
+                    Boolean primary = (Boolean) isPrimary.invoke(volume);
                     if (null == primary) primary = false;
 
-                    if (volumeIdMatch(uuid, primary, volumeId))
-                        return getVolumePath(storageVolumeElement);
+                    if (volumeIdMatch(uuid, primary, volumeId)) return getVolumePath(volume);
                 }
             }
             // not found.
@@ -409,12 +421,17 @@ public class FileHelper {
         // Validate folder
         if (!folder.exists() && !folder.isDirectory()) return -1;
 
-        // Remove and add back the nomedia file to test if the user has the I/O rights to the selected folder
+        // Make sure the nomedia file is created
         DocumentFile nomedia = findFile(context, folder, NOMEDIA_FILE_NAME);
-        if (nomedia != null && !nomedia.delete()) return -2;
+        if (null == nomedia) {
+            nomedia = folder.createFile("application/octet-steam", NOMEDIA_FILE_NAME);
+            if (null == nomedia || !nomedia.exists()) return -3;
+        }
 
-        nomedia = folder.createFile("application/octet-steam", NOMEDIA_FILE_NAME);
-        if (null == nomedia || !nomedia.exists()) return -2;
+        // Remove and add back a test file to test if the user has the I/O rights to the selected folder
+        DocumentFile testFile = findOrCreateDocumentFile(context, folder, "application/octet-steam", TEST_FILE_NAME);
+        if (null == testFile) return -3;
+        if (!testFile.delete()) return -2;
 
         return 0;
     }

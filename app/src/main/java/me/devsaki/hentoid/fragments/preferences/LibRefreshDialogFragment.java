@@ -19,6 +19,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.annotation.IdRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.StringRes;
 import androidx.constraintlayout.widget.Group;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.FragmentManager;
@@ -41,6 +42,7 @@ import me.devsaki.hentoid.events.ServiceDestroyedEvent;
 import me.devsaki.hentoid.util.FileHelper;
 import me.devsaki.hentoid.util.ImportHelper;
 import me.devsaki.hentoid.util.Preferences;
+import me.devsaki.hentoid.util.ToastHelper;
 import me.devsaki.hentoid.workers.ImportWorker;
 import timber.log.Timber;
 
@@ -167,10 +169,21 @@ public class LibRefreshDialogFragment extends DialogFragment {
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(
                             res -> {
-                                if (ImportHelper.ProcessFolderResult.KO_INVALID_FOLDER == res || ImportHelper.ProcessFolderResult.KO_CREATE_FAIL == res || ImportHelper.ProcessFolderResult.KO_APP_FOLDER == res || ImportHelper.ProcessFolderResult.KO_DOWNLOAD_FOLDER == res)
-                                    dismissAllowingStateLoss();
-                            },
-                            Timber::w
+                                if (ImportHelper.ProcessFolderResult.KO_INVALID_FOLDER == res
+                                        || ImportHelper.ProcessFolderResult.KO_CREATE_FAIL == res
+                                        || ImportHelper.ProcessFolderResult.KO_APP_FOLDER == res
+                                        || ImportHelper.ProcessFolderResult.KO_DOWNLOAD_FOLDER == res
+                                        || ImportHelper.ProcessFolderResult.KO_ALREADY_RUNNING == res
+                                        || ImportHelper.ProcessFolderResult.KO_OTHER == res
+                                ) {
+                                    Snackbar.make(rootView, getMessage(res), BaseTransientBottomBar.LENGTH_LONG).show();
+                                    new Handler(Looper.getMainLooper()).postDelayed(this::dismissAllowingStateLoss, 3000);
+                                }
+                            }, t -> {
+                                Timber.w(t);
+                                Snackbar.make(rootView, getMessage(ImportHelper.ProcessFolderResult.KO_OTHER), BaseTransientBottomBar.LENGTH_LONG).show();
+                                new Handler(Looper.getMainLooper()).postDelayed(this::dismissAllowingStateLoss, 3000);
+                            }
                     )
             );
         } else {
@@ -178,17 +191,36 @@ public class LibRefreshDialogFragment extends DialogFragment {
             options.rename = rename;
             options.cleanNoJson = cleanAbsent;
             options.cleanNoImages = cleanNoImages;
+            options.importGroups = false;
 
-            Uri rootUri = Uri.parse(Preferences.getStorageUri());
+            String uriStr = Preferences.getStorageUri();
+            if (uriStr.isEmpty()) {
+                ToastHelper.toast(requireContext(), R.string.import_invalid_uri);
+                dismissAllowingStateLoss();
+                return;
+            }
+            Uri rootUri = Uri.parse(uriStr);
             compositeDisposable.add(Single.fromCallable(() -> ImportHelper.setAndScanHentoidFolder(requireContext(), rootUri, false, options))
                     .subscribeOn(Schedulers.io())
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(
                             res -> {
-                                if (ImportHelper.ProcessFolderResult.KO_INVALID_FOLDER == res || ImportHelper.ProcessFolderResult.KO_CREATE_FAIL == res || ImportHelper.ProcessFolderResult.OK_EMPTY_FOLDER == res)
-                                    dismissAllowingStateLoss();
-                            },
-                            Timber::w
+                                if (ImportHelper.ProcessFolderResult.KO_INVALID_FOLDER == res
+                                        || ImportHelper.ProcessFolderResult.KO_CREATE_FAIL == res
+                                        || ImportHelper.ProcessFolderResult.KO_APP_FOLDER == res
+                                        || ImportHelper.ProcessFolderResult.KO_DOWNLOAD_FOLDER == res
+                                        || ImportHelper.ProcessFolderResult.KO_ALREADY_RUNNING == res
+                                        || ImportHelper.ProcessFolderResult.KO_OTHER == res
+                                ) {
+                                    Snackbar.make(rootView, getMessage(res), BaseTransientBottomBar.LENGTH_LONG).show();
+                                    new Handler(Looper.getMainLooper()).postDelayed(this::dismissAllowingStateLoss, 3000);
+                                }
+                            }, t -> {
+                                Timber.w(t);
+                                Snackbar.make(rootView, getMessage(ImportHelper.ProcessFolderResult.KO_OTHER), BaseTransientBottomBar.LENGTH_LONG).show();
+                                new Handler(Looper.getMainLooper()).postDelayed(this::dismissAllowingStateLoss, 3000);
+                            }
+
                     )
             );
         }
@@ -237,11 +269,11 @@ public class LibRefreshDialogFragment extends DialogFragment {
         switch (resultCode) {
             case ImportHelper.PickerResult.OK:
                 importDisposable = io.reactivex.Single.fromCallable(() -> {
-                    if (externalLibrary)
-                        return ImportHelper.setAndScanExternalFolder(requireContext(), uri);
-                    else
-                        return ImportHelper.setAndScanHentoidFolder(requireContext(), uri, true, null);
-                })
+                            if (externalLibrary)
+                                return ImportHelper.setAndScanExternalFolder(requireContext(), uri);
+                            else
+                                return ImportHelper.setAndScanHentoidFolder(requireContext(), uri, true, null);
+                        })
                         .subscribeOn(io.reactivex.schedulers.Schedulers.io())
                         .observeOn(AndroidSchedulers.mainThread())
                         .subscribe(
@@ -262,7 +294,7 @@ public class LibRefreshDialogFragment extends DialogFragment {
         }
     }
 
-    private void onScanHentoidFolderResult(Integer resultCode) {
+    private void onScanHentoidFolderResult(@ImportHelper.ProcessFolderResult int resultCode) {
         importDisposable.dispose();
         switch (resultCode) {
             case ImportHelper.ProcessFolderResult.OK_EMPTY_FOLDER:
@@ -278,27 +310,40 @@ public class LibRefreshDialogFragment extends DialogFragment {
                 ImportHelper.showExistingLibraryDialog(requireContext(), this::onCancelExistingLibraryDialog);
                 break;
             case ImportHelper.ProcessFolderResult.KO_INVALID_FOLDER:
-                Snackbar.make(rootView, R.string.import_invalid, BaseTransientBottomBar.LENGTH_LONG).show();
-                setCancelable(true);
-                break;
             case ImportHelper.ProcessFolderResult.KO_APP_FOLDER:
-                Snackbar.make(rootView, R.string.import_app_folder, BaseTransientBottomBar.LENGTH_LONG).show();
-                setCancelable(true);
-                break;
             case ImportHelper.ProcessFolderResult.KO_DOWNLOAD_FOLDER:
-                Snackbar.make(rootView, R.string.import_download_folder, BaseTransientBottomBar.LENGTH_LONG).show();
-                setCancelable(true);
-                break;
             case ImportHelper.ProcessFolderResult.KO_CREATE_FAIL:
-                Snackbar.make(rootView, R.string.import_create_fail, BaseTransientBottomBar.LENGTH_LONG).show();
-                setCancelable(true);
-                break;
+            case ImportHelper.ProcessFolderResult.KO_ALREADY_RUNNING:
             case ImportHelper.ProcessFolderResult.KO_OTHER:
-                Snackbar.make(rootView, R.string.import_other, BaseTransientBottomBar.LENGTH_LONG).show();
+                Snackbar.make(rootView, getMessage(resultCode), BaseTransientBottomBar.LENGTH_LONG).show();
                 setCancelable(true);
                 break;
             default:
                 // Nothing should happen here
+        }
+    }
+
+    private @StringRes
+    int getMessage(@ImportHelper.ProcessFolderResult int resultCode) {
+        switch (resultCode) {
+            case ImportHelper.ProcessFolderResult.KO_INVALID_FOLDER:
+                return R.string.import_invalid;
+            case ImportHelper.ProcessFolderResult.KO_APP_FOLDER:
+                return R.string.import_app_folder;
+            case ImportHelper.ProcessFolderResult.KO_DOWNLOAD_FOLDER:
+                return R.string.import_download_folder;
+            case ImportHelper.ProcessFolderResult.KO_CREATE_FAIL:
+                return R.string.import_create_fail;
+            case ImportHelper.ProcessFolderResult.KO_ALREADY_RUNNING:
+                return R.string.service_running;
+            case ImportHelper.ProcessFolderResult.KO_OTHER:
+                return R.string.import_other;
+            case ImportHelper.ProcessFolderResult.OK_EMPTY_FOLDER:
+            case ImportHelper.ProcessFolderResult.OK_LIBRARY_DETECTED:
+            case ImportHelper.ProcessFolderResult.OK_LIBRARY_DETECTED_ASK:
+            default:
+                // Nothing should happen here
+                return R.string.none;
         }
     }
 
@@ -343,10 +388,11 @@ public class LibRefreshDialogFragment extends DialogFragment {
                 progressBar.setMax(event.elementsTotal);
                 progressBar.setProgress(event.elementsOK + event.elementsKO);
             } else {
-                step2Txt.setText(event.elementName);
                 progressBar.setIndeterminate(true);
             }
-            if (ImportWorker.STEP_3_BOOKS == event.step) {
+            if (ImportWorker.STEP_2_BOOK_FOLDERS == event.step) {
+                step2Txt.setText(event.elementName);
+            } else if (ImportWorker.STEP_3_BOOKS == event.step) {
                 step2progress.setIndeterminate(false);
                 step2progress.setMax(1);
                 step2progress.setProgress(1);

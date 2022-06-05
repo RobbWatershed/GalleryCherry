@@ -206,8 +206,7 @@ public final class ImagePagerAdapter extends ListAdapter<ImageFile, ImagePagerAd
 
         // Initialize SSIV when required
         if (holder.getItemViewType() == ViewType.DEFAULT && Preferences.Constant.VIEWER_ORIENTATION_HORIZONTAL == viewerOrientation && !holder.isImageView) {
-            if (recyclerView != null)
-                holder.ssiv.setPreloadDimensions(recyclerView.getWidth(), recyclerView.getHeight());
+            holder.ssiv.setPreloadDimensions(holder.itemView.getWidth(), holder.imgView.getHeight());
             if (!Preferences.isViewerZoomTransitions())
                 holder.ssiv.setDoubleTapZoomDuration(10);
             holder.ssiv.setOffsetLeftSide(isScrollLTR);
@@ -226,11 +225,13 @@ public final class ImagePagerAdapter extends ListAdapter<ImageFile, ImagePagerAd
         ImageFile img = getImageAt(position);
         if (img != null && !img.getFileUri().isEmpty()) holder.setImage(img);
         else imageAvailable = false;
-        boolean isStreaming = (img != null && img.getStatus().equals(StatusContent.ONLINE) && !imageAvailable);
+        boolean isStreaming = (img != null && !imageAvailable && img.getStatus().equals(StatusContent.ONLINE));
+        boolean isExtracting = (img != null && !imageAvailable && !img.getUrl().startsWith("http"));
 
         if (holder.noImgTxt != null) {
             @StringRes int text = R.string.image_not_found;
             if (isStreaming) text = R.string.image_streaming;
+            else if (isExtracting) text = R.string.image_extracting;
             holder.noImgTxt.setText(text);
             holder.noImgTxt.setVisibility(!imageAvailable ? View.VISIBLE : View.GONE);
         }
@@ -279,6 +280,15 @@ public final class ImagePagerAdapter extends ListAdapter<ImageFile, ImagePagerAd
         }
     }
 
+    public void multiplyScale(float multiplier) {
+        if (recyclerView != null) {
+            for (int i = 0; i < getItemCount(); i++) {
+                ImageViewHolder holder = (ImageViewHolder) recyclerView.findViewHolderForAdapterPosition(i);
+                if (holder != null) holder.multiplyVirtualScale(multiplier);
+            }
+        }
+    }
+
     public void setMaxDimensions(int maxWidth, int maxHeight) {
         maxBitmapWidth = maxWidth;
         maxBitmapHeight = maxHeight;
@@ -315,6 +325,7 @@ public final class ImagePagerAdapter extends ListAdapter<ImageFile, ImagePagerAd
         private Boolean forceImageView = null;
 
         private ImageFile img;
+        private float scaleMultiplier = 1f; // When used with ZoomableFrame in vertical mode
 
         private ImageViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -380,7 +391,7 @@ public final class ImagePagerAdapter extends ListAdapter<ImageFile, ImagePagerAd
 
         private float getScale() {
             if (!isImageView) {
-                return ssiv.getScale();
+                return ssiv.getVirtualScale();
             } else { // ImageView
                 return imageView.getScaleX(); // TODO doesn't work for Glide as it doesn't use ImageView's scaling
             }
@@ -388,8 +399,20 @@ public final class ImagePagerAdapter extends ListAdapter<ImageFile, ImagePagerAd
 
         void resetScale() {
             if (!isImageView) {
-                if (ssiv.isImageLoaded() && ssiv.isReady() && ssiv.isLaidOut())
+                if (ssiv.isImageLoaded() && ssiv.isReady() && ssiv.isLaidOut()) {
+                    scaleMultiplier = 0;
                     ssiv.resetScale();
+                }
+            }
+        }
+
+        void multiplyVirtualScale(float multiplier) {
+            if (!isImageView) {
+                if (ssiv.isImageLoaded() && ssiv.isReady() && ssiv.isLaidOut()) {
+                    float rawScale = ssiv.getVirtualScale() / scaleMultiplier;
+                    ssiv.setVirtualScale(rawScale * multiplier);
+                    scaleMultiplier = multiplier;
+                }
             }
         }
 

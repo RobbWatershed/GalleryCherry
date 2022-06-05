@@ -76,7 +76,7 @@ public class ImportHelper {
         int KO_OTHER = 3; // Any other issue
     }
 
-    @IntDef({ProcessFolderResult.OK_EMPTY_FOLDER, ProcessFolderResult.OK_LIBRARY_DETECTED, ProcessFolderResult.OK_LIBRARY_DETECTED_ASK, ProcessFolderResult.KO_INVALID_FOLDER, ProcessFolderResult.KO_DOWNLOAD_FOLDER, ProcessFolderResult.KO_APP_FOLDER, ProcessFolderResult.KO_CREATE_FAIL, ProcessFolderResult.KO_OTHER})
+    @IntDef({ProcessFolderResult.OK_EMPTY_FOLDER, ProcessFolderResult.OK_LIBRARY_DETECTED, ProcessFolderResult.OK_LIBRARY_DETECTED_ASK, ProcessFolderResult.KO_INVALID_FOLDER, ProcessFolderResult.KO_DOWNLOAD_FOLDER, ProcessFolderResult.KO_APP_FOLDER, ProcessFolderResult.KO_CREATE_FAIL, ProcessFolderResult.KO_ALREADY_RUNNING, ProcessFolderResult.KO_OTHER})
     @Retention(RetentionPolicy.SOURCE)
     public @interface ProcessFolderResult {
         int OK_EMPTY_FOLDER = 1; // OK - Existing, empty Hentoid folder
@@ -86,7 +86,8 @@ public class ImportHelper {
         int KO_APP_FOLDER = 6; // Selected folder is the app folder and can't be used as an external folder
         int KO_DOWNLOAD_FOLDER = 7; // Selected folder is the device's download folder and can't be used as a primary folder (downloads visibility + storage calculation issues)
         int KO_CREATE_FAIL = 8; // Hentoid folder could not be created
-        int KO_OTHER = 9; // Any other issue
+        int KO_ALREADY_RUNNING = 9; // Import is already running
+        int KO_OTHER = 99; // Any other issue
     }
 
     private static final FileHelper.NameFilter hentoidFolderNames = displayName -> displayName.equalsIgnoreCase(Consts.DEFAULT_PRIMARY_FOLDER)
@@ -99,6 +100,7 @@ public class ImportHelper {
         public boolean rename; // If true, rename folders with current naming convention
         public boolean cleanNoJson; // If true, delete folders where no JSON file is found
         public boolean cleanNoImages; // If true, delete folders where no supported images are found
+        public boolean importGroups; // If true, reimport groups from the groups JSON
     }
 
     /**
@@ -212,8 +214,7 @@ public class ImportHelper {
             @NonNull final Uri treeUri,
             boolean askScanExisting,
             @Nullable final ImportOptions options) {
-
-        // Persist I/O permissions
+        // Persist I/O permissions; keep existing ones if present
         Uri externalUri = null;
         if (!Preferences.getExternalLibraryUri().isEmpty())
             externalUri = Uri.parse(Preferences.getExternalLibraryUri());
@@ -225,6 +226,7 @@ public class ImportHelper {
             Timber.e("Could not find the selected file %s", treeUri.toString());
             return ProcessFolderResult.KO_INVALID_FOLDER;
         }
+
         // Check if the folder is not the device's Download folder
         List<String> pathSegments = treeUri.getPathSegments();
         if (pathSegments.size() > 1) {
@@ -235,12 +237,14 @@ public class ImportHelper {
                 return ProcessFolderResult.KO_DOWNLOAD_FOLDER;
             }
         }
+
         // Retrieve or create the Hentoid folder
         DocumentFile hentoidFolder = getOrCreateHentoidFolder(context, docFile);
         if (null == hentoidFolder) {
             Timber.e("Could not create Hentoid folder in folder %s", docFile.getUri().toString());
             return ProcessFolderResult.KO_CREATE_FAIL;
         }
+
         // Set the folder as the app's downloads folder
         int result = FileHelper.checkAndSetRootFolder(context, hentoidFolder);
         if (result < 0) {
@@ -278,7 +282,7 @@ public class ImportHelper {
             @NonNull final Context context,
             @NonNull final Uri treeUri) {
 
-        // Persist I/O permissions
+        // Persist I/O permissions; keep existing ones if present
         Uri hentoidUri = null;
         if (!Preferences.getStorageUri().isEmpty())
             hentoidUri = Uri.parse(Preferences.getStorageUri());
@@ -299,8 +303,8 @@ public class ImportHelper {
         Preferences.setExternalLibraryUri(folderUri);
 
         // Start the import
-        runExternalImport(context);
-        return ProcessFolderResult.OK_LIBRARY_DETECTED;
+        if (runExternalImport(context)) return ProcessFolderResult.OK_LIBRARY_DETECTED;
+        else return ProcessFolderResult.KO_ALREADY_RUNNING;
     }
 
     /**
@@ -415,14 +419,17 @@ public class ImportHelper {
         ImportNotificationChannel.init(context);
 
         ImportData.Builder builder = new ImportData.Builder();
-        builder.setRefreshRename(null != options && options.rename);
-        builder.setRefreshCleanNoJson(null != options && options.cleanNoJson);
-        builder.setRefreshCleanNoImages(null != options && options.cleanNoImages);
+        if (options != null) {
+            builder.setRefreshRename(options.rename);
+            builder.setRefreshCleanNoJson(options.cleanNoJson);
+            builder.setRefreshCleanNoImages(options.cleanNoImages);
+            builder.setImportGroups(options.importGroups);
+        }
 
         WorkManager workManager = WorkManager.getInstance(context);
         workManager.enqueueUniqueWork(
                 Integer.toString(R.id.import_service),
-                ExistingWorkPolicy.KEEP,
+                ExistingWorkPolicy.REPLACE,
                 new OneTimeWorkRequest.Builder(ImportWorker.class).setInputData(builder.getData()).addTag(WORK_CLOSEABLE).build());
     }
 
@@ -431,21 +438,20 @@ public class ImportHelper {
      *
      * @param context Context to use
      */
-    private static void runExternalImport(
+    private static boolean runExternalImport(
             @NonNull final Context context
     ) {
-        if (ExternalImportWorker.isRunning(context)) {
-            ToastHelper.toast(R.string.service_running);
-            return;
-        }
+        if (ExternalImportWorker.isRunning(context)) return false;
 
         ImportNotificationChannel.init(context);
 
         WorkManager workManager = WorkManager.getInstance(context);
         workManager.enqueueUniqueWork(
                 Integer.toString(R.id.external_import_service),
-                ExistingWorkPolicy.KEEP,
+                ExistingWorkPolicy.REPLACE,
                 new OneTimeWorkRequest.Builder(ExternalImportWorker.class).addTag(WORK_CLOSEABLE).build());
+
+        return true;
     }
 
     /**

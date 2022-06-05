@@ -33,6 +33,7 @@ import me.devsaki.hentoid.enums.Grouping;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.util.ContentHelper;
+import me.devsaki.hentoid.widget.ContentSearchManager;
 
 public interface CollectionDAO {
 
@@ -59,6 +60,8 @@ public interface CollectionDAO {
 
     long insertContent(@NonNull final Content content);
 
+    long insertContentCore(@NonNull final Content content);
+
     void updateContentStatus(@NonNull final StatusContent updateFrom, @NonNull final StatusContent updateTo);
 
     void deleteContent(@NonNull final Content content);
@@ -81,6 +84,8 @@ public interface CollectionDAO {
     long countAllInternalBooks(boolean favsOnly);
 
     List<Content> selectAllInternalBooks(boolean favsOnly);
+
+    void streamAllInternalBooks(boolean favsOnly, Consumer<Content> consumer);
 
     void flagAllInternalBooks();
 
@@ -111,7 +116,7 @@ public interface CollectionDAO {
 
     List<Group> selectGroups(long[] groupIds);
 
-    LiveData<List<Group>> selectGroupsLive(int grouping, @Nullable String query, int orderField, boolean orderDesc, int artistGroupVisibility, boolean groupFavouritesOnly);
+    LiveData<List<Group>> selectGroupsLive(int grouping, @Nullable String query, int orderField, boolean orderDesc, int artistGroupVisibility, boolean groupFavouritesOnly, int filterRating);
 
     List<Group> selectGroups(int grouping, int subType);
 
@@ -158,18 +163,18 @@ public interface CollectionDAO {
     void streamStoredContent(boolean nonFavouritesOnly, boolean includeQueued, int orderField, boolean orderDesc, Consumer<Content> consumer);
 
 
-    Single<List<Long>> selectRecentBookIds(long groupId, int orderField, boolean orderDesc, boolean bookFavouritesOnly, boolean pageFavouritesOnly, boolean bookCompletedOnly, boolean bookNotCompletedOnly);
+    Single<List<Long>> selectRecentBookIds(ContentSearchManager.ContentSearchBundle searchBundle);
 
-    Single<List<Long>> searchBookIds(String query, long groupId, List<Attribute> metadata, int orderField, boolean orderDesc, boolean bookFavouritesOnly, boolean pageFavouritesOnly, boolean bookCompletedOnly, boolean bookNotCompletedOnly);
+    Single<List<Long>> searchBookIds(ContentSearchManager.ContentSearchBundle searchBundle, List<Attribute> metadata);
 
-    Single<List<Long>> searchBookIdsUniversal(String query, long groupId, int orderField, boolean orderDesc, boolean bookFavouritesOnly, boolean pageFavouritesOnly, boolean bookCompletedOnly, boolean bookNotCompletedOnly);
+    Single<List<Long>> searchBookIdsUniversal(ContentSearchManager.ContentSearchBundle searchBundle);
 
 
-    LiveData<PagedList<Content>> selectRecentBooks(long groupId, int orderField, boolean orderDesc, boolean favouritesOnly, boolean loadAll, boolean bookCompletedOnly, boolean bookNotCompletedOnly);
+    LiveData<PagedList<Content>> selectRecentBooks(ContentSearchManager.ContentSearchBundle searchBundle);
 
-    LiveData<PagedList<Content>> searchBooks(String query, long groupId, List<Attribute> metadata, int orderField, boolean orderDesc, boolean favouritesOnly, boolean loadAll, boolean bookCompletedOnly, boolean bookNotCompletedOnly);
+    LiveData<PagedList<Content>> searchBooks(ContentSearchManager.ContentSearchBundle searchBundle, List<Attribute> metadata);
 
-    LiveData<PagedList<Content>> searchBooksUniversal(String query, long groupId, int orderField, boolean orderDesc, boolean favouritesOnly, boolean loadAll, boolean bookCompletedOnly, boolean bookNotCompletedOnly);
+    LiveData<PagedList<Content>> searchBooksUniversal(ContentSearchManager.ContentSearchBundle searchBundle);
 
     LiveData<Map<String, StatusContent>> selectContentUniqueIdStates(@NonNull final Site site);
 
@@ -179,7 +184,7 @@ public interface CollectionDAO {
     List<Content> selectErrorContentList();
 
 
-    LiveData<Integer> countBooks(String query, long groupId, List<Attribute> metadata, boolean favouritesOnly, boolean bookCompletedOnly, boolean bookNotCompletedOnly);
+    LiveData<Integer> countBooks(long groupId, List<Attribute> metadata);
 
     LiveData<Integer> countAllBooks();
 
@@ -215,13 +220,14 @@ public interface CollectionDAO {
 
     List<QueueRecord> selectQueue();
 
-    List<QueueRecord> selectQueue(String query);
+    @Nullable
+    QueueRecord selectQueue(long contentId);
 
     LiveData<List<QueueRecord>> selectQueueLive();
 
     LiveData<List<QueueRecord>> selectQueueLive(String query);
 
-    void addContentToQueue(@NonNull final Content content, StatusContent targetImageStatus, @ContentHelper.QueuePosition int position, boolean isQueueActive);
+    void addContentToQueue(@NonNull final Content content, StatusContent targetImageStatus, @ContentHelper.QueuePosition int position, long replacedContentId, boolean isQueueActive);
 
     void insertQueue(long contentId, int order);
 
@@ -238,9 +244,6 @@ public interface CollectionDAO {
             @NonNull List<AttributeType> types,
             String filter,
             List<Attribute> attrs,
-            boolean filterFavourites,
-            boolean bookCompletedOnly,
-            boolean bookNotCompletedOnly,
             int page,
             int booksPerPage,
             int orderStyle);

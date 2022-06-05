@@ -1,6 +1,6 @@
 package me.devsaki.hentoid.parsers;
 
-import android.util.Pair;
+import androidx.core.util.Pair;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -233,7 +233,8 @@ public class ParseHelper {
             @Nonnull List<String> imgUrls,
             int initialOrder,
             @NonNull final StatusContent status,
-            int totalBookPages, final Chapter chapter
+            int totalBookPages,
+            final Chapter chapter
     ) {
         List<ImageFile> result = new ArrayList<>();
 

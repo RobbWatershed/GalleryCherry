@@ -5,14 +5,15 @@ import static me.devsaki.hentoid.util.network.HttpHelper.HEADER_CONTENT_TYPE;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
-import android.util.Pair;
 
 import androidx.annotation.DrawableRes;
 import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.util.Pair;
 import androidx.documentfile.provider.DocumentFile;
 
 import com.annimon.stream.Optional;
@@ -171,7 +172,7 @@ public final class ContentHelper {
      * @param context Context to use for the action
      * @param content Content whose JSON file to update
      */
-    public static void updateContentJson(@NonNull Context context, @NonNull Content content) {
+    public static void updateJson(@NonNull Context context, @NonNull Content content) {
         Helper.assertNonUiThread();
 
         DocumentFile file = FileHelper.getFileFromSingleUriString(context, content.getJsonUri());
@@ -195,7 +196,7 @@ public final class ContentHelper {
      * @return Created JSON file, or null if it couldn't be created
      */
     @Nullable
-    public static DocumentFile createContentJson(@NonNull Context context, @NonNull Content content) {
+    public static DocumentFile createJson(@NonNull Context context, @NonNull Content content) {
         Helper.assertNonUiThread();
         if (content.isArchive())
             return null; // Keep that as is, we can't find the parent folder anyway
@@ -210,6 +211,13 @@ public final class ContentHelper {
             Timber.e(e, "Error while writing to %s", content.getStorageUri());
         }
         return null;
+    }
+
+    // TODO doc
+    public static void persistJson(@NonNull Context context, @NonNull Content content) {
+        if (!content.getJsonUri().isEmpty()) // Having an active Content without JSON file shouldn't be possible after the API29 migration
+            ContentHelper.updateJson(context, content);
+        else ContentHelper.createJson(context, content);
     }
 
     /**
@@ -299,9 +307,7 @@ public final class ContentHelper {
         if (updateReads) content.increaseReads().setLastReadDate(Instant.now().toEpochMilli());
         dao.replaceImageList(content.getId(), images);
         dao.insertContent(content);
-
-        if (!content.getJsonUri().isEmpty()) updateContentJson(context, content);
-        else createContentJson(context, content);
+        persistJson(context, content);
     }
 
     /**
@@ -403,6 +409,21 @@ public final class ContentHelper {
         if (deleteContent) removeContent(context, dao, content);
     }
 
+    public static void removeAllExternalContent(
+            @NonNull final Context context,
+            @NonNull final CollectionDAO dao
+    ) {
+        // Remove all external books from DB
+        // NB : do NOT use ContentHelper.removeContent as it would remove files too
+        // here we just want to remove DB entries without removing files
+        dao.deleteAllExternalBooks();
+
+        // Remove all images stored in the app's persistent folder (archive covers)
+        File appFolder = context.getFilesDir();
+        File[] images = appFolder.listFiles((file, s) -> ImageHelper.isSupportedImage(s));
+        if (images != null) for (File f : images) FileHelper.removeFile(f);
+    }
+
     /**
      * Add new content to the library
      *
@@ -460,15 +481,43 @@ public final class ContentHelper {
             DocumentFile archive = FileHelper.getFileFromSingleUriString(context, content.getStorageUri());
             if (archive != null) {
                 try {
+                    File targetFolder = context.getFilesDir();
+                    List<Pair<String, String>> extractInstructions = new ArrayList<>();
+                    extractInstructions.add(new Pair<>(content.getCover().getFileUri().replace(content.getStorageUri() + File.separator, ""), newContentId + ""));
+
                     Disposable unarchiveDisposable = ArchiveHelper.extractArchiveEntriesRx(
-                            context,
-                            archive,
-                            Stream.of(content.getCover().getFileUri().replace(content.getStorageUri() + File.separator, "")).toList(),
-                            context.getFilesDir(),
-                            Stream.of(newContentId + "").toList(),
-                            null)
+                                    context,
+                                    archive,
+                                    targetFolder,
+                                    extractInstructions,
+                                    null)
                             .subscribeOn(Schedulers.io())
+                            // Save the pic as low-res JPG
                             .observeOn(Schedulers.computation())
+                            .map(uri -> {
+                                File extractedFile = new File(uri.getPath()); // These are file URI's
+                                try (InputStream is = FileHelper.getInputStream(context, uri)) {
+                                    Bitmap b = BitmapFactory.decodeStream(is);
+                                    String targetFileName = Consts.EXT_THUMB_FILE_PREFIX + extractedFile.getName();
+                                    // Reuse existing file if exists
+                                    File finalFile;
+                                    File[] existingFiles = targetFolder.listFiles((file, s) -> s.equals(targetFileName));
+                                    if (existingFiles != null && existingFiles.length > 0) {
+                                        finalFile = existingFiles[0];
+                                    } else { // Create new file
+                                        finalFile = new File(targetFolder, targetFileName);
+                                    }
+                                    try (OutputStream os = FileHelper.getOutputStream(finalFile)) {
+                                        Bitmap resizedBitmap = ImageHelper.getScaledDownBitmap(b, context.getResources().getDimensionPixelSize(R.dimen.card_grid_width), false);
+                                        resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 85, os);
+                                        resizedBitmap.recycle();
+                                    }
+                                    if (!extractedFile.delete())
+                                        Timber.w("Failed deleting file %s", extractedFile.getAbsolutePath());
+                                    return Uri.fromFile(finalFile);
+                                }
+                            })
+                            // Add it as the book's cover
                             .subscribe(
                                     uri -> {
                                         Timber.i(">> Set cover for %s", content.getTitle());
@@ -513,7 +562,7 @@ public final class ContentHelper {
         for (Long contentId : contents) {
             Content content = dao.selectContent(contentId);
             if (content != null && !content.getJsonUri().isEmpty())
-                updateContentJson(context, content);
+                updateJson(context, content);
         }
     }
 
@@ -552,7 +601,7 @@ public final class ContentHelper {
 
         // Update content JSON if it exists (i.e. if book is not queued)
         if (!content.getJsonUri().isEmpty())
-            updateContentJson(context, content);
+            updateJson(context, content);
     }
 
     /**
@@ -920,7 +969,7 @@ public final class ContentHelper {
         List<ArchiveHelper.ArchiveEntry> fileList = Stream.of(files).withoutNulls().sorted(new InnerNameNumberArchiveComparator()).toList();
         for (ArchiveHelper.ArchiveEntry f : fileList) {
             String name = namePrefix + f.path;
-            String path = archiveFileUri.toString() + File.separator + f.path;
+            String path = archiveFileUri + File.separator + f.path;
             ImageFile img = new ImageFile();
             if (name.startsWith(Consts.THUMB_FILE_NAME)) img.setIsCover(true);
             else order++;
@@ -1174,6 +1223,25 @@ public final class ContentHelper {
         return 0;
     }
 
+    // TODO doc
+    public static @DrawableRes
+    int getRatingResourceId(int rating) {
+        switch (rating) {
+            case 1:
+                return R.drawable.ic_star_1;
+            case 2:
+                return R.drawable.ic_star_2;
+            case 3:
+                return R.drawable.ic_star_3;
+            case 4:
+                return R.drawable.ic_star_4;
+            case 5:
+                return R.drawable.ic_star_5;
+            default:
+                return R.drawable.ic_star_none;
+        }
+    }
+
     /**
      * Format the given Content's artists for display
      *
@@ -1412,6 +1480,7 @@ public final class ContentHelper {
         mergedContent.setDownloadDate(Instant.now().toEpochMilli());
         mergedContent.setStatus(firstContent.getStatus());
         mergedContent.setFavourite(firstContent.isFavourite());
+        mergedContent.setRating(firstContent.getRating());
         mergedContent.setBookPreferences(firstContent.getBookPreferences());
         mergedContent.setManuallyMerged(true);
 
@@ -1533,7 +1602,7 @@ public final class ContentHelper {
             mergedContent.setQtyPages(mergedImages.size() - 1);
             mergedContent.computeSize();
 
-            DocumentFile jsonFile = ContentHelper.createContentJson(context, mergedContent);
+            DocumentFile jsonFile = ContentHelper.createJson(context, mergedContent);
             if (jsonFile != null) mergedContent.setJsonUri(jsonFile.getUri().toString());
 
             // Save new content (incl. non-custom group operations)

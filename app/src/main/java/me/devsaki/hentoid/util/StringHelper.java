@@ -22,6 +22,7 @@ public final class StringHelper {
     }
 
     private static final Pattern NUMERIC_PATTERN = Pattern.compile("-?\\d+(\\.\\d+)?");
+    private static final Pattern STRING_CLEANUP_INVALID_CHARS_PATTERN = Pattern.compile("[(\\[\\-+?!_~/,:;|.#\"'’=&)\\]]");
 
 
     /**
@@ -136,7 +137,7 @@ public final class StringHelper {
     /**
      * Clean up the given string by
      * - Removing everything between ()'s and []'s
-     * - Replacing [-+_~/\,:;|.#"'=]'s by a space
+     * - Replacing [-+_~/\,:;|.#"'=&!?]'s by a space
      * - Putting all characters lowercase
      * - Replacing HTML-escaped characters by their ASCII equivalent
      * - Trimming
@@ -144,9 +145,9 @@ public final class StringHelper {
      * @param s String to cleanup
      * @return Cleaned-up string
      */
-    public static String cleanup(String s) {
+    public static String cleanup(@NonNull String s) {
         boolean openBracket = false;
-        String formattedS = StringEscapeUtils.unescapeHtml4(s.toLowerCase());
+        String formattedS = StringEscapeUtils.unescapeHtml4(s.toLowerCase().trim());
         StringBuilder result = new StringBuilder();
         for (int i = 0; i < formattedS.length(); i++) {
             char c = formattedS.charAt(i);
@@ -156,7 +157,10 @@ public final class StringHelper {
                 result.append(' ');
             else if (!openBracket) result.append(c);
         }
-        return /*cleanMultipleSpaces(*/result.toString().trim()/*)*/;
+        String resStr = result.toString().trim();
+        if (resStr.isEmpty())
+            return STRING_CLEANUP_INVALID_CHARS_PATTERN.matcher(formattedS).replaceAll("");
+        else return /*cleanMultipleSpaces(*/resStr/*)*/;
     }
 
     /**

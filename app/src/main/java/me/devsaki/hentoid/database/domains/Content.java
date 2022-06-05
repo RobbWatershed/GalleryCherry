@@ -29,6 +29,7 @@ import io.objectbox.annotation.Index;
 import io.objectbox.annotation.Transient;
 import io.objectbox.converter.PropertyConverter;
 import io.objectbox.relation.ToMany;
+import io.objectbox.relation.ToOne;
 import me.devsaki.hentoid.activities.sources.AsianSisterActivity;
 import me.devsaki.hentoid.activities.sources.BabeTodayActivity;
 import me.devsaki.hentoid.activities.sources.BaseWebActivity;
@@ -103,6 +104,7 @@ public class Content implements Serializable {
     private String storageFolder; // Used as pivot for API29 migration; no use after that (replaced by storageUri)
     private String storageUri; // Not exposed because it will vary according to book location -> valued at import
     private boolean favourite = false;
+    private int rating = 0;
     private boolean completed = false;
     private long reads = 0;
     private long lastReadDate;
@@ -113,6 +115,7 @@ public class Content implements Serializable {
 
     private @DownloadMode
     int downloadMode;
+    private ToOne<Content> contentToReplace;
 
     // Aggregated data redundant with the sum of individual data contained in ImageFile
     // ObjectBox can't do the sum in a single Query, so here it is !
@@ -305,6 +308,8 @@ public class Content implements Serializable {
                 return FapalityActivity.class;
             case ASIANSISTER:
                 return AsianSisterActivity.class;
+            case MULTPORN:
+                return MultpornActivity.class;
             default:
                 return BaseWebActivity.class;
         }
@@ -605,10 +610,6 @@ public class Content implements Serializable {
         return this;
     }
 
-    public boolean isFavourite() {
-        return favourite;
-    }
-
     public boolean isCompleted() {
         return completed;
     }
@@ -618,9 +619,21 @@ public class Content implements Serializable {
         return this;
     }
 
+    public boolean isFavourite() {
+        return favourite;
+    }
+
     public Content setFavourite(boolean favourite) {
         this.favourite = favourite;
         return this;
+    }
+
+    public int getRating() {
+        return rating;
+    }
+
+    public void setRating(int rating) {
+        this.rating = rating;
     }
 
     public boolean isLast() {
@@ -795,6 +808,14 @@ public class Content implements Serializable {
         this.updatedProperties = updatedProperties;
     }
 
+    public ToOne<Content> getContentToReplace() {
+        return contentToReplace;
+    }
+
+    public void setContentIdToReplace(long contentIdToReplace) {
+        this.contentToReplace.setTargetId(contentIdToReplace);
+    }
+
     public static class StringMapConverter implements PropertyConverter<Map<String, String>, String> {
         @Override
         public Map<String, String> convertToEntityProperty(String databaseValue) {
@@ -823,6 +844,7 @@ public class Content implements Serializable {
         if (o == null || getClass() != o.getClass()) return false;
         Content content = (Content) o;
         return isFavourite() == content.isFavourite() &&
+                getRating() == content.getRating() &&
                 isCompleted() == content.isCompleted() &&
                 getDownloadDate() == content.getDownloadDate() && // To differentiate external books that have no URL
                 getSize() == content.getSize() && // To differentiate external books that have no URL
@@ -836,7 +858,7 @@ public class Content implements Serializable {
 
     @Override
     public int hashCode() {
-        return Objects.hash(getUrl(), getCoverImageUrl(), getDownloadDate(), getSize(), getSite(), isFavourite(), isCompleted(), getLastReadDate(), isBeingDeleted(), getTitle());
+        return Objects.hash(getUrl(), getCoverImageUrl(), getDownloadDate(), getSize(), getSite(), isFavourite(), getRating(), isCompleted(), getLastReadDate(), isBeingDeleted(), getTitle());
     }
 
     public long uniqueHash() {

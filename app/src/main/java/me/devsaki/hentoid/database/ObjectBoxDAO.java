@@ -50,6 +50,7 @@ import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.util.ContentHelper;
 import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.Preferences;
+import me.devsaki.hentoid.widget.ContentSearchManager;
 import timber.log.Timber;
 
 public class ObjectBoxDAO implements CollectionDAO {
@@ -111,23 +112,23 @@ public class ObjectBoxDAO implements CollectionDAO {
     }
 
     @Override
-    public Single<List<Long>> selectRecentBookIds(long groupId, int orderField, boolean orderDesc, boolean bookFavouritesOnly, boolean pageFavouritesOnly, boolean bookCompletedOnly, boolean bookNotCompletedOnly) {
-        return Single.fromCallable(() -> contentIdSearch(false, "", groupId, Collections.emptyList(), orderField, orderDesc, bookFavouritesOnly, pageFavouritesOnly, bookCompletedOnly, bookNotCompletedOnly))
+    public Single<List<Long>> selectRecentBookIds(ContentSearchManager.ContentSearchBundle searchBundle) {
+        return Single.fromCallable(() -> contentIdSearch(false, searchBundle, Collections.emptyList()))
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread());
     }
 
     @Override
-    public Single<List<Long>> searchBookIds(String query, long groupId, List<Attribute> metadata, int orderField, boolean orderDesc, boolean bookFavouritesOnly, boolean pageFavouritesOnly, boolean bookCompletedOnly, boolean bookNotCompletedOnly) {
-        return Single.fromCallable(() -> contentIdSearch(false, query, groupId, metadata, orderField, orderDesc, bookFavouritesOnly, pageFavouritesOnly, bookCompletedOnly, bookNotCompletedOnly))
+    public Single<List<Long>> searchBookIds(ContentSearchManager.ContentSearchBundle searchBundle, List<Attribute> metadata) {
+        return Single.fromCallable(() -> contentIdSearch(false, searchBundle, metadata))
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread());
     }
 
     @Override
-    public Single<List<Long>> searchBookIdsUniversal(String query, long groupId, int orderField, boolean orderDesc, boolean bookFavouritesOnly, boolean pageFavouritesOnly, boolean bookCompletedOnly, boolean bookNotCompletedOnly) {
+    public Single<List<Long>> searchBookIdsUniversal(ContentSearchManager.ContentSearchBundle searchBundle) {
         return
-                Single.fromCallable(() -> contentIdSearch(true, query, groupId, Collections.emptyList(), orderField, orderDesc, bookFavouritesOnly, pageFavouritesOnly, bookCompletedOnly, bookNotCompletedOnly))
+                Single.fromCallable(() -> contentIdSearch(true, searchBundle, Collections.emptyList()))
                         .subscribeOn(Schedulers.io())
                         .observeOn(AndroidSchedulers.mainThread());
     }
@@ -137,14 +138,11 @@ public class ObjectBoxDAO implements CollectionDAO {
             @NonNull List<AttributeType> types,
             String filter,
             List<Attribute> attrs,
-            boolean filterFavourites,
-            boolean bookCompletedOnly,
-            boolean bookNotCompletedOnly,
             int page,
             int booksPerPage,
             int orderStyle) {
         return Single
-                .fromCallable(() -> pagedAttributeSearch(types, filter, attrs, filterFavourites, orderStyle, page, booksPerPage, bookCompletedOnly, bookNotCompletedOnly))
+                .fromCallable(() -> pagedAttributeSearch(types, filter, attrs, orderStyle, page, booksPerPage))
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread());
     }
@@ -180,27 +178,33 @@ public class ObjectBoxDAO implements CollectionDAO {
         return result;
     }
 
-    public LiveData<Integer> countBooks(String query, long groupId, List<Attribute> metadata, boolean bookFavouritesOnly, boolean bookCompletedOnly, boolean bookNotCompletedOnly) {
+    public LiveData<Integer> countBooks(long groupId, List<Attribute> metadata) {
         // This is not optimal because it fetches all the content and returns its size only
         // That's because ObjectBox v2.4.0 does not allow watching Query.count or Query.findLazy using LiveData, but only Query.find
         // See https://github.com/objectbox/objectbox-java/issues/776
-        ObjectBoxLiveData<Content> livedata = new ObjectBoxLiveData<>(db.selectContentSearchContentQ(query, groupId, metadata, bookFavouritesOnly, false, Preferences.Constant.ORDER_FIELD_NONE, false, bookCompletedOnly, bookNotCompletedOnly));
+        ContentSearchManager.ContentSearchBundle bundle = new ContentSearchManager.ContentSearchBundle();
+        bundle.setGroupId(groupId);
+        bundle.setSortField(Preferences.Constant.ORDER_FIELD_NONE);
+        ObjectBoxLiveData<Content> livedata = new ObjectBoxLiveData<>(db.selectContentSearchContentQ(bundle, metadata));
 
         MediatorLiveData<Integer> result = new MediatorLiveData<>();
         result.addSource(livedata, v -> result.setValue(v.size()));
         return result;
     }
 
-    public LiveData<PagedList<Content>> selectRecentBooks(long groupId, int orderField, boolean orderDesc, boolean favouritesOnly, boolean loadAll, boolean bookCompletedOnly, boolean bookNotCompletedOnly) {
-        return getPagedContent(false, "", groupId, Collections.emptyList(), orderField, orderDesc, favouritesOnly, loadAll, bookCompletedOnly, bookNotCompletedOnly);
+    @Override
+    public LiveData<PagedList<Content>> selectRecentBooks(ContentSearchManager.ContentSearchBundle searchBundle) {
+        return getPagedContent(false, searchBundle, Collections.emptyList());
     }
 
-    public LiveData<PagedList<Content>> searchBooks(String query, long groupId, List<Attribute> metadata, int orderField, boolean orderDesc, boolean favouritesOnly, boolean loadAll, boolean bookCompletedOnly, boolean bookNotCompletedOnly) {
-        return getPagedContent(false, query, groupId, metadata, orderField, orderDesc, favouritesOnly, loadAll, bookCompletedOnly, bookNotCompletedOnly);
+    @Override
+    public LiveData<PagedList<Content>> searchBooks(ContentSearchManager.ContentSearchBundle searchBundle, List<Attribute> metadata) {
+        return getPagedContent(false, searchBundle, metadata);
     }
 
-    public LiveData<PagedList<Content>> searchBooksUniversal(String query, long groupId, int orderField, boolean orderDesc, boolean favouritesOnly, boolean loadAll, boolean bookCompletedOnly, boolean bookNotCompletedOnly) {
-        return getPagedContent(true, query, groupId, Collections.emptyList(), orderField, orderDesc, favouritesOnly, loadAll, bookCompletedOnly, bookNotCompletedOnly);
+    @Override
+    public LiveData<PagedList<Content>> searchBooksUniversal(ContentSearchManager.ContentSearchBundle searchBundle) {
+        return getPagedContent(true, searchBundle, Collections.emptyList());
     }
 
     public LiveData<PagedList<Content>> selectNoContent() {
@@ -210,52 +214,39 @@ public class ObjectBoxDAO implements CollectionDAO {
 
     private LiveData<PagedList<Content>> getPagedContent(
             boolean isUniversal,
-            String filter,
-            long groupId,
-            List<Attribute> metadata,
-            int orderField,
-            boolean orderDesc,
-            boolean favouritesOnly,
-            boolean loadAll,
-            boolean bookCompletedOnly,
-            boolean bookNotCompletedOnly) {
-        boolean isCustomOrder = (orderField == Preferences.Constant.ORDER_FIELD_CUSTOM);
+            ContentSearchManager.ContentSearchBundle searchBundle,
+            List<Attribute> metadata) {
+        boolean isCustomOrder = (searchBundle.getSortField() == Preferences.Constant.ORDER_FIELD_CUSTOM);
 
         ImmutablePair<Long, DataSource.Factory<Integer, Content>> contentRetrieval;
         if (isCustomOrder)
-            contentRetrieval = getPagedContentByList(isUniversal, filter, groupId, metadata, orderField, orderDesc, favouritesOnly, bookCompletedOnly, bookNotCompletedOnly);
+            contentRetrieval = getPagedContentByList(isUniversal, searchBundle, metadata);
         else
-            contentRetrieval = getPagedContentByQuery(isUniversal, filter, groupId, metadata, orderField, orderDesc, favouritesOnly, bookCompletedOnly, bookNotCompletedOnly);
+            contentRetrieval = getPagedContentByQuery(isUniversal, searchBundle, metadata);
 
         int nbPages = Preferences.getContentPageQuantity();
         int initialLoad = nbPages * 2;
-        if (loadAll) {
+        if (searchBundle.getLoadAll()) {
             // Trump Android's algorithm by setting a number of pages higher that the actual number of results
             // to avoid having a truncated result set (see issue #501)
             initialLoad = (int) Math.ceil(contentRetrieval.left * 1.0 / nbPages) * nbPages;
         }
 
-        PagedList.Config cfg = new PagedList.Config.Builder().setEnablePlaceholders(!loadAll).setInitialLoadSizeHint(initialLoad).setPageSize(nbPages).build();
+        PagedList.Config cfg = new PagedList.Config.Builder().setEnablePlaceholders(!searchBundle.getLoadAll()).setInitialLoadSizeHint(initialLoad).setPageSize(nbPages).build();
         return new LivePagedListBuilder<>(contentRetrieval.right, cfg).build();
     }
 
     private ImmutablePair<Long, DataSource.Factory<Integer, Content>> getPagedContentByQuery(
             boolean isUniversal,
-            String filter,
-            long groupId,
-            List<Attribute> metadata,
-            int orderField,
-            boolean orderDesc,
-            boolean bookFavouritesOnly,
-            boolean bookCompletedOnly,
-            boolean bookNotCompletedOnly) {
-        boolean isRandom = (orderField == Preferences.Constant.ORDER_FIELD_RANDOM);
+            ContentSearchManager.ContentSearchBundle searchBundle,
+            List<Attribute> metadata) {
+        boolean isRandom = (searchBundle.getSortField() == Preferences.Constant.ORDER_FIELD_RANDOM);
 
         Query<Content> query;
         if (isUniversal) {
-            query = db.selectContentUniversalQ(filter, groupId, bookFavouritesOnly, false, orderField, orderDesc, bookCompletedOnly, bookNotCompletedOnly);
+            query = db.selectContentUniversalQ(searchBundle);
         } else {
-            query = db.selectContentSearchContentQ(filter, groupId, metadata, bookFavouritesOnly, false, orderField, orderDesc, bookCompletedOnly, bookNotCompletedOnly);
+            query = db.selectContentSearchContentQ(searchBundle, metadata);
         }
 
         if (isRandom) {
@@ -266,20 +257,14 @@ public class ObjectBoxDAO implements CollectionDAO {
 
     private ImmutablePair<Long, DataSource.Factory<Integer, Content>> getPagedContentByList(
             boolean isUniversal,
-            String filter,
-            long groupId,
-            List<Attribute> metadata,
-            int orderField,
-            boolean orderDesc,
-            boolean bookFavouritesOnly,
-            boolean bookCompletedOnly,
-            boolean bookNotCompletedOnly) {
+            ContentSearchManager.ContentSearchBundle searchBundle,
+            List<Attribute> metadata) {
         long[] ids;
 
         if (isUniversal) {
-            ids = db.selectContentUniversalByGroupItem(filter, groupId, bookFavouritesOnly, false, orderField, orderDesc, bookCompletedOnly, bookNotCompletedOnly);
+            ids = db.selectContentUniversalByGroupItem(searchBundle);
         } else {
-            ids = db.selectContentSearchContentByGroupItem(filter, groupId, metadata, bookFavouritesOnly, orderField, orderDesc, bookCompletedOnly, bookNotCompletedOnly);
+            ids = db.selectContentSearchContentByGroupItem(searchBundle, metadata);
         }
 
         return new ImmutablePair<>((long) ids.length, new ObjectBoxPredeterminedDataSource.PredeterminedDataSourceFactory<>(db::selectContentById, ids));
@@ -330,6 +315,10 @@ public class ObjectBoxDAO implements CollectionDAO {
 
     public long insertContent(@NonNull final Content content) {
         return db.insertContent(content);
+    }
+
+    public long insertContentCore(@NonNull final Content content) {
+        return db.insertContentCore(content);
     }
 
     public void updateContentStatus(@NonNull final StatusContent updateFrom, @NonNull final StatusContent updateTo) {
@@ -401,6 +390,11 @@ public class ObjectBoxDAO implements CollectionDAO {
         return db.selectAllInternalBooksQ(favsOnly).find();
     }
 
+    public void streamAllInternalBooks(boolean favsOnly, Consumer<Content> consumer) {
+        Query<Content> query = db.selectAllInternalBooksQ(favsOnly);
+        query.forEach(consumer::accept);
+    }
+
     @Override
     public void deleteAllExternalBooks() {
         db.deleteContentById(db.selectAllExternalBooksQ().findIds());
@@ -414,12 +408,12 @@ public class ObjectBoxDAO implements CollectionDAO {
 
     @Override
     public List<Group> selectGroups(int grouping) {
-        return db.selectGroupsQ(grouping, null, 0, false, -1, false).find();
+        return db.selectGroupsQ(grouping, null, 0, false, -1, false, 0).find();
     }
 
     @Override
     public List<Group> selectGroups(int grouping, int subType) {
-        return db.selectGroupsQ(grouping, null, 0, false, subType, false).find();
+        return db.selectGroupsQ(grouping, null, 0, false, subType, false, 0).find();
     }
 
     @Override
@@ -429,11 +423,12 @@ public class ObjectBoxDAO implements CollectionDAO {
             int orderField,
             boolean orderDesc,
             int artistGroupVisibility,
-            boolean groupFavouritesOnly) {
+            boolean groupFavouritesOnly,
+            int filterRating) {
         // Artist / group visibility filter is only relevant when the selected grouping is "By Artist"
         int subType = (grouping == Grouping.ARTIST.getId()) ? artistGroupVisibility : -1;
 
-        LiveData<List<Group>> livedata = new ObjectBoxLiveData<>(db.selectGroupsQ(grouping, query, orderField, orderDesc, subType, groupFavouritesOnly));
+        LiveData<List<Group>> livedata = new ObjectBoxLiveData<>(db.selectGroupsQ(grouping, query, orderField, orderDesc, subType, groupFavouritesOnly, filterRating));
         LiveData<List<Group>> workingData = livedata;
 
         // Download date grouping : groups are empty as they are dynamically populated
@@ -697,12 +692,13 @@ public class ObjectBoxDAO implements CollectionDAO {
         return db.selectExternalMemoryUsagePerSource();
     }
 
-    public void addContentToQueue(@NonNull final Content content, StatusContent targetImageStatus, int position, boolean isQueueActive) {
+    public void addContentToQueue(@NonNull final Content content, StatusContent targetImageStatus, int position, long replacedContentId, boolean isQueueActive) {
         if (targetImageStatus != null)
             db.updateImageContentStatus(content.getId(), null, targetImageStatus);
 
         content.setStatus(StatusContent.DOWNLOADING);
         content.setIsBeingDeleted(false); // Remove any UI animation
+        if (replacedContentId > -1) content.setContentIdToReplace(replacedContentId);
         db.insertContent(content);
 
         if (!db.isContentInQueue(content)) {
@@ -718,11 +714,13 @@ public class ObjectBoxDAO implements CollectionDAO {
 
     private void insertQueueAndRenumber(long contentId, int order) {
         List<QueueRecord> queue = db.selectQueueRecordsQ(null).find();
+        QueueRecord newRecord = new QueueRecord(contentId, order);
+
         // Put in the right place
-        if (order > queue.size()) queue.add(new QueueRecord(contentId, order));
+        if (order > queue.size()) queue.add(newRecord);
         else {
             int newOrder = Math.min(queue.size() + 1, order);
-            queue.add(newOrder - 1, new QueueRecord(contentId, newOrder));
+            queue.add(newOrder - 1, newRecord);
         }
         // Renumber everything and save
         int index = 1;
@@ -737,20 +735,12 @@ public class ObjectBoxDAO implements CollectionDAO {
 
     private List<Long> contentIdSearch(
             boolean isUniversal,
-            String filter,
-            long groupId,
-            List<Attribute> metadata,
-            int orderField,
-            boolean orderDesc,
-            boolean bookFavouritesOnly,
-            boolean pageFavouritesOnly,
-            boolean bookCompletedOnly,
-            boolean bookNotCompletedOnly) {
-
+            ContentSearchManager.ContentSearchBundle searchBundle,
+            List<Attribute> metadata) {
         if (isUniversal) {
-            return Helper.getListFromPrimitiveArray(db.selectContentUniversalId(filter, groupId, bookFavouritesOnly, pageFavouritesOnly, orderField, orderDesc, bookCompletedOnly, bookNotCompletedOnly, ContentHelper.getLibraryStatuses()));
+            return Helper.getListFromPrimitiveArray(db.selectContentUniversalId(searchBundle, ContentHelper.getLibraryStatuses()));
         } else {
-            return Helper.getListFromPrimitiveArray(db.selectContentSearchId(filter, groupId, metadata, bookFavouritesOnly, pageFavouritesOnly, orderField, orderDesc, bookCompletedOnly, bookNotCompletedOnly));
+            return Helper.getListFromPrimitiveArray(db.selectContentSearchId(searchBundle, metadata));
         }
     }
 
@@ -758,12 +748,9 @@ public class ObjectBoxDAO implements CollectionDAO {
             @NonNull List<AttributeType> attrTypes,
             String filter,
             List<Attribute> attrs,
-            boolean filterFavourites,
             int sortOrder,
             int pageNum,
-            int itemPerPage,
-            boolean bookCompletedOnly,
-            boolean bookNotCompletedOnly) {
+            int itemPerPage) {
         AttributeQueryResult result = new AttributeQueryResult();
 
         if (!attrTypes.isEmpty()) {
@@ -773,8 +760,8 @@ public class ObjectBoxDAO implements CollectionDAO {
             } else {
                 for (AttributeType type : attrTypes) {
                     // TODO fix sorting when concatenating both lists
-                    result.attributes.addAll(db.selectAvailableAttributes(type, attrs, filter, filterFavourites, sortOrder, pageNum, itemPerPage, bookCompletedOnly, bookNotCompletedOnly));
-                    result.totalSelectedAttributes += db.countAvailableAttributes(type, attrs, filter, filterFavourites, bookCompletedOnly, bookNotCompletedOnly);
+                    result.attributes.addAll(db.selectAvailableAttributes(type, attrs, filter, sortOrder, pageNum, itemPerPage));
+                    result.totalSelectedAttributes += db.countAvailableAttributes(type, attrs, filter);
                 }
             }
         }
@@ -810,9 +797,9 @@ public class ObjectBoxDAO implements CollectionDAO {
         return db.selectQueueRecordsQ(null).find();
     }
 
-    @Override
-    public List<QueueRecord> selectQueue(String query) {
-        return db.selectQueueRecordsQ(query).find();
+    @Nullable
+    public QueueRecord selectQueue(long contentId) {
+        return db.selectQueueRecordFromContentId(contentId);
     }
 
     public void updateQueue(@NonNull List<QueueRecord> queue) {
