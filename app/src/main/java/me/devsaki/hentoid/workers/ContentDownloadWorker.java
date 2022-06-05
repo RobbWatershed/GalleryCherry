@@ -2,7 +2,6 @@ package me.devsaki.hentoid.workers;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
-import android.util.Pair;
 import android.webkit.MimeTypeMap;
 
 import androidx.annotation.NonNull;

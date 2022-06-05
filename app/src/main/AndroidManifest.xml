@@ -95,9 +95,6 @@
             android:name=".activities.sources.AsianSisterActivity"
             android:configChanges="orientation|screenSize" />
         <activity
-            android:name=".activities.sources.MultpornActivity"
-            android:configChanges="orientation|screenSize" />
-        <activity
             android:name=".activities.LibraryActivity"
             android:configChanges="orientation|screenSize"
             android:label="@string/title_activity_downloads"

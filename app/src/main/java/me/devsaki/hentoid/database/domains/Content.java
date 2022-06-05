@@ -308,8 +308,6 @@ public class Content implements Serializable {
                 return FapalityActivity.class;
             case ASIANSISTER:
                 return AsianSisterActivity.class;
-            case MULTPORN:
-                return MultpornActivity.class;
             default:
                 return BaseWebActivity.class;
         }
@@ -363,7 +361,7 @@ public class Content implements Serializable {
                 galleryConst = "galleries/";
                 break;
             case LUSCIOUS:
-                return site.getUrl().replace("/porn/","") + url;
+                return site.getUrl().replace("/porn/", "") + url;
             default:
                 galleryConst = "gallery/";
                 break;

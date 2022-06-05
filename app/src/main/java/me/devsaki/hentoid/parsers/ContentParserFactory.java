@@ -12,7 +12,6 @@ import me.devsaki.hentoid.parsers.content.JjgirlsContent;
 import me.devsaki.hentoid.parsers.content.JpegworldContent;
 import me.devsaki.hentoid.parsers.content.PornPicsContent;
 import me.devsaki.hentoid.parsers.content.SmartContent;
-import me.devsaki.hentoid.parsers.content.MultpornContent;
 import me.devsaki.hentoid.parsers.content.XhamsterContent;
 import me.devsaki.hentoid.parsers.content.XnxxContent;
 import me.devsaki.hentoid.parsers.images.DummyParser;
@@ -76,8 +75,6 @@ public class ContentParserFactory {
                 return new LusciousParser();
             case FAPALITY:
                 return new FapalityParser();
-            case MULTPORN:
-                return new MultpornParser();
             default:
                 return new DummyParser();
         }

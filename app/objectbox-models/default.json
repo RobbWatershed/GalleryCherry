@@ -41,7 +41,7 @@
     },
     {
       "id": "2:5880334030341287801",
-      "lastPropertyId": "29:2362560534739372565",
+      "lastPropertyId": "31:2613006283435488163",
       "name": "Content",
       "properties": [
         {
@@ -190,6 +190,19 @@
           "id": "29:2362560534739372565",
           "name": "downloadCompletionDate",
           "type": 6
+        },
+        {
+          "id": "30:2304695679437525889",
+          "name": "rating",
+          "type": 5
+        },
+        {
+          "id": "31:2613006283435488163",
+          "name": "contentToReplaceId",
+          "indexId": "22:2514730480265444220",
+          "type": 11,
+          "flags": 520,
+          "relationTarget": "Content"
         }
       ],
       "relations": [
@@ -458,7 +471,7 @@
     },
     {
       "id": "11:6720485967163238938",
-      "lastPropertyId": "13:1851200173989875747",
+      "lastPropertyId": "14:6162599683722944597",
       "name": "Group",
       "properties": [
         {
@@ -526,6 +539,11 @@
           "type": 11,
           "flags": 520,
           "relationTarget": "Content"
+        },
+        {
+          "id": "14:6162599683722944597",
+          "name": "rating",
+          "type": 5
         }
       ],
       "relations": []
@@ -721,7 +739,7 @@
     }
   ],
   "lastEntityId": "16:5351865710215352208",
-  "lastIndexId": "21:7217407183716014362",
+  "lastIndexId": "22:2514730480265444220",
   "lastRelationId": "3:1412032361666532056",
   "lastSequenceId": "0:0",
   "modelVersion": 5,
