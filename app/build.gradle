@@ -34,7 +34,7 @@ android {
         minSdkVersion 21
         targetSdkVersion 32
         versionCode 130 // is updated automatically by BitRise; only used when building locally
-        versionName '1.12.3'
+        versionName '1.12.4'
 
         buildConfigField 'String', 'GITHUB_API_URL', '"https://api.github.com/repos/RobbWatershed/GalleryCherry/"'
 
