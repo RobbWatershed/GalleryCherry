@@ -30,7 +30,6 @@ import me.devsaki.hentoid.notification.import_.ImportProgressNotification;
 import me.devsaki.hentoid.notification.import_.ImportStartNotification;
 import me.devsaki.hentoid.util.ContentHelper;
 import me.devsaki.hentoid.util.Preferences;
-import me.devsaki.hentoid.util.StringHelper;
 import me.devsaki.hentoid.util.download.ContentQueueManager;
 import me.devsaki.hentoid.util.file.FileHelper;
 import me.devsaki.hentoid.util.network.CloudflareHelper;
@@ -122,10 +121,7 @@ public class DownloadsImportWorker extends BaseWorker {
 
         try {
             for (String s : downloads) {
-                String galleryUrl = s;
-                if (StringHelper.isNumeric(galleryUrl))
-                    galleryUrl = Content.getGalleryUrlFromId(Site.NHENTAI, galleryUrl);
-                importGallery(galleryUrl, queuePosition, importAsStreamed, false);
+                importGallery(s, queuePosition, importAsStreamed, false);
             }
         } catch (InterruptedException ie) {
             Timber.e(ie);

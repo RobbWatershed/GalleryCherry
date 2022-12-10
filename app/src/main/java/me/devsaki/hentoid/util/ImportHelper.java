@@ -98,7 +98,7 @@ public class ImportHelper {
     private static final FileHelper.NameFilter hentoidFolderNames = displayName -> displayName.equalsIgnoreCase(Consts.DEFAULT_PRIMARY_FOLDER)
             || displayName.equalsIgnoreCase(Consts.DEFAULT_PRIMARY_FOLDER_OLD);
 
-    private static final FileHelper.NameFilter hentoidContentJson = displayName -> displayName.equalsIgnoreCase(Consts.JSON_FILE_NAME_V2) || displayName.equalsIgnoreCase(Consts.JSON_FILE_NAME) || displayName.equalsIgnoreCase(Consts.JSON_FILE_NAME_OLD);
+    private static final FileHelper.NameFilter hentoidContentJson = displayName -> displayName.equalsIgnoreCase(Consts.JSON_FILE_NAME_V2);
 
     /**
      * Import options for the Hentoid folder

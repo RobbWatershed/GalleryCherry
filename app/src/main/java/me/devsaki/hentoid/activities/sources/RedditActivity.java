@@ -44,7 +44,7 @@ public class RedditActivity extends BaseWebActivity {
     }
 
     @Override
-    protected CustomWebViewClient getWebClient() {
+    protected CustomWebViewClient createWebClient() {
         CustomWebViewClient client = new RedditWebViewClient(GALLERY_FILTER, this);
         client.restrictTo(DOMAIN_FILTER);
         return client;

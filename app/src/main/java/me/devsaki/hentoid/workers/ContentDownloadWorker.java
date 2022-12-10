@@ -3,7 +3,6 @@ package me.devsaki.hentoid.workers;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.net.Uri;
-import android.webkit.MimeTypeMap;
 
 import androidx.annotation.NonNull;
 import androidx.core.util.Pair;
@@ -20,6 +19,7 @@ import org.greenrobot.eventbus.Subscribe;
 import org.threeten.bp.Instant;
 
 import java.io.IOException;
+import java.security.InvalidParameterException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -76,9 +76,7 @@ import me.devsaki.hentoid.util.exception.EmptyResultException;
 import me.devsaki.hentoid.util.exception.LimitReachedException;
 import me.devsaki.hentoid.util.exception.ParseException;
 import me.devsaki.hentoid.util.exception.PreparationInterruptedException;
-import me.devsaki.hentoid.util.file.ArchiveHelper;
 import me.devsaki.hentoid.util.file.FileHelper;
-import me.devsaki.hentoid.util.image.ImageHelper;
 import me.devsaki.hentoid.util.network.DownloadSpeedCalculator;
 import me.devsaki.hentoid.util.network.HttpHelper;
 import me.devsaki.hentoid.util.network.NetworkHelper;

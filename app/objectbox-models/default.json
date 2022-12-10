@@ -41,7 +41,7 @@
     },
     {
       "id": "2:5880334030341287801",
-      "lastPropertyId": "31:2613006283435488163",
+      "lastPropertyId": "32:959812979590750305",
       "name": "Content",
       "properties": [
         {
@@ -203,6 +203,11 @@
           "type": 11,
           "flags": 520,
           "relationTarget": "Content"
+        },
+        {
+          "id": "32:959812979590750305",
+          "name": "lastEditDate",
+          "type": 6
         }
       ],
       "relations": [
@@ -736,10 +741,67 @@
         }
       ],
       "relations": []
+    },
+    {
+      "id": "17:6346381442614233430",
+      "lastPropertyId": "4:6372285466819172471",
+      "name": "RenamingRule",
+      "properties": [
+        {
+          "id": "1:6737126787868292339",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:1645051224777718882",
+          "name": "attributeType",
+          "indexId": "23:5440221106777048709",
+          "type": 5,
+          "flags": 8
+        },
+        {
+          "id": "3:1094710033317287847",
+          "name": "sourceName",
+          "indexId": "24:5444702821145855329",
+          "type": 9,
+          "flags": 2048
+        },
+        {
+          "id": "4:6372285466819172471",
+          "name": "targetName",
+          "type": 9
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "18:7041068337752094656",
+      "lastPropertyId": "3:5968293343859735170",
+      "name": "SearchRecord",
+      "properties": [
+        {
+          "id": "1:5727048058881457129",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:380979140206638508",
+          "name": "searchString",
+          "type": 9
+        },
+        {
+          "id": "3:5968293343859735170",
+          "name": "label",
+          "type": 9
+        }
+      ],
+      "relations": []
     }
   ],
-  "lastEntityId": "16:5351865710215352208",
-  "lastIndexId": "22:2514730480265444220",
+  "lastEntityId": "18:7041068337752094656",
+  "lastIndexId": "24:5444702821145855329",
   "lastRelationId": "3:1412032361666532056",
   "lastSequenceId": "0:0",
   "modelVersion": 5,

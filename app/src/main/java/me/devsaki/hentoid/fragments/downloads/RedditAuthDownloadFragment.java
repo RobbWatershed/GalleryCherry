@@ -1,5 +1,8 @@
 package me.devsaki.hentoid.fragments.downloads;
 
+import static androidx.core.view.ViewCompat.requireViewById;
+import static io.reactivex.android.schedulers.AndroidSchedulers.mainThread;
+
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -29,14 +32,11 @@ import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.parsers.ParseHelper;
 import me.devsaki.hentoid.retrofit.RedditOAuthApiServer;
-import me.devsaki.hentoid.util.ImageHelper;
 import me.devsaki.hentoid.util.OauthSessionManager;
 import me.devsaki.hentoid.util.download.ContentQueueManager;
+import me.devsaki.hentoid.util.image.ImageHelper;
 import me.devsaki.hentoid.util.network.HttpHelper;
 import timber.log.Timber;
-
-import static androidx.core.view.ViewCompat.requireViewById;
-import static io.reactivex.android.schedulers.AndroidSchedulers.mainThread;
 
 public class RedditAuthDownloadFragment extends Fragment {
 

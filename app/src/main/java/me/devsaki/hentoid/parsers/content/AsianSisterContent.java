@@ -16,7 +16,7 @@ import me.devsaki.hentoid.enums.AttributeType;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.parsers.ParseHelper;
-import me.devsaki.hentoid.util.ImageHelper;
+import me.devsaki.hentoid.util.image.ImageHelper;
 import pl.droidsonroids.jspoon.annotation.Selector;
 
 public class AsianSisterContent extends BaseContentParser {

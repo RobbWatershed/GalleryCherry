@@ -14,6 +14,7 @@ import me.devsaki.hentoid.database.ObjectBoxDAO
 import me.devsaki.hentoid.database.domains.ImageFile
 import me.devsaki.hentoid.databinding.DialogMetaGalleryBinding
 import me.devsaki.hentoid.viewholders.ImageFileItem
+import me.devsaki.hentoid.viewholders.ImageFileItem.ViewType
 
 /**
  * Dialog to pick a picture in a content gallery
@@ -62,7 +63,7 @@ class GalleyPickerDialogFragment : DialogFragment() {
     override fun onViewCreated(rootView: View, savedInstanceState: Bundle?) {
         super.onViewCreated(rootView, savedInstanceState)
 
-        itemAdapter.set(loadImages().map { i -> ImageFileItem(i, false) })
+        itemAdapter.set(loadImages().map { i -> ImageFileItem(i, false, ViewType.LIBRARY) })
 
         fastAdapter.onClickListener =
             { _: View?, _: IAdapter<ImageFileItem>, i: ImageFileItem, _: Int ->

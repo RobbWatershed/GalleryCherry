@@ -413,7 +413,7 @@ class CustomWebViewClient extends WebViewClient {
         isPageLoading.set(false);
         // Specific to Cherry : due to redirections, the correct page URLs are those visible from onPageFinished
         // Launch on a new thread to avoid crashes
-        if (isGalleryPage(url) && !isHtmlLoaded.get()) parseResponseAsync(url, false);
+        if (isGalleryPage(url) && !isHtmlLoaded.get()) parseResponseAsync(url);
         isHtmlLoaded.set(false); // Reset for the next page
         activity.onPageFinished(isResultsPage(StringHelper.protect(url)), isGalleryPage(url));
     }
@@ -493,9 +493,24 @@ class CustomWebViewClient extends WebViewClient {
     }
 
     /**
+     * Process the given webpage in a background thread (used by quick download)
+     *
+     * @param urlStr URL of the page to parse
+     */
+    void parseResponseAsync(@NonNull String urlStr) {
+        compositeDisposable.add(
+                Completable.fromCallable(() -> parseResponse(urlStr, null, true, false))
+                        .subscribeOn(Schedulers.io())
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe(() -> {
+                        }, Timber::e)
+        );
+    }
+
+    /**
      * Load the given URL using a separate thread
      *
-     * @param urlStr URL to load
+     * @param url URL to load
      */
     void browserLoadAsync(@NonNull String url) {
         compositeDisposable.add(

@@ -14,8 +14,6 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -37,7 +35,6 @@ import me.devsaki.hentoid.activities.sources.BaseWebActivity;
 import me.devsaki.hentoid.activities.sources.FapalityActivity;
 import me.devsaki.hentoid.activities.sources.HellpornoActivity;
 import me.devsaki.hentoid.activities.sources.Jjgirls2Activity;
-import me.devsaki.hentoid.activities.sources.HdPornComicsActivity;
 import me.devsaki.hentoid.activities.sources.JjgirlsActivity;
 import me.devsaki.hentoid.activities.sources.JpegworldActivity;
 import me.devsaki.hentoid.activities.sources.Link2GalleriesActivity;
@@ -58,7 +55,6 @@ import me.devsaki.hentoid.util.JsonHelper;
 import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.util.StringHelper;
 import me.devsaki.hentoid.util.file.ArchiveHelper;
-import me.devsaki.hentoid.util.network.HttpHelper;
 import me.devsaki.hentoid.workers.PrimaryImportWorker;
 import timber.log.Timber;
 
@@ -244,47 +240,7 @@ public class Content implements Serializable {
     }
 
     public static String transformRawUrl(@NonNull final Site site, @NonNull final String url) {
-        switch (site) {
-            case TSUMINO:
-                return url.replace("/Read/Index", "");
-            case PURURIN:
-                return url.replace(HttpHelper.getProtocol(url) + "://pururin.to/gallery", "");
-            case NHENTAI:
-                return url.replace(site.getUrl(), "").replace("/g", "").replaceFirst("/1/$", "/");
-            case MUSES:
-                return url.replace(site.getUrl(), "").replace("https://comics.8muses.com", "");
-            case MRM:
-                return url.replace(site.getUrl(), "").split("/")[0];
-            case HITOMI:
-                return url.replace(site.getUrl(), "").replace("/reader", "").replace("/galleries", "");
-            case MANHWA18:
-            case IMHENTAI:
-            case HENTAIFOX:
-                return url.replace(site.getUrl(), "").replace("/gallery", "");
-            case ASMHENTAI:
-            case ASMHENTAI_COMICS:
-                return url.substring(url.indexOf("/gallery/") + 8, url.length() - 2);
-            case PIXIV:
-                return url.replace(site.getUrl(), "").replaceAll("^[a-z]{2}/", "");
-            case ALLPORNCOMIC:
-            case DOUJINS:
-            case HENTAI2READ:
-            case HBROWSE:
-            case MANHWA:
-            case MULTPORN:
-            case TOONILY:
-            case SIMPLY:
-            case HDPORNCOMICS:
-                return url.replace(site.getUrl(), "");
-            case EHENTAI:
-            case EXHENTAI:
-                return url.replace(site.getUrl() + "/g", "");
-            case LUSCIOUS:
-                return url.replace(site.getUrl().replace("/manga/", ""), "");
-            case PORNCOMIX:
-            default:
-                return url;
-        }
+        return url;
     }
 
     private String computeUniqueSiteId() {
@@ -365,34 +321,9 @@ public class Content implements Serializable {
                 return FapalityActivity.class;
             case ASIANSISTER:
                 return AsianSisterActivity.class;
-            case SIMPLY:
-                return SimplyActivity.class;
-            case HDPORNCOMICS:
-                return HdPornComicsActivity.class;
             default:
                 return BaseWebActivity.class;
         }
-    }
-
-    public String getCategory() {
-        if (attributes != null) {
-            List<Attribute> attributesList = getAttributeMap().get(AttributeType.CATEGORY);
-            if (attributesList != null && !attributesList.isEmpty()) {
-                return attributesList.get(0).getName();
-            }
-        }
-
-        return null;
-    }
-
-    public String getUrl() {
-        return (null == url) ? "" : url;
-    }
-
-    public Content setUrl(String url) {
-        this.url = url;
-        computeUniqueSiteId();
-        return this;
     }
 
     public boolean isUrlBrowsable() {
@@ -436,35 +367,7 @@ public class Content implements Serializable {
     }
 
     public static String getGalleryUrlFromId(@NonNull Site site, @NonNull String id) {
-        switch (site) {
-            case HITOMI:
-                return site.getUrl() + "/galleries/" + id + ".html";
-            case NHENTAI:
-            case ASMHENTAI:
-            case ASMHENTAI_COMICS:
-                return site.getUrl() + "/g/" + id + "/";
-            case IMHENTAI:
-            case HENTAIFOX:
-                return site.getUrl() + "/gallery/" + id + "/";
-            case HENTAICAFE:
-                return site.getUrl() + "/hc.fyi/" + id;
-            case TSUMINO:
-                return site.getUrl() + "/entry/" + id;
-            case NEXUS:
-                return site.getUrl() + "/view/" + id;
-            case LUSCIOUS:
-                return site.getUrl().replace("manga", "albums") + id + "/";
-            case HBROWSE:
-                return site.getUrl() + id + "/c00001";
-            case PIXIV:
-                return site.getUrl() + "artworks/" + id;
-            case MULTPORN:
-                return site.getUrl() + "node/" + id;
-            case HDPORNCOMICS:
-                return site.getUrl() + "?p=" + id;
-            default:
-                return site.getUrl();
-        }
+        return site.getUrl();
     }
 
     /**
@@ -479,14 +382,10 @@ public class Content implements Serializable {
     }
 
     public String getCategory() {
-        if (site == Site.FAKKU) {
-            return url.substring(1, url.lastIndexOf('/'));
-        } else {
-            if (attributes != null) {
-                List<Attribute> attributesList = getAttributeMap().get(AttributeType.CATEGORY);
-                if (attributesList != null && !attributesList.isEmpty()) {
-                    return attributesList.get(0).getName();
-                }
+        if (attributes != null) {
+            List<Attribute> attributesList = getAttributeMap().get(AttributeType.CATEGORY);
+            if (attributesList != null && !attributesList.isEmpty()) {
+                return attributesList.get(0).getName();
             }
         }
 

@@ -1,7 +1,7 @@
 package me.devsaki.hentoid.viewholders;
 
 import static androidx.core.view.ViewCompat.requireViewById;
-import static me.devsaki.hentoid.util.ImageHelper.tintBitmap;
+import static me.devsaki.hentoid.util.image.ImageHelper.tintBitmap;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -43,8 +43,8 @@ import me.devsaki.hentoid.core.HentoidApp;
 import me.devsaki.hentoid.database.domains.Chapter;
 import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.util.Helper;
-import me.devsaki.hentoid.util.ImageHelper;
 import me.devsaki.hentoid.util.ThemeHelper;
+import me.devsaki.hentoid.util.image.ImageHelper;
 
 public class ImageFileItem extends AbstractItem<ImageFileItem.ImageViewHolder> implements IExpandable<ImageFileItem.ImageViewHolder>, INestedItem<ImageFileItem.ImageViewHolder> {
 

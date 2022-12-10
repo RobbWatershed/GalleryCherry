@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import me.devsaki.hentoid.enums.Site;
+import me.devsaki.hentoid.util.file.FileHelper;
 import timber.log.Timber;
 
 /**
