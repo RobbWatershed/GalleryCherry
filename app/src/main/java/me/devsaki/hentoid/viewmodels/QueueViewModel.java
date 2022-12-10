@@ -37,6 +37,7 @@ import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.events.DownloadEvent;
 import me.devsaki.hentoid.events.ProcessEvent;
 import me.devsaki.hentoid.util.ContentHelper;
+import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.util.download.ContentQueueManager;
 import me.devsaki.hentoid.util.exception.EmptyResultException;
@@ -114,7 +115,7 @@ public class QueueViewModel extends AndroidViewModel {
         queue.addSource(currentQueueSource, queue::setValue);
         // Errors
         if (currentErrorsSource != null) errors.removeSource(currentErrorsSource);
-        currentErrorsSource = dao.selectErrorContent();
+        currentErrorsSource = dao.selectErrorContentLive();
         errors.addSource(currentErrorsSource, errors::setValue);
         newSearch.setValue(true);
     }
@@ -123,6 +124,14 @@ public class QueueViewModel extends AndroidViewModel {
         if (currentQueueSource != null) queue.removeSource(currentQueueSource);
         currentQueueSource = dao.selectQueueLive(query);
         queue.addSource(currentQueueSource, queue::setValue);
+        newSearch.setValue(true);
+    }
+
+    public void searchErrorContentUniversal(String query) {
+        if (currentErrorsSource != null) errors.removeSource(currentErrorsSource);
+        if (null == query || query.isEmpty()) currentErrorsSource = dao.selectErrorContentLive();
+        else currentErrorsSource = dao.selectErrorContentLive(query);
+        errors.addSource(currentErrorsSource, errors::setValue);
         newSearch.setValue(true);
     }
 
@@ -242,7 +251,7 @@ public class QueueViewModel extends AndroidViewModel {
     }
 
     public void removeAll() {
-        List<Content> errorsLocal = dao.selectErrorContentList();
+        List<Content> errorsLocal = dao.selectErrorContent();
         if (errorsLocal.isEmpty()) return;
 
         remove(errorsLocal);
@@ -251,7 +260,7 @@ public class QueueViewModel extends AndroidViewModel {
     public void remove(@NonNull List<Content> contentList) {
         DeleteData.Builder builder = new DeleteData.Builder();
         if (!contentList.isEmpty())
-            builder.setQueueIds(Stream.of(contentList).map(Content::getId).toList());
+            builder.setQueueIds(Stream.of(contentList).map(Content::getId).filter(id -> id > 0).toList());
 
         WorkManager workManager = WorkManager.getInstance(getApplication());
         workManager.enqueue(new OneTimeWorkRequest.Builder(DeleteWorker.class).setInputData(builder.getData()).build());
@@ -272,12 +281,13 @@ public class QueueViewModel extends AndroidViewModel {
     public void cancelAll() {
         List<QueueRecord> localQueue = dao.selectQueue();
         if (localQueue.isEmpty()) return;
-        List<Long> contentIdList = Stream.of(localQueue).map(qr -> qr.getContent().getTargetId()).toList();
+        List<Long> contentIdList = Stream.of(localQueue).map(qr -> qr.getContent().getTargetId()).filter(id -> id > 0).toList();
 
         EventBus.getDefault().post(new DownloadEvent(DownloadEvent.Type.EV_PAUSE));
 
         DeleteData.Builder builder = new DeleteData.Builder();
         if (!contentIdList.isEmpty()) builder.setQueueIds(contentIdList);
+        builder.setDeleteAllQueueRecords(true);
 
         WorkManager workManager = WorkManager.getInstance(getApplication());
         workManager.enqueue(new OneTimeWorkRequest.Builder(DeleteWorker.class).setInputData(builder.getData()).build());
@@ -355,5 +365,37 @@ public class QueueViewModel extends AndroidViewModel {
 
     public void setContentToShowFirst(long hash) {
         contentHashToShowFirst.setValue(hash);
+    }
+
+    public void setDownloadMode(List<Long> contentIds, int downloadMode) {
+        compositeDisposable.add(
+                Observable.fromIterable(contentIds)
+                        .observeOn(Schedulers.io())
+                        .map(id -> doSetDownloadMode(id, downloadMode))
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe(
+                                v -> {
+                                    // Updated through LiveData
+                                },
+                                Timber::w
+                        )
+        );
+    }
+
+    public Content doSetDownloadMode(Long contentId, int downloadMode) {
+        Helper.assertNonUiThread();
+
+        // Check if given content still exists in DB
+        Content theContent = dao.selectContent(contentId);
+        if (theContent != null && !theContent.isBeingDeleted()) {
+            theContent.setDownloadMode(downloadMode);
+            // Persist in it DB
+            dao.insertContent(theContent);
+            // Update queue JSON
+            ContentHelper.updateQueueJson(getApplication(), dao);
+            // Force display by updating queue
+            dao.updateQueue(dao.selectQueue());
+        }
+        return theContent;
     }
 }

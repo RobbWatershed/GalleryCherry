@@ -81,6 +81,8 @@ public class ChangeGroupDialogFragment extends DialogFragment {
 
                 if (!customGroups.isEmpty()) { // "Existing group" by default
                     existingRadio.setChecked(true);
+                    existingSpin.setIsFocusable(true);
+                    existingSpin.setLifecycleOwner(requireActivity());
                     existingSpin.setVisibility(View.VISIBLE);
                     existingSpin.setItems(Stream.of(customGroups).map(g -> g.name).toList());
 
@@ -110,7 +112,7 @@ public class ChangeGroupDialogFragment extends DialogFragment {
                 detachRadio.setOnCheckedChangeListener((v, b) -> onDetachRadioSelect(b));
 
                 // Item click listener
-                rootView.findViewById(R.id.change_ok_btn).setOnClickListener(v -> onOkClick());
+                rootView.findViewById(R.id.action_button).setOnClickListener(v -> onOkClick());
             } finally {
                 dao.cleanup();
             }

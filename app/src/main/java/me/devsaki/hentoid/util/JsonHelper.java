@@ -27,6 +27,7 @@ import javax.annotation.Nullable;
 import me.devsaki.hentoid.core.Consts;
 import me.devsaki.hentoid.enums.AttributeType;
 import me.devsaki.hentoid.json.adapters.AndroidPairAdapterFactory;
+import me.devsaki.hentoid.util.file.FileHelper;
 import timber.log.Timber;
 
 /**
@@ -64,22 +65,6 @@ public class JsonHelper {
         JsonAdapter<K> jsonAdapter = MOSHI.adapter(type);
 
         return jsonAdapter.toJson(o);
-    }
-
-    /**
-     * Serialize and save the object contents to a json file in the given directory.
-     * The JSON file is created if it doesn't exist
-     *
-     * @param context Context to be used
-     * @param object  Object to be serialized and saved
-     * @param type    Type of the output JSON structure to use
-     * @param dir     Existing folder to save the JSON file to
-     * @param <K>     Type of the given object
-     * @return DocumentFile where the object has been serialized and saved
-     * @throws IOException If anything happens during file I/O
-     */
-    public static <K> DocumentFile jsonToFile(@NonNull final Context context, K object, Type type, @NonNull DocumentFile dir) throws IOException {
-        return jsonToFile(context, object, type, dir, Consts.JSON_FILE_NAME_V2);
     }
 
     /**

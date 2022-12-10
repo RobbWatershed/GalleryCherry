@@ -44,9 +44,10 @@ import me.devsaki.hentoid.notification.delete.DeleteNotificationChannel;
 import me.devsaki.hentoid.notification.download.DownloadNotificationChannel;
 import me.devsaki.hentoid.notification.startup.StartupNotificationChannel;
 import me.devsaki.hentoid.notification.update.UpdateNotificationChannel;
+import me.devsaki.hentoid.notification.updateJson.UpdateJsonNotificationChannel;
 import me.devsaki.hentoid.receiver.PlugEventsReceiver;
 import me.devsaki.hentoid.services.UpdateCheckService;
-import me.devsaki.hentoid.util.FileHelper;
+import me.devsaki.hentoid.util.file.FileHelper;
 import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.JsonHelper;
 import me.devsaki.hentoid.util.Preferences;
@@ -187,6 +188,7 @@ public class AppStartup {
             DownloadNotificationChannel.init(context);
             UserActionNotificationChannel.init(context);
             DeleteNotificationChannel.init(context);
+            UpdateJsonNotificationChannel.init(context);
             // Clears all previous notifications
             NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
             if (manager != null) manager.cancelAll();
@@ -203,7 +205,7 @@ public class AppStartup {
                 Timber.d("Process app update : update detected from %s to %s", Preferences.getLastKnownAppVersionCode(), BuildConfig.VERSION_CODE);
 
                 Timber.d("Process app update : Clearing webview cache");
-                ContextXKt.clearWebviewCache(context);
+                ContextXKt.clearWebviewCache(context, null);
 
                 Timber.d("Process app update : Clearing app cache");
                 ContextXKt.clearAppCache(context);

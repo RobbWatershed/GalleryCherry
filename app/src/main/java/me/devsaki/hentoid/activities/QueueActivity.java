@@ -5,11 +5,9 @@ import static me.devsaki.hentoid.util.Preferences.Constant.QUEUE_NEW_DOWNLOADS_P
 import static me.devsaki.hentoid.util.Preferences.Constant.QUEUE_NEW_DOWNLOADS_POSITION_TOP;
 
 import android.content.Intent;
-import android.content.res.Resources;
 import android.os.Bundle;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -35,15 +33,12 @@ import org.greenrobot.eventbus.ThreadMode;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
-import io.reactivex.disposables.CompositeDisposable;
-import io.reactivex.schedulers.Schedulers;
+import io.reactivex.disposables.Disposable;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.activities.bundles.QueueActivityBundle;
-import me.devsaki.hentoid.core.Consts;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.QueueRecord;
 import me.devsaki.hentoid.enums.Site;
@@ -54,11 +49,12 @@ import me.devsaki.hentoid.fragments.queue.ErrorsFragment;
 import me.devsaki.hentoid.fragments.queue.QueueFragment;
 import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.Preferences;
-import me.devsaki.hentoid.util.network.HttpHelper;
+import me.devsaki.hentoid.util.ToastHelper;
+import me.devsaki.hentoid.util.network.CloudflareHelper;
+import me.devsaki.hentoid.util.network.WebkitPackageHelper;
 import me.devsaki.hentoid.util.notification.NotificationManager;
 import me.devsaki.hentoid.viewmodels.QueueViewModel;
 import me.devsaki.hentoid.viewmodels.ViewModelFactory;
-import me.devsaki.hentoid.views.CloudflareWebView;
 import me.devsaki.hentoid.widget.AddQueueMenu;
 import timber.log.Timber;
 
@@ -75,21 +71,21 @@ public class QueueActivity extends BaseActivity {
 
     private Toolbar toolbar;
     private Toolbar selectionToolbar;
-    private MenuItem searchMenu;
     private MenuItem errorStatsMenu;
     private MenuItem invertQueueMenu;
     private MenuItem cancelAllMenu;
     private MenuItem cancelAllErrorsMenu;
     private MenuItem redownloadAllMenu;
+    private MenuItem importDownloadsMenu;
 
     private TextView reviveOverlay;
     private ProgressBar reviveProgress;
     private TextView reviveCancel;
 
-    private QueueViewModel viewModel;
-    private CloudflareWebView reviveWebview;
+    private CloudflareHelper cloudflareHelper;
+    private Disposable reviveDisposable;
 
-    private final CompositeDisposable compositeDisposable = new CompositeDisposable();
+    private QueueViewModel viewModel;
 
 
     @Override
@@ -104,9 +100,9 @@ public class QueueActivity extends BaseActivity {
 
         selectionToolbar = findViewById(R.id.queue_selection_toolbar);
 
-        searchMenu = toolbar.getMenu().findItem(R.id.action_search);
         errorStatsMenu = toolbar.getMenu().findItem(R.id.action_error_stats);
         invertQueueMenu = toolbar.getMenu().findItem(R.id.action_invert_queue);
+        importDownloadsMenu = toolbar.getMenu().findItem(R.id.action_import_downloads);
         cancelAllMenu = toolbar.getMenu().findItem(R.id.action_cancel_all);
         cancelAllErrorsMenu = toolbar.getMenu().findItem(R.id.action_cancel_all_errors);
         redownloadAllMenu = toolbar.getMenu().findItem(R.id.action_redownload_all);
@@ -114,7 +110,7 @@ public class QueueActivity extends BaseActivity {
         reviveOverlay = findViewById(R.id.download_revive_txt);
         reviveProgress = findViewById(R.id.download_revive_progress);
         reviveCancel = findViewById(R.id.download_revive_cancel);
-        reviveCancel.setOnClickListener(v -> cancelReviveDownload());
+        reviveCancel.setOnClickListener(v -> clearReviveDownload());
 
         // Instantiate a ViewPager and a PagerAdapter.
         tabLayout = findViewById(R.id.queue_tabs);
@@ -177,26 +173,16 @@ public class QueueActivity extends BaseActivity {
 
     @Override
     protected void onDestroy() {
-        if (reviveWebview != null) {
-            // the WebView must be removed from the view hierarchy before calling destroy
-            // to prevent a memory leak
-            // See https://developer.android.com/reference/android/webkit/WebView.html#destroy%28%29
-            ((ViewGroup) reviveWebview.getParent()).removeView(reviveWebview);
-            reviveWebview.removeAllViews();
-            reviveWebview.destroy();
-            reviveWebview = null;
-        }
-
-        compositeDisposable.clear();
-
         if (EventBus.getDefault().isRegistered(this)) EventBus.getDefault().unregister(this);
+        if (cloudflareHelper != null) cloudflareHelper.clear();
+        if (reviveDisposable != null) reviveDisposable.dispose();
         super.onDestroy();
     }
 
     private void onTabSelected(int position) {
         // Update permanent toolbar
-        searchMenu.setVisible(0 == position);
         invertQueueMenu.setVisible(0 == position);
+        importDownloadsMenu.setVisible(0 == position);
         cancelAllMenu.setVisible(0 == position);
         cancelAllErrorsMenu.setVisible(1 == position);
         redownloadAllMenu.setVisible(1 == position);
@@ -274,7 +260,7 @@ public class QueueActivity extends BaseActivity {
      */
     public void redownloadContent(@NonNull final List<Content> contentList, boolean reparseContent, boolean reparseImages) {
         if (Preferences.getQueueNewDownloadPosition() == QUEUE_NEW_DOWNLOADS_POSITION_ASK) {
-            AddQueueMenu.show(this, tabLayout, this, (position, item) ->
+            AddQueueMenu.Companion.show(this, tabLayout, this, (position, item) ->
                     redownloadContent(contentList, reparseContent, reparseImages, (0 == position) ? QUEUE_NEW_DOWNLOADS_POSITION_TOP : QUEUE_NEW_DOWNLOADS_POSITION_BOTTOM)
             );
         } else
@@ -291,6 +277,12 @@ public class QueueActivity extends BaseActivity {
      * @param position       Position of the new item to redownload, either QUEUE_NEW_DOWNLOADS_POSITION_TOP or QUEUE_NEW_DOWNLOADS_POSITION_BOTTOM
      */
     private void redownloadContent(@NonNull final List<Content> contentList, boolean reparseContent, boolean reparseImages, int position) {
+        if (!WebkitPackageHelper.getWebViewAvailable()) {
+            if (WebkitPackageHelper.getWebViewUpdating())
+                ToastHelper.toast(R.string.redownloaded_updating_webview);
+            else ToastHelper.toast(R.string.redownloaded_missing_webview);
+            return;
+        }
         if (reparseContent || reparseImages)
             ProgressDialogFragment.invoke(getSupportFragmentManager(), getResources().getString(R.string.redownload_queue_progress), R.plurals.book);
         viewModel.redownloadContent(contentList, reparseContent, reparseImages, position,
@@ -316,76 +308,50 @@ public class QueueActivity extends BaseActivity {
      */
     @Subscribe(threadMode = ThreadMode.MAIN)
     public void onReviveDownload(DownloadReviveEvent event) {
-        if (reviveWebview != null) return;
-
         reviveDownload(event.site, event.url);
     }
 
     // TODO doc
     private void reviveDownload(@NonNull final Site revivedSite, @NonNull final String oldCookie) {
         Timber.d(">> REVIVAL ASKED @ %s", revivedSite.getUrl());
+        if (!WebkitPackageHelper.getWebViewAvailable()) {
+            if (WebkitPackageHelper.getWebViewUpdating())
+                ToastHelper.toast(R.string.revive_updating_webview);
+            else ToastHelper.toast(R.string.revive_missing_webview);
+            return;
+        }
 
         // Remove any notification
         NotificationManager userActionNotificationManager = new NotificationManager(this, R.id.user_action_notification);
         userActionNotificationManager.cancel();
 
-        // Nuke the cookie to force its refresh
-        String domain = "." + HttpHelper.getDomainFromUri(revivedSite.getUrl());
-        HttpHelper.setCookies(domain, Consts.CLOUDFLARE_COOKIE + "=;Max-Age=0; secure; HttpOnly");
-
-        ViewGroup rootView = (ViewGroup) findViewById(android.R.id.content).getRootView();
-
-        try {
-            reviveWebview = new CloudflareWebView(this, revivedSite);
-        } catch (Resources.NotFoundException e) {
-            // Some older devices can crash when instantiating a WebView, due to a Resources$NotFoundException
-            // Creating with the application Context fixes this, but is not generally recommended for view creation
-            reviveWebview = new CloudflareWebView(Helper.getFixedContext(this), revivedSite);
-        }
-        // TODO no need to add it to the layout
-        reviveWebview.setVisibility(View.GONE);
-        rootView.addView(reviveWebview);
-        reviveWebview.loadUrl(revivedSite.getUrl());
-
         reviveProgress.setMax((int) Math.round(90 / 1.5)); // How many ticks in 1.5 minutes, which is the maximum time for revival
         reviveProgress.setProgress(reviveProgress.getMax());
         changeReviveUIVisibility(true);
 
-        AtomicInteger reloadCounter = new AtomicInteger(0);
-        // Wait for cookies to refresh
-        compositeDisposable.add(Observable.timer(1500, TimeUnit.MILLISECONDS)
-                .subscribeOn(Schedulers.computation())
+        // Start progress UI
+        reviveDisposable = Observable.timer(1500, TimeUnit.MILLISECONDS)
                 .repeat()
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(v -> {
-                    final String cfcookie = HttpHelper.parseCookies(HttpHelper.getCookies(revivedSite.getUrl())).get(Consts.CLOUDFLARE_COOKIE);
-                    if (cfcookie != null && !cfcookie.isEmpty() && !cfcookie.equals(oldCookie)) {
-                        Timber.d("CF-COOKIE : refreshed !");
-                        EventBus.getDefault().post(new DownloadEvent(DownloadEvent.Type.EV_UNPAUSE));
-                        cancelReviveDownload();
-                    } else {
-                        Timber.v("CF-COOKIE : not refreshed");
-                        int currentProgress = reviveProgress.getProgress();
-                        if (currentProgress > 0) reviveProgress.setProgress(currentProgress - 1);
-                        // Reload if nothing for 7.5s
-                        if (reloadCounter.incrementAndGet() > 5) {
-                            reloadCounter.set(0);
-                            Timber.v("CF-COOKIE : RELOAD");
-                            reviveWebview.reload();
+                .subscribe(
+                        v -> {
+                            int currentProgress = reviveProgress.getProgress();
+                            if (currentProgress > 0)
+                                reviveProgress.setProgress(currentProgress - 1);
                         }
-                    }
-                })
-        );
+                );
+
+        // Try passing CF
+        if (null == cloudflareHelper) cloudflareHelper = new CloudflareHelper();
+        if (cloudflareHelper.tryPassCloudflare(revivedSite, oldCookie)) {
+            EventBus.getDefault().post(new DownloadEvent(DownloadEvent.Type.EV_UNPAUSE));
+        }
+        clearReviveDownload();
     }
 
-    private void cancelReviveDownload() {
-        compositeDisposable.clear();
-
+    private void clearReviveDownload() {
         changeReviveUIVisibility(false);
-
-        ((ViewGroup) reviveWebview.getParent()).removeView(reviveWebview);
-        reviveWebview.removeAllViews();
-        reviveWebview.destroy();
-        reviveWebview = null;
+        if (reviveDisposable != null) reviveDisposable.dispose();
+        cloudflareHelper.clear();
     }
 }

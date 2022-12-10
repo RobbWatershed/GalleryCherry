@@ -47,15 +47,20 @@ import me.devsaki.hentoid.database.domains.Attribute;
 import me.devsaki.hentoid.database.domains.AttributeMap;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.ImageFile;
+import me.devsaki.hentoid.database.domains.RenamingRule;
 import me.devsaki.hentoid.database.domains.SiteBookmark;
 import me.devsaki.hentoid.enums.AttributeType;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.json.JsonContent;
 import me.devsaki.hentoid.notification.import_.ImportNotificationChannel;
+import me.devsaki.hentoid.util.file.ArchiveHelper;
+import me.devsaki.hentoid.util.file.FileExplorer;
+import me.devsaki.hentoid.util.file.FileHelper;
+import me.devsaki.hentoid.util.image.ImageHelper;
 import me.devsaki.hentoid.workers.ExternalImportWorker;
-import me.devsaki.hentoid.workers.ImportWorker;
-import me.devsaki.hentoid.workers.data.ImportData;
+import me.devsaki.hentoid.workers.PrimaryImportWorker;
+import me.devsaki.hentoid.workers.data.PrimaryImportData;
 import timber.log.Timber;
 
 public class ImportHelper {
@@ -93,11 +98,14 @@ public class ImportHelper {
     private static final FileHelper.NameFilter hentoidFolderNames = displayName -> displayName.equalsIgnoreCase(Consts.DEFAULT_PRIMARY_FOLDER)
             || displayName.equalsIgnoreCase(Consts.DEFAULT_PRIMARY_FOLDER_OLD);
 
+    private static final FileHelper.NameFilter hentoidContentJson = displayName -> displayName.equalsIgnoreCase(Consts.JSON_FILE_NAME_V2) || displayName.equalsIgnoreCase(Consts.JSON_FILE_NAME) || displayName.equalsIgnoreCase(Consts.JSON_FILE_NAME_OLD);
+
     /**
      * Import options for the Hentoid folder
      */
     public static class ImportOptions {
         public boolean rename; // If true, rename folders with current naming convention
+        public boolean removePlaceholders; // If true, books & folders with status PLACEHOLDER will be removed
         public boolean cleanNoJson; // If true, delete folders where no JSON file is found
         public boolean cleanNoImages; // If true, delete folders where no supported images are found
         public boolean importGroups; // If true, reimport groups from the groups JSON
@@ -152,11 +160,11 @@ public class ImportHelper {
             Uri uri = intent.getData();
             if (uri != null)
                 return new ImmutablePair<>(PickerResult.OK, uri);
-            else return new ImmutablePair<>(PickerResult.KO_NO_URI, null);
+            else return new ImmutablePair<>(PickerResult.KO_NO_URI, Uri.EMPTY);
         } else if (resultCode == Activity.RESULT_CANCELED) {
-            return new ImmutablePair<>(PickerResult.KO_CANCELED, null);
+            return new ImmutablePair<>(PickerResult.KO_CANCELED, Uri.EMPTY);
         }
-        return new ImmutablePair<>(PickerResult.KO_OTHER, null);
+        return new ImmutablePair<>(PickerResult.KO_OTHER, Uri.EMPTY);
     }
 
     /**
@@ -418,9 +426,10 @@ public class ImportHelper {
     ) {
         ImportNotificationChannel.init(context);
 
-        ImportData.Builder builder = new ImportData.Builder();
+        PrimaryImportData.Builder builder = new PrimaryImportData.Builder();
         if (options != null) {
             builder.setRefreshRename(options.rename);
+            builder.setRefreshRemovePlaceholders(options.removePlaceholders);
             builder.setRefreshCleanNoJson(options.cleanNoJson);
             builder.setRefreshCleanNoImages(options.cleanNoImages);
             builder.setImportGroups(options.importGroups);
@@ -430,7 +439,7 @@ public class ImportHelper {
         workManager.enqueueUniqueWork(
                 Integer.toString(R.id.import_service),
                 ExistingWorkPolicy.REPLACE,
-                new OneTimeWorkRequest.Builder(ImportWorker.class).setInputData(builder.getData()).addTag(WORK_CLOSEABLE).build());
+                new OneTimeWorkRequest.Builder(PrimaryImportWorker.class).setInputData(builder.getData()).addTag(WORK_CLOSEABLE).build());
     }
 
     /**
@@ -520,10 +529,20 @@ public class ImportHelper {
         result.setStatus(targetStatus).setStorageUri(bookFolder.getUri().toString());
         if (0 == result.getDownloadDate()) result.setDownloadDate(Instant.now().toEpochMilli());
         List<ImageFile> images = new ArrayList<>();
-        scanImages(context, bookFolder, explorer, targetStatus, false, images, imageFiles);
+        scanFolderImages(context, bookFolder, explorer, targetStatus, false, images, imageFiles);
+
+        // Detect cover
         boolean coverExists = Stream.of(images).anyMatch(ImageFile::isCover);
         if (!coverExists) createCover(images);
-        result.setImageFiles(images);
+
+        // If streamed, keep everything and update cover URI
+        if (result.getDownloadMode() == Content.DownloadMode.STREAM) {
+            Optional<ImageFile> coverFile = Stream.of(images).filter(ImageFile::isCover).findFirst();
+            if (coverFile.isPresent())
+                result.getCover().setFileUri(coverFile.get().getFileUri()).setSize(coverFile.get().getSize());
+        } else { // Set all detected images
+            result.setImageFiles(images);
+        }
         if (0 == result.getQtyPages()) {
             int countUnreadable = (int) Stream.of(images).filterNot(ImageFile::isReadable).count();
             result.setQtyPages(images.size() - countUnreadable); // Minus unreadable pages (cover thumb)
@@ -584,7 +603,7 @@ public class ImportHelper {
         List<ImageFile> images = new ArrayList<>();
         // Scan pages across all subfolders
         for (DocumentFile chapterFolder : chapterFolders)
-            scanImages(context, chapterFolder, explorer, StatusContent.EXTERNAL, true, images, null);
+            scanFolderImages(context, chapterFolder, explorer, StatusContent.EXTERNAL, true, images, null);
         boolean coverExists = Stream.of(images).anyMatch(ImageFile::isCover);
         if (!coverExists) createCover(images);
         result.setImageFiles(images);
@@ -607,7 +626,7 @@ public class ImportHelper {
      * @param images                 Image list to populate or enrich
      * @param imageFiles             Image file list, if already listed upstream; null if it needs to be listed
      */
-    private static void scanImages(
+    private static void scanFolderImages(
             @NonNull final Context context,
             @NonNull final DocumentFile bookFolder,
             @NonNull final FileExplorer explorer,
@@ -808,6 +827,21 @@ public class ImportHelper {
     }
 
     /**
+     * Add the given list of renaming rules to the DB, handling duplicates
+     * Rules that have the same attribute type, source and target string as existing ones won't be imported
+     *
+     * @param dao   CollectionDAO to use
+     * @param rules List of rules to add to the existing rules
+     * @return Quantity of new integrated rules
+     */
+    public static int importRenamingRules(@NonNull final CollectionDAO dao, List<RenamingRule> rules) {
+        Set<RenamingRule> existingRules = new HashSet<>(dao.selectRenamingRules(AttributeType.UNDEFINED, null));
+        List<RenamingRule> rulesToImport = Stream.of(new HashSet<>(rules)).filterNot(existingRules::contains).toList();
+        dao.insertRenamingRules(rulesToImport);
+        return rulesToImport.size();
+    }
+
+    /**
      * Return the first file with the given name (without extension) among the given list of files
      *
      * @param files List of files to search into
@@ -821,5 +855,14 @@ public class ImportHelper {
         String targetBareName = FileHelper.getFileNameWithoutExtension(name);
         Optional<DocumentFile> file = Stream.of(files).filter(f -> (f.getName() != null && FileHelper.getFileNameWithoutExtension(f.getName()).equalsIgnoreCase(targetBareName))).findFirst();
         return file.orElse(null);
+    }
+
+    /**
+     * Build a {@link FileHelper.NameFilter} only accepting Content json files
+     *
+     * @return {@link FileHelper.NameFilter} only accepting Content json files
+     */
+    public static FileHelper.NameFilter getContentJsonNamesFilter() {
+        return hentoidContentJson;
     }
 }

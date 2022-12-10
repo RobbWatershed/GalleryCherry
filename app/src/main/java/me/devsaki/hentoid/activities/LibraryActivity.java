@@ -1,5 +1,6 @@
 package me.devsaki.hentoid.activities;
 
+import static androidx.core.view.inputmethod.EditorInfoCompat.IME_FLAG_NO_PERSONALIZED_LEARNING;
 import static com.google.android.material.snackbar.BaseTransientBottomBar.LENGTH_LONG;
 import static me.devsaki.hentoid.events.CommunicationEvent.EV_ADVANCED_SEARCH;
 import static me.devsaki.hentoid.events.CommunicationEvent.EV_CLOSED;
@@ -15,6 +16,9 @@ import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.graphics.Typeface;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -29,6 +33,7 @@ import androidx.annotation.StringRes;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.widget.SearchView;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.content.ContextCompat;
 import androidx.core.view.GravityCompat;
 import androidx.customview.widget.ViewDragHelper;
 import androidx.documentfile.provider.DocumentFile;
@@ -44,6 +49,9 @@ import com.google.android.material.snackbar.BaseTransientBottomBar;
 import com.google.android.material.snackbar.Snackbar;
 import com.mikepenz.fastadapter.select.SelectExtension;
 import com.skydoves.balloon.ArrowOrientation;
+import com.skydoves.powermenu.MenuAnimation;
+import com.skydoves.powermenu.PowerMenu;
+import com.skydoves.powermenu.PowerMenuItem;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
@@ -52,18 +60,18 @@ import org.greenrobot.eventbus.ThreadMode;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import me.devsaki.hentoid.BuildConfig;
 import me.devsaki.hentoid.R;
+import me.devsaki.hentoid.activities.bundles.SearchActivityBundle;
 import me.devsaki.hentoid.database.CollectionDAO;
 import me.devsaki.hentoid.database.ObjectBoxDAO;
-import me.devsaki.hentoid.database.domains.Attribute;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.Group;
+import me.devsaki.hentoid.database.domains.SearchRecord;
 import me.devsaki.hentoid.enums.Grouping;
 import me.devsaki.hentoid.events.AppUpdatedEvent;
 import me.devsaki.hentoid.events.CommunicationEvent;
@@ -78,11 +86,13 @@ import me.devsaki.hentoid.notification.archive.ArchiveNotificationChannel;
 import me.devsaki.hentoid.notification.archive.ArchiveProgressNotification;
 import me.devsaki.hentoid.notification.archive.ArchiveStartNotification;
 import me.devsaki.hentoid.util.ContentHelper;
-import me.devsaki.hentoid.util.FileHelper;
 import me.devsaki.hentoid.util.Helper;
-import me.devsaki.hentoid.util.PermissionHelper;
+import me.devsaki.hentoid.util.LocaleHelper;
 import me.devsaki.hentoid.util.Preferences;
+import me.devsaki.hentoid.util.SearchHelper;
 import me.devsaki.hentoid.util.TooltipHelper;
+import me.devsaki.hentoid.util.file.FileHelper;
+import me.devsaki.hentoid.util.file.PermissionHelper;
 import me.devsaki.hentoid.util.notification.NotificationManager;
 import me.devsaki.hentoid.viewmodels.LibraryViewModel;
 import me.devsaki.hentoid.viewmodels.ViewModelFactory;
@@ -141,9 +151,10 @@ public class LibraryActivity extends BaseActivity {
 
     // === Selection toolbar
     private Toolbar selectionToolbar;
-    private MenuItem editNameMenu;
+    private MenuItem editMenu;
     private MenuItem deleteMenu;
     private MenuItem completedMenu;
+    private MenuItem resetReadStatsMenu;
     private MenuItem shareMenu;
     private MenuItem archiveMenu;
     private MenuItem changeGroupMenu;
@@ -151,7 +162,7 @@ public class LibraryActivity extends BaseActivity {
     private MenuItem redownloadMenu;
     private MenuItem downloadStreamedMenu;
     private MenuItem streamMenu;
-    private MenuItem coverMenu;
+    private MenuItem groupCoverMenu;
     private MenuItem mergeMenu;
     private MenuItem splitMenu;
 
@@ -165,14 +176,20 @@ public class LibraryActivity extends BaseActivity {
     private int archiveProgress;
     private int archiveMax;
 
+    // ======== DATA SYNC
+    private final List<SearchRecord> searchRecords = new ArrayList<>();
 
-    // ======== VARIABLES
+    // ======== INNER VARIABLES
     // Used to ignore native calls to onQueryTextChange
     private boolean invalidateNextQueryTextChange = false;
+    // TODO
+    private boolean preventShowSearchHistoryNextExpand = false;
+    // TODO
+    private PowerMenu searchHistory = null;
     // Current text search query; one per tab
     private final List<String> query = Arrays.asList("", "");
     // Current metadata search query; one per tab
-    private final List<List<Attribute>> metadata = Arrays.asList(new ArrayList<>(), new ArrayList<>());
+    private final List<SearchHelper.AdvancedSearchCriteria> advSearchCriteria = Arrays.asList(new SearchHelper.AdvancedSearchCriteria(new ArrayList<>(), ContentHelper.Location.ANY, ContentHelper.Type.ANY), new SearchHelper.AdvancedSearchCriteria(new ArrayList<>(), ContentHelper.Location.ANY, ContentHelper.Type.ANY));
     // True if item positioning edit mode is on (only available for specific groupings)
     private boolean editMode = false;
     // Titles of each of the Viewpager2's tabs
@@ -201,12 +218,16 @@ public class LibraryActivity extends BaseActivity {
         this.query.set(getCurrentFragmentIndex(), query);
     }
 
-    public List<Attribute> getMetadata() {
-        return metadata.get(getCurrentFragmentIndex());
+    public SearchHelper.AdvancedSearchCriteria getAdvSearchCriteria() {
+        return advSearchCriteria.get(getCurrentFragmentIndex());
     }
 
-    public void setMetadata(List<Attribute> metadata) {
-        this.metadata.set(getCurrentFragmentIndex(), metadata);
+    public void setAdvancedSearchCriteria(@NonNull SearchHelper.AdvancedSearchCriteria criteria) {
+        advSearchCriteria.set(getCurrentFragmentIndex(), criteria);
+    }
+
+    public void clearAdvancedSearchCriteria() {
+        advSearchCriteria.set(getCurrentFragmentIndex(), SearchHelper.Companion.getEmptyAdvancedSearchCriteria());
     }
 
     public boolean isEditMode() {
@@ -283,6 +304,10 @@ public class LibraryActivity extends BaseActivity {
             GroupSearchManager.GroupSearchBundle searchBundle = new GroupSearchManager.GroupSearchBundle(b);
             onGroupingChanged(searchBundle.getGroupingId());
         });
+        viewModel.getSearchRecords().observe(this, records -> {
+            searchRecords.clear();
+            searchRecords.addAll(records);
+        });
 
         if (!Preferences.getRecentVisibility()) {
             getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
@@ -295,7 +320,7 @@ public class LibraryActivity extends BaseActivity {
         initSelectionToolbar();
         initUI();
         updateToolbar();
-        updateSelectionToolbar(0, 0, 0, 0);
+        updateSelectionToolbar(0, 0, 0, 0, 0);
 
         onCreated();
 
@@ -324,24 +349,20 @@ public class LibraryActivity extends BaseActivity {
         super.onDestroy();
     }
 
+    @Override
+    public void onRestart() {
+        // Change locale if set manually
+        LocaleHelper.convertLocaleToEnglish(this);
+
+        super.onRestart();
+    }
+
     private void onCreated() {
         // Display search bar tooltip _after_ the left drawer closes (else it displays over it)
         if (Preferences.isFirstRunProcessComplete())
             TooltipHelper.showTooltip(this, R.string.help_search, ArrowOrientation.TOP, toolbar, this);
 
-        // Display permissions alert if required
-        if (!PermissionHelper.checkExternalStorageReadWritePermission(this)) {
-            alertTxt.setText(R.string.permissions_lost);
-            alertFixBtn.setOnClickListener(v -> fixPermissions());
-            alertTxt.setVisibility(View.VISIBLE);
-            alertIcon.setVisibility(View.VISIBLE);
-            alertFixBtn.setVisibility(View.VISIBLE);
-        } else if (isLowOnSpace()) { // Else display low space alert
-            alertTxt.setText(R.string.low_memory);
-            alertTxt.setVisibility(View.VISIBLE);
-            alertIcon.setVisibility(View.VISIBLE);
-            alertFixBtn.setVisibility(View.GONE);
-        }
+        updateAlertBanner();
     }
 
     @Override
@@ -349,7 +370,7 @@ public class LibraryActivity extends BaseActivity {
         super.onStart();
         final long previouslyViewedContent = Preferences.getViewerCurrentContent();
         final int previouslyViewedPage = Preferences.getViewerCurrentPageNum();
-        if (previouslyViewedContent > -1 && previouslyViewedPage > -1 && !ImageViewerActivity.isRunning()) {
+        if (previouslyViewedContent > -1 && previouslyViewedPage > -1 && !ReaderActivity.isRunning()) {
             Snackbar snackbar = Snackbar.make(viewPager, R.string.resume_closed, BaseTransientBottomBar.LENGTH_LONG);
             snackbar.setAction(R.string.resume, v -> {
                 Timber.i("Reopening book %d from page %d", previouslyViewedContent, previouslyViewedPage);
@@ -357,7 +378,7 @@ public class LibraryActivity extends BaseActivity {
                 try {
                     Content c = dao.selectContent(previouslyViewedContent);
                     if (c != null)
-                        ContentHelper.openHentoidViewer(this, c, previouslyViewedPage, contentSearchBundle, false);
+                        ContentHelper.openReader(this, c, previouslyViewedPage, contentSearchBundle, false);
                 } finally {
                     dao.cleanup();
                 }
@@ -389,7 +410,7 @@ public class LibraryActivity extends BaseActivity {
         searchClearButton = findViewById(R.id.search_clear_btn);
         searchClearButton.setOnClickListener(v -> {
             setQuery("");
-            getMetadata().clear();
+            clearAdvancedSearchCriteria();
             actionSearchView.setQuery("", false);
             hideSearchSubBar();
             signalCurrentFragment(EV_SEARCH, "");
@@ -404,12 +425,38 @@ public class LibraryActivity extends BaseActivity {
                 enableCurrentFragment();
                 hideSearchSubBar();
                 updateToolbar();
-                updateSelectionToolbar(0, 0, 0, 0);
+                updateSelectionToolbar(0, 0, 0, 0, 0);
             }
         });
         viewPager.setAdapter(pagerAdapter);
 
         updateDisplay(Preferences.getGroupingDisplay().getId());
+    }
+
+    private void updateAlertBanner() {
+        // Remind user that the app is in browser mode
+        if (Preferences.isBrowserMode()) {
+            alertTxt.setText(R.string.alert_browser_mode);
+            alertTxt.setVisibility(View.VISIBLE);
+            alertIcon.setVisibility(View.GONE);
+            alertFixBtn.setVisibility(View.GONE);
+        } else if (!PermissionHelper.checkExternalStorageReadWritePermission(this) &&
+                Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) { // Warn about permissions being lost
+            alertTxt.setText(R.string.permissions_lost);
+            alertFixBtn.setOnClickListener(v -> fixPermissions());
+            alertTxt.setVisibility(View.VISIBLE);
+            alertIcon.setVisibility(View.VISIBLE);
+            alertFixBtn.setVisibility(View.VISIBLE);
+        } else if (isLowOnSpace()) { // Display low space alert
+            alertTxt.setText(R.string.low_memory);
+            alertTxt.setVisibility(View.VISIBLE);
+            alertIcon.setVisibility(View.VISIBLE);
+            alertFixBtn.setVisibility(View.GONE);
+        } else {
+            alertTxt.setVisibility(View.GONE);
+            alertIcon.setVisibility(View.GONE);
+            alertFixBtn.setVisibility(View.GONE);
+        }
     }
 
     private void updateDisplay(int targetGroupingId) {
@@ -428,7 +475,8 @@ public class LibraryActivity extends BaseActivity {
         searchMenu.setOnActionExpandListener(new MenuItem.OnActionExpandListener() {
             @Override
             public boolean onMenuItemActionExpand(MenuItem item) {
-                showSearchSubBar(true, false);
+                showSearchSubBar(true, null, !preventShowSearchHistoryNextExpand);
+                preventShowSearchHistoryNextExpand = false;
                 invalidateNextQueryTextChange = true;
 
                 // Re-sets the query on screen, since default behaviour removes it right after collapse _and_ expand
@@ -465,8 +513,9 @@ public class LibraryActivity extends BaseActivity {
         sortMenu = toolbar.getMenu().findItem(R.id.action_sort_filter);
 
         actionSearchView = (SearchView) searchMenu.getActionView();
+        actionSearchView.setImeOptions(IME_FLAG_NO_PERSONALIZED_LEARNING);
         actionSearchView.setIconifiedByDefault(true);
-        actionSearchView.setQueryHint(getString(R.string.search_hint));
+        actionSearchView.setQueryHint(getString(R.string.library_search_hint));
         // Change display when text query is typed
         actionSearchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
@@ -516,7 +565,7 @@ public class LibraryActivity extends BaseActivity {
             } else if (nonEmptyResults) {
                 collapseSearchMenu();
             }
-            showSearchSubBar(!isGroupDisplayed(), true);
+            showSearchSubBar(!isGroupDisplayed(), true, false);
         } else {
             collapseSearchMenu();
             if (actionSearchView.getQuery().length() > 0)
@@ -560,13 +609,59 @@ public class LibraryActivity extends BaseActivity {
         return true;
     }
 
-    private void showSearchSubBar(Boolean showAdvancedSearch, Boolean showClear) {
+    private void showSearchSubBar(boolean showAdvancedSearch, Boolean showClear, boolean showSearchHistory) {
         searchSubBar.setVisibility(View.VISIBLE);
-        if (showAdvancedSearch != null)
-            advancedSearchButton.setVisibility(showAdvancedSearch && !isGroupDisplayed() ? View.VISIBLE : View.GONE);
-
+        advancedSearchButton.setVisibility(showAdvancedSearch && !isGroupDisplayed() ? View.VISIBLE : View.GONE);
         if (showClear != null)
             searchClearButton.setVisibility(showClear ? View.VISIBLE : View.GONE);
+
+        if (showSearchHistory && !searchRecords.isEmpty()) {
+            PowerMenu.Builder powerMenuBuilder = new PowerMenu.Builder(this)
+                    .setAnimation(MenuAnimation.DROP_DOWN)
+                    .setLifecycleOwner(this)
+                    .setTextColor(ContextCompat.getColor(this, R.color.white_opacity_87))
+                    .setTextTypeface(Typeface.DEFAULT)
+                    .setShowBackground(false)
+                    .setWidth((int) getResources().getDimension(R.dimen.dialog_width))
+                    .setMenuColor(ContextCompat.getColor(this, R.color.medium_gray))
+                    .setTextSize(Helper.dimensAsDp(this, R.dimen.text_subtitle_2))
+                    .setAutoDismiss(true);
+
+            for (int i = searchRecords.size() - 1; i >= 0; i--)
+                powerMenuBuilder.addItem(new PowerMenuItem(searchRecords.get(i).getLabel(), R.drawable.ic_clock, false, searchRecords.get(i)));
+            powerMenuBuilder.addItem(new PowerMenuItem(getResources().getString(R.string.clear_search_history), false));
+
+            searchHistory = powerMenuBuilder.build();
+            searchHistory.setOnMenuItemClickListener((position, item) -> {
+                if (item.getTag() != null) { // Tap on search record
+                    SearchRecord record = (SearchRecord) item.getTag();
+                    Uri searchUri = Uri.parse(record.getSearchString());
+                    String targetQuery = searchUri.getPath();
+                    if (!targetQuery.isEmpty())
+                        targetQuery = targetQuery.substring(1); // Remove the leading '/'
+                    setQuery(targetQuery);
+                    setAdvancedSearchCriteria(SearchActivityBundle.Companion.parseSearchUri(searchUri));
+                    if (getAdvSearchCriteria().isEmpty()) { // Universal search
+                        if (!getQuery().isEmpty()) viewModel.searchContentUniversal(getQuery());
+                    } else { // Advanced search
+                        viewModel.searchContent(getQuery(), getAdvSearchCriteria(), searchUri);
+                    }
+                } else { // Clear history
+                    MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
+                    builder.setMessage(getResources().getString(R.string.clear_search_history_confirm))
+                            .setPositiveButton(R.string.yes,
+                                    (dialog, which) -> viewModel.clearSearchHistory()
+                            )
+                            .setNegativeButton(R.string.no,
+                                    (dialog, which) -> {
+                                    })
+                            .create().show();
+                }
+            });
+
+            searchHistory.setIconColor(ContextCompat.getColor(this, R.color.white_opacity_87));
+            searchHistory.showAsDropDown(searchSubBar);
+        } else if (!showSearchHistory && searchHistory != null) searchHistory.dismiss();
     }
 
     public void hideSearchSubBar() {
@@ -593,6 +688,7 @@ public class LibraryActivity extends BaseActivity {
 
     public void expandSearchMenu() {
         if (searchMenu != null && !searchMenu.isActionViewExpanded()) {
+            preventShowSearchHistoryNextExpand = true;
             searchMenu.expandActionView();
         }
     }
@@ -603,9 +699,10 @@ public class LibraryActivity extends BaseActivity {
         selectionToolbar.inflateMenu(R.menu.library_selection_menu);
         Helper.tryShowMenuIcons(this, selectionToolbar.getMenu());
 
-        editNameMenu = selectionToolbar.getMenu().findItem(R.id.action_edit_name);
+        editMenu = selectionToolbar.getMenu().findItem(R.id.action_edit);
         deleteMenu = selectionToolbar.getMenu().findItem(R.id.action_delete);
         completedMenu = selectionToolbar.getMenu().findItem(R.id.action_completed);
+        resetReadStatsMenu = selectionToolbar.getMenu().findItem(R.id.action_reset_read);
         shareMenu = selectionToolbar.getMenu().findItem(R.id.action_share);
         archiveMenu = selectionToolbar.getMenu().findItem(R.id.action_archive);
         changeGroupMenu = selectionToolbar.getMenu().findItem(R.id.action_change_group);
@@ -613,7 +710,7 @@ public class LibraryActivity extends BaseActivity {
         redownloadMenu = selectionToolbar.getMenu().findItem(R.id.action_redownload);
         downloadStreamedMenu = selectionToolbar.getMenu().findItem(R.id.action_download);
         streamMenu = selectionToolbar.getMenu().findItem(R.id.action_stream);
-        coverMenu = selectionToolbar.getMenu().findItem(R.id.action_set_cover);
+        groupCoverMenu = selectionToolbar.getMenu().findItem(R.id.action_set_group_cover);
         mergeMenu = selectionToolbar.getMenu().findItem(R.id.action_merge);
         splitMenu = selectionToolbar.getMenu().findItem(R.id.action_split);
     }
@@ -637,6 +734,9 @@ public class LibraryActivity extends BaseActivity {
             case Preferences.Key.EXTERNAL_LIBRARY_URI:
                 updateDisplay(Grouping.FLAT.getId());
                 viewModel.setGrouping(Grouping.FLAT.getId());
+                break;
+            case Preferences.Key.BROWSER_MODE:
+                updateAlertBanner();
                 break;
             default:
                 // Nothing to handle there
@@ -698,11 +798,12 @@ public class LibraryActivity extends BaseActivity {
      * @return True if a search query is active (using universal search or advanced search); false if not (=whole unfiltered library selected)
      */
     public boolean isSearchQueryActive() {
-        return (!getQuery().isEmpty() || !getMetadata().isEmpty());
+        return (!getQuery().isEmpty() || !getAdvSearchCriteria().isEmpty());
     }
 
     private void fixPermissions() {
-        PermissionHelper.requestExternalStorageReadWritePermission(this, PermissionHelper.RQST_STORAGE_PERMISSION);
+        if (PermissionHelper.requestExternalStorageReadWritePermission(this, PermissionHelper.RQST_STORAGE_PERMISSION))
+            updateAlertBanner();
     }
 
     private boolean isLowOnSpace() {
@@ -759,7 +860,7 @@ public class LibraryActivity extends BaseActivity {
     public boolean isFilterActive() {
         if (isSearchQueryActive()) {
             setQuery("");
-            setMetadata(Collections.emptyList());
+            clearAdvancedSearchCriteria();
             collapseSearchMenu();
             hideSearchSubBar();
         }
@@ -806,31 +907,35 @@ public class LibraryActivity extends BaseActivity {
             long selectedTotalCount,
             long selectedLocalCount,
             long selectedStreamedCount,
-            long selectedExternalCount) {
+            long selectedNonArchiveExternalCount,
+            long selectedArchiveExternalCount) {
         boolean isMultipleSelection = selectedTotalCount > 1;
         long selectedDownloadedCount = selectedLocalCount - selectedStreamedCount;
+        long selectedExternalCount = selectedNonArchiveExternalCount + selectedArchiveExternalCount;
         selectionToolbar.setTitle(getResources().getQuantityString(R.plurals.items_selected, (int) selectedTotalCount, (int) selectedTotalCount));
 
         if (isGroupDisplayed()) {
-            editNameMenu.setVisible(!isMultipleSelection && Preferences.getGroupingDisplay().canReorderGroups());
+            editMenu.setVisible(!isMultipleSelection && Preferences.getGroupingDisplay().canReorderGroups());
             deleteMenu.setVisible(true);
             shareMenu.setVisible(false);
             completedMenu.setVisible(false);
+            resetReadStatsMenu.setVisible(false);
             archiveMenu.setVisible(true);
             changeGroupMenu.setVisible(false);
             folderMenu.setVisible(false);
             redownloadMenu.setVisible(false);
             downloadStreamedMenu.setVisible(false);
             streamMenu.setVisible(false);
-            coverMenu.setVisible(false);
+            groupCoverMenu.setVisible(false);
             mergeMenu.setVisible(false);
             splitMenu.setVisible(false);
         } else { // Flat view
-            editNameMenu.setVisible(!isMultipleSelection);
+            editMenu.setVisible(true);
             deleteMenu.setVisible(
                     ((selectedLocalCount > 0 || selectedStreamedCount > 0) && 0 == selectedExternalCount) || (selectedExternalCount > 0 && Preferences.isDeleteExternalLibrary())
             );
             completedMenu.setVisible(true);
+            resetReadStatsMenu.setVisible(true);
             shareMenu.setVisible(!isMultipleSelection && 1 == selectedLocalCount);
             archiveMenu.setVisible(true);
             changeGroupMenu.setVisible(true);
@@ -838,11 +943,11 @@ public class LibraryActivity extends BaseActivity {
             redownloadMenu.setVisible(selectedDownloadedCount > 0);
             downloadStreamedMenu.setVisible(selectedStreamedCount > 0);
             streamMenu.setVisible(selectedDownloadedCount > 0);
-            coverMenu.setVisible(!isMultipleSelection && !Preferences.getGroupingDisplay().equals(Grouping.FLAT));
+            groupCoverMenu.setVisible(!isMultipleSelection && !Preferences.getGroupingDisplay().equals(Grouping.FLAT));
             mergeMenu.setVisible(
                     (selectedLocalCount > 1 && 0 == selectedStreamedCount && 0 == selectedExternalCount)
                             || (selectedStreamedCount > 1 && 0 == selectedLocalCount && 0 == selectedExternalCount)
-                            || (selectedExternalCount > 1 && 0 == selectedLocalCount && 0 == selectedStreamedCount)
+                            || (selectedNonArchiveExternalCount > 1 && 0 == selectedArchiveExternalCount && 0 == selectedLocalCount && 0 == selectedStreamedCount)
             ); // Can only merge downloaded, streamed or non-archive external content together
             splitMenu.setVisible(!isMultipleSelection && 1 == selectedLocalCount);
         }

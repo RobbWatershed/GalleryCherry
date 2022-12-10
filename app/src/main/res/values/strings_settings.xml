@@ -24,18 +24,23 @@
     <string name="pref_color_theme_title">Color theme</string>
     <string name="pref_color_theme_summary">Current theme: <x:g example="Deep Red" id="theme_name">%s</x:g></string>
     <string name="pref_misc">Miscellaneous</string>
+    <string name="pref_cat_language">Interface Language</string>
+    <string name="pref_force_english_title">Force English locale</string>
+    <string name="pref_force_english_summary_off">Use your device\'s language\nif the translation is available</string>
+    <string name="pref_force_english_summary_on">Use English</string>
 
     <!-- Storage -->
     <string name="pref_screen_storage">Storage</string>
     <string name="pref_cat_downloads_folder">GalleryCherry library</string>
     <string name="pref_select_folder_title">Select Downloads Folder</string>
     <string name="pref_select_folder_summary">Select where GalleryCherry will store your downloads</string>
-    <string name="pref_import_queue_empty_title">Queue empty books as errors</string>
-    <string name="pref_import_queue_empty_on">Empty books will be added to the queue as errors</string>
-    <string name="pref_import_queue_empty_off">Empty books will be added to the library</string>
+    <string name="pref_import_queue_empty_title">Queue empty imported books as errors</string>
+    <string name="pref_import_queue_empty_on">Empty imported books will be added to the queue as errors</string>
+    <string name="pref_import_queue_empty_off">Empty imported books will be added to the library</string>
     <string name="pref_folder_naming_content_title">Folder names</string>
     <string name="pref_folder_naming_content_summary">Book folder naming convention:\n<x:g example="Name - ID" id="convention">%s</x:g></string>
     <string name="pref_import_running">Import is already running</string>
+    <string name="pref_import_browser_mode">App is in browser mode</string>
     <string name="prefs_ask_detach_external_library">Detach the external library\?</string>
     <string name="prefs_external_library_detached">External library detached</string>
     <string name="pref_folder_trunc_title">Truncate folder name</string>
@@ -81,15 +86,23 @@
     <string name="pref_browser_nhentai_invisible_blacklist_on">Nhentai-blacklisted books are invisible</string>
     <string name="pref_browser_quick_dl_threshold_title">Quick download long press threshold</string>
     <string name="pref_browser_quick_dl_threshold_summary">Hold down for this duration to start quick downloading\nCurrent: <x:g example="1 s" id="time">%s</x:g></string>
+    <string name="pref_browser_duplicate_detector">Duplicate detector</string>
     <string name="pref_browser_duplicate_ask_title">Duplicates checking</string>
     <string name="pref_browser_duplicate_ask_off">No: always download</string>
     <string name="pref_browser_duplicate_ask_on">Yes: ask before downloading</string>
+    <string name="pref_browser_duplicate_use_title_title">Use title</string>
+    <string name="pref_browser_duplicate_use_artist_title">Use artist</string>
+    <string name="pref_browser_duplicate_use_language_title">Use language</string>
+    <string name="pref_browser_duplicate_use_cover_title">Use cover</string>
     <string name="pref_browser_duplicate_try_pages_title">Try finding extra pages on potential duplicates\?</string>
     <string name="pref_browser_duplicate_try_pages_off">Only try finding extra pages on the original book</string>
     <string name="pref_browser_duplicate_try_pages_on">Try finding extra pages on potential duplicates</string>
     <string name="pref_browser_mark_downloaded_title">Mark downloaded books</string>
     <string name="pref_browser_mark_downloaded_off">Downloaded books have no special display</string>
     <string name="pref_browser_mark_downloaded_on">Downloaded books are marked\nNB: does not work on all sites</string>
+    <string name="pref_browser_mark_merged_title">Mark merged books</string>
+    <string name="pref_browser_mark_merged_off">Merged books have no special display</string>
+    <string name="pref_browser_mark_merged_on">Merged books are marked\nNB: does not work on all sites</string>
     <string name="pref_browser_visuals">Visuals</string>
     <string name="pref_browser_augmented_title">Augmented browser</string>
     <string name="pref_browser_augmented_off">Using vanilla behaviour</string>
@@ -103,6 +116,8 @@
     <string name="pref_browser_clear_cookies">Clear all cookies</string>
     <string name="pref_browser_clear_cookies_ok">Cookies cleared successfully</string>
     <string name="pref_browser_clear_cookies_ko">No cookie to clear</string>
+    <string name="pref_browser_clear_cookies_missing_webview">WebView is unavailable, can\'t clear cookies now</string>
+    <string name="pref_browser_clear_cookies_updating_webview">WebView is updating right now, can\'t clear cookies yet</string>
 
     <!-- Downloader -->
     <string name="pref_screen_downloader">Downloader</string>
@@ -130,6 +145,7 @@
     <string name="pref_dl_blocked_tags_behaviour_title">Blocking behaviour</string>
     <string name="pref_dl_threads_quantity_title">Number of parallel downloads</string>
     <string name="pref_dl_threads_quantity_summary">Number of images downloaded simultaneously\nCurrently: <x:g example="5" id="number">%s</x:g></string>
+    <string name="pref_dl_speed_cap_title">Download speed limit</string>
 
     <!-- Privacy -->
     <string name="pref_screen_privacy">Privacy</string>
@@ -161,19 +177,25 @@
     <string name="pref_viewer_page_turn">Page turn control</string>
     <string name="pref_viewer_page_turn_swipe">Swipe</string>
     <string name="pref_viewer_page_turn_tap">Border tap</string>
-    <string name="pref_viewer_page_turn_tap_2x">Tap zone width x2</string>
+    <string name="pref_viewer_page_turn_tap_2x">Larger tap zone</string>
     <string name="pref_viewer_page_turn_volume">Volume button</string>
     <string name="pref_viewer_page_turn_keyboard">Keyboard left/right</string>
     <string name="pref_viewer_swipe_to_fling">Swipe to fling</string>
     <string name="pref_viewer_invert_volume">Invert volume buttons</string>
-    <string name="pref_viewer_zoom">Zoom</string>
+    <string name="pref_viewer_book_switch">Book switch control</string>
+    <string name="pref_viewer_book_switch_volume">Volume button (long tap)</string>
+    <string name="pref_viewer_zoom">Zoom control</string>
     <string name="pref_viewer_zoom_holding">Temp zoom while holding</string>
     <string name="pref_viewer_cap_tap_zoom">Cap double &amp; long tap zoom</string>
     <string name="pref_viewer_visuals">Visuals</string>
+    <string name="pref_viewer_horizontal_reader">Horizontal reader</string>
+    <string name="pref_viewer_vertical_reader">Vertical reader</string>
     <string name="pref_viewer_keep_screen_on">Keep screen on</string>
+    <string name="pref_viewer_display_notch">Display around notch area</string>
     <string name="pref_viewer_display_pagenum">Always display page number</string>
     <string name="pref_viewer_tap_transitions">Enable page turn animation</string>
     <string name="pref_viewer_zoom_transitions">Enable zoom animation</string>
+    <string name="pref_viewer_maintain_horizontal_zoom">Maintain zoom level between pages</string>
     <string name="pref_viewer_separating_bars">Separating bars in vertical mode</string>
     <string name="pref_viewer_display_mode">Display mode for horizontal viewing</string>
     <string name="pref_viewer_rendering">Rendering mode</string>
@@ -191,6 +213,8 @@
     <string name="pref_viewer_continuous_summary_off">Using next page on last page has no effect</string>
     <string name="pref_viewer_continuous_summary_on">Using next page on last page loads the next book</string>
     <string name="pref_viewer_read_threshold">Mark book as read after N pages</string>
-    <string name="pref_viewer_slideshow_delay">Slideshow / Delay between each page</string>
+    <string name="pref_viewer_ratio_completed_threshold">Mark book as completed after N% pages</string>
+    <string name="pref_viewer_slideshow_delay">Slideshow / Delay between each page (horizontal display)</string>
+    <string name="pref_viewer_slideshow_delay_vertical">Slideshow / Scrolling speed (vertical display)</string>
     <string name="doh_warning">Some websites won\'t work well with DNS over HTTPS. Use an external DNS app if you experience issues during navigation (e.g. blank pages, unresponsive login forms)</string>
 </resources>

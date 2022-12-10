@@ -22,6 +22,7 @@ import java.util.List;
 
 import me.devsaki.hentoid.core.HentoidApp;
 import me.devsaki.hentoid.events.ServiceDestroyedEvent;
+import me.devsaki.hentoid.util.LocaleHelper;
 import me.devsaki.hentoid.util.LogHelper;
 import me.devsaki.hentoid.util.notification.Notification;
 import me.devsaki.hentoid.util.notification.NotificationManager;
@@ -63,6 +64,9 @@ public abstract class BaseWorker extends Worker {
             String logName) {
         super(context, parameters);
         this.serviceId = serviceId;
+
+        // Change locale if set manually
+        LocaleHelper.convertLocaleToEnglish(context);
 
         initNotifications(context);
 
@@ -113,12 +117,7 @@ public abstract class BaseWorker extends Worker {
 
         if (logs != null) {
             logs.add(new LogHelper.LogEntry("Worker destroyed / stopped=%s / complete=%s", isStopped(), isComplete));
-
-            LogHelper.LogInfo logInfo = new LogHelper.LogInfo();
-            logInfo.setFileName(logName);
-            logInfo.setHeaderName(logName);
-            logInfo.setEntries(logs);
-            LogHelper.writeLog(HentoidApp.getInstance(), logInfo);
+            dumpLog();
         }
 
         // Tell everyone the worker is shutting down
@@ -134,8 +133,10 @@ public abstract class BaseWorker extends Worker {
             ensureLongRunning();
             getToWork(getInputData());
         } catch (Exception e) {
-            if (logs != null)
+            if (logs != null) {
                 logs.add(new LogHelper.LogEntry("Exception caught ! %s : %s", e.getMessage(), e.getStackTrace()));
+                dumpLog();
+            }
             Timber.e(e);
         } finally {
             clear();
@@ -144,6 +145,14 @@ public abstract class BaseWorker extends Worker {
         // Retry when incomplete and not manually stopped
         if (!isStopped() && !isComplete) return Result.retry();
         return Result.success();
+    }
+
+    private void dumpLog() {
+        LogHelper.LogInfo logInfo = new LogHelper.LogInfo();
+        logInfo.setFileName(logName);
+        logInfo.setHeaderName(logName);
+        logInfo.setEntries(logs);
+        LogHelper.writeLog(HentoidApp.getInstance(), logInfo);
     }
 
     abstract Notification getStartNotification();

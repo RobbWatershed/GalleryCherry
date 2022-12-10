@@ -1,6 +1,7 @@
 package me.devsaki.hentoid.fragments.preferences;
 
 import static androidx.core.view.ViewCompat.requireViewById;
+import static me.devsaki.hentoid.util.file.PermissionHelper.RQST_STORAGE_PERMISSION;
 
 import android.net.Uri;
 import android.os.Bundle;
@@ -39,11 +40,12 @@ import io.reactivex.schedulers.Schedulers;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.events.ProcessEvent;
 import me.devsaki.hentoid.events.ServiceDestroyedEvent;
-import me.devsaki.hentoid.util.FileHelper;
 import me.devsaki.hentoid.util.ImportHelper;
 import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.util.ToastHelper;
-import me.devsaki.hentoid.workers.ImportWorker;
+import me.devsaki.hentoid.util.file.FileHelper;
+import me.devsaki.hentoid.util.file.PermissionHelper;
+import me.devsaki.hentoid.workers.PrimaryImportWorker;
 import timber.log.Timber;
 
 /**
@@ -132,6 +134,7 @@ public class LibRefreshDialogFragment extends DialogFragment {
 
         if (showOptions) { // Show option screen first
             CheckBox renameChk = requireViewById(rootView, R.id.refresh_options_rename);
+            CheckBox removePlaceholdersChk = requireViewById(rootView, R.id.refresh_options_remove_placeholders);
             CheckBox cleanAbsentChk = requireViewById(rootView, R.id.refresh_options_remove_1);
             CheckBox cleanNoImagesChk = requireViewById(rootView, R.id.refresh_options_remove_2);
             RadioButton externalChk = requireViewById(rootView, R.id.refresh_location_external);
@@ -144,8 +147,8 @@ public class LibRefreshDialogFragment extends DialogFragment {
             if (!Preferences.getExternalLibraryUri().isEmpty())
                 locationGroup.setVisibility(View.VISIBLE);
 
-            View okBtn = requireViewById(rootView, R.id.refresh_ok);
-            okBtn.setOnClickListener(v -> launchRefreshImport(externalChk.isChecked(), renameChk.isChecked(), cleanAbsentChk.isChecked(), cleanNoImagesChk.isChecked()));
+            View okBtn = requireViewById(rootView, R.id.action_button);
+            okBtn.setOnClickListener(v -> launchRefreshImport(externalChk.isChecked(), renameChk.isChecked(), removePlaceholdersChk.isChecked(), cleanAbsentChk.isChecked(), cleanNoImagesChk.isChecked()));
         } else { // Show import progress layout immediately
             showImportProgressLayout(chooseFolder, externalLibrary);
         }
@@ -157,7 +160,7 @@ public class LibRefreshDialogFragment extends DialogFragment {
         else optionsGroup.setVisibility(View.VISIBLE);
     }
 
-    private void launchRefreshImport(boolean isExternal, boolean rename, boolean cleanAbsent, boolean cleanNoImages) {
+    private void launchRefreshImport(boolean isExternal, boolean rename, boolean removePlaceholders, boolean cleanAbsent, boolean cleanNoImages) {
         showImportProgressLayout(false, isExternal);
         setCancelable(false);
 
@@ -189,6 +192,7 @@ public class LibRefreshDialogFragment extends DialogFragment {
         } else {
             ImportHelper.ImportOptions options = new ImportHelper.ImportOptions();
             options.rename = rename;
+            options.removePlaceholders = removePlaceholders;
             options.cleanNoJson = cleanAbsent;
             options.cleanNoImages = cleanNoImages;
             options.importGroups = false;
@@ -229,7 +233,7 @@ public class LibRefreshDialogFragment extends DialogFragment {
     private void showImportProgressLayout(boolean askFolder, boolean isExternal) {
         // Replace launch options layout with import progress layout
         rootView.removeAllViews();
-        LayoutInflater.from(getActivity()).inflate(R.layout.include_import_steps, rootView, true);
+        requireActivity().getLayoutInflater().inflate(R.layout.include_import_steps, rootView, true);
 
         // Memorize UI elements that will be updated during the import events
         TextView step1Txt = rootView.findViewById(R.id.import_step1_text);
@@ -255,13 +259,20 @@ public class LibRefreshDialogFragment extends DialogFragment {
 
         if (askFolder) {
             step1FolderButton.setVisibility(View.VISIBLE);
-            step1FolderButton.setOnClickListener(v -> pickFolder.launch(0));
-            pickFolder.launch(0); // Ask right away, there's no reason why the user should click again
+            step1FolderButton.setOnClickListener(v -> pickFolder());
+            pickFolder(); // Ask right away, there's no reason why the user should click again
         } else {
             ((TextView) rootView.findViewById(R.id.import_step1_folder)).setText(FileHelper.getFullPathFromTreeUri(requireContext(), Uri.parse(Preferences.getStorageUri())));
             rootView.findViewById(R.id.import_step1_check).setVisibility(View.VISIBLE);
             rootView.findViewById(R.id.import_step2).setVisibility(View.VISIBLE);
             step2progress.setIndeterminate(true);
+        }
+    }
+
+    private void pickFolder() {
+        if (PermissionHelper.requestExternalStorageReadWritePermission(requireActivity(), RQST_STORAGE_PERMISSION)) { // Make sure permissions are set
+            Preferences.setBrowserMode(false);
+            pickFolder.launch(0); // Run folder picker
         }
     }
 
@@ -372,10 +383,10 @@ public class LibRefreshDialogFragment extends DialogFragment {
 
         ProgressBar progressBar;
         switch (event.step) {
-            case (ImportWorker.STEP_2_BOOK_FOLDERS):
+            case (PrimaryImportWorker.STEP_2_BOOK_FOLDERS):
                 progressBar = step2progress;
                 break;
-            case (ImportWorker.STEP_3_BOOKS):
+            case (PrimaryImportWorker.STEP_3_BOOKS):
                 progressBar = step3progress;
                 break;
             default:
@@ -390,9 +401,9 @@ public class LibRefreshDialogFragment extends DialogFragment {
             } else {
                 progressBar.setIndeterminate(true);
             }
-            if (ImportWorker.STEP_2_BOOK_FOLDERS == event.step) {
+            if (PrimaryImportWorker.STEP_2_BOOK_FOLDERS == event.step) {
                 step2Txt.setText(event.elementName);
-            } else if (ImportWorker.STEP_3_BOOKS == event.step) {
+            } else if (PrimaryImportWorker.STEP_3_BOOKS == event.step) {
                 step2progress.setIndeterminate(false);
                 step2progress.setMax(1);
                 step2progress.setProgress(1);
@@ -400,23 +411,23 @@ public class LibRefreshDialogFragment extends DialogFragment {
                 step2check.setVisibility(View.VISIBLE);
                 step3block.setVisibility(View.VISIBLE);
                 step3Txt.setText(getResources().getString(R.string.api29_migration_step3, event.elementsKO + event.elementsOK, event.elementsTotal));
-            } else if (ImportWorker.STEP_4_QUEUE_FINAL == event.step) {
+            } else if (PrimaryImportWorker.STEP_4_QUEUE_FINAL == event.step) {
                 step3check.setVisibility(View.VISIBLE);
                 step4block.setVisibility(View.VISIBLE);
             }
         } else if (ProcessEvent.EventType.COMPLETE == event.eventType) {
-            if (ImportWorker.STEP_2_BOOK_FOLDERS == event.step) {
+            if (PrimaryImportWorker.STEP_2_BOOK_FOLDERS == event.step) {
                 step2progress.setIndeterminate(false);
                 step2progress.setMax(1);
                 step2progress.setProgress(1);
                 step2Txt.setVisibility(View.GONE);
                 step2check.setVisibility(View.VISIBLE);
                 step3block.setVisibility(View.VISIBLE);
-            } else if (ImportWorker.STEP_3_BOOKS == event.step) {
+            } else if (PrimaryImportWorker.STEP_3_BOOKS == event.step) {
                 step3Txt.setText(getResources().getString(R.string.api29_migration_step3, event.elementsTotal, event.elementsTotal));
                 step3check.setVisibility(View.VISIBLE);
                 step4block.setVisibility(View.VISIBLE);
-            } else if (ImportWorker.STEP_4_QUEUE_FINAL == event.step) {
+            } else if (PrimaryImportWorker.STEP_4_QUEUE_FINAL == event.step) {
                 step4check.setVisibility(View.VISIBLE);
                 isServiceGracefulClose = true;
                 dismissAllowingStateLoss();

@@ -34,16 +34,19 @@ import me.devsaki.hentoid.fragments.ProgressDialogFragment
 import me.devsaki.hentoid.retrofit.GithubServer
 import me.devsaki.hentoid.retrofit.sources.LusciousServer
 import me.devsaki.hentoid.services.UpdateCheckService
-import me.devsaki.hentoid.util.FileHelper
 import me.devsaki.hentoid.util.Preferences
 import me.devsaki.hentoid.util.ThemeHelper
 import me.devsaki.hentoid.util.ToastHelper
+import me.devsaki.hentoid.util.download.DownloadSpeedLimiter
 import me.devsaki.hentoid.util.download.RequestQueueManager
+import me.devsaki.hentoid.util.file.FileHelper
+import me.devsaki.hentoid.util.network.WebkitPackageHelper
 import me.devsaki.hentoid.viewmodels.PreferencesViewModel
 import me.devsaki.hentoid.viewmodels.ViewModelFactory
 import me.devsaki.hentoid.workers.ExternalImportWorker
-import me.devsaki.hentoid.workers.ImportWorker
+import me.devsaki.hentoid.workers.PrimaryImportWorker
 import me.devsaki.hentoid.workers.UpdateDownloadWorker
+import kotlin.properties.Delegates
 
 
 class PreferencesFragment : PreferenceFragmentCompat(),
@@ -84,13 +87,11 @@ class PreferencesFragment : PreferenceFragmentCompat(),
 
     override fun onResume() {
         super.onResume()
-        preferenceScreen.sharedPreferences
-            .registerOnSharedPreferenceChangeListener(this)
+        preferenceScreen.sharedPreferences?.registerOnSharedPreferenceChangeListener(this)
     }
 
     override fun onDestroy() {
-        preferenceScreen.sharedPreferences
-            .unregisterOnSharedPreferenceChangeListener(this)
+        preferenceScreen.sharedPreferences?.unregisterOnSharedPreferenceChangeListener(this)
         super.onDestroy()
     }
 
@@ -106,6 +107,7 @@ class PreferencesFragment : PreferenceFragmentCompat(),
             Preferences.Key.COLOR_THEME -> onPrefColorThemeChanged()
             Preferences.Key.DL_THREADS_QUANTITY_LISTS,
             Preferences.Key.APP_PREVIEW,
+            Preferences.Key.FORCE_ENGLISH,
             Preferences.Key.ANALYTICS_PREFERENCE -> onPrefRequiringRestartChanged()
             Preferences.Key.SETTINGS_FOLDER,
             Preferences.Key.SD_STORAGE_URI -> onHentoidFolderChanged()
@@ -121,7 +123,9 @@ class PreferencesFragment : PreferenceFragmentCompat(),
                 true
             }
             Preferences.Key.EXTERNAL_LIBRARY -> {
-                if (ExternalImportWorker.isRunning(requireContext())) {
+                if (Preferences.isBrowserMode()) {
+                    ToastHelper.toast(R.string.pref_import_browser_mode)
+                } else if (ExternalImportWorker.isRunning(requireContext())) {
                     ToastHelper.toast(R.string.pref_import_running)
                 } else {
                     LibRefreshDialogFragment.invoke(parentFragmentManager, false, true, true)
@@ -153,7 +157,9 @@ class PreferencesFragment : PreferenceFragmentCompat(),
                 true
             }
             Preferences.Key.REFRESH_LIBRARY -> {
-                if (ImportWorker.isRunning(requireContext())) {
+                if (Preferences.isBrowserMode()) {
+                    ToastHelper.toast(R.string.pref_import_browser_mode)
+                } else if (PrimaryImportWorker.isRunning(requireContext())) {
                     ToastHelper.toast(R.string.pref_import_running)
                 } else {
                     LibRefreshDialogFragment.invoke(parentFragmentManager, true, false, false)
@@ -170,7 +176,7 @@ class PreferencesFragment : PreferenceFragmentCompat(),
                 true
             }
             Preferences.Key.SETTINGS_FOLDER -> {
-                if (ImportWorker.isRunning(requireContext())) {
+                if (PrimaryImportWorker.isRunning(requireContext())) {
                     ToastHelper.toast(R.string.pref_import_running)
                 } else {
                     LibRefreshDialogFragment.invoke(parentFragmentManager, false, true, false)
@@ -178,7 +184,9 @@ class PreferencesFragment : PreferenceFragmentCompat(),
                 true
             }
             Preferences.Key.MEMORY_USAGE -> {
-                MemoryUsageDialogFragment.invoke(parentFragmentManager)
+                if (!Preferences.isBrowserMode()) MemoryUsageDialogFragment.invoke(
+                    parentFragmentManager
+                )
                 true
             }
             Preferences.Key.APP_LOCK -> {
@@ -187,6 +195,10 @@ class PreferencesFragment : PreferenceFragmentCompat(),
             }
             Preferences.Key.CHECK_UPDATE_MANUAL -> {
                 onCheckUpdatePrefClick()
+                true
+            }
+            Preferences.Key.DL_SPEED_CAP -> {
+                DownloadSpeedLimiter.setSpeedLimitKbps(getPrefsSpeedCapKbps())
                 true
             }
             Preferences.Key.BROWSER_CLEAR_COOKIES -> {
@@ -258,8 +270,8 @@ class PreferencesFragment : PreferenceFragmentCompat(),
         runBlocking {
             launch(Dispatchers.Default) {
                 // Reset connection pool used by the downloader (includes an OkHttp instance reset)
-                RequestQueueManager.getInstance(requireContext())
-                    .resetRequestQueue(requireContext(), true)
+                RequestQueueManager.getInstance(requireContext(), null, null)
+                    .resetRequestQueue(true)
                 // Reset all retrofit clients
                 GithubServer.init()
                 LusciousServer.init()
@@ -268,16 +280,31 @@ class PreferencesFragment : PreferenceFragmentCompat(),
     }
 
     private fun onClearCookies() {
-        CookieManager.getInstance().removeAllCookies {
-            var caption = R.string.pref_browser_clear_cookies_ok
-            if (!it) caption = R.string.pref_browser_clear_cookies_ko
-
+        fun showSnackBar(caption: Int) {
             val snack = Snackbar.make(
                 listView,
                 caption,
                 BaseTransientBottomBar.LENGTH_SHORT
             )
             snack.show()
+        }
+
+        var caption by Delegates.notNull<Int>()
+
+        if (!WebkitPackageHelper.getWebViewAvailable()) {
+            caption = R.string.pref_browser_clear_cookies_missing_webview
+            showSnackBar(caption)
+            return
+        } else if (WebkitPackageHelper.getWebViewUpdating()) {
+            caption = R.string.pref_browser_clear_cookies_updating_webview
+            showSnackBar(caption)
+            return
+        } else {
+            CookieManager.getInstance().removeAllCookies {
+                caption = R.string.pref_browser_clear_cookies_ok
+                if (!it) caption = R.string.pref_browser_clear_cookies_ko
+                showSnackBar(caption)
+            }
         }
     }
 
@@ -341,5 +368,15 @@ class PreferencesFragment : PreferenceFragmentCompat(),
                         .create()
                         .show()
                 }
+    }
+
+    private fun getPrefsSpeedCapKbps(): Int {
+        return when (Preferences.getDlSpeedCap()) {
+            Preferences.Constant.DL_SPEED_CAP_100 -> 100
+            Preferences.Constant.DL_SPEED_CAP_200 -> 200
+            Preferences.Constant.DL_SPEED_CAP_400 -> 400
+            Preferences.Constant.DL_SPEED_CAP_800 -> 800
+            else -> -1
+        }
     }
 }

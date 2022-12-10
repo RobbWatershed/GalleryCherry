@@ -6,12 +6,13 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.annimon.stream.function.IntConsumer;
 
-import me.devsaki.hentoid.util.Preferences;
-
 public final class ScrollPositionListener extends RecyclerView.OnScrollListener {
 
     private final IntConsumer onPositionChangeListener;
     private boolean isScrollEnabled = true;
+
+    private int mTotalScrolledX = 0;
+    private int mTotalScrolledY = 0;
 
     // Out of bounds scrolling detection
     private boolean isSettlingX = false;
@@ -39,6 +40,9 @@ public final class ScrollPositionListener extends RecyclerView.OnScrollListener 
     public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
         super.onScrolled(recyclerView, dx, dy);
 
+        mTotalScrolledY += dy;
+        mTotalScrolledX += dx;
+
         LinearLayoutManager llm = (LinearLayoutManager) recyclerView.getLayoutManager();
         if (llm != null) {
             int firstVisibleItemPosition = llm.findFirstVisibleItemPosition();
@@ -50,7 +54,7 @@ public final class ScrollPositionListener extends RecyclerView.OnScrollListener 
     @Override
     public void onScrollStateChanged(@NonNull RecyclerView recyclerView, int newState) {
         super.onScrollStateChanged(recyclerView, newState);
-        if (!Preferences.isViewerSwipeToTurn() || !isScrollEnabled) {
+        if (!isScrollEnabled) {
             recyclerView.stopScroll();
             return;
         }
@@ -100,5 +104,13 @@ public final class ScrollPositionListener extends RecyclerView.OnScrollListener 
 
     public void enableScroll() {
         isScrollEnabled = true;
+    }
+
+    public int getTotalScrolledX() {
+        return mTotalScrolledX;
+    }
+
+    public int getTotalScrolledY() {
+        return mTotalScrolledY;
     }
 }

@@ -2,6 +2,7 @@ package me.devsaki.hentoid.adapters;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.Point;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Build;
@@ -25,8 +26,10 @@ import androidx.vectordrawable.graphics.drawable.Animatable2Compat;
 import com.bumptech.glide.integration.webp.decoder.WebpDrawable;
 import com.bumptech.glide.integration.webp.decoder.WebpDrawableTransformation;
 import com.bumptech.glide.load.DataSource;
+import com.bumptech.glide.load.MultiTransformation;
 import com.bumptech.glide.load.Transformation;
 import com.bumptech.glide.load.engine.GlideException;
+import com.bumptech.glide.load.resource.UnitTransformation;
 import com.bumptech.glide.load.resource.bitmap.CenterInside;
 import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.target.Target;
@@ -40,6 +43,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -50,8 +54,9 @@ import me.devsaki.hentoid.customssiv.CustomSubsamplingScaleImageView;
 import me.devsaki.hentoid.customssiv.ImageSource;
 import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.enums.StatusContent;
-import me.devsaki.hentoid.util.FileHelper;
 import me.devsaki.hentoid.util.Preferences;
+import me.devsaki.hentoid.util.file.FileHelper;
+import me.devsaki.hentoid.util.image.SmartRotateTransformation;
 import timber.log.Timber;
 
 
@@ -70,18 +75,21 @@ public final class ImagePagerAdapter extends ListAdapter<ImageFile, ImagePagerAd
     }
 
     // Screen width and height; used to adjust dimensions of small images handled by Glide
-    static final int SCREEN_WIDTH = HentoidApp.getInstance().getResources().getDisplayMetrics().widthPixels;
-    static final int SCREEN_HEIGHT = HentoidApp.getInstance().getResources().getDisplayMetrics().heightPixels;
+    static final int screenWidth = HentoidApp.getInstance().getResources().getDisplayMetrics().widthPixels;
+    static final int screenHeight = HentoidApp.getInstance().getResources().getDisplayMetrics().heightPixels;
 
     private static final int PAGE_MIN_HEIGHT = (int) HentoidApp.getInstance().getResources().getDimension(R.dimen.page_min_height);
 
     private View.OnTouchListener itemTouchListener;
     private RecyclerView recyclerView;
+    private final Map<Integer, Float> initialAbsoluteScales = new HashMap<>();
+    private final Map<Integer, Float> absoluteScales = new HashMap<>();
 
     // To preload images before they appear on screen with CustomSubsamplingScaleImageView
     private int maxBitmapWidth = -1;
     private int maxBitmapHeight = -1;
 
+    // Direction user is curently reading the book with
     private boolean isScrollLTR = true;
 
     // Single instance of RenderScript
@@ -95,6 +103,23 @@ public final class ImagePagerAdapter extends ListAdapter<ImageFile, ImagePagerAd
     private boolean autoRotate;
     private boolean isSmoothRendering;
     private float doubleTapZoomCap;
+
+
+    private static final DiffUtil.ItemCallback<ImageFile> IMAGE_DIFF_CALLBACK =
+            new DiffUtil.ItemCallback<ImageFile>() {
+                @Override
+                public boolean areItemsTheSame(
+                        @NonNull ImageFile oldItem, @NonNull ImageFile newItem) {
+                    return oldItem.uniqueHash() == newItem.uniqueHash();
+                }
+
+                @Override
+                public boolean areContentsTheSame(
+                        @NonNull ImageFile oldItem, @NonNull ImageFile newItem) {
+                    return Objects.equals(oldItem, newItem);
+                }
+            };
+
 
     public ImagePagerAdapter(Context context) {
         super(IMAGE_DIFF_CALLBACK);
@@ -169,7 +194,7 @@ public final class ImagePagerAdapter extends ListAdapter<ImageFile, ImagePagerAd
     @Override
     public ImageViewHolder onCreateViewHolder(@NonNull ViewGroup viewGroup, int viewType) {
         LayoutInflater inflater = LayoutInflater.from(viewGroup.getContext());
-        View view = inflater.inflate(R.layout.item_viewer_image, viewGroup, false);
+        View view = inflater.inflate(R.layout.item_reader_image, viewGroup, false);
         if (ViewType.DEFAULT == viewType) {
             // ImageView shouldn't react to click events when in vertical mode (controlled by ZoomableFrame / ZoomableRecyclerView)
             if (Preferences.Constant.VIEWER_ORIENTATION_VERTICAL == viewerOrientation) {
@@ -210,6 +235,7 @@ public final class ImagePagerAdapter extends ListAdapter<ImageFile, ImagePagerAd
             if (!Preferences.isViewerZoomTransitions())
                 holder.ssiv.setDoubleTapZoomDuration(10);
             holder.ssiv.setOffsetLeftSide(isScrollLTR);
+            holder.ssiv.setScaleListener(s -> onAbsoluteScaleChanged(position, s));
         }
 
         int layoutStyle = (Preferences.Constant.VIEWER_ORIENTATION_VERTICAL == viewerOrientation) ? ViewGroup.LayoutParams.WRAP_CONTENT : ViewGroup.LayoutParams.MATCH_PARENT;
@@ -251,7 +277,7 @@ public final class ImagePagerAdapter extends ListAdapter<ImageFile, ImagePagerAd
         }
 
         // Free the SSIV's resources
-        if (!holder.isImageView) holder.ssiv.recycle();
+        if (!holder.isImageView) holder.ssiv.clear();
 
         super.onViewRecycled(holder);
     }
@@ -265,12 +291,48 @@ public final class ImagePagerAdapter extends ListAdapter<ImageFile, ImagePagerAd
         if (rs != null) rs.destroy();
     }
 
-    public float getScaleAtPosition(int position) {
+    public void reset() {
+        absoluteScales.clear();
+        initialAbsoluteScales.clear();
+    }
+
+    public Point getDimensionsAtPosition(int position) {
         if (recyclerView != null) {
             ImageViewHolder holder = (ImageViewHolder) recyclerView.findViewHolderForAdapterPosition(position);
-            if (holder != null) return holder.getScale();
+            if (holder != null) return holder.getDimensions();
+        }
+        return new Point();
+    }
+
+    public float getAbsoluteScaleAtPosition(int position) {
+        if (absoluteScales.containsKey(position)) {
+            Float result = absoluteScales.get(position);
+            if (result != null) return result;
+        } else if (recyclerView != null) {
+            ImageViewHolder holder = (ImageViewHolder) recyclerView.findViewHolderForAdapterPosition(position);
+            if (holder != null) return holder.getAbsoluteScale();
         }
         return 0f;
+    }
+
+    public float getRelativeScaleAtPosition(int position) {
+        if (absoluteScales.containsKey(position)) {
+            Float resultInitial = initialAbsoluteScales.get(position);
+            Float result = absoluteScales.get(position);
+            if (result != null && resultInitial != null) return result / resultInitial;
+        }
+        return 0f;
+    }
+
+    public void setRelativeScaleAtPosition(int position, float targetRelativeScale) {
+        if (recyclerView != null) {
+            ImageViewHolder holder = (ImageViewHolder) recyclerView.findViewHolderForAdapterPosition(position);
+            if (holder != null && initialAbsoluteScales.containsKey(position)) {
+                Float initialScale = initialAbsoluteScales.get(position);
+                if (initialScale != null)
+                    holder.setAbsoluteScale(targetRelativeScale * initialScale);
+            }
+        }
     }
 
     public void resetScaleAtPosition(int position) {
@@ -289,6 +351,13 @@ public final class ImagePagerAdapter extends ListAdapter<ImageFile, ImagePagerAd
         }
     }
 
+    private void onAbsoluteScaleChanged(int position, double scale) {
+        Timber.d(">> position %d -> scale %s", position, scale);
+        if (!initialAbsoluteScales.containsKey(position))
+            initialAbsoluteScales.put(position, (float) scale);
+        absoluteScales.put(position, (float) scale);
+    }
+
     public void setMaxDimensions(int maxWidth, int maxHeight) {
         maxBitmapWidth = maxWidth;
         maxBitmapHeight = maxHeight;
@@ -298,20 +367,6 @@ public final class ImagePagerAdapter extends ListAdapter<ImageFile, ImagePagerAd
         this.isScrollLTR = isScrollLTR;
     }
 
-    private static final DiffUtil.ItemCallback<ImageFile> IMAGE_DIFF_CALLBACK =
-            new DiffUtil.ItemCallback<ImageFile>() {
-                @Override
-                public boolean areItemsTheSame(
-                        @NonNull ImageFile oldItem, @NonNull ImageFile newItem) {
-                    return oldItem.uniqueHash() == newItem.uniqueHash();
-                }
-
-                @Override
-                public boolean areContentsTheSame(
-                        @NonNull ImageFile oldItem, @NonNull ImageFile newItem) {
-                    return Objects.equals(oldItem, newItem);
-                }
-            };
 
     final class ImageViewHolder extends RecyclerView.ViewHolder implements CustomSubsamplingScaleImageView.OnImageEventListener, RequestListener<Drawable> {
 
@@ -370,10 +425,12 @@ public final class ImagePagerAdapter extends ListAdapter<ImageFile, ImagePagerAd
                 } else {
                     Timber.d("Using Glide");
                     Transformation<Bitmap> centerInside = new CenterInside();
+                    Transformation<Bitmap> smartRotate90 = (autoRotate) ? new SmartRotateTransformation(90, screenWidth, screenHeight) : UnitTransformation.get();
+
                     GlideApp.with(view)
                             .load(uri)
-                            .optionalTransform(centerInside)
-                            .optionalTransform(WebpDrawable.class, new WebpDrawableTransformation(centerInside))
+                            .optionalTransform(new MultiTransformation<>(centerInside, smartRotate90))
+                            .optionalTransform(WebpDrawable.class, new MultiTransformation<>(new WebpDrawableTransformation(centerInside), new WebpDrawableTransformation(smartRotate90)))
 //                            .set(WebpFrameLoader.FRAME_CACHE_STRATEGY, WebpFrameCacheStrategy.ALL)
                             .listener(this)
                             .into(view);
@@ -389,11 +446,19 @@ public final class ImagePagerAdapter extends ListAdapter<ImageFile, ImagePagerAd
             }
         }
 
-        private float getScale() {
+        private float getAbsoluteScale() {
             if (!isImageView) {
                 return ssiv.getVirtualScale();
             } else { // ImageView
                 return imageView.getScaleX(); // TODO doesn't work for Glide as it doesn't use ImageView's scaling
+            }
+        }
+
+        private void setAbsoluteScale(float targetScale) {
+            if (!isImageView) {
+                ssiv.setScaleAndCenter(targetScale, null);
+            } else { // ImageView
+                imageView.setScaleX(targetScale);
             }
         }
 
@@ -416,6 +481,14 @@ public final class ImagePagerAdapter extends ListAdapter<ImageFile, ImagePagerAd
             }
         }
 
+        Point getDimensions() {
+            if (!isImageView) {
+                return new Point(ssiv.getWidth(), ssiv.getHeight());
+            } else { // ImageView
+                return new Point(imageView.getWidth(), imageView.getHeight());
+            }
+        }
+
         private void adjustHeight(int imgWidth, int imgHeight, boolean resizeSmallPics) {
             int rootLayoutStyle = (Preferences.Constant.VIEWER_ORIENTATION_VERTICAL == viewerOrientation) ? ViewGroup.LayoutParams.WRAP_CONTENT : ViewGroup.LayoutParams.MATCH_PARENT;
             ViewGroup.LayoutParams layoutParams = rootView.getLayoutParams();
@@ -425,7 +498,7 @@ public final class ImagePagerAdapter extends ListAdapter<ImageFile, ImagePagerAd
 
             int targetImgHeight = imgHeight;
             // If we display a picture smaller than the screen dimensions, we have to zoom it
-            if (resizeSmallPics && imgHeight < SCREEN_HEIGHT && imgWidth < SCREEN_WIDTH) {
+            if (resizeSmallPics && imgHeight < screenHeight && imgWidth < screenWidth) {
                 targetImgHeight = Math.round(imgHeight * getTargetScale(imgWidth, imgHeight, displayMode));
                 ViewGroup.LayoutParams imgLayoutParams = imgView.getLayoutParams();
                 imgLayoutParams.width = ViewGroup.LayoutParams.MATCH_PARENT;
@@ -441,19 +514,19 @@ public final class ImagePagerAdapter extends ListAdapter<ImageFile, ImagePagerAd
             if (Preferences.Constant.VIEWER_DISPLAY_FILL == displayMode) { // Fill screen
                 if (imgHeight > imgWidth) {
                     // Fit to width
-                    return SCREEN_WIDTH / (float) imgWidth;
+                    return screenWidth / (float) imgWidth;
                 } else {
-                    if (SCREEN_HEIGHT > SCREEN_WIDTH)
-                        return SCREEN_HEIGHT / (float) imgHeight; // Fit to height when in portrait mode
+                    if (screenHeight > screenWidth)
+                        return screenHeight / (float) imgHeight; // Fit to height when in portrait mode
                     else
-                        return SCREEN_WIDTH / (float) imgWidth; // Fit to width when in landscape mode
+                        return screenWidth / (float) imgWidth; // Fit to width when in landscape mode
                 }
             } else { // Fit screen
-                return Math.min(SCREEN_WIDTH / (float) imgWidth, SCREEN_HEIGHT / (float) imgHeight);
+                return Math.min(screenWidth / (float) imgWidth, screenHeight / (float) imgHeight);
             }
         }
 
-        void switchImageView(boolean isImageView) {
+        private void switchImageView(boolean isImageView) {
             Timber.d("Picture %d : switching to %s", getAbsoluteAdapterPosition(), isImageView ? "imageView" : "ssiv");
             ssiv.setVisibility(isImageView ? View.GONE : View.VISIBLE);
             imageView.setVisibility(isImageView ? View.VISIBLE : View.GONE);
@@ -461,9 +534,9 @@ public final class ImagePagerAdapter extends ListAdapter<ImageFile, ImagePagerAd
             this.isImageView = isImageView;
         }
 
-        void forceImageView(boolean isImageView) {
-            switchImageView(isImageView);
-            this.forceImageView = isImageView;
+        private void forceImageView() {
+            switchImageView(true);
+            this.forceImageView = true;
         }
 
         // == SUBSAMPLINGSCALEVIEW CALLBACKS
@@ -471,7 +544,7 @@ public final class ImagePagerAdapter extends ListAdapter<ImageFile, ImagePagerAd
         public void onReady() {
             if (Preferences.Constant.VIEWER_ORIENTATION_VERTICAL == viewerOrientation) {
                 CustomSubsamplingScaleImageView scaleView = (CustomSubsamplingScaleImageView) imgView;
-                adjustHeight(0, (int) (scaleView.getScale() * scaleView.getSHeight()), false);
+                adjustHeight(0, (int) (scaleView.getAbsoluteScale() * scaleView.getSHeight()), false);
             }
         }
 
@@ -489,7 +562,7 @@ public final class ImagePagerAdapter extends ListAdapter<ImageFile, ImagePagerAd
         public void onImageLoadError(Throwable e) {
             Timber.d(e, "Picture %d : SSIV loading failed; reloading with Glide : %s", getAbsoluteAdapterPosition(), img.getFileUri());
             // Fall back to Glide
-            forceImageView(true);
+            forceImageView();
             // Reload adapter
             notifyItemChanged(getLayoutPosition());
         }

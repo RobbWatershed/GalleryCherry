@@ -36,7 +36,7 @@ import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.schedulers.Schedulers;
 import me.devsaki.hentoid.R;
-import me.devsaki.hentoid.util.FileHelper;
+import me.devsaki.hentoid.util.file.FileHelper;
 import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.viewholders.TextItem;
@@ -60,7 +60,7 @@ public class LogsDialogFragment extends DialogFragment {
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedState) {
-        rootView = inflater.inflate(R.layout.dialog_prefs_logs, container, false);
+        rootView = inflater.inflate(R.layout.dialog_tools_app_logs, container, false);
 
         FastAdapter<TextItem<DocumentFile>> fastadapter = FastAdapter.with(itemAdapter);
         RecyclerView recyclerView = requireViewById(rootView, R.id.logs_list);

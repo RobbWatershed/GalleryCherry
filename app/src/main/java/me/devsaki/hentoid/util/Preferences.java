@@ -5,6 +5,7 @@ import android.content.SharedPreferences;
 import android.os.Build;
 import android.text.TextUtils;
 
+import androidx.annotation.NonNull;
 import androidx.preference.PreferenceManager;
 
 import com.annimon.stream.Stream;
@@ -83,7 +84,7 @@ public final class Preferences {
         }
 
         if (sharedPreferences.contains(Key.ORDER_CONTENT_LISTS)) {
-            int field = 0;
+            int field;
             boolean isDesc = false;
 
             switch (sharedPreferences.getInt(Key.ORDER_CONTENT_LISTS, Constant.ORDER_CONTENT_TITLE_ALPHA)) {
@@ -128,6 +129,7 @@ public final class Preferences {
                     break;
                 default:
                     // Nothing there
+                    field = 0;
             }
             sharedPreferences.edit().putInt(Key.ORDER_CONTENT_FIELD, field).apply();
             sharedPreferences.edit().putBoolean(Key.ORDER_CONTENT_DESC, isDesc).apply();
@@ -182,6 +184,18 @@ public final class Preferences {
         }
     }
 
+    private static int getIntPref(@NonNull String key, int defaultValue) {
+        if (null == sharedPreferences) return defaultValue;
+        else
+            return Integer.parseInt(sharedPreferences.getString(key, Integer.toString(defaultValue)) + "");
+    }
+
+    private static boolean getBoolPref(@NonNull String key, boolean defaultValue) {
+        if (null == sharedPreferences) return defaultValue;
+        else
+            return sharedPreferences.getBoolean(key, defaultValue);
+    }
+
 
     // ======= PROPERTIES GETTERS / SETTERS
 
@@ -196,15 +210,15 @@ public final class Preferences {
     }
 
     public static boolean isAnalyticsEnabled() {
-        return sharedPreferences.getBoolean(Key.ANALYTICS_PREFERENCE, true);
+        return getBoolPref(Key.ANALYTICS_PREFERENCE, true);
     }
 
     public static boolean isAutomaticUpdateEnabled() {
-        return sharedPreferences.getBoolean(Key.CHECK_UPDATES, Default.CHECK_UPDATES);
+        return getBoolPref(Key.CHECK_UPDATES, Default.CHECK_UPDATES);
     }
 
     public static boolean isFirstRun() {
-        return sharedPreferences.getBoolean(Key.FIRST_RUN, Default.FIRST_RUN);
+        return getBoolPref(Key.FIRST_RUN, Default.FIRST_RUN);
     }
 
     public static void setIsFirstRun(boolean isFirstRun) {
@@ -213,8 +227,18 @@ public final class Preferences {
                 .apply();
     }
 
+    public static boolean isBrowserMode() {
+        return getBoolPref(Key.BROWSER_MODE, false);
+    }
+
+    public static void setBrowserMode(boolean value) {
+        sharedPreferences.edit()
+                .putBoolean(Key.BROWSER_MODE, value)
+                .apply();
+    }
+
     public static boolean isImportQueueEmptyBooks() {
-        return sharedPreferences.getBoolean(Key.IMPORT_QUEUE_EMPTY, Default.IMPORT_QUEUE_EMPTY);
+        return getBoolPref(Key.IMPORT_QUEUE_EMPTY, Default.IMPORT_QUEUE_EMPTY);
     }
 
     @Deprecated
@@ -223,13 +247,17 @@ public final class Preferences {
     }
 
     public static int getLibraryDisplay() {
-        return Integer.parseInt(sharedPreferences.getString(Key.LIBRARY_DISPLAY, Integer.toString(Default.LIBRARY_DISPLAY)) + "");
+        return getIntPref(Key.LIBRARY_DISPLAY, Default.LIBRARY_DISPLAY);
     }
 
     public static void setLibraryDisplay(int displayMode) {
         sharedPreferences.edit()
                 .putString(Key.LIBRARY_DISPLAY, Integer.toString(displayMode))
                 .apply();
+    }
+
+    public static boolean isForceEnglishLocale() {
+        return getBoolPref(Key.FORCE_ENGLISH, Default.FORCE_ENGLISH);
     }
 
     public static int getContentSortField() {
@@ -269,6 +297,26 @@ public final class Preferences {
     public static void setGroupSortDesc(boolean isDesc) {
         sharedPreferences.edit()
                 .putBoolean(Key.ORDER_GROUP_DESC, isDesc)
+                .apply();
+    }
+
+    public static int getRuleSortField() {
+        return sharedPreferences.getInt(Key.ORDER_RULE_FIELD, Default.ORDER_RULE_FIELD);
+    }
+
+    public static void setRuleSortField(int sortField) {
+        sharedPreferences.edit()
+                .putInt(Key.ORDER_RULE_FIELD, sortField)
+                .apply();
+    }
+
+    public static boolean isRuleSortDesc() {
+        return sharedPreferences.getBoolean(Key.ORDER_RULE_DESC, Default.ORDER_RULE_DESC);
+    }
+
+    public static void setRuleSortDesc(boolean isDesc) {
+        sharedPreferences.edit()
+                .putBoolean(Key.ORDER_RULE_DESC, isDesc)
                 .apply();
     }
 
@@ -372,6 +420,10 @@ public final class Preferences {
         return sharedPreferences.getBoolean(Key.BROWSER_MARK_DOWNLOADED, Default.BROWSER_MARK_DOWNLOADED);
     }
 
+    public static boolean isBrowserMarkMerged() {
+        return sharedPreferences.getBoolean(Key.BROWSER_MARK_MERGED, Default.BROWSER_MARK_DOWNLOADED);
+    }
+
     public static int getBrowserDlAction() {
         return Integer.parseInt(
                 sharedPreferences.getString(
@@ -413,11 +465,23 @@ public final class Preferences {
         return sharedPreferences.getBoolean(Key.VIEWER_KEEP_SCREEN_ON, Default.VIEWER_KEEP_SCREEN_ON);
     }
 
+    public static boolean isViewerDisplayAroundNotch() {
+        return sharedPreferences.getBoolean(Key.VIEWER_DISPLAY_AROUND_NOTCH, Default.VIEWER_DISPLAY_AROUND_NOTCH);
+    }
+
     public static int getContentDisplayMode(final Map<String, String> bookPrefs) {
-        if (Constant.VIEWER_ORIENTATION_HORIZONTAL == getContentOrientation(bookPrefs))
-            return Integer.parseInt(sharedPreferences.getString(Key.VIEWER_IMAGE_DISPLAY, Integer.toString(Default.VIEWER_IMAGE_DISPLAY)) + "");
-        else
+        if (Constant.VIEWER_ORIENTATION_HORIZONTAL == getContentOrientation(bookPrefs)) {
+            if (bookPrefs != null && bookPrefs.containsKey(Key.VIEWER_IMAGE_DISPLAY)) {
+                String value = bookPrefs.get(Key.VIEWER_IMAGE_DISPLAY);
+                if (value != null) return Integer.parseInt(value);
+            }
+            return getViewerDisplayMode();
+        } else
             return Constant.VIEWER_DISPLAY_FIT; // The only relevant mode for vertical (aka. webtoon) display
+    }
+
+    public static int getViewerDisplayMode() {
+        return Integer.parseInt(sharedPreferences.getString(Key.VIEWER_IMAGE_DISPLAY, Integer.toString(Default.VIEWER_IMAGE_DISPLAY)) + "");
     }
 
     public static int getContentBrowseMode(final Map<String, String> bookPrefs) {
@@ -506,6 +570,10 @@ public final class Preferences {
         return sharedPreferences.getBoolean(Key.VIEWER_PAGE_TURN_KEYBOARD, Default.VIEWER_PAGE_TURN_KEYBOARD);
     }
 
+    public static boolean isViewerVolumeToSwitchBooks() {
+        return sharedPreferences.getBoolean(Key.VIEWER_BOOK_SWITCH_VOLUME, Default.VIEWER_BOOK_SWITCH_VOLUME);
+    }
+
     public static boolean isViewerOpenBookInGalleryMode() {
         return sharedPreferences.getBoolean(Key.VIEWER_OPEN_GALLERY, Default.VIEWER_OPEN_GALLERY);
     }
@@ -514,8 +582,12 @@ public final class Preferences {
         return sharedPreferences.getBoolean(Key.VIEWER_CONTINUOUS, Default.VIEWER_CONTINUOUS);
     }
 
-    public static int getViewerReadThreshold() {
-        return Integer.parseInt(sharedPreferences.getString(Key.VIEWER_READ_THRESHOLD, Integer.toString(Default.VIEWER_READ_THRESHOLD)) + "");
+    public static int getViewerPageReadThreshold() {
+        return Integer.parseInt(sharedPreferences.getString(Key.VIEWER_PAGE_READ_THRESHOLD, Integer.toString(Default.VIEWER_PAGE_READ_THRESHOLD)) + "");
+    }
+
+    public static int getViewerRatioCompletedThreshold() {
+        return Integer.parseInt(sharedPreferences.getString(Key.VIEWER_RATIO_COMPLETED_THRESHOLD, Integer.toString(Default.VIEWER_RATIO_COMPLETED_THRESHOLD)) + "");
     }
 
     public static int getViewerSlideshowDelay() {
@@ -525,6 +597,16 @@ public final class Preferences {
     public static void setViewerSlideshowDelay(int value) {
         sharedPreferences.edit()
                 .putString(Key.VIEWER_SLIDESHOW_DELAY, Integer.toString(value))
+                .apply();
+    }
+
+    public static int getViewerSlideshowDelayVertical() {
+        return Integer.parseInt(sharedPreferences.getString(Key.VIEWER_SLIDESHOW_DELAY_VERTICAL, Integer.toString(Default.VIEWER_SLIDESHOW_DELAY_VERTICAL)) + "");
+    }
+
+    public static void setViewerSlideshowDelayVertical(int value) {
+        sharedPreferences.edit()
+                .putString(Key.VIEWER_SLIDESHOW_DELAY_VERTICAL, Integer.toString(value))
                 .apply();
     }
 
@@ -538,6 +620,10 @@ public final class Preferences {
 
     public static int getViewerCapTapZoom() {
         return Integer.parseInt(sharedPreferences.getString(Key.VIEWER_CAP_TAP_ZOOM, Integer.toString(Default.VIEWER_CAP_TAP_ZOOM)) + "");
+    }
+
+    public static boolean isViewerMaintainHorizontalZoom() {
+        return sharedPreferences.getBoolean(Key.VIEWER_MAINTAIN_HORIZONTAL_ZOOM, Default.VIEWER_MAINTAIN_HORIZONTAL_ZOOM);
     }
 
     public static boolean isViewerAutoRotate() {
@@ -583,11 +669,15 @@ public final class Preferences {
     }
 
     public static int getDlRetriesNumber() {
-        return Integer.parseInt(sharedPreferences.getString(Key.DL_RETRIES_NUMBER, Integer.toString(Default.DL_RETRIES_NUMBER)) + "");
+        return getIntPref(Key.DL_RETRIES_NUMBER, Default.DL_RETRIES_NUMBER);
     }
 
     public static int getDlRetriesMemLimit() {
-        return Integer.parseInt(sharedPreferences.getString(Key.DL_RETRIES_MEM_LIMIT, Integer.toString(Default.DL_RETRIES_MEM_LIMIT)) + "");
+        return getIntPref(Key.DL_RETRIES_MEM_LIMIT, Default.DL_RETRIES_MEM_LIMIT);
+    }
+
+    public static int getDlSpeedCap() {
+        return getIntPref(Key.DL_SPEED_CAP, Default.DL_SPEED_CAP);
     }
 
     public static List<String> getBlockedTags() {
@@ -613,7 +703,7 @@ public final class Preferences {
     }
 
     public static int getColorTheme() {
-        return Integer.parseInt(sharedPreferences.getString(Key.COLOR_THEME, Integer.toString(Default.COLOR_THEME)) + "");
+        return getIntPref(Key.COLOR_THEME, Default.COLOR_THEME);
     }
 
     public static void setColorTheme(int colorTheme) {
@@ -736,6 +826,22 @@ public final class Preferences {
                 .apply();
     }
 
+    public static boolean isDuplicateBrowserUseTitle() {
+        return sharedPreferences.getBoolean(Key.DUPLICATE_BROWSER_USE_TITLE, Default.DUPLICATE_BROWSER_USE_TITLE);
+    }
+
+    public static boolean isDuplicateBrowserUseCover() {
+        return sharedPreferences.getBoolean(Key.DUPLICATE_BROWSER_USE_COVER, Default.DUPLICATE_BROWSER_USE_COVER);
+    }
+
+    public static boolean isDuplicateBrowserUseArtist() {
+        return sharedPreferences.getBoolean(Key.DUPLICATE_BROWSER_USE_ARTIST, Default.DUPLICATE_BROWSER_USE_ARTIST);
+    }
+
+    public static boolean isDuplicateBrowserUseSameLanguage() {
+        return sharedPreferences.getBoolean(Key.DUPLICATE_BROWSER_USE_SAME_LANGUAGE, Default.DUPLICATE_BROWSER_USE_SAME_LANGUAGE);
+    }
+
     public static boolean isDuplicateIgnoreChapters() {
         return sharedPreferences.getBoolean(Key.DUPLICATE_IGNORE_CHAPTERS, Default.DUPLICATE_IGNORE_CHAPTERS);
     }
@@ -806,6 +912,7 @@ public final class Preferences {
             throw new IllegalStateException("Utility class");
         }
 
+        public static final String BROWSER_MODE = "browser_mode";
         public static final String ANALYTICS_PREFERENCE = "pref_analytics_preference";
         public static final String APP_LOCK = "pref_app_lock";
         public static final String APP_PREVIEW = "pref_app_preview";
@@ -815,6 +922,7 @@ public final class Preferences {
         public static final String DELETE_ALL_EXCEPT_FAVS = "pref_delete_all_except_favs";
         static final String WELCOME_DONE = "pref_welcome_done";
         static final String VERSION_KEY = "prefs_version";
+        public static final String FORCE_ENGLISH = "force_english";
         public static final String LIBRARY_DISPLAY = "pref_library_display";
         public static final String IMPORT_QUEUE_EMPTY = "pref_import_queue_empty";
         static final String QUANTITY_PER_PAGE_LISTS = "pref_quantity_per_page_lists";
@@ -822,6 +930,8 @@ public final class Preferences {
         static final String ORDER_CONTENT_DESC = "pref_order_content_desc";
         static final String ORDER_GROUP_FIELD = "pref_order_group_field";
         static final String ORDER_GROUP_DESC = "pref_order_group_desc";
+        static final String ORDER_RULE_FIELD = "pref_order_rule_field";
+        static final String ORDER_RULE_DESC = "pref_order_rule_desc";
         static final String SEARCH_ORDER_ATTRIBUTE_LISTS = "pref_order_attribute_lists";
         static final String SEARCH_COUNT_ATTRIBUTE_RESULTS = "pref_order_attribute_count";
         static final String FIRST_RUN = "pref_first_run";
@@ -842,15 +952,17 @@ public final class Preferences {
         static final String BROWSER_RESUME_LAST = "pref_browser_resume_last";
         static final String BROWSER_AUGMENTED = "pref_browser_augmented";
         public static final String BROWSER_MARK_DOWNLOADED = "browser_mark_downloaded";
+        public static final String BROWSER_MARK_MERGED = "browser_mark_merged";
         public static final String BROWSER_DL_ACTION = "pref_browser_dl_action";
-        static final String BROWSER_QUICK_DL = "pref_browser_quick_dl";
-        static final String BROWSER_QUICK_DL_THRESHOLD = "pref_browser_quick_dl_threshold";
+        public static final String BROWSER_QUICK_DL = "pref_browser_quick_dl";
+        public static final String BROWSER_QUICK_DL_THRESHOLD = "pref_browser_quick_dl_threshold";
         public static final String BROWSER_DNS_OVER_HTTPS = "pref_browser_dns_over_https";
         public static final String BROWSER_CLEAR_COOKIES = "pref_browser_clear_cookies";
         public static final String BROWSER_NHENTAI_INVISIBLE_BLACKLIST = "pref_nhentai_invisible_blacklist";
         static final String FOLDER_TRUNCATION_LISTS = "pref_folder_trunc_lists";
         static final String VIEWER_RESUME_LAST_LEFT = "pref_viewer_resume_last_left";
         public static final String VIEWER_KEEP_SCREEN_ON = "pref_viewer_keep_screen_on";
+        public static final String VIEWER_DISPLAY_AROUND_NOTCH = "pref_viewer_display_notch";
         public static final String VIEWER_IMAGE_DISPLAY = "pref_viewer_image_display";
         public static final String VIEWER_RENDERING = "pref_viewer_rendering";
         public static final String VIEWER_BROWSE_MODE = "pref_viewer_browse_mode";
@@ -861,16 +973,20 @@ public final class Preferences {
         static final String VIEWER_OPEN_GALLERY = "pref_viewer_open_gallery";
         public static final String VIEWER_CONTINUOUS = "pref_viewer_continuous";
         static final String VIEWER_INVERT_VOLUME_ROCKER = "pref_viewer_invert_volume_rocker";
-        static final String VIEWER_PAGE_TURN_SWIPE = "pref_viewer_page_turn_swipe";
+        public static final String VIEWER_PAGE_TURN_SWIPE = "pref_viewer_page_turn_swipe";
         static final String VIEWER_PAGE_TURN_TAP = "pref_viewer_page_turn_tap";
         static final String VIEWER_PAGE_TURN_TAP_2X = "pref_viewer_page_turn_tap_2x";
         static final String VIEWER_PAGE_TURN_VOLUME = "pref_viewer_page_turn_volume";
         static final String VIEWER_PAGE_TURN_KEYBOARD = "pref_viewer_page_turn_keyboard";
+        static final String VIEWER_BOOK_SWITCH_VOLUME = "pref_viewer_book_switch_volume";
         public static final String VIEWER_SEPARATING_BARS = "pref_viewer_separating_bars";
-        static final String VIEWER_READ_THRESHOLD = "pref_viewer_read_threshold";
+        static final String VIEWER_PAGE_READ_THRESHOLD = "pref_viewer_read_threshold";
+        static final String VIEWER_RATIO_COMPLETED_THRESHOLD = "pref_viewer_ratio_completed_threshold";
         static final String VIEWER_SLIDESHOW_DELAY = "pref_viewer_slideshow_delay";
+        static final String VIEWER_SLIDESHOW_DELAY_VERTICAL = "pref_viewer_slideshow_delay_vertical";
         public static final String VIEWER_HOLD_TO_ZOOM = "pref_viewer_zoom_holding";
         public static final String VIEWER_CAP_TAP_ZOOM = "pref_viewer_cap_tap_zoom";
+        public static final String VIEWER_MAINTAIN_HORIZONTAL_ZOOM = "pref_viewer_maintain_horizontal_zoom";
         public static final String VIEWER_AUTO_ROTATE = "pref_viewer_auto_rotate";
         static final String LAST_KNOWN_APP_VERSION_CODE = "last_known_app_version_code";
         public static final String COLOR_THEME = "pref_color_theme";
@@ -883,6 +999,7 @@ public final class Preferences {
         static final String DL_RETRIES_ACTIVE = "pref_dl_retries_active";
         static final String DL_RETRIES_NUMBER = "pref_dl_retries_number";
         static final String DL_RETRIES_MEM_LIMIT = "pref_dl_retries_mem_limit";
+        public static final String DL_SPEED_CAP = "dl_speed_cap";
         static final String DL_BLOCKED_TAGS = "pref_dl_blocked_tags";
         static final String DL_BLOCKED_TAG_BEHAVIOUR = "pref_dl_blocked_tags_behaviour";
         public static final String DL_THREADS_QUANTITY_LISTS = "pref_dl_threads_quantity_lists";
@@ -902,6 +1019,10 @@ public final class Preferences {
         public static final String DUPLICATE_USE_COVER = "duplicate_use_cover";
         public static final String DUPLICATE_USE_ARTIST = "duplicate_use_artist";
         public static final String DUPLICATE_USE_SAME_LANGUAGE = "duplicate_use_same_language";
+        public static final String DUPLICATE_BROWSER_USE_TITLE = "duplicate_browser_use_title";
+        public static final String DUPLICATE_BROWSER_USE_COVER = "duplicate_browser_use_cover";
+        public static final String DUPLICATE_BROWSER_USE_ARTIST = "duplicate_browser_use_artist";
+        public static final String DUPLICATE_BROWSER_USE_SAME_LANGUAGE = "duplicate_browser_use_same_language";
         public static final String DUPLICATE_IGNORE_CHAPTERS = "duplicate_ignore_chapters";
         public static final String DUPLICATE_LAST_INDEX = "last_index";
         public static final String DOWNLOAD_DUPLICATE_ASK = "download_duplicate_ask";
@@ -924,11 +1045,14 @@ public final class Preferences {
         }
 
         public static final int LIBRARY_DISPLAY = Constant.LIBRARY_DISPLAY_LIST;
+        static final boolean FORCE_ENGLISH = false;
         static final int QUANTITY_PER_PAGE = 20;
         public static final int ORDER_CONTENT_FIELD = Constant.ORDER_FIELD_TITLE;
         public static final int ORDER_GROUP_FIELD = Constant.ORDER_FIELD_TITLE;
+        public static final int ORDER_RULE_FIELD = Constant.ORDER_FIELD_SOURCE_NAME;
         static final boolean ORDER_CONTENT_DESC = false;
         static final boolean ORDER_GROUP_DESC = false;
+        static final boolean ORDER_RULE_DESC = false;
         static final int SEARCH_ORDER_ATTRIBUTES = Constant.SEARCH_ORDER_ATTRIBUTES_COUNT;
         static final boolean SEARCH_COUNT_ATTRIBUTE_RESULTS = true;
         static final boolean FIRST_RUN = true;
@@ -945,13 +1069,14 @@ public final class Preferences {
         static final boolean BROWSER_MARK_DOWNLOADED = false;
         static final int BROWSER_DL_ACTION = Constant.DL_ACTION_DL_PAGES;
         static final boolean BROWSER_QUICK_DL = true;
-        static final int BROWSER_QUICK_DL_THRESHOLD = 500; // 500ms
+        static final int BROWSER_QUICK_DL_THRESHOLD = 1500; // 1.5s
         static final int BROWSER_DNS_OVER_HTTPS = -1; // No DNS
         static final boolean BROWSER_NHENTAI_INVISIBLE_BLACKLIST = false;
         static final int DL_THREADS_QUANTITY = Constant.DOWNLOAD_THREAD_COUNT_AUTO;
         static final int FOLDER_TRUNCATION = Constant.TRUNCATE_FOLDER_100;
         static final boolean VIEWER_RESUME_LAST_LEFT = true;
         static final boolean VIEWER_KEEP_SCREEN_ON = true;
+        static final boolean VIEWER_DISPLAY_AROUND_NOTCH = true;
         static final int VIEWER_IMAGE_DISPLAY = Constant.VIEWER_DISPLAY_FIT;
         static final int VIEWER_RENDERING = Constant.VIEWER_RENDERING_SHARP;
         static final int VIEWER_BROWSE_MODE = Constant.VIEWER_BROWSE_NONE;
@@ -965,17 +1090,21 @@ public final class Preferences {
         static final boolean VIEWER_PAGE_TURN_TAP_2X = false;
         static final boolean VIEWER_PAGE_TURN_VOLUME = true;
         static final boolean VIEWER_PAGE_TURN_KEYBOARD = true;
+        static final boolean VIEWER_BOOK_SWITCH_VOLUME = false;
         static final boolean VIEWER_SWIPE_TO_FLING = false;
         static final boolean VIEWER_INVERT_VOLUME_ROCKER = false;
         static final int VIEWER_SEPARATING_BARS = Constant.VIEWER_SEPARATING_BARS_OFF;
-        static final int VIEWER_READ_THRESHOLD = Constant.VIEWER_READ_THRESHOLD_1;
+        static final int VIEWER_PAGE_READ_THRESHOLD = Constant.VIEWER_READ_THRESHOLD_1;
+        static final int VIEWER_RATIO_COMPLETED_THRESHOLD = Constant.VIEWER_COMPLETED_RATIO_THRESHOLD_NONE;
         public static final int VIEWER_SLIDESHOW_DELAY = Constant.VIEWER_SLIDESHOW_DELAY_2;
+        public static final int VIEWER_SLIDESHOW_DELAY_VERTICAL = Constant.VIEWER_SLIDESHOW_DELAY_2;
         static final boolean VIEWER_HOLD_TO_ZOOM = false;
         static final int VIEWER_CAP_TAP_ZOOM = Constant.VIEWER_CAP_TAP_ZOOM_NONE;
+        static final boolean VIEWER_MAINTAIN_HORIZONTAL_ZOOM = false;
         static final boolean VIEWER_AUTO_ROTATE = false;
         public static final int COLOR_THEME = Constant.COLOR_THEME_LIGHT;
         static final boolean QUEUE_AUTOSTART = true;
-        static final int QUEUE_NEW_DOWNLOADS_POSITION = Constant.QUEUE_NEW_DOWNLOADS_POSITION_BOTTOM;
+        public static final int QUEUE_NEW_DOWNLOADS_POSITION = Constant.QUEUE_NEW_DOWNLOADS_POSITION_BOTTOM;
         static final boolean QUEUE_WIFI_ONLY = false;
         static final boolean DL_SIZE_WIFI = false;
         static final int DL_SIZE_WIFI_THRESHOLD = 40;
@@ -983,6 +1112,7 @@ public final class Preferences {
         static final boolean DL_RETRIES_ACTIVE = false;
         static final int DL_RETRIES_NUMBER = 3;
         static final int DL_RETRIES_MEM_LIMIT = 100;
+        static final int DL_SPEED_CAP = Constant.DL_SPEED_CAP_NONE;
         static final int DL_BLOCKED_TAGS_BEHAVIOUR = Constant.DL_TAG_BLOCKING_BEHAVIOUR_DONT_QUEUE;
         static final boolean CHECK_UPDATES = true;
         // Default menu in v1.3.x
@@ -1001,6 +1131,10 @@ public final class Preferences {
         static final boolean DUPLICATE_USE_COVER = false;
         static final boolean DUPLICATE_USE_ARTIST = true;
         static final boolean DUPLICATE_USE_SAME_LANGUAGE = false;
+        static final boolean DUPLICATE_BROWSER_USE_TITLE = true;
+        static final boolean DUPLICATE_BROWSER_USE_COVER = true;
+        static final boolean DUPLICATE_BROWSER_USE_ARTIST = true;
+        static final boolean DUPLICATE_BROWSER_USE_SAME_LANGUAGE = false;
         static final boolean DUPLICATE_IGNORE_CHAPTERS = true;
         static final boolean DOWNLOAD_DUPLICATE_ASK = true;
         static final boolean DOWNLOAD_PLUS_DUPLICATE_TRY = true;
@@ -1031,6 +1165,8 @@ public final class Preferences {
         public static final int ORDER_FIELD_CHILDREN = 8; // Groups only
         public static final int ORDER_FIELD_READ_PROGRESS = 9;
         public static final int ORDER_FIELD_DOWNLOAD_COMPLETION_DATE = 10;
+        public static final int ORDER_FIELD_SOURCE_NAME = 11;
+        public static final int ORDER_FIELD_TARGET_NAME = 12;
         public static final int ORDER_FIELD_CUSTOM = 98;
         public static final int ORDER_FIELD_RANDOM = 99;
 
@@ -1054,6 +1190,13 @@ public final class Preferences {
 
         public static final int DL_ACTION_DL_PAGES = 0;
         public static final int DL_ACTION_STREAM = 1;
+        public static final int DL_ACTION_ASK = 2;
+
+        public static final int DL_SPEED_CAP_NONE = -1;
+        public static final int DL_SPEED_CAP_100 = 0;
+        public static final int DL_SPEED_CAP_200 = 1;
+        public static final int DL_SPEED_CAP_400 = 2;
+        public static final int DL_SPEED_CAP_800 = 3;
 
         static final int TRUNCATE_FOLDER_100 = 100;
 
@@ -1080,10 +1223,19 @@ public final class Preferences {
         public static final int VIEWER_SEPARATING_BARS_MEDIUM = 2;
         public static final int VIEWER_SEPARATING_BARS_LARGE = 3;
 
+        public static final int VIEWER_READ_THRESHOLD_NONE = -1;
         public static final int VIEWER_READ_THRESHOLD_1 = 0;
         public static final int VIEWER_READ_THRESHOLD_2 = 1;
         public static final int VIEWER_READ_THRESHOLD_5 = 2;
         public static final int VIEWER_READ_THRESHOLD_ALL = 3;
+
+        public static final int VIEWER_COMPLETED_RATIO_THRESHOLD_NONE = -1;
+        public static final int VIEWER_COMPLETED_RATIO_THRESHOLD_10 = 0;
+        public static final int VIEWER_COMPLETED_RATIO_THRESHOLD_25 = 1;
+        public static final int VIEWER_COMPLETED_RATIO_THRESHOLD_33 = 2;
+        public static final int VIEWER_COMPLETED_RATIO_THRESHOLD_50 = 3;
+        public static final int VIEWER_COMPLETED_RATIO_THRESHOLD_75 = 4;
+        public static final int VIEWER_COMPLETED_RATIO_THRESHOLD_ALL = 99;
 
         public static final int VIEWER_SLIDESHOW_DELAY_2 = 0;
         public static final int VIEWER_SLIDESHOW_DELAY_4 = 1;

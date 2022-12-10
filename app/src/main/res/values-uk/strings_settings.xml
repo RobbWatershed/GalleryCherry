@@ -25,15 +25,19 @@
     <string name="pref_color_theme_title">Схема кольорів</string>
     <string name="pref_color_theme_summary">Поточна тема: <x:g id="theme_name" example="Темно-червона">%s</x:g></string>
     <string name="pref_misc">Інше</string>
+    <string name="pref_cat_language">Мова інтерфейсу</string>
+    <string name="pref_force_english_title">Примусово використовувати англійську</string>
+    <string name="pref_force_english_summary_off">Використовується мова пристрою, якщо додаток підтримує її</string>
+    <string name="pref_force_english_summary_on">Використовується англійська мова</string>
 
     <!-- Storage -->
     <string name="pref_screen_storage">Сховище</string>
     <string name="pref_cat_downloads_folder">Бібліотека Hentoid</string>
     <string name="pref_select_folder_title">Вибір папки завантажень</string>
     <string name="pref_select_folder_summary">Виберіть, де Hentoid буде зберігати ваші завантаження</string>
-    <string name="pref_import_queue_empty_title">Додавати порожні книги в чергу як невдалі завантаження</string>
-    <string name="pref_import_queue_empty_on">Порожні книги будуть додані в чергу як помилки завантаження</string>
-    <string name="pref_import_queue_empty_off">Порожні книги будуть додані до бібліотеки</string>
+    <string name="pref_import_queue_empty_title">Додавати порожні імпортовані книги в чергу як невдалі завантаження</string>
+    <string name="pref_import_queue_empty_on">Порожні імпортовані книги будуть додані в чергу як помилки завантаження</string>
+    <string name="pref_import_queue_empty_off">Порожні імпортовані книги будуть додані до бібліотеки</string>
     <string name="pref_folder_naming_content_title">Назви папок</string>
     <string name="pref_folder_naming_content_summary">Спосіб найменування папок:\n<x:g id="convention" example="Назва - ID">%s</x:g></string>
     <string name="pref_import_running">Імпортування вже запущено</string>
@@ -99,6 +103,8 @@
     <string name="pref_browser_clear_cookies">Очистити cookies браузера</string>
     <string name="pref_browser_clear_cookies_ok">Cookies видалені успішно</string>
     <string name="pref_browser_clear_cookies_ko">Нічого видаляти</string>
+    <string name="pref_browser_clear_cookies_missing_webview">WebView недоступно, неможливо видалити cookies зараз</string>
+    <string name="pref_browser_clear_cookies_updating_webview">WebView зараз оновлюється, поки неможливо видалити cookies</string>
 
     <!-- Downloader -->
     <string name="pref_screen_downloader">Завантажувач</string>
@@ -162,14 +168,20 @@
     <string name="pref_viewer_page_turn_keyboard">Стрілки вліво/вправо на клавіатурі</string>
     <string name="pref_viewer_swipe_to_fling">Перегортати кілька сторінок одним свайпом</string>
     <string name="pref_viewer_invert_volume">Інвертувати кнопки гучності</string>
+    <string name="pref_viewer_book_switch">Перемикання книг</string>
+    <string name="pref_viewer_book_switch_volume">Кнопки гучності (довге натискання)</string>
     <string name="pref_viewer_zoom">Збільшення</string>
     <string name="pref_viewer_zoom_holding">Тимчасово збільшувати при утриманні пальця</string>
     <string name="pref_viewer_cap_tap_zoom">Обмежити зум за подвійним або довгим натисканням</string>
     <string name="pref_viewer_visuals">Зовнішній вигляд</string>
+    <string name="pref_viewer_horizontal_reader">Читання по горизонталі</string>
+    <string name="pref_viewer_vertical_reader">Читання по вертикалі</string>
     <string name="pref_viewer_keep_screen_on">Не вимикати екран</string>
+    <string name="pref_viewer_display_notch">Показувати біля "чубчика"</string>
     <string name="pref_viewer_display_pagenum">Завжди показувати номер сторінки</string>
     <string name="pref_viewer_tap_transitions">Увімкнути анімацію зміни сторінок</string>
     <string name="pref_viewer_zoom_transitions">Увімкнути анімацію зуму</string>
+    <string name="pref_viewer_maintain_horizontal_zoom">Зберігати значення зуму між сторінками</string>
     <string name="pref_viewer_separating_bars">Смуги, що розділяють у вертикальному режимі</string>
     <string name="pref_viewer_display_mode">Режим відображення для горизонтального перегляду</string>
     <string name="pref_viewer_rendering">Режим відмальовування</string>
@@ -187,6 +199,8 @@
     <string name="pref_viewer_continuous_summary_off">Остання сторінка книги справді остання</string>
     <string name="pref_viewer_continuous_summary_on">З останньої сторінки книги можна піти на наступну книгу</string>
     <string name="pref_viewer_read_threshold">Вважати книгу прочитаною після N сторінок</string>
+    <string name="pref_viewer_ratio_completed_threshold">Вважати книгу прочитаною після відсотка сторінок</string>
     <string name="pref_viewer_slideshow_delay">Слайдшоу / Час показу кожної сторінки</string>
+    <string name="pref_viewer_slideshow_delay_vertical">Слайдшоу / Швидкість вертикального перегортання</string>
     <string name="doh_warning">Деякі сайти погано працюють з DNS через HTTPS. Скористайтеся стороннім додатком для DNS, якщо ви маєте проблеми при навігації (наприклад: порожні сторінки або помилки під час авторизації)</string>
 </resources>

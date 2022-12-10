@@ -26,6 +26,7 @@ import java.util.Set;
 import javax.annotation.Nullable;
 
 import me.devsaki.hentoid.BuildConfig;
+import me.devsaki.hentoid.util.file.FileHelper;
 import okhttp3.MediaType;
 import okhttp3.Request;
 import okhttp3.RequestBody;
@@ -38,7 +39,7 @@ import timber.log.Timber;
  */
 public class HttpHelper {
 
-    public static final int DEFAULT_REQUEST_TIMEOUT = 30000; // 30 seconds
+    static final int DEFAULT_REQUEST_TIMEOUT = 30000; // 30 seconds
 
     // Keywords of the HTTP protocol
     public static final String HEADER_ACCEPT_KEY = "accept";
@@ -49,17 +50,17 @@ public class HttpHelper {
 
     public static final String POST_MIME_TYPE = "application/x-www-form-urlencoded";
 
-    public static final Set<String> COOKIES_STANDARD_ATTRS = new HashSet<>();
+    private static final Set<String> COOKIES_STANDARD_ATTRS = new HashSet<>();
 
     // To display sites with desktop layouts
-    public static final String DESKTOP_USER_AGENT_PATTERN = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) %s Safari/537.36";
+    private static final String DESKTOP_USER_AGENT_PATTERN = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) %s Safari/537.36";
 
-    public static String defaultUserAgent = null;
-    public static String defaultChromeAgent = null;
-    public static int defaultChromeVersion = -1;
+    private static String defaultUserAgent = null;
+    private static String defaultChromeAgent = null;
+    private static int defaultChromeVersion = -1;
 
     // Error messages
-    public static final String AGENT_INIT_ISSUE = "Call initUserAgents first to initialize them !";
+    private static final String AGENT_INIT_ISSUE = "Call initUserAgents first to initialize them !";
 
 
     static {
@@ -139,6 +140,16 @@ public class HttpHelper {
         return OkHttpClientSingleton.getInstance(2000, 10000, followRedirects).newCall(request).execute();
     }
 
+    public static Response getOnlineResourceDownloader(@NonNull String url, @Nullable List<Pair<String, String>> headers, boolean useMobileAgent, boolean useHentoidAgent, boolean useWebviewAgent) throws IOException {
+        return getOnlineResourceFast(url, headers, useMobileAgent, useHentoidAgent, useWebviewAgent, true);
+    }
+
+    public static Response getOnlineResourceDownloader(@NonNull String url, @Nullable List<Pair<String, String>> headers, boolean useMobileAgent, boolean useHentoidAgent, boolean useWebviewAgent, boolean followRedirects) throws IOException {
+        Request.Builder requestBuilder = buildRequest(url, headers, useMobileAgent, useHentoidAgent, useWebviewAgent);
+        Request request = requestBuilder.get().build();
+        return OkHttpClientSingleton.getInstance(4000, 15000, followRedirects).newCall(request).execute();
+    }
+
     /**
      * Read a resource from the given URL with HTTP POST, using the given headers and agent
      *
@@ -200,7 +211,7 @@ public class HttpHelper {
             Pair<String, String> details = cleanContentType(contentTypeValue);
             result = new WebResourceResponse(details.first, details.second, resp.code(), message, responseHeaders, is);
         } else {
-            result = new WebResourceResponse("application/octet-stream", null, resp.code(), message, responseHeaders, is);
+            result = new WebResourceResponse(FileHelper.DEFAULT_MIME_TYPE, null, resp.code(), message, responseHeaders, is);
         }
 
         return result;
@@ -326,6 +337,10 @@ public class HttpHelper {
         if (1 == parts.length) return parts[0];
         // Main domain and extension
         return parts[parts.length - 2] + "." + parts[parts.length - 1];
+    }
+
+    public static String getProtocol(@NonNull final String url) {
+        return url.startsWith("https") ? "https" : "http";
     }
 
     /**

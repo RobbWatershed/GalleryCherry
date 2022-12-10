@@ -1,7 +1,5 @@
 package me.devsaki.hentoid.database.domains;
 
-import android.content.res.Resources;
-
 import androidx.annotation.NonNull;
 
 import java.io.DataInputStream;
@@ -9,6 +7,7 @@ import java.io.IOException;
 import java.util.Objects;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import io.objectbox.annotation.Backlink;
 import io.objectbox.annotation.Convert;
@@ -20,6 +19,7 @@ import io.objectbox.relation.ToMany;
 import io.objectbox.relation.ToOne;
 import me.devsaki.hentoid.enums.AttributeType;
 import me.devsaki.hentoid.enums.Site;
+import me.devsaki.hentoid.util.Helper;
 import timber.log.Timber;
 
 /**
@@ -43,6 +43,8 @@ public class Attribute {
     @Transient
     private boolean excluded = false;
     @Transient
+    private boolean isNew = false;
+    @Transient
     private int count = 0;
     @Transient
     private int externalId = 0;
@@ -50,15 +52,34 @@ public class Attribute {
     public ToMany<Content> contents;
     @Transient
     private String displayName = "";
+    @Transient
+    private long uniqueHash = 0;    // cached value of uniqueHash
+
+    // WARNING : Update copy constructor when adding attributes
 
 
     public Attribute() { // Required by ObjectBox when an alternate constructor exists
     }
 
+    public Attribute(Attribute data) {
+        this.id = data.id;
+        this.name = data.name;
+        this.type = data.type;
+        this.locations = data.locations; // this isn't a deep copy
+        this.group = data.group; // this isn't a deep copy
+
+        this.excluded = data.excluded;
+        this.isNew = data.isNew;
+        this.count = data.count;
+        this.externalId = data.externalId;
+        this.contents = data.contents;  // this isn't a deep copy
+        this.displayName = data.displayName;
+        this.uniqueHash = data.uniqueHash;
+    }
+
     public Attribute(@Nonnull AttributeType type, @Nonnull String name) {
         this.type = type;
         this.name = name;
-
     }
 
     public Attribute(@Nonnull AttributeType type, @Nonnull String name, @Nonnull String url, @Nonnull Site site) {
@@ -115,6 +136,14 @@ public class Attribute {
         return excluded;
     }
 
+    public boolean isNew() {
+        return isNew;
+    }
+
+    public void setNew(boolean aNew) {
+        isNew = aNew;
+    }
+
     public void setType(@Nonnull AttributeType type) {
         this.type = type;
     }
@@ -138,6 +167,11 @@ public class Attribute {
 
     public ToOne<Group> getGroup() {
         return group;
+    }
+
+    @Nullable
+    public Group getLinkedGroup() {
+        return (group != null && !group.isNull()) ? group.getTarget() : null;
     }
 
     public void putGroup(@NonNull Group group) {
@@ -175,10 +209,6 @@ public class Attribute {
         return getName();
     }
 
-    public String formatLabel(@NonNull Resources res, boolean useNamespace) {
-        return String.format("%s%s %s", useNamespace ? res.getString(type.getDisplayName()).toLowerCase() + ":" : "", getDisplayName(), getCount() > 0 ? "(" + getCount() + ")" : "");
-    }
-
     // Hashcode (and by consequence equals) has to take into account fields that get visually updated on the app UI
     // If not done, FastAdapter's PagedItemListImpl cache won't detect changes to the object
     // and items won't be visually updated on screen
@@ -202,5 +232,14 @@ public class Attribute {
         long idComp = id;
         if (externalId != 0) idComp = externalId;
         return Objects.hash(getName(), getType(), idComp);
+    }
+
+    public long uniqueHash() {
+        if (0 == uniqueHash) {
+            long idComp = id;
+            if (externalId != 0) idComp = externalId;
+            uniqueHash = Helper.hash64((idComp + "." + name + "." + type.getCode()).getBytes());
+        }
+        return uniqueHash;
     }
 }

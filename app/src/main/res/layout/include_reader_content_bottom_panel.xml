@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/image_dialog_root"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="16dp"
+    android:theme="@style/Theme.Light.BottomSheetDialog"
+    tools:targetApi="o">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:theme="@style/Theme.Light.BottomSheetDialog">
+
+        <ImageView
+            android:id="@+id/ivCover"
+            android:layout_width="75dp"
+            android:layout_height="100dp"
+            android:adjustViewBounds="true"
+            app:layout_constraintBottom_toBottomOf="@id/img_divider"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:ignore="ContentDescription"
+            tools:src="@drawable/ic_hentoid_trans"
+            tools:tint="@color/light_gray" />
+
+        <TextView
+            android:id="@+id/content_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:textSize="@dimen/text_subtitle_2"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/ivCover"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="this is a very long title" />
+
+        <TextView
+            android:id="@+id/content_artist"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="8dp"
+            android:textSize="@dimen/text_subtitle_2"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/ivCover"
+            app:layout_constraintTop_toBottomOf="@id/content_title"
+            tools:text="@string/book_artist" />
+
+        <TextView
+            android:id="@+id/content_tags"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="8dp"
+            android:ellipsize="middle"
+            android:maxLines="5"
+            android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
+            android:textColor="@color/card_tags_light"
+            android:textSize="@dimen/text_subtitle_2"
+            app:layout_constraintBottom_toTopOf="@id/img_divider"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/ivCover"
+            app:layout_constraintTop_toBottomOf="@id/content_artist"
+            tools:text="@string/book_tags" />
+
+        <View
+            android:id="@+id/img_divider"
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="160dp"
+            android:background="?colorOnPrimary"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ImageView
+            android:id="@+id/img_action_favourite"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:padding="8dp"
+            android:src="@drawable/ic_fav_empty"
+            android:tooltipText="@string/page_fav_help"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/img_divider"
+            tools:ignore="ContentDescription" />
+
+        <ImageView
+            android:id="@+id/rating_1"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:padding="8dp"
+            android:src="@drawable/ic_star_empty"
+            android:tooltipText="@string/filter_rating"
+            app:layout_constraintEnd_toStartOf="@id/rating_2"
+            app:layout_constraintTop_toBottomOf="@id/img_divider"
+            tools:ignore="ContentDescription"
+            tools:targetApi="o" />
+
+        <ImageView
+            android:id="@+id/rating_2"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:padding="8dp"
+            android:src="@drawable/ic_star_empty"
+            android:tooltipText="@string/filter_rating"
+            app:layout_constraintEnd_toStartOf="@id/rating_3"
+            app:layout_constraintTop_toBottomOf="@id/img_divider"
+            tools:ignore="ContentDescription"
+            tools:targetApi="o" />
+
+        <ImageView
+            android:id="@+id/rating_3"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:padding="8dp"
+            android:src="@drawable/ic_star_empty"
+            android:tooltipText="@string/filter_rating"
+            app:layout_constraintEnd_toStartOf="@id/rating_4"
+            app:layout_constraintTop_toBottomOf="@id/img_divider"
+            tools:ignore="ContentDescription"
+            tools:targetApi="o" />
+
+        <ImageView
+            android:id="@+id/rating_4"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:padding="8dp"
+            android:src="@drawable/ic_star_empty"
+            android:tooltipText="@string/filter_rating"
+            app:layout_constraintEnd_toStartOf="@id/rating_5"
+            app:layout_constraintTop_toBottomOf="@id/img_divider"
+            tools:ignore="ContentDescription"
+            tools:targetApi="o" />
+
+        <ImageView
+            android:id="@+id/rating_5"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginEnd="32dp"
+            android:padding="8dp"
+            android:src="@drawable/ic_star_empty"
+            android:tooltipText="@string/filter_rating"
+            app:layout_constraintEnd_toEndOf="@id/img_divider"
+            app:layout_constraintTop_toBottomOf="@id/img_divider"
+            tools:ignore="ContentDescription"
+            tools:targetApi="o" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -15,7 +15,11 @@ class ThemeIntroFragment : Fragment(R.layout.intro_slide_05) {
     private var _binding: IntroSlide05Binding? = null
     private val binding get() = _binding!!
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
         _binding = IntroSlide05Binding.inflate(inflater, container, false)
         return binding.root
     }

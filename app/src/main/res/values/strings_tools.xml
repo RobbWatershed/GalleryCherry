@@ -35,13 +35,28 @@
     <string name="tools_cache_browser">Clear browser cache</string>
     <!-- Toast notification -->
     <string name="tools_cache_browser_success">WebView cache successfully cleared</string>
+    <string name="tools_cache_browser_missing_webview">WebView is unavailable, can\'t clear cache now</string>
+    <string name="tools_cache_browser_updating_webview">WebView is updating right now, can\'t clear cache yet</string>
     <!-- Button -->
     <string name="tools_cache_app">Clear app cache</string>
     <!-- Toast notification -->
     <string name="tools_cache_app_success">App cache successfully cleared</string>
 
     <!-- Menu item -->
+    <string name="tools_renaming_rules_title">Attribute renaming rules</string>
+    <!-- Menu item description -->
+    <string name="tools_renaming_rules_summary">Manage attribute renaming rules</string>
+
+    <!-- Menu item -->
     <string name="tools_latest_logs_title">App logs</string>
     <!-- Menu item description -->
     <string name="tools_latest_logs_summary">View the app\'s latest logs</string>
+
+
+    <!-- Metadata import -->
+    <string name="tools_import_empty_books_intro">If no images folder is detected…</string>
+    <string name="tools_import_empty_books_entries_1">Do not import</string>
+    <string name="tools_import_empty_books_entries_2">Import as empty book</string>
+    <string name="tools_import_empty_books_entries_3">Import as streamed book if possible</string>
+    <string name="tools_import_empty_books_entries_4">Add to error queue</string>
 </resources>

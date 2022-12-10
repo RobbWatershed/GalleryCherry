@@ -26,11 +26,22 @@
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:largeHeap="true"
+        android:localeConfig="@xml/locales_config"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="false"
         android:theme="@style/Theme.Light"
         android:usesCleartextTraffic="true"
         tools:replace="android:allowBackup, android:supportsRtl, android:extractNativeLibs">
+
+        <meta-data
+            android:name="android.webkit.WebView.MetricsOptOut"
+            android:value="true" />
+
+        <activity
+            android:name=".activities.MissingWebViewActivity"
+            android:exported="false"
+            android:label="@string/missing_web_view"
+            android:noHistory="true" />
         <activity
             android:name=".activities.SplashActivity"
             android:exported="true"
@@ -93,6 +104,12 @@
             android:configChanges="orientation|screenSize" />
         <activity
             android:name=".activities.sources.AsianSisterActivity"
+            android:configChanges="orientation|screenSize" />
+        <activity
+            android:name=".activities.sources.SimplyActivity"
+            android:configChanges="orientation|screenSize" />
+        <activity
+            android:name=".activities.sources.HdPornComicsActivity"
             android:configChanges="orientation|screenSize" />
         <activity
             android:name=".activities.LibraryActivity"
@@ -165,6 +182,14 @@
             android:name=".activities.PinPreferenceActivity"
             android:resizeableActivity="false"
             android:screenOrientation="portrait" />
+        <activity
+            android:name=".activities.MetadataEditActivity"
+            android:label="@string/title_activity_meta_edit"
+            tools:ignore="UnusedAttribute" />
+        <activity
+            android:name=".activities.RenamingRulesActivity"
+            android:label="@string/title_activity_rules"
+            tools:ignore="UnusedAttribute" />
         <activity
             android:name=".activities.IntentActivity"
             android:exported="true"
@@ -379,10 +404,32 @@
                     android:pathPattern="/..*/..*"
                     android:scheme="https" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="www.simply-hentai.com"
+                    android:pathPattern="/..*/..*"
+                    android:scheme="https" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="hdporncomics.com"
+                    android:pathPattern="/..*/"
+                    android:scheme="https" />
+            </intent-filter>
         </activity>
 
         <activity
-            android:name=".activities.ImageViewerActivity"
+            android:name=".activities.ReaderActivity"
             android:label="Image Viewer"
             android:launchMode="singleTask"
             android:theme="@style/Theme.Light.Monochrome">

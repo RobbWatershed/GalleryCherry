@@ -30,6 +30,12 @@
         <item quantity="few">файла</item>
         <item quantity="many">файлов</item>
     </plurals>
+    <plurals name="item" tools:ignore="ImpliedQuantity">
+        <item quantity="one">элемент</item>
+        <item quantity="few">элемента</item>
+        <item quantity="many">элементов</item>
+        <item quantity="other">элементов</item>
+    </plurals>
     <string name="groups">Группы</string>
     <string name="pause">Приостановить</string>
     <string name="stop">Остановить</string>
@@ -37,11 +43,13 @@
     <string name="cancel">Отменить</string>
     <string name="cancel_all">Отменить всё</string>
     <string name="menu_completed_single">Завершено</string>
+    <string name="menu_reset_read">Пометить непрочитанным</string>
     <string name="service_running">Сервис уже запущен</string>
     <string name="open_folder">Открыть папку</string>
     <string name="_default">по умолчанию</string>
     <string name="empty">пусто</string>
     <string name="none">Никак</string>
+    <string name="disabled_generic">Отключено</string>
 
     <!-- Activities -->
     <string name="title_activity_api29_migration">Переход на API 29</string>
@@ -77,9 +85,9 @@
     <string name="menu_edit_confirm">Подтвердить редактирование</string>
     <string name="menu_edit_cancel">Отменить редактирование</string>
     <string name="menu_edit_warning_custom">Новая пользовательская сортировка заменит предыдущую.</string>
-    <string name="menu_order">Сортировать книги</string>
+    <string name="menu_sort_filter">Сортировать книги</string>
     <string name="menu_delete_single">Удалить</string>
-    <string name="menu_change_group">Переместить в группу…</string>
+    <string name="menu_change_group">Переместить в группу</string>
     <string name="menu_open_folder">Открыть родительскую папку</string>
     <string name="menu_redownload">Загрузить снова</string>
     <string name="menu_redownload_scratch">Загрузить с нуля</string>
@@ -91,7 +99,7 @@
     <string name="menu_archive">В архив</string>
     <string name="menu_archive_help">Заархивировать книгу в ZIP</string>
     <string name="menu_share_title">Ссылка на книгу</string>
-    <string name="search_hint">Название, художник, тэг или ID книги</string>
+    <string name="library_search_hint">Название, художник, тэг или ID книги</string>
     <string name="send_to">Поделиться через:</string>
     <string name="open_settings">Настройки</string>
     <string name="app_settings">Настройки приложения</string>
@@ -100,6 +108,7 @@
     <string name="low_memory">Заканчивается память на устройстве!</string>
     <string name="fix_permissions">Исправить</string>
     <string name="view_queue">Просмотреть очередь</string>
+    <string name="clear_search_history">Очистить историю поиска</string>
 
     <!-- Queue / Downloader -->
     <string name="downloader_title">Загрузчик</string>
@@ -113,6 +122,7 @@
     <string name="invert_queue">Инвертировать порядок</string>
     <string name="redownload_all">Загрузить всё снова</string>
     <string name="cancel_all_errors">Отменить все ошибки</string>
+    <string name="import_downloads">Импортировать загрузки</string>
     <string name="move_top">В начало</string>
     <string name="move_bottom">В конец</string>
     <string name="queue_paused">Очередь приостановлена</string>
@@ -151,6 +161,8 @@
     <string name="step_remove_duplicate">Заменяется дубликат</string>
     <string name="help_swipe_cancel">Вы можете отменять загрузки свайпом влево</string>
     <string name="redownloaded_error">Возникла проблема при повторной загрузке — отменено</string>
+    <string name="redownloaded_missing_webview">WebView недоступен, невозможно загрузить снова сейчас</string>
+    <string name="redownloaded_updating_webview">WebView сейчас обновляется, пока невозможно загрузить снова</string>
     <plurals name="redownloaded_scratch">
         <item quantity="one"><x:g id="number" example="1">%1$d</x:g> элемент из <x:g id="total" example="42">%2$d</x:g> будет загружен снова</item>
         <item quantity="few"><x:g id="number" example="2">%1$d</x:g> элемента из <x:g id="total" example="42">%2$d</x:g> будут загружены снова</item>
@@ -162,6 +174,8 @@
     <string name="notification_user_action_needed">Необходимо действие пользователя</string>
     <string name="notification_action_dl_revive">Нажмите, чтобы возобновить загрузку</string>
     <string name="revive_wait">Пожалуйста, не закрывайте это окно, пока ваша загрузка возобновляется</string>
+    <string name="revive_missing_webview">WebView недоступен, невозможно возобновлять загрузки сейчас</string>
+    <string name="revive_updating_webview">WebView сейчас обновляется, пока невозможно возобновлять загрузки</string>
     <string name="queue_json_saved">JSON очереди успешно сохранён</string>
     <string name="queue_json_failed">Не удалось сохранить JSON очереди</string>
     <string name="queue_content_size_estimate">примерно <x:g id="size_mbytes" example="13.37">%.1f</x:g> МБ</string>
@@ -177,6 +191,15 @@
     <string name="download_notif_failed">Загрузка не удалась</string>
     <string name="download_notif_failed_details">Невозможно загрузить <x:g id="book_name" example="Крутая хентай-манга">%1$s</x:g>: не удалось создать папку <x:g id="path" example="/storage/emulated/0/Hentoid/nhentai/coolhmanga">%2$s</x:g>. Пожалуйста, проверьте папку Hentoid и повторите загрузку с помощью кнопки \'!\'.</string>
 
+    <!-- Import downloads -->
+    <string name="import_downloads_title">Импорт загрузок</string>
+    <plurals name="import_downloads_found">
+        <item quantity="one"><x:g example="1" id="downloads">%d</x:g> загрузка обработана</item>
+        <item quantity="few"><x:g example="2" id="downloads">%d</x:g> загрузки обработаны</item>
+        <item quantity="many"><x:g example="2" id="downloads">%d</x:g> загрузок обработано</item>
+    </plurals>
+    <string name="importing_downloads">Импортирую загрузки…</string>
+
     <!-- TextViews -->
     <string name="work_series">Сеттинг: <x:g id="series" example="original">%s</x:g></string>
     <string name="work_artist">Художник: <x:g id="artist" example="hayao miyazaki">%s</x:g></string>
@@ -191,6 +214,9 @@
         <item quantity="few"><x:g id="pages_count" example="32">%1$d</x:g> страницы / <x:g id="size_mb" example="3.88">%2$.1f</x:g> МБ</item>
         <item quantity="many"><x:g id="pages_count" example="45">%1$d</x:g> страниц / <x:g id="size_mb" example="3.88">%2$.1f</x:g> МБ</item>
     </plurals>
+    <string name="work_pages_duplicate_dialog_library">Страниц (в библиотеке): %d</string>
+    <string name="work_pages_duplicate_dialog_queue">Страниц (в очереди): %d</string>
+    <string name="work_pages_duplicate_dialog_source">Страниц (в этом источнике): %d</string>
     <string name="library_metrics_storage"><x:g id="size_mb" example="3.88">%.0f</x:g> МБ</string>
     <string name="redownload_queue_progress">Выбранные книги загружаются снова</string>
     <string name="errortype_parsing">Обработка</string>
@@ -212,6 +238,7 @@
     <string name="refresh_location_internal">Библиотека Hentoid</string>
     <string name="refresh_location_external">Внешняя библиотека</string>
     <string name="refresh_options_rename">Переименовать все папки согласно текущим настройкам названий и максимальной длины</string>
+    <string name="refresh_options_remove_placeholders">Удалить пустые книги (импортированы только метаданные)</string>
     <string name="refresh_options_remove">Удалить папки, в которых…</string>
     <string name="refresh_options_remove_1">Отсутствует JSON-файл (рекомендуется)</string>
     <string name="refresh_options_remove_2">Отсутствуют изображения</string>
@@ -236,6 +263,7 @@
     <string name="import_mode_add">Добавить импортированные элементы</string>
     <string name="import_mode_replace">Заменить импортированными элементами</string>
     <string name="import_select_file">Выбор файла для импорта</string>
+    <string name="checking_file">Проверяю файл…</string>
     <string name="import_file_invalid">Невозможно обработать файл <x:g id="filename" example="metadata.json">%s</x:g></string>
     <plurals name="import_file_library">
         <item quantity="one">Импорт библиотеки (<x:g id="number" example="1">%d</x:g> книга)</item>
@@ -257,7 +285,6 @@
         <item quantity="few">Импорт закладок (<x:g id="number" example="2">%d</x:g> элемента)</item>
         <item quantity="many">Импорт закладок (<x:g id="number" example="5">%d</x:g> элементов)</item>
     </plurals>
-    <string name="import_warning">Если папок с изображениями не обнаружится, импортированные книги будут отображены как пустые загрузки.\nВам придётся загрузить их в Очередь &gt; Ошибки.</string>
     <string name="import_run">ЗАПУСТИТЬ ИМПОРТ</string>
     <plurals name="import_result_books">
         <item quantity="one"><x:g id="number" example="1">%d</x:g> книга успешно импортирована</item>
@@ -269,7 +296,14 @@
         <item quantity="few"><x:g id="number" example="2">%d</x:g> закладки успешно импортированы</item>
         <item quantity="many"><x:g id="number" example="5">%d</x:g> закладок успешно импортировано</item>
     </plurals>
+    <plurals name="import_result">
+        <item quantity="one"><x:g example="1" id="number">%1$d</x:g> элемент из <x:g example="2" id="number">%2$d</x:g> успешно импортирован</item>
+        <item quantity="few"><x:g example="2" id="number">%1$d</x:g> элемента из <x:g example="2" id="number">%2$d</x:g> успешно импортировано</item>
+        <item quantity="many"><x:g example="5" id="number">%1$d</x:g> элементов из <x:g example="2" id="number">%2$d</x:g> успешно импортировано</item>
+        <item quantity="other"><x:g example="5" id="number">%1$d</x:g> элементов из <x:g example="2" id="number">%2$d</x:g> успешно импортировано</item>
+    </plurals>
     <string name="dialog_prompt">Выберите папку</string>
+    <string name="importing_metadata">Импортирую метаданные…</string>
 
     <!-- Export metadata -->
     <string name="export_title">Экспорт метаданных</string>
@@ -354,6 +388,8 @@
     <string name="error_creating_folder">Ошибка создания папки.</string>
     <string name="error_open">Ошибка открытия файла: не найдено подходящего приложения</string>
     <string name="error_browser">Ошибка открытия ссылки: не обнаружен браузер</string>
+    <string name="error_missing_webview">WebView недоступен, невозможно открыть встроенный браузер сейчас</string>
+    <string name="error_updating_webview">WebView сейчас обновляется, пока невозможно открыть встроенный браузер</string>
 
     <!-- Error log -->
     <string name="redownload_dialog_title">Попытаться загрузить снова\?</string>
@@ -411,7 +447,11 @@
         <item quantity="many"><x:g id="count" example="5">%d</x:g> книг заархивировано в Загрузках</item>
     </plurals>
     <string name="stream_canceled">Потоковая передача отменена — книга не доступна в сети</string>
+    <string name="stream_missing_webview">Потоковая передача отменена — WebView недоступен</string>
+    <string name="stream_updating_webview">Потоковая передача отменена — WebView обновляется</string>
     <string name="download_canceled">Загрузка отменена — книга не доступна в сети</string>
+    <string name="download_missing_webview">Загрузка отменена — WebView недоступен</string>
+    <string name="download_updating_webview">Загрузка отменена — WebView обновляется</string>
     <string name="press_back_again">Нажмите \'Назад\' два раза, чтобы выйти.</string>
     <string name="queue_empty">Почему во мне пусто\?</string>
     <string name="errors_empty">Ошибок при загрузке не обнаружено</string>
@@ -606,6 +646,8 @@
     <string name="about_licenses">Показать лицензии</string>
     <string name="about_app_version">Версия Hentoid: <x:g id="ver_name" example="1.15.20">%1$s</x:g> (<x:g id="ver_code" example="130">%2$d</x:g>)</string>
     <string name="about_chrome_version">Версия Chrome: <x:g id="chrome_ver" example="98">%1$d</x:g></string>
+    <string name="about_chrome_unavailable">WebView недоступен</string>
+    <string name="about_chrome_updating">WebView сейчас обновляется</string>
 
     <!-- Web browser -->
     <string name="web_gallery">Назад к последней странице галереи</string>
@@ -640,12 +682,17 @@
     <string name="search_category">Ищем <x:g id="search_category" example="язык">%s</x:g></string>
     <string name="search_prompt">Искать <x:g id="search_prompt">%s</x:g></string>
     <!-- Used as a category on the search screen -->
-    <string name="category_artist">Художник (<x:g id="count" example="2">%1$d</x:g>)</string>
-    <string name="category_tag">Тэг (<x:g id="count" example="2">%1$d</x:g>)</string>
-    <string name="category_character">Персонаж (<x:g id="count" example="2">%1$d</x:g>)</string>
-    <string name="category_series">Сеттинг (<x:g id="count" example="2">%1$d</x:g>)</string>
-    <string name="category_language">Язык (<x:g id="count" example="2">%1$d</x:g>)</string>
-    <string name="category_source">Источник (<x:g id="count" example="2">%1$d</x:g>)</string>
+    <string name="category_artist">Художник</string>
+    <string name="category_tag">Тэг</string>
+    <string name="category_character">Персонаж</string>
+    <string name="category_series">Сеттинг</string>
+    <string name="category_language">Язык</string>
+    <string name="category_source">Источник</string>
+    <string name="category_uploader">Загрузчик</string>
+    <string name="category_circle">Круг</string>
+    <string name="category_category">Категория</string>
+    <string name="category_translator">Переводчик</string>
+    <string name="category_publisher">Издатель</string>
     <!-- Used near items or in prompts (e.g. "Search artist"): Accusative case -->
     <string name="object_artist">художника</string>
     <string name="object_tag">тэг</string>
@@ -664,6 +711,14 @@
         <item quantity="many">Найдено <x:g id="count" example="5">%s</x:g> результатов</item>
     </plurals>
     <string name="search_select_a_filter">Выберите фильтр</string>
+    <string name="search_location">Местоположение</string>
+    <string name="search_location_entries_1">Все местоположения</string>
+    <string name="search_type">Вид</string>
+    <string name="search_type_entries_1">Все виды книг</string>
+    <string name="search_type_entries_2">Папка</string>
+    <string name="search_type_entries_3">Потоковая передача</string>
+    <string name="search_type_entries_4">Архив</string>
+    <string name="search_type_entries_5">Пустышка</string>
 
     <!-- Image viewer -->
     <string name="no_images">Не удалось загрузить книгу: Не найдено ни одного изображения</string>
@@ -733,6 +788,7 @@
     <string name="chapters_remove_failed">Не удалось удалить главы</string>
     <string name="chapter_move_failed">Не удалось переместить главу</string>
     <string name="slideshow_start">Начало слайдшоу (задержка в <x:g id="time" example="0.5">%.1f</x:g> с)</string>
+    <string name="slideshow_start_vertical">Начало слайдшоу (<x:g example="быстро" id="speed">%s</x:g>)</string>
     <string name="slideshow_stop">Слайдшоу остановлено</string>
     <string name="ask_clear_chapters">Удалить все главы?</string>
 
@@ -821,6 +877,11 @@
     <string name="title_startup">Запуск</string>
     <string name="title_startup_progress">Запускается…</string>
     <string name="title_startup_complete">Запуск завершён</string>
+
+    <!-- Missing WebView -->
+    <string name="missing_web_view_title">WebView не установлен или отключён</string>
+    <string name="missing_web_view">Hentoid не обнаружил встроенный специальный браузер Android.\nБез него невозможно ходить по сайтам, загружать книги, равно как и делать много чего, что связано с интернетом.\n\nСкорее всего, он на самом деле установлен у вас, просто отключён: пожалуйста, перейдите в <b>Настройки</b> &gt; <b>Приложения</b> &gt; <b>Отключённые</b> и включите <b>Android System WebView</b>.\n\nЕсли вы не можете найти такое приложение, пожалуйста, установите его из вашего <b><a href="https://play.google.com/store/apps/details?id=com.google.android.webview">магазина приложений</a></b>.</string>
+    <string name="missing_web_view_library">Обратно в библиотеку</string>
 
     <!-- Group names -->
     <string name="group_today">Сегодня</string>

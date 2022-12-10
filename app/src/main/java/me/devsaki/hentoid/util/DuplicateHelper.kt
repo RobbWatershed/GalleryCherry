@@ -9,6 +9,9 @@ import me.devsaki.hentoid.database.CollectionDAO
 import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.database.domains.DuplicateEntry
 import me.devsaki.hentoid.enums.AttributeType
+import me.devsaki.hentoid.util.file.FileHelper
+import me.devsaki.hentoid.util.image.ImageHelper
+import me.devsaki.hentoid.util.image.ImagePHash
 import me.devsaki.hentoid.util.string_similarity.StringSimilarity
 import timber.log.Timber
 import java.io.IOException
@@ -307,11 +310,12 @@ class DuplicateHelper {
         useTitle: Boolean,
         useArtist: Boolean,
         useLanguage: Boolean,
+        useCover: Boolean,
         forceCoverHash: Long = Long.MIN_VALUE
     ) {
         val id = content.id
         val coverHash =
-            if (Long.MIN_VALUE == forceCoverHash) content.cover.imageHash else forceCoverHash
+            if (!useCover) Long.MIN_VALUE else if (Long.MIN_VALUE == forceCoverHash) content.cover.imageHash else forceCoverHash
         val size = content.size
         val titleCleanup = (if (useTitle) StringHelper.cleanup(content.title) else "")!!
         val titleNoDigits = if (useTitle) sanitizeTitle(titleCleanup) else ""

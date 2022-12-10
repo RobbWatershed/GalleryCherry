@@ -3,6 +3,9 @@ package me.devsaki.hentoid.enums;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import io.objectbox.converter.PropertyConverter;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.json.core.JsonSiteSettings;
@@ -30,6 +33,8 @@ public enum Site {
     ASIANSISTER(13, "Asiansister", "https://asiansister.com/", R.drawable.ic_menu_asiansister),
     JJGIRLS2(14, "JJGirls (Western)", "https://jjgirls.com/pornpics/", R.drawable.ic_menu_jjgirls),
     BABETODAY(15, "Babe.today", "https://babe.today/", R.drawable.ic_menu_jjgirls),
+    SIMPLY(27, "Simply Hentai", "https://www.simply-hentai.com/", R.drawable.ic_site_simply),
+    HDPORNCOMICS(28, "HD Porn Comics", "https://hdporncomics.com/", R.drawable.ic_site_hdporncomics),
     NONE(98, "none", "", R.drawable.ic_attribute_source); // External library; fallback site
 
 
@@ -50,13 +55,16 @@ public enum Site {
     private boolean useMobileAgent = true;
     private boolean useHentoidAgent = false;
     private boolean useWebviewAgent = true;
-    private boolean hasImageProcessing = false;
+    // Download behaviour control
     private boolean hasBackupURLs = false;
     private boolean hasCoverBasedPageUpdates = false;
     private boolean isDanbooru = false;
     private boolean useCloudflare = false;
     private int requestsCapPerSecond = -1;
     private int parallelDownloadCap = 0;
+    // Controls for "Mark downloaded/merged" in browser
+    private int bookCardDepth = 2;
+    private Set<String> bookCardExcludedParentClasses = new HashSet<>();
 
     Site(int code,
          String description,
@@ -126,10 +134,6 @@ public enum Site {
         return useWebviewAgent;
     }
 
-    public boolean hasImageProcessing() {
-        return hasImageProcessing;
-    }
-
     public boolean hasBackupURLs() {
         return hasBackupURLs;
     }
@@ -154,6 +158,14 @@ public enum Site {
         return parallelDownloadCap;
     }
 
+    public int getBookCardDepth() {
+        return bookCardDepth;
+    }
+
+    public Set<String> getBookCardExcludedParentClasses() {
+        return bookCardExcludedParentClasses;
+    }
+
     public boolean isVisible() {
         for (Site s : INVISIBLE_SITES) if (s.equals(this)) return false;
         return true;
@@ -175,7 +187,6 @@ public enum Site {
         if (jsonSite.useMobileAgent != null) useMobileAgent = jsonSite.useMobileAgent;
         if (jsonSite.useHentoidAgent != null) useHentoidAgent = jsonSite.useHentoidAgent;
         if (jsonSite.useWebviewAgent != null) useWebviewAgent = jsonSite.useWebviewAgent;
-        if (jsonSite.hasImageProcessing != null) hasImageProcessing = jsonSite.hasImageProcessing;
         if (jsonSite.hasBackupURLs != null) hasBackupURLs = jsonSite.hasBackupURLs;
         if (jsonSite.hasCoverBasedPageUpdates != null)
             hasCoverBasedPageUpdates = jsonSite.hasCoverBasedPageUpdates;
@@ -186,6 +197,10 @@ public enum Site {
             parallelDownloadCap = jsonSite.parallelDownloadCap;
         if (jsonSite.requestsCapPerSecond != null)
             requestsCapPerSecond = jsonSite.requestsCapPerSecond;
+        if (jsonSite.bookCardDepth != null)
+            bookCardDepth = jsonSite.bookCardDepth;
+        if (jsonSite.bookCardExcludedParentClasses != null)
+            bookCardExcludedParentClasses = new HashSet<>(jsonSite.bookCardExcludedParentClasses);
     }
 
     public static class SiteConverter implements PropertyConverter<Site, Long> {

@@ -14,6 +14,7 @@ import org.threeten.bp.Instant;
 
 import me.devsaki.hentoid.core.HentoidApp;
 import me.devsaki.hentoid.events.CommunicationEvent;
+import me.devsaki.hentoid.util.LocaleHelper;
 import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.util.ThemeHelper;
 import me.devsaki.hentoid.util.ToastHelper;
@@ -33,6 +34,9 @@ public abstract class BaseActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        // Change locale if set manually
+        LocaleHelper.convertLocaleToEnglish(this);
+
         ThemeHelper.applyTheme(this);
         if (!EventBus.getDefault().isRegistered(this)) EventBus.getDefault().register(this);
     }

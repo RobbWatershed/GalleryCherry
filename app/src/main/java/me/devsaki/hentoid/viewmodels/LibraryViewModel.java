@@ -3,11 +3,14 @@ package me.devsaki.hentoid.viewmodels;
 import static me.devsaki.hentoid.util.GroupHelper.moveContentToCustomGroup;
 
 import android.app.Application;
+import android.content.res.Resources;
 import android.net.Uri;
 import android.os.Bundle;
+import android.text.TextUtils;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.StringRes;
 import androidx.documentfile.provider.DocumentFile;
 import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
@@ -47,6 +50,7 @@ import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.CompositeDisposable;
 import io.reactivex.schedulers.Schedulers;
 import me.devsaki.hentoid.R;
+import me.devsaki.hentoid.activities.bundles.SearchActivityBundle;
 import me.devsaki.hentoid.core.Consts;
 import me.devsaki.hentoid.database.CollectionDAO;
 import me.devsaki.hentoid.database.domains.Attribute;
@@ -55,27 +59,32 @@ import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.Group;
 import me.devsaki.hentoid.database.domains.GroupItem;
 import me.devsaki.hentoid.database.domains.ImageFile;
+import me.devsaki.hentoid.database.domains.SearchRecord;
 import me.devsaki.hentoid.enums.Grouping;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.events.ProcessEvent;
-import me.devsaki.hentoid.util.ArchiveHelper;
 import me.devsaki.hentoid.util.ContentHelper;
-import me.devsaki.hentoid.util.FileHelper;
 import me.devsaki.hentoid.util.GroupHelper;
 import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.util.RandomSeedSingleton;
+import me.devsaki.hentoid.util.SearchHelper;
 import me.devsaki.hentoid.util.StringHelper;
 import me.devsaki.hentoid.util.download.ContentQueueManager;
 import me.devsaki.hentoid.util.exception.ContentNotProcessedException;
 import me.devsaki.hentoid.util.exception.EmptyResultException;
+import me.devsaki.hentoid.util.file.ArchiveHelper;
+import me.devsaki.hentoid.util.file.FileHelper;
 import me.devsaki.hentoid.util.network.HttpHelper;
+import me.devsaki.hentoid.util.network.WebkitPackageHelper;
 import me.devsaki.hentoid.widget.ContentSearchManager;
 import me.devsaki.hentoid.widget.GroupSearchManager;
 import me.devsaki.hentoid.workers.DeleteWorker;
 import me.devsaki.hentoid.workers.PurgeWorker;
+import me.devsaki.hentoid.workers.UpdateJsonWorker;
 import me.devsaki.hentoid.workers.data.DeleteData;
+import me.devsaki.hentoid.workers.data.UpdateJsonData;
 import timber.log.Timber;
 
 
@@ -105,8 +114,11 @@ public class LibraryViewModel extends AndroidViewModel {
     private final MediatorLiveData<Integer> currentGroupTotal = new MediatorLiveData<>();
     private final MutableLiveData<Boolean> isCustomGroupingAvailable = new MutableLiveData<>();     // True if there's at least one existing custom group; false instead
     private final MutableLiveData<Bundle> groupSearchBundle = new MutableLiveData<>();
+    // Other data
+    private final LiveData<List<SearchRecord>> searchRecords;
+    private final LiveData<Integer> totalQueue;
 
-    // Updated whenever a new COntentsearch is performed
+    // Updated whenever a new Contentsearch is performed
     private final MediatorLiveData<Boolean> newContentSearch = new MediatorLiveData<>();
 
 
@@ -115,7 +127,9 @@ public class LibraryViewModel extends AndroidViewModel {
         dao = collectionDAO;
         contentSearchManager = new ContentSearchManager(dao);
         groupSearchManager = new GroupSearchManager(dao);
-        totalContent = dao.countAllBooks();
+        totalContent = dao.countAllBooksLive();
+        totalQueue = dao.countAllQueueBooksLive();
+        searchRecords = dao.selectSearchRecordsLive();
         refreshCustomGroupingAvailable();
     }
 
@@ -187,6 +201,16 @@ public class LibraryViewModel extends AndroidViewModel {
         return groupSearchBundle;
     }
 
+    @NonNull
+    public LiveData<List<SearchRecord>> getSearchRecords() {
+        return searchRecords;
+    }
+
+    @NonNull
+    public LiveData<Integer> getTotalQueue() {
+        return totalQueue;
+    }
+
     // =========================
     // ========= LIBRARY ACTIONS
     // =========================
@@ -214,9 +238,17 @@ public class LibraryViewModel extends AndroidViewModel {
      * @param query Query to use for the universal search
      */
     public void searchContentUniversal(@NonNull String query) {
-        contentSearchManager.clearSelectedSearchTags(); // If user searches in main toolbar, universal search takes over advanced search
+        // If user searches in main toolbar, universal search takes over advanced search
+        contentSearchManager.clearSelectedSearchTags();
+        contentSearchManager.setLocation(ContentHelper.Location.ANY);
+        contentSearchManager.setContentType(ContentHelper.Type.ANY);
+
         contentSearchManager.setQuery(query);
         newContentSearch.setValue(true);
+        if (!query.isEmpty()) {
+            Uri searchUri = SearchActivityBundle.Companion.buildSearchUri(null, query, ContentHelper.Location.ANY, ContentHelper.Type.ANY);
+            dao.insertSearchRecord(SearchRecord.fromContentUniversalSearch(searchUri), 10);
+        }
         doSearchContent();
     }
 
@@ -226,11 +258,62 @@ public class LibraryViewModel extends AndroidViewModel {
      * @param query    Query to use for the search
      * @param metadata Metadata to use for the search
      */
-    public void searchContent(@NonNull String query, @NonNull List<Attribute> metadata) {
+    public void searchContent(@NonNull String query, @NonNull SearchHelper.AdvancedSearchCriteria metadata, @NonNull Uri searchUri) {
         contentSearchManager.setQuery(query);
-        contentSearchManager.setTags(metadata);
+        contentSearchManager.setTags(metadata.getAttributes());
+        contentSearchManager.setLocation(metadata.getLocation());
+        contentSearchManager.setContentType(metadata.getContentType());
         newContentSearch.setValue(true);
+
+        if (!metadata.isEmpty()) {
+            List<String> labelElts = Stream.of(metadata.getAttributes()).map(a -> formatAttribute(a, getApplication().getResources())).toList();
+            if (metadata.getLocation() != ContentHelper.Location.ANY)
+                labelElts.add("loc:" + getApplication().getResources().getString(formatLocation(metadata.getLocation())).toLowerCase());
+            if (metadata.getContentType() != ContentHelper.Type.ANY)
+                labelElts.add("type:" + getApplication().getResources().getString(formatContentType(metadata.getContentType())).toLowerCase());
+            String label = TextUtils.join("|", labelElts);
+            if (label.length() > 50) label = label.substring(0, 50) + "…";
+            dao.insertSearchRecord(SearchRecord.fromContentAdvancedSearch(searchUri, label), 10);
+        }
         doSearchContent();
+    }
+
+    private @StringRes
+    int formatLocation(@ContentHelper.Location int value) {
+        switch (value) {
+            case ContentHelper.Location.PRIMARY:
+                return R.string.refresh_location_internal;
+            case ContentHelper.Location.EXTERNAL:
+                return R.string.refresh_location_external;
+            case ContentHelper.Location.ANY:
+            default:
+                return R.string.search_location_entries_1;
+        }
+    }
+
+    private @StringRes
+    int formatContentType(@ContentHelper.Type int value) {
+        switch (value) {
+            case ContentHelper.Type.FOLDER:
+                return R.string.search_type_entries_2;
+            case ContentHelper.Type.STREAMED:
+                return R.string.search_type_entries_3;
+            case ContentHelper.Type.ARCHIVE:
+                return R.string.search_type_entries_4;
+            case ContentHelper.Type.PLACEHOLDER:
+                return R.string.search_type_entries_5;
+            case ContentHelper.Type.ANY:
+            default:
+                return R.string.search_type_entries_1;
+        }
+    }
+
+    private String formatAttribute(@NonNull Attribute a, @NonNull Resources res) {
+        return String.format("%s%s:%s",
+                a.isExcluded() ? "[x]" : "",
+                res.getString(a.getType().getDisplayName()),
+                a.getDisplayName()
+        );
     }
 
     public void clearContent() {
@@ -415,7 +498,53 @@ public class LibraryViewModel extends AndroidViewModel {
             if (theContent.isBeingDeleted()) return;
             theContent.setCompleted(!theContent.isCompleted());
             ContentHelper.persistJson(getApplication(), theContent);
-            dao.insertContent(theContent);
+            dao.insertContentCore(theContent);
+            return;
+        }
+
+        throw new InvalidParameterException("Invalid ContentId : " + contentId);
+    }
+
+    public void resetReadStats(@NonNull final List<Content> content, @NonNull final Runnable onSuccess) {
+        compositeDisposable.add(
+                Observable.fromIterable(content)
+                        .observeOn(Schedulers.io())
+                        .map(c -> {
+                            doResetReadStats(c.getId());
+                            return c;
+                        })
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe(
+                                v -> onSuccess.run(),
+                                Timber::e
+                        )
+        );
+    }
+
+    /**
+     * Reset read stats of the given content
+     *
+     * @param contentId ID of the content whose read stats to reset
+     */
+    private void doResetReadStats(long contentId) {
+        Helper.assertNonUiThread();
+
+        // Check if given content still exists in DB
+        Content theContent = dao.selectContent(contentId);
+
+        if (theContent != null) {
+            if (theContent.isBeingDeleted()) return;
+            theContent.setReads(0);
+            theContent.setReadPagesCount(0);
+            theContent.setLastReadPageIndex(0);
+            theContent.setLastReadDate(0);
+            List<ImageFile> imgs = theContent.getImageFiles();
+            if (imgs != null) {
+                for (ImageFile img : imgs) img.setRead(false);
+                dao.insertImageFiles(imgs);
+            }
+            ContentHelper.persistJson(getApplication(), theContent);
+            dao.insertContentCore(theContent);
             return;
         }
 
@@ -512,8 +641,16 @@ public class LibraryViewModel extends AndroidViewModel {
             int position,
             @NonNull final Consumer<Integer> onSuccess,
             @NonNull final Consumer<Throwable> onError) {
+        if (!WebkitPackageHelper.getWebViewAvailable()) {
+            if (WebkitPackageHelper.getWebViewUpdating())
+                onError.accept(new EmptyResultException(getApplication().getString(R.string.redownloaded_updating_webview)));
+            else
+                onError.accept(new EmptyResultException(getApplication().getString(R.string.redownloaded_missing_webview)));
+            return;
+        }
+
         // Flag the content as "being deleted" (triggers blink animation)
-        for (Content c : contentList) flagContentDelete(c, true);
+        for (Content c : contentList) dao.updateContentDeleteFlag(c.getId(), true);
 
         StatusContent targetImageStatus = reparseImages ? StatusContent.ERROR : null;
         AtomicInteger errorCount = new AtomicInteger(0);
@@ -555,8 +692,16 @@ public class LibraryViewModel extends AndroidViewModel {
             int position,
             @NonNull final Consumer<Integer> onSuccess,
             @NonNull final Consumer<Throwable> onError) {
+        if (!WebkitPackageHelper.getWebViewAvailable()) {
+            if (WebkitPackageHelper.getWebViewUpdating())
+                onError.accept(new EmptyResultException(getApplication().getString(R.string.download_updating_webview)));
+            else
+                onError.accept(new EmptyResultException(getApplication().getString(R.string.download_missing_webview)));
+            return;
+        }
+
         // Flag the content as "being deleted" (triggers blink animation)
-        for (Content c : contentList) flagContentDelete(c, true);
+        for (Content c : contentList) dao.updateContentDeleteFlag(c.getId(), true);
 
         AtomicInteger nbErrors = new AtomicInteger(0);
         compositeDisposable.add(
@@ -568,7 +713,8 @@ public class LibraryViewModel extends AndroidViewModel {
                                 Timber.d("Pages unreachable; reparsing content");
                                 // Reparse content itself
                                 Pair<Content, Optional<Content>> newContent = ContentHelper.reparseFromScratch(c);
-                                if (newContent.getRight().isEmpty()) flagContentDelete(c, false);
+                                if (newContent.getRight().isEmpty())
+                                    dao.updateContentDeleteFlag(c.getId(), false);
                                 return newContent.getRight();
                             }
                             return Optional.of(c);
@@ -601,9 +747,16 @@ public class LibraryViewModel extends AndroidViewModel {
 
     public void streamContent(@NonNull final List<Content> contentList,
                               @NonNull final Consumer<Throwable> onError) {
+        if (!WebkitPackageHelper.getWebViewAvailable()) {
+            if (WebkitPackageHelper.getWebViewUpdating())
+                onError.accept(new EmptyResultException(getApplication().getString(R.string.stream_updating_webview)));
+            else
+                onError.accept(new EmptyResultException(getApplication().getString(R.string.stream_missing_webview)));
+            return;
+        }
 
         // Flag the content as "being deleted" (triggers blink animation)
-        for (Content c : contentList) flagContentDelete(c, true);
+        for (Content c : contentList) dao.updateContentDeleteFlag(c.getId(), true);
 
         compositeDisposable.add(
                 Observable.fromIterable(contentList)
@@ -616,7 +769,7 @@ public class LibraryViewModel extends AndroidViewModel {
                                 // Reparse content itself
                                 Pair<Content, Optional<Content>> newContent = ContentHelper.reparseFromScratch(c);
                                 if (newContent.getRight().isEmpty()) {
-                                    flagContentDelete(c, false);
+                                    dao.updateContentDeleteFlag(c.getId(), false);
                                     return newContent.getRight();
                                 } else {
                                     Content reparsedContent = newContent.getRight().get();
@@ -663,17 +816,6 @@ public class LibraryViewModel extends AndroidViewModel {
                                 onError::accept
                         )
         );
-    }
-
-    /**
-     * Set the "being deleted" flag of the given content
-     *
-     * @param content Content whose flag to set
-     * @param flag    Value of the flag to be set
-     */
-    public void flagContentDelete(@NonNull final Content content, boolean flag) {
-        content.setIsBeingDeleted(flag);
-        dao.insertContent(content);
     }
 
     /**
@@ -885,7 +1027,20 @@ public class LibraryViewModel extends AndroidViewModel {
                             .observeOn(Schedulers.io())
                             .doOnComplete(() -> {
                                 refreshCustomGroupingAvailable();
-                                GroupHelper.updateGroupsJson(getApplication(), dao);
+
+                                // Update all JSONs of the books inside the renamed group so that they refer to the correct name
+                                UpdateJsonData.Builder builder = new UpdateJsonData.Builder();
+                                builder.setContentIds(Helper.getPrimitiveArrayFromList(group.getContentIds()));
+                                builder.setUpdateGroups(true);
+
+                                WorkManager workManager = WorkManager.getInstance(getApplication());
+                                workManager.enqueueUniqueWork(
+                                        Integer.toString(R.id.udpate_json_service),
+                                        ExistingWorkPolicy.APPEND_OR_REPLACE,
+                                        new OneTimeWorkRequest.Builder(UpdateJsonWorker.class)
+                                                .setInputData(builder.getData())
+                                                .build()
+                                );
                             })
                             .observeOn(AndroidSchedulers.mainThread())
                             .subscribe(
@@ -1023,30 +1178,6 @@ public class LibraryViewModel extends AndroidViewModel {
         dao.shuffleContent();
     }
 
-    public void renameContent(@NonNull Content content, @NonNull String title) {
-        compositeDisposable.add(
-                Completable.fromRunnable(() -> doRenameContent(content, title))
-                        .subscribeOn(Schedulers.io())
-                        .observeOn(AndroidSchedulers.mainThread())
-                        .subscribe(
-                                () -> {
-                                    // Updated through LiveData
-                                },
-                                Timber::e
-                        )
-        );
-    }
-
-    private void doRenameContent(@NonNull Content content, @NonNull String title) {
-        Helper.assertNonUiThread();
-        Content dbContent = dao.selectContent(content.getId()); // Instanciate a new Content from DB to avoid updating the UI reference
-        if (dbContent != null) {
-            dbContent.setTitle(title);
-            ContentHelper.persistJson(getApplication(), dbContent);
-            dao.insertContent(dbContent);
-        }
-    }
-
     public void mergeContents(
             @NonNull List<Content> contentList,
             @NonNull String newTitle,
@@ -1055,7 +1186,8 @@ public class LibraryViewModel extends AndroidViewModel {
         if (contentList.isEmpty()) return;
 
         // Flag the content as "being deleted" (triggers blink animation)
-        if (deleteAfterMerging) for (Content c : contentList) flagContentDelete(c, true);
+        if (deleteAfterMerging)
+            for (Content c : contentList) dao.updateContentDeleteFlag(c.getId(), true);
 
         compositeDisposable.add(
                 Single.fromCallable(() -> {
@@ -1075,7 +1207,8 @@ public class LibraryViewModel extends AndroidViewModel {
                                 t -> {
                                     Timber.e(t);
                                     if (deleteAfterMerging)
-                                        for (Content c : contentList) flagContentDelete(c, false);
+                                        for (Content c : contentList)
+                                            dao.updateContentDeleteFlag(c.getId(), false);
                                 }
                         )
         );
@@ -1121,7 +1254,7 @@ public class LibraryViewModel extends AndroidViewModel {
             Content splitContent = createContentFromChapter(content, chap);
 
             // Create a new folder for the split content
-            DocumentFile targetFolder = ContentHelper.getOrCreateContentDownloadDir(getApplication(), splitContent);
+            DocumentFile targetFolder = ContentHelper.getOrCreateContentDownloadDir(getApplication(), splitContent, true, null);
             if (null == targetFolder || !targetFolder.exists())
                 throw new ContentNotProcessedException(splitContent, "Could not create target directory");
 
@@ -1176,10 +1309,11 @@ public class LibraryViewModel extends AndroidViewModel {
             Site site = Site.searchByUrl(url);
             if (site != null && !site.equals(Site.NONE)) {
                 splitContent.setSite(site);
-                url = url.replace(site.getUrl(), "");
+                url = Content.transformRawUrl(site, url);
             }
         }
         splitContent.setUrl(url);
+        splitContent.populateUniqueSiteId();
 
         String id = chapter.getUniqueId();
         if (id.isEmpty()) id = content.getUniqueSiteId() + "_"; // Don't create a copy of content
@@ -1222,5 +1356,9 @@ public class LibraryViewModel extends AndroidViewModel {
         splitContent.addAttributes(splitAttributes);
 
         return splitContent;
+    }
+
+    public void clearSearchHistory() {
+        dao.deleteAllSearchRecords();
     }
 }

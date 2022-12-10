@@ -33,12 +33,12 @@ import java.util.List;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.activities.bundles.SearchActivityBundle;
 import me.devsaki.hentoid.adapters.AvailableAttributeAdapter;
-import me.devsaki.hentoid.database.CollectionDAO;
 import me.devsaki.hentoid.database.domains.Attribute;
 import me.devsaki.hentoid.enums.AttributeType;
 import me.devsaki.hentoid.ui.BlinkAnimation;
 import me.devsaki.hentoid.util.Debouncer;
 import me.devsaki.hentoid.util.LanguageHelper;
+import me.devsaki.hentoid.util.SearchHelper;
 import me.devsaki.hentoid.util.StringHelper;
 import me.devsaki.hentoid.util.ThemeHelper;
 import me.devsaki.hentoid.viewmodels.SearchViewModel;
@@ -72,7 +72,7 @@ public class SearchBottomSheetFragment extends BottomSheetDialogFragment {
     private TextView tagWaitMessage;
     // Search bar
     private SearchView tagSearchView;
-    // Container where all proposed attributes are loaded
+    // Container where all suggested attributes are loaded
     private AvailableAttributeAdapter attributeAdapter;
 
     private boolean clearOnSuccess; // Flag to clear the adapter on content reception
@@ -147,7 +147,7 @@ public class SearchBottomSheetFragment extends BottomSheetDialogFragment {
 
         // Image that displays current metadata type title (e.g. "Character search")
         TextView tagWaitTitle = requireViewById(rootView, R.id.tag_wait_title);
-        tagWaitTitle.setText(getString(R.string.search_category, StringHelper.capitalizeString(getString(mainAttr.getDisplayName()))));
+        tagWaitTitle.setText(getString(R.string.search_category, StringHelper.capitalizeString(getString(mainAttr.getAccusativeName()))));
 
         tagWaitPanel = requireViewById(rootView, R.id.tag_wait_panel);
         tagWaitMessage = requireViewById(rootView, R.id.tag_wait_description);
@@ -164,7 +164,7 @@ public class SearchBottomSheetFragment extends BottomSheetDialogFragment {
 
         tagSearchView = requireViewById(rootView, R.id.tag_filter);
         tagSearchView.setSearchableInfo(getSearchableInfo(requireActivity())); // Associate searchable configuration with the SearchView
-        List<String> attrTypesNames = Stream.of(selectedAttributeTypes).map(AttributeType::getDisplayName).map(this::getString).toList();
+        List<String> attrTypesNames = Stream.of(selectedAttributeTypes).map(AttributeType::getAccusativeName).map(this::getString).toList();
         tagSearchView.setQueryHint(getResources().getString(R.string.search_prompt, android.text.TextUtils.join(", ", attrTypesNames)));
         tagSearchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
@@ -241,7 +241,7 @@ public class SearchBottomSheetFragment extends BottomSheetDialogFragment {
      *
      * @param results Available attributes according to current search query
      */
-    private void onAttributesReady(CollectionDAO.AttributeQueryResult results) {
+    private void onAttributesReady(SearchHelper.AttributeQueryResult results) {
         if (!isInitialized) return; // Hack to avoid double calls from LiveData
 
         tagWaitMessage.clearAnimation();
@@ -252,15 +252,16 @@ public class SearchBottomSheetFragment extends BottomSheetDialogFragment {
                 : Stream.of(selectedAttributes).filter(a -> selectedAttributeTypes.contains(a.getType())).toList();
 
         // Remove selected attributes from the result set
-        results.attributes.removeAll(selectedAttributes);
+        List<Attribute> attrs = results.getAttributes();
+        attrs.removeAll(selectedAttributes);
 
         // Translate language names if present
-        if (!results.attributes.isEmpty() && results.attributes.get(0).getType().equals(AttributeType.LANGUAGE)) {
-            for (Attribute a : results.attributes)
+        if (!attrs.isEmpty() && attrs.get(0).getType().equals(AttributeType.LANGUAGE)) {
+            for (Attribute a : attrs)
                 a.setDisplayName(LanguageHelper.getLocalNameFromLanguage(requireContext(), a.getName()));
         }
 
-        mTotalSelectedCount = (int) results.totalSelectedAttributes/* - selectedAttributes.size()*/;
+        mTotalSelectedCount = (int) results.getTotalSelectedAttributes()/* - selectedAttributes.size()*/;
         if (clearOnSuccess) attributeAdapter.clear();
         if (0 == mTotalSelectedCount) {
             String searchQuery = tagSearchView.getQuery().toString();
@@ -268,8 +269,7 @@ public class SearchBottomSheetFragment extends BottomSheetDialogFragment {
             else tagWaitMessage.setText(R.string.masterdata_no_result);
         } else {
             tagWaitPanel.setVisibility(View.GONE);
-            attributeAdapter.setFormatWithNamespace(selectedAttributeTypes.size() > 1);
-            attributeAdapter.add(results.attributes);
+            attributeAdapter.add(attrs);
         }
     }
 

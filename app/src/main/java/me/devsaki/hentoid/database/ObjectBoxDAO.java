@@ -17,6 +17,7 @@ import com.annimon.stream.function.Consumer;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -41,6 +42,8 @@ import me.devsaki.hentoid.database.domains.Group;
 import me.devsaki.hentoid.database.domains.GroupItem;
 import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.database.domains.QueueRecord;
+import me.devsaki.hentoid.database.domains.RenamingRule;
+import me.devsaki.hentoid.database.domains.SearchRecord;
 import me.devsaki.hentoid.database.domains.SiteBookmark;
 import me.devsaki.hentoid.database.domains.SiteHistory;
 import me.devsaki.hentoid.enums.AttributeType;
@@ -50,6 +53,8 @@ import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.util.ContentHelper;
 import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.Preferences;
+import me.devsaki.hentoid.util.SearchHelper;
+import me.devsaki.hentoid.util.StringHelper;
 import me.devsaki.hentoid.widget.ContentSearchManager;
 import timber.log.Timber;
 
@@ -78,11 +83,6 @@ public class ObjectBoxDAO implements CollectionDAO {
     @Override
     public long getDbSizeBytes() {
         return db.getDbSizeBytes();
-    }
-
-    @Override
-    public List<Content> selectStoredContent(boolean nonFavouritesOnly, boolean includeQueued, int orderField, boolean orderDesc) {
-        return db.selectStoredContentQ(nonFavouritesOnly, includeQueued, orderField, orderDesc).build().find();
     }
 
     @Override
@@ -134,22 +134,41 @@ public class ObjectBoxDAO implements CollectionDAO {
     }
 
     @Override
-    public Single<AttributeQueryResult> selectAttributeMasterDataPaged(
+    public long insertAttribute(@NonNull Attribute attr) {
+        return db.insertAttribute(attr);
+    }
+
+    @Override
+    @Nullable
+    public Attribute selectAttribute(long id) {
+        return db.selectAttribute(id);
+    }
+
+    @Override
+    public Single<SearchHelper.AttributeQueryResult> selectAttributeMasterDataPaged(
             @NonNull List<AttributeType> types,
             String filter,
+            long groupId,
             List<Attribute> attrs,
+            @ContentHelper.Location int location,
+            @ContentHelper.Type int contentType,
+            boolean includeFreeAttrs,
             int page,
             int booksPerPage,
             int orderStyle) {
         return Single
-                .fromCallable(() -> pagedAttributeSearch(types, filter, attrs, orderStyle, page, booksPerPage))
+                .fromCallable(() -> pagedAttributeSearch(types, filter, groupId, attrs, location, contentType, includeFreeAttrs, orderStyle, page, booksPerPage))
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread());
     }
 
     @Override
-    public Single<SparseIntArray> countAttributesPerType(List<Attribute> filter) {
-        return Single.fromCallable(() -> count(filter))
+    public Single<SparseIntArray> countAttributesPerType(
+            long groupId,
+            List<Attribute> filter,
+            @ContentHelper.Location int location,
+            @ContentHelper.Type int contentType) {
+        return Single.fromCallable(() -> countAttributes(groupId, filter, location, contentType))
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread());
     }
@@ -159,15 +178,22 @@ public class ObjectBoxDAO implements CollectionDAO {
         return db.selectChapters(contentId);
     }
 
-    public LiveData<List<Content>> selectErrorContent() {
+    public LiveData<List<Content>> selectErrorContentLive() {
         return new ObjectBoxLiveData<>(db.selectErrorContentQ());
     }
 
-    public List<Content> selectErrorContentList() {
+    public LiveData<List<Content>> selectErrorContentLive(String query) {
+        ContentSearchManager.ContentSearchBundle bundle = new ContentSearchManager.ContentSearchBundle();
+        bundle.setQuery(query);
+        bundle.setSortField(Preferences.Constant.ORDER_FIELD_DOWNLOAD_PROCESSING_DATE);
+        return new ObjectBoxLiveData<>(db.selectContentUniversalQ(bundle, new int[]{StatusContent.ERROR.getCode()}));
+    }
+
+    public List<Content> selectErrorContent() {
         return db.selectErrorContentQ().find();
     }
 
-    public LiveData<Integer> countAllBooks() {
+    public LiveData<Integer> countAllBooksLive() {
         // This is not optimal because it fetches all the content and returns its size only
         // That's because ObjectBox v2.4.0 does not allow watching Query.count or Query.findLazy using LiveData, but only Query.find
         // See https://github.com/objectbox/objectbox-java/issues/776
@@ -178,12 +204,18 @@ public class ObjectBoxDAO implements CollectionDAO {
         return result;
     }
 
-    public LiveData<Integer> countBooks(long groupId, List<Attribute> metadata) {
+    public LiveData<Integer> countBooks(
+            long groupId,
+            List<Attribute> metadata,
+            @ContentHelper.Location int location,
+            @ContentHelper.Type int contentType) {
         // This is not optimal because it fetches all the content and returns its size only
         // That's because ObjectBox v2.4.0 does not allow watching Query.count or Query.findLazy using LiveData, but only Query.find
         // See https://github.com/objectbox/objectbox-java/issues/776
         ContentSearchManager.ContentSearchBundle bundle = new ContentSearchManager.ContentSearchBundle();
         bundle.setGroupId(groupId);
+        bundle.setLocation(location);
+        bundle.setContentType(contentType);
         bundle.setSortField(Preferences.Constant.ORDER_FIELD_NONE);
         ObjectBoxLiveData<Content> livedata = new ObjectBoxLiveData<>(db.selectContentSearchContentQ(bundle, metadata));
 
@@ -280,12 +312,17 @@ public class ObjectBoxDAO implements CollectionDAO {
     }
 
     @Nullable
-    public Content selectContentBySourceAndUrl(@NonNull Site site, @NonNull String contentUrl, @NonNull String coverUrl) {
-        return db.selectContentBySourceAndUrl(site, contentUrl, Content.getNeutralCoverUrlRoot(coverUrl, site));
+    public Content selectContentBySourceAndUrl(@NonNull Site site, @NonNull String contentUrl, @Nullable String coverUrl) {
+        final String coverUrlStart = (coverUrl != null) ? Content.getNeutralCoverUrlRoot(coverUrl, site) : "";
+        return db.selectContentBySourceAndUrl(site, contentUrl, coverUrlStart);
     }
 
     public Set<String> selectAllSourceUrls(@NonNull Site site) {
         return db.selectAllContentUrls(site.getCode());
+    }
+
+    public Set<String> selectAllMergedUrls(@NonNull Site site) {
+        return db.selectAllMergedContentUrls(site);
     }
 
     @Override
@@ -323,6 +360,10 @@ public class ObjectBoxDAO implements CollectionDAO {
 
     public void updateContentStatus(@NonNull final StatusContent updateFrom, @NonNull final StatusContent updateTo) {
         db.updateContentStatus(updateFrom, updateTo);
+    }
+
+    public void updateContentDeleteFlag(long contentId, boolean flag) {
+        db.updateContentDeleteFlag(contentId, flag);
     }
 
     public void deleteContent(@NonNull final Content content) {
@@ -379,19 +420,26 @@ public class ObjectBoxDAO implements CollectionDAO {
     }
 
     public long countAllInternalBooks(boolean favsOnly) {
-        return db.selectAllInternalBooksQ(favsOnly).count();
+        return db.selectAllInternalBooksQ(favsOnly, true).count();
     }
 
     public long countAllQueueBooks() {
         return db.selectAllQueueBooksQ().count();
     }
 
-    public List<Content> selectAllInternalBooks(boolean favsOnly) {
-        return db.selectAllInternalBooksQ(favsOnly).find();
+    public LiveData<Integer> countAllQueueBooksLive() {
+        // This is not optimal because it fetches all the content and returns its size only
+        // That's because ObjectBox v2.4.0 does not allow watching Query.count or Query.findLazy using LiveData, but only Query.find
+        // See https://github.com/objectbox/objectbox-java/issues/776
+        ObjectBoxLiveData<Content> livedata = new ObjectBoxLiveData<>(db.selectAllQueueBooksQ());
+
+        MediatorLiveData<Integer> result = new MediatorLiveData<>();
+        result.addSource(livedata, v -> result.setValue(v.size()));
+        return result;
     }
 
     public void streamAllInternalBooks(boolean favsOnly, Consumer<Content> consumer) {
-        Query<Content> query = db.selectAllInternalBooksQ(favsOnly);
+        Query<Content> query = db.selectAllInternalBooksQ(favsOnly, true);
         query.forEach(consumer::accept);
     }
 
@@ -408,12 +456,12 @@ public class ObjectBoxDAO implements CollectionDAO {
 
     @Override
     public List<Group> selectGroups(int grouping) {
-        return db.selectGroupsQ(grouping, null, 0, false, -1, false, 0).find();
+        return db.selectGroupsQ(grouping, null, 0, false, -1, false, -1).find();
     }
 
     @Override
     public List<Group> selectGroups(int grouping, int subType) {
-        return db.selectGroupsQ(grouping, null, 0, false, subType, false, 0).find();
+        return db.selectGroupsQ(grouping, null, 0, false, subType, false, -1).find();
     }
 
     @Override
@@ -538,7 +586,7 @@ public class ObjectBoxDAO implements CollectionDAO {
     }
 
     public void flagAllGroups(Grouping grouping) {
-        db.flagGroups(db.selectGroupsByGroupingQ(grouping.getId()).find(), true);
+        db.flagGroupsForDeletion(db.selectGroupsByGroupingQ(grouping.getId()).find());
     }
 
     public void deleteAllFlaggedGroups() {
@@ -592,12 +640,12 @@ public class ObjectBoxDAO implements CollectionDAO {
         return db.selectAllQueueBooksQ().find();
     }
 
-    public void flagAllInternalBooks() {
-        db.flagContents(db.selectAllInternalBooksQ(false).find(), true);
+    public void flagAllInternalBooks(boolean includePlaceholders) {
+        db.flagContentsForDeletion(db.selectAllInternalBooksQ(false, includePlaceholders).find(), true);
     }
 
     public void deleteAllInternalBooks(boolean resetRemainingImagesStatus) {
-        db.deleteContentById(db.selectAllInternalBooksQ(false).findIds());
+        db.deleteContentById(db.selectAllInternalBooksQ(false, true).findIds());
 
         // Switch status of all remaining images (i.e. from queued books) to SAVED, as we cannot guarantee the files are still there
         if (resetRemainingImagesStatus) {
@@ -619,13 +667,13 @@ public class ObjectBoxDAO implements CollectionDAO {
     }
 
     public void flagAllErrorBooksWithJson() {
-        db.flagContents(db.selectAllErrorJsonBooksQ().find(), true);
+        db.flagContentsForDeletion(db.selectAllErrorJsonBooksQ().find(), true);
     }
 
     public void deleteAllQueuedBooks() {
         Timber.i("Cleaning up queue");
         db.deleteContentById(db.selectAllQueueBooksQ().findIds());
-        db.deleteQueue();
+        db.deleteQueueRecords();
     }
 
     public void insertImageFile(@NonNull ImageFile img) {
@@ -669,6 +717,10 @@ public class ObjectBoxDAO implements CollectionDAO {
     @Nullable
     public ImageFile selectImageFile(long id) {
         return db.selectImageFile(id);
+    }
+
+    public List<ImageFile> selectImageFiles(long[] ids) {
+        return db.selectImageFiles(ids);
     }
 
     public LiveData<List<ImageFile>> selectDownloadedImagesFromContentLive(long id) {
@@ -744,40 +796,47 @@ public class ObjectBoxDAO implements CollectionDAO {
         }
     }
 
-    private AttributeQueryResult pagedAttributeSearch(
+    private SearchHelper.AttributeQueryResult pagedAttributeSearch(
             @NonNull List<AttributeType> attrTypes,
             String filter,
+            long groupId,
             List<Attribute> attrs,
+            @ContentHelper.Location int location,
+            @ContentHelper.Type int contentType,
+            boolean includeFreeAttrs,
             int sortOrder,
             int pageNum,
             int itemPerPage) {
-        AttributeQueryResult result = new AttributeQueryResult();
+        List<Attribute> attributes = new ArrayList<>();
+        long totalSelectedAttributes = 0;
 
         if (!attrTypes.isEmpty()) {
             if (attrTypes.get(0).equals(AttributeType.SOURCE)) {
-                result.attributes.addAll(db.selectAvailableSources(attrs));
-                result.totalSelectedAttributes = result.attributes.size();
+                attributes.addAll(db.selectAvailableSources(groupId, attrs, location, contentType, includeFreeAttrs));
+                totalSelectedAttributes = attributes.size();
             } else {
                 for (AttributeType type : attrTypes) {
                     // TODO fix sorting when concatenating both lists
-                    result.attributes.addAll(db.selectAvailableAttributes(type, attrs, filter, sortOrder, pageNum, itemPerPage));
-                    result.totalSelectedAttributes += db.countAvailableAttributes(type, attrs, filter);
+                    attributes.addAll(db.selectAvailableAttributes(type, groupId, attrs, location, contentType, includeFreeAttrs, filter, sortOrder, pageNum, itemPerPage));
+                    totalSelectedAttributes += db.countAvailableAttributes(type, groupId, attrs, location, contentType, includeFreeAttrs, filter);
                 }
             }
         }
 
-        return result;
+        return new SearchHelper.AttributeQueryResult(attributes, totalSelectedAttributes);
     }
 
-    private SparseIntArray count(List<Attribute> filter) {
+    private SparseIntArray countAttributes(long groupId,
+                                           List<Attribute> filter,
+                                           @ContentHelper.Location int location,
+                                           @ContentHelper.Type int contentType) {
         SparseIntArray result;
-
-        if (null == filter || filter.isEmpty()) {
+        if ((null == filter || filter.isEmpty()) && 0 == location && 0 == contentType && -1 == groupId) {
             result = db.countAvailableAttributesPerType();
             result.put(AttributeType.SOURCE.getCode(), db.selectAvailableSources().size());
         } else {
-            result = db.countAvailableAttributesPerType(filter);
-            result.put(AttributeType.SOURCE.getCode(), db.selectAvailableSources(filter).size());
+            result = db.countAvailableAttributesPerType(groupId, filter, location, contentType);
+            result.put(AttributeType.SOURCE.getCode(), db.selectAvailableSources(groupId, filter, location, contentType, false).size());
         }
 
         return result;
@@ -797,21 +856,20 @@ public class ObjectBoxDAO implements CollectionDAO {
         return db.selectQueueRecordsQ(null).find();
     }
 
-    @Nullable
-    public QueueRecord selectQueue(long contentId) {
-        return db.selectQueueRecordFromContentId(contentId);
-    }
-
     public void updateQueue(@NonNull List<QueueRecord> queue) {
         db.updateQueue(queue);
     }
 
     public void deleteQueue(@NonNull Content content) {
-        db.deleteQueue(content);
+        db.deleteQueueRecords(content);
     }
 
     public void deleteQueue(int index) {
-        db.deleteQueue(index);
+        db.deleteQueueRecords(index);
+    }
+
+    public void deleteQueueRecordsCore() {
+        db.deleteQueueRecords();
     }
 
     public SiteHistory selectHistory(@NonNull Site s) {
@@ -821,6 +879,8 @@ public class ObjectBoxDAO implements CollectionDAO {
     public void insertSiteHistory(@NonNull Site site, @NonNull String url) {
         db.insertSiteHistory(site, url);
     }
+
+    // BOOKMARKS
 
     public long countAllBookmarks() {
         return db.selectBookmarksQ(null).count();
@@ -857,6 +917,66 @@ public class ObjectBoxDAO implements CollectionDAO {
 
     public void deleteBookmark(long bookmarkId) {
         db.deleteBookmark(bookmarkId);
+    }
+
+
+    // SEARCH HISTORY
+
+    public LiveData<List<SearchRecord>> selectSearchRecordsLive() {
+        return new ObjectBoxLiveData<>(db.selectSearchRecordsQ());
+    }
+
+    private List<SearchRecord> selectSearchRecords() {
+        return db.selectSearchRecordsQ().find();
+    }
+
+    public void insertSearchRecord(@NonNull SearchRecord record, int limit) {
+        List<SearchRecord> records = selectSearchRecords();
+        if (records.contains(record)) return;
+
+        while (records.size() >= limit) {
+            db.deleteSearchRecord(records.get(0).id);
+            records.remove(0);
+        }
+        records.add(record);
+        db.insertSearchRecords(records);
+    }
+
+    public void deleteAllSearchRecords() {
+        db.selectSearchRecordsQ().remove();
+    }
+
+
+    // RENAMING RULES
+
+    @Nullable
+    public RenamingRule selectRenamingRule(long id) {
+        return db.selectRenamingRule(id);
+    }
+
+    public LiveData<List<RenamingRule>> selectRenamingRulesLive(@NonNull AttributeType type, String nameFilter) {
+        return new ObjectBoxLiveData<>(db.selectRenamingRulesQ(type, StringHelper.protect(nameFilter)));
+    }
+
+    public List<RenamingRule> selectRenamingRules(@NonNull AttributeType type, String nameFilter) {
+        Query<RenamingRule> query = db.selectRenamingRulesQ(type, StringHelper.protect(nameFilter));
+        return query.find();
+    }
+
+    public long insertRenamingRule(@NonNull RenamingRule rule) {
+        return db.insertRenamingRule(rule);
+    }
+
+    public void insertRenamingRules(@NonNull List<RenamingRule> rules) {
+        db.insertRenamingRules(rules);
+    }
+
+    public void deleteRenamingRules(List<Long> ids) {
+        db.deleteRenamingRules(Helper.getPrimitiveArrayFromList(ids));
+    }
+
+    public void deleteAllRenamingRules() {
+        db.deleteAllRenamingRules();
     }
 
 

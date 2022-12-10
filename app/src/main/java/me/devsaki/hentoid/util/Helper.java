@@ -8,15 +8,18 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.res.Configuration;
+import android.graphics.Point;
 import android.graphics.drawable.InsetDrawable;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 
 import androidx.annotation.DimenRes;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.view.menu.MenuBuilder;
 import androidx.core.util.Pair;
 import androidx.documentfile.provider.DocumentFile;
@@ -57,14 +60,16 @@ import javax.annotation.Nonnull;
 
 import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Action;
-import io.reactivex.functions.Consumer;
 import io.whitfin.siphash.SipHasher;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.core.Consts;
 import me.devsaki.hentoid.core.HentoidApp;
 import me.devsaki.hentoid.database.CollectionDAO;
+import me.devsaki.hentoid.database.domains.RenamingRule;
 import me.devsaki.hentoid.database.domains.SiteBookmark;
+import me.devsaki.hentoid.enums.AttributeType;
 import me.devsaki.hentoid.json.JsonContentCollection;
+import me.devsaki.hentoid.util.file.FileHelper;
 import timber.log.Timber;
 
 /**
@@ -80,8 +85,6 @@ public final class Helper {
 
     private static final byte[] SIP_KEY = "0123456789ABCDEF".getBytes();
     public static final Action EMPTY_ACTION = () -> {
-    };
-    public static final Consumer<? super Object> EMPTY_CONSUMER = c -> {
     };
 
 
@@ -141,6 +144,15 @@ public final class Helper {
     public static long[] getPrimitiveArrayFromList(List<Long> input) {
         long[] ret = new long[input.size()];
         Iterator<Long> iterator = input.iterator();
+        for (int i = 0; i < ret.length; i++) {
+            ret[i] = iterator.next();
+        }
+        return ret;
+    }
+
+    public static int[] getPrimitiveArrayFromListInt(List<Integer> input) {
+        int[] ret = new int[input.size()];
+        Iterator<Integer> iterator = input.iterator();
         for (int i = 0; i < ret.length; i++) {
             ret[i] = iterator.next();
         }
@@ -227,19 +239,6 @@ public final class Helper {
             throw new IllegalStateException("This should not be run on the UI thread");
         }
     }
-
-    /// <summary>
-    /// Format the given duration using the following format
-    ///     DDdHH:MM:SS
-    ///
-    ///  Where
-    ///     DD is the number of days, if applicable (i.e. durations of less than 1 day won't display the "DDd" part)
-    ///     HH is the number of hours, if applicable (i.e. durations of less than 1 hour won't display the "HH:" part)
-    ///     MM is the number of minutes
-    ///     SS is the number of seconds
-    /// </summary>
-    /// <param name="seconds">Duration to format (in seconds)</param>
-    /// <returns>Formatted duration according to the abovementioned convention</returns>
 
     /**
      * Format the given duration using the HH:MM:SS format
@@ -368,10 +367,8 @@ public final class Helper {
      * @return Generated ID
      */
     public static long generateIdForPlaceholder() {
-        long result = rand.nextLong();
         // Make sure nothing collides with an actual ID; nobody has 1M books; it should be fine
-        while (result < 1e6) result = rand.nextLong();
-        return result;
+        return (long) 1e6 + rand.nextLong();
     }
 
     /**
@@ -494,6 +491,37 @@ public final class Helper {
         return true;
     }
 
+    /**
+     * Update the JSON file that stores renaming rules with the current rules
+     *
+     * @param context Context to be used
+     * @param dao     DAO to be used
+     * @return True if the rules JSON file has been updated properly; false instead
+     */
+    public static boolean updateRenamingRulesJson(@NonNull Context context, @NonNull CollectionDAO dao) {
+        Helper.assertNonUiThread();
+        List<RenamingRule> rules = dao.selectRenamingRules(AttributeType.UNDEFINED, null);
+
+        JsonContentCollection contentCollection = new JsonContentCollection();
+        contentCollection.setRenamingRules(rules);
+
+        DocumentFile rootFolder = FileHelper.getFolderFromTreeUriString(context, Preferences.getStorageUri());
+        if (null == rootFolder) return false;
+
+        try {
+            JsonHelper.jsonToFile(context, contentCollection, JsonContentCollection.class, rootFolder, Consts.RENAMING_RULES_JSON_FILE_NAME);
+        } catch (IOException | IllegalArgumentException e) {
+            // NB : IllegalArgumentException might happen for an unknown reason on certain devices
+            // even though all the file existence checks are in place
+            // ("Failed to determine if primary:.Hentoid/queue.json is child of primary:.Hentoid: java.io.FileNotFoundException: Missing file for primary:.Hentoid/queue.json at /storage/emulated/0/.Hentoid/queue.json")
+            Timber.e(e);
+            FirebaseCrashlytics crashlytics = FirebaseCrashlytics.getInstance();
+            crashlytics.recordException(e);
+            return false;
+        }
+        return true;
+    }
+
     public static void logException(Throwable t) {
         List<LogHelper.LogEntry> log = new ArrayList<>();
         log.add(new LogHelper.LogEntry(StringHelper.protect(t.getMessage())));
@@ -526,5 +554,30 @@ public final class Helper {
         } catch (Exception e) {
             Timber.w(e);
         }
+    }
+
+    /**
+     * Set the given view's margins, in pixels
+     *
+     * @param view   View to update the margins for
+     * @param left   Left margin (pixels)
+     * @param top    Top margin (pixels)
+     * @param right  Right margin (pixels)
+     * @param bottom Bottom margin (pixels)
+     */
+    public static void setMargins(@NonNull View view, int left, int top, int right, int bottom) {
+        if (view.getLayoutParams() instanceof ViewGroup.MarginLayoutParams) {
+            ViewGroup.MarginLayoutParams p = (ViewGroup.MarginLayoutParams) view.getLayoutParams();
+            p.setMargins(left, top, right, bottom);
+        }
+    }
+
+    @Nullable
+    public static Point getCenter(@NonNull View view) {
+        if (view.getLayoutParams() instanceof ViewGroup.MarginLayoutParams) {
+            ViewGroup.MarginLayoutParams p = (ViewGroup.MarginLayoutParams) view.getLayoutParams();
+            return new Point(p.leftMargin + view.getWidth() / 2, p.topMargin + view.getHeight() / 2);
+        }
+        return null;
     }
 }

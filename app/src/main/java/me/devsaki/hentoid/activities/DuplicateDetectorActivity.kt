@@ -1,6 +1,7 @@
 package me.devsaki.hentoid.activities
 
 import android.os.Bundle
+import android.view.View
 import android.view.WindowManager
 import androidx.appcompat.widget.Toolbar
 import androidx.fragment.app.Fragment
@@ -41,7 +42,7 @@ class DuplicateDetectorActivity : BaseActivity() {
         }
 
         val vmFactory = ViewModelFactory(application)
-        viewModel = ViewModelProvider(this, vmFactory).get(DuplicateViewModel::class.java)
+        viewModel = ViewModelProvider(this, vmFactory)[DuplicateViewModel::class.java]
 
         if (!Preferences.getRecentVisibility()) {
             window.setFlags(
@@ -56,6 +57,11 @@ class DuplicateDetectorActivity : BaseActivity() {
         initUI()
         updateToolbar(0, 0, 0)
         initSelectionToolbar()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        viewModel.allDuplicates.removeObservers(this)
     }
 
     override fun onDestroy() {
@@ -76,7 +82,8 @@ class DuplicateDetectorActivity : BaseActivity() {
                 enableCurrentFragment()
                 hideSettingsBar()
                 updateToolbar(0, 0, 0)
-                updateTitle(-1)
+                viewModel.allDuplicates.observe(this@DuplicateDetectorActivity,
+                        { updateTitle(it.groupBy { it.referenceContent }.mapValues { it.value.sumOf { 1 as Int } }.size * -1) })
                 updateSelectionToolbar()
             }
         })
@@ -132,11 +139,24 @@ class DuplicateDetectorActivity : BaseActivity() {
         )
     }
 
+    /**
+     * Update the title of the DuplicateDetectorActivity
+     * ```
+     * if count>0, update the title to "n duplicates" for the detail page
+     * if count<0, update the title to "n item(s) left" for the main page
+     * if count=0, update the title to "Duplicate Detector" for the main page without any items
+     * ```
+     * @param count Number of items
+     */
     fun updateTitle(count: Int) {
-        binding!!.toolbar.title = if (count > -1) resources.getQuantityString(
+        binding!!.toolbar.title = if (count > 0) resources.getQuantityString(
             R.plurals.duplicate_detail_title,
             count,
             count
+        ) else if (count < 0) resources.getQuantityString(
+            R.plurals.duplicate_main_title,
+            -count,
+            -count
         ) else resources.getString(R.string.title_activity_duplicate_detector)
     }
 
@@ -153,6 +173,10 @@ class DuplicateDetectorActivity : BaseActivity() {
                                 || (externalCount > 1 && 0 == localCount && 0 == streamedCount)
                         )
                 )
+    }
+
+    fun getToolbarView() : View {
+        return binding!!.toolbar
     }
 
     private fun initSelectionToolbar() {

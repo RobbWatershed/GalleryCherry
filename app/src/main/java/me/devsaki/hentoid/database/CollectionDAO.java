@@ -10,7 +10,6 @@ import com.annimon.stream.function.Consumer;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -26,6 +25,8 @@ import me.devsaki.hentoid.database.domains.Group;
 import me.devsaki.hentoid.database.domains.GroupItem;
 import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.database.domains.QueueRecord;
+import me.devsaki.hentoid.database.domains.RenamingRule;
+import me.devsaki.hentoid.database.domains.SearchRecord;
 import me.devsaki.hentoid.database.domains.SiteBookmark;
 import me.devsaki.hentoid.database.domains.SiteHistory;
 import me.devsaki.hentoid.enums.AttributeType;
@@ -33,6 +34,7 @@ import me.devsaki.hentoid.enums.Grouping;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.util.ContentHelper;
+import me.devsaki.hentoid.util.SearchHelper;
 import me.devsaki.hentoid.widget.ContentSearchManager;
 
 public interface CollectionDAO {
@@ -52,9 +54,11 @@ public interface CollectionDAO {
     Content selectContentByStorageUri(@NonNull final String folderUri, boolean onlyFlagged);
 
     @Nullable
-    Content selectContentBySourceAndUrl(@NonNull Site site, @NonNull String contentUrl, @NonNull String coverUrl);
+    Content selectContentBySourceAndUrl(@NonNull Site site, @NonNull String contentUrl, @Nullable String coverUrl);
 
     Set<String> selectAllSourceUrls(@NonNull Site site);
+
+    Set<String> selectAllMergedUrls(@NonNull Site site);
 
     List<Content> searchTitlesWith(@NonNull final String word, int[] contentStatusCodes);
 
@@ -63,6 +67,8 @@ public interface CollectionDAO {
     long insertContentCore(@NonNull final Content content);
 
     void updateContentStatus(@NonNull final StatusContent updateFrom, @NonNull final StatusContent updateTo);
+
+    void updateContentDeleteFlag(long contentId, boolean flag);
 
     void deleteContent(@NonNull final Content content);
 
@@ -83,11 +89,9 @@ public interface CollectionDAO {
 
     long countAllInternalBooks(boolean favsOnly);
 
-    List<Content> selectAllInternalBooks(boolean favsOnly);
-
     void streamAllInternalBooks(boolean favsOnly, Consumer<Content> consumer);
 
-    void flagAllInternalBooks();
+    void flagAllInternalBooks(boolean includePlaceholders);
 
     void deleteAllInternalBooks(boolean resetRemainingImagesStatus);
 
@@ -96,6 +100,8 @@ public interface CollectionDAO {
     void flagAllErrorBooksWithJson();
 
     long countAllQueueBooks();
+
+    LiveData<Integer> countAllQueueBooksLive();
 
     List<Content> selectAllQueueBooks();
 
@@ -149,8 +155,6 @@ public interface CollectionDAO {
 
     // High-level queries (internal and external locations)
 
-    List<Content> selectStoredContent(boolean nonFavouriteOnly, boolean includeQueued, int orderField, boolean orderDesc);
-
     List<Long> selectStoredContentIds(boolean nonFavouritesOnly, boolean includeQueued, int orderField, boolean orderDesc);
 
     long countStoredContent(boolean nonFavouriteOnly, boolean includeQueued);
@@ -179,14 +183,20 @@ public interface CollectionDAO {
     LiveData<Map<String, StatusContent>> selectContentUniqueIdStates(@NonNull final Site site);
 
 
-    LiveData<List<Content>> selectErrorContent();
+    LiveData<List<Content>> selectErrorContentLive();
 
-    List<Content> selectErrorContentList();
+    LiveData<List<Content>> selectErrorContentLive(String query);
+
+    List<Content> selectErrorContent();
 
 
-    LiveData<Integer> countBooks(long groupId, List<Attribute> metadata);
+    LiveData<Integer> countBooks(
+            long groupId,
+            List<Attribute> metadata,
+            @ContentHelper.Location int location,
+            @ContentHelper.Type int contentType);
 
-    LiveData<Integer> countAllBooks();
+    LiveData<Integer> countAllBooksLive();
 
 
     // IMAGEFILES
@@ -205,6 +215,8 @@ public interface CollectionDAO {
 
     ImageFile selectImageFile(long id);
 
+    List<ImageFile> selectImageFiles(long[] ids);
+
     LiveData<List<ImageFile>> selectDownloadedImagesFromContentLive(long id);
 
     List<ImageFile> selectDownloadedImagesFromContent(long id);
@@ -220,9 +232,6 @@ public interface CollectionDAO {
 
     List<QueueRecord> selectQueue();
 
-    @Nullable
-    QueueRecord selectQueue(long contentId);
-
     LiveData<List<QueueRecord>> selectQueueLive();
 
     LiveData<List<QueueRecord>> selectQueueLive(String query);
@@ -233,6 +242,8 @@ public interface CollectionDAO {
 
     void updateQueue(@NonNull List<QueueRecord> queue);
 
+    void deleteQueueRecordsCore();
+
     void deleteQueue(@NonNull Content content);
 
     void deleteQueue(int index);
@@ -240,15 +251,28 @@ public interface CollectionDAO {
 
     // ATTRIBUTES
 
-    Single<AttributeQueryResult> selectAttributeMasterDataPaged(
+    long insertAttribute(@NonNull Attribute attr);
+
+    @Nullable
+    Attribute selectAttribute(long id);
+
+    Single<SearchHelper.AttributeQueryResult> selectAttributeMasterDataPaged(
             @NonNull List<AttributeType> types,
             String filter,
+            long groupId,
             List<Attribute> attrs,
+            @ContentHelper.Location int location,
+            @ContentHelper.Type int contentType,
+            boolean includeFreeAttrs,
             int page,
             int booksPerPage,
             int orderStyle);
 
-    Single<SparseIntArray> countAttributesPerType(List<Attribute> filter);
+    Single<SparseIntArray> countAttributesPerType(
+            long groupId,
+            List<Attribute> filter,
+            @ContentHelper.Location int location,
+            @ContentHelper.Type int contentType);
 
 
     // CHAPTERS
@@ -289,6 +313,33 @@ public interface CollectionDAO {
     void deleteAllBookmarks();
 
 
+    // SEARCH HISTORY
+
+    LiveData<List<SearchRecord>> selectSearchRecordsLive();
+
+    void insertSearchRecord(@NonNull SearchRecord record, int limit);
+
+    void deleteAllSearchRecords();
+
+
+    // RENAMING RULES
+
+    @Nullable
+    RenamingRule selectRenamingRule(long id);
+
+    LiveData<List<RenamingRule>> selectRenamingRulesLive(@NonNull AttributeType type, String nameFilter);
+
+    List<RenamingRule> selectRenamingRules(@NonNull AttributeType type, String nameFilter);
+
+    long insertRenamingRule(@NonNull RenamingRule rule);
+
+    void insertRenamingRules(@NonNull List<RenamingRule> rules);
+
+    void deleteRenamingRules(List<Long> ids);
+
+    void deleteAllRenamingRules();
+
+
     // RESOURCES
 
     void cleanup();
@@ -301,14 +352,4 @@ public interface CollectionDAO {
     Single<List<Long>> selectOldStoredBookIds();
 
     long countOldStoredContent();
-
-
-    // RESULTS STRUCTURES
-
-    // This is a dumb struct class, nothing more
-    @SuppressWarnings("squid:S1104")
-    class AttributeQueryResult {
-        public List<Attribute> attributes = new ArrayList<>();
-        public long totalSelectedAttributes = 0;
-    }
 }

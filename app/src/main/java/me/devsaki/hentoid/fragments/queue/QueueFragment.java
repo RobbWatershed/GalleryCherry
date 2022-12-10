@@ -1,6 +1,8 @@
 package me.devsaki.hentoid.fragments.queue;
 
 import static androidx.core.view.ViewCompat.requireViewById;
+import static androidx.core.view.inputmethod.EditorInfoCompat.IME_FLAG_NO_PERSONALIZED_LEARNING;
+import static me.devsaki.hentoid.fragments.library.LibraryContentFragment.CONTENT_ITEM_DIFF_CALLBACK;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
@@ -52,12 +54,8 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
-import io.reactivex.Observable;
-import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.CompositeDisposable;
-import io.reactivex.schedulers.Schedulers;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.activities.PrefsActivity;
 import me.devsaki.hentoid.activities.QueueActivity;
@@ -70,26 +68,27 @@ import me.devsaki.hentoid.events.DownloadPreparationEvent;
 import me.devsaki.hentoid.events.ProcessEvent;
 import me.devsaki.hentoid.events.ServiceDestroyedEvent;
 import me.devsaki.hentoid.fragments.ProgressDialogFragment;
+import me.devsaki.hentoid.fragments.tools.DownloadsImportDialogFragment;
 import me.devsaki.hentoid.ui.BlinkAnimation;
 import me.devsaki.hentoid.util.ContentHelper;
 import me.devsaki.hentoid.util.Debouncer;
-import me.devsaki.hentoid.util.FileHelper;
 import me.devsaki.hentoid.util.Helper;
-import me.devsaki.hentoid.util.PermissionHelper;
 import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.util.StringHelper;
 import me.devsaki.hentoid.util.ThemeHelper;
 import me.devsaki.hentoid.util.ToastHelper;
 import me.devsaki.hentoid.util.TooltipHelper;
 import me.devsaki.hentoid.util.download.ContentQueueManager;
+import me.devsaki.hentoid.util.file.FileHelper;
+import me.devsaki.hentoid.util.file.PermissionHelper;
 import me.devsaki.hentoid.util.network.DownloadSpeedCalculator;
-import me.devsaki.hentoid.util.network.NetworkHelper;
 import me.devsaki.hentoid.viewholders.ContentItem;
 import me.devsaki.hentoid.viewholders.IDraggableViewHolder;
 import me.devsaki.hentoid.viewholders.ISwipeableViewHolder;
 import me.devsaki.hentoid.viewmodels.QueueViewModel;
 import me.devsaki.hentoid.viewmodels.ViewModelFactory;
 import me.devsaki.hentoid.views.CircularProgressView;
+import me.devsaki.hentoid.widget.DownloadModeMenu;
 import me.devsaki.hentoid.widget.FastAdapterPreClickSelectHelper;
 import me.zhanghai.android.fastscroll.FastScrollerBuilder;
 import timber.log.Timber;
@@ -128,9 +127,6 @@ public class QueueFragment extends Fragment implements ItemTouchCallback, Simple
     private final FastAdapter<ContentItem> fastAdapter = FastAdapter.with(itemAdapter);
     private SelectExtension<ContentItem> selectExtension;
     private ItemTouchHelper touchHelper;
-
-    // Download speed calculator
-    private final DownloadSpeedCalculator downloadSpeedCalculator = new DownloadSpeedCalculator();
 
     // State
     private boolean isPreparingDownload = false;
@@ -256,15 +252,6 @@ public class QueueFragment extends Fragment implements ItemTouchCallback, Simple
         initSelectionToolbar();
         attachButtons(fastAdapter);
 
-        // Network usage display refresh
-        compositeDisposable.add(Observable.timer(1, TimeUnit.SECONDS)
-                .subscribeOn(Schedulers.computation())
-                .repeat()
-                .observeOn(Schedulers.computation())
-                .map(v -> NetworkHelper.getIncomingNetworkUsage(requireContext()))
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(this::updateNetworkUsage));
-
         addCustomBackControl();
 
         return rootView;
@@ -321,8 +308,9 @@ public class QueueFragment extends Fragment implements ItemTouchCallback, Simple
         });
 
         mainSearchView = (SearchView) searchMenu.getActionView();
+        mainSearchView.setImeOptions(IME_FLAG_NO_PERSONALIZED_LEARNING);
         mainSearchView.setIconifiedByDefault(true);
-        mainSearchView.setQueryHint(getString(R.string.search_hint));
+        mainSearchView.setQueryHint(getString(R.string.library_search_hint));
         // Change display when text query is typed
         mainSearchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
@@ -379,6 +367,11 @@ public class QueueFragment extends Fragment implements ItemTouchCallback, Simple
         MenuItem invertMenu = queueActivity.getToolbar().getMenu().findItem(R.id.action_invert_queue);
         invertMenu.setOnMenuItemClickListener(item -> {
             viewModel.invertQueue();
+            return true;
+        });
+        MenuItem importMenu = queueActivity.getToolbar().getMenu().findItem(R.id.action_import_downloads);
+        importMenu.setOnMenuItemClickListener(item -> {
+            DownloadsImportDialogFragment.Companion.invoke(getParentFragmentManager());
             return true;
         });
         errorStatsMenu = queueActivity.getToolbar().getMenu().findItem(R.id.action_error_stats);
@@ -667,7 +660,7 @@ public class QueueFragment extends Fragment implements ItemTouchCallback, Simple
                     message.append(" ").append(getResources().getQuantityString(R.plurals.queue_bottom_bar_errors, pagesKO, pagesKO));
                 if (numberRetries > 0)
                     message.append(" ").append(getResources().getString(R.string.queue_bottom_bar_retry, numberRetries, Preferences.getDlRetriesNumber()));
-                int avgSpeedKbps = (int) downloadSpeedCalculator.getAvgSpeedKbps();
+                int avgSpeedKbps = (int) DownloadSpeedCalculator.INSTANCE.getAvgSpeedKbps();
                 if (avgSpeedKbps > 0)
                     message.append(" @ ").append(getResources().getString(R.string.queue_bottom_bar_speed, avgSpeedKbps));
 
@@ -714,7 +707,8 @@ public class QueueFragment extends Fragment implements ItemTouchCallback, Simple
         // Update displayed books
         List<ContentItem> contentItems = Stream.of(result).map(c -> new ContentItem(c, !query.isEmpty(), touchHelper, this::onCancelSwipedBook)).withoutNulls().distinct().toList();
         if (newSearch) itemAdapter.setNewList(contentItems, false);
-        else FastAdapterDiffUtil.INSTANCE.set(itemAdapter, contentItems);
+        else
+            FastAdapterDiffUtil.INSTANCE.set(itemAdapter, contentItems, CONTENT_ITEM_DIFF_CALLBACK);
         new Handler(Looper.getMainLooper()).postDelayed(this::differEndCallback, 150);
         updateControlBar();
 
@@ -841,7 +835,7 @@ public class QueueFragment extends Fragment implements ItemTouchCallback, Simple
                 c = new ObjectBoxDAO(requireContext()).selectContent(c.getId());
 
             if (c != null) {
-                if (!ContentHelper.openHentoidViewer(requireContext(), c, -1, null, false))
+                if (!ContentHelper.openReader(requireContext(), c, -1, null, false))
                     ToastHelper.toast(R.string.err_no_content);
                 return true;
             } else return false;
@@ -976,10 +970,6 @@ public class QueueFragment extends Fragment implements ItemTouchCallback, Simple
         requireContext().startActivity(intent);
     }
 
-    private void updateNetworkUsage(long bytesReceived) {
-        downloadSpeedCalculator.addSampleNow(bytesReceived);
-    }
-
     private void initSelectionToolbar() {
         QueueActivity queueActivity = activity.get();
 
@@ -1018,6 +1008,15 @@ public class QueueFragment extends Fragment implements ItemTouchCallback, Simple
                 askRedownloadSelectedScratch();
                 keepToolbar = true;
                 break;
+            case R.id.action_change_mode:
+                DownloadModeMenu.Companion.show(
+                        requireContext(),
+                        recyclerView,
+                        requireActivity(),
+                        (position, item) -> onNewModeSelected(position),
+                        this::leaveSelectionMode
+                );
+                break;
             case R.id.action_select_all:
                 // Make certain _everything_ is properly selected (selectExtension.select() as doesn't get everything the 1st time it's called)
                 int count = 0;
@@ -1031,6 +1030,24 @@ public class QueueFragment extends Fragment implements ItemTouchCallback, Simple
         if (!keepToolbar) selectionToolbar.setVisibility(View.GONE);
 
         return true;
+    }
+
+    public void leaveSelectionMode() {
+        selectExtension.setSelectOnLongClick(true);
+        // Warning : next line makes FastAdapter cycle through all items,
+        // which has a side effect of calling TiledPageList.onPagePlaceholderInserted,
+        // flagging the end of the list as being the last displayed position
+        Set<Integer> selection = selectExtension.getSelections();
+        if (!selection.isEmpty()) selectExtension.deselect(selection);
+        selectionToolbar.setVisibility(View.GONE);
+    }
+
+    private void onNewModeSelected(int downloadMode) {
+        Set<Integer> selection = selectExtension.getSelections();
+        List<Long> selectedContentIds = Stream.of(selection).map(pos -> itemAdapter.getAdapterItem(pos).getContent()).map(Content::getId).toList();
+        if (!selection.isEmpty()) selectExtension.deselect(selection);
+        selectionToolbar.setVisibility(View.GONE);
+        viewModel.setDownloadMode(selectedContentIds, downloadMode);
     }
 
     private void updateSelectionToolbar(long selectedCount) {
@@ -1081,7 +1098,7 @@ public class QueueFragment extends Fragment implements ItemTouchCallback, Simple
         List<Content> contents = new ArrayList<>();
         for (ContentItem ci : selectedItems) {
             Content c = ci.getContent();
-            if (null == c) continue;
+            if (null == c || c.isBeingDeleted()) continue; // Don't redownload if the content is being purged
             contents.add(c);
         }
 

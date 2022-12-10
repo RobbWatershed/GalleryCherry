@@ -20,8 +20,12 @@
         <item quantity="other">pagine</item>
     </plurals>
     <plurals name="file" tools:ignore="ImpliedQuantity">
-        <item quantity="one">File</item>
-        <item quantity="other">Files</item>
+        <item quantity="one">file</item>
+        <item quantity="other">files</item>
+    </plurals>
+    <plurals name="item" tools:ignore="ImpliedQuantity">
+        <item quantity="one">elemento</item>
+        <item quantity="other">elementi</item>
     </plurals>
     <string name="groups">Gruppi</string>
     <string name="pause">Pausa</string>
@@ -29,12 +33,17 @@
     <string name="resume">Riprendi</string>
     <string name="cancel">Annulla</string>
     <string name="cancel_all">Annulla tutto</string>
-    <string name="menu_completed_single">Completato</string>
+    <string name="menu_completed_single">Segna come completato</string>
+    <string name="menu_reset_read">Segna come da leggere</string>
     <string name="service_running">Il servizio è già in esecuzione</string>
     <string name="open_folder">Apri cartella</string>
     <string name="_default">predefinito</string>
     <string name="empty">vuoto</string>
     <string name="none">Nessuno</string>
+    <string name="disabled_generic">Disabilitato</string>
+    <string name="create_generic">Crea</string>
+    <string name="edit_generic">Modifica</string>
+    <string name="remove_generic">Rimuovi</string>
 <string name="title_activity_api29_migration">Migrazione API 29</string>
     <string name="title_activity_downloads">Libreria</string>
     <string name="title_activity_queue">Coda</string>
@@ -42,6 +51,8 @@
     <string name="title_activity_about">Informazioni</string>
     <string name="title_activity_app_lock">Blocco app</string>
     <string name="title_activity_search">Ricerca avanzata</string>
+    <string name="title_activity_meta_edit">Modifica metadata</string>
+    <string name="title_activity_rules">Rinomina regole</string>
 <string name="api29_migration_title">Hentoid v12 \nAggiornamento gestione file</string>
     <string name="api29_migration_subtitle">Hentoid sta aggiornando la tua raccolta. \nPotrebbero essere necessari alcuni minuti.</string>
     <string name="api29_migration_location">L\'attuale posizione della cartelle di Hentoid è \n<x:g example="/storage/emulated/0/Hentoid" id="path">%s</x:g></string>
@@ -64,9 +75,9 @@
     <string name="menu_edit_confirm">Conferma modifica</string>
     <string name="menu_edit_cancel">Annulla modifica</string>
     <string name="menu_edit_warning_custom">Il nuovo ordine personalizzato che stai per creare sovrascriverà quello precedente.</string>
-    <string name="menu_order">Ordina libri</string>
+    <string name="menu_sort_filter">Ordina e filtra</string>
     <string name="menu_delete_single">Elimina</string>
-    <string name="menu_change_group">Passa al gruppo…</string>
+    <string name="menu_change_group">Muovi nel gruppo</string>
     <string name="menu_open_folder">Apri la cartella contenente</string>
     <string name="menu_redownload">Scarica di nuovo</string>
     <string name="menu_redownload_scratch">Scarica di nuovo da zero</string>
@@ -78,15 +89,17 @@
     <string name="menu_share_title">URL del libro</string>
     <string name="menu_archive">Archivio</string>
     <string name="menu_archive_help">Archivia il libro in un file ZIP</string>
-    <string name="search_hint">Titolo, autore, tag o ID del libro</string>
+    <string name="library_search_hint">Titolo, autore, tag o ID del libro</string>
     <string name="send_to">Condividi con:</string>
     <string name="open_settings">Apri impostazioni</string>
     <string name="app_settings">Impostazioni app</string>
     <string name="book_settings">Impostazioni libro</string>
-    <string name="permissions_lost">I permessi per i file sono stati persi</string>
+    <string name="alert_browser_mode">Modalità browser attiva: nessun accesso alla memoria</string>
     <string name="low_memory">Il tuo dispositivo ha poca memoria!</string>
+    <string name="permissions_lost">I permessi per i file sono stati persi</string>
     <string name="fix_permissions">Aggiusta</string>
     <string name="view_queue">Visualizza coda</string>
+    <string name="clear_search_history">Pulisci cronologia ricerca</string>
 <string name="downloader_title">Downloader</string>
     <string name="queue_queue_tab">In corso</string>
     <string name="queue_errors_tab">Errori</string>
@@ -97,6 +110,7 @@
     <string name="invert_queue">Inverti coda</string>
     <string name="redownload_all">Scarica di nuovo tutto</string>
     <string name="cancel_all_errors">Cancella tutti gli errori</string>
+    <string name="import_downloads">Importa downloads</string>
     <string name="move_top">Vai all\'inizio</string>
     <string name="move_bottom">Scendi alla fine</string>
     <string name="queue_paused">Coda in pausa</string>
@@ -131,6 +145,8 @@
     <string name="step_remove_duplicate">Sostituendo duplicato</string>
     <string name="help_swipe_cancel">Puoi annullare i download scorrendoli verso sinistra</string>
     <string name="redownloaded_error">Si è verificato un problema durante il nuovo download - annullato</string>
+    <string name="redownloaded_missing_webview">WebView non è disponibile, impossibile riscaricare adesso</string>
+    <string name="redownloaded_updating_webview">WebView si sta aggiornando, ancora impossibile riscaricare </string>
     <plurals name="redownloaded_scratch">
         <item quantity="one"><x:g example="1" id="number">%1$d</x:g>/<x:g example="42" id="total">%2$d</x:g> elemento cancellato per riscaricarlo</item>
         <item quantity="other"><x:g example="2" id="number">%1$d</x:g>/<x:g example="42" id="total">%2$d</x:g> elementi cancellati per riscaricarli</item>
@@ -141,6 +157,8 @@
     <string name="notification_user_action_needed">Azione dell\'utente necessaria</string>
     <string name="notification_action_dl_revive">Tocca qui per riattivare il download</string>
     <string name="revive_wait">Rimani su questa schermata mentre il download viene riattivato</string>
+    <string name="revive_missing_webview">WebView non è disponibile, impossibile rianimare i download al momento</string>
+    <string name="revive_updating_webview">WebView si sta aggiornando, ancora impossibile rianimare i download </string>
     <string name="queue_json_saved">Coda JSON salvata</string>
     <string name="queue_json_failed">Salvataggio JSON della coda non riuscito</string>
     <string name="queue_content_size_estimate"><x:g example="13.37" id="size_mbytes">%.1f</x:g> MB estimati</string>
@@ -154,6 +172,16 @@
     <string name="download_notif_speed" tools:ignore="MissingTranslation"><x:g example="3.88" id="size_dled">%1$d</x:g><x:g example="/14.56" id="formatted_estimated_total">%2$s</x:g> MB a <x:g example="102.4" id="speed_kbps">%3$d</x:g> KBps</string>
     <string name="download_notif_failed">Attenzione: download fallito</string>
     <string name="download_notif_failed_details">Impossibile scaricare <x:g example="Cool H-Manga" id="book_name">%1$s</x:g> : impossibile creare cartella <x:g example="/storage/emulated/0/Hentoid/nhentai/coolhmanga" id="path">%2$s</x:g> . Perfavore controlla la tua cartella Hentoid e riprova a scaricare usando il pulsante \'!\'.</string>
+    <string name="menu_change_dl_mode">Cambia modalità download</string>
+    <string name="mode_dl">Download immagine</string>
+    <string name="mode_stream">Strammando</string>
+<string name="import_downloads_title">Importa downloads</string>
+    <plurals name="import_downloads_found">
+        <item quantity="one"><x:g example="1" id="downloads">%d</x:g> download valido trovato</item>
+        <item quantity="other"><x:g example="2" id="downloads">%d</x:g> download validi trovati</item>
+    </plurals>
+    <string name="import_streamed">Importa come libro streammato</string>
+    <string name="importing_downloads">Importando downloads...</string>
 <string name="work_series">Serie: <x:g example="original" id="series">%s</x:g></string>
     <string name="work_artist">Artista: <x:g example="hayao miyazaki" id="artist">%s</x:g></string>
     <plurals name="work_pages_missing">
@@ -165,6 +193,9 @@
         <item quantity="one"><x:g example="1" id="pages_count">%1$d</x:g> pagina / <x:g example="3.88" id="size_mb">%2$.1f</x:g> MB</item>
         <item quantity="other"><x:g example="2" id="pages_count">%1$d</x:g> pagine / <x:g example="3.88" id="size_mb">%2$.1f</x:g> MB</item>
     </plurals>
+    <string name="work_pages_duplicate_dialog_library">Pagine (in libreria): %d</string>
+    <string name="work_pages_duplicate_dialog_queue">Pagine (in coda): %d</string>
+    <string name="work_pages_duplicate_dialog_source">Pagine (questa fonte): %d</string>
     <string name="library_metrics_storage"><x:g example="3.88" id="size_mb">%.0f</x:g> MB</string>
     <string name="redownload_queue_progress">Riscarica libri selezionati</string>
     <string name="errortype_parsing">Analisi</string>
@@ -174,7 +205,7 @@
     <string name="errortype_img_processing">Processando immagine</string>
     <string name="errortype_site_limit">Limite downloads/connessione raggiunto</string>
     <string name="errortype_account">Nessun account o credenziali insufficienti</string>
-    <string name="errortype_import">Nessun file locale trovato dopo l\'importazione</string>
+    <string name="errortype_import">Nessun file locale trovato durante l\'importazione</string>
     <string name="errortype_wifi">Libro saltato per limite della grandezza di download in Wi-Fi</string>
     <string name="errortype_blocked">Libro contiene un tag bloccato</string>
     <string name="errortype_undefined">Indefinito</string>
@@ -184,6 +215,7 @@
     <string name="refresh_location_internal">Libreria Hentoid</string>
     <string name="refresh_location_external">Libreria esterna</string>
     <string name="refresh_options_rename">Rinomina tutte le cartelle in base alla denominazione corrente e alla preferenza di lunghezza massima</string>
+    <string name="refresh_options_remove_placeholders">Rimuovi segnalibri dei libri importati dal metadata</string>
     <string name="refresh_options_remove">Rimuovi le cartelle in cui…</string>
     <string name="refresh_options_remove_1">Il file JSON è assente (raccomandato)</string>
     <string name="refresh_options_remove_2">Nessuna immagine è stata scaricata</string>
@@ -202,6 +234,7 @@
     <string name="import_mode_add">Aggiungi elementi importati</string>
     <string name="import_mode_replace">Sostituisci con elementi importati</string>
     <string name="import_select_file">Seleziona il file da importare</string>
+    <string name="checking_file">Controllando file...</string>
     <string name="import_file_invalid">File <x:g example="metadata.json" id="filename">%s</x:g> è invalido</string>
     <plurals name="import_file_library">
         <item quantity="one">Importa libreria (<x:g example="1" id="number">%d</x:g> libro)</item>
@@ -219,7 +252,6 @@
         <item quantity="one">Importa segnalibro (<x:g example="1" id="number">%d</x:g> elemento)</item>
         <item quantity="other">Importa segnalibri (<x:g example="2" id="number">%d</x:g> elementi)</item>
     </plurals>
-    <string name="import_warning">Se nessuna immagine è rilevata, i libri importati apprariranno come download vuoti. \nDovrai scaricarli usando Coda &gt; Errori.</string>
     <string name="import_run">ESEGUI IMPORTAZIONE</string>
     <plurals name="import_result_books">
         <item quantity="one"><x:g example="1" id="number">%d</x:g> libro importato correttamente</item>
@@ -229,7 +261,12 @@
         <item quantity="one"><x:g example="1" id="number">%d</x:g> segnalibro importato correttamente</item>
         <item quantity="other"><x:g example="2" id="number">%d</x:g> segnalibri importati correttamente</item>
     </plurals>
+    <plurals name="import_result">
+        <item quantity="one"><x:g example="1" id="number">%1$d</x:g> / <x:g example="2" id="number">%2$d</x:g> elemento importato correttamente</item>
+        <item quantity="other"><x:g example="2" id="number">%1$d</x:g> / <x:g example="2" id="number">%2$d</x:g> elementi importati correttamente</item>
+    </plurals>
     <string name="dialog_prompt">Scegli una cartella</string>
+    <string name="importing_metadata">Importando metadata...</string>
 <string name="export_title">Esporta metadata</string>
     <plurals name="export_file_library">
         <item quantity="one">Esporta libreria (<x:g example="1" id="number">%d</x:g> libro)</item>
@@ -299,6 +336,8 @@
     <string name="error_creating_folder">La cartella non è valida.</string>
     <string name="error_open">Errore nell\'apertura del file: nessuna applicazione rilevante trovata</string>
     <string name="error_browser">Errore nell\'apertura del link: nessun browser trovato</string>
+    <string name="error_missing_webview">WebView non è disponibile, impossibile aprire il browser integrato</string>
+    <string name="error_updating_webview">WebView si sta aggiornando, ancora impossibile aprire il browser integrato</string>
 <string name="redownload_dialog_title">Provare a scaricare di nuovo\?</string>
     <string name="redownload_dialog_message">Immagini totali in download: <x:g example="10" id="total_imgs">%1$d</x:g>\nImmagini senza errori: <x:g example="8" id="fine_imgs">%2$d</x:g>\nImmagini con errori: <x:g example="2" id="failed_imgs">%3$d</x:g></string>
     <string name="redownload_first_error">Primo errore: <x:g id="errortype">%s</x:g></string>
@@ -346,7 +385,11 @@
         <item quantity="other"><x:g example="2" id="count">%d</x:g> libri archiviati nella tua cartella Download</item>
     </plurals>
     <string name="stream_canceled">Streaming annullato - libro non disponibile online</string>
+    <string name="stream_missing_webview">Streaming cancellato - WebView non disponibile </string>
+    <string name="stream_updating_webview">Streaming cancellato - WebView si sta aggiornando </string>
     <string name="download_canceled">Download annullato - libro non disponibile online</string>
+    <string name="download_missing_webview">Download cancellato - WebView non è disponibile </string>
+    <string name="download_updating_webview">Download cancellato - WebView si sta aggiornando</string>
     <string name="press_back_again">Premi indietro due volte (rapidamente) per uscire.</string>
     <string name="queue_empty">Perché sono vuoto\?</string>
     <string name="errors_empty">Nessun errore rilevato tra i download</string>
@@ -386,8 +429,7 @@
         <item quantity="other"><x:g example="2" id="count">%d</x:g> libri selezionati sono già scaricati\nSaranno ignorati.</item>
     </plurals>
     <plurals name="stream_external_streamed_content">
-        <item quantity="one">Uno dei libri selezionati sta già venendo letto o è aperto in una libreria esterna
-Questo libro sarà ignorato.</item>
+        <item quantity="one">Uno dei libri selezionati sta già venendo letto o è aperto in una libreria esterna Questo libro sarà ignorato.</item>
         <item quantity="other"><x:g example="2" id="count">%d</x:g> libri selezionati stanno già venendo letti o sono aperti in una libreria esterna\nSaranno ignorati.</item>
     </plurals>
     <string name="help_search">Cerca qualsiasi cosa: titolo, autore, tag \ne anche codici di lancio!</string>
@@ -428,6 +470,7 @@ Questo libro sarà ignorato.</item>
     </plurals>
     <string name="group_delete_nothing">Niente da eliminare - seleziona Consenti l\'eleminazione di contenuti esterni per cambiarlo</string>
     <string name="clear_rating">Rimuovi voto</string>
+    <string name="clear_search_history_confirm">Pulisci cronologia ricerca?</string>
 <string name="merge_merge">Unisci</string>
     <string name="merge_progress">Unendo i libri…</string>
     <string name="split_progress">Dividendo il libro…</string>
@@ -450,7 +493,7 @@ Questo libro sarà ignorato.</item>
     <string name="sort_title">Titolo</string>
     <string name="sort_artist">Artista</string>
     <string name="sort_pages">Pagine</string>
-    <string name="sort_dl_date">Data download (processato) </string>
+    <string name="sort_dl_date">Data download (processato)</string>
     <string name="sort_dl_completion_date">Data download (completato)</string>
     <string name="sort_read_date">Leggi data</string>
     <string name="sort_reads">Legge</string>
@@ -509,6 +552,8 @@ Questo libro sarà ignorato.</item>
     <string name="about_licenses">Visualizza licenze</string>
     <string name="about_app_version" tools:ignore="MissingTranslation">Hentoid v<x:g example="1.15.20" id="ver_name">%1$s</x:g> (<x:g example="130" id="ver_code">%2$d</x:g>)</string>
     <string name="about_chrome_version" tools:ignore="MissingTranslation">Chrome v<x:g example="98" id="chrome_ver">%1$d</x:g></string>
+    <string name="about_chrome_unavailable">WebView non è disponibile</string>
+    <string name="about_chrome_updating">WebView si sta aggiornando</string>
 <string name="web_gallery">Torna all\'ultima pagina della galleria</string>
     <string name="web_home">Torna alla libreria</string>
     <string name="web_back">Indietro</string>
@@ -519,8 +564,7 @@ Questo libro sarà ignorato.</item>
     <string name="web_download">Scarica</string>
     <string name="web_unparsable">Questo contenuto non può essere scaricato. Scusa~</string>
     <string name="web_url_clipboard">URL copiato negli appunti</string>
-    <string name="help_web_download">Hai raggiunto la pagina di un libro.
-È ora di scaricare con la barra in basso!</string>
+    <string name="help_web_download">Hai raggiunto la pagina di un libro. È ora di scaricare con la barra in basso!</string>
     <string name="blocked_tag">Libro ha un tag bloccato (<x:g example="bad" id="tag">%s</x:g>)\nDownload cancellato</string>
     <string name="blocked_tag_queued">Libro ha un tag bloccato (<x:g example="bad" id="tag">%s</x:g>)\nMesso in coda come errore</string>
     <string name="bookmark_current">Aggiungi la pagina ai segnalibri</string>
@@ -537,13 +581,20 @@ Questo libro sarà ignorato.</item>
 <string name="category_any">Qualsiasi</string>
     <string name="exclude">Escludi</string>
     <string name="search_category"><x:g example="Language" id="search_category">%s</x:g> cerca</string>
+    <string name="searching_generic">Cercando</string>
     <string name="search_prompt">Cerca <x:g id="search_prompt">%s</x:g></string>
-<string name="category_artist">Artista (<x:g example="2" id="count">%1$d</x:g>)</string>
-    <string name="category_tag">Tag (<x:g example="2" id="count">%1$d</x:g>)</string>
-    <string name="category_character">Personaggio (<x:g example="2" id="count">%1$d</x:g>)</string>
-    <string name="category_series">Serie (<x:g example="2" id="count">%1$d</x:g>)</string>
-    <string name="category_language">Lingua (<x:g example="2" id="count">%1$d</x:g>)</string>
-    <string name="category_source">Fonte (<x:g example="2" id="count">%1$d</x:g>)</string>
+<string name="category_artist">Artista</string>
+    <string name="category_tag">Tag</string>
+    <string name="category_character">Personaggio</string>
+    <string name="category_series">Serie</string>
+    <string name="category_language">Lingua</string>
+    <string name="category_source">Fonte</string>
+    <string name="category_uploader">Uploader</string>
+    <string name="category_circle">Cerchio</string>
+    <string name="category_category">Categoria</string>
+    <string name="category_translator">Traduttore</string>
+    <string name="category_publisher">Editore</string>
+    <string name="category_undefined">Indefinito</string>
 <string name="object_artist">Artista</string>
     <string name="object_tag">Tag</string>
     <string name="object_character">Personaggio</string>
@@ -555,11 +606,20 @@ Questo libro sarà ignorato.</item>
     <string name="object_category">Categoria</string>
     <string name="object_translator">Traduttore</string>
     <string name="object_publisher">Editore</string>
+    <string name="object_undefined">Indefinito</string>
     <plurals name="search_button">
         <item quantity="one"><x:g example="1" id="count">%s</x:g> Risultato trovato</item>
         <item quantity="other"><x:g example="2" id="count">%s</x:g> Risultati trovati</item>
     </plurals>
     <string name="search_select_a_filter">Seleziona un filtro</string>
+    <string name="search_location">Posizione</string>
+    <string name="search_location_entries_1">Tutte le posizioni</string>
+    <string name="search_type">Tipo</string>
+    <string name="search_type_entries_1">Tutti i tipi di libri</string>
+    <string name="search_type_entries_2">Cartella</string>
+    <string name="search_type_entries_3">Streammato</string>
+    <string name="search_type_entries_4">Archivio</string>
+    <string name="search_type_entries_5">Segnaposto</string>
 
 <string name="no_images">Impossibile caricare il libro: nessuna immagine trovata</string>
     <string name="loading_archive">Caricando: <x:g example="1" id="number">%1$d</x:g>/<x:g example="42" id="total">%2$d</x:g></string>
@@ -628,6 +688,7 @@ Questo libro sarà ignorato.</item>
     <string name="chapters_remove_failed">Impossibile rimuovere i capitoli</string>
     <string name="chapter_move_failed">Impossibile spostare il capitolo</string>
     <string name="slideshow_start">Inizio presentazione (ritardo <x:g example="0.5" id="time">%.1f</x:g> sec)</string>
+    <string name="slideshow_start_vertical">Inizio presentazione (<x:g example="fast" id="speed">%s</x:g>)</string>
     <string name="slideshow_stop">Presentazione interrotta</string>
     <string name="ask_clear_chapters">Cancellare tutti i capitoli?</string>
 <string name="view_changelog">Visualizza il registro modifiche</string>
@@ -671,6 +732,10 @@ Questo libro sarà ignorato.</item>
     </plurals>
     <string name="duplicate_empty_first_use">Niente da visualizzare - Esegui una nuova ricerca di duplicati</string>
     <string name="duplicate_processing">Rilevando duplicati…</string>
+    <plurals name="duplicate_main_title">
+        <item quantity="one"><x:g example="1" id="number">%d</x:g> oggetto rimanente</item>
+        <item quantity="other"><x:g example="2" id="number">%d</x:g> oggetti rimanenti</item>
+    </plurals>
     <plurals name="duplicate_detail_title">
         <item quantity="one"><x:g example="1" id="number">%d</x:g> duplicato</item>
         <item quantity="other"><x:g example="2" id="number">%d</x:g> duplicati</item>
@@ -688,6 +753,17 @@ Questo libro sarà ignorato.</item>
     <string name="duplicate_alert_download_book">Scarica libro</string>
     <string name="duplicate_alert_download_pages">Scarica pagine extra</string>
     <string name="duplicate_wait_index">Indicizzazione…</string>
+<string name="meta_cover_multiple_warning">La copertina non può essere cambiata per più libri</string>
+    <string name="meta_cover_archive_warning">La copertina non può essere cambiata per gli archivi</string>
+    <string name="meta_choose_type">Scegli un tipo per \"%s\"</string>
+    <string name="meta_replace_with">Rimpiazza con...</string>
+    <string name="meta_tag_all_selected">Segna tutti i libri selezionati</string>
+    <string name="meta_tag_all_selected_confirm">Segnare tutti i %1$d libri selezionati con \'%2$s\'?</string>
+    <string name="meta_rename_new_name">Nuovo nome</string>
+    <string name="meta_rename_new_rule">Ricorda per futuri downloads</string>
+<string name="meta_rule_source">Fonte</string>
+    <string name="meta_rule_target">Obiettivo</string>
+    <string name="meta_rule_wildcard">Se l\'obiettivo ha un jolly, anche la fonte deve avere un jolly</string>
 <string name="notif_archive_title">Archiviazione dei contenuti</string>
     <string name="notif_delete_title">Eliminazione del contenuto</string>
     <string name="notif_delete_complete">Eliminazione completata</string>
@@ -700,6 +776,9 @@ Questo libro sarà ignorato.</item>
 <string name="title_startup">Avvio</string>
     <string name="title_startup_progress">Avviando…</string>
     <string name="title_startup_complete">Avvio completato</string>
+<string name="missing_web_view_title">WebView non installata o disabilitata</string>
+    <string name="missing_web_view">Hentoid non è riuscito a trovare il WebView per le app integrato in Android. \nSenza non potrai navigare tra le fonti, riscaricare libri; non puoi fare molto che richieda internet. \n\nÈ molto probabile che sia scaricato, ma disabilitato: perfavore vai in <b>Impostazioni</b> &gt; <b>Apps</b> &gt; <b>Applicazioni disabilitate</b> e attiva <b>Android System WebView</b>.\n\nSe non riesci a trovare l\'app, perfavore installala <b><a href="https://play.google.com/store/apps/details?id=com.google.android.webview">App Store</a></b>.</string>
+    <string name="missing_web_view_library">Torna alla libreria</string>
 <string name="group_today">Oggi</string>
     <string name="group_7">Ultimi 7 giorni</string>
     <string name="group_30">Ultimi 30 giorni</string>

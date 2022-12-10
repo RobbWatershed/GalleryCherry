@@ -23,13 +23,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 import me.devsaki.hentoid.R;
+import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.util.ContentHelper;
 import me.devsaki.hentoid.util.ThemeHelper;
 import me.devsaki.hentoid.viewholders.TextItem;
 
 /**
- * Launcher dialog for the library refresh feature
+ * Launcher dialog for the "reach book page by launch code" feature
  */
 public class SearchContentIdDialogFragment extends DialogFragment {
 
@@ -95,7 +96,7 @@ public class SearchContentIdDialogFragment extends DialogFragment {
     private boolean onItemSelected(Site s) {
         if (null == s) return false;
 
-        ContentHelper.launchBrowserFor(requireContext(), getUrlFromId(s, bookId));
+        ContentHelper.launchBrowserFor(requireContext(), Content.getGalleryUrlFromId(s, bookId));
 
         this.dismiss();
         return true;

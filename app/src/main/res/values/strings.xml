@@ -26,18 +26,28 @@
         <item quantity="one">file</item>
         <item quantity="other">files</item>
     </plurals>
+    <plurals name="item" tools:ignore="ImpliedQuantity">
+        <item quantity="one">item</item>
+        <item quantity="other">items</item>
+    </plurals>
     <string name="groups">Groups</string>
     <string name="pause">Pause</string>
     <string name="stop">Stop</string>
     <string name="resume">Resume</string>
     <string name="cancel">Cancel</string>
     <string name="cancel_all">Cancel all</string>
-    <string name="menu_completed_single">Completed</string>
+    <string name="menu_completed_single">Mark as completed</string>
+    <string name="menu_reset_read">Mark as unread</string>
     <string name="service_running">Service is already running</string>
     <string name="open_folder">Open folder</string>
     <string name="_default">default</string>
     <string name="empty">empty</string>
     <string name="none">None</string>
+    <string name="disabled_generic">Disabled</string>
+    <string name="create_generic">Create</string>
+    <string name="edit_generic">Edit</string>
+    <string name="remove_generic">Remove</string>
+
 
     <!-- Activities -->
     <string name="title_activity_api29_migration">API 29 migration</string>
@@ -47,6 +57,8 @@
     <string name="title_activity_about">About</string>
     <string name="title_activity_app_lock">App Lock</string>
     <string name="title_activity_search">Advanced Search</string>
+    <string name="title_activity_meta_edit">Edit metadata</string>
+    <string name="title_activity_rules">Renaming rules</string>
 
     <!-- API29 migration / library refresh screen -->
     <string name="api29_migration_title">GalleryCherry v1.6\nFile management update</string>
@@ -73,9 +85,9 @@
     <string name="menu_edit_confirm">Confirm editing</string>
     <string name="menu_edit_cancel">Cancel editing</string>
     <string name="menu_edit_warning_custom">New custom ordering will overwrite the previous one.</string>
-    <string name="menu_order">Order books</string>
+    <string name="menu_sort_filter">Sort and filter</string>
     <string name="menu_delete_single">Delete</string>
-    <string name="menu_change_group">Move to group…</string>
+    <string name="menu_change_group">Move to group</string>
     <string name="menu_open_folder">Open containing folder</string>
     <string name="menu_redownload">Redownload</string>
     <string name="menu_redownload_scratch">Redownload from scratch</string>
@@ -87,15 +99,17 @@
     <string name="menu_share_title">Book URL</string>
     <string name="menu_archive">Archive</string>
     <string name="menu_archive_help">Archive the book to a ZIP file</string>
-    <string name="search_hint">Title, artist, tag or book ID</string>
+    <string name="library_search_hint">Title, artist, tag or book ID</string>
     <string name="send_to">Share with:</string>
     <string name="open_settings">Open settings</string>
     <string name="app_settings">App settings</string>
     <string name="book_settings">Book settings</string>
-    <string name="permissions_lost">File permissions have been lost</string>
+    <string name="alert_browser_mode">Browser mode active : no storage access</string>
     <string name="low_memory">Your device is low on storage!</string>
+    <string name="permissions_lost">File permissions have been lost</string>
     <string name="fix_permissions">Fix</string>
     <string name="view_queue">View queue</string>
+    <string name="clear_search_history">Clear search history</string>
 
     <!-- Queue / Downloader -->
     <string name="downloader_title">Downloader</string>
@@ -108,6 +122,7 @@
     <string name="invert_queue">Invert queue</string>
     <string name="redownload_all">Redownload all</string>
     <string name="cancel_all_errors">Cancel all errors</string>
+    <string name="import_downloads">Import downloads</string>
     <string name="move_top">Move to top</string>
     <string name="move_bottom">Move to bottom</string>
     <string name="queue_paused">Queue paused</string>
@@ -142,6 +157,8 @@
     <string name="step_remove_duplicate">Replacing duplicate</string>
     <string name="help_swipe_cancel">You can cancel downloads by swiping them to the left</string>
     <string name="redownloaded_error">An issue happened while redownloading - canceled</string>
+    <string name="redownloaded_missing_webview">WebView is unavailable, can\'t redownload now</string>
+    <string name="redownloaded_updating_webview">WebView is updating right now, can\'t redownload yet</string>
     <plurals name="redownloaded_scratch">
         <item quantity="one"><x:g example="1" id="number">%1$d</x:g>/<x:g example="42" id="total">%2$d</x:g> item cleared for redownloading</item>
         <item quantity="other"><x:g example="2" id="number">%1$d</x:g>/<x:g example="42" id="total">%2$d</x:g> items cleared for redownloading</item>
@@ -152,6 +169,8 @@
     <string name="notification_user_action_needed">User action needed</string>
     <string name="notification_action_dl_revive">Tap here to reactivate your download</string>
     <string name="revive_wait">Please stay on this screen while your download is being revived</string>
+    <string name="revive_missing_webview">WebView is unavailable, can\'t revive downloads now</string>
+    <string name="revive_updating_webview">WebView is updating right now, can\'t revive downloads yet</string>
     <string name="queue_json_saved">JSON of the queue saved</string>
     <string name="queue_json_failed">Could not save JSON of the queue</string>
     <string name="queue_content_size_estimate">estimated <x:g example="13.37" id="size_mbytes">%.1f</x:g> MB</string>
@@ -165,6 +184,18 @@
     <string name="download_notif_speed" tools:ignore="MissingTranslation"><x:g example="3.88" id="size_dled">%1$d</x:g><x:g example="/14.56" id="formatted_estimated_total">%2$s</x:g> MB @ <x:g example="102.4" id="speed_kbps">%3$d</x:g> KBps</string>
     <string name="download_notif_failed">Download failed</string>
     <string name="download_notif_failed_details">Cannot download <x:g example="Cool H-Manga" id="book_name">%1$s</x:g>: unable to create folder <x:g example="/storage/emulated/0/Cherry/nhentai/coolhmanga" id="path">%2$s</x:g>. Please check your GalleryCherry folder and retry downloading using the \'!\' button.</string>
+    <string name="menu_change_dl_mode">Change download mode</string>
+    <string name="mode_dl">Picture download</string>
+    <string name="mode_stream">Streaming</string>
+
+    <!-- Import downloads -->
+    <string name="import_downloads_title">Import downloads</string>
+    <plurals name="import_downloads_found">
+        <item quantity="one"><x:g example="1" id="downloads">%d</x:g> valid download found</item>
+        <item quantity="other"><x:g example="2" id="downloads">%d</x:g> valid downloads found</item>
+    </plurals>
+    <string name="import_streamed">Import as streamed books</string>
+    <string name="importing_downloads">Importing downloads…</string>
 
     <!-- TextViews -->
     <string name="work_series">Series: <x:g example="original" id="series">%s</x:g></string>
@@ -179,6 +210,9 @@
         <item quantity="one"><x:g example="1" id="pages_count">%1$d</x:g> page / <x:g example="3.88" id="size_mb">%2$.1f</x:g> MB</item>
         <item quantity="other"><x:g example="2" id="pages_count">%1$d</x:g> pages / <x:g example="3.88" id="size_mb">%2$.1f</x:g> MB</item>
     </plurals>
+    <string name="work_pages_duplicate_dialog_library">Pages (in library): %d</string>
+    <string name="work_pages_duplicate_dialog_queue">Pages (in queue): %d</string>
+    <string name="work_pages_duplicate_dialog_source">Pages (this source): %d</string>
     <string name="library_metrics_storage"><x:g example="3.88" id="size_mb">%.0f</x:g> MB</string>
     <string name="redownload_queue_progress">Redownloading selected books</string>
     <string name="errortype_parsing">Parsing</string>
@@ -188,7 +222,7 @@
     <string name="errortype_img_processing">Image processing</string>
     <string name="errortype_site_limit">Downloads/bandwidth limit reached</string>
     <string name="errortype_account">No account or insufficient credentials</string>
-    <string name="errortype_import">No local file found after import</string>
+    <string name="errortype_import">No local file found while importing</string>
     <string name="errortype_wifi">Book skipped because of Wi-Fi download size limitations</string>
     <string name="errortype_blocked">Book contains a blocked tag</string>
     <string name="errortype_undefined">Undefined</string>
@@ -200,6 +234,7 @@
     <string name="refresh_location_internal">GalleryCherry library</string>
     <string name="refresh_location_external">External library</string>
     <string name="refresh_options_rename">Rename all folders according to the current naming and max length preference</string>
+    <string name="refresh_options_remove_placeholders">Remove placeholder books imported through metadata</string>
     <string name="refresh_options_remove">Remove folders where…</string>
     <string name="refresh_options_remove_1">JSON file is absent (recommended)</string>
     <string name="refresh_options_remove_2">No image has been downloaded</string>
@@ -222,6 +257,7 @@
     <string name="import_mode_add">Add imported items</string>
     <string name="import_mode_replace">Replace with imported items</string>
     <string name="import_select_file">Select file to import</string>
+    <string name="checking_file">Checking file…</string>
     <string name="import_file_invalid">File <x:g example="metadata.json" id="filename">%s</x:g> is invalid</string>
     <plurals name="import_file_library">
         <item quantity="one">Import library (<x:g example="1" id="number">%d</x:g> book)</item>
@@ -239,7 +275,6 @@
         <item quantity="one">Import bookmark (<x:g example="1" id="number">%d</x:g> item)</item>
         <item quantity="other">Import bookmarks (<x:g example="2" id="number">%d</x:g> items)</item>
     </plurals>
-    <string name="import_warning">If no images folder is detected, imported books will appear as empty downloads.\nYou will have to download them using Queue &gt; Errors.</string>
     <string name="import_run">RUN IMPORT</string>
     <plurals name="import_result_books">
         <item quantity="one"><x:g example="1" id="number">%d</x:g> book imported successfully</item>
@@ -249,7 +284,12 @@
         <item quantity="one"><x:g example="1" id="number">%d</x:g> bookmark imported successfully</item>
         <item quantity="other"><x:g example="2" id="number">%d</x:g> bookmarks imported successfully</item>
     </plurals>
+    <plurals name="import_result">
+        <item quantity="one"><x:g example="1" id="number">%1$d</x:g> / <x:g example="2" id="number">%2$d</x:g> item imported successfully</item>
+        <item quantity="other"><x:g example="2" id="number">%1$d</x:g> / <x:g example="2" id="number">%2$d</x:g> items imported successfully</item>
+    </plurals>
     <string name="dialog_prompt">Choose a Folder</string>
+    <string name="importing_metadata">Importing metadata…</string>
 
     <!-- Export metadata -->
     <string name="export_title">Export metadata</string>
@@ -333,6 +373,8 @@
     <string name="error_creating_folder">Folder is not valid.</string>
     <string name="error_open">Error opening file: no relevant application found</string>
     <string name="error_browser">Error opening link: no browser found</string>
+    <string name="error_missing_webview">WebView is unavailable, can\'t open in-app browser now</string>
+    <string name="error_updating_webview">WebView is updating right now, can\'t open in-app browser yet</string>
 
     <!-- Error log -->
     <string name="redownload_dialog_title">Try downloading again\?</string>
@@ -384,7 +426,11 @@
         <item quantity="other"><x:g example="2" id="count">%d</x:g> books archived in your Download folder</item>
     </plurals>
     <string name="stream_canceled">Streaming canceled - book unavailable online</string>
+    <string name="stream_missing_webview">Streaming canceled - WebView is unavailable</string>
+    <string name="stream_updating_webview">Streaming canceled - WebView is updating</string>
     <string name="download_canceled">Download canceled - book unavailable online</string>
+    <string name="download_missing_webview">Download canceled - WebView is unavailable</string>
+    <string name="download_updating_webview">Download canceled - WebView is updating</string>
     <string name="press_back_again">Press back twice (quickly) to exit.</string>
     <string name="queue_empty">Why am I empty\?</string>
     <string name="errors_empty">No errors detected among downloads</string>
@@ -485,6 +531,7 @@
     </plurals>
     <string name="group_delete_nothing">Nothing to delete - check "Allow deleting external content" to change that</string>
     <string name="clear_rating">Clear rating</string>
+    <string name="clear_search_history_confirm">Clear search history?</string>
 
     <!-- Merge & split -->
     <string name="merge_merge">Merge</string>
@@ -587,6 +634,8 @@
     <string name="about_licenses">Display Licenses</string>
     <string name="about_app_version" tools:ignore="MissingTranslation">GalleryCherry v<x:g example="1.15.20" id="ver_name">%1$s</x:g> (<x:g example="130" id="ver_code">%2$d</x:g>)</string>
     <string name="about_chrome_version" tools:ignore="MissingTranslation">Chrome v<x:g example="98" id="chrome_ver">%1$d</x:g></string>
+    <string name="about_chrome_unavailable">WebView is unavailable</string>
+    <string name="about_chrome_updating">WebView is updating right now</string>
 
     <!-- Web browser -->
     <string name="web_gallery">Back to latest gallery page</string>
@@ -620,14 +669,21 @@
     <string name="category_any">Any</string>
     <string name="exclude">Exclude</string>
     <string name="search_category"><x:g example="Language" id="search_category">%s</x:g> search</string>
+    <string name="searching_generic">Searching</string>
     <string name="search_prompt">Search <x:g id="search_prompt">%s</x:g></string>
     <!-- Used as a category on the search screen -->
-    <string name="category_artist">Artist (<x:g example="2" id="count">%1$d</x:g>)</string>
-    <string name="category_tag">Tag (<x:g example="2" id="count">%1$d</x:g>)</string>
-    <string name="category_character">Character (<x:g example="2" id="count">%1$d</x:g>)</string>
-    <string name="category_series">Series (<x:g example="2" id="count">%1$d</x:g>)</string>
-    <string name="category_language">Language (<x:g example="2" id="count">%1$d</x:g>)</string>
-    <string name="category_source">Source (<x:g example="2" id="count">%1$d</x:g>)</string>
+    <string name="category_artist">Artist</string>
+    <string name="category_tag">Tag</string>
+    <string name="category_character">Character</string>
+    <string name="category_series">Series</string>
+    <string name="category_language">Language</string>
+    <string name="category_source">Source</string>
+    <string name="category_uploader">Uploader</string>
+    <string name="category_circle">Circle</string>
+    <string name="category_category">Category</string>
+    <string name="category_translator">Translator</string>
+    <string name="category_publisher">Publisher</string>
+    <string name="category_undefined">Undefined</string>
     <!-- Used near items or in prompts (e.g. "Search artist"): Accusative case -->
     <string name="object_artist">Artist</string>
     <string name="object_tag">Tag</string>
@@ -642,11 +698,20 @@
     <string name="object_translator">Translator</string>
     <string name="object_publisher">Publisher</string>
     <string name="category_model">Model (%1$d)</string>
+    <string name="object_undefined">Undefined</string>
     <plurals name="search_button">
         <item quantity="one"><x:g example="1" id="count">%s</x:g> Result found</item>
         <item quantity="other"><x:g example="2" id="count">%s</x:g> Results found</item>
     </plurals>
     <string name="search_select_a_filter">Select a filter</string>
+    <string name="search_location">Location</string>
+    <string name="search_location_entries_1">All locations</string>
+    <string name="search_type">Type</string>
+    <string name="search_type_entries_1">All book types</string>
+    <string name="search_type_entries_2">Folder</string>
+    <string name="search_type_entries_3">Streamed</string>
+    <string name="search_type_entries_4">Archive</string>
+    <string name="search_type_entries_5">Placeholder</string>
 
     <!-- DB migration & Maintenance -->
 
@@ -718,6 +783,7 @@
     <string name="chapters_remove_failed">Couldn\'t remove chapters</string>
     <string name="chapter_move_failed">Couldn\'t move chapter</string>
     <string name="slideshow_start">Starting slideshow (delay <x:g example="0.5" id="time">%.1f</x:g>s)</string>
+    <string name="slideshow_start_vertical">Starting slideshow (<x:g example="fast" id="speed">%s</x:g>)</string>
     <string name="slideshow_stop">Slideshow stopped</string>
     <string name="ask_clear_chapters">Clear all chapters?</string>
 
@@ -767,6 +833,10 @@
     </plurals>
     <string name="duplicate_empty_first_use">Nothing to display - Run a new duplicate search</string>
     <string name="duplicate_processing">Detecting duplicates…</string>
+    <plurals name="duplicate_main_title">
+        <item quantity="one"><x:g example="1" id="number">%d</x:g> item left</item>
+        <item quantity="other"><x:g example="2" id="number">%d</x:g> items left</item>
+    </plurals>
     <plurals name="duplicate_detail_title">
         <item quantity="one"><x:g example="1" id="number">%d</x:g> duplicate</item>
         <item quantity="other"><x:g example="2" id="number">%d</x:g> duplicates</item>
@@ -787,6 +857,21 @@
     <string name="duplicate_alert_download_pages">Download extra pages</string>
     <string name="duplicate_wait_index">Indexing…</string>
 
+    <!-- Metadata editor -->
+    <string name="meta_cover_multiple_warning">Cover cannot be changed for multiple books</string>
+    <string name="meta_cover_archive_warning">Cover cannot be changed for archives</string>
+    <string name="meta_choose_type">Choose a type for \'%s\'</string>
+    <string name="meta_replace_with">Replace with…</string>
+    <string name="meta_tag_all_selected">Tag all selected books</string>
+    <string name="meta_tag_all_selected_confirm">Tag all %1$d selected books with \'%2$s\' ?</string>
+    <string name="meta_rename_new_name">New name</string>
+    <string name="meta_rename_new_rule">Remember for future downloads</string>
+
+    <!-- Renaming rules editor -->
+    <string name="meta_rule_source">Source</string>
+    <string name="meta_rule_target">Target</string>
+    <string name="meta_rule_wildcard">If target has a wildcard, source must have a wildcard too</string>
+
     <!-- Generic delete & purge -->
     <string name="notif_archive_title">Content archival</string>
     <string name="notif_delete_title">Content deletion</string>
@@ -798,10 +883,20 @@
     <string name="notif_delete_fail">Deletion failed</string>
     <string name="notif_delete_fail_details">At least one book failed to be deleted</string>
 
+    <!-- Update Json service -->
+    <string name="notif_json_title">JSON update</string>
+    <string name="notif_json_progress">JSON update in progress</string>
+    <string name="notif_json_complete">Update complete</string>
+
     <!-- Startup -->
     <string name="title_startup">Startup</string>
     <string name="title_startup_progress">Starting…</string>
     <string name="title_startup_complete">Startup complete</string>
+
+    <!-- Missing WebView -->
+    <string name="missing_web_view_title">WebView is not installed or disabled</string>
+    <string name="missing_web_view">Hentoid has been unable to find Android\'s built-in Web Viewer for apps.\nWithout it you can\'t browse sources, redownload books; you really can\'t do much that requires Internet.\n\nIt is most likely that it\'s actually installed on your system, but disabled: please go to <b>Settings</b> &gt; <b>Apps</b> &gt; <b>Disabled apps</b> and enable <b>Android System WebView</b>.\n\nIf you can\'t find the app, please install it from your device\'s <b><a href="https://play.google.com/store/apps/details?id=com.google.android.webview">App Store</a></b>.</string>
+    <string name="missing_web_view_library">Back to library</string>
 
     <!-- Group names -->
     <string name="group_today">Today</string>

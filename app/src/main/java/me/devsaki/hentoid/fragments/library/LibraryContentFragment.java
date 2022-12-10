@@ -35,6 +35,7 @@ import androidx.activity.result.contract.ActivityResultContracts.StartActivityFo
 import androidx.annotation.DimenRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.OptIn;
 import androidx.annotation.StringRes;
 import androidx.documentfile.provider.DocumentFile;
 import androidx.fragment.app.Fragment;
@@ -86,11 +87,12 @@ import io.reactivex.disposables.CompositeDisposable;
 import me.devsaki.hentoid.BuildConfig;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.activities.LibraryActivity;
+import me.devsaki.hentoid.activities.MetadataEditActivity;
 import me.devsaki.hentoid.activities.QueueActivity;
 import me.devsaki.hentoid.activities.SearchActivity;
 import me.devsaki.hentoid.activities.bundles.ContentItemBundle;
+import me.devsaki.hentoid.activities.bundles.MetaEditActivityBundle;
 import me.devsaki.hentoid.activities.bundles.SearchActivityBundle;
-import me.devsaki.hentoid.database.domains.Attribute;
 import me.devsaki.hentoid.database.domains.Chapter;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.Group;
@@ -101,16 +103,15 @@ import me.devsaki.hentoid.events.AppUpdatedEvent;
 import me.devsaki.hentoid.events.CommunicationEvent;
 import me.devsaki.hentoid.events.ProcessEvent;
 import me.devsaki.hentoid.fragments.ProgressDialogFragment;
-import me.devsaki.hentoid.fragments.RatingDialogFragment;
-import me.devsaki.hentoid.ui.InputDialog;
 import me.devsaki.hentoid.util.ContentHelper;
 import me.devsaki.hentoid.util.Debouncer;
-import me.devsaki.hentoid.util.FileHelper;
 import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.Preferences;
+import me.devsaki.hentoid.util.SearchHelper;
 import me.devsaki.hentoid.util.StringHelper;
 import me.devsaki.hentoid.util.ThemeHelper;
 import me.devsaki.hentoid.util.ToastHelper;
+import me.devsaki.hentoid.util.file.FileHelper;
 import me.devsaki.hentoid.viewholders.ContentItem;
 import me.devsaki.hentoid.viewholders.IDraggableViewHolder;
 import me.devsaki.hentoid.viewholders.ISwipeableViewHolder;
@@ -290,6 +291,9 @@ public class LibraryContentFragment extends Fragment implements
             if (!oldItem.getTitle().equals(newItem.getTitle())) {
                 diffBundleBuilder.setTitle(newItem.getTitle());
             }
+            if (oldItem.getDownloadMode() != newItem.getDownloadMode()) {
+                diffBundleBuilder.setDownloadMode(newItem.getDownloadMode());
+            }
 
             if (diffBundleBuilder.isEmpty()) return null;
             else return diffBundleBuilder.getBundle();
@@ -406,12 +410,12 @@ public class LibraryContentFragment extends Fragment implements
         activity.get().setQuery(query);
     }
 
-    private List<Attribute> getMetadata() {
-        return activity.get().getMetadata();
+    private SearchHelper.AdvancedSearchCriteria getMetadata() {
+        return activity.get().getAdvSearchCriteria();
     }
 
-    private void setMetadata(List<Attribute> attrs) {
-        activity.get().setMetadata(attrs);
+    private void setMetadata(SearchHelper.AdvancedSearchCriteria criteria) {
+        activity.get().setAdvancedSearchCriteria(criteria);
     }
 
     private void enterEditMode() {
@@ -487,6 +491,9 @@ public class LibraryContentFragment extends Fragment implements
             case R.id.action_completed:
                 markSelectedAsCompleted();
                 break;
+            case R.id.action_reset_read:
+                resetSelectedReadStats();
+                break;
             case R.id.action_archive:
                 archiveSelectedItems();
                 break;
@@ -515,8 +522,8 @@ public class LibraryContentFragment extends Fragment implements
                     selectExtension.select(Stream.range(0, getItemAdapter().getAdapterItemCount()).toList());
                 keepToolbar = true;
                 break;
-            case R.id.action_set_cover:
-                askSetCover();
+            case R.id.action_set_group_cover:
+                askSetGroupCover();
                 break;
             case R.id.action_merge:
                 MergeDialogFragment.invoke(this, Stream.of(selectExtension.getSelectedItems()).map(ContentItem::getContent).toList(), false);
@@ -531,14 +538,16 @@ public class LibraryContentFragment extends Fragment implements
                 }
                 keepToolbar = true;
                 break;
-            case R.id.action_edit_name:
-                selectedContent = Stream.of(selectExtension.getSelectedItems()).findFirst();
-                if (selectedContent.isPresent()) {
-                    Content c = selectedContent.get().getContent();
-                    if (c != null)
-                        InputDialog.invokeInputDialog(requireActivity(), R.string.book_edit_title,
-                                c.getTitle(),
-                                s -> viewModel.renameContent(c, s), null);
+            case R.id.action_edit:
+                List<Long> selectedIds = Stream.of(selectExtension.getSelectedItems()).map(ContentItem::getContent).withoutNulls().map(Content::getId).toList();
+                if (!selectedIds.isEmpty()) {
+                    Intent editMetaIntent = new Intent(this.getContext(), MetadataEditActivity.class);
+                    MetaEditActivityBundle builder = new MetaEditActivityBundle();
+
+                    builder.setContentIds(Helper.getPrimitiveArrayFromList(selectedIds));
+                    editMetaIntent.putExtras(builder.getBundle());
+
+                    requireContext().startActivity(editMetaIntent);
                 }
                 keepSelection = false;
                 break;
@@ -573,6 +582,7 @@ public class LibraryContentFragment extends Fragment implements
         Context context = getActivity();
         if (1 == selectedItems.size() && context != null) {
             Content c = Stream.of(selectedItems).findFirst().get().getContent();
+            leaveSelectionMode();
             if (c != null) ContentHelper.shareContent(context, c);
         }
     }
@@ -601,6 +611,20 @@ public class LibraryContentFragment extends Fragment implements
             List<Content> selectedContent = Stream.of(selectedItems).map(ContentItem::getContent).withoutNulls().toList();
             if (!selectedContent.isEmpty()) {
                 viewModel.toggleContentCompleted(selectedContent, this::refreshIfNeeded);
+                selectExtension.deselect(selectExtension.getSelections());
+            }
+        }
+    }
+
+    /**
+     * Callback for "reset read stats" action button
+     */
+    private void resetSelectedReadStats() {
+        Set<ContentItem> selectedItems = selectExtension.getSelectedItems();
+        if (!selectedItems.isEmpty()) {
+            List<Content> selectedContent = Stream.of(selectedItems).map(ContentItem::getContent).withoutNulls().toList();
+            if (!selectedContent.isEmpty()) {
+                viewModel.resetReadStats(selectedContent, this::refreshIfNeeded);
                 selectExtension.deselect(selectExtension.getSelections());
             }
         }
@@ -733,7 +757,7 @@ public class LibraryContentFragment extends Fragment implements
 
     private void onDownloadError(Throwable t) {
         Timber.w(t);
-        Snackbar.make(recyclerView, R.string.download_canceled, BaseTransientBottomBar.LENGTH_SHORT).show();
+        Snackbar.make(recyclerView, t.getMessage(), BaseTransientBottomBar.LENGTH_SHORT).show();
     }
 
     /**
@@ -777,13 +801,13 @@ public class LibraryContentFragment extends Fragment implements
 
     private void onStreamError(Throwable t) {
         Timber.w(t);
-        Snackbar.make(recyclerView, R.string.stream_canceled, BaseTransientBottomBar.LENGTH_SHORT).show();
+        Snackbar.make(recyclerView, t.getMessage(), BaseTransientBottomBar.LENGTH_SHORT).show();
     }
 
     /**
      * Callback for the "set as group cover" action button
      */
-    private void askSetCover() {
+    private void askSetGroupCover() {
         Set<ContentItem> selectedItems = selectExtension.getSelectedItems();
         if (selectedItems.isEmpty()) return;
 
@@ -958,8 +982,10 @@ public class LibraryContentFragment extends Fragment implements
 
         SearchActivityBundle builder = new SearchActivityBundle();
 
-        if (!getMetadata().isEmpty())
-            builder.setUri(SearchActivityBundle.Companion.buildSearchUri(getMetadata()).toString());
+        SearchHelper.AdvancedSearchCriteria advancedSearchCriteria = getMetadata();
+        if (!advancedSearchCriteria.isEmpty()) {
+            builder.setUri(SearchActivityBundle.Companion.buildSearchUri(advancedSearchCriteria, "").toString());
+        }
 
         if (group != null)
             builder.setGroupId(group.id);
@@ -984,7 +1010,7 @@ public class LibraryContentFragment extends Fragment implements
                 excludeClicked = parser.getExcludeMode();
                 setQuery(searchUri.getPath());
                 setMetadata(SearchActivityBundle.Companion.parseSearchUri(searchUri));
-                viewModel.searchContent(getQuery(), getMetadata());
+                viewModel.searchContent(getQuery(), getMetadata(), searchUri);
             }
         }
     }
@@ -994,6 +1020,7 @@ public class LibraryContentFragment extends Fragment implements
      *
      * @param isEndless True if endless mode has to be set; false if paged mode has to be set
      */
+    @OptIn(markerClass = com.mikepenz.fastadapter.paged.ExperimentalPagedSupport.class)
     private void setPagingMethod(boolean isEndless, boolean isEditMode) {
         // Editing will always be done in Endless mode
         viewModel.setContentPagingMethod(isEndless || isEditMode);
@@ -1260,7 +1287,7 @@ public class LibraryContentFragment extends Fragment implements
      * @param result Current library according to active filters
      */
     private void onLibraryChanged(PagedList<Content> result) {
-        Timber.i(">> Library changed ! Size=%s", result.size());
+        Timber.i(">> Library changed ! Size=%s enabled=%s", result.size(), enabled);
         if (!enabled && !Preferences.getGroupingDisplay().equals(Grouping.FLAT)) return;
 
         activity.get().updateTitle(result.size(), totalContentCount);
@@ -1315,7 +1342,7 @@ public class LibraryContentFragment extends Fragment implements
         }
 
         // Go back to groups view if there are no books to display (use case : remove the last books from the currently viewed group)
-        if (result.isEmpty() && Grouping.CUSTOM.equals(Preferences.getGroupingDisplay()))
+        if (result.isEmpty() && !isSearchQueryActive() && Grouping.CUSTOM.equals(Preferences.getGroupingDisplay()))
             activity.get().goBackToGroups();
 
         newSearch = false;
@@ -1348,7 +1375,7 @@ public class LibraryContentFragment extends Fragment implements
      * @param item ContentItem that has been clicked on
      */
     private boolean onItemClick(int position, @NonNull ContentItem item) {
-        if (selectExtension.getSelections().isEmpty()) {
+        if (selectExtension.getSelectOnLongClick()) {
             if (item.getContent() != null && !item.getContent().isBeingDeleted()) {
                 readBook(item.getContent(), false);
             }
@@ -1360,7 +1387,7 @@ public class LibraryContentFragment extends Fragment implements
     // TODO doc
     public void readBook(@NonNull Content content, boolean forceShowGallery) {
         topItemPosition = getTopItemPosition();
-        ContentHelper.openHentoidViewer(requireContext(), content, -1, contentSearchBundle, forceShowGallery);
+        ContentHelper.openReader(requireContext(), content, -1, contentSearchBundle, forceShowGallery);
     }
 
     /**
@@ -1398,7 +1425,7 @@ public class LibraryContentFragment extends Fragment implements
 
     private void redownloadFromScratch(@NonNull final List<Content> contentList) {
         if (Preferences.getQueueNewDownloadPosition() == QUEUE_NEW_DOWNLOADS_POSITION_ASK) {
-            AddQueueMenu.show(activity.get(), recyclerView, this, (position, item) ->
+            AddQueueMenu.Companion.show(activity.get(), recyclerView, this, (position, item) ->
                     redownloadFromScratch(contentList, (0 == position) ? QUEUE_NEW_DOWNLOADS_POSITION_TOP : QUEUE_NEW_DOWNLOADS_POSITION_BOTTOM)
             );
         } else
@@ -1422,7 +1449,7 @@ public class LibraryContentFragment extends Fragment implements
 
     private void download(@NonNull final List<Content> contentList, @NonNull Consumer<Throwable> onError) {
         if (Preferences.getQueueNewDownloadPosition() == QUEUE_NEW_DOWNLOADS_POSITION_ASK) {
-            AddQueueMenu.show(activity.get(), recyclerView, this, (position, item) ->
+            AddQueueMenu.Companion.show(activity.get(), recyclerView, this, (position, item) ->
                     download(contentList, (0 == position) ? QUEUE_NEW_DOWNLOADS_POSITION_TOP : QUEUE_NEW_DOWNLOADS_POSITION_BOTTOM, onError)
             );
         } else
@@ -1459,8 +1486,9 @@ public class LibraryContentFragment extends Fragment implements
             List<Content> contentList = Stream.of(selectedItems).map(ContentItem::getContent).withoutNulls().toList();
             long selectedLocalCount = Stream.of(contentList).filterNot(c -> c.getStatus().equals(StatusContent.EXTERNAL)).filterNot(c -> c.getDownloadMode() == Content.DownloadMode.STREAM).count();
             long selectedStreamedCount = Stream.of(contentList).map(Content::getDownloadMode).filter(m -> m == Content.DownloadMode.STREAM).count();
-            long selectedEligibleExternalCount = Stream.of(contentList).filter(c -> c.getStatus().equals(StatusContent.EXTERNAL) && !c.isArchive()).count();
-            activity.get().updateSelectionToolbar(selectedCount, selectedLocalCount, selectedStreamedCount, selectedEligibleExternalCount);
+            long selectedNonArchiveExternalCount = Stream.of(contentList).filter(c -> c.getStatus().equals(StatusContent.EXTERNAL) && !c.isArchive()).count();
+            long selectedArchiveExternalCount = Stream.of(contentList).filter(c -> c.getStatus().equals(StatusContent.EXTERNAL) && c.isArchive()).count();
+            activity.get().updateSelectionToolbar(selectedCount, selectedLocalCount, selectedStreamedCount, selectedNonArchiveExternalCount, selectedArchiveExternalCount);
             activity.get().getSelectionToolbar().setVisibility(View.VISIBLE);
         }
     }
@@ -1483,14 +1511,24 @@ public class LibraryContentFragment extends Fragment implements
 
     public void mergeContents(@NonNull List<Content> contentList, @NonNull String newTitle, boolean deleteAfterMerging) {
         leaveSelectionMode();
-        viewModel.mergeContents(contentList, newTitle, deleteAfterMerging, () -> ToastHelper.toast(R.string.merge_success));
+        viewModel.mergeContents(contentList, newTitle, deleteAfterMerging, this::onMergeSuccess);
         ProgressDialogFragment.invoke(getParentFragmentManager(), getResources().getString(R.string.merge_progress), R.plurals.page);
+    }
+
+    private void onMergeSuccess() {
+        ToastHelper.toast(R.string.merge_success);
+        refreshIfNeeded();
     }
 
     public void splitContent(@NonNull Content content, @NonNull List<Chapter> chapters) {
         leaveSelectionMode();
-        viewModel.splitContent(content, chapters, () -> ToastHelper.toast(R.string.split_success));
+        viewModel.splitContent(content, chapters, this::onSplitSuccess);
         ProgressDialogFragment.invoke(getParentFragmentManager(), getResources().getString(R.string.split_progress), R.plurals.page);
+    }
+
+    private void onSplitSuccess() {
+        ToastHelper.toast(R.string.split_success);
+        refreshIfNeeded();
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
@@ -1509,10 +1547,10 @@ public class LibraryContentFragment extends Fragment implements
     /**
      * Force a new search :
      * - when the book sort order is custom (in that case, LiveData can't do its job because of https://github.com/objectbox/objectbox-java/issues/141)
-     * - when the current grouping is custom (because the app needs to refresh the display when moving books out of the currently displayed group)
+     * - when the current grouping is not flat (because the app needs to refresh the display when moving books out of/into the currently displayed group)
      */
     private void refreshIfNeeded() {
-        if (Grouping.CUSTOM.equals(Preferences.getGroupingDisplay()) || Preferences.getContentSortField() == Preferences.Constant.ORDER_FIELD_CUSTOM)
+        if (!Grouping.FLAT.equals(Preferences.getGroupingDisplay()) || Preferences.getContentSortField() == Preferences.Constant.ORDER_FIELD_CUSTOM)
             viewModel.searchContent();
     }
 
@@ -1605,7 +1643,7 @@ public class LibraryContentFragment extends Fragment implements
         }
         Content content = item.getContent();
         if (content != null)
-            viewModel.deleteItems(Stream.of(content).toList(), Collections.emptyList(), false, null);
+            viewModel.deleteItems(Stream.of(content).toList(), Collections.emptyList(), false, this::refreshIfNeeded);
     }
 
     /**

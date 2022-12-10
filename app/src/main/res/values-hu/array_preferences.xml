@@ -6,9 +6,9 @@
     <string name="pref_memory_alert_entries_2" tools:ignore="StringFormatInvalid">90%-ban tele van</string>
     <string name="pref_memory_alert_entries_3" tools:ignore="StringFormatInvalid">95%-ban tele van</string>
     <string name="pref_memory_alert_entries_4" tools:ignore="StringFormatInvalid">98%-ban tele van</string>
-<string name="pref_browser_quick_dl_threshold_entries_1">500 ms (alapértelmezett)</string>
+<string name="pref_browser_quick_dl_threshold_entries_1" tools:ignore="MissingTranslation">500 ms</string>
     <string name="pref_browser_quick_dl_threshold_entries_2" tools:ignore="MissingTranslation">1 másodperc</string>
-    <string name="pref_browser_quick_dl_threshold_entries_3" tools:ignore="MissingTranslation">1,5 másodperc</string>
+    <string name="pref_browser_quick_dl_threshold_entries_3">1.5 másodperc (alapértelmezett)</string>
     <string name="pref_browser_quick_dl_threshold_entries_4" tools:ignore="MissingTranslation">2 másodperc</string>
     <string name="pref_browser_quick_dl_threshold_entries_5" tools:ignore="MissingTranslation">3 másodperc</string>
 <string name="pref_browser_dns_entries_1">Egyik sem</string>
@@ -61,6 +61,12 @@
     <string name="pref_viewer_slideshow_delay_entries_4" tools:ignore="MissingTranslation">4 másodperc</string>
     <string name="pref_viewer_slideshow_delay_entries_5" tools:ignore="MissingTranslation">8 másodperc</string>
     <string name="pref_viewer_slideshow_delay_entries_6" tools:ignore="MissingTranslation">16 másodperc</string>
+<string name="pref_viewer_slideshow_delay_entries_vertical_1">Szuper lassú</string>
+    <string name="pref_viewer_slideshow_delay_entries_vertical_2">Lassú</string>
+    <string name="pref_viewer_slideshow_delay_entries_vertical_3">Normál (alapértelmezetten)</string>
+    <string name="pref_viewer_slideshow_delay_entries_vertical_4">Azonnal</string>
+    <string name="pref_viewer_slideshow_delay_entries_vertical_5">Gyorsan</string>
+    <string name="pref_viewer_slideshow_delay_entries_vertical_6">Szuper gyorsan</string>
 <string name="pref_viewer_display_mode_entries_1">Képernyőre illesztés (alapértelmezett)</string>
     <string name="pref_viewer_display_mode_entries_2">Képernyő kitöltése (arányosan)</string>
     <string name="pref_viewer_display_mode_entries_3">Képernyő kitöltése (nyújtással)</string>
