@@ -33,8 +33,6 @@ public enum Site {
     ASIANSISTER(13, "Asiansister", "https://asiansister.com/", R.drawable.ic_menu_asiansister),
     JJGIRLS2(14, "JJGirls (Western)", "https://jjgirls.com/pornpics/", R.drawable.ic_menu_jjgirls),
     BABETODAY(15, "Babe.today", "https://babe.today/", R.drawable.ic_menu_jjgirls),
-    SIMPLY(27, "Simply Hentai", "https://www.simply-hentai.com/", R.drawable.ic_site_simply),
-    HDPORNCOMICS(28, "HD Porn Comics", "https://hdporncomics.com/", R.drawable.ic_site_hdporncomics),
     NONE(98, "none", "", R.drawable.ic_attribute_source); // External library; fallback site
 
 
