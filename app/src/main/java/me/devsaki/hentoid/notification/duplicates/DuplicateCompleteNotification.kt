@@ -10,7 +10,7 @@ class DuplicateCompleteNotification(private val nbDuplicates: Int) : Notificatio
 
     override fun onCreateNotification(context: Context): android.app.Notification =
         NotificationCompat.Builder(context, DuplicateNotificationChannel.ID)
-            .setSmallIcon(R.drawable.ic_hentoid_shape)
+            .setSmallIcon(R.drawable.ic_cherry_icon)
             .setContentTitle(context.resources.getText(R.string.duplicate_notif_complete_title))
             .setContentText(
                 context.resources.getQuantityString(

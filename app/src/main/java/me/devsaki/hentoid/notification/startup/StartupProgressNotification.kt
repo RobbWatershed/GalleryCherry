@@ -17,7 +17,7 @@ class StartupProgressNotification(
 
     override fun onCreateNotification(context: Context): android.app.Notification {
         return NotificationCompat.Builder(context, StartupNotificationChannel.ID)
-            .setSmallIcon(R.drawable.ic_hentoid_shape)
+            .setSmallIcon(R.drawable.ic_cherry_icon)
             .setContentTitle(message)
             .setContentInfo(progressString)
             .setProgress(max, progress, (0 == max))

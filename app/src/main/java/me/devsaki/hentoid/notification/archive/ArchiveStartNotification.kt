@@ -10,7 +10,7 @@ class ArchiveStartNotification : Notification {
 
     override fun onCreateNotification(context: Context): android.app.Notification =
             NotificationCompat.Builder(context, ArchiveNotificationChannel.ID)
-                    .setSmallIcon(R.drawable.ic_hentoid_shape)
+                    .setSmallIcon(R.drawable.ic_cherry_icon)
                     .setProgress(1, 1, true)
                     .setContentTitle(context.resources.getString(R.string.archive_progress))
                     .setContentText(context.resources.getString(R.string.archive_progress))

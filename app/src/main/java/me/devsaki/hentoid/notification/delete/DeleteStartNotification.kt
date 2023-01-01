@@ -13,7 +13,7 @@ class DeleteStartNotification(
 
     override fun onCreateNotification(context: Context): android.app.Notification =
         NotificationCompat.Builder(context, DeleteNotificationChannel.ID)
-            .setSmallIcon(R.drawable.ic_hentoid_shape)
+            .setSmallIcon(R.drawable.ic_cherry_icon)
             .setProgress(max, 0, 0 == max)
             .setContentTitle(context.getString(if (isPurge) R.string.purge_progress else R.string.delete_progress))
             .setContentText("")

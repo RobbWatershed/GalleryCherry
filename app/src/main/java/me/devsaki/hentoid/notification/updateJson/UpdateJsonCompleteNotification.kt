@@ -12,7 +12,7 @@ class UpdateJsonCompleteNotification() :
         val title = R.string.notif_json_complete
 
         return NotificationCompat.Builder(context, UpdateJsonNotificationChannel.ID)
-            .setSmallIcon(R.drawable.ic_hentoid_shape)
+            .setSmallIcon(R.drawable.ic_cherry_icon)
             .setContentTitle(context.getString(title))
             .build()
     }

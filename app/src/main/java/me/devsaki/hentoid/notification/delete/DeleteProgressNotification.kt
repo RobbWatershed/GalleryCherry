@@ -18,7 +18,7 @@ class DeleteProgressNotification(
 
     override fun onCreateNotification(context: Context): android.app.Notification {
         return NotificationCompat.Builder(context, DeleteNotificationChannel.ID)
-            .setSmallIcon(R.drawable.ic_hentoid_shape)
+            .setSmallIcon(R.drawable.ic_cherry_icon)
             .setContentTitle(context.getString(if (isPurge) R.string.purge_progress else R.string.delete_progress))
             .setContentText(title)
             .setContentInfo(progressString)

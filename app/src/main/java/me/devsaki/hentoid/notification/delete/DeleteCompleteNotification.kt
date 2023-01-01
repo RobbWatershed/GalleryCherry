@@ -18,7 +18,7 @@ class DeleteCompleteNotification(private val books: Int, private val isError: Bo
         )
 
         return NotificationCompat.Builder(context, DeleteNotificationChannel.ID)
-            .setSmallIcon(R.drawable.ic_hentoid_shape)
+            .setSmallIcon(R.drawable.ic_cherry_icon)
             .setContentTitle(context.getString(title))
             .setContentText(content)
             .build()

@@ -17,7 +17,7 @@ class ImportProgressNotification(
 
     override fun onCreateNotification(context: Context): android.app.Notification {
         return NotificationCompat.Builder(context, ImportNotificationChannel.ID)
-                .setSmallIcon(R.drawable.ic_cherry)
+                .setSmallIcon(R.drawable.ic_cherry_icon)
                 .setContentTitle(context.getString(R.string.importing_library))
                 .setContentText(title)
                 .setContentInfo(progressString)

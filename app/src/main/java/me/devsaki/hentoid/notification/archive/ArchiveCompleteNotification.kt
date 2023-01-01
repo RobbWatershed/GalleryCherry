@@ -22,7 +22,7 @@ class ArchiveCompleteNotification(private val books: Int, private val isError: B
         )
 
         return NotificationCompat.Builder(context, ArchiveNotificationChannel.ID)
-            .setSmallIcon(R.drawable.ic_hentoid_shape)
+            .setSmallIcon(R.drawable.ic_cherry_icon)
             .setContentTitle(context.getString(title))
             .setContentText(contentTxt)
             .setContentIntent(getIntent(context))
