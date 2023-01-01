@@ -1459,6 +1459,19 @@ public final class ContentHelper {
         }
     }
 
+    public static String formatModelForDisplay(@NonNull final Context context, @NonNull final Content content) {
+        List<Attribute> modelAttributes = content.getAttributeMap().get(AttributeType.MODEL);
+        if (modelAttributes == null || modelAttributes.isEmpty()) {
+            return "";
+        } else {
+            List<String> allModels = new ArrayList<>();
+            for (Attribute attribute : modelAttributes) {
+                allModels.add(attribute.getName());
+            }
+            return context.getString(R.string.work_model, android.text.TextUtils.join(", ", allModels));
+        }
+    }
+
     /**
      * Transform the given online URL into a working GlideUrl using the given Content's cookies
      * (useful when viewing queue screen before any image has been downloaded)

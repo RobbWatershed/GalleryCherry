@@ -234,6 +234,7 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
         // Specific to library content
         private View ivNew;
         private TextView tvTags;
+        private TextView tvModel;
         private TextView tvSeries;
         private ImageView ivFavourite;
         private ImageView ivRating;
@@ -280,6 +281,7 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
                 ivFavourite = itemView.findViewById(R.id.ivFavourite);
                 ivRating = itemView.findViewById(R.id.iv_rating);
                 ivExternal = itemView.findViewById(R.id.ivExternal);
+                tvModel = requireViewById(itemView, R.id.tvModel);
                 tvSeries = requireViewById(itemView, R.id.tvSeries);
                 tvTags = requireViewById(itemView, R.id.tvTags);
                 ivChapters = itemView.findViewById(R.id.ivChapters);
@@ -369,6 +371,7 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
                 attachReadingProgress(item.content);
             if (tvArtist != null) attachArtist(item.content);
             if (tvSeries != null) attachSeries(item.content);
+            if (tvModel != null) attachModel(item.content);
             if (tvPages != null) attachMetrics(item.content, item.viewType);
             if (tvTags != null) attachTags(item.content);
             attachButtons(item);
@@ -466,6 +469,16 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
 
         private void attachArtist(@NonNull final Content content) {
             tvArtist.setText(ContentHelper.formatArtistForDisplay(tvArtist.getContext(), content));
+        }
+
+        private void attachModel(@NonNull final Content content) {
+            String text = ContentHelper.formatModelForDisplay(tvModel.getContext(), content);
+            if (text.isEmpty()) {
+                tvModel.setVisibility(View.GONE);
+            } else {
+                tvModel.setVisibility(View.VISIBLE);
+                tvModel.setText(text);
+            }
         }
 
 
