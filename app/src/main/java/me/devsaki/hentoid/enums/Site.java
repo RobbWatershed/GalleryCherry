@@ -41,6 +41,7 @@ public enum Site {
             HINA, // Hardcoded link; should not be on display on dynamic sources
             JJGIRLS2, // Abandoned in favour of babe.today
             HINA, // Dead service
+            ASIANSISTER, // Redirected to sisterasian.com; only hosts videos now
             NONE // Technical fallback
     };
 
