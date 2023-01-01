@@ -83,7 +83,7 @@ class MetadataEditActivity : BaseActivity(), GalleyPickerDialogFragment.Parent,
         AttributeType.CIRCLE,
         AttributeType.SERIE,
         AttributeType.TAG,
-        AttributeType.CHARACTER,
+        AttributeType.MODEL,
         AttributeType.LANGUAGE
     )
 

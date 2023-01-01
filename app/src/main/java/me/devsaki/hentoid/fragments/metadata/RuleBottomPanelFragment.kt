@@ -49,7 +49,7 @@ class RuleBottomPanelFragment : BottomSheetDialogFragment() {
         AttributeType.CIRCLE,
         AttributeType.SERIE,
         AttributeType.TAG,
-        AttributeType.CHARACTER,
+        AttributeType.MODEL,
         AttributeType.LANGUAGE
     )
 

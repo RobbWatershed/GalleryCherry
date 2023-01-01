@@ -69,7 +69,7 @@ class AttributeTypePickerDialogFragment : DialogFragment() {
                 AttributeType.ARTIST,
                 AttributeType.CIRCLE,
                 AttributeType.SERIE,
-                AttributeType.CHARACTER,
+                AttributeType.MODEL,
                 AttributeType.TAG,
                 AttributeType.LANGUAGE
             )
