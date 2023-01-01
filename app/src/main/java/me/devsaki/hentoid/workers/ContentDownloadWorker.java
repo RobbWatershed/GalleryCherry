@@ -67,6 +67,8 @@ import me.devsaki.hentoid.util.JsonHelper;
 import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.util.StringHelper;
 import me.devsaki.hentoid.util.download.ContentQueueManager;
+import me.devsaki.hentoid.util.download.DownloadHelper;
+import me.devsaki.hentoid.util.download.DownloadSpeedLimiter;
 import me.devsaki.hentoid.util.download.RequestOrder;
 import me.devsaki.hentoid.util.download.RequestQueueManager;
 import me.devsaki.hentoid.util.exception.AccountException;
@@ -119,6 +121,7 @@ public class ContentDownloadWorker extends BaseWorker {
 
         requestQueueManager = RequestQueueManager.Companion.getInstance(context, this::onRequestSuccess, this::onRequestError);
         userActionNotificationManager = new NotificationManager(context, R.id.user_action_notification);
+        DownloadSpeedLimiter.INSTANCE.setSpeedLimitKbps(DownloadSpeedLimiter.INSTANCE.prefsSpeedCapToKbps(Preferences.getDlSpeedCap()));
     }
 
     @Override
@@ -449,22 +452,27 @@ public class ContentDownloadWorker extends BaseWorker {
                 requestQueueManager.queueRequest(buildImageDownloadRequest(cover, dir, content));
             }
         } else { // Regular downloads
-
+            ImageFile cover = null;
             // Queue image download requests
             for (ImageFile img : images) {
                 if (img.getStatus().equals(StatusContent.SAVED)) {
-
                     enrichImageDownloadParams(img, content);
 
                     // Set the 1st image of the list as a backup in case the cover URL is stale (might happen when restarting old downloads)
-                    if (img.isCover() && images.size() > 1)
+                    if (img.isCover() && images.size() > 1) {
                         img.setBackupUrl(images.get(1).getUrl());
+                        cover = img;
+                    }
 
                     if (img.needsPageParsing()) pagesToParse.add(img);
-                    else
+                    else if (!img.isCover())
                         requestQueueManager.queueRequest(buildImageDownloadRequest(img, dir, content));
                 }
             }
+
+            // Download cover last, to avoid being blocked by the server when downloading cover and page 1 back to back when they are the same resource
+            if (cover != null)
+                requestQueueManager.queueRequest(buildImageDownloadRequest(cover, dir, content));
 
             // Parse pages for images
             if (!pagesToParse.isEmpty()) {
@@ -666,9 +674,10 @@ public class ContentDownloadWorker extends BaseWorker {
 
             // If additional pages have been downloaded (e.g. new chapters on existing book),
             // update the book's number of pages and download date
+            long now = Instant.now().toEpochMilli();
             if (nbImages > content.getQtyPages()) {
                 content.setQtyPages(nbImages);
-                content.setDownloadDate(Instant.now().toEpochMilli());
+                content.setDownloadDate(now);
             }
 
             if (content.getStorageUri().isEmpty()) return;
@@ -702,12 +711,12 @@ public class ContentDownloadWorker extends BaseWorker {
                 ContentHelper.computeAndSaveCoverHash(getApplicationContext(), content, dao);
 
                 // Mark content as downloaded (download processing date; if none set before)
-                if (0 == content.getDownloadDate())
-                    content.setDownloadDate(Instant.now().toEpochMilli());
+
+                if (0 == content.getDownloadDate()) content.setDownloadDate(now);
 
                 if (0 == pagesKO && !hasError) {
                     content.setDownloadParams("");
-                    content.setDownloadCompletionDate(Instant.now().toEpochMilli());
+                    content.setDownloadCompletionDate(now);
                     content.setStatus(StatusContent.DOWNLOADED);
 
                     applyRenamingRules(content);

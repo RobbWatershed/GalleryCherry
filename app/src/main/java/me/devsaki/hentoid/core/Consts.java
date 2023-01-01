@@ -35,4 +35,5 @@ public abstract class Consts {
     public static final String URL_GITHUB = "https://github.com/RobbWatershed/GalleryCherry";
     public static final String URL_GITHUB_WIKI = "https://github.com/RobbWatershed/GalleryCherry/wiki";
     public static final String URL_DISCORD = "https://discord.gg/waTF8vw"; // If that value changes, change it in assets/about_mikan.html too
+    public static final String URL_WIKI_TRANSFER = "https://github.com/avluis/Hentoid/wiki/Transferring-your-collection-between-devices";
 }

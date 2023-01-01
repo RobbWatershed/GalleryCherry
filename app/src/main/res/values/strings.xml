@@ -105,8 +105,9 @@
     <string name="app_settings">App settings</string>
     <string name="book_settings">Book settings</string>
     <string name="alert_browser_mode">Browser mode active : no storage access</string>
-    <string name="low_memory">Your device is low on storage!</string>
-    <string name="permissions_lost">File permissions have been lost</string>
+    <string name="alert_low_memory">Your device is low on storage!</string>
+    <string name="alert_permissions_lost">File permissions have been lost</string>
+    <string name="alert_notifications">Notifications are disabled!</string>
     <string name="fix_permissions">Fix</string>
     <string name="view_queue">View queue</string>
     <string name="clear_search_history">Clear search history</string>
@@ -293,6 +294,11 @@
 
     <!-- Export metadata -->
     <string name="export_title">Export metadata</string>
+    <string name="export_question">Do you want to transfer your library to another phone ?</string>
+
+    <string name="export_answer_yes">This feature is NOT made to transfer your collection to another phone. It does work in certain cases, but some of your books might prove impossible to redownload!</string>
+    <string name="export_transfer_tutorial"><u>Check out our wiki about library transfers</u></string>
+
     <plurals name="export_file_library">
         <item quantity="one">Export library (<x:g example="1" id="number">%d</x:g> book)</item>
         <item quantity="other">Export library (<x:g example="2" id="number">%d</x:g> books)</item>

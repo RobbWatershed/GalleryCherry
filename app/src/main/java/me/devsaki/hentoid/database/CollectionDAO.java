@@ -352,4 +352,6 @@ public interface CollectionDAO {
     Single<List<Long>> selectOldStoredBookIds();
 
     long countOldStoredContent();
+
+    long[] selectContentIdsWithUpdatableJson();
 }

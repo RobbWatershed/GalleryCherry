@@ -424,7 +424,7 @@ public class ObjectBoxDAO implements CollectionDAO {
     }
 
     public long countAllQueueBooks() {
-        return db.selectAllQueueBooksQ().count();
+        return db.selectAllQueueBooksQ().findIds().length; // Count doesn't work here because selectAllQueueBooksQ uses a filter
     }
 
     public LiveData<Integer> countAllQueueBooksLive() {
@@ -748,7 +748,7 @@ public class ObjectBoxDAO implements CollectionDAO {
         if (targetImageStatus != null)
             db.updateImageContentStatus(content.getId(), null, targetImageStatus);
 
-        content.setStatus(StatusContent.DOWNLOADING);
+        content.setStatus(StatusContent.PAUSED);
         content.setIsBeingDeleted(false); // Remove any UI animation
         if (replacedContentId > -1) content.setContentIdToReplace(replacedContentId);
         db.insertContent(content);
@@ -994,5 +994,10 @@ public class ObjectBoxDAO implements CollectionDAO {
     @Override
     public long countOldStoredContent() {
         return db.selectOldStoredContentQ().count();
+    }
+
+    @Override
+    public long[] selectContentIdsWithUpdatableJson() {
+        return db.selectContentIdsWithUpdatableJson();
     }
 }

@@ -35,6 +35,7 @@ public class JsonContent {
     private long uploadDate;
     private long downloadDate;
     private String uniqueSiteId;
+    private long downloadCompletionDate;
     private StatusContent status;
     private Site site;
     private boolean favourite;
@@ -84,6 +85,7 @@ public class JsonContent {
         result.qtyPages = c.getQtyPages();
         result.uploadDate = c.getUploadDate();
         result.downloadDate = c.getDownloadDate();
+        result.downloadCompletionDate = c.getDownloadCompletionDate();
         result.uniqueSiteId = c.getUniqueSiteId();
         result.status = c.getStatus();
         result.site = c.getSite();
@@ -136,6 +138,10 @@ public class JsonContent {
         result.setQtyPages(qtyPages);
         result.setUploadDate(uploadDate);
         result.setDownloadDate(downloadDate);
+        if (downloadCompletionDate > 0)
+            result.setDownloadCompletionDate(downloadCompletionDate);
+        else
+            result.setDownloadCompletionDate(downloadDate); // When the field is absent from the JSON
         result.setUniqueSiteId(uniqueSiteId);
         result.setStatus(status);
         result.setFavourite(favourite);
