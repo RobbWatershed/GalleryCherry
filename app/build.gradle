@@ -46,7 +46,7 @@ android {
         buildConfigField 'String', 'GITHUB_API_URL', '"https://api.github.com/repos/RobbWatershed/GalleryCherry/"'
 
         proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-        resConfigs 'en'
+        resConfigs 'en', 'ru', 'it', 'uk', 'hu', 'ko', 'ja', 'es'
 
         renderscriptTargetApi 21
         renderscriptSupportModeEnabled false
