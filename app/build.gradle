@@ -36,7 +36,6 @@ android {
         versionCode 130 // is updated automatically by BitRise; only used when building locally
         versionName '1.13.1'
 
-        buildConfigField 'String', 'GITHUB_API_URL', '"https://api.github.com/repos/RobbWatershed/GalleryCherry/"'
 
         def includeObjectBoxBrowser = System.getenv("INCLUDE_OBJECTBOX_BROWSER") ?: "false"
         def includeLeakCanary = System.getenv("INCLUDE_LEAK_CANARY") ?: "false"
@@ -44,12 +43,10 @@ android {
         buildConfigField "boolean", "INCLUDE_OBJECTBOX_BROWSER", includeObjectBoxBrowser
         buildConfigField "boolean", "INCLUDE_LEAK_CANARY", includeLeakCanary
 
-        buildConfigField 'String', 'GITHUB_API_URL', '"https://api.github.com/repos/avluis/Hentoid/"'
+        buildConfigField 'String', 'GITHUB_API_URL', '"https://api.github.com/repos/RobbWatershed/GalleryCherry/"'
 
         proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-        resConfigs 'en', 'ru', 'it', 'uk', 'hu', 'ko', 'ja', 'es'
-
-        // Only include complete translations
+        resConfigs 'en'
 
         renderscriptTargetApi 21
         renderscriptSupportModeEnabled false
