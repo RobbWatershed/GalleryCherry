@@ -3,14 +3,19 @@ package me.devsaki.hentoid.fragments.tools
 import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.commit
-import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.PreferenceScreen
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import com.google.android.material.snackbar.BaseTransientBottomBar
 import com.google.android.material.snackbar.Snackbar
-import io.reactivex.android.schedulers.AndroidSchedulers
-import io.reactivex.disposables.Disposable
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.activities.DuplicateDetectorActivity
 import me.devsaki.hentoid.activities.RenamingRulesActivity
@@ -18,6 +23,7 @@ import me.devsaki.hentoid.core.clearAppCache
 import me.devsaki.hentoid.core.clearWebviewCache
 import me.devsaki.hentoid.core.startLocalActivity
 import me.devsaki.hentoid.core.withArguments
+import me.devsaki.hentoid.fragments.ProgressDialogFragment
 import me.devsaki.hentoid.json.JsonSettings
 import me.devsaki.hentoid.util.Helper
 import me.devsaki.hentoid.util.JsonHelper
@@ -25,8 +31,8 @@ import me.devsaki.hentoid.util.Preferences
 import me.devsaki.hentoid.util.ToastHelper
 import me.devsaki.hentoid.util.file.FileHelper
 import me.devsaki.hentoid.util.network.WebkitPackageHelper
-import me.devsaki.hentoid.viewmodels.PreferencesViewModel
-import me.devsaki.hentoid.viewmodels.ViewModelFactory
+import me.devsaki.hentoid.workers.DeleteWorker
+import me.devsaki.hentoid.workers.data.DeleteData
 import timber.log.Timber
 import java.io.ByteArrayInputStream
 import java.io.IOException
@@ -34,7 +40,7 @@ import java.nio.charset.StandardCharsets
 
 
 @Suppress("PrivatePropertyName")
-class ToolsFragment : PreferenceFragmentCompat() {
+class ToolsFragment : PreferenceFragmentCompat(), MassDeleteFragment.Companion.Parent {
 
     private val DUPLICATE_DETECTOR_KEY = "tools_duplicate_detector"
     private val EXPORT_LIBRARY = "export_library"
@@ -46,9 +52,6 @@ class ToolsFragment : PreferenceFragmentCompat() {
     private val CLEAR_BROWSER_CACHE = "cache_browser"
     private val CLEAR_APP_CACHE = "cache_app"
 
-
-    lateinit var viewModel: PreferencesViewModel
-    private lateinit var exportDisposable: Disposable
     private var rootView: View? = null
 
     companion object {
@@ -60,9 +63,6 @@ class ToolsFragment : PreferenceFragmentCompat() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         rootView = view
-        val vmFactory = ViewModelFactory(requireActivity().application)
-        viewModel =
-            ViewModelProvider(requireActivity(), vmFactory)[PreferencesViewModel::class.java]
     }
 
     override fun onDestroy() {
@@ -80,22 +80,32 @@ class ToolsFragment : PreferenceFragmentCompat() {
                 requireContext().startLocalActivity<DuplicateDetectorActivity>()
                 true
             }
+
+            Preferences.Key.DELETE_ALL_EXCEPT_FAVS -> {
+                MassDeleteFragment.invoke(this.childFragmentManager)
+                true
+            }
+
             EXPORT_LIBRARY -> {
                 MetaExportDialogFragment.invoke(parentFragmentManager)
                 true
             }
+
             IMPORT_LIBRARY -> {
                 MetaImportDialogFragment.invoke(parentFragmentManager)
                 true
             }
+
             EXPORT_SETTINGS -> {
                 onExportSettings()
                 true
             }
+
             IMPORT_SETTINGS -> {
                 SettingsImportDialogFragment.invoke(parentFragmentManager)
                 true
             }
+
             CLEAR_BROWSER_CACHE -> {
                 context?.clearWebviewCache {
                     ToastHelper.toast(
@@ -106,19 +116,23 @@ class ToolsFragment : PreferenceFragmentCompat() {
                 }
                 true
             }
+
             CLEAR_APP_CACHE -> {
                 context?.clearAppCache()
                 ToastHelper.toast(R.string.tools_cache_app_success)
                 true
             }
+
             ACCESS_RENAMING_RULES -> {
                 requireContext().startLocalActivity<RenamingRulesActivity>()
                 true
             }
+
             ACCESS_LATEST_LOGS -> {
                 LogsDialogFragment.invoke(parentFragmentManager)
                 true
             }
+
             else -> super.onPreferenceTreeClick(preference)
         }
 
@@ -134,19 +148,23 @@ class ToolsFragment : PreferenceFragmentCompat() {
     }
 
     private fun onExportSettings() {
-        exportDisposable = io.reactivex.Single.fromCallable { getExportedSettings() }
-            .subscribeOn(io.reactivex.schedulers.Schedulers.io())
-            .observeOn(io.reactivex.schedulers.Schedulers.io())
-            .map { c: JsonSettings? ->
-                JsonHelper.serializeToJson<JsonSettings?>(
-                    c,
-                    JsonSettings::class.java
-                )
+        lifecycleScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                try {
+                    val settings = getExportedSettings()
+                    return@withContext JsonHelper.serializeToJson(
+                        settings,
+                        JsonSettings::class.java
+                    )
+                } catch (e: Exception) {
+                    Timber.w(e)
+                }
+                return@withContext ""
             }
-            .observeOn(AndroidSchedulers.mainThread())
-            .subscribe(
-                { s: String -> onJsonSerialized(s) }, { t: Throwable? -> Timber.w(t) }
-            )
+            coroutineScope {
+                if (result.isNotEmpty()) onJsonSerialized(result)
+            }
+        }
     }
 
     private fun getExportedSettings(): JsonSettings {
@@ -158,8 +176,6 @@ class ToolsFragment : PreferenceFragmentCompat() {
     }
 
     private fun onJsonSerialized(json: String) {
-        exportDisposable.dispose()
-
         // Use a random number to avoid erasing older exports by mistake
         var targetFileName = Helper.getRandomInt(9999).toString() + ".json"
         targetFileName = "settings-$targetFileName"
@@ -205,5 +221,26 @@ class ToolsFragment : PreferenceFragmentCompat() {
                 ).show()
             }
         }
+    }
+
+    override fun onMassDelete(keepBookPrefs: Boolean, keepGroupPrefs: Boolean) {
+        ProgressDialogFragment.invoke(
+            parentFragmentManager,
+            resources.getString(R.string.delete_title),
+            R.plurals.book
+        )
+
+        val builder = DeleteData.Builder()
+        builder.setDeleteAllContentExceptFavsBooks(keepBookPrefs)
+        builder.setDeleteAllContentExceptFavsGroups(keepGroupPrefs)
+
+        val workManager = WorkManager.getInstance(requireContext())
+        workManager.enqueueUniqueWork(
+            R.id.delete_service_delete.toString(),
+            ExistingWorkPolicy.APPEND_OR_REPLACE,
+            OneTimeWorkRequestBuilder<DeleteWorker>()
+                .setInputData(builder.data)
+                .build()
+        )
     }
 }

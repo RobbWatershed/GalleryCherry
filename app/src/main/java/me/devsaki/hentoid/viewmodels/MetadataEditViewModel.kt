@@ -7,8 +7,8 @@ import androidx.lifecycle.MutableLiveData
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
-import com.annimon.stream.Stream
 import io.reactivex.Completable
+import io.reactivex.Single
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.disposables.Disposables
@@ -27,8 +27,8 @@ import me.devsaki.hentoid.util.Preferences
 import me.devsaki.hentoid.util.SearchHelper.AttributeQueryResult
 import me.devsaki.hentoid.workers.UpdateJsonWorker
 import me.devsaki.hentoid.workers.data.UpdateJsonData
-import org.threeten.bp.Instant
 import timber.log.Timber
+import java.time.Instant
 
 
 class MetadataEditViewModel(
@@ -97,7 +97,7 @@ class MetadataEditViewModel(
      */
     fun loadContent(contentId: LongArray) {
         val contents = dao.selectContent(contentId.filter { id -> id > 0 }.toLongArray())
-        val rawAttrs = java.util.ArrayList<Attribute>()
+        val rawAttrs = ArrayList<Attribute>()
         contents.forEach { c ->
             rawAttrs.addAll(c.attributes)
         }
@@ -109,18 +109,19 @@ class MetadataEditViewModel(
     }
 
     fun setCover(order: Int) {
-        val content = contentList.value?.get(0)
-        if (content != null) {
-            content.imageFiles?.forEach {
-                if (it.order == order) {
-                    it.setIsCover(true)
-                    content.coverImageUrl = it.url
-                } else {
-                    it.setIsCover(false)
-                }
-            }
-            contentList.postValue(Stream.of(content).toList())
-        }
+        val content = contentList.value?.get(0) ?: return
+        val imageFiles = content.imageFiles ?: return
+
+        val img = imageFiles.find { it.order == order }
+        if (img != null)
+            compositeDisposable.add(
+                Single.fromCallable { ContentHelper.setContentCover(content, imageFiles, img) }
+                    .subscribeOn(Schedulers.io())
+                    .subscribe({
+                        contentList.postValue(mutableListOf(content))
+                    }
+                    ) { t: Throwable? -> Timber.e(t) }
+            )
     }
 
     /**
@@ -141,20 +142,24 @@ class MetadataEditViewModel(
      */
     fun setAttributeQuery(query: String, pageNum: Int, itemsPerPage: Int) {
         filterDisposable.dispose()
-        filterDisposable = dao.selectAttributeMasterDataPaged(
-            attributeTypes.value!!,
-            query,
-            -1,
-            emptyList(),
-            ContentHelper.Location.ANY,
-            ContentHelper.Type.ANY,
-            true,
-            pageNum,
-            itemsPerPage,
-            Preferences.getSearchAttributesSortOrder()
-        ).subscribe { value: AttributeQueryResult? ->
-            libraryAttributes.postValue(value)
-        }
+        filterDisposable = Single.fromCallable {
+            dao.selectAttributeMasterDataPaged(
+                attributeTypes.value!!,
+                query,
+                -1,
+                emptyList(),
+                ContentHelper.Location.ANY,
+                ContentHelper.Type.ANY,
+                true,
+                pageNum,
+                itemsPerPage,
+                Preferences.getSearchAttributesSortOrder()
+            )
+        }.subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe { value: AttributeQueryResult? ->
+                libraryAttributes.postValue(value)
+            }
     }
 
     /**
@@ -262,13 +267,20 @@ class MetadataEditViewModel(
         // Update DB
         contentList.value?.forEach {
             it.lastEditDate = Instant.now().toEpochMilli()
-            it.author = ContentHelper.formatBookAuthor(it)
+            it.computeAuthor()
+
+            // Save Content itself
+            it.imageFiles?.let { imgs ->
+                dao.insertImageFiles(imgs)
+            }
+            dao.insertContent(it)
+
             // Assign Content to each artist/circle group
             GroupHelper.removeContentFromGrouping(
                 me.devsaki.hentoid.enums.Grouping.ARTIST,
                 it,
                 dao
-            ) // Saves content to DAO
+            )
             var artistFound = false
             it.attributes.forEach { attr ->
                 if (attr.type == AttributeType.ARTIST || attr.type == AttributeType.CIRCLE) {
@@ -348,7 +360,7 @@ class MetadataEditViewModel(
             contents.forEach {
                 // Update the 'author' pre-calculated field for all related books if needed
                 if (attr.type.equals(AttributeType.ARTIST) || attr.type.equals(AttributeType.CIRCLE)) {
-                    it.author = ContentHelper.formatBookAuthor(it)
+                    it.computeAuthor()
                     ContentHelper.persistJson(getApplication(), it)
                 }
                 it.lastEditDate = Instant.now().toEpochMilli()

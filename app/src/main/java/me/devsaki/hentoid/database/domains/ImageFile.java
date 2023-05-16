@@ -1,6 +1,5 @@
 package me.devsaki.hentoid.database.domains;
 
-import java.util.Comparator;
 import java.util.Locale;
 import java.util.Objects;
 
@@ -16,6 +15,7 @@ import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.util.ContentHelper;
 import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.StringHelper;
+import me.devsaki.hentoid.util.file.ArchiveHelper;
 import me.devsaki.hentoid.util.image.ImageHelper;
 
 /**
@@ -48,11 +48,12 @@ public class ImageFile {
     // WARNING : Update copy constructor when adding attributes
 
 
-    // Runtime attributes; no need to expose them nor to persist them
+    // == Runtime attributes; no need to expose them nor to persist them
 
-    // Display order of the image in the image viewer (view-time only)
+    // cached value of uniqueHash
     @Transient
-    private long uniqueHash = 0;    // cached value of uniqueHash
+    private long uniqueHash = 0;
+    // Display order of the image in the image viewer (view-time only; 0-indexed)
     @Transient
     private int displayOrder;
     // Backup URL for that picture (download-time only)
@@ -61,6 +62,9 @@ public class ImageFile {
     // Has the image been read from a backup URL ? (download-time only)
     @Transient
     private boolean isBackup = false;
+    // Force refresh
+    @Transient
+    public boolean isForceRefresh = false;
 
     // WARNING : Update copy constructor when adding attributes
 
@@ -345,6 +349,14 @@ public class ImageFile {
 
     public static final Comparator<ImageFile> ORDER_COMPARATOR = (a, b) -> a.getOrder().compareTo(b.getOrder());
 
+    public boolean isArchived() {
+        String lowerUri = url.toLowerCase();
+        for (String ext : ArchiveHelper.getSupportedExtensions()) {
+            if (lowerUri.contains("." + ext + File.separator)) return true;
+        }
+        return false;
+    }
+
     public boolean needsPageParsing() {
         return (pageUrl != null && !pageUrl.isEmpty() && (null == url || url.isEmpty()));
     }
@@ -357,6 +369,8 @@ public class ImageFile {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         ImageFile imageFile = (ImageFile) o;
+        if (imageFile.isForceRefresh || isForceRefresh) return false;
+
         return getId() == imageFile.getId() &&
                 Objects.equals(getUrl(), imageFile.getUrl())
                 && Objects.equals(getPageUrl(), imageFile.getPageUrl())
@@ -370,12 +384,12 @@ public class ImageFile {
     @Override
     public int hashCode() {
         // Must be an int32, so we're bound to use Objects.hash
-        return Objects.hash(getId(), getPageUrl(), getUrl(), getFileUri(), getOrder(), isCover(), isFavourite(), chapter.getTargetId());
+        return Objects.hash(getId(), getPageUrl(), getUrl(), getFileUri(), getOrder(), isCover(), isFavourite(), chapter.getTargetId(), isForceRefresh);
     }
 
     public long uniqueHash() {
         if (0 == uniqueHash)
-            uniqueHash = Helper.hash64((id + "." + pageUrl + "." + url + "." + order + "." + isCover + "." + chapter.getTargetId()).getBytes());
+            uniqueHash = Helper.hash64((id + "." + pageUrl + "." + url + "." + order + "." + isCover + "." + chapter.getTargetId() + "." + isForceRefresh).getBytes());
         return uniqueHash;
     }
 }

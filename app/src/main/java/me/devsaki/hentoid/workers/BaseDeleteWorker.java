@@ -12,13 +12,16 @@ import androidx.work.WorkerParameters;
 
 import org.greenrobot.eventbus.EventBus;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.database.CollectionDAO;
 import me.devsaki.hentoid.database.ObjectBoxDAO;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.database.domains.Group;
+import me.devsaki.hentoid.enums.Grouping;
 import me.devsaki.hentoid.events.ProcessEvent;
 import me.devsaki.hentoid.notification.delete.DeleteCompleteNotification;
 import me.devsaki.hentoid.notification.delete.DeleteProgressNotification;
@@ -29,6 +32,7 @@ import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.exception.ContentNotProcessedException;
 import me.devsaki.hentoid.util.exception.FileNotProcessedException;
 import me.devsaki.hentoid.util.notification.Notification;
+import me.devsaki.hentoid.widget.ContentSearchManager;
 import me.devsaki.hentoid.workers.data.DeleteData;
 
 
@@ -70,8 +74,17 @@ public abstract class BaseDeleteWorker extends BaseWorker {
 
         // Queried here to avoid serialization hard-limit of androidx.work.Data.Builder
         // when passing a large long[] through DeleteData
-        if (inputData.isDeleteAllContentExceptFavs())
-            askedContentIds = Helper.getPrimitiveArrayFromList(dao.selectStoredContentIds(true, false, -1, false));
+        if (inputData.isDeleteAllContentExceptFavsBooks() || inputData.isDeleteAllContentExceptFavsGroups()) {
+            Set<Long> keptContentIds = dao.selectStoredFavContentIds(inputData.isDeleteAllContentExceptFavsBooks(), inputData.isDeleteAllContentExceptFavsGroups());
+            Set<Long> deletedContentIds = new HashSet<>();
+            dao.streamStoredContent(false, -1, false,
+                    content -> {
+                        if (!keptContentIds.contains(content.getId()))
+                            deletedContentIds.add(content.getId());
+                    }
+            );
+            askedContentIds = Helper.getPrimitiveLongArrayFromSet(deletedContentIds);
+        }
         contentIds = askedContentIds;
 
         deleteMax = contentIds.length + contentPurgeIds.length + groupIds.length + queueIds.length;
@@ -214,6 +227,11 @@ public abstract class BaseDeleteWorker extends BaseWorker {
                     ContentHelper.updateJson(getApplicationContext(), movedContent);
                 }
                 theGroup = dao.selectGroup(theGroup.id);
+            } else if (theGroup.grouping.equals(Grouping.DYNAMIC)) { // Delete books from dynamic group
+                ContentSearchManager.ContentSearchBundle bundle = new ContentSearchManager.ContentSearchBundle();
+                bundle.setGroupId(theGroup.id);
+                long[] containedContentList = Helper.getPrimitiveArrayFromList(dao.searchBookIdsUniversal(bundle));
+                removeContentList(containedContentList);
             }
             if (theGroup != null) {
                 if (!theGroup.items.isEmpty()) {
@@ -272,6 +290,6 @@ public abstract class BaseDeleteWorker extends BaseWorker {
 
     private void progressDone() {
         notificationManager.notify(new DeleteCompleteNotification(deleteMax, nbError > 0));
-        EventBus.getDefault().post(new ProcessEvent(ProcessEvent.EventType.COMPLETE, R.id.generic_progress, 0, deleteProgress, nbError, deleteMax));
+        EventBus.getDefault().postSticky(new ProcessEvent(ProcessEvent.EventType.COMPLETE, R.id.generic_progress, 0, deleteProgress, nbError, deleteMax));
     }
 }

@@ -7,19 +7,19 @@
     tools:context=".activities.ReaderActivity">
 
     <androidx.appcompat.widget.Toolbar
-        android:id="@+id/viewer_gallery_toolbar"
+        android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="?colorPrimaryVariant"
         android:elevation="@dimen/toolbar_layout_elevation"
         android:minHeight="?android:attr/actionBarSize"
         app:layout_constraintTop_toTopOf="parent"
-        app:menu="@menu/viewer_gallery_menu"
+        app:menu="@menu/reader_gallery_menu"
         app:navigationIcon="@drawable/ic_arrow_back"
         app:title="@string/gallery_title" />
 
     <androidx.appcompat.widget.Toolbar
-        android:id="@+id/viewer_gallery_selection_toolbar"
+        android:id="@+id/selection_toolbar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="?colorPrimaryVariant"
@@ -27,7 +27,7 @@
         android:minHeight="?android:attr/actionBarSize"
         android:visibility="gone"
         app:layout_constraintTop_toTopOf="parent"
-        app:menu="@menu/viewer_gallery_selection_menu"
+        app:menu="@menu/reader_gallery_selection_menu"
         app:navigationIcon="@drawable/ic_arrow_back" />
 
     <androidx.constraintlayout.widget.Barrier
@@ -35,29 +35,19 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         app:barrierDirection="bottom"
-        app:constraint_referenced_ids="viewer_gallery_selection_toolbar,viewer_gallery_toolbar" />
+        app:constraint_referenced_ids="selection_toolbar,toolbar" />
 
-    <com.skydoves.powerspinner.PowerSpinnerView
+    <me.devsaki.hentoid.views.ListPickerView
         android:id="@+id/chapter_selector"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@drawable/bg_spinner_border"
-        android:gravity="center_vertical"
-        android:padding="8dp"
         android:visibility="gone"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/horizontal_barrier"
-        app:spinner_arrow_gravity="end"
-        app:spinner_arrow_padding="8dp"
-        app:spinner_arrow_tint="@color/white_opacity_66"
-        app:spinner_divider_show="true"
-        app:spinner_divider_size="0.4dp"
-        app:spinner_popup_background="@color/dark_gray"
-        app:spinner_popup_elevation="14dp"
         tools:visibility="visible" />
 
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/viewer_gallery_recycler"
+        android:id="@+id/recyclerView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"

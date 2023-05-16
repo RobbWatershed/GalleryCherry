@@ -3,6 +3,7 @@ package me.devsaki.hentoid.viewmodels
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.Observer
+import androidx.test.core.app.ApplicationProvider
 import io.kotlintest.matchers.numerics.shouldBeGreaterThanOrEqual
 import io.kotlintest.matchers.types.shouldNotBeNull
 import io.kotlintest.shouldBe
@@ -76,7 +77,7 @@ class SearchViewModelTest : AbstractObjectBoxTest() {
         }
     }
 
-    fun lookForAttr(type: AttributeType, name: String): Attribute? {
+    private fun lookForAttr(type: AttributeType, name: String): Attribute {
         val result = mockObjectBoxDAO.selectAttributeMasterDataPaged(
             listOf(type),
             name,
@@ -84,10 +85,11 @@ class SearchViewModelTest : AbstractObjectBoxTest() {
             null,
             ContentHelper.Location.ANY,
             ContentHelper.Type.ANY,
+            true,
             1,
             40,
             0
-        ).blockingGet()
+        )
         return result.attributes[0]
     }
 
@@ -115,8 +117,8 @@ class SearchViewModelTest : AbstractObjectBoxTest() {
         var data: T? = null
         val latch = CountDownLatch(1)
         val observer = object : Observer<T> {
-            override fun onChanged(o: T?) {
-                data = o
+            override fun onChanged(value: T) {
+                data = value
                 latch.countDown()
                 this@getOrAwaitValue.removeObserver(this)
             }
@@ -138,19 +140,21 @@ class SearchViewModelTest : AbstractObjectBoxTest() {
     @Test
     fun `verify initial state`() {
         println(">> verify initial state START")
-        val viewModel = SearchViewModel(mockObjectBoxDAO, 1)
+        val viewModel =
+            SearchViewModel(ApplicationProvider.getApplicationContext(), mockObjectBoxDAO, 1)
 
-        viewModel.selectedAttributesData.shouldNotBeNull()
+        viewModel.selectedAttributes.shouldNotBeNull()
         println(">> verify initial state END")
     }
 
     @Test
     fun `count category attributes unfiltered`() {
         println(">> count category attributes unfiltered START")
-        val viewModel = SearchViewModel(mockObjectBoxDAO, 1)
+        val viewModel =
+            SearchViewModel(ApplicationProvider.getApplicationContext(), mockObjectBoxDAO, 1)
         viewModel.update()
 
-        val attrs = viewModel.attributesCountData.value
+        val attrs = viewModel.nbAttributesPerType.value
         attrs.shouldNotBeNull()
 
         // General attributes
@@ -169,7 +173,8 @@ class SearchViewModelTest : AbstractObjectBoxTest() {
     @Test
     fun `list category attributes unfiltered`() {
         println(">> list category attributes unfiltered START")
-        val viewModel = SearchViewModel(mockObjectBoxDAO, 1)
+        val viewModel =
+            SearchViewModel(ApplicationProvider.getApplicationContext(), mockObjectBoxDAO, 1)
         viewModel.update()
 
         val typeList = ArrayList<AttributeType>()
@@ -177,7 +182,7 @@ class SearchViewModelTest : AbstractObjectBoxTest() {
         viewModel.setAttributeTypes(typeList)
         viewModel.setAttributeQuery("", 1, 40)
 
-        val attrs = viewModel.availableAttributesData.value
+        val attrs = viewModel.availableAttributes.value
         attrs.shouldNotBeNull()
         attrs.attributes.shouldNotBeNull()
 
@@ -193,12 +198,13 @@ class SearchViewModelTest : AbstractObjectBoxTest() {
     @Test
     fun `count category attributes filtered`() {
         println(">> count category attributes filtered START")
-        val viewModel = SearchViewModel(mockObjectBoxDAO, 1)
+        val viewModel =
+            SearchViewModel(ApplicationProvider.getApplicationContext(), mockObjectBoxDAO, 1)
         val searchAttr = lookForAttr(AttributeType.ARTIST, "artist1")
         searchAttr.shouldNotBeNull()
         viewModel.addSelectedAttribute(searchAttr)
 
-        val attrs = viewModel.attributesCountData.value
+        val attrs = viewModel.nbAttributesPerType.value
         attrs.shouldNotBeNull()
 
         // General attributes
@@ -218,7 +224,8 @@ class SearchViewModelTest : AbstractObjectBoxTest() {
     @Test
     fun `count books unfiltered`() {
         println(">> count books unfiltered START")
-        val viewModel = SearchViewModel(mockObjectBoxDAO, 1)
+        val viewModel =
+            SearchViewModel(ApplicationProvider.getApplicationContext(), mockObjectBoxDAO, 1)
         viewModel.update()
 
         val typeList = ArrayList<AttributeType>()
@@ -235,7 +242,8 @@ class SearchViewModelTest : AbstractObjectBoxTest() {
     @Test
     fun `count books filtered`() {
         println(">> count books filtered START")
-        val viewModel = SearchViewModel(mockObjectBoxDAO, 1)
+        val viewModel =
+            SearchViewModel(ApplicationProvider.getApplicationContext(), mockObjectBoxDAO, 1)
 
         val searchAttr = lookForAttr(AttributeType.ARTIST, "artist1")
         searchAttr.shouldNotBeNull()

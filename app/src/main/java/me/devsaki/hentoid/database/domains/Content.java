@@ -15,6 +15,7 @@ import java.io.Serializable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +35,7 @@ import me.devsaki.hentoid.activities.sources.BabeTodayActivity;
 import me.devsaki.hentoid.activities.sources.BaseWebActivity;
 import me.devsaki.hentoid.activities.sources.FapalityActivity;
 import me.devsaki.hentoid.activities.sources.HellpornoActivity;
+import me.devsaki.hentoid.activities.sources.EdoujinActivity;
 import me.devsaki.hentoid.activities.sources.Jjgirls2Activity;
 import me.devsaki.hentoid.activities.sources.JjgirlsActivity;
 import me.devsaki.hentoid.activities.sources.JpegworldActivity;
@@ -45,6 +47,7 @@ import me.devsaki.hentoid.activities.sources.PornPicsActivity;
 import me.devsaki.hentoid.activities.sources.RedditActivity;
 import me.devsaki.hentoid.activities.sources.XhamsterActivity;
 import me.devsaki.hentoid.activities.sources.XnxxActivity;
+import me.devsaki.hentoid.database.DBHelper;
 import me.devsaki.hentoid.enums.AttributeType;
 import me.devsaki.hentoid.enums.Grouping;
 import me.devsaki.hentoid.enums.Site;
@@ -55,6 +58,7 @@ import me.devsaki.hentoid.util.JsonHelper;
 import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.util.StringHelper;
 import me.devsaki.hentoid.util.file.ArchiveHelper;
+import me.devsaki.hentoid.util.network.HttpHelper;
 import me.devsaki.hentoid.workers.PrimaryImportWorker;
 import timber.log.Timber;
 
@@ -105,11 +109,6 @@ public class Content implements Serializable {
     @Index
     @Convert(converter = Site.SiteConverter.class, dbType = Long.class)
     private Site site;
-    /**
-     * @deprecated Replaced by {@link PrimaryImportWorker} methods; class is kept for retrocompatibilty
-     */
-    @Deprecated
-    private String storageFolder; // Used as pivot for API29 migration; no use after that (replaced by storageUri)
     private String storageUri; // Not exposed because it will vary according to book location -> valued at import
     private boolean favourite = false;
     private int rating = 0;
@@ -124,6 +123,7 @@ public class Content implements Serializable {
     private @DownloadMode
     int downloadMode;
     private ToOne<Content> contentToReplace;
+    private String replacementTitle;
 
     // Aggregated data redundant with the sum of individual data contained in ImageFile
     // ObjectBox can't do the sum in a single Query, so here it is !
@@ -137,7 +137,7 @@ public class Content implements Serializable {
     private ToMany<ErrorRecord> errorLog;
     // Needs to be in the DB to keep the information when deletion takes a long time
     // and user navigates away; no need to save that into JSON
-    private boolean isBeingDeleted = false;
+    private boolean isBeingProcessed = false;
     // Needs to be in the DB to optimize I/O
     // No need to save that into the JSON file itself, obviously
     private String jsonUri;
@@ -163,7 +163,13 @@ public class Content implements Serializable {
     @Transient
     private String archiveLocationUri;  // Only used when importing external archives
     @Transient
+    private boolean isFrozen;  // Only used when importing queued items (temp location to simplify JSON structure; definite storage in QueueRecord)
+    @Transient
     private boolean updatedProperties = false;  // Only used when using ImageListParsers to indicate the passed Content has been updated
+    @Transient
+    private boolean folderExists = true;  // Only used when loading the Content into the reader
+    @Transient
+    private boolean isDynamic = false;  // Only used when loading the Content into the reader
 
     public Content() { // Required by ObjectBox when an alternate constructor exists
     }
@@ -191,7 +197,7 @@ public class Content implements Serializable {
 
     public AttributeMap getAttributeMap() {
         AttributeMap result = new AttributeMap();
-        if (attributes != null)
+        if (attributes != null && (!DBHelper.isDetached(this) || !attributes.isEmpty()))
             for (Attribute a : attributes) result.add(a);
         return result;
     }
@@ -323,6 +329,8 @@ public class Content implements Serializable {
                 return FapalityActivity.class;
             case ASIANSISTER:
                 return AsianSisterActivity.class;
+            case EDOUJIN:
+                return EdoujinActivity.class;
             default:
                 return BaseWebActivity.class;
         }
@@ -354,6 +362,7 @@ public class Content implements Serializable {
             case JPEGWORLD:
                 galleryConst = "galleries/";
                 break;
+            case EDOUJIN:
             case LUSCIOUS:
                 return site.getUrl().replace("/porn/", "") + url;
             default:
@@ -419,8 +428,12 @@ public class Content implements Serializable {
         return this;
     }
 
+    public void computeAuthor() {
+        author = ContentHelper.formatBookAuthor(this);
+    }
+
     public String getAuthor() {
-        if (null == author) author = ContentHelper.formatBookAuthor(this);
+        if (null == author) computeAuthor();
         return author;
     }
 
@@ -479,6 +492,10 @@ public class Content implements Serializable {
         return imageFiles;
     }
 
+    public List<ImageFile> getImageList() {
+        return (imageFiles != null && !DBHelper.isDetached(this)) ? imageFiles : Collections.emptyList();
+    }
+
     public Content setImageFiles(List<ImageFile> imageFiles) {
         // We do want to compare array references, not content
         if (imageFiles != null && imageFiles != this.imageFiles) {
@@ -489,11 +506,8 @@ public class Content implements Serializable {
     }
 
     public ImageFile getCover() {
-        List<ImageFile> images = getImageFiles();
-        if (images != null && !images.isEmpty()) {
-            for (ImageFile img : images)
-                if (img.isCover()) return img;
-        }
+        List<ImageFile> images = getImageList();
+        for (ImageFile img : images) if (img.isCover()) return img;
         ImageFile makeupCover = ImageFile.fromImageUrl(0, getCoverImageUrl(), StatusContent.ONLINE, 1);
         makeupCover.setImageHash(Long.MIN_VALUE); // Makeup cover is unhashable
         return makeupCover;
@@ -605,25 +619,6 @@ public class Content implements Serializable {
         return this;
     }
 
-
-    /**
-     * @deprecated Replaced by getStorageUri; accessor is kept for API29 migration
-     */
-    @SuppressWarnings("deprecation")
-    @Deprecated
-    public String getStorageFolder() {
-        return storageFolder == null ? "" : storageFolder;
-    }
-
-    /**
-     * @deprecated Replaced by getStorageUri; accessor is kept for API29 migration
-     */
-    @SuppressWarnings("deprecation")
-    @Deprecated
-    public void resetStorageFolder() {
-        storageFolder = "";
-    }
-
     public String getStorageUri() {
         return storageUri == null ? "" : storageUri;
     }
@@ -723,12 +718,12 @@ public class Content implements Serializable {
         this.lastReadPageIndex = index;
     }
 
-    public boolean isBeingDeleted() {
-        return isBeingDeleted;
+    public boolean isBeingProcessed() {
+        return isBeingProcessed;
     }
 
-    public void setIsBeingDeleted(boolean isBeingDeleted) {
-        this.isBeingDeleted = isBeingDeleted;
+    public void setIsBeingProcessed(boolean data) {
+        this.isBeingProcessed = data;
     }
 
     public String getJsonUri() {
@@ -790,6 +785,10 @@ public class Content implements Serializable {
         return chapters;
     }
 
+    public List<Chapter> getChaptersList() {
+        return (chapters != null && !DBHelper.isDetached(this)) ? chapters : Collections.emptyList();
+    }
+
     public void setChapters(List<Chapter> chapters) {
         // We do want to compare array references, not content
         if (chapters != null && chapters != this.chapters) {
@@ -848,6 +847,38 @@ public class Content implements Serializable {
         this.contentToReplace.setTargetId(contentIdToReplace);
     }
 
+    public String getReplacementTitle() {
+        return (null == replacementTitle) ? "" : replacementTitle;
+    }
+
+    public void setReplacementTitle(String replacementTitle) {
+        this.replacementTitle = replacementTitle;
+    }
+
+    public boolean isFrozen() {
+        return isFrozen;
+    }
+
+    public void setFrozen(boolean frozen) {
+        isFrozen = frozen;
+    }
+
+    public boolean isFolderExists() {
+        return folderExists;
+    }
+
+    public void setFolderExists(boolean folderExists) {
+        this.folderExists = folderExists;
+    }
+
+    public boolean isDynamic() {
+        return isDynamic;
+    }
+
+    public void setDynamic(boolean dynamic) {
+        isDynamic = dynamic;
+    }
+
     public static class StringMapConverter implements PropertyConverter<Map<String, String>, String> {
         @Override
         public Map<String, String> convertToEntityProperty(String databaseValue) {
@@ -881,7 +912,7 @@ public class Content implements Serializable {
                 getDownloadDate() == content.getDownloadDate() && // To differentiate external books that have no URL
                 getSize() == content.getSize() && // To differentiate external books that have no URL
                 getLastReadDate() == content.getLastReadDate() &&
-                isBeingDeleted() == content.isBeingDeleted() &&
+                isBeingProcessed() == content.isBeingProcessed() &&
                 Objects.equals(getUrl(), content.getUrl()) &&
                 Objects.equals(getCoverImageUrl(), content.getCoverImageUrl()) &&
                 getSite() == content.getSite() &&
@@ -891,7 +922,7 @@ public class Content implements Serializable {
 
     @Override
     public int hashCode() {
-        return Objects.hash(getUrl(), getCoverImageUrl(), getDownloadDate(), getSize(), getSite(), isFavourite(), getRating(), isCompleted(), getLastReadDate(), isBeingDeleted(), getDownloadMode(), getLastEditDate());
+        return Objects.hash(getUrl(), getCoverImageUrl(), getDownloadDate(), getSize(), getSite(), isFavourite(), getRating(), isCompleted(), getLastReadDate(), isBeingProcessed(), getDownloadMode(), getLastEditDate());
     }
 
     public long uniqueHash() {

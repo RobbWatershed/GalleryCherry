@@ -8,6 +8,7 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.res.Configuration;
+import android.content.res.Resources;
 import android.graphics.Point;
 import android.graphics.drawable.InsetDrawable;
 import android.os.Handler;
@@ -22,6 +23,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.view.menu.MenuBuilder;
 import androidx.core.util.Pair;
+import androidx.core.view.MenuCompat;
 import androidx.documentfile.provider.DocumentFile;
 import androidx.lifecycle.DefaultLifecycleObserver;
 import androidx.lifecycle.LifecycleObserver;
@@ -32,14 +34,6 @@ import com.google.android.material.slider.LabelFormatter;
 import com.google.android.material.slider.Slider;
 import com.google.firebase.crashlytics.FirebaseCrashlytics;
 
-import org.threeten.bp.Instant;
-import org.threeten.bp.ZoneId;
-import org.threeten.bp.format.DateTimeFormatter;
-import org.threeten.bp.format.DateTimeFormatterBuilder;
-import org.threeten.bp.format.DateTimeParseException;
-import org.threeten.bp.format.ResolverStyle;
-import org.threeten.bp.temporal.ChronoField;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -48,6 +42,13 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.Method;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.format.DateTimeParseException;
+import java.time.format.ResolverStyle;
+import java.time.temporal.ChronoField;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -59,7 +60,6 @@ import java.util.Set;
 import javax.annotation.Nonnull;
 
 import io.reactivex.disposables.Disposable;
-import io.reactivex.functions.Action;
 import io.whitfin.siphash.SipHasher;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.core.Consts;
@@ -68,6 +68,7 @@ import me.devsaki.hentoid.database.CollectionDAO;
 import me.devsaki.hentoid.database.domains.RenamingRule;
 import me.devsaki.hentoid.database.domains.SiteBookmark;
 import me.devsaki.hentoid.enums.AttributeType;
+import me.devsaki.hentoid.enums.StorageLocation;
 import me.devsaki.hentoid.json.JsonContentCollection;
 import me.devsaki.hentoid.util.file.FileHelper;
 import timber.log.Timber;
@@ -84,8 +85,6 @@ public final class Helper {
     private static final Random rand = new Random();
 
     private static final byte[] SIP_KEY = "0123456789ABCDEF".getBytes();
-    public static final Action EMPTY_ACTION = () -> {
-    };
 
 
     /**
@@ -162,6 +161,15 @@ public final class Helper {
     public static int[] getPrimitiveArrayFromSet(Set<Integer> input) {
         int[] ret = new int[input.size()];
         Iterator<Integer> iterator = input.iterator();
+        for (int i = 0; i < ret.length; i++) {
+            ret[i] = iterator.next();
+        }
+        return ret;
+    }
+
+    public static long[] getPrimitiveLongArrayFromSet(Set<Long> input) {
+        long[] ret = new long[input.size()];
+        Iterator<Long> iterator = input.iterator();
         for (int i = 0; i < ret.length; i++) {
             ret[i] = iterator.next();
         }
@@ -394,6 +402,7 @@ public final class Helper {
         } catch (Exception e) {
             Timber.i(e);
         }
+        MenuCompat.setGroupDividerEnabled(menu, true);
     }
 
     /**
@@ -460,6 +469,16 @@ public final class Helper {
         return 0;
     }
 
+    public static String formatEpochToDate(long epoch, String pattern) {
+        return formatEpochToDate(epoch, DateTimeFormatter.ofPattern(pattern, Locale.ENGLISH));
+    }
+
+    public static String formatEpochToDate(long epoch, DateTimeFormatter formatter) {
+        if (0 == epoch) return "";
+        Instant i = Instant.ofEpochMilli(epoch);
+        return i.atZone(ZoneId.systemDefault()).format(formatter);
+    }
+
     /**
      * Update the JSON file that stores bookmarks with the current bookmarks
      *
@@ -474,7 +493,7 @@ public final class Helper {
         JsonContentCollection contentCollection = new JsonContentCollection();
         contentCollection.setBookmarks(bookmarks);
 
-        DocumentFile rootFolder = FileHelper.getFolderFromTreeUriString(context, Preferences.getStorageUri());
+        DocumentFile rootFolder = FileHelper.getDocumentFromTreeUriString(context, Preferences.getStorageUri(StorageLocation.PRIMARY_1));
         if (null == rootFolder) return false;
 
         try {
@@ -505,7 +524,7 @@ public final class Helper {
         JsonContentCollection contentCollection = new JsonContentCollection();
         contentCollection.setRenamingRules(rules);
 
-        DocumentFile rootFolder = FileHelper.getFolderFromTreeUriString(context, Preferences.getStorageUri());
+        DocumentFile rootFolder = FileHelper.getDocumentFromTreeUriString(context, Preferences.getStorageUri(StorageLocation.PRIMARY_1));
         if (null == rootFolder) return false;
 
         try {
@@ -527,10 +546,10 @@ public final class Helper {
         log.add(new LogHelper.LogEntry(StringHelper.protect(t.getMessage())));
         log.add(new LogHelper.LogEntry(Helper.getStackTraceString(t)));
 
-        LogHelper.LogInfo logInfo = new LogHelper.LogInfo();
+        LogHelper.LogInfo logInfo = new LogHelper.LogInfo("latest-crash");
         logInfo.setEntries(log);
         logInfo.setHeaderName("latest-crash");
-        LogHelper.writeLog(HentoidApp.getInstance(), logInfo);
+        LogHelper.Companion.writeLog(HentoidApp.getInstance(), logInfo);
     }
 
     public static String getStackTraceString(Throwable t) {
@@ -579,5 +598,15 @@ public final class Helper {
             return new Point(p.leftMargin + view.getWidth() / 2, p.topMargin + view.getHeight() / 2);
         }
         return null;
+    }
+
+    public static int getPrefsIndex(@NonNull Resources res, int valuesRes, String value) {
+        String[] values = res.getStringArray(valuesRes);
+        int index = 0;
+        for (String val : values) {
+            if (val.equals(value)) return index;
+            index++;
+        }
+        return -1;
     }
 }

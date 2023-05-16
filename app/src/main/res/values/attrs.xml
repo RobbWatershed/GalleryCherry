@@ -24,4 +24,10 @@
         <attr name="width" format="dimension" />
     </declare-styleable>
 
+    <declare-styleable name="ListPickerView">
+        <attr name="title" format="string" localization="suggested" />
+        <attr name="entries" format="reference" />
+        <attr name="values" format="reference" />
+    </declare-styleable>
+
 </resources>

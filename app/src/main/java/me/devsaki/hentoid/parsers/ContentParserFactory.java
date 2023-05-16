@@ -75,6 +75,8 @@ public class ContentParserFactory {
                 return new LusciousParser();
             case FAPALITY:
                 return new FapalityParser();
+            case EDOUJIN:
+                return new EdoujinParser();
             default:
                 return new DummyParser();
         }

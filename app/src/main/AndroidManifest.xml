@@ -18,7 +18,7 @@
     <!-- Required to install update packages when targeting API 29 or higher -->
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <!-- Required to fire notifications when targeting API 33 or higher -->
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:name=".core.HentoidApp"
@@ -55,9 +55,6 @@
         <activity
             android:name=".activities.IntroActivity"
             android:label="@string/app_intro" />
-        <activity
-            android:name=".activities.Api29MigrationActivity"
-            android:label="@string/title_activity_api29_migration" />
         <activity
             android:name=".activities.sources.XhamsterActivity"
             android:configChanges="orientation|screenSize" />
@@ -107,6 +104,9 @@
             android:name=".activities.sources.AsianSisterActivity"
             android:configChanges="orientation|screenSize" />
         <activity
+            android:name=".activities.sources.EdoujinActivity"
+            android:configChanges="orientation|screenSize" />
+        <activity
             android:name=".activities.LibraryActivity"
             android:configChanges="orientation|screenSize"
             android:label="@string/title_activity_downloads"
@@ -128,7 +128,7 @@
         <activity
             android:name=".activities.PrefsActivity"
             android:configChanges="orientation|screenSize"
-            android:label="@string/title_activity_preferences"
+            android:label="@string/title_activity_settings"
             android:parentActivityName=".activities.LibraryActivity"
             android:theme="@style/Theme.Light.Prefs"
             tools:ignore="UnusedAttribute">
@@ -139,7 +139,7 @@
         <activity
             android:name=".activities.ToolsActivity"
             android:configChanges="orientation|screenSize"
-            android:label="@string/title_activity_preferences"
+            android:label="@string/title_activity_settings"
             android:parentActivityName=".activities.LibraryActivity"
             android:theme="@style/Theme.Light.Prefs"
             tools:ignore="UnusedAttribute">
@@ -184,6 +184,10 @@
         <activity
             android:name=".activities.RenamingRulesActivity"
             android:label="@string/title_activity_rules"
+            tools:ignore="UnusedAttribute" />
+        <activity
+            android:name=".activities.StoragePreferenceActivity"
+            android:label="@string/title_activity_storage"
             tools:ignore="UnusedAttribute" />
         <activity
             android:name=".activities.IntentActivity"
@@ -421,6 +425,26 @@
                     android:pathPattern="/..*/"
                     android:scheme="https" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="edoujin.net"
+                    android:pathPattern="/manga/..*"
+                    android:scheme="https" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".activities.ReaderActivity$ReaderActivityMulti"
+            android:label="Image Viewer"
+            android:theme="@style/Theme.Light.Monochrome">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".activities.LibraryActivity" />
         </activity>
 
         <activity
@@ -436,8 +460,6 @@
         <!-- Services -->
 
         <service android:name=".services.UpdateCheckService" />
-
-        <service android:name=".services.API29MigrationService" />
 
         <!-- Receivers -->
 

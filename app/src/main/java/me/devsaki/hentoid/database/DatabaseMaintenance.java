@@ -81,17 +81,17 @@ public class DatabaseMaintenance {
 
             // Unflag all books marked for deletion
             Timber.i("Unflag books : start");
-            List<Content> contentList = db.selectAllFlaggedBooksQ().find();
+            List<Content> contentList = DBHelper.safeFind(db.selectAllFlaggedBooksQ());
             Timber.i("Unflag books : %s books detected", contentList.size());
             db.flagContentsForDeletion(contentList, false);
             Timber.i("Unflag books : done");
 
             // Unflag all books signaled as being deleted
-            Timber.i("Unmark books as being deleted : start");
-            contentList = db.selectAllMarkedBooksQ().find();
-            Timber.i("Unmark books as being deleted : %s books detected", contentList.size());
-            db.markContentsAsBeingDeleted(contentList, false);
-            Timber.i("Unmark books as being deleted : done");
+            Timber.i("Unmark books as being processed : start");
+            contentList = DBHelper.safeFind(db.selectAllProcessedBooksQ());
+            Timber.i("Unmark books as being processed : %s books detected", contentList.size());
+            db.markContentsAsBeingProcessed(contentList, false);
+            Timber.i("Unmark books as being processed : done");
 
             // Add back in the queue isolated DOWNLOADING or PAUSED books that aren't in the queue (since version code 106 / v1.8.0)
             Timber.i("Moving back isolated items to queue : start");
@@ -161,9 +161,10 @@ public class DatabaseMaintenance {
         try {
             // Detect duplicate bookmarks (host/someurl and host/someurl/)
             Timber.i("Detecting duplicate bookmarks : start");
-            Query<SiteBookmark> entries = db.selectAllDuplicateBookmarks();
-            Timber.i("Detecting duplicate bookmarks : %d bookmarks detected", entries.count());
-            entries.remove();
+            try (Query<SiteBookmark> entries = db.selectAllDuplicateBookmarksQ()) {
+                Timber.i("Detecting duplicate bookmarks : %d bookmarks detected", entries.count());
+                entries.remove();
+            }
             Timber.i("Detecting duplicate bookmarks : done");
         } finally {
             db.closeThreadResources();
@@ -251,7 +252,7 @@ public class DatabaseMaintenance {
             float pos = 1;
             for (Content c : contents) {
                 c.computeSize();
-                db.insertContent(c);
+                db.insertContentCore(c);
                 emitter.onNext(pos++ / max);
             }
             Timber.i("Computing downloaded content size : done");
@@ -271,7 +272,7 @@ public class DatabaseMaintenance {
                 if (0 == db.countGroupsFor(grouping)) groupingsToProcess.add(grouping);
 
             // Test the existence of the "Ungrouped" custom group
-            List<Group> ungroupedCustomGroup = db.selectGroupsQ(Grouping.CUSTOM.getId(), null, -1, false, 1, false, -1).find();
+            List<Group> ungroupedCustomGroup = DBHelper.safeFind(db.selectGroupsQ(Grouping.CUSTOM.getId(), null, -1, false, 1, false, -1));
             if (ungroupedCustomGroup.isEmpty()) groupingsToProcess.add(Grouping.CUSTOM);
 
             Timber.i("Create non-existing groupings : %s non-existing groupings detected", groupingsToProcess.size());
@@ -281,10 +282,10 @@ public class DatabaseMaintenance {
             for (Grouping g : groupingsToProcess) {
                 if (g.equals(Grouping.ARTIST)) {
                     List<Attribute> artists = db.selectAvailableAttributes(
-                            AttributeType.ARTIST, -1, null, ContentHelper.Location.ANY, ContentHelper.Type.ANY, false,
+                            AttributeType.ARTIST, -1, new long[0], null, ContentHelper.Location.ANY, ContentHelper.Type.ANY, false,
                             null, Preferences.Constant.SEARCH_ORDER_ATTRIBUTES_ALPHABETIC, 0, 0);
                     artists.addAll(db.selectAvailableAttributes(
-                            AttributeType.CIRCLE, -1, null, ContentHelper.Location.ANY, ContentHelper.Type.ANY, false,
+                            AttributeType.CIRCLE, -1, new long[0], null, ContentHelper.Location.ANY, ContentHelper.Type.ANY, false,
                             null, Preferences.Constant.SEARCH_ORDER_ATTRIBUTES_ALPHABETIC, 0, 0));
                     int order = 1;
                     for (Attribute a : artists) {
@@ -358,7 +359,7 @@ public class DatabaseMaintenance {
             float pos = 1;
             for (Content c : contents) {
                 c.computeReadProgress();
-                db.insertContent(c);
+                db.insertContentCore(c);
                 emitter.onNext(pos++ / max);
             }
             Timber.i("Computing downloaded content read progress : done");

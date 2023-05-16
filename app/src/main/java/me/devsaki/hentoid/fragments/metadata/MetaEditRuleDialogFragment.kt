@@ -20,10 +20,6 @@ import me.devsaki.hentoid.enums.AttributeType
 /**
  * Dialog to edit an attribute naming rule
  */
-const val KEY_RULE_ID = "id"
-const val KEY_MODE_CREATE = "mode_create"
-const val KEY_ATTR_TYPE_CODE = "attr_type_code"
-
 class MetaEditRuleDialogFragment : DialogFragment() {
 
     // UI
@@ -79,11 +75,8 @@ class MetaEditRuleDialogFragment : DialogFragment() {
                 )
             )
             binding.attributeType.let {
-                it.setIsFocusable(true)
-                it.lifecycleOwner = viewLifecycleOwner
-                it.setItems(attributeTypes.map { a -> resources.getString(a.displayName) })
-                if (attrType != AttributeType.UNDEFINED)
-                    it.selectItemByIndex(attributeTypes.indexOf(attrType))
+                it.entries = attributeTypes.map { a -> resources.getString(a.displayName) }
+                if (attrType != AttributeType.UNDEFINED) it.index = attributeTypes.indexOf(attrType)
             }
         } else {
             val rule = loadRule()
@@ -96,7 +89,7 @@ class MetaEditRuleDialogFragment : DialogFragment() {
         }
 
         binding.let {
-            binding.attributeType.setOnSpinnerItemSelectedListener<String> { _, _, _, _ -> updateNewBtnStates() }
+            binding.attributeType.setOnIndexChangeListener { updateNewBtnStates() }
 
             it.sourceName.editText?.addTextChangedListener(
                 object : TextWatcher {
@@ -161,7 +154,7 @@ class MetaEditRuleDialogFragment : DialogFragment() {
 
     private fun updateNewBtnStates() {
         binding.let {
-            val typeIndex = it.attributeType.selectedIndex
+            val typeIndex = it.attributeType.index
             val source = if (null == it.sourceName.editText) "" else it.sourceName.editText!!.text
             val target = if (null == it.targetName.editText) "" else it.targetName.editText!!.text
             val enabled =
@@ -187,7 +180,7 @@ class MetaEditRuleDialogFragment : DialogFragment() {
         if (!checkConsistency(sourceName, targetName)) return
 
         parent?.onCreateRule(
-            attributeTypes[binding.attributeType.selectedIndex],
+            attributeTypes[binding.attributeType.index],
             sourceName,
             targetName
         )
@@ -226,6 +219,10 @@ class MetaEditRuleDialogFragment : DialogFragment() {
     }
 
     companion object {
+        const val KEY_RULE_ID = "id"
+        const val KEY_MODE_CREATE = "mode_create"
+        const val KEY_ATTR_TYPE_CODE = "attr_type_code"
+
         fun invoke(
             parent: FragmentActivity,
             createMode: Boolean,

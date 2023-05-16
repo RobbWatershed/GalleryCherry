@@ -21,6 +21,7 @@ import androidx.core.util.Pair;
 import com.annimon.stream.Optional;
 import com.annimon.stream.Stream;
 import com.annimon.stream.function.BiFunction;
+import com.annimon.stream.function.Consumer;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -32,6 +33,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
+import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -85,12 +87,14 @@ class CustomWebViewClient extends WebViewClient {
 
     // Pre-built object to represent an empty input stream
     // (will be used instead of the actual stream when the requested resource is blocked)
-    private final byte[] nothing = "".getBytes();
+    private final byte[] NOTHING = new byte[0];
     // Pre-built object to represent WEBP binary data for the checkmark icon used to mark downloaded books
     // (will be fed directly to the browser when the resourcei is requested)
-    private final byte[] checkmark;
+    private final byte[] CHECKMARK;
     // this is for merged books
-    private final byte[] mergedMark;
+    private final byte[] MERGED_MARK;
+    // this is for books with blocked tags;
+    private final byte[] BLOCKED_MARK;
 
     // Site for the session
     protected final Site site;
@@ -115,12 +119,15 @@ class CustomWebViewClient extends WebViewClient {
     private final AtomicBoolean isHtmlLoaded = new AtomicBoolean(false);
     // Flag to automatically prevent augmented browser to be used
     boolean preventAugmentedBrowser = false;
+    // URL string of the main page (used for custom CSS loading)
+    private String mainPageUrl;
 
     protected final AdBlocker adBlocker;
 
     // Faster access to Preferences settings
     private final AtomicBoolean markDownloaded = new AtomicBoolean(Preferences.isBrowserMarkDownloaded());
     private final AtomicBoolean markMerged = new AtomicBoolean((Preferences.isBrowserMarkMerged()));
+    private final AtomicBoolean markBlockedTags = new AtomicBoolean((Preferences.isBrowserMarkBlockedTags()));
     private final AtomicBoolean dnsOverHttpsEnabled = new AtomicBoolean(Preferences.getDnsOverHttps() > -1);
 
     // Disposable to be used for punctual operations
@@ -130,12 +137,12 @@ class CustomWebViewClient extends WebViewClient {
     // List of elements (CSS selector) to be removed before displaying the page
     private List<String> removableElements;
 
-    // List of elements (CSS selector) to be hidden by inline CSS
-    private List<String> hideableElements;
-
     // List of blacklisted Javascript strings : if any of these is found inside
     // an inline script tag, the entire tag is removed from the HTML
     private List<String> jsContentBlacklist;
+
+    // Custom method to use while pre-processing HTML
+    private Consumer<Document> customHtmlRewriter = null;
 
     // List of JS scripts to load from app resources every time a webpage is started
     private List<String> jsStartupScripts;
@@ -153,16 +160,23 @@ class CustomWebViewClient extends WebViewClient {
 
         for (String s : galleryUrl) galleryUrlPattern.add(Pattern.compile(s));
 
-        checkmark = ImageHelper.BitmapToWebp(
-                ImageHelper.tintBitmap(
-                        ImageHelper.getBitmapFromVectorDrawable(HentoidApp.getInstance(), R.drawable.ic_checked),
+        CHECKMARK = ImageHelper.INSTANCE.bitmapToWebp(
+                ImageHelper.INSTANCE.tintBitmap(
+                        ImageHelper.INSTANCE.getBitmapFromVectorDrawable(HentoidApp.getInstance(), R.drawable.ic_checked),
                         HentoidApp.getInstance().getResources().getColor(R.color.secondary_light)
                 )
         );
 
-        mergedMark = ImageHelper.BitmapToWebp(
-                ImageHelper.tintBitmap(
-                        ImageHelper.getBitmapFromVectorDrawable(HentoidApp.getInstance(), R.drawable.ic_action_merge),
+        MERGED_MARK = ImageHelper.INSTANCE.bitmapToWebp(
+                ImageHelper.INSTANCE.tintBitmap(
+                        ImageHelper.INSTANCE.getBitmapFromVectorDrawable(HentoidApp.getInstance(), R.drawable.ic_action_merge),
+                        HentoidApp.getInstance().getResources().getColor(R.color.secondary_light)
+                )
+        );
+
+        BLOCKED_MARK = ImageHelper.INSTANCE.bitmapToWebp(
+                ImageHelper.INSTANCE.tintBitmap(
+                        ImageHelper.INSTANCE.getBitmapFromVectorDrawable(HentoidApp.getInstance(), R.drawable.ic_forbidden),
                         HentoidApp.getInstance().getResources().getColor(R.color.secondary_light)
                 )
         );
@@ -181,16 +195,6 @@ class CustomWebViewClient extends WebViewClient {
     protected void addRemovableElements(String... elements) {
         if (null == removableElements) removableElements = new ArrayList<>();
         Collections.addAll(removableElements, elements);
-    }
-
-    /**
-     * Add an element filter to current site
-     *
-     * @param elements Elements (CSS selector) to addAll to page cleaner
-     */
-    protected void addHideableElements(String... elements) {
-        if (null == hideableElements) hideableElements = new ArrayList<>();
-        Collections.addAll(hideableElements, elements);
     }
 
     /**
@@ -222,6 +226,10 @@ class CustomWebViewClient extends WebViewClient {
      */
     void setResultUrlRewriter(@NonNull BiFunction<Uri, Integer, String> rewriter) {
         resultsUrlRewriter = rewriter;
+    }
+
+    void setCustomHtmlRewriter(@NonNull Consumer<Document> rewriter) {
+        customHtmlRewriter = rewriter;
     }
 
     /**
@@ -431,7 +439,8 @@ class CustomWebViewClient extends WebViewClient {
             Timber.v("[%s] ignored by interceptor; method = %s", url, request.getMethod());
             return sendRequest(request);
         }
-
+        if (request.isForMainFrame())
+            mainPageUrl = url;
         WebResourceResponse result = shouldInterceptRequestInternal(url, request.getRequestHeaders());
         if (result != null) return result;
         else return sendRequest(request);
@@ -449,18 +458,20 @@ class CustomWebViewClient extends WebViewClient {
     private WebResourceResponse shouldInterceptRequestInternal(@NonNull final String url,
                                                                @Nullable final Map<String, String> headers) {
         if ((Preferences.isBrowserAugmented() && adBlocker.isBlocked(url, headers)) || !url.startsWith("http")) {
-            return new WebResourceResponse("text/plain", "utf-8", new ByteArrayInputStream(nothing));
+            return new WebResourceResponse("text/plain", "utf-8", new ByteArrayInputStream(NOTHING));
         } else if (isMarkDownloaded() && url.contains("hentoid-checkmark")) {
-            return new WebResourceResponse(ImageHelper.MIME_IMAGE_WEBP, "utf-8", new ByteArrayInputStream(checkmark));
+            return new WebResourceResponse(ImageHelper.MIME_IMAGE_WEBP, "utf-8", new ByteArrayInputStream(CHECKMARK));
         } else if (isMarkMerged() && url.contains("hentoid-mergedmark")) {
-            return new WebResourceResponse(ImageHelper.MIME_IMAGE_WEBP, "utf-8", new ByteArrayInputStream(mergedMark));
+            return new WebResourceResponse(ImageHelper.MIME_IMAGE_WEBP, "utf-8", new ByteArrayInputStream(MERGED_MARK));
+        } else if (url.contains("hentoid-blockedmark")) {
+            return new WebResourceResponse(ImageHelper.MIME_IMAGE_WEBP, "utf-8", new ByteArrayInputStream(BLOCKED_MARK));
         } else {
             if (isGalleryPage(url)) return parseResponse(url, headers, true, false);
             else if (BuildConfig.DEBUG) Timber.v("WebView : not gallery %s", url);
 
             // If we're here to remove "dirty elements" or mark downloaded books, we only do it
             // on HTML resources (URLs without extension) from the source's main domain
-            if ((removableElements != null || hideableElements != null || jsContentBlacklist != null || isMarkDownloaded() || isMarkMerged() || !activity.getCustomCss().isEmpty())
+            if ((removableElements != null || jsContentBlacklist != null || isMarkDownloaded() || isMarkMerged() || isMarkBlockedTags() || !activity.getCustomCss().isEmpty())
                     && (HttpHelper.getExtensionFromUri(url).isEmpty() || HttpHelper.getExtensionFromUri(url).equalsIgnoreCase("html"))) {
                 String host = Uri.parse(url).getHost();
                 if (host != null && !isHostNotInRestrictedDomains(host))
@@ -555,106 +566,122 @@ class CustomWebViewClient extends WebViewClient {
 
         List<Pair<String, String>> requestHeadersList = HttpHelper.webkitRequestHeadersToOkHttpHeaders(requestHeaders, urlStr);
 
+        Response response = null;
         try {
             // Query resource here, using OkHttp
-            Response response = HttpHelper.getOnlineResourceFast(urlStr, requestHeadersList, site.useMobileAgent(), site.useHentoidAgent(), site.useWebviewAgent(), false);
-
-            // Scram if the response is an error
-            if (response.code() >= 400) return null;
-
-            // Handle redirection and force the browser to reload to be able to process the page
-            // NB1 : shouldInterceptRequest doesn't trigger on redirects
-            // NB2 : parsing alone won't cut it because the adblocker needs the new content on the new URL
-            if (response.code() >= 300) {
-                String targetUrl = StringHelper.protect(response.header("location"));
-                if (targetUrl.isEmpty())
-                    targetUrl = StringHelper.protect(response.header("Location"));
-                if (BuildConfig.DEBUG)
-                    Timber.v("WebView : redirection from %s to %s", urlStr, targetUrl);
-                if (!targetUrl.isEmpty())
-                    browserLoadAsync(HttpHelper.fixUrl(targetUrl, site.getUrl()));
-                return null;
-            }
-
-            // Scram if the response is something else than html
-            String rawContentType = response.header(HEADER_CONTENT_TYPE, "");
-            if (null == rawContentType) return null;
-
-            Pair<String, String> contentType = HttpHelper.cleanContentType(rawContentType);
-            if (!contentType.first.isEmpty() && !contentType.first.equals("text/html"))
-                return null;
-
-            // Scram if the response is empty
-            ResponseBody body = response.body();
-            if (null == body) throw new IOException("Empty body");
-
-            InputStream parserStream;
-            WebResourceResponse result;
-            if (canUseSingleOkHttpRequest()) {
-                InputStream browserStream;
-                if (analyzeForDownload) {
-                    // Response body bytestream needs to be duplicated
-                    // because Jsoup closes it, which makes it unavailable for the WebView to use
-                    List<InputStream> is = Helper.duplicateInputStream(body.byteStream(), 2);
-                    parserStream = is.get(0);
-                    browserStream = is.get(1);
-                } else {
-                    parserStream = null;
-                    browserStream = body.byteStream();
-                }
-
-                // Remove dirty elements from HTML resources
-                String customCss = activity.getCustomCss();
-                if (removableElements != null || hideableElements != null || jsContentBlacklist != null || isMarkDownloaded() || isMarkMerged() || !customCss.isEmpty()) {
-                    browserStream = ProcessHtml(browserStream, urlStr, customCss, removableElements, hideableElements, jsContentBlacklist, activity.getAllSiteUrls(), activity.getAllMergedBooksUrls());
-                    if (null == browserStream) return null;
-                }
-
-                // Convert OkHttp response to the expected format
-                result = HttpHelper.okHttpResponseToWebkitResponse(response, browserStream);
-
-                // Manually set cookie if present in response header (has to be set manually because we're using OkHttp right now, not the webview)
-                if (result.getResponseHeaders().containsKey("set-cookie") || result.getResponseHeaders().containsKey("Set-Cookie")) {
-                    String cookiesStr = result.getResponseHeaders().get("set-cookie");
-                    if (null == cookiesStr)
-                        cookiesStr = result.getResponseHeaders().get("Set-Cookie");
-                    if (cookiesStr != null) {
-                        // Set-cookie might contain multiple cookies to set separated by a line feed (see HttpHelper.getValuesSeparatorFromHttpHeader)
-                        String[] cookieParts = cookiesStr.split("\n");
-                        for (String cookie : cookieParts)
-                            if (!cookie.isEmpty())
-                                HttpHelper.setCookies(urlStr, cookie);
-                    }
-                }
-            } else {
-                parserStream = body.byteStream();
-                result = null; // Default webview behaviour
-            }
-
-            if (analyzeForDownload) {
-                compositeDisposable.add(
-                        Single.fromCallable(() -> htmlAdapter.fromInputStream(parserStream, new URL(urlStr)).toContent(urlStr))
-                                .subscribeOn(Schedulers.computation())
-                                .observeOn(Schedulers.computation())
-                                .map(content -> processContent(content, urlStr, quickDownload))
-                                .observeOn(AndroidSchedulers.mainThread())
-                                .subscribe(
-                                        content2 -> activity.onResultReady(content2, quickDownload),
-                                        throwable -> {
-                                            Timber.e(throwable, "Error parsing content.");
-                                            isHtmlLoaded.set(true);
-                                            activity.onResultFailed();
-                                        })
-                );
-            } else {
-                isHtmlLoaded.set(true);
-            }
-
-            return result;
+            response = HttpHelper.getOnlineResourceFast(urlStr, requestHeadersList, site.useMobileAgent(), site.useHentoidAgent(), site.useWebviewAgent(), false);
         } catch (MalformedURLException e) {
             Timber.e(e, "Malformed URL : %s", urlStr);
+        } catch (SocketTimeoutException e) {
+            // If fast method occurred timeout, reconnect with non-fast method
+            Timber.d("Timeout; Reconnect with non-fast method : %s", urlStr);
+            try {
+                response = HttpHelper.getOnlineResource(urlStr, requestHeadersList, site.useMobileAgent(), site.useHentoidAgent(), site.useWebviewAgent());
+            } catch (IOException | IllegalStateException ex) {
+                Timber.e(ex);
+            }
         } catch (IOException | IllegalStateException e) {
             Timber.e(e);
+        }
+
+        if (response != null) {
+            try {
+                // Scram if the response is an error
+                if (response.code() >= 400) return null;
+
+                // Handle redirection and force the browser to reload to be able to process the page
+                // NB1 : shouldInterceptRequest doesn't trigger on redirects
+                // NB2 : parsing alone won't cut it because the adblocker needs the new content on the new URL
+                if (response.code() >= 300) {
+                    String targetUrl = StringHelper.protect(response.header("location"));
+                    if (targetUrl.isEmpty())
+                        targetUrl = StringHelper.protect(response.header("Location"));
+                    if (BuildConfig.DEBUG)
+                        Timber.v("WebView : redirection from %s to %s", urlStr, targetUrl);
+                    if (!targetUrl.isEmpty())
+                        browserLoadAsync(HttpHelper.fixUrl(targetUrl, site.getUrl()));
+                    return null;
+                }
+
+                // Scram if the response is something else than html
+                String rawContentType = response.header(HEADER_CONTENT_TYPE, "");
+                if (null == rawContentType) return null;
+
+                Pair<String, String> contentType = HttpHelper.cleanContentType(rawContentType);
+                if (!contentType.first.isEmpty() && !contentType.first.equals("text/html"))
+                    return null;
+
+                // Scram if the response is empty
+                ResponseBody body = response.body();
+                if (null == body) throw new IOException("Empty body");
+
+                InputStream parserStream;
+                WebResourceResponse result;
+                if (canUseSingleOkHttpRequest()) {
+                    InputStream browserStream;
+                    if (analyzeForDownload) {
+                        // Response body bytestream needs to be duplicated
+                        // because Jsoup closes it, which makes it unavailable for the WebView to use
+                        List<InputStream> is = Helper.duplicateInputStream(body.byteStream(), 2);
+                        parserStream = is.get(0);
+                        browserStream = is.get(1);
+                    } else {
+                        parserStream = null;
+                        browserStream = body.byteStream();
+                    }
+
+                    // Remove dirty elements from HTML resources
+                    String customCss = activity.getCustomCss();
+                    if (removableElements != null || jsContentBlacklist != null || isMarkDownloaded() || isMarkMerged() || isMarkBlockedTags() || !customCss.isEmpty()) {
+                        browserStream = ProcessHtml(browserStream, urlStr, customCss, removableElements, jsContentBlacklist, activity.getAllSiteUrls(), activity.getAllMergedBooksUrls(), activity.getPrefBlockedTags());
+                        if (null == browserStream) return null;
+                    }
+
+                    // Convert OkHttp response to the expected format
+                    result = HttpHelper.okHttpResponseToWebkitResponse(response, browserStream);
+
+                    // Manually set cookie if present in response header (has to be set manually because we're using OkHttp right now, not the webview)
+                    if (result.getResponseHeaders().containsKey("set-cookie") || result.getResponseHeaders().containsKey("Set-Cookie")) {
+                        String cookiesStr = result.getResponseHeaders().get("set-cookie");
+                        if (null == cookiesStr)
+                            cookiesStr = result.getResponseHeaders().get("Set-Cookie");
+                        if (cookiesStr != null) {
+                            // Set-cookie might contain multiple cookies to set separated by a line feed (see HttpHelper.getValuesSeparatorFromHttpHeader)
+                            String[] cookieParts = cookiesStr.split("\n");
+                            for (String cookie : cookieParts)
+                                if (!cookie.isEmpty())
+                                    HttpHelper.setCookies(urlStr, cookie);
+                        }
+                    }
+                } else {
+                    parserStream = body.byteStream();
+                    result = null; // Default webview behaviour
+                }
+
+                if (analyzeForDownload) {
+                    compositeDisposable.add(
+                            Single.fromCallable(() -> htmlAdapter.fromInputStream(parserStream, new URL(urlStr)).toContent(urlStr))
+                                    .subscribeOn(Schedulers.computation())
+                                    .observeOn(Schedulers.computation())
+                                    .map(content -> processContent(content, urlStr, quickDownload))
+                                    .observeOn(AndroidSchedulers.mainThread())
+                                    .subscribe(
+                                            content2 -> activity.onResultReady(content2, quickDownload),
+                                            throwable -> {
+                                                Timber.e(throwable, "Error parsing content.");
+                                                isHtmlLoaded.set(true);
+                                                activity.onResultFailed();
+                                            })
+                    );
+                } else {
+                    isHtmlLoaded.set(true);
+                    activity.onNoResult();
+                }
+
+                return result;
+            } catch (IOException | IllegalStateException e) {
+                Timber.e(e);
+            }
         }
         return null;
     }
@@ -712,29 +739,16 @@ class CustomWebViewClient extends WebViewClient {
         markMerged.set(value);
     }
 
-    void setDnsOverHttpsEnabled(boolean value) {
-        dnsOverHttpsEnabled.set(value);
+    boolean isMarkBlockedTags() {
+        return markBlockedTags.get();
     }
 
-    /**
-     * Simplify the given URL :
-     * - Remove parameters
-     * - Remove any duplicate separator
-     * - Replace all separators by .'s
-     *
-     * @param url Url to simplify
-     * @return Simplified URL according to the above rules
-     */
-    private String simplifyUrl(@NonNull String url) {
-        String result = url;
-        // Remove parameters
-        int paramsIndex = result.indexOf("?");
-        if (paramsIndex > -1) result = result.substring(0, paramsIndex);
-        // Simplify & eliminate double separators
-        result = result.trim().replaceAll("\\p{Punct}", ".");
-        if (result.length() < 2) return "";
-        if (result.endsWith(".")) result = result.substring(0, result.length() - 1);
-        return result;
+    void setMarkBlockedTags(boolean value) {
+        markBlockedTags.set(value);
+    }
+
+    void setDnsOverHttpsEnabled(boolean value) {
+        dnsOverHttpsEnabled.set(value);
     }
 
     /**
@@ -745,10 +759,10 @@ class CustomWebViewClient extends WebViewClient {
      * @param stream             Stream containing the HTML document to process; will be closed during the process
      * @param baseUri            Base URI of the document
      * @param removableElements  CSS selectors of the nodes to remove
-     * @param hideableElements   CSS selectors of the nodes to hide
      * @param jsContentBlacklist Blacklisted elements to detect script tags to remove
      * @param siteUrls           Urls of the covers or links to visually mark as downloaded
      * @param mergedSiteUrls     Urls of the covers or links to visually mark as merged
+     * @param blockedTags        Tags of the preference-browser-blocked tag option to visually mark as blocked
      * @return Stream containing the HTML document stripped from the elements to remove
      */
     @Nullable
@@ -757,15 +771,15 @@ class CustomWebViewClient extends WebViewClient {
             @NonNull String baseUri,
             @Nullable String customCss,
             @Nullable List<String> removableElements,
-            @Nullable List<String> hideableElements,
             @Nullable List<String> jsContentBlacklist,
             @Nullable List<String> siteUrls,
-            @Nullable List<String> mergedSiteUrls) {
+            @Nullable List<String> mergedSiteUrls,
+            @Nullable List<String> blockedTags) {
         try {
             Document doc = Jsoup.parse(stream, null, baseUri);
 
             // Add custom inline CSS to the main page only
-            if (customCss != null && !isHtmlLoaded.get())
+            if (customCss != null && baseUri.equals(mainPageUrl))
                 doc.head().appendElement("style").attr("type", "text/css").appendText(customCss);
 
             // Remove ad spaces
@@ -775,18 +789,6 @@ class CustomWebViewClient extends WebViewClient {
                         Timber.d("[%s] Removing node %s", baseUri, e.toString());
                         e.remove();
                     }
-
-            // Hide ad spaces
-            if (hideableElements != null) {
-                for (String s : hideableElements)
-                    for (Element e : doc.select(s)) {
-                        String existingStyle = e.attr("style");
-                        if (!existingStyle.contains("min-height:0px;height:0%;")) {
-                            Timber.d("[%s] Hiding node %s", baseUri, e.toString());
-                            e.attr("style", "min-height:0px;height:0%;");
-                        }
-                    }
-            }
 
             // Remove scripts
             if (jsContentBlacklist != null) {
@@ -818,7 +820,7 @@ class CustomWebViewClient extends WebViewClient {
                         boolean isForbidden = Stream.of(link.parents()).anyMatch(e -> containsForbiddenClass(site, e.classNames()));
                         if (isForbidden) continue;
                     }
-                    String aHref = simplifyUrl(link.attr("href"));
+                    String aHref = HttpHelper.simplifyUrl(link.attr("href"));
                     if (!aHref.isEmpty() && !elements.containsKey(aHref)) // We only process the first match - usually the cover
                         elements.put(aHref, new Pair<>(link, null));
                 }
@@ -833,7 +835,7 @@ class CustomWebViewClient extends WebViewClient {
                         if (isForbidden) continue;
                     }
 
-                    String aHref = simplifyUrl(parent.attr("href"));
+                    String aHref = HttpHelper.simplifyUrl(parent.attr("href"));
                     Pair<Element, Element> elt = elements.get(aHref);
                     if (elt != null && null == elt.second) // We only process the first match - usually the cover
                         elements.put(aHref, new Pair<>(elt.first, linkedImage));
@@ -873,6 +875,53 @@ class CustomWebViewClient extends WebViewClient {
                 }
             }
 
+            // Mark books with blocked tags
+            if (blockedTags != null && !blockedTags.isEmpty()) {
+                Elements plainLinks = doc.select("a");
+
+                // Key= plain link ("a")
+                // Value = simplified HREF
+                Map<Element, String> elements = new HashMap<>();
+
+                for (Element link : plainLinks) {
+                    if (!site.getBookCardExcludedParentClasses().isEmpty()) {
+                        boolean isForbidden = Stream.of(link.parents()).anyMatch(e -> containsForbiddenClass(site, e.classNames()));
+                        if (isForbidden) continue;
+                    }
+                    String aHref = HttpHelper.simplifyUrl(link.attr("href"));
+                    elements.put(link, aHref);
+                }
+
+                for (Map.Entry<Element, String> entry : elements.entrySet()) {
+                    if (site.getGalleryHeight() != -1) {
+                        for (String blockedTag : blockedTags) {
+                            if (entry.getValue().contains("/tag/") || entry.getValue().contains("/category/")) {
+                                String tag = null;
+                                if (entry.getKey().childNodeSize() != 0)
+                                    tag = entry.getKey().childNode(0).toString();
+                                if (tag == null)
+                                    break;
+                                if (blockedTag.equalsIgnoreCase(tag) || StringHelper.isPresentAsWord(blockedTag, tag)) {
+                                    Element imgParent = entry.getKey();
+                                    for (int i = 0; i <= site.getGalleryHeight(); i++) {
+                                        if (imgParent.parent() != null)
+                                            imgParent = imgParent.parent();
+                                    }
+                                    Elements imgs = imgParent.getAllElements().select("img");
+                                    for (Element img : imgs) {
+                                        if (img.parent() != null)
+                                            img.parent().addClass("watermarked-blocked");
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (customHtmlRewriter != null) customHtmlRewriter.accept(doc);
+
             return new ByteArrayInputStream(doc.toString().getBytes(StandardCharsets.UTF_8));
         } catch (
                 IOException e) {
@@ -911,6 +960,11 @@ class CustomWebViewClient extends WebViewClient {
         void onResultReady(@NonNull Content results, boolean quickDownload);
 
         /**
+         * Callback when the page does not have any Content to parse
+         */
+        void onNoResult();
+
+        /**
          * Callback when the page should have been parsed into a Content, but the parsing failed
          */
         void onResultFailed();
@@ -919,6 +973,8 @@ class CustomWebViewClient extends WebViewClient {
         List<String> getAllSiteUrls();
 
         List<String> getAllMergedBooksUrls();
+
+        List<String> getPrefBlockedTags();
 
         String getCustomCss();
     }

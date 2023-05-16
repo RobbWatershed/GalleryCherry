@@ -4,8 +4,6 @@ import android.graphics.Bitmap
 import android.graphics.Typeface
 import android.net.Uri
 import android.os.Bundle
-import android.text.Editable
-import android.text.TextWatcher
 import android.view.MenuItem
 import android.view.View
 import android.view.inputmethod.EditorInfo
@@ -14,9 +12,8 @@ import androidx.annotation.DrawableRes
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
-import com.bumptech.glide.integration.webp.decoder.WebpDrawable
-import com.bumptech.glide.integration.webp.decoder.WebpDrawableTransformation
 import com.bumptech.glide.load.Transformation
 import com.bumptech.glide.load.resource.bitmap.CenterInside
 import com.bumptech.glide.request.RequestOptions
@@ -38,6 +35,7 @@ import com.skydoves.powermenu.PowerMenuItem
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.activities.bundles.AttributeItemBundle
 import me.devsaki.hentoid.activities.bundles.MetaEditActivityBundle
+import me.devsaki.hentoid.core.setOnTextChangedListener
 import me.devsaki.hentoid.database.domains.Attribute
 import me.devsaki.hentoid.database.domains.AttributeMap
 import me.devsaki.hentoid.database.domains.Content
@@ -142,9 +140,8 @@ class MetadataEditActivity : BaseActivity(), GalleyPickerDialogFragment.Parent,
         viewModel = ViewModelProvider(this, vmFactory)[MetadataEditViewModel::class.java]
 
         val currentContent = viewModel.getContent().value
-        if (null == currentContent || currentContent.isEmpty()) { // ViewModel hasn't loaded anything yet (fresh start)
-            viewModel.loadContent(contentIds)
-        }
+        // ViewModel hasn't loaded anything yet (fresh start)
+        if (currentContent.isNullOrEmpty()) viewModel.loadContent(contentIds)
 
         bindInteractions()
 
@@ -285,29 +282,9 @@ class MetadataEditActivity : BaseActivity(), GalleyPickerDialogFragment.Parent,
                     b2.tagsFab.visibility = View.GONE
                 }
             }
-            it.titleNew.editText?.addTextChangedListener(
-                object : TextWatcher {
-                    override fun afterTextChanged(s: Editable?) {
-                        if (s != null) viewModel.setTitle(s.toString())
-                    }
-
-                    override fun beforeTextChanged(
-                        s: CharSequence?,
-                        start: Int,
-                        count: Int,
-                        after: Int
-                    ) {
-                    }
-
-                    override fun onTextChanged(
-                        s: CharSequence?,
-                        start: Int,
-                        before: Int,
-                        count: Int
-                    ) {
-                    }
-                }
-            )
+            it.titleNew.editText?.setOnTextChangedListener(lifecycleScope) { value ->
+                viewModel.setTitle(value)
+            }
             it.titleNew.editText?.setOnEditorActionListener { _, actionId, _ ->
                 var handled = false
                 if (actionId == EditorInfo.IME_ACTION_DONE) {
@@ -338,7 +315,13 @@ class MetadataEditActivity : BaseActivity(), GalleyPickerDialogFragment.Parent,
             // Cover
             it.ivCover.setOnClickListener {
                 binding?.let { b2 ->
-                    if (1 == contents.size) {
+                    if (contents.size > 1) {
+                        Snackbar.make(
+                            b2.root,
+                            R.string.meta_cover_multiple_warning,
+                            BaseTransientBottomBar.LENGTH_SHORT
+                        ).show()
+                    } else {
                         if (contents[0].isArchive) {
                             Snackbar.make(
                                 b2.root,
@@ -349,20 +332,10 @@ class MetadataEditActivity : BaseActivity(), GalleyPickerDialogFragment.Parent,
                             val imgs = contents[0].imageFiles?.filter { i -> i.isReadable }
                             if (imgs != null) {
                                 b2.titleNew.visibility = View.GONE
-                                b2.tags.visibility = View.GONE
                                 b2.tagsFab.visibility = View.GONE
-                                GalleyPickerDialogFragment.invoke(
-                                    supportFragmentManager,
-                                    imgs
-                                )
+                                GalleyPickerDialogFragment.invoke(supportFragmentManager, imgs)
                             }
                         }
-                    } else {
-                        Snackbar.make(
-                            b2.root,
-                            R.string.meta_cover_multiple_warning,
-                            BaseTransientBottomBar.LENGTH_SHORT
-                        ).show()
                     }
                 }
             }
@@ -417,24 +390,30 @@ class MetadataEditActivity : BaseActivity(), GalleyPickerDialogFragment.Parent,
             .addItem(
                 PowerMenuItem(
                     resources.getString(R.string.menu_edit_name),
-                    R.drawable.ic_edit_square,
                     false,
+                    R.drawable.ic_edit_square,
+                    null,
+                    null,
                     0
                 )
             )
             .addItem(
                 PowerMenuItem(
                     resources.getString(R.string.meta_replace_with),
-                    R.drawable.ic_replace,
                     false,
+                    R.drawable.ic_replace,
+                    null,
+                    null,
                     1
                 )
             )
             .addItem(
                 PowerMenuItem(
                     resources.getString(R.string.remove_generic),
-                    R.drawable.ic_action_delete,
                     false,
+                    R.drawable.ic_action_delete,
+                    null,
+                    null,
                     3
                 )
             )
@@ -453,8 +432,10 @@ class MetadataEditActivity : BaseActivity(), GalleyPickerDialogFragment.Parent,
                 1,
                 PowerMenuItem(
                     resources.getString(R.string.meta_tag_all_selected),
-                    R.drawable.ic_action_select_all,
                     false,
+                    R.drawable.ic_action_select_all,
+                    null,
+                    null,
                     2
                 )
             )
@@ -470,12 +451,14 @@ class MetadataEditActivity : BaseActivity(), GalleyPickerDialogFragment.Parent,
                             item.attribute.id
                         )
                     }
+
                     1 -> { // Replace with...
                         MetaEditBottomSheetFragment.invoke(
                             this,
                             supportFragmentManager, false, item.attribute.id
                         )
                     }
+
                     2 -> { // Tag all selected books
                         val builder = MaterialAlertDialogBuilder(this)
                         val title = resources.getString(
@@ -493,6 +476,7 @@ class MetadataEditActivity : BaseActivity(), GalleyPickerDialogFragment.Parent,
                             .create().show()
 
                     }
+
                     else -> { // Remove
                         viewModel.removeContentAttribute(item.attribute)
                     }
@@ -520,7 +504,7 @@ class MetadataEditActivity : BaseActivity(), GalleyPickerDialogFragment.Parent,
     }
 
     private fun cancelEdit() {
-        onBackPressed()
+        finish()
     }
 
     /**
@@ -561,9 +545,5 @@ class MetadataEditActivity : BaseActivity(), GalleyPickerDialogFragment.Parent,
         val centerInside: Transformation<Bitmap> = CenterInside()
         val glideRequestOptions = RequestOptions()
             .optionalTransform(centerInside)
-            .optionalTransform(
-                WebpDrawable::class.java,
-                WebpDrawableTransformation(centerInside)
-            )
     }
 }

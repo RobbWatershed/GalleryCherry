@@ -16,7 +16,6 @@ import java.util.Set;
 
 import javax.annotation.Nullable;
 
-import io.reactivex.Single;
 import me.devsaki.hentoid.database.domains.Attribute;
 import me.devsaki.hentoid.database.domains.Chapter;
 import me.devsaki.hentoid.database.domains.Content;
@@ -85,15 +84,15 @@ public interface CollectionDAO {
 
     // MASS OPERATIONS
 
-    // Internal library (i.e. managed in the Hentoid folder)
+    // Primary library ("internal books")
 
-    long countAllInternalBooks(boolean favsOnly);
+    long countAllInternalBooks(@NonNull String rootPath, boolean favsOnly);
 
-    void streamAllInternalBooks(boolean favsOnly, Consumer<Content> consumer);
+    void streamAllInternalBooks(@NonNull String rootPath, boolean favsOnly, Consumer<Content> consumer);
 
-    void flagAllInternalBooks(boolean includePlaceholders);
+    void flagAllInternalBooks(@NonNull String rootPath, boolean includePlaceholders);
 
-    void deleteAllInternalBooks(boolean resetRemainingImagesStatus);
+    void deleteAllInternalBooks(@NonNull String rootPath, boolean resetRemainingImagesStatus);
 
     // Queued books
 
@@ -103,19 +102,19 @@ public interface CollectionDAO {
 
     LiveData<Integer> countAllQueueBooksLive();
 
-    List<Content> selectAllQueueBooks();
-
     void deleteAllQueuedBooks();
+
 
     // Flagging
 
-    void deleteAllFlaggedBooks(boolean resetRemainingImagesStatus);
+    void deleteAllFlaggedBooks(boolean resetRemainingImagesStatus, @Nullable String pathRoot);
+
 
     // External library
 
-    long countAllExternalBooks();
-
     void deleteAllExternalBooks();
+
+    void flagAllExternalBooks();
 
 
     // GROUPS
@@ -124,9 +123,11 @@ public interface CollectionDAO {
 
     LiveData<List<Group>> selectGroupsLive(int grouping, @Nullable String query, int orderField, boolean orderDesc, int artistGroupVisibility, boolean groupFavouritesOnly, int filterRating);
 
+    List<Group> selectGroups(int grouping);
+
     List<Group> selectGroups(int grouping, int subType);
 
-    List<Group> selectGroups(int grouping);
+    List<Group> selectEditedGroups(int grouping);
 
     @Nullable
     Group selectGroup(long groupId);
@@ -155,23 +156,21 @@ public interface CollectionDAO {
 
     // High-level queries (internal and external locations)
 
-    List<Long> selectStoredContentIds(boolean nonFavouritesOnly, boolean includeQueued, int orderField, boolean orderDesc);
-
-    long countStoredContent(boolean nonFavouriteOnly, boolean includeQueued);
+    Set<Long> selectStoredFavContentIds(boolean bookFavs, boolean groupFavs);
 
     List<Content> selectContentWithUnhashedCovers();
 
     long countContentWithUnhashedCovers();
 
 
-    void streamStoredContent(boolean nonFavouritesOnly, boolean includeQueued, int orderField, boolean orderDesc, Consumer<Content> consumer);
+    void streamStoredContent(boolean includeQueued, int orderField, boolean orderDesc, Consumer<Content> consumer);
 
 
-    Single<List<Long>> selectRecentBookIds(ContentSearchManager.ContentSearchBundle searchBundle);
+    List<Long> selectRecentBookIds(ContentSearchManager.ContentSearchBundle searchBundle);
 
-    Single<List<Long>> searchBookIds(ContentSearchManager.ContentSearchBundle searchBundle, List<Attribute> metadata);
+    List<Long> searchBookIds(ContentSearchManager.ContentSearchBundle searchBundle, List<Attribute> metadata);
 
-    Single<List<Long>> searchBookIdsUniversal(ContentSearchManager.ContentSearchBundle searchBundle);
+    List<Long> searchBookIdsUniversal(ContentSearchManager.ContentSearchBundle searchBundle);
 
 
     LiveData<PagedList<Content>> selectRecentBooks(ContentSearchManager.ContentSearchBundle searchBundle);
@@ -223,7 +222,13 @@ public interface CollectionDAO {
 
     Map<StatusContent, ImmutablePair<Integer, Long>> countProcessedImagesById(long contentId);
 
+    LiveData<List<ImageFile>> selectAllFavouritePagesLive();
+
+    LiveData<Integer> countAllFavouritePagesLive();
+
     Map<Site, ImmutablePair<Integer, Long>> selectPrimaryMemoryUsagePerSource();
+
+    Map<Site, ImmutablePair<Integer, Long>> selectPrimaryMemoryUsagePerSource(@NonNull String rootPath);
 
     Map<Site, ImmutablePair<Integer, Long>> selectExternalMemoryUsagePerSource();
 
@@ -236,7 +241,7 @@ public interface CollectionDAO {
 
     LiveData<List<QueueRecord>> selectQueueLive(String query);
 
-    void addContentToQueue(@NonNull final Content content, StatusContent targetImageStatus, @ContentHelper.QueuePosition int position, long replacedContentId, boolean isQueueActive);
+    void addContentToQueue(@NonNull final Content content, StatusContent targetImageStatus, @ContentHelper.QueuePosition int position, long replacedContentId, @Nullable String replacementTitle, boolean isQueueActive);
 
     void insertQueue(long contentId, int order);
 
@@ -256,7 +261,7 @@ public interface CollectionDAO {
     @Nullable
     Attribute selectAttribute(long id);
 
-    Single<SearchHelper.AttributeQueryResult> selectAttributeMasterDataPaged(
+    SearchHelper.AttributeQueryResult selectAttributeMasterDataPaged(
             @NonNull List<AttributeType> types,
             String filter,
             long groupId,
@@ -268,7 +273,7 @@ public interface CollectionDAO {
             int booksPerPage,
             int orderStyle);
 
-    Single<SparseIntArray> countAttributesPerType(
+    SparseIntArray countAttributesPerType(
             long groupId,
             List<Attribute> filter,
             @ContentHelper.Location int location,
@@ -337,21 +342,17 @@ public interface CollectionDAO {
 
     void deleteRenamingRules(List<Long> ids);
 
-    void deleteAllRenamingRules();
-
 
     // RESOURCES
 
     void cleanup();
 
+    void cleanupOrphanAttributes();
+
     long getDbSizeBytes();
 
 
     // ONE-TIME USE QUERIES (MIGRATION & CLEANUP)
-
-    Single<List<Long>> selectOldStoredBookIds();
-
-    long countOldStoredContent();
 
     long[] selectContentIdsWithUpdatableJson();
 }

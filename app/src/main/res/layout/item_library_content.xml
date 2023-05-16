@@ -137,7 +137,6 @@
             tools:ignore="ContentDescription"
             tools:src="@drawable/ic_hentoid_shape" />
 
-
     </androidx.constraintlayout.widget.ConstraintLayout>
 
 </FrameLayout>

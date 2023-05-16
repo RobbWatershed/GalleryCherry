@@ -1,7 +1,6 @@
 package me.devsaki.hentoid.viewholders;
 
 import static androidx.core.view.ViewCompat.requireViewById;
-import static me.devsaki.hentoid.util.image.ImageHelper.tintBitmap;
 
 import android.content.Context;
 import android.content.res.Resources;
@@ -26,13 +25,11 @@ import androidx.constraintlayout.widget.Group;
 import androidx.core.content.ContextCompat;
 
 import com.bumptech.glide.Glide;
-import com.bumptech.glide.integration.webp.decoder.WebpDrawable;
-import com.bumptech.glide.integration.webp.decoder.WebpDrawableTransformation;
 import com.bumptech.glide.load.Transformation;
 import com.bumptech.glide.load.model.GlideUrl;
 import com.bumptech.glide.load.resource.bitmap.CenterInside;
 import com.bumptech.glide.request.RequestOptions;
-import com.google.android.material.switchmaterial.SwitchMaterial;
+import com.google.android.material.materialswitch.MaterialSwitch;
 import com.mikepenz.fastadapter.FastAdapter;
 import com.mikepenz.fastadapter.items.AbstractItem;
 
@@ -54,6 +51,7 @@ import me.devsaki.hentoid.util.ContentHelper;
 import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.util.ThemeHelper;
+import me.devsaki.hentoid.util.image.ImageHelper;
 
 public class DuplicateItem extends AbstractItem<DuplicateItem.ContentViewHolder> {
 
@@ -86,12 +84,11 @@ public class DuplicateItem extends AbstractItem<DuplicateItem.ContentViewHolder>
 
         Bitmap bmp = BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_cherry_outline);
         int tintColor = ThemeHelper.getColor(context, R.color.light_gray);
-        Drawable d = new BitmapDrawable(context.getResources(), tintBitmap(bmp, tintColor));
+        Drawable d = new BitmapDrawable(context.getResources(), ImageHelper.INSTANCE.tintBitmap(bmp, tintColor));
 
         final Transformation<Bitmap> centerInside = new CenterInside();
         glideRequestOptions = new RequestOptions()
                 .optionalTransform(centerInside)
-                .optionalTransform(WebpDrawable.class, new WebpDrawableTransformation(centerInside))
                 .error(d);
     }
 
@@ -177,7 +174,7 @@ public class DuplicateItem extends AbstractItem<DuplicateItem.ContentViewHolder>
         private TextView totalScore;
         private TextView keepButton;
         private TextView deleteButton;
-        private SwitchMaterial keepDeleteSwitch;
+        private MaterialSwitch keepDeleteSwitch;
 
 
         ContentViewHolder(View view, @ViewType int viewType) {
@@ -410,11 +407,11 @@ public class DuplicateItem extends AbstractItem<DuplicateItem.ContentViewHolder>
             }
         }
 
-        public View getViewDetailsButton() {
-            return viewDetails;
+        public View getSiteButton() {
+            return ivSite;
         }
 
-        public SwitchMaterial getKeepDeleteSwitch() {
+        public MaterialSwitch getKeepDeleteSwitch() {
             return keepDeleteSwitch;
         }
 

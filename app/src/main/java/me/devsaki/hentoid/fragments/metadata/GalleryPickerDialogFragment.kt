@@ -19,8 +19,6 @@ import me.devsaki.hentoid.viewholders.ImageFileItem.ViewType
 /**
  * Dialog to pick a picture in a content gallery
  */
-const val KEY_IMGS = "image_ids"
-
 class GalleyPickerDialogFragment : DialogFragment() {
 
     // UI
@@ -38,10 +36,10 @@ class GalleyPickerDialogFragment : DialogFragment() {
         super.onCreate(savedInstanceState)
 
         val imgs = requireArguments().getLongArray(KEY_IMGS)
-        require(!(null == imgs || imgs.isEmpty())) { "No images provided" }
+        requireNotNull(imgs) { "No images provided" }
+        require(imgs.isNotEmpty()) { "No images provided" }
 
-        imageIds = imgs!!
-
+        imageIds = imgs
         parent = activity as Parent
     }
 
@@ -96,6 +94,8 @@ class GalleyPickerDialogFragment : DialogFragment() {
     }
 
     companion object {
+        const val KEY_IMGS = "image_ids"
+
         fun invoke(fragmentManager: FragmentManager, images: List<ImageFile>) {
             val fragment = GalleyPickerDialogFragment()
 

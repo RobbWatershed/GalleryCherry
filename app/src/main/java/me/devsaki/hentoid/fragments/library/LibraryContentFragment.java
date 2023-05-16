@@ -2,10 +2,12 @@ package me.devsaki.hentoid.fragments.library;
 
 import static androidx.core.view.ViewCompat.requireViewById;
 import static com.annimon.stream.Collectors.toCollection;
+import static com.google.android.material.snackbar.BaseTransientBottomBar.LENGTH_LONG;
 import static me.devsaki.hentoid.events.CommunicationEvent.EV_ADVANCED_SEARCH;
 import static me.devsaki.hentoid.events.CommunicationEvent.EV_DISABLE;
 import static me.devsaki.hentoid.events.CommunicationEvent.EV_ENABLE;
 import static me.devsaki.hentoid.events.CommunicationEvent.EV_SEARCH;
+import static me.devsaki.hentoid.events.CommunicationEvent.EV_UPDATE_EDIT_MODE;
 import static me.devsaki.hentoid.events.CommunicationEvent.EV_UPDATE_TOOLBAR;
 import static me.devsaki.hentoid.events.CommunicationEvent.RC_CONTENTS;
 import static me.devsaki.hentoid.util.Preferences.Constant.QUEUE_NEW_DOWNLOADS_POSITION_ASK;
@@ -77,13 +79,16 @@ import org.greenrobot.eventbus.ThreadMode;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.ref.WeakReference;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
 
 import io.reactivex.disposables.CompositeDisposable;
+import kotlin.Unit;
 import me.devsaki.hentoid.BuildConfig;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.activities.LibraryActivity;
@@ -121,8 +126,10 @@ import me.devsaki.hentoid.widget.AddQueueMenu;
 import me.devsaki.hentoid.widget.AutofitGridLayoutManager;
 import me.devsaki.hentoid.widget.FastAdapterPreClickSelectHelper;
 import me.devsaki.hentoid.widget.LibraryPager;
+import me.devsaki.hentoid.widget.RedownloadMenu;
 import me.devsaki.hentoid.widget.ScrollPositionListener;
 import me.zhanghai.android.fastscroll.FastScrollerBuilder;
+import me.zhanghai.android.fastscroll.PopupTextProvider;
 import timber.log.Timber;
 
 @SuppressLint("NonConstantResourceId")
@@ -131,6 +138,7 @@ public class LibraryContentFragment extends Fragment implements
         MergeDialogFragment.Parent,
         SplitDialogFragment.Parent,
         RatingDialogFragment.Parent,
+        PopupTextProvider,
         ItemTouchCallback,
         SimpleSwipeDrawerCallback.ItemSwipeCallback {
 
@@ -161,7 +169,10 @@ public class LibraryContentFragment extends Fragment implements
     // "Go to top" FAB
     private FloatingActionButton topFab;
     // Scroll listener for the top FAB
-    private final ScrollPositionListener scrollListener = new ScrollPositionListener(this::onScrollPositionChange);
+    private final ScrollPositionListener scrollListener = new ScrollPositionListener(i -> {
+        onScrollPositionChange(i);
+        return Unit.INSTANCE;
+    });
 
     // === FASTADAPTER COMPONENTS AND HELPERS
     private ItemAdapter<ContentItem> itemAdapter;
@@ -192,6 +203,7 @@ public class LibraryContentFragment extends Fragment implements
 
     // Used to start processing when the recyclerView has finished updating
     private Debouncer<Integer> listRefreshDebouncer;
+    // Used to check back the "exclude" checkbox when re-entering advanced search
     private boolean excludeClicked = false;
 
     // Launches the search activity according to the returned result
@@ -249,7 +261,7 @@ public class LibraryContentFragment extends Fragment implements
 
     }).build();
 
-    // The one for "classic" List (paged mode)
+    // The one for "legacy" List (paged mode)
     public static final DiffCallback<ContentItem> CONTENT_ITEM_DIFF_CALLBACK = new DiffCallback<ContentItem>() {
         @Override
         public boolean areItemsTheSame(ContentItem oldItem, ContentItem newItem) {
@@ -258,7 +270,11 @@ public class LibraryContentFragment extends Fragment implements
 
         @Override
         public boolean areContentsTheSame(ContentItem oldContentItem, ContentItem newContentItem) {
-            return Objects.equals(oldContentItem.getContent(), newContentItem.getContent());
+            boolean result = Objects.equals(oldContentItem.getContent(), newContentItem.getContent());
+            if (oldContentItem.getQueueRecord() != null && newContentItem.getQueueRecord() != null) {
+                result &= oldContentItem.getQueueRecord().isFrozen() == newContentItem.getQueueRecord().isFrozen();
+            }
+            return result;
         }
 
         @Override
@@ -293,6 +309,11 @@ public class LibraryContentFragment extends Fragment implements
             }
             if (oldItem.getDownloadMode() != newItem.getDownloadMode()) {
                 diffBundleBuilder.setDownloadMode(newItem.getDownloadMode());
+            }
+            if (oldContentItem.getQueueRecord() != null
+                    && newContentItem.getQueueRecord() != null
+                    && oldContentItem.getQueueRecord().isFrozen() != newContentItem.getQueueRecord().isFrozen()) {
+                diffBundleBuilder.setFrozen(newContentItem.getQueueRecord().isFrozen());
             }
 
             if (diffBundleBuilder.isEmpty()) return null;
@@ -373,7 +394,17 @@ public class LibraryContentFragment extends Fragment implements
             llm = new AutofitGridLayoutManager(requireContext(), (int) getResources().getDimension(R.dimen.card_grid_width));
         recyclerView.setLayoutManager(llm);
         recyclerView.addOnScrollListener(scrollListener);
-        new FastScrollerBuilder(recyclerView).build();
+        new FastScrollerBuilder(recyclerView)
+                .setPopupTextProvider(this)
+                .build();
+
+        // Hide FAB when scrolling up
+        scrollListener.setDeltaYListener(activity.get(), i -> {
+            if (Preferences.isTopFabEnabled() && i > 0)
+                topFab.setVisibility(View.VISIBLE);
+            else topFab.setVisibility(View.GONE);
+            return Unit.INSTANCE;
+        });
 
         // Top FAB
         topFab = requireViewById(rootView, R.id.top_fab);
@@ -419,8 +450,6 @@ public class LibraryContentFragment extends Fragment implements
     }
 
     private void enterEditMode() {
-        activity.get().setEditMode(true);
-
         if (group.hasCustomBookOrder) { // Warn if a custom order already exists
             new MaterialAlertDialogBuilder(requireContext(), ThemeHelper.getIdForCurrentTheme(requireContext(), R.style.Theme_Light_Dialog))
                     .setIcon(R.drawable.ic_warning)
@@ -436,18 +465,14 @@ public class LibraryContentFragment extends Fragment implements
                     .create()
                     .show();
         }
-
-        setPagingMethod(Preferences.getEndlessScroll(), activity.get().isEditMode());
+        activity.get().setEditMode(true);
     }
 
     private void cancelEdit() {
         activity.get().setEditMode(false);
-        setPagingMethod(Preferences.getEndlessScroll(), false);
     }
 
     private void confirmEdit() {
-        activity.get().setEditMode(false);
-
         // == Save new item position
         // Set ordering field to custom
         Preferences.setContentSortField(Preferences.Constant.ORDER_FIELD_CUSTOM);
@@ -456,7 +481,7 @@ public class LibraryContentFragment extends Fragment implements
         viewModel.saveContentPositions(Stream.of(itemAdapter.getAdapterItems()).map(ContentItem::getContent).withoutNulls().toList(), this::refreshIfNeeded);
         group.hasCustomBookOrder = true;
 
-        setPagingMethod(Preferences.getEndlessScroll(), activity.get().isEditMode());
+        activity.get().setEditMode(false);
     }
 
     private boolean onToolbarItemClicked(@NonNull MenuItem menuItem) {
@@ -538,6 +563,15 @@ public class LibraryContentFragment extends Fragment implements
                 }
                 keepToolbar = true;
                 break;
+            case R.id.action_transform:
+                List<Content> contents = Stream.of(selectExtension.getSelectedItems()).map(ContentItem::getContent).toList();
+                if (contents.size() > 1000) {
+                    Snackbar.make(recyclerView, R.string.transform_limit, LENGTH_LONG).show();
+                    return false;
+                }
+                LibraryTransformDialogFragment.Companion.invoke(this, contents);
+                keepToolbar = true;
+                break;
             case R.id.action_edit:
                 List<Long> selectedIds = Stream.of(selectExtension.getSelectedItems()).map(ContentItem::getContent).withoutNulls().map(Content::getId).toList();
                 if (!selectedIds.isEmpty()) {
@@ -579,11 +613,10 @@ public class LibraryContentFragment extends Fragment implements
      */
     private void shareSelectedItems() {
         Set<ContentItem> selectedItems = selectExtension.getSelectedItems();
-        Context context = getActivity();
-        if (1 == selectedItems.size() && context != null) {
-            Content c = Stream.of(selectedItems).findFirst().get().getContent();
+        if (!selectedItems.isEmpty()) {
+            List<Content> c = Stream.of(selectedItems).map(ContentItem::getContent).withoutNulls().toList();
             leaveSelectionMode();
-            if (c != null) ContentHelper.shareContent(context, c);
+            ContentHelper.shareContent(requireContext(), c);
         }
     }
 
@@ -667,7 +700,7 @@ public class LibraryContentFragment extends Fragment implements
                     return;
                 }
 
-                DocumentFile folder = FileHelper.getFolderFromTreeUriString(requireContext(), c.getStorageUri());
+                DocumentFile folder = FileHelper.getDocumentFromTreeUriString(requireContext(), c.getStorageUri());
                 if (folder != null) {
                     selectExtension.deselect(selectExtension.getSelections());
                     activity.get().getSelectionToolbar().setVisibility(View.GONE);
@@ -695,25 +728,27 @@ public class LibraryContentFragment extends Fragment implements
             }
         }
 
-        String message = getResources().getQuantityString(R.plurals.redownload_confirm, contents.size());
-        if (externalContent > 0)
-            message = getResources().getQuantityString(R.plurals.redownload_external_content, externalContent);
+        if (contents.size() > 1000) {
+            Snackbar.make(recyclerView, R.string.redownload_limit, LENGTH_LONG).show();
+            return;
+        }
 
-        new MaterialAlertDialogBuilder(requireContext(), ThemeHelper.getIdForCurrentTheme(requireContext(), R.style.Theme_Light_Dialog))
-                .setIcon(R.drawable.ic_warning)
-                .setCancelable(false)
-                .setTitle(R.string.app_name)
-                .setMessage(message)
-                .setPositiveButton(R.string.yes,
-                        (dialog1, which) -> {
-                            dialog1.dismiss();
-                            redownloadFromScratch(contents);
-                            leaveSelectionMode();
-                        })
-                .setNegativeButton(R.string.no,
-                        (dialog12, which) -> dialog12.dismiss())
-                .create()
-                .show();
+        RedownloadMenu.Companion.show(requireContext(), recyclerView, this, (position, item) -> {
+            if (0 == position) redownloadFromScratch(contents);
+            else viewModel.redownloadContent(contents, true, false, 0,
+                    nbSuccess -> {
+                        String message = getResources().getQuantityString(R.plurals.add_to_queue, contents.size(), nbSuccess, contents.size());
+                        Snackbar snackbar = Snackbar.make(recyclerView, message, BaseTransientBottomBar.LENGTH_LONG);
+                        snackbar.setAction(R.string.view_queue, v -> viewQueue());
+                        snackbar.show();
+                    },
+                    t -> {
+                        Timber.w(t);
+                        Snackbar.make(recyclerView, R.string.redownloaded_error, BaseTransientBottomBar.LENGTH_LONG).show();
+                    });
+
+            leaveSelectionMode();
+        });
     }
 
     /**
@@ -776,6 +811,11 @@ public class LibraryContentFragment extends Fragment implements
             } else {
                 contents.add(c);
             }
+        }
+
+        if (contents.size() > 1000) {
+            Snackbar.make(recyclerView, R.string.stream_limit, LENGTH_LONG).show();
+            return;
         }
 
         String message = getResources().getQuantityString(R.plurals.stream_confirm, contents.size());
@@ -891,6 +931,9 @@ public class LibraryContentFragment extends Fragment implements
                 break;
             case EV_DISABLE:
                 onDisable();
+                break;
+            case EV_UPDATE_EDIT_MODE:
+                setPagingMethod(Preferences.getEndlessScroll(), activity.get().isEditMode());
                 break;
             default:
                 // No default behaviour
@@ -1023,7 +1066,7 @@ public class LibraryContentFragment extends Fragment implements
     @OptIn(markerClass = com.mikepenz.fastadapter.paged.ExperimentalPagedSupport.class)
     private void setPagingMethod(boolean isEndless, boolean isEditMode) {
         // Editing will always be done in Endless mode
-        viewModel.setContentPagingMethod(isEndless || isEditMode);
+        viewModel.setContentPagingMethod(isEndless && !isEditMode);
 
         // RecyclerView horizontal centering
         ViewGroup.LayoutParams layoutParams = recyclerView.getLayoutParams();
@@ -1057,6 +1100,9 @@ public class LibraryContentFragment extends Fragment implements
         }
 
         if (!fastAdapter.hasObservers()) fastAdapter.setHasStableIds(true);
+
+
+        // == CLICK LISTENERS
 
         // Item click listener
         fastAdapter.setOnClickListener((v, a, i, p) -> onItemClick(p, i));
@@ -1305,8 +1351,11 @@ public class LibraryContentFragment extends Fragment implements
             emptyText.setText(backgroundText);
         } else emptyText.setVisibility(View.GONE);
 
-        // Update visibility of advanced search bar
-        activity.get().updateSearchBarOnResults(!result.isEmpty());
+        // Update visibility and content of advanced search bar
+        // - After getting results from a search
+        // - When switching between Group and Content view
+        // Shouldn't trigger for a new download
+        if (newSearch) activity.get().updateSearchBarOnResults(!result.isEmpty());
 
         String query = getQuery();
         // User searches a book ID
@@ -1376,7 +1425,7 @@ public class LibraryContentFragment extends Fragment implements
      */
     private boolean onItemClick(int position, @NonNull ContentItem item) {
         if (selectExtension.getSelectOnLongClick()) {
-            if (item.getContent() != null && !item.getContent().isBeingDeleted()) {
+            if (item.getContent() != null && !item.getContent().isBeingProcessed()) {
                 readBook(item.getContent(), false);
             }
             return true;
@@ -1387,7 +1436,7 @@ public class LibraryContentFragment extends Fragment implements
     // TODO doc
     public void readBook(@NonNull Content content, boolean forceShowGallery) {
         topItemPosition = getTopItemPosition();
-        ContentHelper.openReader(requireContext(), content, -1, contentSearchBundle, forceShowGallery);
+        ContentHelper.openReader(requireContext(), content, -1, contentSearchBundle, forceShowGallery, false);
     }
 
     /**
@@ -1484,11 +1533,12 @@ public class LibraryContentFragment extends Fragment implements
             selectExtension.setSelectOnLongClick(true);
         } else {
             List<Content> contentList = Stream.of(selectedItems).map(ContentItem::getContent).withoutNulls().toList();
+            long selectedProcessedCount = Stream.of(contentList).filter(Content::isBeingProcessed).count();
             long selectedLocalCount = Stream.of(contentList).filterNot(c -> c.getStatus().equals(StatusContent.EXTERNAL)).filterNot(c -> c.getDownloadMode() == Content.DownloadMode.STREAM).count();
             long selectedStreamedCount = Stream.of(contentList).map(Content::getDownloadMode).filter(m -> m == Content.DownloadMode.STREAM).count();
             long selectedNonArchiveExternalCount = Stream.of(contentList).filter(c -> c.getStatus().equals(StatusContent.EXTERNAL) && !c.isArchive()).count();
             long selectedArchiveExternalCount = Stream.of(contentList).filter(c -> c.getStatus().equals(StatusContent.EXTERNAL) && c.isArchive()).count();
-            activity.get().updateSelectionToolbar(selectedCount, selectedLocalCount, selectedStreamedCount, selectedNonArchiveExternalCount, selectedArchiveExternalCount);
+            activity.get().updateSelectionToolbar(selectedCount, selectedProcessedCount, selectedLocalCount, selectedStreamedCount, selectedNonArchiveExternalCount, selectedArchiveExternalCount);
             activity.get().getSelectionToolbar().setVisibility(View.VISIBLE);
         }
     }
@@ -1512,7 +1562,7 @@ public class LibraryContentFragment extends Fragment implements
     public void mergeContents(@NonNull List<Content> contentList, @NonNull String newTitle, boolean deleteAfterMerging) {
         leaveSelectionMode();
         viewModel.mergeContents(contentList, newTitle, deleteAfterMerging, this::onMergeSuccess);
-        ProgressDialogFragment.invoke(getParentFragmentManager(), getResources().getString(R.string.merge_progress), R.plurals.page);
+        ProgressDialogFragment.Companion.invoke(getParentFragmentManager(), getResources().getString(R.string.merge_progress), R.plurals.page);
     }
 
     private void onMergeSuccess() {
@@ -1523,7 +1573,7 @@ public class LibraryContentFragment extends Fragment implements
     public void splitContent(@NonNull Content content, @NonNull List<Chapter> chapters) {
         leaveSelectionMode();
         viewModel.splitContent(content, chapters, this::onSplitSuccess);
-        ProgressDialogFragment.invoke(getParentFragmentManager(), getResources().getString(R.string.split_progress), R.plurals.page);
+        ProgressDialogFragment.Companion.invoke(getParentFragmentManager(), getResources().getString(R.string.split_progress), R.plurals.page);
     }
 
     private void onSplitSuccess() {
@@ -1531,8 +1581,8 @@ public class LibraryContentFragment extends Fragment implements
         refreshIfNeeded();
     }
 
-    @Subscribe(threadMode = ThreadMode.MAIN)
-    public void onProcessEvent(ProcessEvent event) {
+    @Subscribe(sticky = true, threadMode = ThreadMode.MAIN)
+    public void onProcessStickyEvent(ProcessEvent event) {
         // Filter on delete complete event
         if (R.id.delete_service_delete != event.processId) return;
         if (ProcessEvent.EventType.COMPLETE != event.eventType) return;
@@ -1657,6 +1707,45 @@ public class LibraryContentFragment extends Fragment implements
                 topFab.setVisibility(View.VISIBLE);
             else
                 topFab.setVisibility(View.GONE);
+        }
+    }
+
+    @NonNull
+    @Override
+    public CharSequence getPopupText(int position) {
+        IAdapter<ContentItem> adapter = getItemAdapter();
+        if (null == adapter) return "";
+        Content c = adapter.getAdapterItem(position).getContent();
+        if (null == c) return "";
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy/MM/dd", Locale.ENGLISH);
+
+        switch (Preferences.getContentSortField()) {
+            case (Preferences.Constant.ORDER_FIELD_TITLE):
+                return (c.getTitle().isEmpty()) ? "" : (c.getTitle().charAt(0) + "").toUpperCase();
+            case (Preferences.Constant.ORDER_FIELD_ARTIST):
+                return (c.getAuthor().isEmpty()) ? "" : (c.getAuthor().charAt(0) + "").toUpperCase();
+            case (Preferences.Constant.ORDER_FIELD_NB_PAGES):
+                return Long.toString(c.getQtyPages());
+            case (Preferences.Constant.ORDER_FIELD_READS):
+                return Long.toString(c.getReads());
+            case (Preferences.Constant.ORDER_FIELD_SIZE):
+                return FileHelper.formatHumanReadableSize(c.getSize(), getResources());
+            case (Preferences.Constant.ORDER_FIELD_READ_PROGRESS):
+                return String.format(Locale.ENGLISH, "%d %%", Math.round(c.getReadProgress() * 100));
+            case (Preferences.Constant.ORDER_FIELD_DOWNLOAD_PROCESSING_DATE):
+                return Helper.formatEpochToDate(c.getDownloadDate(), formatter);
+            case (Preferences.Constant.ORDER_FIELD_UPLOAD_DATE):
+                return Helper.formatEpochToDate(c.getUploadDate(), formatter);
+            case (Preferences.Constant.ORDER_FIELD_READ_DATE):
+                return Helper.formatEpochToDate(c.getLastReadDate(), formatter);
+            case (Preferences.Constant.ORDER_FIELD_DOWNLOAD_COMPLETION_DATE):
+                return Helper.formatEpochToDate(c.getDownloadCompletionDate(), formatter);
+            case (Preferences.Constant.ORDER_FIELD_NONE):
+            case (Preferences.Constant.ORDER_FIELD_CUSTOM):
+            case (Preferences.Constant.ORDER_FIELD_RANDOM):
+            default:
+                return "";
         }
     }
 }

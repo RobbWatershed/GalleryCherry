@@ -1,7 +1,5 @@
 package me.devsaki.hentoid.fragments.web;
 
-import static me.devsaki.hentoid.util.image.ImageHelper.tintBitmap;
-
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -21,8 +19,6 @@ import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.FragmentActivity;
 
 import com.bumptech.glide.Glide;
-import com.bumptech.glide.integration.webp.decoder.WebpDrawable;
-import com.bumptech.glide.integration.webp.decoder.WebpDrawableTransformation;
 import com.bumptech.glide.load.Transformation;
 import com.bumptech.glide.load.resource.bitmap.CenterInside;
 import com.bumptech.glide.request.RequestOptions;
@@ -44,6 +40,7 @@ import me.devsaki.hentoid.enums.StatusContent;
 import me.devsaki.hentoid.util.ContentHelper;
 import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.util.ThemeHelper;
+import me.devsaki.hentoid.util.image.ImageHelper;
 
 public final class DuplicateDialogFragment extends DialogFragment {
 
@@ -71,12 +68,11 @@ public final class DuplicateDialogFragment extends DialogFragment {
 
         Bitmap bmp = BitmapFactory.decodeResource(context.getResources(), R.drawable.ic_cherry_outline);
         int tintColor = ThemeHelper.getColor(context, R.color.light_gray);
-        Drawable d = new BitmapDrawable(context.getResources(), tintBitmap(bmp, tintColor));
+        Drawable d = new BitmapDrawable(context.getResources(), ImageHelper.INSTANCE.tintBitmap(bmp, tintColor));
 
         final Transformation<Bitmap> centerInside = new CenterInside();
         glideRequestOptions = new RequestOptions()
                 .optionalTransform(centerInside)
-                .optionalTransform(WebpDrawable.class, new WebpDrawableTransformation(centerInside))
                 .error(d);
     }
 
@@ -146,6 +142,7 @@ public final class DuplicateDialogFragment extends DialogFragment {
         binding.chNeverExtraOnDupes.setVisibility(isDownloadPlus ? View.VISIBLE : View.GONE);
 
         binding.tvTitle.setText(libraryContent.getTitle());
+        binding.tvTitle.setSelected(true);
         ImageFile cover = libraryContent.getCover();
         String thumbLocation = cover.getUsableUri();
         if (thumbLocation.isEmpty()) {

@@ -55,13 +55,8 @@
     <string name="pref_external_library_delete_on">GalleryCherry can delete books and pages in the external library</string>
     <string name="pref_external_library_delete_off">GalleryCherry can\'t delete books nor pages in the external library</string>
     <string name="pref_external_library_detach_title">Detach external library</string>
-    <string name="pref_external_library_detach_summary">Don\'t include the external library into GalleryCherry anymore</string>
-
-    <string name="pref_cat_metadata">Metadata</string>
-    <string name="pref_export_library_title">Export metadata</string>
-    <string name="pref_export_library_summary">Export GalleryCherry books to a JSON file</string>
-    <string name="pref_import_library_title">Import metadata</string>
-    <string name="pref_import_library_summary">Restore exported GalleryCherry books from a JSON file</string>
+    <string name="pref_external_library_detach_summary">Don\'t include the external library into Hentoid anymore</string>
+    <string name="pref_cat_eh">E-hentai / ExHentai</string>
     <string name="pref_cat_advanced">Advanced</string>
     <string name="pref_refresh_library_title">Refresh library</string>
     <string name="pref_refresh_library_summary">Manually refresh library contents</string>
@@ -103,6 +98,11 @@
     <string name="pref_browser_mark_merged_title">Mark merged books</string>
     <string name="pref_browser_mark_merged_off">Merged books have no special display</string>
     <string name="pref_browser_mark_merged_on">Merged books are marked\nNB: does not work on all sites</string>
+    <string name="pref_browser_mark_blocked_title">Mark books with blocked tags</string>
+    <string name="pref_browser_mark_blocked_off">Books with blocked tags have no special display</string>
+    <string name="pref_browser_mark_blocked_on">Books with blocked tags are marked\nNB: does not work on all sites</string>
+    <string name="pref_browser_blocked_tags_title">Blocked tags</string>
+    <string name="pref_browser_blocked_tags_summary">Tip: separate tags with commas</string>
     <string name="pref_browser_visuals">Visuals</string>
     <string name="pref_browser_augmented_title">Augmented browser</string>
     <string name="pref_browser_augmented_off">Using vanilla behaviour</string>
@@ -118,6 +118,11 @@
     <string name="pref_browser_clear_cookies_ko">No cookie to clear</string>
     <string name="pref_browser_clear_cookies_missing_webview">WebView is unavailable, can\'t clear cookies now</string>
     <string name="pref_browser_clear_cookies_updating_webview">WebView is updating right now, can\'t clear cookies yet</string>
+    <string name="pref_browser_language_filter_title">Language filter button</string>
+    <string name="pref_browser_language_filter_off">Language filter button is disabled\nNB: Only works on Hitomi</string>
+    <string name="pref_browser_language_filter_on">Language filter button is enabled\nNB: Only works on Hitomi</string>
+    <string name="pref_browser_language_filter_setting_title">Language filter setting</string>
+    <string name="pref_browser_language_filter_setting_summary">Tip: Enter the language in English</string>
 
     <!-- Downloader -->
     <string name="pref_screen_downloader">Downloader</string>
@@ -143,9 +148,13 @@
     <string name="pref_dl_blocked_tags_title">Blocked tags</string>
     <string name="pref_dl_blocked_tags_summary">Block the download of books with specific tags\nTip: separate tags with commas</string>
     <string name="pref_dl_blocked_tags_behaviour_title">Blocking behaviour</string>
+    <string name="download_eh_hires_title">Download hi-res pictures</string>
+    <string name="pref_dl_eh_hires_on">Download hi-res pictures when available\nCAUTION:Enabling this option will consume your E-hentai/Exhentai image view limit much faster</string>
+    <string name="pref_dl_eh_hires_off">Download pictures that are displayed on the website</string>
     <string name="pref_dl_threads_quantity_title">Number of parallel downloads</string>
     <string name="pref_dl_threads_quantity_summary">Number of images downloaded simultaneously\nCurrently: <x:g example="5" id="number">%s</x:g></string>
     <string name="pref_dl_speed_cap_title">Download speed limit</string>
+    <string name="pref_dl_http_429_default_delay_title">HTTP 429 default delay (seconds)</string>
 
     <!-- Privacy -->
     <string name="pref_screen_privacy">Privacy</string>
@@ -209,6 +218,9 @@
     <string name="pref_viewer_resume_last_left_summary_off">Reopening a book always starts at page 1</string>
     <string name="pref_viewer_resume_last_left_summary_on">Reopening a book resumes on last read page, except if the end of the book has been reached</string>
     <string name="pref_viewer_open_gallery">Always open in gallery mode</string>
+    <string name="pref_viewer_chaptered_navigation_title">Chaptered navigation</string>
+    <string name="pref_viewer_chaptered_navigation_summary_off">Next / previous buttons go to next/previous book</string>
+    <string name="pref_viewer_chaptered_navigation_summary_on">Next / previous buttons go to next/previous chapter within the current book</string>
     <string name="pref_viewer_continuous_title">Continuous reading</string>
     <string name="pref_viewer_continuous_summary_off">Using next page on last page has no effect</string>
     <string name="pref_viewer_continuous_summary_on">Using next page on last page loads the next book</string>

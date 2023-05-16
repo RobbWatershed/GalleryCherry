@@ -12,8 +12,8 @@ import com.annimon.stream.Stream;
 
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.threeten.bp.Instant;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
@@ -70,12 +70,14 @@ import me.devsaki.hentoid.enums.AttributeType;
 import me.devsaki.hentoid.enums.Grouping;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
+import me.devsaki.hentoid.enums.StorageLocation;
 import me.devsaki.hentoid.util.ContentHelper;
 import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.util.RandomSeedSingleton;
 import me.devsaki.hentoid.util.file.ArchiveHelper;
 import me.devsaki.hentoid.widget.ContentSearchManager;
+import me.devsaki.hentoid.widget.ContentSearchManager.ContentSearchBundle;
 import timber.log.Timber;
 
 public class ObjectBoxDB {
@@ -163,12 +165,11 @@ public class ObjectBoxDB {
         return store.sizeOnDisk();
     }
 
-    long insertContent(Content content) {
+    ImmutablePair<Long, Set<Attribute>> insertContentAndAttributes(Content content) {
         ToMany<Attribute> attributes = content.getAttributes();
         Box<Attribute> attrBox = store.boxFor(Attribute.class);
-        Query<Attribute> attrByUniqueKey = attrBox.query().equal(Attribute_.type, 0).equal(Attribute_.name, "", QueryBuilder.StringOrder.CASE_INSENSITIVE).build();
-
-        return store.callInTxNoException(() -> {
+        Set<Attribute> newAttrs = new HashSet<>();
+        long result = store.callInTxNoException(() -> {
             // Master data management managed manually
             // Ensure all known attributes are replaced by their ID before being inserted
             // Watch https://github.com/objectbox/objectbox-java/issues/1023 for a lighter solution based on @Unique annotation
@@ -176,21 +177,25 @@ public class ObjectBoxDB {
             Attribute inputAttr;
             if (attributes != null) {
                 // This transaction may consume a lot of DB readers depending on the number of attributes involved
-                for (int i = 0; i < attributes.size(); i++) {
-                    inputAttr = attributes.get(i);
-                    dbAttr = attrByUniqueKey.setParameter(Attribute_.name, inputAttr.getName()).setParameter(Attribute_.type, inputAttr.getType().getCode()).findFirst();
-                    if (dbAttr != null) {
-                        attributes.set(i, dbAttr); // If existing -> set the existing attribute
-                        dbAttr.addLocationsFrom(inputAttr);
-                        attrBox.put(dbAttr);
-                    } else {
-                        inputAttr.setName(inputAttr.getName().toLowerCase().trim()); // If new -> normalize the attribute name
+                try (Query<Attribute> attrByUniqueKey = attrBox.query().equal(Attribute_.type, 0).equal(Attribute_.name, "", QueryBuilder.StringOrder.CASE_INSENSITIVE).build()) {
+                    for (int i = 0; i < attributes.size(); i++) {
+                        inputAttr = attributes.get(i);
+                        dbAttr = attrByUniqueKey.setParameter(Attribute_.name, inputAttr.getName()).setParameter(Attribute_.type, inputAttr.getType().getCode()).findFirst();
+                        if (dbAttr != null) { // Existing attribute -> set the existing attribute
+                            attributes.set(i, dbAttr);
+                            dbAttr.addLocationsFrom(inputAttr);
+                            attrBox.put(dbAttr);
+                        } else { // New attribute -> normalize name
+                            inputAttr.setName(inputAttr.getName().toLowerCase().trim());
+                            if (inputAttr.getType().equals(AttributeType.ARTIST) || inputAttr.getType().equals(AttributeType.CIRCLE))
+                                newAttrs.add(inputAttr);
+                        }
                     }
                 }
             }
-
             return store.boxFor(Content.class).put(content);
         });
+        return new ImmutablePair<>(result, newAttrs);
     }
 
     long insertContentCore(@NonNull Content content) {
@@ -212,7 +217,7 @@ public class ObjectBoxDB {
         store.runInTx(() -> {
             Content c = store.boxFor(Content.class).get(contentId);
             if (c != null) {
-                c.setIsBeingDeleted(flag);
+                c.setIsBeingProcessed(flag);
                 store.boxFor(Content.class).put(c);
             }
         });
@@ -223,17 +228,27 @@ public class ObjectBoxDB {
     }
 
     private List<Content> selectContentByStatusCodes(int[] statusCodes) {
-        return store.boxFor(Content.class).query().in(Content_.status, statusCodes).build().find();
+        return DBHelper.safeFind(store.boxFor(Content.class).query().in(Content_.status, statusCodes));
     }
 
-    Query<Content> selectAllInternalBooksQ(boolean favsOnly, boolean includePlaceholders) {
+    Query<Content> selectAllInternalBooksQ(@NonNull String rootPath, boolean favsOnly, boolean includePlaceholders) {
         // All statuses except SAVED, DOWNLOADING, PAUSED and ERROR that imply the book is in the download queue
         // and EXTERNAL because we only want to manage internal books here
         int[] storedContentStatus = {StatusContent.DOWNLOADED.getCode(), StatusContent.MIGRATED.getCode(), StatusContent.IGNORED.getCode(), StatusContent.UNHANDLED_ERROR.getCode(), StatusContent.CANCELED.getCode()};
         if (includePlaceholders)
             storedContentStatus = ArrayUtils.addAll(storedContentStatus, StatusContent.PLACEHOLDER.getCode());
-        QueryBuilder<Content> query = store.boxFor(Content.class).query().in(Content_.status, storedContentStatus);
+        QueryBuilder<Content> query = store.boxFor(Content.class).query().in(Content_.status, storedContentStatus).startsWith(Content_.storageUri, rootPath, QueryBuilder.StringOrder.CASE_INSENSITIVE);
         if (favsOnly) query.equal(Content_.favourite, true);
+        return query.build();
+    }
+
+    Query<Content> selectAllInternalBooksQ(@NonNull String rootPath, boolean includePlaceholders) {
+        // All statuses except SAVED, DOWNLOADING, PAUSED and ERROR that imply the book is in the download queue
+        // and EXTERNAL because we only want to manage internal books here
+        int[] storedContentStatus = {StatusContent.DOWNLOADED.getCode(), StatusContent.MIGRATED.getCode(), StatusContent.IGNORED.getCode(), StatusContent.UNHANDLED_ERROR.getCode(), StatusContent.CANCELED.getCode()};
+        if (includePlaceholders)
+            storedContentStatus = ArrayUtils.addAll(storedContentStatus, StatusContent.PLACEHOLDER.getCode());
+        QueryBuilder<Content> query = store.boxFor(Content.class).query().in(Content_.status, storedContentStatus).startsWith(Content_.storageUri, rootPath, QueryBuilder.StringOrder.CASE_INSENSITIVE);
         return query.build();
     }
 
@@ -247,15 +262,22 @@ public class ObjectBoxDB {
 
     Query<Content> selectAllQueueBooksQ() {
         // Strong check to make sure selected books are _actually_ part of the queue (i.e. attached to a QueueRecord)
+        // NB : Can't use QueryCondition here because there's no way to query the existence of a relation (see https://github.com/objectbox/objectbox-java/issues/1110)
         return store.boxFor(Content.class).query().in(Content_.status, ContentHelper.getQueueStatuses()).filter(c -> (StatusContent.ERROR == c.getStatus() || (c.getQueueRecords() != null && !c.getQueueRecords().isEmpty()))).build();
+    }
+
+    Query<Content> selectAllQueueBooksQ(@NonNull String rootPath) {
+        // Strong check to make sure selected books are _actually_ part of the queue (i.e. attached to a QueueRecord)
+        // NB : Can't use QueryCondition here because there's no way to query the existence of a relation (see https://github.com/objectbox/objectbox-java/issues/1110)
+        return store.boxFor(Content.class).query().in(Content_.status, ContentHelper.getQueueStatuses()).startsWith(Content_.storageUri, rootPath, QueryBuilder.StringOrder.CASE_INSENSITIVE).filter(c -> (StatusContent.ERROR == c.getStatus() || (c.getQueueRecords() != null && !c.getQueueRecords().isEmpty()))).build();
     }
 
     Query<Content> selectAllFlaggedBooksQ() {
         return store.boxFor(Content.class).query().equal(Content_.isFlaggedForDeletion, true).build();
     }
 
-    Query<Content> selectAllMarkedBooksQ() {
-        return store.boxFor(Content.class).query().equal(Content_.isBeingDeleted, true).build();
+    Query<Content> selectAllProcessedBooksQ() {
+        return store.boxFor(Content.class).query().equal(Content_.isBeingProcessed, true).build();
     }
 
     void flagContentsForDeletion(List<Content> contentList, boolean flag) {
@@ -263,8 +285,8 @@ public class ObjectBoxDB {
         store.boxFor(Content.class).put(contentList);
     }
 
-    void markContentsAsBeingDeleted(List<Content> contentList, boolean flag) {
-        for (Content c : contentList) c.setIsBeingDeleted(flag);
+    void markContentsAsBeingProcessed(List<Content> contentList, boolean flag) {
+        for (Content c : contentList) c.setIsBeingProcessed(flag);
         store.boxFor(Content.class).put(contentList);
     }
 
@@ -311,7 +333,7 @@ public class ObjectBoxDB {
                     c.getAttributes().clear();
 
                     // Delete corresponding groupItem
-                    List<GroupItem> groupItems = groupItemBox.query().equal(GroupItem_.contentId, id).build().find();
+                    List<GroupItem> groupItems = DBHelper.safeFind(groupItemBox.query().equal(GroupItem_.contentId, id));
                     for (GroupItem groupItem : groupItems) {
                         // If we're not in the Custom grouping and it's the only item of its group, delete the group
                         Group g = groupItem.group.getTarget();
@@ -335,7 +357,7 @@ public class ObjectBoxDB {
         Box<AttributeLocation> locationBox = store.boxFor(AttributeLocation.class);
 
         // Stream the collection to get the attributes to clean
-        List<Attribute> attrsToClean = attributeBox.query().filter(attr -> attr.contents.isEmpty()).build().find();
+        List<Attribute> attrsToClean = DBHelper.safeFind(attributeBox.query().filter(attr -> attr.contents.isEmpty()));
 
         // Clean the attributes
         for (Attribute attr : attrsToClean) {
@@ -352,7 +374,7 @@ public class ObjectBoxDB {
 
     List<Content> selectQueueContents() {
         List<Content> result = new ArrayList<>();
-        List<QueueRecord> queueRecords = selectQueueRecordsQ(null).find();
+        List<QueueRecord> queueRecords = DBHelper.safeFind(selectQueueRecordsQ(null));
         for (QueueRecord q : queueRecords) result.add(q.getContent().getTarget());
         return result;
     }
@@ -364,18 +386,20 @@ public class ObjectBoxDB {
             ContentSearchManager.ContentSearchBundle bundle = new ContentSearchManager.ContentSearchBundle();
             bundle.setQuery(query);
             bundle.setSortField(Preferences.Constant.ORDER_FIELD_NONE);
-            long[] contentIds = selectContentUniversalId(bundle, ContentHelper.getQueueTabStatuses());
+            long[] contentIds = selectContentUniversalId(bundle, new long[0], ContentHelper.getQueueTabStatuses());
             qb.in(QueueRecord_.contentId, contentIds);
         }
         return qb.order(QueueRecord_.rank).build();
     }
 
     boolean isContentInQueue(@NonNull final Content c) {
-        return store.boxFor(QueueRecord.class).query().equal(QueueRecord_.contentId, c.getId()).build().count() > 0;
+        return DBHelper.safeCount(store.boxFor(QueueRecord.class).query().equal(QueueRecord_.contentId, c.getId())) > 0;
     }
 
     long selectMaxQueueOrder() {
-        return store.boxFor(QueueRecord.class).query().build().property(QueueRecord_.rank).max();
+        try (Query<QueueRecord> qrc = store.boxFor(QueueRecord.class).query().build()) {
+            return qrc.property(QueueRecord_.rank).max();
+        }
     }
 
     void insertQueue(long contentId, int order) {
@@ -392,7 +416,7 @@ public class ObjectBoxDB {
     }
 
     void deleteQueueRecords(int queueIndex) {
-        store.boxFor(QueueRecord.class).remove(selectQueueRecordsQ(null).find().get(queueIndex).id);
+        store.boxFor(QueueRecord.class).remove(DBHelper.safeFind(selectQueueRecordsQ(null)).get(queueIndex).id);
     }
 
     void deleteQueueRecords() {
@@ -401,7 +425,7 @@ public class ObjectBoxDB {
 
     private void deleteQueueRecords(long contentId) {
         Box<QueueRecord> queueRecordBox = store.boxFor(QueueRecord.class);
-        QueueRecord record = queueRecordBox.query().equal(QueueRecord_.contentId, contentId).build().findFirst();
+        QueueRecord record = DBHelper.safeFindFirst(queueRecordBox.query().equal(QueueRecord_.contentId, contentId));
 
         if (record != null) queueRecordBox.remove(record);
     }
@@ -409,7 +433,7 @@ public class ObjectBoxDB {
     Query<Content> selectVisibleContentQ() {
         ContentSearchManager.ContentSearchBundle bundle = new ContentSearchManager.ContentSearchBundle();
         bundle.setSortField(Preferences.Constant.ORDER_FIELD_NONE);
-        return selectContentSearchContentQ(bundle, Collections.emptyList());
+        return selectContentSearchContentQ(bundle, new long[0], Collections.emptyList());
     }
 
     @Nullable
@@ -429,7 +453,10 @@ public class ObjectBoxDB {
     }
 
     private long[] selectContentIdsByChapterUrl(@NonNull String url) {
-        return store.boxFor(Chapter.class).query(Chapter_.url.notEqual("", QueryBuilder.StringOrder.CASE_INSENSITIVE).and(Chapter_.url.endsWith(url, QueryBuilder.StringOrder.CASE_INSENSITIVE))).build().property(Chapter_.contentId).findLongs();
+        if (url.isEmpty()) return new long[0];
+        try (Query<Chapter> cq = store.boxFor(Chapter.class).query(Chapter_.url.notEqual("", QueryBuilder.StringOrder.CASE_INSENSITIVE).and(Chapter_.url.endsWith(url, QueryBuilder.StringOrder.CASE_INSENSITIVE))).build()) {
+            return cq.property(Chapter_.contentId).findLongs();
+        }
     }
 
     @Nullable
@@ -439,19 +466,21 @@ public class ObjectBoxDB {
         QueryCondition<Content> urlCondition = contentUrlCondition.or(chapterUrlCondition);
         if (!coverUrlStart.isEmpty()) {
             QueryCondition<Content> coverCondition = Content_.coverImageUrl.notEqual("", QueryBuilder.StringOrder.CASE_INSENSITIVE).and(Content_.coverImageUrl.equal(coverUrlStart, QueryBuilder.StringOrder.CASE_INSENSITIVE)).and(Content_.site.equal(site.getCode()));
-            return store.boxFor(Content.class).query(urlCondition.or(coverCondition)).order(Content_.id).build().findFirst();
+            return DBHelper.safeFindFirst(store.boxFor(Content.class).query(urlCondition.or(coverCondition)).order(Content_.id));
         } else
-            return store.boxFor(Content.class).query(urlCondition).order(Content_.id).build().findFirst();
+            return DBHelper.safeFindFirst(store.boxFor(Content.class).query(urlCondition).order(Content_.id));
     }
 
     Set<String> selectAllContentUrls(int siteCode) {
-        Query<Content> allContentQ = store.boxFor(Content.class).query().equal(Content_.site, siteCode).in(Content_.status, libraryStatus).build();
-        return new HashSet<>(Stream.of(allContentQ.property(Content_.url).findStrings()).toList());
+        try (Query<Content> allContentQ = store.boxFor(Content.class).query().equal(Content_.site, siteCode).in(Content_.status, libraryStatus).notNull(Content_.url).notEqual(Content_.url, "", QueryBuilder.StringOrder.CASE_INSENSITIVE).build()) {
+            return new HashSet<>(Stream.of(allContentQ.property(Content_.url).findStrings()).toList());
+        }
     }
 
     Set<String> selectAllMergedContentUrls(Site site) {
-        Query<Chapter> allChapterQ = store.boxFor(Chapter.class).query().startsWith(Chapter_.url, site.getUrl(), QueryBuilder.StringOrder.CASE_INSENSITIVE).build();
-        return new HashSet<>(Stream.of(allChapterQ.property(Chapter_.url).findStrings()).toList());
+        try (Query<Chapter> allChapterQ = store.boxFor(Chapter.class).query().startsWith(Chapter_.url, site.getUrl(), QueryBuilder.StringOrder.CASE_INSENSITIVE).build()) {
+            return new HashSet<>(Stream.of(allChapterQ.property(Chapter_.url).findStrings()).toList());
+        }
     }
 
     @Nullable
@@ -459,7 +488,7 @@ public class ObjectBoxDB {
         QueryBuilder<Content> queryBuilder = store.boxFor(Content.class).query().endsWith(Content_.storageUri, folderUriEnd, QueryBuilder.StringOrder.CASE_INSENSITIVE);
         if (onlyFlagged) queryBuilder.equal(Content_.isFlaggedForDeletion, true);
 
-        return queryBuilder.build().findFirst();
+        return DBHelper.safeFindFirst(queryBuilder.build());
     }
 
     private long[] getIdsFromAttributes(@NonNull List<Attribute> attrs) {
@@ -473,7 +502,7 @@ public class ObjectBoxDB {
             QueryBuilder<Content> query = store.boxFor(Content.class).query();
             query.in(Content_.status, libraryStatus);
             query.in(Content_.id, filteredBooks);
-            List<Content> content = query.build().find();
+            List<Content> content = DBHelper.safeFind(query);
 
             // Extract sites from them
             Map<Site, List<Content>> contentPerSite = Stream.of(content).collect(Collectors.groupingBy(Content::getSite));
@@ -554,7 +583,7 @@ public class ObjectBoxDB {
         return store.boxFor(Content.class).query().equal(Content_.id, -1).build();
     }
 
-    Query<Content> selectContentSearchContentQ(ContentSearchManager.ContentSearchBundle searchBundle, List<Attribute> metadata) {
+    Query<Content> selectContentSearchContentQ(ContentSearchBundle searchBundle, long[] dynamicGroupContentIds, List<Attribute> metadata) {
         if (Preferences.Constant.ORDER_FIELD_CUSTOM == searchBundle.getSortField())
             return store.boxFor(Content.class).query().build();
 
@@ -562,7 +591,6 @@ public class ObjectBoxDB {
         metadataMap.addAll(metadata);
 
         boolean hasTitleFilter = (!searchBundle.getQuery().isEmpty());
-        boolean hasGroupFilter = (searchBundle.getGroupId() > 0);
         List<Attribute> sources = metadataMap.get(AttributeType.SOURCE);
         boolean hasSiteFilter = metadataMap.containsKey(AttributeType.SOURCE) && (sources != null) && !(sources.isEmpty());
         boolean hasTagFilter = metadataMap.keySet().size() > (hasSiteFilter ? 1 : 0);
@@ -592,7 +620,9 @@ public class ObjectBoxDB {
                 }
             }
         }
-        if (hasGroupFilter) qc = applyContentGroupFilter(qc, searchBundle.getGroupId());
+
+        if (searchBundle.getGroupId() > 0)
+            qc = applyContentGroupFilter(qc, searchBundle.getGroupId(), dynamicGroupContentIds);
 
         qc = applyContentLocationFilter(qc, searchBundle.getLocation());
         qc = applyContentTypeFilter(qc, searchBundle.getContentType());
@@ -605,7 +635,7 @@ public class ObjectBoxDB {
         return query.build();
     }
 
-    long[] selectContentSearchContentByGroupItem(ContentSearchManager.ContentSearchBundle searchBundle, List<Attribute> metadata) {
+    long[] selectContentSearchContentByGroupItem(ContentSearchBundle searchBundle, long[] dynamicGroupContentIds, List<Attribute> metadata) {
         if (searchBundle.getSortField() != Preferences.Constant.ORDER_FIELD_CUSTOM)
             return new long[]{};
 
@@ -613,14 +643,17 @@ public class ObjectBoxDB {
         metadataMap.addAll(metadata);
 
         boolean hasTitleFilter = (!searchBundle.getQuery().isEmpty());
-        boolean hasGroupFilter = (searchBundle.getGroupId() > 0);
         List<Attribute> sources = metadataMap.get(AttributeType.SOURCE);
         boolean hasSiteFilter = metadataMap.containsKey(AttributeType.SOURCE) && (sources != null) && !(sources.isEmpty());
         boolean hasTagFilter = metadataMap.keySet().size() > (hasSiteFilter ? 1 : 0);
 
         // Pre-filter and order on GroupItem
         QueryBuilder<GroupItem> query = store.boxFor(GroupItem.class).query();
-        if (hasGroupFilter) query.equal(GroupItem_.groupId, searchBundle.getGroupId());
+        if (searchBundle.getGroupId() > 0) {
+            if (0 == dynamicGroupContentIds.length)
+                query.equal(GroupItem_.groupId, searchBundle.getGroupId());
+            else query.in(GroupItem_.contentId, dynamicGroupContentIds);
+        }
 
         if (searchBundle.getSortDesc()) query.orderDesc(GroupItem_.order);
         else query.order(GroupItem_.order);
@@ -650,10 +683,10 @@ public class ObjectBoxDB {
                 }
             }
         }
-        return query.build().property(GroupItem_.contentId).findLongs();
+        return Helper.getPrimitiveArrayFromList(Stream.of(DBHelper.safeFind(query)).map(gi -> gi.content.getTargetId()).toList());
     }
 
-    private Query<Content> selectContentUniversalAttributesQ(ContentSearchManager.ContentSearchBundle searchBundle, int[] statuses) {
+    private Query<Content> selectContentUniversalAttributesQ(ContentSearchManager.ContentSearchBundle searchBundle, long[] dynamicGroupContentIds, int[] statuses) {
         QueryBuilder<Content> query = store.boxFor(Content.class).query();
         query.in(Content_.status, statuses);
 
@@ -668,13 +701,18 @@ public class ObjectBoxDB {
         if (searchBundle.getFilterPageFavourites()) filterWithPageFavs(query);
         query.link(Content_.attributes).contains(Attribute_.name, searchBundle.getQuery(), QueryBuilder.StringOrder.CASE_INSENSITIVE);
 
-        if (searchBundle.getGroupId() > 0)
-            query.in(Content_.id, selectFilteredContent(searchBundle.getGroupId()));
+        if (searchBundle.getGroupId() > 0) {
+            if (0 == dynamicGroupContentIds.length) // Classic group
+                query.in(Content_.id, selectFilteredContent(searchBundle.getGroupId()));
+            else { // Dynamic group
+                query.in(Content_.id, dynamicGroupContentIds);
+            }
+        }
 
         return query.build();
     }
 
-    private Query<Content> selectContentUniversalContentQ(ContentSearchManager.ContentSearchBundle searchBundle, long[] additionalIds, int[] statuses) {
+    private Query<Content> selectContentUniversalContentQ(ContentSearchBundle searchBundle, long[] additionalIds, long[] dynamicGroupContentIds, int[] statuses) {
         if (Preferences.Constant.ORDER_FIELD_CUSTOM == searchBundle.getSortField())
             return store.boxFor(Content.class).query().build();
 
@@ -692,11 +730,15 @@ public class ObjectBoxDB {
         qc = qc.and(Content_.title.contains(searchBundle.getQuery(), QueryBuilder.StringOrder.CASE_INSENSITIVE).or(Content_.uniqueSiteId.equal(searchBundle.getQuery(), QueryBuilder.StringOrder.CASE_INSENSITIVE)).or(Content_.id.oneOf(additionalIds)));
 
         if (searchBundle.getGroupId() > 0) {
-            Group group = store.boxFor(Group.class).get(searchBundle.getGroupId());
-            if (group.grouping.equals(Grouping.DL_DATE)) // According to days since download date
-                qc = applyContentDownloadDateFilter(qc, group.propertyMin, group.propertyMax);
-            else // Direct link to group
-                qc = qc.and(Content_.id.oneOf(selectFilteredContent(searchBundle.getGroupId())));
+            if (0 == dynamicGroupContentIds.length) { // Classic group
+                Group group = store.boxFor(Group.class).get(searchBundle.getGroupId());
+                if (group.grouping.equals(Grouping.DL_DATE)) // According to days since download date
+                    qc = applyContentDownloadDateFilter(qc, group.propertyMin, group.propertyMax);
+                else // Direct link to group
+                    qc = qc.and(Content_.id.oneOf(selectFilteredContent(searchBundle.getGroupId())));
+            } else { // Dynamic group
+                qc = qc.and(Content_.id.oneOf(dynamicGroupContentIds));
+            }
         }
 
         QueryBuilder<Content> query = store.boxFor(Content.class).query(qc);
@@ -707,7 +749,7 @@ public class ObjectBoxDB {
         return query.build();
     }
 
-    private long[] selectContentUniversalContentByGroupItem(ContentSearchManager.ContentSearchBundle searchBundle, long[] additionalIds) {
+    private long[] selectContentUniversalContentByGroupItem(ContentSearchBundle searchBundle, long[] dynamicGroupContentIds, long[] additionalIds) {
         if (searchBundle.getSortField() != Preferences.Constant.ORDER_FIELD_CUSTOM)
             return new long[]{};
 
@@ -736,32 +778,37 @@ public class ObjectBoxDB {
         contentQuery.or().equal(Content_.uniqueSiteId, searchBundle.getQuery(), QueryBuilder.StringOrder.CASE_INSENSITIVE);
         //        query.or().link(Content_.attributes).contains(Attribute_.name, queryStr, QueryBuilder.StringOrder.CASE_INSENSITIVE); // Use of or() here is not possible yet with ObjectBox v2.3.1
         contentQuery.or().in(Content_.id, additionalIds);
-        if (searchBundle.getGroupId() > 0)
-            contentQuery.in(Content_.id, selectFilteredContent(searchBundle.getGroupId()));
+        if (searchBundle.getGroupId() > 0) {
+            if (0 == dynamicGroupContentIds.length) // Classic group
+                contentQuery.in(Content_.id, selectFilteredContent(searchBundle.getGroupId()));
+            else contentQuery.in(Content_.id, dynamicGroupContentIds); // Dynamic group
+        }
 
-        return query.build().property(GroupItem_.contentId).findLongs();
+        return Helper.getPrimitiveArrayFromList(Stream.of(DBHelper.safeFind(query)).map(gi -> gi.content.getTargetId()).toList());
     }
 
-    Query<Content> selectContentUniversalQ(ContentSearchManager.ContentSearchBundle searchBundle) {
-        return selectContentUniversalQ(searchBundle, libraryStatus);
+    Query<Content> selectContentUniversalQ(ContentSearchManager.ContentSearchBundle searchBundle, long[] dynamicGroupContentIds) {
+        return selectContentUniversalQ(searchBundle, dynamicGroupContentIds, libraryStatus);
     }
 
-    Query<Content> selectContentUniversalQ(ContentSearchManager.ContentSearchBundle searchBundle, int[] status) {
+    Query<Content> selectContentUniversalQ(ContentSearchManager.ContentSearchBundle searchBundle, long[] dynamicGroupContentIds, int[] status) {
         // Due to objectBox limitations (see https://github.com/objectbox/objectbox-java/issues/497)
         // querying Content and attributes have to be done separately
-        Query<Content> contentAttrSubQuery = selectContentUniversalAttributesQ(searchBundle, status);
-        return selectContentUniversalContentQ(searchBundle, contentAttrSubQuery.findIds(), status);
+        long[] ids = DBHelper.safeFindIds(selectContentUniversalAttributesQ(searchBundle, dynamicGroupContentIds, status));
+        return selectContentUniversalContentQ(searchBundle, ids, dynamicGroupContentIds, status);
     }
 
-    long[] selectContentUniversalByGroupItem(ContentSearchManager.ContentSearchBundle searchBundle) {
+    long[] selectContentUniversalByGroupItem(ContentSearchManager.ContentSearchBundle searchBundle, long[] dynamicGroupContentIds) {
         // Due to objectBox limitations (see https://github.com/objectbox/objectbox-java/issues/497)
         // querying Content and attributes have to be done separately
-        Query<Content> contentAttrSubQuery = selectContentUniversalAttributesQ(searchBundle, libraryStatus);
-        return selectContentUniversalContentByGroupItem(searchBundle, contentAttrSubQuery.findIds());
+        long[] ids = DBHelper.safeFindIds(selectContentUniversalAttributesQ(searchBundle, dynamicGroupContentIds, libraryStatus));
+        return selectContentUniversalContentByGroupItem(searchBundle, dynamicGroupContentIds, ids);
     }
 
     List<Long> getShuffledIds() {
-        return Helper.getListFromPrimitiveArray(store.boxFor(ShuffleRecord.class).query().build().property(ShuffleRecord_.contentId).findLongs());
+        try (Query<ShuffleRecord> srq = store.boxFor(ShuffleRecord.class).query().build()) {
+            return Helper.getListFromPrimitiveArray(srq.property(ShuffleRecord_.contentId).findLongs());
+        }
     }
 
     void shuffleContentIds() {
@@ -769,7 +816,7 @@ public class ObjectBoxDB {
         Box<ShuffleRecord> shuffleStore = store.boxFor(ShuffleRecord.class);
         shuffleStore.removeAll();
         // Populate with a new list
-        List<Long> allBooksIds = Helper.getListFromPrimitiveArray(selectStoredContentQ(false, false, -1, false).build().findIds());
+        List<Long> allBooksIds = Helper.getListFromPrimitiveArray(DBHelper.safeFindIds(selectStoredContentQ(false, -1, false)));
         Collections.shuffle(allBooksIds, new Random(RandomSeedSingleton.getInstance().getSeed(Consts.SEED_CONTENT)));
         shuffleStore.put(Stream.of(allBooksIds).map(ShuffleRecord::new).toList());
     }
@@ -792,29 +839,29 @@ public class ObjectBoxDB {
         return Helper.getPrimitiveArrayFromList(Stream.of(shuffledSet).toList());
     }
 
-    long[] selectContentSearchId(ContentSearchManager.ContentSearchBundle searchBundle, List<Attribute> metadata) {
+    long[] selectContentSearchId(ContentSearchManager.ContentSearchBundle searchBundle, long[] dynamicGroupContentIds, List<Attribute> metadata) {
         long[] result;
-        Query<Content> query = selectContentSearchContentQ(searchBundle, metadata);
-
-        if (searchBundle.getSortField() != Preferences.Constant.ORDER_FIELD_RANDOM) {
-            result = query.findIds();
-        } else {
-            result = shuffleRandomSortId(query);
+        try (Query<Content> query = selectContentSearchContentQ(searchBundle, dynamicGroupContentIds, metadata)) {
+            if (searchBundle.getSortField() != Preferences.Constant.ORDER_FIELD_RANDOM) {
+                result = query.findIds();
+            } else {
+                result = shuffleRandomSortId(query);
+            }
         }
         return result;
     }
 
-    long[] selectContentUniversalId(ContentSearchManager.ContentSearchBundle searchBundle, int[] statuses) {
+    long[] selectContentUniversalId(ContentSearchManager.ContentSearchBundle searchBundle, long[] dynamicGroupContentIds, int[] statuses) {
         long[] result;
         // Due to objectBox limitations (see https://github.com/objectbox/objectbox-java/issues/497)
         // querying Content and attributes have to be done separately
-        Query<Content> contentAttrSubQuery = selectContentUniversalAttributesQ(searchBundle, statuses);
-        Query<Content> query = selectContentUniversalContentQ(searchBundle, contentAttrSubQuery.findIds(), statuses);
-
-        if (searchBundle.getSortField() != Preferences.Constant.ORDER_FIELD_RANDOM) {
-            result = query.findIds();
-        } else {
-            result = shuffleRandomSortId(query);
+        long[] ids = DBHelper.safeFindIds(selectContentUniversalAttributesQ(searchBundle, dynamicGroupContentIds, statuses));
+        try (Query<Content> query = selectContentUniversalContentQ(searchBundle, ids, dynamicGroupContentIds, statuses)) {
+            if (searchBundle.getSortField() != Preferences.Constant.ORDER_FIELD_RANDOM) {
+                result = query.findIds();
+            } else {
+                result = shuffleRandomSortId(query);
+            }
         }
         return result;
     }
@@ -824,14 +871,14 @@ public class ObjectBoxDB {
 
         QueryBuilder<Content> qb = store.boxFor(Content.class).query();
         qb.link(Content_.groupItems).equal(GroupItem_.groupId, groupId);
-        return qb.build().findIds();
+        return DBHelper.safeFindIds(qb);
     }
 
     private long[] selectFilteredContent(List<Attribute> attrs) {
-        return selectFilteredContent(-1, attrs, ContentHelper.Location.ANY, ContentHelper.Type.ANY);
+        return selectFilteredContent(-1, new long[0], attrs, ContentHelper.Location.ANY, ContentHelper.Type.ANY);
     }
 
-    private long[] selectFilteredContent(long groupId, List<Attribute> attributesFilter, @ContentHelper.Location int location, @ContentHelper.Type int contentType) {
+    private long[] selectFilteredContent(long groupId, long[] dynamicGroupContentIds, List<Attribute> attributesFilter, @ContentHelper.Location int location, @ContentHelper.Type int contentType) {
         List<Attribute> attrs = (null == attributesFilter) ? Collections.emptyList() : attributesFilter;
         if (attrs.isEmpty() && groupId < 1 && ContentHelper.Location.ANY == location && ContentHelper.Type.ANY == contentType)
             return new long[0];
@@ -839,25 +886,27 @@ public class ObjectBoxDB {
         // Handle simple case where no attributes have been selected
         if (attrs.isEmpty()) {
             QueryCondition<Content> qc = Content_.status.oneOf(libraryStatus);
-            if (groupId > 0) qc = applyContentGroupFilter(qc, groupId);
+            if (groupId > 0) qc = applyContentGroupFilter(qc, groupId, dynamicGroupContentIds);
             qc = applyContentLocationFilter(qc, location);
             qc = applyContentTypeFilter(qc, contentType);
 
-            return store.boxFor(Content.class).query(qc).build().findIds();
+            return DBHelper.safeFindIds(store.boxFor(Content.class).query(qc));
         }
 
         // Pre-build queries to reuse them efficiently within the loops
 
         // Content from attribute
         final Query<Content> contentFromAttributesQuery;
+        boolean useCachedAttrQuery = false;
         if (groupId < 1 && ContentHelper.Location.ANY == location && ContentHelper.Type.ANY == contentType) { // Standard cached query
             contentFromAttributesQuery = contentFromAttributesSearchQ;
+            useCachedAttrQuery = true;
         } else { // On-demand query
             QueryCondition<Content> qc = Content_.status.oneOf(libraryStatus);
 
             qc = applyContentLocationFilter(qc, location);
             qc = applyContentTypeFilter(qc, contentType);
-            if (groupId > 0) qc = applyContentGroupFilter(qc, groupId);
+            if (groupId > 0) qc = applyContentGroupFilter(qc, groupId, dynamicGroupContentIds);
 
             QueryBuilder<Content> contentFromAttributesQueryBuilder = store.boxFor(Content.class).query(qc);
 
@@ -868,15 +917,17 @@ public class ObjectBoxDB {
 
         // Content from source (distinct query as source is not an actual Attribute of the data model)
         final Query<Content> contentFromSourceQuery;
+        boolean useCachedSourceQuery = false;
         if (groupId < 1 && ContentHelper.Location.ANY == location && ContentHelper.Type.ANY == contentType) { // Standard cached query
             contentFromSourceQuery = contentFromSourceSearchQ;
+            useCachedSourceQuery = true;
         } else { // On-demand query
             QueryCondition<Content> qc = Content_.status.oneOf(libraryStatus);
             qc.and(Content_.site.equal(1));
 
             qc = applyContentLocationFilter(qc, location);
             qc = applyContentTypeFilter(qc, contentType);
-            if (groupId > 0) qc = applyContentGroupFilter(qc, groupId);
+            if (groupId > 0) qc = applyContentGroupFilter(qc, groupId, dynamicGroupContentIds);
 
             contentFromSourceQuery = store.boxFor(Content.class).query(qc).build();
         }
@@ -888,35 +939,39 @@ public class ObjectBoxDB {
         if (!attrs.isEmpty() && attrs.get(0).isExcluded()) {
             final QueryBuilder<Content> contentFromAttributesQueryBuilder1 = store.boxFor(Content.class).query();
             contentFromAttributesQueryBuilder1.in(Content_.status, libraryStatus);
-            idsFull = Helper.getListFromPrimitiveArray(contentFromAttributesQueryBuilder1.build().findIds());
+            idsFull = Helper.getListFromPrimitiveArray(DBHelper.safeFindIds(contentFromAttributesQueryBuilder1));
         }
 
         // Cumulative query loop
         // Each iteration restricts the results of the next because advanced search uses an AND logic
         List<Long> results = Collections.emptyList();
         long[] ids;
-
-        for (Attribute attr : attrs) {
-            if (attr.getType().equals(AttributeType.SOURCE)) {
-                ids = contentFromSourceQuery.setParameter(Content_.site, attr.getId()).findIds();
-            } else {
-                ids = contentFromAttributesQuery.setParameter(Attribute_.type, attr.getType().getCode()).setParameter(Attribute_.name, attr.getName()).findIds();
-            }
-            if (results.isEmpty()) { // First iteration
-                results = Helper.getListFromPrimitiveArray(ids);
-
-                // If first tag is to be excluded, start trimming results
-                if (attr.isExcluded()) {
-                    idsFull.removeAll(results);
-                    results = idsFull;
+        try {
+            for (Attribute attr : attrs) {
+                if (attr.getType().equals(AttributeType.SOURCE)) {
+                    ids = contentFromSourceQuery.setParameter(Content_.site, attr.getId()).findIds();
+                } else {
+                    ids = contentFromAttributesQuery.setParameter(Attribute_.type, attr.getType().getCode()).setParameter(Attribute_.name, attr.getName()).findIds();
                 }
-            } else {
-                // Filter results with newly found IDs (only common IDs should stay)
-                List<Long> idsAsList = Helper.getListFromPrimitiveArray(ids);
-                // Remove ids that fit the attribute from results
-                if (attr.isExcluded()) results.removeAll(idsAsList);
-                else results.retainAll(idsAsList); // Careful with retainAll performance
+                if (results.isEmpty()) { // First iteration
+                    results = Helper.getListFromPrimitiveArray(ids);
+
+                    // If first tag is to be excluded, start trimming results
+                    if (attr.isExcluded()) {
+                        idsFull.removeAll(results);
+                        results = idsFull;
+                    }
+                } else {
+                    // Filter results with newly found IDs (only common IDs should stay)
+                    List<Long> idsAsList = Helper.getListFromPrimitiveArray(ids);
+                    // Remove ids that fit the attribute from results
+                    if (attr.isExcluded()) results.removeAll(idsAsList);
+                    else results.retainAll(idsAsList); // Careful with retainAll performance
+                }
             }
+        } finally {
+            if (!useCachedAttrQuery) contentFromAttributesQuery.close();
+            if (!useCachedSourceQuery) contentFromSourceQuery.close();
         }
 
         return Helper.getPrimitiveArrayFromList(results);
@@ -927,10 +982,10 @@ public class ObjectBoxDB {
     }
 
     List<Attribute> selectAvailableSources() {
-        return selectAvailableSources(-1, null, ContentHelper.Location.ANY, ContentHelper.Type.ANY, false);
+        return selectAvailableSources(-1, new long[0], null, ContentHelper.Location.ANY, ContentHelper.Type.ANY, false);
     }
 
-    List<Attribute> selectAvailableSources(long groupId, List<Attribute> filter, @ContentHelper.Location int location, @ContentHelper.Type int contentType, boolean includeFreeAttrs) {
+    List<Attribute> selectAvailableSources(long groupId, long[] dynamicGroupContentIds, List<Attribute> filter, @ContentHelper.Location int location, @ContentHelper.Type int contentType, boolean includeFreeAttrs) {
         List<Attribute> result = new ArrayList<>();
 
         QueryCondition<Content> qc = Content_.status.oneOf(libraryStatus);
@@ -953,12 +1008,12 @@ public class ObjectBoxDB {
             }
         }
 
-        if (groupId > 0) qc = applyContentGroupFilter(qc, groupId);
+        if (groupId > 0) qc = applyContentGroupFilter(qc, groupId, dynamicGroupContentIds);
         qc = applyContentLocationFilter(qc, location);
         qc = applyContentTypeFilter(qc, contentType);
 
         QueryBuilder<Content> query = store.boxFor(Content.class).query(qc);
-        List<Content> content = query.build().find();
+        List<Content> content = DBHelper.safeFind(query);
 
         // SELECT field, COUNT(*) GROUP BY (field) is not implemented in ObjectBox v2.3.1
         // (see https://github.com/objectbox/objectbox-java/issues/422)
@@ -985,17 +1040,21 @@ public class ObjectBoxDB {
     List<Content> selectContentByDlDate(int minDays, int maxDays) {
         QueryCondition<Content> qc = Content_.status.oneOf(libraryStatus);
         qc = applyContentDownloadDateFilter(qc, minDays, maxDays);
-        return store.boxFor(Content.class).query(qc).build().find();
+        return DBHelper.safeFind(store.boxFor(Content.class).query(qc));
     }
 
-    private QueryCondition<Content> applyContentGroupFilter(@NonNull final QueryCondition<Content> qc, long groupId) {
-        Group group = store.boxFor(Group.class).get(groupId);
-        if (group != null && group.grouping.equals(Grouping.DL_DATE)) // According to days since download date
-            return applyContentDownloadDateFilter(qc, group.propertyMin, group.propertyMax);
-        else if (group != null && group.grouping.equals(Grouping.CUSTOM) && 1 == group.subtype) // Books with no CUSTOM group attached
-            return qc.and(Content_.id.notOneOf(selectCustomGroupedContent()));
-        else // Direct link to group
-            return qc.and(Content_.id.oneOf(selectFilteredContent(groupId)));
+    private QueryCondition<Content> applyContentGroupFilter(@NonNull final QueryCondition<Content> qc, long groupId, long[] dynamicGroupContentIds) {
+        if (0 == dynamicGroupContentIds.length) {
+            Group group = store.boxFor(Group.class).get(groupId);
+            if (group != null && group.grouping.equals(Grouping.DL_DATE)) // According to days since download date
+                return applyContentDownloadDateFilter(qc, group.propertyMin, group.propertyMax);
+            else if (group != null && group.grouping.equals(Grouping.CUSTOM) && 1 == group.subtype) // Books with no CUSTOM group attached
+                return qc.and(Content_.id.notOneOf(selectCustomGroupedContent()));
+            else // Direct link to group
+                return qc.and(Content_.id.oneOf(selectFilteredContent(groupId)));
+        } else { // Dynamic group
+            return qc.and(Content_.id.oneOf(dynamicGroupContentIds));
+        }
     }
 
     private QueryCondition<Content> applyContentDownloadDateFilter(@NonNull final QueryCondition<Content> qc, int minDays, int maxDays) {
@@ -1014,7 +1073,7 @@ public class ObjectBoxDB {
         return store.boxFor(Attribute.class).get(id);
     }
 
-    private Query<Attribute> queryAvailableAttributes(@NonNull final AttributeType type, String filter, long[] filteredContent, boolean includeFreeAttrs) {
+    private Query<Attribute> queryAvailableAttributesQ(@NonNull final AttributeType type, String filter, long[] filteredContent, boolean includeFreeAttrs) {
         QueryBuilder<Attribute> query = store.boxFor(Attribute.class).query();
         query.equal(Attribute_.type, type.getCode());
         if (filter != null && !filter.trim().isEmpty())
@@ -1028,20 +1087,20 @@ public class ObjectBoxDB {
         return query.build();
     }
 
-    long countAvailableAttributes(AttributeType type, long groupId, List<Attribute> attributeFilter, @ContentHelper.Location int location, @ContentHelper.Type int contentType, boolean includeFreeAttrs, String filter) {
-        long[] filteredContent = (includeFreeAttrs ? new long[0] : selectFilteredContent(groupId, attributeFilter, location, contentType));
-        return queryAvailableAttributes(type, filter, filteredContent, includeFreeAttrs).count();
+    long countAvailableAttributes(AttributeType type, long groupId, long[] dynamicGroupContentIds, List<Attribute> attributeFilter, @ContentHelper.Location int location, @ContentHelper.Type int contentType, boolean includeFreeAttrs, String filter) {
+        long[] filteredContent = (includeFreeAttrs ? new long[0] : selectFilteredContent(groupId, dynamicGroupContentIds, attributeFilter, location, contentType));
+        return DBHelper.safeCount(queryAvailableAttributesQ(type, filter, filteredContent, includeFreeAttrs));
     }
 
     @SuppressWarnings("squid:S2184")
         // In our case, limit() argument has to be human-readable -> no issue concerning its type staying in the int range
-    List<Attribute> selectAvailableAttributes(@NonNull AttributeType type, long groupId, List<Attribute> attributeFilter, @ContentHelper.Location int location, @ContentHelper.Type int contentType, boolean includeFreeAttrs, String filter, int sortOrder, int page, int itemsPerPage) {
-        long[] filteredContent = (includeFreeAttrs ? new long[0] : selectFilteredContent(groupId, attributeFilter, location, contentType));
+    List<Attribute> selectAvailableAttributes(@NonNull AttributeType type, long groupId, long[] dynamicGroupContentIds, List<Attribute> attributeFilter, @ContentHelper.Location int location, @ContentHelper.Type int contentType, boolean includeFreeAttrs, String filter, int sortOrder, int page, int itemsPerPage) {
+        long[] filteredContent = (includeFreeAttrs ? new long[0] : selectFilteredContent(groupId, dynamicGroupContentIds, attributeFilter, location, contentType));
         if (filteredContent.length == 0 && attributeFilter != null && !attributeFilter.isEmpty() && !includeFreeAttrs)
             return Collections.emptyList();
         Set<Long> filteredContentAsSet = Helper.getSetFromPrimitiveArray(filteredContent);
         Set<Integer> libraryStatusAsSet = Helper.getSetFromPrimitiveArray(libraryStatus);
-        List<Attribute> result = queryAvailableAttributes(type, filter, filteredContent, includeFreeAttrs).find();
+        List<Attribute> result = DBHelper.safeFind(queryAvailableAttributesQ(type, filter, filteredContent, includeFreeAttrs));
 
         // Compute attribute count for sorting
         if (Preferences.getSearchAttributesCount()) { // TODO get that call to Prefs out of there
@@ -1070,12 +1129,12 @@ public class ObjectBoxDB {
     }
 
     SparseIntArray countAvailableAttributesPerType() {
-        return countAvailableAttributesPerType(-1, null, ContentHelper.Location.ANY, ContentHelper.Type.ANY);
+        return countAvailableAttributesPerType(-1, new long[0], null, ContentHelper.Location.ANY, ContentHelper.Type.ANY);
     }
 
-    SparseIntArray countAvailableAttributesPerType(long groupId, List<Attribute> attributeFilter, @ContentHelper.Location int location, @ContentHelper.Type int contentType) {
+    SparseIntArray countAvailableAttributesPerType(long groupId, long[] dynamicGroupContentIds, List<Attribute> attributeFilter, @ContentHelper.Location int location, @ContentHelper.Type int contentType) {
         // Get Content filtered by current selection
-        long[] filteredContent = selectFilteredContent(groupId, attributeFilter, location, contentType);
+        long[] filteredContent = selectFilteredContent(groupId, dynamicGroupContentIds, attributeFilter, location, contentType);
         // Get available attributes of the resulting content list
         QueryBuilder<Attribute> query = store.boxFor(Attribute.class).query();
 
@@ -1083,7 +1142,7 @@ public class ObjectBoxDB {
             query.link(Attribute_.contents).in(Content_.id, filteredContent).in(Content_.status, libraryStatus);
         else query.link(Attribute_.contents).in(Content_.status, libraryStatus);
 
-        List<Attribute> attributes = query.build().find();
+        List<Attribute> attributes = DBHelper.safeFind(query);
 
         SparseIntArray result = new SparseIntArray();
         // SELECT field, COUNT(*) GROUP BY (field) is not implemented in ObjectBox v2.3.1
@@ -1111,16 +1170,26 @@ public class ObjectBoxDB {
         QueryBuilder<Content> query = store.boxFor(Content.class).query();
         query.contains(Content_.title, word, QueryBuilder.StringOrder.CASE_INSENSITIVE);
         query.in(Content_.status, contentStatusCodes);
-        return query.build().find();
+        return DBHelper.safeFind(query);
     }
 
     private QueryCondition<Content> applyContentLocationFilter(@NonNull QueryCondition<Content> qc, @ContentHelper.Location int location) {
-        if (ContentHelper.Location.PRIMARY == location) {
-            return qc.and(Content_.status.notEqual(StatusContent.EXTERNAL.getCode()));
-        } else if (ContentHelper.Location.EXTERNAL == location) {
-            return qc.and(Content_.status.equal(StatusContent.EXTERNAL.getCode()));
+        switch (location) {
+            case ContentHelper.Location.PRIMARY:
+                return qc.and(Content_.status.notEqual(StatusContent.EXTERNAL.getCode()));
+            case ContentHelper.Location.PRIMARY_1:
+                String root = Preferences.getStorageUri(StorageLocation.PRIMARY_1);
+                if (root.isEmpty()) root = "FAIL"; // Auto-fails condition
+                return qc.and(Content_.storageUri.startsWith(root, QueryBuilder.StringOrder.CASE_INSENSITIVE));
+            case ContentHelper.Location.PRIMARY_2:
+                root = Preferences.getStorageUri(StorageLocation.PRIMARY_2);
+                if (root.isEmpty()) root = "FAIL"; // Auto-fails condition
+                return qc.and(Content_.storageUri.startsWith(root, QueryBuilder.StringOrder.CASE_INSENSITIVE));
+            case ContentHelper.Location.EXTERNAL:
+                return qc.and(Content_.status.equal(StatusContent.EXTERNAL.getCode()));
+            default:
+                return qc;
         }
-        return qc;
     }
 
     private QueryCondition<Content> applyContentTypeFilter(@NonNull QueryCondition<Content> qc, @ContentHelper.Type int contentType) {
@@ -1141,6 +1210,7 @@ public class ObjectBoxDB {
             case ContentHelper.Type.PLACEHOLDER:
                 return qc.and(Content_.status.equal(StatusContent.PLACEHOLDER.getCode()));
             case ContentHelper.Type.FOLDER:
+                // TODO : Should also not be an archive, but that would require Content_.storageUri.doesNotEndWith (see ObjectBox issue #1129)
                 qc = qc.and(Content_.downloadMode.equal(Content.DownloadMode.DOWNLOAD));
                 return qc.and(Content_.status.notEqual(StatusContent.PLACEHOLDER.getCode()));
             case ContentHelper.Type.ANY:
@@ -1165,7 +1235,7 @@ public class ObjectBoxDB {
     void updateImageContentStatus(long contentId, @Nullable StatusContent updateFrom, @NonNull StatusContent updateTo) {
         QueryBuilder<ImageFile> query = store.boxFor(ImageFile.class).query();
         if (updateFrom != null) query.equal(ImageFile_.status, updateFrom.getCode());
-        List<ImageFile> imgs = query.equal(ImageFile_.contentId, contentId).build().find();
+        List<ImageFile> imgs = DBHelper.safeFind(query.equal(ImageFile_.contentId, contentId));
         if (imgs.isEmpty()) return;
 
         for (ImageFile img : imgs) img.setStatus(updateTo);
@@ -1185,7 +1255,7 @@ public class ObjectBoxDB {
     Map<StatusContent, ImmutablePair<Integer, Long>> countProcessedImagesById(long contentId) {
         QueryBuilder<ImageFile> imgQuery = store.boxFor(ImageFile.class).query();
         imgQuery.equal(ImageFile_.contentId, contentId);
-        List<ImageFile> images = imgQuery.build().find();
+        List<ImageFile> images = DBHelper.safeFind(imgQuery);
 
         Map<StatusContent, ImmutablePair<Integer, Long>> result = new EnumMap<>(StatusContent.class);
         // SELECT field, COUNT(*) GROUP BY (field) is not implemented in ObjectBox v2.3.1
@@ -1209,19 +1279,27 @@ public class ObjectBoxDB {
         return result;
     }
 
-    Map<Site, ImmutablePair<Integer, Long>> selectPrimaryMemoryUsagePerSource() {
-        return selectMemoryUsagePerSource(new int[]{StatusContent.DOWNLOADED.getCode(), StatusContent.MIGRATED.getCode()});
+    Query<ImageFile> selectAllFavouritePagesQ() {
+        return store.boxFor(ImageFile.class).query()
+                .equal(ImageFile_.favourite, true)
+                .build();
+    }
+
+    Map<Site, ImmutablePair<Integer, Long>> selectPrimaryMemoryUsagePerSource(String rootPath) {
+        return selectMemoryUsagePerSource(new int[]{StatusContent.DOWNLOADED.getCode(), StatusContent.MIGRATED.getCode()}, rootPath);
     }
 
     Map<Site, ImmutablePair<Integer, Long>> selectExternalMemoryUsagePerSource() {
-        return selectMemoryUsagePerSource(new int[]{StatusContent.EXTERNAL.getCode()});
+        return selectMemoryUsagePerSource(new int[]{StatusContent.EXTERNAL.getCode()}, "");
     }
 
-    Map<Site, ImmutablePair<Integer, Long>> selectMemoryUsagePerSource(int[] statusCodes) {
+    Map<Site, ImmutablePair<Integer, Long>> selectMemoryUsagePerSource(int[] statusCodes, String rootPath) {
         // Get all downloaded images regardless of the book's status
         QueryBuilder<Content> query = store.boxFor(Content.class).query();
         query.in(Content_.status, statusCodes);
-        List<Content> books = query.build().find();
+        if (rootPath != null && !rootPath.isEmpty())
+            query.startsWith(Content_.storageUri, rootPath, QueryBuilder.StringOrder.CASE_INSENSITIVE);
+        List<Content> books = DBHelper.safeFind(query);
 
         Map<Site, ImmutablePair<Integer, Long>> result = new EnumMap<>(Site.class);
         // SELECT field, COUNT(*) GROUP BY (field) is not implemented in ObjectBox v2.3.1
@@ -1250,7 +1328,7 @@ public class ObjectBoxDB {
     }
 
     List<ErrorRecord> selectErrorRecordByContentId(long contentId) {
-        return store.boxFor(ErrorRecord.class).query().equal(ErrorRecord_.contentId, contentId).build().find();
+        return DBHelper.safeFind(store.boxFor(ErrorRecord.class).query().equal(ErrorRecord_.contentId, contentId));
     }
 
     void deleteErrorRecords(long contentId) {
@@ -1263,7 +1341,7 @@ public class ObjectBoxDB {
     }
 
     void deleteImageFiles(long contentId) {
-        store.boxFor(ImageFile.class).query().equal(ImageFile_.contentId, contentId).build().remove();
+        DBHelper.safeRemove(store.boxFor(ImageFile.class).query().equal(ImageFile_.contentId, contentId));
     }
 
     void deleteImageFiles(List<ImageFile> images) {
@@ -1312,7 +1390,7 @@ public class ObjectBoxDB {
 
     @Nullable
     SiteHistory selectHistory(@NonNull Site s) {
-        return store.boxFor(SiteHistory.class).query().equal(SiteHistory_.site, s.getCode()).build().findFirst();
+        return DBHelper.safeFindFirst(store.boxFor(SiteHistory.class).query().equal(SiteHistory_.site, s.getCode()));
     }
 
     public void insertLandingRecord(LandingRecord record) {
@@ -1351,11 +1429,13 @@ public class ObjectBoxDB {
         qb.equal(SiteBookmark_.site, s.getCode());
         qb.equal(SiteBookmark_.isHomepage, true);
 
-        return qb.build().findFirst();
+        return DBHelper.safeFindFirst(qb);
     }
 
     String[] selectAllBooksmarkUrls() {
-        return store.boxFor(SiteBookmark.class).query().build().property(SiteBookmark_.url).findStrings();
+        try (Query<SiteBookmark> sbq = store.boxFor(SiteBookmark.class).query().build()) {
+            return sbq.property(SiteBookmark_.url).findStrings();
+        }
     }
 
     long insertBookmark(@NonNull final SiteBookmark bookmark) {
@@ -1371,11 +1451,13 @@ public class ObjectBoxDB {
     }
 
     int getMaxBookmarkOrderFor(@NonNull final Site site) {
-        return (int) store.boxFor(SiteBookmark.class).query().equal(SiteBookmark_.site, site.getCode()).build().property(SiteBookmark_.order).max();
+        try (Query<SiteBookmark> sbq = store.boxFor(SiteBookmark.class).query().equal(SiteBookmark_.site, site.getCode()).build()) {
+            return (int) sbq.property(SiteBookmark_.order).max();
+        }
     }
 
     // Select all duplicate bookmarks that end with a "/"
-    public Query<SiteBookmark> selectAllDuplicateBookmarks() {
+    public Query<SiteBookmark> selectAllDuplicateBookmarksQ() {
         String[] urls = selectAllBooksmarkUrls();
         for (int i = 0; i < urls.length; i++) urls[i] = urls[i] + "/";
 
@@ -1388,8 +1470,7 @@ public class ObjectBoxDB {
     // SEARCH RECORDS
 
     Query<SearchRecord> selectSearchRecordsQ() {
-        QueryBuilder<SearchRecord> qb = store.boxFor(SearchRecord.class).query();
-        return qb.build();
+        return store.boxFor(SearchRecord.class).query().build();
     }
 
     void deleteSearchRecord(long id) {
@@ -1444,9 +1525,6 @@ public class ObjectBoxDB {
         store.boxFor(RenamingRule.class).remove(ids);
     }
 
-    public void deleteAllRenamingRules() {
-        store.boxFor(RenamingRule.class).removeAll();
-    }
 
     // GROUPS
 
@@ -1465,7 +1543,7 @@ public class ObjectBoxDB {
     List<GroupItem> selectGroupItems(long contentId, int groupingId) {
         QueryBuilder<GroupItem> qb = store.boxFor(GroupItem.class).query().equal(GroupItem_.contentId, contentId);
         qb.link(GroupItem_.group).equal(Group_.grouping, groupingId);
-        return qb.build().find();
+        return DBHelper.safeFind(qb);
     }
 
     void deleteGroupItems(long[] groupItemIds) {
@@ -1473,15 +1551,19 @@ public class ObjectBoxDB {
     }
 
     long countGroupsFor(@NonNull final Grouping grouping) {
-        return store.boxFor(Group.class).query().equal(Group_.grouping, grouping.getId()).build().count();
+        return DBHelper.safeCount(store.boxFor(Group.class).query().equal(Group_.grouping, grouping.getId()));
     }
 
     int getMaxGroupOrderFor(@NonNull final Grouping grouping) {
-        return (int) store.boxFor(Group.class).query().equal(Group_.grouping, grouping.getId()).build().property(Group_.order).max();
+        try (Query<Group> gq = store.boxFor(Group.class).query().equal(Group_.grouping, grouping.getId()).build()) {
+            return (int) gq.property(Group_.order).max();
+        }
     }
 
     int getMaxGroupItemOrderFor(long groupid) {
-        return (int) store.boxFor(GroupItem.class).query().equal(GroupItem_.groupId, groupid).build().property(GroupItem_.order).max();
+        try (Query<GroupItem> giq = store.boxFor(GroupItem.class).query().equal(GroupItem_.groupId, groupid).build()) {
+            return (int) giq.property(GroupItem_.order).max();
+        }
     }
 
     Query<Group> selectGroupsQ(int grouping, @Nullable String query, int orderField, boolean orderDesc, int subType, boolean groupFavouritesOnly, int filterRating) {
@@ -1515,6 +1597,13 @@ public class ObjectBoxDB {
         return qb.build();
     }
 
+    List<Group> selectEditedGroups(int grouping) {
+        QueryCondition<Group> qcFavs = Group_.favourite.equal(true);
+        QueryCondition<Group> qcRating = Group_.rating.greater(0);
+        QueryCondition<Group> qc = Group_.grouping.equal(grouping).and(qcFavs.or(qcRating));
+        return DBHelper.safeFind(store.boxFor(Group.class).query(qc));
+    }
+
     @Nullable
     Group selectGroup(long groupId) {
         return store.boxFor(Group.class).get(groupId);
@@ -1527,7 +1616,7 @@ public class ObjectBoxDB {
 
     @Nullable
     Group selectGroupByName(int grouping, @NonNull final String name) {
-        return store.boxFor(Group.class).query().equal(Group_.grouping, grouping).equal(Group_.name, name, QueryBuilder.StringOrder.CASE_INSENSITIVE).build().findFirst();
+        return DBHelper.safeFindFirst(store.boxFor(Group.class).query().equal(Group_.grouping, grouping).equal(Group_.name, name, QueryBuilder.StringOrder.CASE_INSENSITIVE));
     }
 
     void deleteGroup(long groupId) {
@@ -1550,17 +1639,17 @@ public class ObjectBoxDB {
     void deleteGroupItemsByGrouping(int groupingId) {
         QueryBuilder<GroupItem> qb = store.boxFor(GroupItem.class).query();
         qb.link(GroupItem_.group).equal(Group_.grouping, groupingId);
-        qb.build().remove();
+        DBHelper.safeRemove(qb);
     }
 
     void deleteGroupItemsByGroup(long groupId) {
         QueryBuilder<GroupItem> qb = store.boxFor(GroupItem.class).query();
         qb.link(GroupItem_.group).equal(Group_.id, groupId);
-        qb.build().remove();
+        DBHelper.safeRemove(qb);
     }
 
     List<Chapter> selectChapters(long contentId) {
-        return store.boxFor(Chapter.class).query().equal(Chapter_.contentId, contentId).order(Chapter_.order).build().find();
+        return DBHelper.safeFind(store.boxFor(Chapter.class).query().equal(Chapter_.contentId, contentId).order(Chapter_.order));
     }
 
     void insertChapters(List<Chapter> chapters) {
@@ -1570,7 +1659,7 @@ public class ObjectBoxDB {
     void deleteChaptersByContentId(long contentId) {
         QueryBuilder<Chapter> qb = store.boxFor(Chapter.class).query();
         qb.equal(Chapter_.contentId, contentId);
-        qb.build().remove();
+        DBHelper.safeRemove(qb);
     }
 
     void deleteChapter(long chapterId) {
@@ -1583,11 +1672,11 @@ public class ObjectBoxDB {
      */
 
     List<Chapter> selecChaptersEmptyName() {
-        return store.boxFor(Chapter.class).query().equal(Chapter_.name, "", QueryBuilder.StringOrder.CASE_INSENSITIVE).build().find();
+        return DBHelper.safeFind(store.boxFor(Chapter.class).query().equal(Chapter_.name, "", QueryBuilder.StringOrder.CASE_INSENSITIVE));
     }
 
     List<Content> selectDownloadedContentWithNoSize() {
-        return store.boxFor(Content.class).query().in(Content_.status, libraryStatus).isNull(Content_.size).build().find();
+        return DBHelper.safeFind(store.boxFor(Content.class).query().in(Content_.status, libraryStatus).isNull(Content_.size));
     }
 
     /**
@@ -1595,50 +1684,41 @@ public class ObjectBoxDB {
      */
 
     List<Content> selectDownloadedContentWithNoReadProgress() {
-        return store.boxFor(Content.class).query().in(Content_.status, libraryStatus).isNull(Content_.readProgress).build().find();
+        return DBHelper.safeFind(store.boxFor(Content.class).query().in(Content_.status, libraryStatus).isNull(Content_.readProgress));
     }
 
     List<Group> selectGroupsWithNoCoverContent() {
-        return store.boxFor(Group.class).query().isNull(Group_.coverContentId).or().equal(Group_.coverContentId, 0).build().find();
+        return DBHelper.safeFind(store.boxFor(Group.class).query().isNull(Group_.coverContentId).or().equal(Group_.coverContentId, 0));
     }
 
     List<Content> selectContentWithNullCompleteField() {
-        return store.boxFor(Content.class).query().isNull(Content_.completed).build().find();
+        return DBHelper.safeFind(store.boxFor(Content.class).query().isNull(Content_.completed));
     }
 
     List<Content> selectContentWithNullDlModeField() {
-        return store.boxFor(Content.class).query().isNull(Content_.downloadMode).build().find();
+        return DBHelper.safeFind(store.boxFor(Content.class).query().isNull(Content_.downloadMode));
     }
 
     List<Content> selectContentWithNullMergeField() {
-        return store.boxFor(Content.class).query().isNull(Content_.manuallyMerged).build().find();
+        return DBHelper.safeFind(store.boxFor(Content.class).query().isNull(Content_.manuallyMerged));
     }
 
     List<Content> selectContentWithNullDlCompletionDateField() {
-        return store.boxFor(Content.class).query().isNull(Content_.downloadCompletionDate).build().find();
+        return DBHelper.safeFind(store.boxFor(Content.class).query().isNull(Content_.downloadCompletionDate));
     }
 
     List<Content> selectContentWithInvalidUploadDate() {
-        return store.boxFor(Content.class).query().greater(Content_.uploadDate, 0).less(Content_.uploadDate, 10000000000L).build().find();
+        return DBHelper.safeFind(store.boxFor(Content.class).query().greater(Content_.uploadDate, 0).less(Content_.uploadDate, 10000000000L));
     }
 
     List<Chapter> selectChapterWithNullUploadDate() {
-        return store.boxFor(Chapter.class).query().isNull(Chapter_.uploadDate).build().find();
+        return DBHelper.safeFind(store.boxFor(Chapter.class).query().isNull(Chapter_.uploadDate));
     }
 
-    Query<Content> selectOldStoredContentQ() {
-        QueryBuilder<Content> query = store.boxFor(Content.class).query();
-        query.in(Content_.status, new int[]{StatusContent.DOWNLOADING.getCode(), StatusContent.PAUSED.getCode(), StatusContent.ERROR.getCode(), StatusContent.DOWNLOADED.getCode(), StatusContent.MIGRATED.getCode()});
-        query.notNull(Content_.storageFolder);
-        query.notEqual(Content_.storageFolder, "", QueryBuilder.StringOrder.CASE_INSENSITIVE);
-        return query.build();
-    }
-
-    QueryBuilder<Content> selectStoredContentQ(boolean nonFavouritesOnly, boolean includeQueued, int orderField, boolean orderDesc) {
+    QueryBuilder<Content> selectStoredContentQ(boolean includeQueued, int orderField, boolean orderDesc) {
         QueryBuilder<Content> query = store.boxFor(Content.class).query();
         if (includeQueued) query.in(Content_.status, libraryQueueStatus);
         else query.in(Content_.status, libraryStatus);
-        if (nonFavouritesOnly) query.equal(Content_.favourite, false);
         if (orderField > -1) {
             Property<Content> field = getPropertyFromField(orderField);
             if (null != field) {
@@ -1649,7 +1729,57 @@ public class ObjectBoxDB {
         return query;
     }
 
-    Query<Content> selectNonHashedContent() {
+    Set<Long> selectStoredContentFavIds(boolean bookFavs, boolean groupFavs) {
+        /*
+        QueryCondition<Content> qc = Content_.status.oneOf(libraryStatus);
+        QueryCondition<Content> qcB = Content_.favourite.equal(true);
+        QueryCondition<Content> qcG = qcB;
+        if (groupFavs) {
+            long[] favGroupIds = store.boxFor(Group.class).query().equal(Group_.favourite, true).build().findIds();
+            qcG = Content_.groupItems.
+        }
+
+
+        if (bookFavs && groupFavs) qc = qc.and(qcB.or(qcG));
+        else if (bookFavs) qc = qc.and(qcB);
+        else if (groupFavs) qc = qc.and(qcG);
+
+        return store.boxFor(Content.class).query(qc).build();
+         */
+        if (bookFavs && groupFavs) {
+            Set<Long> qcBIds = Helper.getSetFromPrimitiveArray(DBHelper.safeFindIds(selectStoredContentFavBookBQ()));
+            Set<Long> qcGIds = Helper.getSetFromPrimitiveArray(DBHelper.safeFindIds(selectStoredContentFavBookGQ()));
+            qcBIds.addAll(qcGIds);
+            return qcBIds;
+        } else if (bookFavs) {
+            return Helper.getSetFromPrimitiveArray(DBHelper.safeFindIds(selectStoredContentFavBookBQ()));
+        } else if (groupFavs) {
+            return Helper.getSetFromPrimitiveArray(DBHelper.safeFindIds(selectStoredContentFavBookGQ()));
+        } else {
+            return new HashSet<>();
+        }
+    }
+
+    private Query<Content> selectStoredContentFavBookBQ() {
+        QueryCondition<Content> qc = Content_.status.oneOf(libraryStatus);
+        QueryCondition<Content> qcB = Content_.favourite.equal(true);
+        return store.boxFor(Content.class).query(qc.and(qcB)).build();
+    }
+
+    private Query<Content> selectStoredContentFavBookGQ() {
+        /*
+        QueryBuilder<GroupItem> groupItemQb = store.boxFor(GroupItem.class).query();
+        QueryBuilder<Group> groupSubQb = groupItemQb.link(GroupItem_.group).equal(Group_.favourite, true);
+        long[] groupItemIds = groupItemQb.build().findIds();
+         */
+        // Triple-linking =D
+        QueryBuilder<Content> contentQb = store.boxFor(Content.class).query();
+        QueryBuilder<GroupItem> groupItemSubQb = contentQb.link(Content_.groupItems);
+        groupItemSubQb.link(GroupItem_.group).equal(Group_.favourite, true);
+        return contentQb.build();
+    }
+
+    Query<Content> selectNonHashedContentQ() {
         QueryBuilder<Content> query = store.boxFor(Content.class).query().in(Content_.status, new int[]{StatusContent.DOWNLOADED.getCode(), StatusContent.MIGRATED.getCode()}).notNull(Content_.storageUri).notEqual(Content_.storageUri, "", QueryBuilder.StringOrder.CASE_INSENSITIVE);
 
         QueryBuilder<ImageFile> imageQuery = query.backlink(ImageFile_.content);
@@ -1662,13 +1792,13 @@ public class ObjectBoxDB {
         QueryBuilder<Content> customContentQB = store.boxFor(Content.class).query();
         customContentQB.link(Content_.groupItems).link(GroupItem_.group).equal(Group_.grouping, Grouping.CUSTOM.getId()) // Custom group
                 .equal(Group_.subtype, 0); // Not the Ungrouped group (subtype 1)
-        return customContentQB.build().findIds();
+        return DBHelper.safeFindIds(customContentQB);
     }
 
     Set<Long> selectUngroupedContentIds() {
         // Select all eligible content
         QueryBuilder<Content> allContentQ = store.boxFor(Content.class).query().in(Content_.status, libraryStatus);
-        Set<Long> allContent = Helper.getSetFromPrimitiveArray(allContentQ.build().findIds());
+        Set<Long> allContent = Helper.getSetFromPrimitiveArray(DBHelper.safeFindIds(allContentQ));
         // Strip all content that have a Custom grouping
         allContent.removeAll(Helper.getSetFromPrimitiveArray(selectCustomGroupedContent()));
         return allContent;
@@ -1677,6 +1807,6 @@ public class ObjectBoxDB {
     long[] selectContentIdsWithUpdatableJson() {
         QueryCondition<Content> contentCondition = Content_.jsonUri.endsWith(".json").and(Content_.downloadCompletionDate.greater(0));
         QueryBuilder<Content> allContentQ = store.boxFor(Content.class).query(contentCondition).filter(c -> Math.abs(c.getDownloadCompletionDate() - c.getDownloadDate()) > 10);
-        return allContentQ.build().findIds();
+        return DBHelper.safeFindIds(allContentQ);
     }
 }

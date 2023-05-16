@@ -18,8 +18,6 @@ import me.devsaki.hentoid.viewholders.AttributeItem
 /**
  * Dialog to pick a picture in a content gallery
  */
-const val KEY_NAME = "name"
-
 class AttributeTypePickerDialogFragment : DialogFragment() {
 
     // UI
@@ -37,9 +35,9 @@ class AttributeTypePickerDialogFragment : DialogFragment() {
         super.onCreate(savedInstanceState)
 
         val newName = requireArguments().getString(KEY_NAME)
-        require(!(null == newName || newName.isEmpty())) { "No images provided" }
+        require(!newName.isNullOrEmpty()) { "No images provided" }
 
-        newAttrName = newName!!
+        newAttrName = newName
 
         parent = activity as Parent
     }
@@ -103,6 +101,8 @@ class AttributeTypePickerDialogFragment : DialogFragment() {
     }
 
     companion object {
+        const val KEY_NAME = "name"
+
         fun invoke(parent: FragmentActivity, newAttrName: String) {
             val fragment = AttributeTypePickerDialogFragment()
 

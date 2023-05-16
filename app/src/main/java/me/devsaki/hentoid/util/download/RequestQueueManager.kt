@@ -5,15 +5,15 @@ import android.content.Context
 import android.net.Uri
 import com.annimon.stream.function.BiConsumer
 import com.google.firebase.crashlytics.FirebaseCrashlytics
-import io.reactivex.Completable
-import io.reactivex.disposables.CompositeDisposable
-import io.reactivex.schedulers.Schedulers
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import me.devsaki.hentoid.util.Helper
 import me.devsaki.hentoid.util.Preferences
 import me.devsaki.hentoid.util.network.OkHttpClientSingleton
-import org.threeten.bp.Instant
 import timber.log.Timber
-import java.util.*
+import java.util.Collections
+import java.util.LinkedList
 import kotlin.math.ceil
 import kotlin.math.min
 
@@ -34,26 +34,15 @@ class RequestQueueManager private constructor(
     // Actual number of allowed parallel download threads
     private var downloadThreadCount = 0
 
-    // Maximum number of allowed requests per second (-1 = not capped)
-    private var nbRequestsPerSecond = -1
-
-    // Used when waiting between requests
-    private val waitDisposable = CompositeDisposable()
-
     // Requests waiting to be executed
     private val waitingRequestQueue = LinkedList<RequestOrder>()
 
     // Requests being currently executed
-    private val currentRequests: MutableSet<RequestOrder> = HashSet()
-
-    // Measurement of the number of requests per second
-    private val previousRequestsTimestamps: Queue<Long> = LinkedList()
+    private val activeRequests: MutableSet<RequestOrder> = Collections.synchronizedSet(HashSet())
 
 
     init {
         downloadThreadCount = getPreferredThreadCount(context)
-        val crashlytics = FirebaseCrashlytics.getInstance()
-        crashlytics.setCustomKey("Download thread count", downloadThreadCount)
         init(resetActiveRequests = false, cancelQueue = true)
     }
 
@@ -64,9 +53,7 @@ class RequestQueueManager private constructor(
      * @param resetOkHttp     If true, also reset the underlying OkHttp connections
      */
     private fun init(
-        resetActiveRequests: Boolean,
-        cancelQueue: Boolean,
-        resetOkHttp: Boolean = false
+        resetActiveRequests: Boolean, cancelQueue: Boolean, resetOkHttp: Boolean = false
     ) {
         if (cancelQueue) cancelQueue()
         else if (resetOkHttp || resetActiveRequests) mRequestQueue?.stop()
@@ -74,7 +61,7 @@ class RequestQueueManager private constructor(
         if (resetOkHttp) OkHttpClientSingleton.reset()
 
         mRequestQueue = RequestQueue(this::onRequestSuccess, this::onRequestError)
-        mRequestQueue?.start()
+        start()
     }
 
     /**
@@ -99,9 +86,10 @@ class RequestQueueManager private constructor(
     fun resetRequestQueue(resetOkHttp: Boolean) {
         init(true, cancelQueue = false, resetOkHttp = resetOkHttp)
         // Requeue interrupted requests
-        synchronized(currentRequests) {
-            Timber.d("resetRequestQueue :: Requeuing %d requests", currentRequests.size)
-            for (order in currentRequests) executeRequest(order)
+        synchronized(activeRequests) {
+            Timber.d("resetRequestQueue :: Requeuing %d requests", activeRequests.size)
+            for (order in activeRequests)
+                CoroutineScope(Dispatchers.Default).launch { executeRequest(order, false) }
         }
         refill()
     }
@@ -112,9 +100,13 @@ class RequestQueueManager private constructor(
     fun cancelQueue() {
         mRequestQueue?.stop()
         synchronized(waitingRequestQueue) { waitingRequestQueue.clear() }
-        synchronized(currentRequests) { currentRequests.clear() }
-        waitDisposable.clear()
+        synchronized(activeRequests) { activeRequests.clear() }
         Timber.d("RequestQueue ::: canceled")
+    }
+
+    fun start() {
+        mRequestQueue?.start()
+        Timber.d("RequestQueue ::: started")
     }
 
     /**
@@ -123,48 +115,27 @@ class RequestQueueManager private constructor(
      * @param order Request to add to the queue
      */
     fun queueRequest(order: RequestOrder) {
-        val now = Instant.now().toEpochMilli()
-        if (getAllowedNewRequests(now) > 0) executeRequest(order, now) else {
-            synchronized(waitingRequestQueue) {
-                waitingRequestQueue.add(order)
-                Timber.d(
-                    "Waiting requests queue ::: added new request - current total %d",
-                    waitingRequestQueue.size
-                )
+        CoroutineScope(Dispatchers.Default).launch {
+            if (isNewRequestAllowed()) executeRequest(order) else {
+                synchronized(waitingRequestQueue) {
+                    waitingRequestQueue.add(order)
+                    Timber.d(
+                        "Waiting requests queue ::: added new request - current total %d",
+                        waitingRequestQueue.size
+                    )
+                }
             }
         }
     }
 
     /**
-     * Get the number of new requests that can be executed at the given timestamp
-     * This method is where the number of parallel downloads and the download rate limitations
-     * are actually used
-     *
-     * @param now Timestamp to consider
-     * @return Number of new requests that can be executed at the given timestamp
+     * Indicates whether a new request can be executed or not
+     * NB : This call might _block_ the calling thread according to the current download rate limit
      */
-    private fun getAllowedNewRequests(now: Long): Int {
+    private fun isNewRequestAllowed(): Boolean {
         val remainingSlots = downloadThreadCount - nbActiveRequests
-        if (0 == remainingSlots) return 0
-        return if (nbRequestsPerSecond > -1) {
-            synchronized(previousRequestsTimestamps) {
-                var polled: Boolean
-                do {
-                    polled = false
-                    val earliestRequestTimestamp = previousRequestsTimestamps.peek() ?: break
-                    // Empty collection
-                    if (now - earliestRequestTimestamp > 1000) {
-                        previousRequestsTimestamps.poll()
-                        polled = true
-                    }
-                } while (polled)
-                val nbRequestsLastSecond = previousRequestsTimestamps.size
-                return min(
-                    remainingSlots,
-                    nbRequestsPerSecond - nbRequestsLastSecond
-                )
-            }
-        } else remainingSlots
+        if (remainingSlots < 1) return false
+        return true
     }
 
     /**
@@ -172,40 +143,32 @@ class RequestQueueManager private constructor(
      */
     private fun refill() {
         if (nbActiveRequests < downloadThreadCount) {
-            waitDisposable.add(Completable.fromRunnable { doRefill() }
-                .subscribeOn(Schedulers.computation())
-                .observeOn(Schedulers.computation())
-                .subscribe(
-                    Helper.EMPTY_ACTION
-                ) { t: Throwable? ->
-                    Timber.e(
-                        t
-                    )
+            CoroutineScope(Dispatchers.Default).launch {
+                try {
+                    doRefill()
+                } catch (e: Exception) {
+                    Timber.e(e)
                 }
-            )
+            }
         }
     }
 
     /**
      * Refill the queue with the allowed number of requests
      */
-    @Synchronized
-    private fun doRefill() {
-        var now = Instant.now().toEpochMilli()
-        var allowedNewRequests = getAllowedNewRequests(now)
-        while (0 == allowedNewRequests && 0 == nbActiveRequests) { // Dry queue
+    private suspend fun doRefill() {
+        var newRequestAllowed = isNewRequestAllowed()
+        while (!newRequestAllowed && 0 == nbActiveRequests) { // Dry queue
             Helper.pause(250)
-            now = Instant.now().toEpochMilli()
-            allowedNewRequests = getAllowedNewRequests(now)
+            newRequestAllowed = isNewRequestAllowed()
         }
-        if (allowedNewRequests > 0) {
+        if (newRequestAllowed) {
+            val o: RequestOrder?
             synchronized(waitingRequestQueue) {
-                for (i in 0 until allowedNewRequests) {
-                    if (waitingRequestQueue.isEmpty()) break
-                    val o = waitingRequestQueue.removeFirst()
-                    o?.let { executeRequest(it, now) }
-                }
+                o = if (!waitingRequestQueue.isEmpty()) waitingRequestQueue.removeFirst()
+                else null
             }
+            o?.let { executeRequest(it) }
         }
     }
 
@@ -214,21 +177,21 @@ class RequestQueueManager private constructor(
      * NB : if we're here, that means all quota checks have already passed
      *
      * @param order Request order to execute
-     * @param now   Timestamp to record the execution for
      */
-    private fun executeRequest(order: RequestOrder, now: Long = Instant.now().toEpochMilli()) {
-        synchronized(currentRequests) { currentRequests.add(order) }
-        mRequestQueue?.executeRequest(order)
-        if (nbRequestsPerSecond > -1) {
-            synchronized(previousRequestsTimestamps) { previousRequestsTimestamps.add(now) }
-        }
-        synchronized(waitingRequestQueue) {
-            Timber.d(
-                "Requests queue ::: request executed for host %s - current total (%d active + %d waiting)",
-                Uri.parse(order.url).host,
-                nbActiveRequests,
-                waitingRequestQueue.size
-            )
+    private suspend fun executeRequest(order: RequestOrder, insert: Boolean = true) {
+        mRequestQueue?.let {
+            if (!it.active) return
+            if (insert) synchronized(activeRequests) { activeRequests.add(order) }
+            DownloadRateLimiter.take()
+            it.executeRequest(order)
+            synchronized(waitingRequestQueue) {
+                Timber.d(
+                    "Requests queue ::: request executed for host %s - current total (%d active + %d waiting)",
+                    Uri.parse(order.url).host,
+                    nbActiveRequests,
+                    waitingRequestQueue.size
+                )
+            }
         }
     }
 
@@ -238,8 +201,8 @@ class RequestQueueManager private constructor(
      * @param request Completed request
      */
     private fun onRequestCompleted(request: RequestOrder) {
-        synchronized(currentRequests) {
-            currentRequests.remove(request)
+        synchronized(activeRequests) {
+            activeRequests.remove(request)
             Timber.v(
                 "Global requests queue ::: request removed for host %s - current total %s",
                 Uri.parse(request.url).host,
@@ -247,11 +210,7 @@ class RequestQueueManager private constructor(
             )
         }
 
-        if (!waitingRequestQueue.isEmpty()) {
-            refill()
-        } else { // No more requests to add
-            waitDisposable.clear()
-        }
+        if (!waitingRequestQueue.isEmpty()) refill()
     }
 
     private fun onRequestSuccess(request: RequestOrder, resultFileUri: Uri) {
@@ -262,19 +221,18 @@ class RequestQueueManager private constructor(
     private fun onRequestError(request: RequestOrder, err: RequestOrder.NetworkError) {
         onRequestCompleted(request)
         // Don't propagate interruptions
-        if (err.type != RequestOrder.NetworkErrorType.INTERRUPTED)
-            onError.accept(request, err)
-        else
-            Timber.d("Downloader : Interruption detected for %s : %s", request.url, err.message)
+        if (err.type != RequestOrder.NetworkErrorType.INTERRUPTED) onError.accept(request, err)
+        else Timber.d("Downloader : Interruption detected for %s : %s", request.url, err.message)
     }
 
     fun setNbRequestsPerSecond(value: Int) {
-        nbRequestsPerSecond = value
+        DownloadRateLimiter.setRateLimit(value.toLong())
+        Timber.d("Downloader : Settings download rate limit to %d/s", value)
     }
 
     private val nbActiveRequests: Int
         get() {
-            synchronized(currentRequests) { return currentRequests.size }
+            synchronized(activeRequests) { return activeRequests.size }
         }
 
     /**
@@ -315,8 +273,7 @@ class RequestQueueManager private constructor(
      * @return Device's per-app memory capacity
      */
     private fun getMemoryClass(context: Context): Int {
-        val activityManager =
-            context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
         return activityManager.memoryClass
     }
 
@@ -334,10 +291,9 @@ class RequestQueueManager private constructor(
             context: Context,
             onSuccess: BiConsumer<RequestOrder, Uri>,
             onError: BiConsumer<RequestOrder, RequestOrder.NetworkError>
-        ): RequestQueueManager =
-            instance ?: synchronized(this) {
-                instance ?: RequestQueueManager(context, onSuccess, onError).also { instance = it }
-            }
+        ): RequestQueueManager = instance ?: synchronized(this) {
+            instance ?: RequestQueueManager(context, onSuccess, onError).also { instance = it }
+        }
 
         fun getInstance(): RequestQueueManager? {
             synchronized(this) {

@@ -37,20 +37,22 @@ import me.devsaki.hentoid.database.CollectionDAO;
 import me.devsaki.hentoid.database.DatabaseMaintenance;
 import me.devsaki.hentoid.database.ObjectBoxDAO;
 import me.devsaki.hentoid.enums.Site;
+import me.devsaki.hentoid.enums.StorageLocation;
 import me.devsaki.hentoid.events.AppUpdatedEvent;
 import me.devsaki.hentoid.json.core.JsonSiteSettings;
-import me.devsaki.hentoid.notification.action.UserActionNotificationChannel;
 import me.devsaki.hentoid.notification.delete.DeleteNotificationChannel;
 import me.devsaki.hentoid.notification.download.DownloadNotificationChannel;
 import me.devsaki.hentoid.notification.startup.StartupNotificationChannel;
+import me.devsaki.hentoid.notification.transform.TransformNotificationChannel;
 import me.devsaki.hentoid.notification.update.UpdateNotificationChannel;
 import me.devsaki.hentoid.notification.updateJson.UpdateJsonNotificationChannel;
+import me.devsaki.hentoid.notification.userAction.UserActionNotificationChannel;
 import me.devsaki.hentoid.receiver.PlugEventsReceiver;
 import me.devsaki.hentoid.services.UpdateCheckService;
-import me.devsaki.hentoid.util.file.FileHelper;
 import me.devsaki.hentoid.util.Helper;
 import me.devsaki.hentoid.util.JsonHelper;
 import me.devsaki.hentoid.util.Preferences;
+import me.devsaki.hentoid.util.file.FileHelper;
 import me.devsaki.hentoid.workers.StartupWorker;
 import timber.log.Timber;
 
@@ -137,7 +139,6 @@ public class AppStartup {
 
     public static List<Observable<Float>> getPostLaunchTasks(@NonNull final Context context) {
         List<Observable<Float>> result = new ArrayList<>();
-//        result.add(createObservableFrom(context, AppStartupDev::testImg));
         result.add(createObservableFrom(context, AppStartup::searchForUpdates));
         result.add(createObservableFrom(context, AppStartup::sendFirebaseStats));
         result.add(createObservableFrom(context, AppStartup::clearPictureCache));
@@ -189,6 +190,7 @@ public class AppStartup {
             UserActionNotificationChannel.init(context);
             DeleteNotificationChannel.init(context);
             UpdateJsonNotificationChannel.init(context);
+            TransformNotificationChannel.init(context);
             // Clears all previous notifications
             NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
             if (manager != null) manager.cancelAll();
@@ -268,7 +270,7 @@ public class AppStartup {
     private static void createBookmarksJson(@NonNull final Context context, ObservableEmitter<Float> emitter) {
         Timber.i("Create bookmarks JSON : start");
         try {
-            DocumentFile appRoot = FileHelper.getFolderFromTreeUriString(context, Preferences.getStorageUri());
+            DocumentFile appRoot = FileHelper.getDocumentFromTreeUriString(context, Preferences.getStorageUri(StorageLocation.PRIMARY_1));
             if (appRoot != null) {
                 DocumentFile bookmarksJson = FileHelper.findFile(context, appRoot, Consts.BOOKMARKS_JSON_FILE_NAME);
                 if (null == bookmarksJson) {

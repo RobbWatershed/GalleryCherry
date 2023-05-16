@@ -24,7 +24,6 @@ import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import me.devsaki.hentoid.core.Consts;
 import me.devsaki.hentoid.enums.AttributeType;
 import me.devsaki.hentoid.json.adapters.AndroidPairAdapterFactory;
 import me.devsaki.hentoid.util.file.FileHelper;

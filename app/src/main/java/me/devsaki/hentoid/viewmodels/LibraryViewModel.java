@@ -3,14 +3,11 @@ package me.devsaki.hentoid.viewmodels;
 import static me.devsaki.hentoid.util.GroupHelper.moveContentToCustomGroup;
 
 import android.app.Application;
-import android.content.res.Resources;
 import android.net.Uri;
 import android.os.Bundle;
-import android.text.TextUtils;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.StringRes;
 import androidx.documentfile.provider.DocumentFile;
 import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
@@ -31,11 +28,11 @@ import com.annimon.stream.function.Consumer;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.greenrobot.eventbus.EventBus;
-import org.threeten.bp.Instant;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.security.InvalidParameterException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -63,6 +60,7 @@ import me.devsaki.hentoid.database.domains.SearchRecord;
 import me.devsaki.hentoid.enums.Grouping;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.enums.StatusContent;
+import me.devsaki.hentoid.enums.StorageLocation;
 import me.devsaki.hentoid.events.ProcessEvent;
 import me.devsaki.hentoid.util.ContentHelper;
 import me.devsaki.hentoid.util.GroupHelper;
@@ -81,7 +79,6 @@ import me.devsaki.hentoid.util.network.WebkitPackageHelper;
 import me.devsaki.hentoid.widget.ContentSearchManager;
 import me.devsaki.hentoid.widget.GroupSearchManager;
 import me.devsaki.hentoid.workers.DeleteWorker;
-import me.devsaki.hentoid.workers.PurgeWorker;
 import me.devsaki.hentoid.workers.UpdateJsonWorker;
 import me.devsaki.hentoid.workers.data.DeleteData;
 import me.devsaki.hentoid.workers.data.UpdateJsonData;
@@ -113,10 +110,12 @@ public class LibraryViewModel extends AndroidViewModel {
     private LiveData<List<Group>> currentGroupsTotalSource;
     private final MediatorLiveData<Integer> currentGroupTotal = new MediatorLiveData<>();
     private final MutableLiveData<Boolean> isCustomGroupingAvailable = new MutableLiveData<>();     // True if there's at least one existing custom group; false instead
+    private final MutableLiveData<Boolean> isDynamicGroupingAvailable = new MutableLiveData<>();     // True if there's at least one existing dynamic group; false instead
     private final MutableLiveData<Bundle> groupSearchBundle = new MutableLiveData<>();
     // Other data
     private final LiveData<List<SearchRecord>> searchRecords;
     private final LiveData<Integer> totalQueue;
+    private final LiveData<Integer> favPages;
 
     // Updated whenever a new Contentsearch is performed
     private final MediatorLiveData<Boolean> newContentSearch = new MediatorLiveData<>();
@@ -129,8 +128,9 @@ public class LibraryViewModel extends AndroidViewModel {
         groupSearchManager = new GroupSearchManager(dao);
         totalContent = dao.countAllBooksLive();
         totalQueue = dao.countAllQueueBooksLive();
+        favPages = dao.countAllFavouritePagesLive();
         searchRecords = dao.selectSearchRecordsLive();
-        refreshCustomGroupingAvailable();
+        refreshAvailableGroupings();
     }
 
     public void onSaveState(Bundle outState) {
@@ -192,6 +192,11 @@ public class LibraryViewModel extends AndroidViewModel {
     }
 
     @NonNull
+    public LiveData<Boolean> isDynamicGroupingAvailable() {
+        return isDynamicGroupingAvailable;
+    }
+
+    @NonNull
     public LiveData<Bundle> getContentSearchManagerBundle() {
         return contentSearchBundle;
     }
@@ -209,6 +214,11 @@ public class LibraryViewModel extends AndroidViewModel {
     @NonNull
     public LiveData<Integer> getTotalQueue() {
         return totalQueue;
+    }
+
+    @NonNull
+    public LiveData<Integer> getFavPages() {
+        return favPages;
     }
 
     // =========================
@@ -265,55 +275,9 @@ public class LibraryViewModel extends AndroidViewModel {
         contentSearchManager.setContentType(metadata.getContentType());
         newContentSearch.setValue(true);
 
-        if (!metadata.isEmpty()) {
-            List<String> labelElts = Stream.of(metadata.getAttributes()).map(a -> formatAttribute(a, getApplication().getResources())).toList();
-            if (metadata.getLocation() != ContentHelper.Location.ANY)
-                labelElts.add("loc:" + getApplication().getResources().getString(formatLocation(metadata.getLocation())).toLowerCase());
-            if (metadata.getContentType() != ContentHelper.Type.ANY)
-                labelElts.add("type:" + getApplication().getResources().getString(formatContentType(metadata.getContentType())).toLowerCase());
-            String label = TextUtils.join("|", labelElts);
-            if (label.length() > 50) label = label.substring(0, 50) + "…";
-            dao.insertSearchRecord(SearchRecord.fromContentAdvancedSearch(searchUri, label), 10);
-        }
+        if (!metadata.isEmpty())
+            dao.insertSearchRecord(SearchRecord.fromContentAdvancedSearch(searchUri, metadata.toString(getApplication())), 10);
         doSearchContent();
-    }
-
-    private @StringRes
-    int formatLocation(@ContentHelper.Location int value) {
-        switch (value) {
-            case ContentHelper.Location.PRIMARY:
-                return R.string.refresh_location_internal;
-            case ContentHelper.Location.EXTERNAL:
-                return R.string.refresh_location_external;
-            case ContentHelper.Location.ANY:
-            default:
-                return R.string.search_location_entries_1;
-        }
-    }
-
-    private @StringRes
-    int formatContentType(@ContentHelper.Type int value) {
-        switch (value) {
-            case ContentHelper.Type.FOLDER:
-                return R.string.search_type_entries_2;
-            case ContentHelper.Type.STREAMED:
-                return R.string.search_type_entries_3;
-            case ContentHelper.Type.ARCHIVE:
-                return R.string.search_type_entries_4;
-            case ContentHelper.Type.PLACEHOLDER:
-                return R.string.search_type_entries_5;
-            case ContentHelper.Type.ANY:
-            default:
-                return R.string.search_type_entries_1;
-        }
-    }
-
-    private String formatAttribute(@NonNull Attribute a, @NonNull Resources res) {
-        return String.format("%s%s:%s",
-                a.isExcluded() ? "[x]" : "",
-                res.getString(a.getType().getDisplayName()),
-                a.getDisplayName()
-        );
     }
 
     public void clearContent() {
@@ -346,11 +310,12 @@ public class LibraryViewModel extends AndroidViewModel {
         currentGroupTotal.addSource(currentGroupsTotalSource, list -> currentGroupTotal.postValue(list.size()));
 
         groupSearchBundle.postValue(groupSearchManager.toBundle());
-        refreshCustomGroupingAvailable();
+        refreshAvailableGroupings();
     }
 
-    public void refreshCustomGroupingAvailable() {
+    public void refreshAvailableGroupings() {
         isCustomGroupingAvailable.postValue(dao.countGroupsFor(Grouping.CUSTOM) > 0);
+        isDynamicGroupingAvailable.postValue(dao.countGroupsFor(Grouping.DYNAMIC) > 0);
     }
 
 
@@ -495,7 +460,7 @@ public class LibraryViewModel extends AndroidViewModel {
         Content theContent = dao.selectContent(contentId);
 
         if (theContent != null) {
-            if (theContent.isBeingDeleted()) return;
+            if (theContent.isBeingProcessed()) return;
             theContent.setCompleted(!theContent.isCompleted());
             ContentHelper.persistJson(getApplication(), theContent);
             dao.insertContentCore(theContent);
@@ -533,7 +498,7 @@ public class LibraryViewModel extends AndroidViewModel {
         Content theContent = dao.selectContent(contentId);
 
         if (theContent != null) {
-            if (theContent.isBeingDeleted()) return;
+            if (theContent.isBeingProcessed()) return;
             theContent.setReads(0);
             theContent.setReadPagesCount(0);
             theContent.setLastReadPageIndex(0);
@@ -557,7 +522,7 @@ public class LibraryViewModel extends AndroidViewModel {
      * @param content Content whose favourite state to toggle
      */
     public void toggleContentFavourite(@NonNull final Content content, @NonNull final Runnable onSuccess) {
-        if (content.isBeingDeleted()) return;
+        if (content.isBeingProcessed()) return;
 
         compositeDisposable.add(
                 Single.fromCallable(() -> doToggleContentFavourite(content.getId()))
@@ -663,11 +628,11 @@ public class LibraryViewModel extends AndroidViewModel {
                             if (c.isPresent()) {
                                 Content content = c.get();
                                 // Non-blocking performance bottleneck; run in a dedicated worker
-                                // TODO if the purge is extremely long, that worker might still be working while downloads are happening on these same books
-                                if (reparseImages) purgeItem(content, false);
+                                if (reparseImages)
+                                    ContentHelper.purgeContent(getApplication(), content, false);
                                 dao.addContentToQueue(
-                                        content, targetImageStatus, position, -1,
-                                        ContentQueueManager.getInstance().isQueueActive(getApplication()));
+                                        content, targetImageStatus, position, -1, null,
+                                        ContentQueueManager.INSTANCE.isQueueActive(getApplication()));
                             } else {
                                 errorCount.incrementAndGet();
                                 onError.accept(new EmptyResultException(getApplication().getString(R.string.stream_canceled)));
@@ -676,7 +641,7 @@ public class LibraryViewModel extends AndroidViewModel {
                         .observeOn(AndroidSchedulers.mainThread())
                         .doOnComplete(() -> {
                             if (Preferences.isQueueAutostart())
-                                ContentQueueManager.getInstance().resumeQueue(getApplication());
+                                ContentQueueManager.INSTANCE.resumeQueue(getApplication());
                             onSuccess.accept(contentList.size() - errorCount.get());
                         })
                         .subscribe(
@@ -723,8 +688,8 @@ public class LibraryViewModel extends AndroidViewModel {
                             if (c.isPresent()) {
                                 c.get().setDownloadMode(Content.DownloadMode.DOWNLOAD);
                                 dao.addContentToQueue(
-                                        c.get(), StatusContent.SAVED, position, -1,
-                                        ContentQueueManager.getInstance().isQueueActive(getApplication()));
+                                        c.get(), StatusContent.SAVED, position, -1, null,
+                                        ContentQueueManager.INSTANCE.isQueueActive(getApplication()));
                             } else {
                                 nbErrors.incrementAndGet();
                                 onError.accept(new EmptyResultException(getApplication().getString(R.string.download_canceled)));
@@ -733,7 +698,7 @@ public class LibraryViewModel extends AndroidViewModel {
                         .observeOn(AndroidSchedulers.mainThread())
                         .doOnComplete(() -> {
                             if (Preferences.isQueueAutostart())
-                                ContentQueueManager.getInstance().resumeQueue(getApplication());
+                                ContentQueueManager.INSTANCE.resumeQueue(getApplication());
                             onSuccess.accept(contentList.size() - nbErrors.get());
                         })
                         .observeOn(AndroidSchedulers.mainThread())
@@ -790,7 +755,7 @@ public class LibraryViewModel extends AndroidViewModel {
                                 Content dbContent = dao.selectContent(c.get().getId());
                                 if (null == dbContent) return;
                                 // Non-blocking performance bottleneck; scheduled in a dedicated worker
-                                purgeItem(c.get(), true);
+                                ContentHelper.purgeContent(getApplication(), c.get(), true);
                                 dbContent.setDownloadMode(Content.DownloadMode.STREAM);
                                 List<ImageFile> imgs = dbContent.getImageFiles();
                                 if (imgs != null) {
@@ -802,7 +767,7 @@ public class LibraryViewModel extends AndroidViewModel {
                                     dao.insertImageFiles(imgs);
                                 }
                                 dbContent.forceSize(0);
-                                dbContent.setIsBeingDeleted(false);
+                                dbContent.setIsBeingProcessed(false);
                                 dao.insertContent(dbContent);
                                 ContentHelper.updateJson(getApplication(), dbContent);
                             } else {
@@ -842,25 +807,12 @@ public class LibraryViewModel extends AndroidViewModel {
         Observer<WorkInfo> workInfoObserver = workInfo -> {
             if (workInfo.getState().isFinished()) {
                 if (onSuccess != null) onSuccess.run();
-                refreshCustomGroupingAvailable();
+                refreshAvailableGroupings();
             }
         };
 
         workObservers.add(new ImmutablePair<>(request.getId(), workInfoObserver));
         workManager.getWorkInfoByIdLiveData(request.getId()).observeForever(workInfoObserver);
-    }
-
-    public void purgeItem(@NonNull final Content content, boolean keepCover) {
-        DeleteData.Builder builder = new DeleteData.Builder();
-        builder.setContentPurgeIds(Stream.of(content).map(Content::getId).toList());
-        builder.setContentPurgeKeepCovers(keepCover);
-
-        WorkManager workManager = WorkManager.getInstance(getApplication());
-        workManager.enqueueUniqueWork(
-                Integer.toString(R.id.delete_service_purge),
-                ExistingWorkPolicy.APPEND_OR_REPLACE,
-                new OneTimeWorkRequest.Builder(PurgeWorker.class).setInputData(builder.getData()).build()
-        );
     }
 
     public void archiveContents(@NonNull final List<Content> contentList, Consumer<
@@ -888,7 +840,7 @@ public class LibraryViewModel extends AndroidViewModel {
     public Content doArchiveContent(@NonNull final Content content) throws IOException {
         Helper.assertNonUiThread();
         Timber.i(">> archive %s", content.getTitle());
-        DocumentFile bookFolder = FileHelper.getFolderFromTreeUriString(getApplication(), content.getStorageUri());
+        DocumentFile bookFolder = FileHelper.getDocumentFromTreeUriString(getApplication(), content.getStorageUri());
         if (null == bookFolder) return null;
 
         List<DocumentFile> files = FileHelper.listFiles(getApplication(), bookFolder, null); // Everything (incl. JSON and thumb) gets into the archive
@@ -901,7 +853,8 @@ public class LibraryViewModel extends AndroidViewModel {
             try {
                 try {
                     destFile = FileHelper.openNewDownloadOutputStream(getApplication(), destName, ArchiveHelper.ZIP_MIME_TYPE);
-                } catch (IOException e) { // ...if it fails, try creating the file with the old sanitized naming
+                } catch (
+                        IOException e) { // ...if it fails, try creating the file with the old sanitized naming
                     destName = bookFolderName.right + ".zip";
                     destFile = FileHelper.openNewDownloadOutputStream(getApplication(), destName, ArchiveHelper.ZIP_MIME_TYPE);
                 }
@@ -980,22 +933,24 @@ public class LibraryViewModel extends AndroidViewModel {
         return dao.selectContent(Helper.getPrimitiveArrayFromList(group.getContentIds()));
     }
 
-    public void newGroup(@NonNull final Grouping grouping, @NonNull final String newGroupName,
+    public void newGroup(@NonNull final Grouping grouping,
+                         @NonNull final String newGroupName,
+                         @Nullable final String searchUri,
                          @NonNull final Runnable onNameExists) {
         // Check if the group already exists
-        List<Group> localGroups = getGroups().getValue();
-        if (null == localGroups) return;
-
-        List<Group> groupMatchingName = Stream.of(localGroups).filter(g -> g.name.equalsIgnoreCase(newGroupName)).toList();
+        List<Group> groupingGroups = dao.selectGroups(grouping.getId());
+        List<Group> groupMatchingName = Stream.of(groupingGroups).filter(g -> g.name.equalsIgnoreCase(newGroupName)).toList();
         if (!groupMatchingName.isEmpty()) { // Existing group with the same name
             onNameExists.run();
         } else {
+            Group newGroup = new Group(grouping, newGroupName, -1);
+            if (searchUri != null && !searchUri.isEmpty()) newGroup.searchUri = searchUri;
             compositeDisposable.add(
-                    Completable.fromRunnable(() -> dao.insertGroup(new Group(grouping, newGroupName, -1)))
+                    Completable.fromRunnable(() -> dao.insertGroup(newGroup))
                             .subscribeOn(Schedulers.io())
                             .observeOn(Schedulers.io())
                             .doOnComplete(() -> {
-                                refreshCustomGroupingAvailable();
+                                refreshAvailableGroupings();
                                 GroupHelper.updateGroupsJson(getApplication(), dao);
                             })
                             .observeOn(AndroidSchedulers.mainThread())
@@ -1026,7 +981,7 @@ public class LibraryViewModel extends AndroidViewModel {
                             .subscribeOn(Schedulers.io())
                             .observeOn(Schedulers.io())
                             .doOnComplete(() -> {
-                                refreshCustomGroupingAvailable();
+                                refreshAvailableGroupings();
 
                                 // Update all JSONs of the books inside the renamed group so that they refer to the correct name
                                 UpdateJsonData.Builder builder = new UpdateJsonData.Builder();
@@ -1057,7 +1012,7 @@ public class LibraryViewModel extends AndroidViewModel {
      * @param group Group whose favourite state to toggle
      */
     public void toggleGroupFavourite(@NonNull final Group group) {
-        if (group.isBeingDeleted()) return;
+        if (group.isBeingProcessed()) return;
 
         compositeDisposable.add(
                 Single.fromCallable(() -> doToggleGroupFavourite(group.id))
@@ -1087,11 +1042,11 @@ public class LibraryViewModel extends AndroidViewModel {
         if (theGroup != null) {
             theGroup.setFavourite(!theGroup.isFavourite());
 
-            // Persist in it JSON
-            GroupHelper.updateGroupsJson(getApplication(), dao);
-
             // Persist in it DB
             dao.insertGroup(theGroup);
+
+            // Persist in it JSON
+            GroupHelper.updateGroupsJson(getApplication(), dao);
 
             return theGroup;
         }
@@ -1132,7 +1087,7 @@ public class LibraryViewModel extends AndroidViewModel {
         // Check if given content still exists in DB
         Group theGroup = dao.selectGroup(groupId);
 
-        if (theGroup != null && !theGroup.isBeingDeleted()) {
+        if (theGroup != null && !theGroup.isBeingProcessed()) {
             theGroup.setRating(targetRating);
             // Persist in it JSON
             GroupHelper.updateGroupsJson(getApplication(), dao);
@@ -1162,7 +1117,7 @@ public class LibraryViewModel extends AndroidViewModel {
                         .map(c -> moveContentToCustomGroup(c, group, dao))
                         .doOnNext(c -> ContentHelper.updateJson(getApplication(), c))
                         .doOnComplete(() -> {
-                            refreshCustomGroupingAvailable();
+                            refreshAvailableGroupings();
                             GroupHelper.updateGroupsJson(getApplication(), dao);
                         })
                         .observeOn(AndroidSchedulers.mainThread())
@@ -1254,7 +1209,8 @@ public class LibraryViewModel extends AndroidViewModel {
             Content splitContent = createContentFromChapter(content, chap);
 
             // Create a new folder for the split content
-            DocumentFile targetFolder = ContentHelper.getOrCreateContentDownloadDir(getApplication(), splitContent, true, null);
+            StorageLocation location = ContentHelper.getLocation(content);
+            DocumentFile targetFolder = ContentHelper.getOrCreateContentDownloadDir(getApplication(), splitContent, location, true);
             if (null == targetFolder || !targetFolder.exists())
                 throw new ContentNotProcessedException(splitContent, "Could not create target directory");
 
@@ -1295,7 +1251,7 @@ public class LibraryViewModel extends AndroidViewModel {
                 GroupHelper.moveContentToCustomGroup(splitContent, customGroups.get(0).getGroup(), dao);
         }
 
-        EventBus.getDefault().post(new ProcessEvent(ProcessEvent.EventType.COMPLETE, R.id.generic_progress, 0, nbImages, 0, nbImages));
+        EventBus.getDefault().postSticky(new ProcessEvent(ProcessEvent.EventType.COMPLETE, R.id.generic_progress, 0, nbImages, 0, nbImages));
     }
 
     private Content createContentFromChapter(@NonNull Content content, @NonNull Chapter chapter) {

@@ -56,9 +56,9 @@
     <!-- For downloaded books only -->
     <item
         android:id="@+id/action_redownload"
-        android:icon="@drawable/ic_action_download_scratch"
-        android:title="@string/menu_redownload_scratch"
-        android:tooltipText="@string/menu_redownload_scratch"
+        android:icon="@drawable/ic_action_download"
+        android:title="@string/menu_redownload"
+        android:tooltipText="@string/menu_redownload"
         app:showAsAction="ifRoom" />
     <item
         android:id="@+id/action_stream"
@@ -90,6 +90,12 @@
         android:icon="@drawable/ic_action_split"
         android:title="@string/merge_split"
         android:tooltipText="@string/merge_split"
+        app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/action_transform"
+        android:icon="@drawable/ic_action_transform"
+        android:title="@string/transform"
+        android:tooltipText="@string/transform"
         app:showAsAction="ifRoom" />
     <item
         android:id="@+id/action_select_all"

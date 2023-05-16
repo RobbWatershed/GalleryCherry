@@ -313,8 +313,10 @@ public class CustomSubsamplingScaleImageView extends View {
     // Tile and image decoding
     private ImageRegionDecoder decoder;
     private final ReadWriteLock decoderLock = new ReentrantReadWriteLock(true);
-    private DecoderFactory<? extends ImageDecoder> bitmapDecoderFactory = new CompatDecoderFactory<>(SkiaImageDecoder.class);
-    private DecoderFactory<? extends ImageRegionDecoder> regionDecoderFactory = new CompatDecoderFactory<>(SkiaImageRegionDecoder.class);
+    // Preference for bitmap color format
+    private Bitmap.Config preferredBitmapConfig = Bitmap.Config.RGB_565;
+    private DecoderFactory<? extends ImageDecoder> bitmapDecoderFactory = new CompatDecoderFactory<>(SkiaImageDecoder.class, preferredBitmapConfig);
+    private DecoderFactory<? extends ImageRegionDecoder> regionDecoderFactory = new CompatDecoderFactory<>(SkiaImageRegionDecoder.class, preferredBitmapConfig);
 
     // Start of double-tap and long-tap zoom, in terms of screen (view) coordinates
     private PointF vCenterStart;
@@ -366,9 +368,6 @@ public class CustomSubsamplingScaleImageView extends View {
 
     //The logical density of the display
     private final float density;
-
-    // A global preference for bitmap format, available to decoder classes that respect it
-    private static Bitmap.Config preferredBitmapConfig;
 
     // Switch to ignore all touch events (used in vertical mode when the container view is the one handling touch events)
     private boolean ignoreTouchEvents = false;
@@ -453,8 +452,8 @@ public class CustomSubsamplingScaleImageView extends View {
         }
 
         quickScaleThreshold = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 80, context.getResources().getDisplayMetrics());
-        scaleDebouncer = new Debouncer<>(context, 200, scale -> {
-            if (scaleListener != null) scaleListener.accept(scale);
+        scaleDebouncer = new Debouncer<>(context, 200, scaleOut -> {
+            if (scaleListener != null) scaleListener.accept(scaleOut);
         });
     }
 
@@ -474,7 +473,7 @@ public class CustomSubsamplingScaleImageView extends View {
      *
      * @return the preferred bitmap configuration, or null if none has been set.
      */
-    public static Bitmap.Config getPreferredBitmapConfig() {
+    public Bitmap.Config getPreferredBitmapConfig() {
         return preferredBitmapConfig;
     }
 
@@ -484,10 +483,12 @@ public class CustomSubsamplingScaleImageView extends View {
      * {@link ImageRegionDecoder} classes all respect this (except when they were constructed with
      * an instance-specific config) but custom decoder classes will not.
      *
-     * @param preferredBitmapConfig the bitmap configuration to be used by future instances of the view. Pass null to restore the default.
+     * @param config the bitmap configuration to be used by future instances of the view. Pass null to restore the default.
      */
-    public static void setPreferredBitmapConfig(Bitmap.Config preferredBitmapConfig) {
-        CustomSubsamplingScaleImageView.preferredBitmapConfig = preferredBitmapConfig;
+    public void setPreferredBitmapConfig(Bitmap.Config config) {
+        preferredBitmapConfig = config;
+        bitmapDecoderFactory = new CompatDecoderFactory<>(SkiaImageDecoder.class, config);
+        regionDecoderFactory = new CompatDecoderFactory<>(SkiaImageRegionDecoder.class, config);
     }
 
     /**
@@ -720,6 +721,7 @@ public class CustomSubsamplingScaleImageView extends View {
 
             @Override
             public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
+                // NB : Even though e1 and e2 are marked @NonNull on the overriden method, one of them may be actually null, hence the present implementation
                 if (panEnabled && readySent && vTranslate != null && e1 != null && e2 != null && (Math.abs(e1.getX() - e2.getX()) > 50 || Math.abs(e1.getY() - e2.getY()) > 50) && (Math.abs(velocityX) > 500 || Math.abs(velocityY) > 500) && !isZooming) {
                     PointF vTranslateEnd = new PointF(vTranslate.x + (velocityX * 0.25f), vTranslate.y + (velocityY * 0.25f));
                     float sCenterXEnd = ((getWidthInternal() / 2f) - vTranslateEnd.x) / scale;
@@ -2162,8 +2164,6 @@ public class CustomSubsamplingScaleImageView extends View {
     }
 
     private static class SingleImage {
-        //        private int sampleSize;
-//        private Bitmap bitmap;
         private float scale = 1;
         private int rawWidth = -1;
         private int rawHeight = -1;
@@ -2656,7 +2656,7 @@ public class CustomSubsamplingScaleImageView extends View {
      * @param regionDecoderClass The {@link ImageRegionDecoder} implementation to use.
      */
     public final void setRegionDecoderClass(@NonNull Class<? extends ImageRegionDecoder> regionDecoderClass) {
-        this.regionDecoderFactory = new CompatDecoderFactory<>(regionDecoderClass);
+        this.regionDecoderFactory = new CompatDecoderFactory<>(regionDecoderClass, preferredBitmapConfig);
     }
 
     /**
@@ -2678,7 +2678,7 @@ public class CustomSubsamplingScaleImageView extends View {
      * @param bitmapDecoderClass The {@link ImageDecoder} implementation to use.
      */
     public final void setBitmapDecoderClass(@NonNull Class<? extends ImageDecoder> bitmapDecoderClass) {
-        this.bitmapDecoderFactory = new CompatDecoderFactory<>(bitmapDecoderClass);
+        this.bitmapDecoderFactory = new CompatDecoderFactory<>(bitmapDecoderClass, preferredBitmapConfig);
     }
 
     /**

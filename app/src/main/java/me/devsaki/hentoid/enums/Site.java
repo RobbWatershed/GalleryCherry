@@ -35,7 +35,6 @@ public enum Site {
     BABETODAY(15, "Babe.today", "https://babe.today/", R.drawable.ic_menu_jjgirls),
     NONE(98, "none", "", R.drawable.ic_attribute_source); // External library; fallback site
 
-
     private static final Site[] INVISIBLE_SITES = {
             HELLPORNO, // Removed their pictures section
             HINA, // Hardcoded link; should not be on display on dynamic sources
@@ -64,6 +63,8 @@ public enum Site {
     // Controls for "Mark downloaded/merged" in browser
     private int bookCardDepth = 2;
     private Set<String> bookCardExcludedParentClasses = new HashSet<>();
+    //Controls for "Mark books with blocked tags" in browser
+    private int galleryHeight = -1;
 
     Site(int code,
          String description,
@@ -165,6 +166,10 @@ public enum Site {
         return bookCardExcludedParentClasses;
     }
 
+    public int getGalleryHeight() {
+        return galleryHeight;
+    }
+
     public boolean isVisible() {
         for (Site s : INVISIBLE_SITES) if (s.equals(this)) return false;
         return true;
@@ -200,6 +205,8 @@ public enum Site {
             bookCardDepth = jsonSite.bookCardDepth;
         if (jsonSite.bookCardExcludedParentClasses != null)
             bookCardExcludedParentClasses = new HashSet<>(jsonSite.bookCardExcludedParentClasses);
+        if (jsonSite.galleryHeight != null)
+            galleryHeight = jsonSite.galleryHeight;
     }
 
     public static class SiteConverter implements PropertyConverter<Site, Long> {

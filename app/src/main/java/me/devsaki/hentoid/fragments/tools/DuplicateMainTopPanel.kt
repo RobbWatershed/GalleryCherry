@@ -23,6 +23,9 @@ import me.devsaki.hentoid.util.Preferences
 import me.devsaki.hentoid.viewmodels.DuplicateViewModel
 import me.devsaki.hentoid.viewmodels.ViewModelFactory
 import me.devsaki.hentoid.workers.DuplicateDetectorWorker
+import org.greenrobot.eventbus.EventBus
+import org.greenrobot.eventbus.Subscribe
+import org.greenrobot.eventbus.ThreadMode
 
 
 class DuplicateMainTopPanel(activity: DuplicateDetectorActivity) : DefaultLifecycleObserver {
@@ -120,8 +123,7 @@ class DuplicateMainTopPanel(activity: DuplicateDetectorActivity) : DefaultLifecy
         binding.useArtist.isChecked = Preferences.isDuplicateUseArtist()
         binding.useSameLanguage.isChecked = Preferences.isDuplicateUseSameLanguage()
         binding.ignoreChapters.isChecked = Preferences.isDuplicateIgnoreChapters()
-        binding.useSensitivity.setItems(R.array.duplicate_use_sensitivities)
-        binding.useSensitivity.selectItemByIndex(Preferences.getDuplicateSensitivity())
+        binding.useSensitivity.index = Preferences.getDuplicateSensitivity()
         updateUI(context)
     }
 
@@ -156,7 +158,7 @@ class DuplicateMainTopPanel(activity: DuplicateDetectorActivity) : DefaultLifecy
         Preferences.setDuplicateUseArtist(binding.useArtist.isChecked)
         Preferences.setDuplicateUseSameLanguage(binding.useSameLanguage.isChecked)
         Preferences.setDuplicateIgnoreChapters(binding.ignoreChapters.isChecked)
-        Preferences.setDuplicateSensitivity(binding.useSensitivity.selectedIndex)
+        Preferences.setDuplicateSensitivity(binding.useSensitivity.index)
 
         activateScanUi()
 
@@ -167,7 +169,7 @@ class DuplicateMainTopPanel(activity: DuplicateDetectorActivity) : DefaultLifecy
             binding.useArtist.isChecked,
             binding.useSameLanguage.isChecked,
             binding.ignoreChapters.isChecked,
-            binding.useSensitivity.selectedIndex
+            binding.useSensitivity.index
         )
     }
 
@@ -221,6 +223,7 @@ class DuplicateMainTopPanel(activity: DuplicateDetectorActivity) : DefaultLifecy
             .cancelUniqueWork(R.id.duplicate_detector_service.toString())
     }
 
+    @Subscribe(threadMode = ThreadMode.MAIN)
     fun onProcessEvent(event: ProcessEvent) {
         if (event.processId != R.id.duplicate_index && event.processId != R.id.duplicate_detect) return
 
@@ -244,6 +247,22 @@ class DuplicateMainTopPanel(activity: DuplicateDetectorActivity) : DefaultLifecy
         progressBar.progress = event.elementsOK + event.elementsKO
         progressBarTxt.text = String.format("%d / %d", progressBar.progress, progressBar.max)
         progressBarTxt.visibility = View.VISIBLE
+
+        if (ProcessEvent.EventType.COMPLETE == event.eventType && DuplicateDetectorWorker.STEP_DUPLICATES == event.step) {
+            disableScanUi()
+        } else if (binding.scanFab.visibility == View.VISIBLE && DuplicateDetectorWorker.isRunning(
+                binding.scanFab.context
+            )
+        ) {
+            activateScanUi()
+        }
+    }
+
+    @Subscribe(sticky = true, threadMode = ThreadMode.MAIN)
+    fun onProcessStickyEvent(event: ProcessEvent) {
+        if (event.processId != R.id.duplicate_index && event.processId != R.id.duplicate_detect) return
+
+        EventBus.getDefault().removeStickyEvent(event)
 
         if (ProcessEvent.EventType.COMPLETE == event.eventType && DuplicateDetectorWorker.STEP_DUPLICATES == event.step) {
             disableScanUi()
