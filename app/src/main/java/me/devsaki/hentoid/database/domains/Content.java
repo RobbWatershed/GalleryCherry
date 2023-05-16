@@ -35,7 +35,6 @@ import me.devsaki.hentoid.activities.sources.BabeTodayActivity;
 import me.devsaki.hentoid.activities.sources.BaseWebActivity;
 import me.devsaki.hentoid.activities.sources.FapalityActivity;
 import me.devsaki.hentoid.activities.sources.HellpornoActivity;
-import me.devsaki.hentoid.activities.sources.EdoujinActivity;
 import me.devsaki.hentoid.activities.sources.Jjgirls2Activity;
 import me.devsaki.hentoid.activities.sources.JjgirlsActivity;
 import me.devsaki.hentoid.activities.sources.JpegworldActivity;
@@ -58,8 +57,6 @@ import me.devsaki.hentoid.util.JsonHelper;
 import me.devsaki.hentoid.util.Preferences;
 import me.devsaki.hentoid.util.StringHelper;
 import me.devsaki.hentoid.util.file.ArchiveHelper;
-import me.devsaki.hentoid.util.network.HttpHelper;
-import me.devsaki.hentoid.workers.PrimaryImportWorker;
 import timber.log.Timber;
 
 /**
@@ -329,8 +326,6 @@ public class Content implements Serializable {
                 return FapalityActivity.class;
             case ASIANSISTER:
                 return AsianSisterActivity.class;
-            case EDOUJIN:
-                return EdoujinActivity.class;
             default:
                 return BaseWebActivity.class;
         }
@@ -362,7 +357,6 @@ public class Content implements Serializable {
             case JPEGWORLD:
                 galleryConst = "galleries/";
                 break;
-            case EDOUJIN:
             case LUSCIOUS:
                 return site.getUrl().replace("/porn/", "") + url;
             default:

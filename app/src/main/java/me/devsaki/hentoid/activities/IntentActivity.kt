@@ -10,6 +10,7 @@ import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.util.ContentHelper
 import timber.log.Timber
 
+
 /**
  * Resole intents and send them where appropriate
  * <p>
@@ -76,30 +77,14 @@ class IntentActivity : AppCompatActivity() {
     }
 
     private fun parsePath(site: Site, data: Uri): String? {
-        val toParse = data.path ?: return null
+        val toParse: String = data.path ?: return null
+
         return when (site) {
-            Site.HITOMI -> {
-                val titleIdSeparatorIndex = toParse.lastIndexOf('-')
-                if (-1 == titleIdSeparatorIndex) {
-                    toParse.substring(toParse.lastIndexOf('/')) // Input uses old gallery URL format
-                } else "/" + toParse.substring(toParse.lastIndexOf('-') + 1) // Reconstitute old gallery URL format
+            Site.XHAMSTER -> {
+                val galleryIndex = toParse.indexOf("/gallery/")
+                toParse.substring(galleryIndex + 9)
             }
 
-            Site.NHENTAI -> toParse.replace("/g", "")
-            Site.TSUMINO -> toParse.replace("/entry", "")
-            Site.ASMHENTAI, Site.ASMHENTAI_COMICS -> toParse.replace("/g", "") + "/" // '/' required
-            Site.HENTAICAFE -> {
-                val path = data.toString()
-                if (path.contains("/?p=")) path.replace(Site.HENTAICAFE.url, "") else toParse
-            }
-
-            Site.PURURIN -> toParse.replace("/gallery", "") + "/"
-            Site.EHENTAI, Site.EXHENTAI -> toParse.replace("g/", "")
-            Site.FAKKU2 -> toParse.replace("/hentai", "")
-            Site.NEXUS -> toParse.replace("/view", "")
-            Site.HBROWSE -> toParse.substring(1)
-            Site.IMHENTAI, Site.HENTAIFOX -> toParse.replace("/gallery", "")
-            Site.PORNCOMIX -> data.toString()
             else -> toParse
         }
     }

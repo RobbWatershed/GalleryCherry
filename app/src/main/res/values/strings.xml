@@ -256,9 +256,9 @@
     <string name="storage_merge_complete">Merge complete</string>
     <string name="storage_strategy_title">Download strategy : %s</string>
     <string name="storage_strategy_balance">Balance free space</string>
-    <string name="storage_strategy_balance_desc">Hentoid downloads to whichever location has more free space, trying to maintain balance. Does not move books already in the library.</string>
+    <string name="storage_strategy_balance_desc">GalleryCherry downloads to whichever location has more free space, trying to maintain balance. Does not move books already in the library.</string>
     <string name="storage_strategy_fallover">Fallover</string>
-    <string name="storage_strategy_fallover_desc">Hentoid downloads to Location 1 until %d%% of capacity is filled, then downloads to Location 2.</string>
+    <string name="storage_strategy_fallover_desc">GalleryCherry downloads to Location 1 until %d%% of capacity is filled, then downloads to Location 2.</string>
     <string name="storage_fallover_threshold">Low space threshold (%%)</string>
     <string name="storage_set_strategy">Set download strategy</string>
     <string name="storage_stats">Statistics</string>
@@ -1000,7 +1000,7 @@
 
     <!-- Missing WebView -->
     <string name="missing_web_view_title">WebView is not installed or disabled</string>
-    <string name="missing_web_view">Hentoid has been unable to find Android\'s built-in Web Viewer for apps.\nWithout it you can\'t browse sources, redownload books; you really can\'t do much that requires Internet.\n\nIt is most likely that it\'s actually installed on your system, but disabled: please go to <b>Settings</b> &gt; <b>Apps</b> &gt; <b>Disabled apps</b> and enable <b>Android System WebView</b>.\n\nIf you can\'t find the app, please install it from your device\'s <b><a href="https://play.google.com/store/apps/details?id=com.google.android.webview">App Store</a></b>.</string>
+    <string name="missing_web_view">GalleryCherry has been unable to find Android\'s built-in Web Viewer for apps.\nWithout it you can\'t browse sources, redownload books; you really can\'t do much that requires Internet.\n\nIt is most likely that it\'s actually installed on your system, but disabled: please go to <b>Settings</b> &gt; <b>Apps</b> &gt; <b>Disabled apps</b> and enable <b>Android System WebView</b>.\n\nIf you can\'t find the app, please install it from your device\'s <b><a href="https://play.google.com/store/apps/details?id=com.google.android.webview">App Store</a></b>.</string>
     <string name="missing_web_view_library">Back to library</string>
 
     <!-- Group names -->

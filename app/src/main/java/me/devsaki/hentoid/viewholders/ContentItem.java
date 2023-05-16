@@ -103,7 +103,7 @@ public class ContentItem extends AbstractItem<ContentItem.ContentViewHolder> imp
         int remainingSpacePx = screenWidthPx % gridHorizontalWidthPx;
         ITEM_HORIZONTAL_MARGIN_PX = remainingSpacePx / (nbItems * 2);
 
-        Bitmap bmp = ImageHelper.getBitmapFromResource(context, R.drawable.ic_cherry_icon);
+        Bitmap bmp = ImageHelper.INSTANCE.getBitmapFromResource(context, R.drawable.ic_cherry_icon);
         int tintColor = ThemeHelper.getColor(context, R.color.light_gray);
         Drawable d = new BitmapDrawable(context.getResources(), ImageHelper.INSTANCE.tintBitmap(bmp, tintColor));
 

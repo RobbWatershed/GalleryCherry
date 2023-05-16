@@ -7,6 +7,8 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.VectorDrawable
 import android.net.Uri
 import android.os.Build
 import androidx.annotation.ColorInt
@@ -24,6 +26,7 @@ import java.io.InputStream
 import java.nio.charset.StandardCharsets
 import kotlin.math.abs
 import kotlin.math.pow
+
 
 object ImageHelper {
     private val CHARSET_LATIN_1 = StandardCharsets.ISO_8859_1
@@ -173,6 +176,29 @@ object ImageHelper {
             Timber.w(e)
         }
         return result
+    }
+
+    /**
+     * Convert the given Drawable ID into a Bitmap
+     *
+     * @param context    Context to be used
+     * @param drawableId Drawable ID to get the Bitmap from
+     * @return Given drawable ID rendered into a Bitmap
+     */
+    fun getBitmapFromResource(context: Context, @DrawableRes drawableId: Int): Bitmap {
+        return when (val drawable = ContextCompat.getDrawable(context, drawableId)) {
+            is BitmapDrawable -> {
+                drawable.bitmap
+            }
+
+            is VectorDrawable -> {
+                getBitmapFromVectorDrawable(context, drawableId)
+            }
+
+            else -> {
+                throw java.lang.IllegalArgumentException("unsupported drawable type")
+            }
+        }
     }
 
     /**

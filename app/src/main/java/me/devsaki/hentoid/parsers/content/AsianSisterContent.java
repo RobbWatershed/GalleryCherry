@@ -52,7 +52,7 @@ public class AsianSisterContent extends BaseContentParser {
         // Remove duplicates
         if (updateImages) {
             if (!thumbs.isEmpty()) {
-                thumbs = Stream.of(thumbs).distinct().map(s -> s.replace("imageimages", "images").trim()).filter(ImageHelper::isSupportedImage).toList();
+                thumbs = Stream.of(thumbs).distinct().map(s -> s.replace("imageimages", "images").trim()).filter(ImageHelper.INSTANCE::isSupportedImage).toList();
                 content.setCoverImageUrl(thumbs.get(0));
                 content.setImageFiles(ParseHelper.urlsToImageFiles(thumbs, thumbs.get(0), StatusContent.SAVED));
             }

@@ -13,8 +13,6 @@ import androidx.core.content.ContextCompat;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
-import org.threeten.bp.Instant;
-
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.json.oauth2.Oauth2AccessToken;
@@ -25,6 +23,8 @@ import me.devsaki.hentoid.util.OauthSessionManager;
 import timber.log.Timber;
 
 import static io.reactivex.android.schedulers.AndroidSchedulers.mainThread;
+
+import java.time.Instant;
 
 public class RedditActivity extends BaseWebActivity {
 

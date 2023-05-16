@@ -14,14 +14,14 @@ import androidx.viewpager.widget.ViewPager;
 
 import com.google.android.material.tabs.TabLayout;
 
-import org.threeten.bp.Instant;
-
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.adapters.RedditTabsAdapter;
 import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.util.OauthSessionManager;
 
 import static androidx.core.view.ViewCompat.requireViewById;
+
+import java.time.Instant;
 
 /**
  * Created by Robb on 09/2019

@@ -62,11 +62,7 @@ class SearchActivity : BaseActivity() {
                 onAttrButtonClick(
                     excludeClicked,
                     AttributeType.TAG,
-                    AttributeType.ARTIST,
-                    AttributeType.CIRCLE,
-                    AttributeType.SERIE,
-                    AttributeType.CHARACTER,
-                    AttributeType.LANGUAGE
+                    AttributeType.MODEL
                 )
             } // Everything but source !
             textCategoryAny.isEnabled = true
@@ -75,24 +71,9 @@ class SearchActivity : BaseActivity() {
                     excludeClicked, AttributeType.TAG
                 )
             }
-            textCategoryArtist.setOnClickListener {
+            textCategoryModel.setOnClickListener {
                 onAttrButtonClick(
-                    excludeClicked, AttributeType.ARTIST, AttributeType.CIRCLE
-                )
-            }
-            textCategorySeries.setOnClickListener {
-                onAttrButtonClick(
-                    excludeClicked, AttributeType.SERIE
-                )
-            }
-            textCategoryCharacter.setOnClickListener {
-                onAttrButtonClick(
-                    excludeClicked, AttributeType.CHARACTER
-                )
-            }
-            textCategoryLanguage.setOnClickListener {
-                onAttrButtonClick(
-                    excludeClicked, AttributeType.LANGUAGE
+                    excludeClicked, AttributeType.MODEL
                 )
             }
             textCategorySource.setOnClickListener {
@@ -203,16 +184,7 @@ class SearchActivity : BaseActivity() {
     private fun onQueryUpdated(attrCount: SparseIntArray) {
         binding?.apply {
             updateAttributeTypeButton(textCategoryTag, attrCount, AttributeType.TAG)
-            updateAttributeTypeButton(
-                textCategoryArtist, attrCount, AttributeType.ARTIST, AttributeType.CIRCLE
-            )
-            updateAttributeTypeButton(textCategorySeries, attrCount, AttributeType.SERIE)
-            updateAttributeTypeButton(
-                textCategoryCharacter, attrCount, AttributeType.CHARACTER
-            )
-            updateAttributeTypeButton(
-                textCategoryLanguage, attrCount, AttributeType.LANGUAGE
-            )
+            updateAttributeTypeButton(textCategoryModel, attrCount, AttributeType.MODEL)
             updateAttributeTypeButton(textCategorySource, attrCount, AttributeType.SOURCE)
         }
     }

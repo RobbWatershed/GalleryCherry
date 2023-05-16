@@ -1,5 +1,7 @@
 package me.devsaki.hentoid.database.domains;
 
+import java.io.File;
+import java.util.Comparator;
 import java.util.Locale;
 import java.util.Objects;
 

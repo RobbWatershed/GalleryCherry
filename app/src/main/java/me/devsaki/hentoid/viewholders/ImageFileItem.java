@@ -1,19 +1,15 @@
 package me.devsaki.hentoid.viewholders;
 
 import static androidx.core.view.ViewCompat.requireViewById;
-import static me.devsaki.hentoid.util.image.ImageHelper.tintBitmap;
 
-import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Typeface;
-import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.Drawable;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import androidx.annotation.IntDef;
 import androidx.annotation.NonNull;
 
 import com.bumptech.glide.Glide;
@@ -30,32 +26,18 @@ import com.mikepenz.fastadapter.items.AbstractItem;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
 import java.util.Collections;
 import java.util.List;
 
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.activities.bundles.ImageItemBundle;
-import me.devsaki.hentoid.core.HentoidApp;
 import me.devsaki.hentoid.database.domains.Chapter;
 import me.devsaki.hentoid.database.domains.ImageFile;
 import me.devsaki.hentoid.util.Helper;
-import me.devsaki.hentoid.util.ThemeHelper;
-import me.devsaki.hentoid.util.image.ImageHelper;
 
 public class ImageFileItem extends AbstractItem<ImageFileItem.ImageViewHolder> implements IExpandable<ImageFileItem.ImageViewHolder>, INestedItem<ImageFileItem.ImageViewHolder> {
 
-    @IntDef({ViewType.LIBRARY, ViewType.ONLINE})
-    @Retention(RetentionPolicy.SOURCE)
-    public @interface ViewType {
-        int LIBRARY = 0;
-        int ONLINE = 1;
-    }
-
     private final ImageFile image;
-    private final @ViewType
-    int viewType;
     private final Chapter chapter;
     private final boolean showChapter;
     private boolean isCurrent;
@@ -64,22 +46,12 @@ public class ImageFileItem extends AbstractItem<ImageFileItem.ImageViewHolder> i
     private static final RequestOptions glideRequestOptions;
 
     static {
-        Context context = HentoidApp.getInstance();
-        int tintColor = ThemeHelper.getColor(context, R.color.light_gray);
-
-        Bitmap bmp = ImageHelper.getBitmapFromResource(context, R.drawable.ic_cherry_icon);
-        Drawable d = new BitmapDrawable(context.getResources(), tintBitmap(bmp, tintColor));
-
         final Transformation<Bitmap> centerInside = new CenterInside();
-        glideRequestOptions = new RequestOptions()
-                .optionalTransform(centerInside)
-                .optionalTransform(WebpDrawable.class, new WebpDrawableTransformation(centerInside))
-                .placeholder(d);
+        glideRequestOptions = new RequestOptions().optionalTransform(centerInside);
     }
 
-    public ImageFileItem(@NonNull ImageFile image, boolean showChapter, @ViewType int viewType) {
+    public ImageFileItem(@NonNull ImageFile image, boolean showChapter) {
         this.image = image;
-        this.viewType = viewType;
         if (image.getLinkedChapter() != null)
             this.chapter = image.getLinkedChapter();
         else
@@ -109,7 +81,7 @@ public class ImageFileItem extends AbstractItem<ImageFileItem.ImageViewHolder> i
     @NotNull
     @Override
     public ImageViewHolder getViewHolder(@NotNull View view) {
-        return new ImageViewHolder(view, viewType);
+        return new ImageViewHolder(view);
     }
 
     @Override
@@ -172,16 +144,13 @@ public class ImageFileItem extends AbstractItem<ImageFileItem.ImageViewHolder> i
         private final TextView pageNumberTxt;
         private final ImageView image;
         private final ImageView checkedIndicator;
-        private final @ViewType
-        int viewType;
         private final TextView chapterOverlay;
 
-        ImageViewHolder(@NonNull View view, @ViewType int viewType) {
+        ImageViewHolder(View view) {
             super(view);
             pageNumberTxt = requireViewById(view, R.id.viewer_gallery_pagenumber_text);
             image = requireViewById(view, R.id.viewer_gallery_image);
             checkedIndicator = requireViewById(view, R.id.checked_indicator);
-            this.viewType = viewType;
             chapterOverlay = requireViewById(view, R.id.chapter_overlay);
         }
 
@@ -207,8 +176,6 @@ public class ImageFileItem extends AbstractItem<ImageFileItem.ImageViewHolder> i
             if (item.isSelected()) checkedIndicator.setVisibility(View.VISIBLE);
             else checkedIndicator.setVisibility(View.GONE);
 
-            String uri = item.image.getFileUri();
-
             // Chapter overlay
             if (item.showChapter) {
                 String chapterText = checkedIndicator.getContext().getResources().getString(R.string.gallery_display_chapter, item.chapter.getOrder());
@@ -225,7 +192,7 @@ public class ImageFileItem extends AbstractItem<ImageFileItem.ImageViewHolder> i
 
             // Image
             Glide.with(image)
-                    .load(uri)
+                    .load(Uri.parse(item.image.getFileUri()))
                     .signature(new ObjectKey(item.image.uniqueHash()))
                     .apply(glideRequestOptions)
                     .into(image);

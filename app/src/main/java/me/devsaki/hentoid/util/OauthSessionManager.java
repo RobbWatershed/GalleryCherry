@@ -4,11 +4,10 @@ import android.content.Context;
 
 import androidx.annotation.Nullable;
 
-import org.threeten.bp.Instant;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 

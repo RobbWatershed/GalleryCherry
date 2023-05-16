@@ -92,7 +92,7 @@ public class RedditAuthDownloadFragment extends Fragment {
 
     private boolean isImageSupported(String imgUrl) {
         String extension = HttpHelper.getExtensionFromUri(imgUrl);
-        return ImageHelper.isImageExtensionSupported(extension);
+        return ImageHelper.INSTANCE.isImageExtensionSupported(extension);
     }
 
     private void onSavedItemsSuccess(List<String> savedUrls) { // TODO don't display placeholder when load is not complete - use a "loading..." image
@@ -183,7 +183,7 @@ public class RedditAuthDownloadFragment extends Fragment {
         }
         db.insertQueue(contentId, lastIndex);
 
-        ContentQueueManager.getInstance().resumeQueue(requireContext());
+        ContentQueueManager.INSTANCE.resumeQueue(requireContext());
         viewQueue();
     }
 
