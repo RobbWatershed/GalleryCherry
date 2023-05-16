@@ -32,9 +32,9 @@
 
     <!-- Storage -->
     <string name="pref_screen_storage">Хранилище</string>
-    <string name="pref_cat_downloads_folder">Библиотека Hentoid</string>
+    <string name="pref_cat_downloads_folder">Библиотека GalleryCherry</string>
     <string name="pref_select_folder_title">Выбор папки загрузок</string>
-    <string name="pref_select_folder_summary">Выберите, где Hentoid будет хранить ваши загрузки</string>
+    <string name="pref_select_folder_summary">Выберите, где GalleryCherry будет хранить ваши загрузки</string>
     <string name="pref_import_queue_empty_title">Добавлять пустые импортированные книги в очередь как неудачные загрузки</string>
     <string name="pref_import_queue_empty_on">Пустые импортированные книги будут добавлены в очередь как ошибки загрузки</string>
     <string name="pref_import_queue_empty_off">Пустые импортированные книги будут добавлены в библиотеку</string>

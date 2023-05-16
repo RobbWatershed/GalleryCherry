@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="slide_01_header">¡Bienvenido a Hentoid!</string>
-    <string name="slide_01_text">Hentoid es una aplicación para archivar Doujinshi y manga Hentai.</string>
+    <string name="slide_01_header">¡Bienvenido a GalleryCherry!</string>
+    <string name="slide_01_text">GalleryCherry es una aplicación para archivar Doujinshi y manga Hentai.</string>
 <string name="slide_02_header">Permisos</string>
     <string name="slide_02_browser_mode_title">Solo explorador</string>
     <string name="slide_02_browser_mode_description">Usa la app para explorar los sitios web.
@@ -9,7 +9,7 @@
     <string name="slide_02_library_mode_title">Navegador y Descarga</string>
     <string name="slide_02_library_mode_description">Usa la app para descargar y administrar tu biblioteca.\n\ Se requieren permisos de almacenamiento. </string>
 <string name="slide_04_header">Biblioteca</string>
-    <string name="slide_04_text">Hentoid requiere una carpeta dedicada para almacenar tus archivos.</string>
+    <string name="slide_04_text">GalleryCherry requiere una carpeta dedicada para almacenar tus archivos.</string>
     <string name="slide_04_skip">Omitir</string>
 <string name="slide_04_skip_title">¿Omitir?</string>
     <string name="slide_04_skip_msg">No se podrá hacer una descarga si omites este paso. Para hacer una descarga tendrás que configurar una carpeta desde la configuración de la aplicación.</string>
