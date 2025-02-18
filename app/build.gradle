@@ -1,6 +1,8 @@
+plugins {
+    id("com.google.devtools.ksp").version("1.9.22-1.0.17")
+}
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
-apply plugin: 'kotlin-kapt'
 apply plugin: 'org.sonarqube'
 apply plugin: 'com.google.gms.google-services'
 apply plugin: 'com.google.firebase.crashlytics'
@@ -24,11 +26,11 @@ android {
     compileSdkVersion 33
     compileOptions {
         coreLibraryDesugaringEnabled true
-        targetCompatibility JavaVersion.VERSION_1_8
-        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_17
+        sourceCompatibility JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_1_8
+        jvmTarget = JavaVersion.VERSION_17
     }
     defaultConfig {
         applicationId "me.devsaki.cherry"
@@ -47,8 +49,8 @@ android {
         buildConfigField 'String', 'GITHUB_API_URL', '"https://api.github.com/repos/RobbWatershed/GalleryCherry/"'
 
         proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-        // Only include complete translations
-        resConfigs 'en', 'ru', 'it', 'uk', 'hu', 'ko', 'ja', 'es'
+        resourceConfigurations += ['en', 'ru', 'it', 'uk', 'hu', 'ko', 'ja', 'es']
+// Only include complete translations
         renderscriptTargetApi 21
         renderscriptSupportModeEnabled false
     }
@@ -85,6 +87,9 @@ android {
         resources {
             // Fix issue with RxJava 2.x (https://github.com/ReactiveX/RxJava/issues/4445)
             excludes += ['META-INF/rxjava.properties']
+        }
+        jniLibs {
+            useLegacyPackaging true
         }
     }
     testOptions {
@@ -146,7 +151,8 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$android_lifecycle_version"
     implementation "androidx.lifecycle:lifecycle-process:$android_lifecycle_version"
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:$android_lifecycle_version"
-    kapt("androidx.lifecycle:lifecycle-common-java8:$android_lifecycle_version")
+    implementation "androidx.lifecycle:lifecycle-runtime-ktx:$android_lifecycle_version"
+
 
     // Desugaring (java.time is required for bucket4j)
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.3'
@@ -156,10 +162,9 @@ dependencies {
      * MEDIA
      */
     // Image loader: github.com/bumptech/glide
-    def glide_version = '4.15.1'
+    def glide_version = '4.16.0'
     implementation "com.github.bumptech.glide:glide:$glide_version"
-    annotationProcessor "com.github.bumptech.glide:compiler:$glide_version"
-    kapt "com.github.bumptech.glide:compiler:$glide_version"
+    ksp "com.github.bumptech.glide:ksp:$glide_version"
     implementation("com.github.bumptech.glide:okhttp3-integration:$glide_version") {
         exclude group: 'glide-parent'
     }
@@ -221,11 +226,11 @@ dependencies {
      * NETWORKING
      */
     // JSON serialization/deserialization (Java Objects into JSON and back): https://github.com/square/moshi
-    def moshi_version = '1.14.0'
+    def moshi_version = '1.15.1'
     implementation "com.squareup.moshi:moshi:$moshi_version"
     implementation "com.squareup.moshi:moshi-adapters:$moshi_version"
     implementation "com.squareup.moshi:moshi-kotlin:$moshi_version"
-    kapt("com.squareup.moshi:moshi-kotlin-codegen:$moshi_version")
+    ksp("com.squareup.moshi:moshi-kotlin-codegen:$moshi_version")
 
     // HTTP & HTTP/2 client: github.com/square/okhttp
     def okhttpVersion = "4.10.0"

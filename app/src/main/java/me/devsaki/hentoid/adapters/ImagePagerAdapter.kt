@@ -19,6 +19,7 @@ import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.load.MultiTransformation
 import com.bumptech.glide.load.Transformation
@@ -28,7 +29,6 @@ import com.bumptech.glide.load.resource.bitmap.CenterInside
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
 import me.devsaki.hentoid.R
-import me.devsaki.hentoid.core.GlideApp
 import me.devsaki.hentoid.core.HentoidApp
 import me.devsaki.hentoid.customssiv.CustomSubsamplingScaleImageView
 import me.devsaki.hentoid.customssiv.CustomSubsamplingScaleImageView.OnImageEventListener
@@ -203,7 +203,8 @@ class ImagePagerAdapter(context: Context) :
                 ssiv.setPreloadDimensions(itemView.width, imgView.height)
                 if (!Preferences.isReaderZoomTransitions()) ssiv.setDoubleTapZoomDuration(10)
 
-                val scrollLTR = Preferences.Constant.VIEWER_DIRECTION_LTR == displayParams.direction && isScrollLTR
+                val scrollLTR =
+                    Preferences.Constant.VIEWER_DIRECTION_LTR == displayParams.direction && isScrollLTR
                 ssiv.setOffsetLeftSide(scrollLTR)
 
                 ssiv.setScaleListener { s: Double ->
@@ -218,7 +219,7 @@ class ImagePagerAdapter(context: Context) :
             imgView.layoutParams = layoutParams
             if (Preferences.Constant.VIEWER_ORIENTATION_HORIZONTAL == viewerOrientation)
                 imgView.setOnTouchListener(itemTouchListener)
-            
+
             var imageAvailable = true
             val img = getImageAt(position)
             if (img != null && img.fileUri.isNotEmpty()) setImage(img)
@@ -396,7 +397,7 @@ class ImagePagerAdapter(context: Context) :
                 val smartRotate90 = if (autoRotate) SmartRotateTransformation(
                     90f, ImageTransform.screenWidth, ImageTransform.screenHeight
                 ) else UnitTransformation.get()
-                GlideApp.with(view).load(uri)
+                Glide.with(view).load(uri)
                     .optionalTransform(MultiTransformation(centerInside, smartRotate90))
                     .listener(this).into(view)
             }
@@ -547,7 +548,10 @@ class ImagePagerAdapter(context: Context) :
 
         // == GLIDE CALLBACKS
         override fun onLoadFailed(
-            e: GlideException?, model: Any, target: Target<Drawable>, isFirstResource: Boolean
+            e: GlideException?,
+            model: Any?,
+            target: Target<Drawable?>,
+            isFirstResource: Boolean
         ): Boolean {
             Timber.d(
                 e, "Picture %d : Glide loading failed : %s", absoluteAdapterPosition, img!!.fileUri
