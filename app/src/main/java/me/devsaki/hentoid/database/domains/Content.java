@@ -35,6 +35,7 @@ import me.devsaki.hentoid.activities.sources.BabeTodayActivity;
 import me.devsaki.hentoid.activities.sources.BaseWebActivity;
 import me.devsaki.hentoid.activities.sources.FapalityActivity;
 import me.devsaki.hentoid.activities.sources.HellpornoActivity;
+import me.devsaki.hentoid.activities.sources.JapBeautiesActivity;
 import me.devsaki.hentoid.activities.sources.Jjgirls2Activity;
 import me.devsaki.hentoid.activities.sources.JjgirlsActivity;
 import me.devsaki.hentoid.activities.sources.JpegworldActivity;
@@ -272,6 +273,7 @@ public class Content implements Serializable {
                 return url.substring(url.lastIndexOf("-") + 1, url.lastIndexOf("."));
             case REDDIT:
                 return "reddit"; // One single book
+            case JAPBEAUTIES:
             case JJGIRLS:
                 return parts[parts.length - 2] + "/" + parts[parts.length - 1];
             case LUSCIOUS:
@@ -326,6 +328,8 @@ public class Content implements Serializable {
                 return FapalityActivity.class;
             case ASIANSISTER:
                 return AsianSisterActivity.class;
+            case JAPBEAUTIES:
+                return JapBeautiesActivity.class;
             default:
                 return BaseWebActivity.class;
         }
@@ -347,6 +351,7 @@ public class Content implements Serializable {
             case JJGIRLS:
             case JJGIRLS2:
             case BABETODAY:
+            case JAPBEAUTIES:
                 return url; // Specific case - user can go on any site (smart parser)
             case HELLPORNO:
             case FAPALITY:

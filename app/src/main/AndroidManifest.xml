@@ -103,6 +103,9 @@
             android:name=".activities.sources.AsianSisterActivity"
             android:configChanges="orientation|screenSize" />
         <activity
+            android:name=".activities.sources.JapBeautiesActivity"
+            android:configChanges="orientation|screenSize" />
+        <activity
             android:name=".activities.LibraryActivity"
             android:configChanges="orientation|screenSize"
             android:label="@string/title_activity_downloads"
@@ -430,6 +433,17 @@
                 <data
                     android:host="edoujin.net"
                     android:pathPattern="/manga/..*"
+                    android:scheme="https" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="japanesebeauties.one"
+                    android:pathPattern="/..*/..*/..*/..*"
                     android:scheme="https" />
             </intent-filter>
         </activity>

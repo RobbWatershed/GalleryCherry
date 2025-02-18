@@ -54,6 +54,7 @@ public class ContentParserFactory {
                 return FapalityContent.class;
             case ASIANSISTER:
                 return AsianSisterContent.class;
+            case JAPBEAUTIES:
             case REDDIT:
             case LINK2GALLERIES:
             case NEXTPICTUREZ:
