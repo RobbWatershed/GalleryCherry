@@ -62,8 +62,7 @@ public class GroupDisplayItem extends AbstractItem<GroupDisplayItem.GroupViewHol
 
     // Group
     private final Group group;
-    private final @ViewType
-    int viewType;
+    private final @ViewType int viewType;
     private final boolean isEmpty;
 
     // Drag, drop & swipe
@@ -154,7 +153,7 @@ public class GroupDisplayItem extends AbstractItem<GroupDisplayItem.GroupViewHol
 
         private String coverUri = "";
 
-        GroupViewHolder(View view, @ContentItem.ViewType int viewType) {
+        GroupViewHolder(View view, @ViewType int viewType) {
             super(view);
             baseLayout = requireViewById(view, R.id.item);
             title = requireViewById(view, R.id.tvTitle);

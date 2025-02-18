@@ -96,7 +96,7 @@ class MetadataEditViewModel(
      * @param contentId  IDs of the Contents to load
      */
     fun loadContent(contentId: LongArray) {
-        val contents = dao.selectContent(contentId.filter { id -> id > 0 }.toLongArray())
+        val contents = dao.selectContent(contentId.filter { id -> id > 0 }.toLongArray()).toList()
         val rawAttrs = ArrayList<Attribute>()
         contents.forEach { c ->
             rawAttrs.addAll(c.attributes)
@@ -157,7 +157,7 @@ class MetadataEditViewModel(
             )
         }.subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
-            .subscribe { value: AttributeQueryResult? ->
+            .subscribe { value: AttributeQueryResult ->
                 libraryAttributes.postValue(value)
             }
     }
