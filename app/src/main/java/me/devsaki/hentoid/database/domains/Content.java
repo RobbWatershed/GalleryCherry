@@ -45,6 +45,7 @@ import me.devsaki.hentoid.activities.sources.NextpicturezActivity;
 import me.devsaki.hentoid.activities.sources.PornPicGalleriesActivity;
 import me.devsaki.hentoid.activities.sources.PornPicsActivity;
 import me.devsaki.hentoid.activities.sources.RedditActivity;
+import me.devsaki.hentoid.activities.sources.SxyPixActivity;
 import me.devsaki.hentoid.activities.sources.XhamsterActivity;
 import me.devsaki.hentoid.activities.sources.XnxxActivity;
 import me.devsaki.hentoid.database.DBHelper;
@@ -265,6 +266,7 @@ public class Content implements Serializable {
             case LINK2GALLERIES:
             case NEXTPICTUREZ:
             case JJGIRLS2:
+            case SXYPIX:
             case BABETODAY:
                 return parts[parts.length - 1];
             case FAPALITY:
@@ -330,6 +332,8 @@ public class Content implements Serializable {
                 return AsianSisterActivity.class;
             case JAPBEAUTIES:
                 return JapBeautiesActivity.class;
+            case SXYPIX:
+                return SxyPixActivity.class;
             default:
                 return BaseWebActivity.class;
         }
@@ -352,6 +356,7 @@ public class Content implements Serializable {
             case JJGIRLS2:
             case BABETODAY:
             case JAPBEAUTIES:
+            case SXYPIX:
                 return url; // Specific case - user can go on any site (smart parser)
             case HELLPORNO:
             case FAPALITY:
