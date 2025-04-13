@@ -4,11 +4,9 @@
 -->
 ___
 
-[![Download](https://img.shields.io/badge/GET-the%20APK-brightgreen.svg)](https://github.com/RobbWatershed/GalleryCherry/releases/latest)
+[![Download](https://img.shields.io/badge/GET-the%20APK-brightgreen.svg)](https://github.com/RobbWatershed/GalleryCherry/releases/latest) [![Build Status](https://app.bitrise.io/app/bb99306cfe678782/status.svg?token=Dkxnqyh9qrkFe_sIUGeRNg&branch=master)](https://app.bitrise.io/app/bb99306cfe678782)
 
-[![Build Status](https://app.bitrise.io/app/bb99306cfe678782/status.svg?token=Dkxnqyh9qrkFe_sIUGeRNg&branch=master)](https://app.bitrise.io/app/bb99306cfe678782)
-
-[![](https://discordapp.com/api/guilds/173995475098271746/embed.png?style=banner2)](https://discord.gg/waTF8vw)
+[![](https://discordapp.com/api/guilds/528206521767821312/embed.png?style=banner2)](https://discord.gg/waTF8vw)
 
 ![](https://github.com/avluis/Hentoid/blob/master/wiki-img/welcome_2023.png)
 
