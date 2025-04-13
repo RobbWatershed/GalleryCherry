@@ -43,6 +43,8 @@ public enum Site {
             JJGIRLS2, // Abandoned in favour of babe.today
             HINA, // Dead service
             ASIANSISTER, // Redirected to sisterasian.com; only hosts videos now
+            JPEGWORLD, // Dead site
+            NEXTPICTUREZ, // Dead site
             NONE // Technical fallback
     };
 
