@@ -8,7 +8,7 @@ ___
 
 [![](https://discordapp.com/api/guilds/528206521767821312/embed.png?style=banner2)](https://discord.gg/waTF8vw)
 
-![](https://github.com/avluis/Hentoid/blob/master/wiki-img/welcome_2023.png)
+![](https://github.com/RobbWatershed/GalleryCherry/blob/master/wiki-img/cherry-welcome.png)
 
 ##### `GalleryCherry` is an ad-free XXX Galleries archiving and viewing app.
 ###### `GalleryCherry` currently supports:
