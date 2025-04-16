@@ -18,7 +18,7 @@ ___
 
 ##### Visit our [Discord Server](https://discord.gg/waTF8vw) to chat with other users, read the latest announcements, get dev updates, app support or hang out with the development team.
 ___
-[![](https://github.com/avluis/Hentoid/blob/master/wiki-img/CherryBanner.png)](https://github.com/RobbWatershed/GalleryCherry)
+[![](https://github.com/RobbWatershed/GalleryCherry/blob/master/wiki-img/hentoid-banner_v1.png)](https://github.com/avluis/Hentoid)
 ___
 
 <meta name='keywords' content='galleries, xxx, download galleries, android app, galleries android app, xxx galleries android download, xxx gallery android download'>
