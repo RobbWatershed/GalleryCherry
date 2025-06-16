@@ -237,11 +237,17 @@ public class MetadataImportWorker extends BaseWorker {
                 lst.add(qr);
                 dao.updateQueue(lst);
                 return;
+            } else if (c.getStatus().equals(StatusContent.ERROR)) {
+                List<ErrorRecord> errors = new ArrayList<>();
+                errors.add(new ErrorRecord(ErrorType.IMPORT, "", context.getResources().getQuantityString(R.plurals.book, 1), "No local images found when importing - Please redownload", Instant.now()));
+                c.setErrorLog(errors);
+                ContentHelper.addContent(context, dao, c);
+                return;
             }
             switch (emptyBooksOption) {
                 case MetaImportDialogFragment.IMPORT_AS_STREAMED:
                     // Greenlighted if images exist and are available online
-                    if (c.getImageFiles() != null && c.getImageFiles().size() > 0 && ContentHelper.isDownloadable(c)) {
+                    if (c.getImageFiles() != null && !c.getImageFiles().isEmpty() && ContentHelper.isDownloadable(c)) {
                         c.setDownloadMode(Content.DownloadMode.STREAM);
                         c.setStatus(StatusContent.DOWNLOADED);
                         List<ImageFile> imgs = c.getImageFiles();
