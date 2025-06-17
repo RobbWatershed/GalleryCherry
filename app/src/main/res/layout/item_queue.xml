@@ -187,7 +187,7 @@
             android:clickable="true"
             android:focusable="true"
             android:padding="8dp"
-            android:src="@drawable/ic_menu_hellporno"
+            android:src="@drawable/ic_site_hellporno"
             android:tooltipText="@string/view_source_help"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@id/queueTopBtn"
