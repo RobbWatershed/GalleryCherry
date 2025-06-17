@@ -6,7 +6,7 @@ public class PicsXActivity extends BaseWebActivity {
 
     private static final String DOMAIN_FILTER = "pics-x.com";
     private static final String[] DIRTY_ELEMENTS = {".unit-main", ".unit-dt-blk", ".unit-mobblk"};
-    private static final String[] GALLERY_FILTER = {"pics-x.com/gallery/.*"};
+    private static final String[] GALLERY_FILTER = {"pics-x.com/gallery/[\\w_%\\-]+"};
 
     Site getStartSite() {
         return Site.PICS_X;
