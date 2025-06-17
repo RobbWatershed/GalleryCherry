@@ -109,6 +109,9 @@
             android:name=".activities.sources.SxyPixActivity"
             android:configChanges="orientation|screenSize" />
         <activity
+            android:name=".activities.sources.PicsXActivity"
+            android:configChanges="orientation|screenSize" />
+        <activity
             android:name=".activities.LibraryActivity"
             android:configChanges="orientation|screenSize"
             android:label="@string/title_activity_downloads"
@@ -355,98 +358,19 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data
-                    android:host="pixiv.net"
-                    android:pathPattern="/..*/artworks/..*"
-                    android:scheme="https" />
-                <data
-                    android:host="pixiv.net"
-                    android:pathPattern="/..*/user/..*/series/..*"
-                    android:scheme="https" />
-                <data
-                    android:host="pixiv.net"
-                    android:pathPattern="/..*/users/..*"
-                    android:scheme="https" />
-                <data
-                    android:host="www.pixiv.net"
-                    android:pathPattern="/..*/artworks/..*"
-                    android:scheme="https" />
-                <data
-                    android:host="www.pixiv.net"
-                    android:pathPattern="/..*/user/..*/series/..*"
-                    android:scheme="https" />
-                <data
-                    android:host="www.pixiv.net"
-                    android:pathPattern="/..*/users/..*"
-                    android:scheme="https" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <data
-                    android:host="manhwa18.com"
-                    android:pathPattern="/manga/..*"
-                    android:scheme="https" />
-                <data
-                    android:host="manhwa18.com"
-                    android:pathPattern="/manga/..*/..*"
-                    android:scheme="https" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <data
-                    android:host="multporn.net"
-                    android:pathPattern="/..*/..*"
-                    android:scheme="https" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <data
-                    android:host="www.simply-hentai.com"
-                    android:pathPattern="/..*/..*"
-                    android:scheme="https" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <data
-                    android:host="hdporncomics.com"
-                    android:pathPattern="/..*/"
-                    android:scheme="https" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <data
-                    android:host="edoujin.net"
-                    android:pathPattern="/manga/..*"
-                    android:scheme="https" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <data
                     android:host="japanesebeauties.one"
                     android:pathPattern="/..*/..*/..*/..*"
+                    android:scheme="https" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="pics-x.com"
+                    android:pathPattern="/gallery/..*/..*"
                     android:scheme="https" />
             </intent-filter>
         </activity>

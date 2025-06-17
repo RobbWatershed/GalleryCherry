@@ -42,6 +42,7 @@ import me.devsaki.hentoid.activities.sources.JpegworldActivity;
 import me.devsaki.hentoid.activities.sources.Link2GalleriesActivity;
 import me.devsaki.hentoid.activities.sources.LusciousActivity;
 import me.devsaki.hentoid.activities.sources.NextpicturezActivity;
+import me.devsaki.hentoid.activities.sources.PicsXActivity;
 import me.devsaki.hentoid.activities.sources.PornPicGalleriesActivity;
 import me.devsaki.hentoid.activities.sources.PornPicsActivity;
 import me.devsaki.hentoid.activities.sources.RedditActivity;
@@ -267,6 +268,7 @@ public class Content implements Serializable {
             case NEXTPICTUREZ:
             case JJGIRLS2:
             case SXYPIX:
+            case PICS_X:
             case BABETODAY:
                 return parts[parts.length - 1];
             case FAPALITY:
@@ -334,6 +336,8 @@ public class Content implements Serializable {
                 return JapBeautiesActivity.class;
             case SXYPIX:
                 return SxyPixActivity.class;
+            case PICS_X:
+                return PicsXActivity.class;
             default:
                 return BaseWebActivity.class;
         }

@@ -10,6 +10,7 @@ import me.devsaki.hentoid.parsers.content.HellpornoContent;
 import me.devsaki.hentoid.parsers.content.Jjgirls2Content;
 import me.devsaki.hentoid.parsers.content.JjgirlsContent;
 import me.devsaki.hentoid.parsers.content.JpegworldContent;
+import me.devsaki.hentoid.parsers.content.PicsXContent;
 import me.devsaki.hentoid.parsers.content.PornPicsContent;
 import me.devsaki.hentoid.parsers.content.SmartContent;
 import me.devsaki.hentoid.parsers.content.SxypixContent;
@@ -19,6 +20,7 @@ import me.devsaki.hentoid.parsers.images.DummyParser;
 import me.devsaki.hentoid.parsers.images.FapalityParser;
 import me.devsaki.hentoid.parsers.images.ImageListParser;
 import me.devsaki.hentoid.parsers.images.LusciousParser;
+import me.devsaki.hentoid.parsers.images.PicsXParser;
 import me.devsaki.hentoid.parsers.images.SxypixParser;
 import me.devsaki.hentoid.parsers.images.XhamsterParser;
 
@@ -58,6 +60,8 @@ public class ContentParserFactory {
                 return AsianSisterContent.class;
             case SXYPIX:
                 return SxypixContent.class;
+            case PICS_X:
+                return PicsXContent.class;
             case JAPBEAUTIES:
             case REDDIT:
             case LINK2GALLERIES:
@@ -82,6 +86,8 @@ public class ContentParserFactory {
                 return new FapalityParser();
             case SXYPIX:
                 return new SxypixParser();
+            case PICS_X:
+                return new PicsXParser();
             default:
                 return new DummyParser();
         }
