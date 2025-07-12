@@ -31,6 +31,8 @@ public class PornPicsContent extends BaseContentParser {
     private List<Element> tags;
     @Selector(value = ".gallery-info__item a[href*='/?q']")
     private List<Element> models;
+    @Selector(value = ".gallery-info__item a[href*='/pornstars/']")
+    private List<Element> models2;
     @Selector(value = "#tiles .rel-link", attr = "href")
     private List<String> imageLinks;
 
@@ -51,10 +53,20 @@ public class PornPicsContent extends BaseContentParser {
         if (models != null && models.size() > 1) {
             boolean first = true;
             for (Element e : models) {
+                if (e.childNodes().isEmpty()) continue;
+                if (e.childNode(0).childNodes().isEmpty()) continue;
                 if (first) {
                     first = false;
                     continue;
                 }
+                attributes.add(new Attribute(AttributeType.MODEL, e.childNode(0).childNode(0).toString(), e.attr("href"), Site.PORNPICS));
+            }
+        }
+
+        if (models2 != null) {
+            for (Element e : models2) {
+                if (e.childNodes().isEmpty()) continue;
+                if (e.childNode(0).childNodes().isEmpty()) continue;
                 attributes.add(new Attribute(AttributeType.MODEL, e.childNode(0).childNode(0).toString(), e.attr("href"), Site.PORNPICS));
             }
         }
