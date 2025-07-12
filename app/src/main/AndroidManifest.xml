@@ -112,6 +112,9 @@
             android:name=".activities.sources.PicsXActivity"
             android:configChanges="orientation|screenSize" />
         <activity
+            android:name=".activities.sources.CosplayTeleActivity"
+            android:configChanges="orientation|screenSize" />
+        <activity
             android:name=".activities.LibraryActivity"
             android:configChanges="orientation|screenSize"
             android:label="@string/title_activity_downloads"

@@ -36,6 +36,7 @@ public enum Site {
     JAPBEAUTIES(16, "Japanese beauties", "https://japanesebeauties.one/", R.drawable.ic_cherry_icon),
     SXYPIX(17, "SXYPIX", "https://sxypix.com/", R.drawable.ic_site_sxypix),
     PICS_X(18, "PICS-X", "https://pics-x.com/", R.drawable.ic_site_pics_x),
+    COSPLAYTELE(19, "CosplayTele", "https://cosplaytele.com/", R.drawable.ic_fav_full),
     NONE(98, "none", "", R.drawable.ic_attribute_source); // External library; fallback site
 
     private static final Site[] INVISIBLE_SITES = {

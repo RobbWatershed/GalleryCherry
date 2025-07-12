@@ -33,6 +33,7 @@ import io.objectbox.relation.ToOne;
 import me.devsaki.hentoid.activities.sources.AsianSisterActivity;
 import me.devsaki.hentoid.activities.sources.BabeTodayActivity;
 import me.devsaki.hentoid.activities.sources.BaseWebActivity;
+import me.devsaki.hentoid.activities.sources.CosplayTeleActivity;
 import me.devsaki.hentoid.activities.sources.FapalityActivity;
 import me.devsaki.hentoid.activities.sources.HellpornoActivity;
 import me.devsaki.hentoid.activities.sources.JapBeautiesActivity;
@@ -272,6 +273,7 @@ public class Content implements Serializable {
             case BABETODAY:
                 return parts[parts.length - 1];
             case FAPALITY:
+            case COSPLAYTELE:
                 return parts[parts.length - 2];
             case JPEGWORLD:
                 return url.substring(url.lastIndexOf("-") + 1, url.lastIndexOf("."));
@@ -338,6 +340,8 @@ public class Content implements Serializable {
                 return SxyPixActivity.class;
             case PICS_X:
                 return PicsXActivity.class;
+            case COSPLAYTELE:
+                return CosplayTeleActivity.class;
             default:
                 return BaseWebActivity.class;
         }
@@ -361,6 +365,7 @@ public class Content implements Serializable {
             case BABETODAY:
             case JAPBEAUTIES:
             case SXYPIX:
+            case COSPLAYTELE:
                 return url; // Specific case - user can go on any site (smart parser)
             case HELLPORNO:
             case FAPALITY:

@@ -5,6 +5,7 @@ import me.devsaki.hentoid.enums.Site;
 import me.devsaki.hentoid.parsers.content.AsianSisterContent;
 import me.devsaki.hentoid.parsers.content.BabeTodayContent;
 import me.devsaki.hentoid.parsers.content.ContentParser;
+import me.devsaki.hentoid.parsers.content.CosplayTeleContent;
 import me.devsaki.hentoid.parsers.content.FapalityContent;
 import me.devsaki.hentoid.parsers.content.HellpornoContent;
 import me.devsaki.hentoid.parsers.content.Jjgirls2Content;
@@ -62,6 +63,8 @@ public class ContentParserFactory {
                 return SxypixContent.class;
             case PICS_X:
                 return PicsXContent.class;
+            case COSPLAYTELE:
+                return CosplayTeleContent.class;
             case JAPBEAUTIES:
             case REDDIT:
             case LINK2GALLERIES:
