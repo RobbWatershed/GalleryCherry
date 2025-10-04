@@ -2,15 +2,22 @@ package me.devsaki.hentoid.activities.bundles
 
 import android.net.Uri
 import android.os.Bundle
+import android.text.TextUtils
+import androidx.core.net.toUri
 import me.devsaki.hentoid.database.domains.Attribute
 import me.devsaki.hentoid.database.domains.AttributeMap
 import me.devsaki.hentoid.enums.AttributeType
-import me.devsaki.hentoid.util.SearchHelper
-import me.devsaki.hentoid.util.StringHelper
+import me.devsaki.hentoid.util.Location
+import me.devsaki.hentoid.util.SearchCriteria
+import me.devsaki.hentoid.util.Type
 import me.devsaki.hentoid.util.boolean
 import me.devsaki.hentoid.util.intArrayList
 import me.devsaki.hentoid.util.long
 import me.devsaki.hentoid.util.string
+
+private const val ATTR_EXCLUDED_TYPES = "excludedTypes"
+private const val ATTR_LOCATION = "location"
+private const val ATTR_CONTENT_TYPE = "contentType"
 
 /**
  * Helper class to transfer data from any Activity to [me.devsaki.hentoid.activities.SearchActivity]
@@ -27,25 +34,27 @@ class SearchActivityBundle(val bundle: Bundle = Bundle()) {
     // Used both internally and externally (i.e. to communicate with LibraryActivity) for actual search
     var groupId by bundle.long(default = -1)
 
-    var uri by bundle.string(default = "")
+    var uri: String by bundle.string(default = "")
 
 
     // Helper methods
     companion object {
         fun buildSearchUri(
-            advancedSearchCriteria: SearchHelper.AdvancedSearchCriteria,
+            searchCriteria: SearchCriteria,
             query: String? = null
         ): Uri {
             return buildSearchUri(
-                advancedSearchCriteria.attributes,
-                query ?: advancedSearchCriteria.query,
-                advancedSearchCriteria.location,
-                advancedSearchCriteria.contentType
+                searchCriteria.attributes,
+                searchCriteria.excludedAttributeTypes,
+                query ?: searchCriteria.query,
+                searchCriteria.location.value,
+                searchCriteria.contentType.value
             )
         }
 
         fun buildSearchUri(
-            attributes: List<Attribute>?,
+            attributes: Set<Attribute>?,
+            excludedTypes: Collection<AttributeType>? = null,
             query: String = "",
             location: Int = 0,
             contentType: Int = 0
@@ -56,58 +65,90 @@ class SearchActivityBundle(val bundle: Bundle = Bundle()) {
 
             if (query.isNotEmpty()) searchUri.path(query)
 
-            if (attributes != null) enrichAttrs(attributes, searchUri)
+            if (!attributes.isNullOrEmpty()) addAttrs(attributes, searchUri)
 
-            if (location > 0) searchUri.appendQueryParameter("location", location.toString())
+            if (!excludedTypes.isNullOrEmpty()) addAttrTypeExclusion(excludedTypes, searchUri)
+
+            if (location > 0) searchUri.appendQueryParameter(ATTR_LOCATION, location.toString())
             if (contentType > 0) searchUri.appendQueryParameter(
-                "contentType",
+                ATTR_CONTENT_TYPE,
                 contentType.toString()
             )
 
             return searchUri.build()
         }
 
-        private fun enrichAttrs(attributes: List<Attribute>, uri: Uri.Builder) {
+        private fun addAttrs(attributes: Set<Attribute>, uri: Uri.Builder) {
             val metadataMap = AttributeMap()
             metadataMap.addAll(attributes)
 
             for ((attrType, attrs) in metadataMap) {
-                if (attrs != null) for (attr in attrs) uri.appendQueryParameter(
-                    attrType.name,
-                    attr.id.toString() + ";" + attr.name + ";" + attr.isExcluded
-                )
+                for (attr in attrs)
+                    uri.appendQueryParameter(
+                        attrType.name,
+                        "${attr.id};${attr.name};${attr.isExcluded}"
+                    )
             }
         }
 
-        fun parseSearchUri(uri: Uri?): SearchHelper.AdvancedSearchCriteria {
-            val attrs: MutableList<Attribute> = ArrayList()
+        private fun addAttrTypeExclusion(
+            excludedTypes: Collection<AttributeType>,
+            uri: Uri.Builder
+        ) {
+            if (excludedTypes.isEmpty()) return
+            uri.appendQueryParameter(
+                ATTR_EXCLUDED_TYPES,
+                TextUtils.join(";", excludedTypes.map { it.code })
+            )
+        }
+
+        fun parseSearchUri(uri: String): SearchCriteria {
+            return parseSearchUri(uri.toUri())
+        }
+
+        fun parseSearchUri(uri: Uri): SearchCriteria {
+            val attrs: MutableSet<Attribute> = HashSet()
+            val excludedTypes: MutableSet<AttributeType> = HashSet()
             var location = 0
             var contentType = 0
-            var query = ""
-            if (uri != null) {
-                query = StringHelper.protect(uri.path)
-                for (typeStr in uri.queryParameterNames) {
-                    val type = AttributeType.searchByName(typeStr)
-                    if (type != null) { // Parameter is an Attribute
-                        for (attrStr in uri.getQueryParameters(typeStr)) {
-                            val attrParams = attrStr.split(";").toTypedArray()
-                            if (3 == attrParams.size) {
-                                attrs.add(
-                                    Attribute(type, attrParams[1])
-                                        .setId(attrParams[0].toLong())
-                                        .setExcluded(attrParams[2].toBoolean())
-                                )
-                            }
+            var query = uri.path ?: ""
+            // Remove the leading '/'
+            if (query.isNotEmpty()) query = query.substring(1)
+            for (typeStr in uri.queryParameterNames) {
+                val type = AttributeType.searchByName(typeStr)
+                if (type != null) { // Parameter is an Attribute
+                    for (attrStr in uri.getQueryParameters(typeStr)) {
+                        val attrParams = attrStr.split(";").toTypedArray()
+                        if (3 == attrParams.size) {
+                            val attr = Attribute(
+                                type = type,
+                                name = attrParams[1],
+                                dbId = attrParams[0].toLong()
+                            )
+                            attr.isExcluded = attrParams[2].toBoolean()
+                            attrs.add(attr)
                         }
-                    } else {
-                        if ("location" == typeStr) location =
-                            uri.getQueryParameters(typeStr)[0].toInt()
-                        if ("contentType" == typeStr) contentType =
-                            uri.getQueryParameters(typeStr)[0].toInt()
                     }
+                } else {
+                    if (ATTR_EXCLUDED_TYPES == typeStr)
+                        excludedTypes.addAll(
+                            uri.getQueryParameters(typeStr)[0].split(";")
+                                .filterNot { it.isEmpty() }
+                                .mapNotNull { AttributeType.searchByCode(it.toInt()) }
+                        )
+                    if (ATTR_LOCATION == typeStr)
+                        location = uri.getQueryParameters(typeStr)[0].toInt()
+                    if (ATTR_CONTENT_TYPE == typeStr)
+                        contentType = uri.getQueryParameters(typeStr)[0].toInt()
                 }
             }
-            return SearchHelper.AdvancedSearchCriteria(attrs, query, location, contentType)
+            return SearchCriteria(
+                query,
+                attrs,
+                excludedTypes,
+                Location.fromValue(location),
+                Type.fromValue(contentType)
+            )
         }
     }
 }

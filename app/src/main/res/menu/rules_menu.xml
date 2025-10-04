@@ -3,8 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     tools:context=".activities.RenamingRulesActivity"
-    tools:ignore="AlwaysShowAction"
-    tools:targetApi="o">
+    tools:ignore="AlwaysShowAction">
     <item
         android:id="@+id/action_search"
         android:icon="@drawable/ic_menu_search"
@@ -18,4 +17,10 @@
         android:title="@string/menu_sort_filter"
         android:tooltipText="@string/menu_sort_filter"
         app:showAsAction="always" />
+    <item
+        android:id="@+id/help"
+        android:icon="@drawable/ic_help_outline"
+        android:title="@string/help_generic"
+        android:tooltipText="@string/help_generic"
+        app:showAsAction="ifRoom" />
 </menu>

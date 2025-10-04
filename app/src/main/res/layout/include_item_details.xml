@@ -40,10 +40,11 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
         android:layout_marginTop="8dp"
-        android:layout_marginEnd="8dp"
-        android:textColor="?colorSecondary"
+        android:layout_marginEnd="4dp"
+        android:textColor="?card_title"
         android:textSize="@dimen/text_subtitle_1"
         android:textStyle="bold"
+        android:maxLines="3"
         app:layout_constraintEnd_toStartOf="@id/reading_progress"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/pbDownload"
@@ -62,16 +63,21 @@
         tools:ignore="ContentDescription"
         tools:visibility="visible" />
 
-    <me.devsaki.hentoid.views.CircularProgressView
+    <com.google.android.material.progressindicator.CircularProgressIndicator
         android:id="@+id/reading_progress"
-        style="?android:attr/progressBarStyle"
         android:layout_width="24dp"
         android:layout_height="24dp"
         android:layout_marginTop="8dp"
         android:layout_marginEnd="8dp"
+        android:clickable="false"
+        android:focusable="false"
+        android:progress="76"
         android:visibility="gone"
+        app:indicatorColor="?colorSecondary"
+        app:indicatorSize="24dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/pbDownload"
+        app:trackThickness="4dp"
         tools:visibility="visible" />
 
     <TextView
@@ -81,7 +87,7 @@
         android:layout_marginStart="8dp"
         android:layout_marginEnd="8dp"
         android:textAppearance="?android:attr/textAppearanceSmall"
-        android:textColor="@color/card_tags_light"
+        android:textColor="?card_tags"
         android:textStyle="bold"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toEndOf="@id/ivCover"
@@ -93,7 +99,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:textAppearance="?android:attr/textAppearanceSmall"
-        android:textColor="@color/card_tags_light"
+        android:textColor="?card_tags"
         android:textStyle="bold"
         app:layout_constraintEnd_toEndOf="@id/tvArtist"
         app:layout_constraintStart_toStartOf="@id/tvArtist"
@@ -120,7 +126,7 @@
         android:visibility="visible"
         app:layout_constraintStart_toStartOf="@id/tvArtist"
         app:layout_constraintTop_toBottomOf="@id/tvModel"
-        app:tint="@color/card_tags_light"
+        app:tint="?card_tags"
         tools:ignore="ContentDescription" />
 
     <TextView
@@ -129,7 +135,7 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="4dp"
         android:textAppearance="?android:attr/textAppearanceSmall"
-        android:textColor="@color/card_tags_light"
+        android:textColor="?card_tags"
         app:layout_constraintBottom_toBottomOf="@id/ivPages"
         app:layout_constraintStart_toEndOf="@id/ivPages"
         app:layout_constraintTop_toTopOf="@id/ivPages"
@@ -145,7 +151,7 @@
         android:visibility="visible"
         app:layout_constraintStart_toEndOf="@id/tvPages"
         app:layout_constraintTop_toBottomOf="@id/tvModel"
-        app:tint="@color/card_tags_light"
+        app:tint="?card_tags"
         tools:ignore="ContentDescription" />
 
     <TextView
@@ -154,7 +160,7 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="4dp"
         android:textAppearance="?android:attr/textAppearanceSmall"
-        android:textColor="@color/card_tags_light"
+        android:textColor="?card_tags"
         app:layout_constraintBottom_toBottomOf="@id/ivPages"
         app:layout_constraintStart_toEndOf="@id/ivChapters"
         app:layout_constraintTop_toTopOf="@id/ivPages"
@@ -169,7 +175,7 @@
         android:visibility="visible"
         app:layout_constraintStart_toEndOf="@id/tvChapters"
         app:layout_constraintTop_toBottomOf="@id/tvModel"
-        app:tint="@color/card_tags_light"
+        app:tint="?card_tags"
         tools:ignore="ContentDescription" />
 
     <TextView
@@ -178,11 +184,18 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="4dp"
         android:textAppearance="?android:attr/textAppearanceSmall"
-        android:textColor="@color/card_tags_light"
+        android:textColor="?card_tags"
         app:layout_constraintBottom_toBottomOf="@id/ivPages"
         app:layout_constraintStart_toEndOf="@id/ivStorage"
         app:layout_constraintTop_toTopOf="@id/ivPages"
         tools:text="124 MB" />
+
+    <androidx.constraintlayout.widget.Barrier
+        android:id="@+id/horizontal_barrier"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:barrierDirection="bottom"
+        app:constraint_referenced_ids="ivStorage,ivChapters,ivPages " />
 
     <View
         android:id="@+id/divider"
@@ -191,14 +204,14 @@
         android:layout_marginTop="2dp"
         app:layout_constraintEnd_toEndOf="@id/tvArtist"
         app:layout_constraintStart_toStartOf="@id/tvArtist"
-        app:layout_constraintTop_toBottomOf="@id/ivPages" />
+        app:layout_constraintTop_toBottomOf="@id/horizontal_barrier" />
 
     <TextView
         android:id="@+id/tvTags"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
-        android:textColor="@color/card_tags_light"
+        android:textColor="?card_tags"
+        android:textSize="11sp"
         app:layout_constraintEnd_toEndOf="@id/divider"
         app:layout_constraintStart_toStartOf="@id/divider"
         app:layout_constraintTop_toBottomOf="@id/divider"

@@ -9,9 +9,13 @@
     <item name="drawer_edit" type="id"/>
     <item name="gallery_image" type="id"/>
     <item name="content" type="id"/>
+    <item name="folder" type="id"/>
     <item name="duplicate" type="id"/>
     <item name="text" type="id"/>
+    <item name="icon" type="id"/>
     <item name="group" type="id"/>
     <item name="expandable_item" type="id"/>
     <item name="renamingRule" type="id"/>
+    <item name="achievement" type="id"/>
+    <item name="list_picker" type="id"/>
 </resources>

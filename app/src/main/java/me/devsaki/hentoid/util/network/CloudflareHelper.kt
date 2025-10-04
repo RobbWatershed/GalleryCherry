@@ -5,22 +5,25 @@ import android.content.Context
 import android.content.res.Resources
 import android.os.Handler
 import android.os.Looper
-import android.webkit.*
+import android.webkit.CookieManager
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import me.devsaki.hentoid.BuildConfig
 import me.devsaki.hentoid.core.CLOUDFLARE_COOKIE
 import me.devsaki.hentoid.core.HentoidApp
 import me.devsaki.hentoid.enums.Site
-import me.devsaki.hentoid.util.Helper
-import me.devsaki.hentoid.util.Preferences
-import me.devsaki.hentoid.util.StringHelper
+import me.devsaki.hentoid.util.Settings
+import me.devsaki.hentoid.util.getFixedContext
+import me.devsaki.hentoid.util.pause
 import timber.log.Timber
 import java.io.IOException
 import java.util.concurrent.atomic.AtomicBoolean
 
-const val RELOAD_LIMIT = 3
+private const val RELOAD_LIMIT = 3
 
 class CloudflareHelper {
-
     private var webView: CloudflareWebView? = null
     private val stopped = AtomicBoolean(false)
 
@@ -29,10 +32,10 @@ class CloudflareHelper {
         handler.post {
             this.webView = try {
                 CloudflareWebView(HentoidApp.getInstance())
-            } catch (e: Resources.NotFoundException) {
+            } catch (_: Resources.NotFoundException) {
                 // Some older devices can crash when instantiating a WebView, due to a Resources$NotFoundException
                 // Creating with the application Context fixes this, but is not generally recommended for view creation
-                CloudflareWebView(Helper.getFixedContext(HentoidApp.getInstance()))
+                CloudflareWebView(getFixedContext(HentoidApp.getInstance()))
             }
         }
     }
@@ -43,23 +46,20 @@ class CloudflareHelper {
         revivedSite: Site,
         oldCookie: String?
     ): Boolean {
-        val oldCookieInternal: String = oldCookie ?: StringHelper.protect(
-            HttpHelper.parseCookies(
-                HttpHelper.getCookies(revivedSite.url)
-            )[CLOUDFLARE_COOKIE]
-        )
+        val oldCookieInternal: String =
+            oldCookie ?: parseCookies(getCookies(revivedSite.url))[CLOUDFLARE_COOKIE] ?: ""
 
         // Nuke the cookie to force its refresh
-        val domain = "." + HttpHelper.getDomainFromUri(revivedSite.url)
-        HttpHelper.setCookies(domain, "$CLOUDFLARE_COOKIE=;Max-Age=0; secure; HttpOnly")
+        val domain = "." + getDomainFromUri(revivedSite.url)
+        setCookies(domain, "$CLOUDFLARE_COOKIE=;Max-Age=0; secure; HttpOnly")
 
         val handler = Handler(Looper.getMainLooper())
         handler.post {
             webView?.setUserAgent(revivedSite.userAgent)
             webView?.setAgentProperties(
-                revivedSite.useMobileAgent(),
-                revivedSite.useHentoidAgent(),
-                revivedSite.useWebviewAgent()
+                revivedSite.useMobileAgent,
+                revivedSite.useHentoidAgent,
+                revivedSite.useWebviewAgent
             )
             webView?.loadUrl(revivedSite.url)
         }
@@ -69,8 +69,8 @@ class CloudflareHelper {
         // Wait for cookies to refresh
         do {
             val cfcookie =
-                HttpHelper.parseCookies(HttpHelper.getCookies(revivedSite.url))[CLOUDFLARE_COOKIE]
-            if (cfcookie != null && cfcookie.isNotEmpty() && cfcookie != oldCookieInternal) {
+                parseCookies(getCookies(revivedSite.url))[CLOUDFLARE_COOKIE]
+            if (!cfcookie.isNullOrEmpty() && cfcookie != oldCookieInternal) {
                 Timber.d("CF-COOKIE : refreshed !")
                 passed = true
             } else {
@@ -87,7 +87,7 @@ class CloudflareHelper {
                 }
             }
             // We're polling the DB because we can't observe LiveData from a background service
-            Helper.pause(1500)
+            pause(1500)
         } while (reloadCounter < RELOAD_LIMIT && !passed && !stopped.get())
 
         return passed
@@ -122,7 +122,7 @@ class CloudflareHelper {
                 it.loadWithOverviewMode = true
             }
             if (BuildConfig.DEBUG) setWebContentsDebuggingEnabled(true)
-            client = CloudflareWebViewClient(Preferences.getDnsOverHttps() > -1)
+            client = CloudflareWebViewClient(Settings.dnsOverHttps > -1)
             webViewClient = client
         }
 
@@ -159,9 +159,9 @@ class CloudflareHelper {
                 // Query resource using OkHttp
                 val urlStr = request.url.toString()
                 val requestHeadersList =
-                    HttpHelper.webkitRequestHeadersToOkHttpHeaders(request.requestHeaders, urlStr)
+                    webkitRequestHeadersToOkHttpHeaders(request.requestHeaders, urlStr)
                 try {
-                    val response = HttpHelper.getOnlineResource(
+                    val response = getOnlineResource(
                         urlStr,
                         requestHeadersList,
                         useMobileAgent,
@@ -171,8 +171,8 @@ class CloudflareHelper {
 
                     // Scram if the response is a redirection or an error
                     if (response.code >= 300) return null
-                    val body = response.body ?: throw IOException("Empty body")
-                    return HttpHelper.okHttpResponseToWebkitResponse(response, body.byteStream())
+                    val body = response.body
+                    return okHttpResponseToWebkitResponse(response, body.byteStream())
                 } catch (e: IOException) {
                     Timber.i(e)
                 }

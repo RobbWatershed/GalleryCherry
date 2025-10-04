@@ -13,6 +13,9 @@ import me.devsaki.hentoid.viewholders.AttributeViewHolder
  * <p>
  * Can only be removed when prerequisites are met : see comments in {@link me.devsaki.hentoid.fragments.SearchBottomSheetFragment}
  */
+// Threshold for infinite loading
+private const val VISIBLE_THRESHOLD = 5
+
 class AvailableAttributeAdapter : RecyclerView.Adapter<AttributeViewHolder>() {
     private val dataset: MutableList<Attribute> = ArrayList()
     private var onScrollToEndListener: Runnable? = null
@@ -20,7 +23,7 @@ class AvailableAttributeAdapter : RecyclerView.Adapter<AttributeViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): AttributeViewHolder {
         val view: View =
-            LayoutInflater.from(parent.context).inflate(R.layout.item_badge, parent, false)
+            LayoutInflater.from(parent.context).inflate(R.layout.item_badge_suggestion, parent, false)
         return AttributeViewHolder(view)
     }
 
@@ -56,10 +59,5 @@ class AvailableAttributeAdapter : RecyclerView.Adapter<AttributeViewHolder>() {
         val index = dataset.indexOf(attribute)
         dataset.remove(attribute)
         notifyItemRemoved(index)
-    }
-
-    companion object {
-        // Threshold for infinite loading
-        const val VISIBLE_THRESHOLD = 5
     }
 }

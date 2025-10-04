@@ -13,8 +13,6 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.annimon.stream.Stream
-import com.google.android.material.materialswitch.MaterialSwitch
 import com.mikepenz.fastadapter.FastAdapter
 import com.mikepenz.fastadapter.adapters.ItemAdapter
 import com.mikepenz.fastadapter.diff.DiffCallback
@@ -24,14 +22,16 @@ import me.devsaki.hentoid.R
 import me.devsaki.hentoid.activities.DuplicateDetectorActivity
 import me.devsaki.hentoid.activities.bundles.DuplicateItemBundle
 import me.devsaki.hentoid.database.domains.Content
+import me.devsaki.hentoid.database.domains.DownloadMode
 import me.devsaki.hentoid.database.domains.DuplicateEntry
 import me.devsaki.hentoid.databinding.FragmentDuplicateDetailsBinding
 import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.events.CommunicationEvent
 import me.devsaki.hentoid.fragments.ProgressDialogFragment
 import me.devsaki.hentoid.fragments.library.MergeDialogFragment
-import me.devsaki.hentoid.util.ContentHelper
-import me.devsaki.hentoid.util.ToastHelper
+import me.devsaki.hentoid.util.openReader
+import me.devsaki.hentoid.util.toast
+import me.devsaki.hentoid.util.viewContentGalleryPage
 import me.devsaki.hentoid.viewholders.DuplicateItem
 import me.devsaki.hentoid.viewmodels.DuplicateViewModel
 import me.devsaki.hentoid.viewmodels.ViewModelFactory
@@ -46,8 +46,7 @@ import java.lang.ref.WeakReference
 class DuplicateDetailsFragment : Fragment(R.layout.fragment_duplicate_details),
     MergeDialogFragment.Parent {
 
-    private var _binding: FragmentDuplicateDetailsBinding? = null
-    private val binding get() = _binding!!
+    private var binding: FragmentDuplicateDetailsBinding? = null
 
     // Communication
     private var callback: OnBackPressedCallback? = null
@@ -64,7 +63,10 @@ class DuplicateDetailsFragment : Fragment(R.layout.fragment_duplicate_details),
 
     private val ITEM_DIFF_CALLBACK: DiffCallback<DuplicateItem> =
         object : DiffCallback<DuplicateItem> {
-            override fun areItemsTheSame(oldItem: DuplicateItem, newItem: DuplicateItem): Boolean {
+            override fun areItemsTheSame(
+                oldItem: DuplicateItem,
+                newItem: DuplicateItem
+            ): Boolean {
                 return oldItem.identifier == newItem.identifier
             }
 
@@ -104,11 +106,11 @@ class DuplicateDetailsFragment : Fragment(R.layout.fragment_duplicate_details),
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View {
-        _binding = FragmentDuplicateDetailsBinding.inflate(inflater, container, false)
+    ): View? {
+        binding = FragmentDuplicateDetailsBinding.inflate(inflater, container, false)
         addCustomBackControl()
         activity.get()?.initFragmentToolbars(this::onToolbarItemClicked)
-        return binding.root
+        return binding?.root
     }
 
     override fun onStart() {
@@ -123,7 +125,7 @@ class DuplicateDetailsFragment : Fragment(R.layout.fragment_duplicate_details),
 
     override fun onDestroyView() {
         super.onDestroyView()
-        _binding = null
+        binding = null
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -131,10 +133,12 @@ class DuplicateDetailsFragment : Fragment(R.layout.fragment_duplicate_details),
         viewModel = ViewModelProvider(requireActivity(), vmFactory)[DuplicateViewModel::class.java]
 
         // List
-        binding.list.layoutManager =
-            LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL, false)
-        FastScrollerBuilder(binding.list).build()
-        binding.list.adapter = fastAdapter
+        binding?.list?.apply {
+            layoutManager =
+                LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL, false)
+            FastScrollerBuilder(this).build()
+            adapter = fastAdapter
+        }
 
         viewModel.selectedDuplicates.observe(
             viewLifecycleOwner
@@ -155,39 +159,23 @@ class DuplicateDetailsFragment : Fragment(R.layout.fragment_duplicate_details),
                 item: DuplicateItem
             ) {
                 val c = item.content
-                if (c != null) ContentHelper.viewContentGalleryPage(requireContext(), c)
+                if (c != null) viewContentGalleryPage(requireContext(), c)
             }
 
             override fun onBind(viewHolder: RecyclerView.ViewHolder): View? {
-                return if (viewHolder is DuplicateItem.ContentViewHolder) {
+                return if (viewHolder is DuplicateItem.ViewHolder) {
                     viewHolder.siteButton
                 } else super.onBind(viewHolder)
             }
         })
 
-        // "Keep/delete" switch click listener
-        fastAdapter.addEventHook(object : ClickEventHook<DuplicateItem>() {
-            override fun onClick(
-                v: View,
-                position: Int,
-                fastAdapter: FastAdapter<DuplicateItem>,
-                item: DuplicateItem
-            ) {
-                onBookChoice(item.content, (v as MaterialSwitch).isChecked)
-            }
-
-            override fun onBind(viewHolder: RecyclerView.ViewHolder): View? {
-                return if (viewHolder is DuplicateItem.ContentViewHolder) {
-                    viewHolder.keepDeleteSwitch
-                } else super.onBind(viewHolder)
-            }
-        })
-
-        binding.applyBtn.setOnClickListener {
-            binding.applyBtn.isEnabled = false
-            viewModel.applyChoices {
-                binding.applyBtn.isEnabled = true
-                activity.get()?.goBackToMain()
+        binding?.applyBtn?.apply {
+            setOnClickListener {
+                isEnabled = false
+                viewModel.applyChoices {
+                    isEnabled = true
+                    activity.get()?.goBackToMain()
+                }
             }
         }
     }
@@ -210,17 +198,17 @@ class DuplicateDetailsFragment : Fragment(R.layout.fragment_duplicate_details),
         val c: Content? = item.content
         // Process the click
         if (null == c) {
-            ToastHelper.toast(R.string.err_no_content)
+            toast(R.string.err_no_content)
             return
         }
 
-        if (!ContentHelper.openReader(requireContext(), c, -1, null, false, true))
-            ToastHelper.toast(R.string.err_no_content)
+        if (!openReader(requireContext(), c, -1, null, forceShowGallery = false, newTask = true))
+            toast(R.string.err_no_content)
     }
 
-    private fun onBookChoice(item: Content?, choice: Boolean) {
-        if (item != null)
-            viewModel.setBookChoice(item, choice)
+    private fun onBookChoice(item: Content?, isKeep: Boolean) {
+        item ?: return
+        viewModel.setBookChoice(item, isKeep)
     }
 
     @Synchronized
@@ -236,11 +224,11 @@ class DuplicateDetailsFragment : Fragment(R.layout.fragment_duplicate_details),
             duplicates.asSequence().map(DuplicateEntry::duplicateContent)
                 .filterNotNull()
                 .map { c -> c.status }
-                .filter { s -> s.equals(StatusContent.EXTERNAL) }.count()
+                .filter { s -> s == StatusContent.EXTERNAL }.count()
         val streamedCount = duplicates.asSequence().map(DuplicateEntry::duplicateContent)
             .filterNotNull()
             .map { c -> c.downloadMode }
-            .filter { mode -> mode == Content.DownloadMode.STREAM }.count()
+            .filter { mode -> mode == DownloadMode.STREAM }.count()
         val localCount = duplicates.size - externalCount - streamedCount
 
         // streamed, external
@@ -249,15 +237,17 @@ class DuplicateDetailsFragment : Fragment(R.layout.fragment_duplicate_details),
         // Order by relevance desc and transforms to DuplicateItem
         val items = duplicates.sortedByDescending { it.calcTotalScore() }
             .map { DuplicateItem(it, DuplicateItem.ViewType.DETAILS) }.toMutableList()
+        items.forEach { it.onKeepChange = { b -> onBookChoice(it.content, b) } }
         set(itemAdapter, items, ITEM_DIFF_CALLBACK)
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     fun onActivityEvent(event: CommunicationEvent) {
-        if (event.recipient != CommunicationEvent.RC_DUPLICATE_DETAILS) return
+        if (event.recipient != CommunicationEvent.Recipient.DUPLICATE_DETAILS) return
         when (event.type) {
-            CommunicationEvent.EV_ENABLE -> onEnable()
-            CommunicationEvent.EV_DISABLE -> onDisable()
+            CommunicationEvent.Type.ENABLE -> onEnable()
+            CommunicationEvent.Type.DISABLE -> onDisable()
+            else -> {}
         }
     }
 
@@ -266,9 +256,8 @@ class DuplicateDetailsFragment : Fragment(R.layout.fragment_duplicate_details),
             R.id.action_merge -> {
                 MergeDialogFragment.invoke(
                     this,
-                    Stream.of(itemAdapter.adapterItems)
-                        .map<Content> { obj: DuplicateItem -> obj.content }
-                        .toList(), true
+                    itemAdapter.adapterItems.mapNotNull { di -> di.content },
+                    true
                 )
             }
         }
@@ -287,20 +276,23 @@ class DuplicateDetailsFragment : Fragment(R.layout.fragment_duplicate_details),
     }
 
     override fun mergeContents(
-        contentList: MutableList<Content>,
+        contentList: List<Content>,
         newTitle: String,
+        useBookAsChapter: Boolean, // Ignored on duplicate detector
+        keepFirstBookChaps: Boolean,
         deleteAfterMerging: Boolean
     ) {
         viewModel.mergeContents(
             contentList,
             newTitle,
+            useBookAsChapter,
             deleteAfterMerging,
         ) {
-            ToastHelper.toast(R.string.merge_success)
+            toast(R.string.merge_success)
             activity.get()?.goBackToMain()
         }
         ProgressDialogFragment.invoke(
-            parentFragmentManager,
+            this,
             resources.getString(R.string.merge_progress),
             R.plurals.page
         )

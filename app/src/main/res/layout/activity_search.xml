@@ -4,6 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
     android:orientation="vertical"
     tools:context=".activities.SearchActivity">
 
@@ -11,7 +12,6 @@
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?android:attr/actionBarSize"
-        android:background="?attr/colorPrimary"
         android:elevation="@dimen/toolbar_layout_elevation"
         app:layout_constraintTop_toTopOf="parent"
         app:navigationIcon="@drawable/ic_close"
@@ -21,7 +21,6 @@
         android:id="@+id/startCaption"
         android:layout_width="0dp"
         android:layout_height="48dp"
-        android:background="?attr/colorPrimary"
         android:gravity="center"
         android:text="@string/search_select_a_filter"
         app:layout_constraintEnd_toEndOf="parent"
@@ -54,15 +53,6 @@
         android:orientation="vertical"
         app:layout_constraintGuide_percent="0.5" />
 
-    <CheckBox
-        android:id="@+id/excludeCheckbox"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
-        android:text="@string/exclude"
-        app:layout_constraintBottom_toTopOf="@id/textCategoryAny"
-        app:layout_constraintEnd_toEndOf="@id/guideline_middle"
-        app:layout_constraintStart_toStartOf="parent" />
 
     <TextView
         android:id="@+id/textCategoryAny"
@@ -74,7 +64,43 @@
         app:layout_constraintEnd_toStartOf="@id/guideline_middle"
         app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/textCategoryTag" />
+        app:layout_constraintTop_toBottomOf="@id/search_tags" />
+
+    <TextView
+        android:id="@+id/textCategoryCategory"
+        style="@style/SearchCategoryButton"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="4dp"
+        android:text="@string/category_category"
+        app:layout_constraintEnd_toStartOf="@id/guideline_middle"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/textCategoryAny" />
+
+    <TextView
+        android:id="@+id/textCategoryCharacter"
+        style="@style/SearchCategoryButton"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="4dp"
+        android:text="@string/category_character"
+        app:layout_constraintEnd_toStartOf="@id/guideline_middle"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/textCategoryCategory" />
+
+    <TextView
+        android:id="@+id/textCategorySource"
+        style="@style/SearchCategoryButton"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="4dp"
+        android:text="@string/category_source"
+        app:layout_constraintEnd_toStartOf="@id/guideline_middle"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/textCategoryCharacter" />
 
     <TextView
         android:id="@+id/textCategoryTag"
@@ -119,6 +145,16 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/textCategorySource" />
 
+    <CheckBox
+        android:id="@+id/excludeCheckbox"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:text="@string/exclude"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/horz_divider" />
+
     <me.devsaki.hentoid.views.ListPickerView
         android:id="@+id/location_picker"
         android:layout_width="match_parent"
@@ -127,7 +163,7 @@
         android:paddingEnd="8dp"
         app:entries="@array/search_location_entries"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/horz_divider"
+        app:layout_constraintTop_toBottomOf="@id/excludeCheckbox"
         app:title="@string/search_location" />
 
     <me.devsaki.hentoid.views.ListPickerView
@@ -142,19 +178,16 @@
         app:layout_constraintTop_toBottomOf="@id/location_picker"
         app:title="@string/search_type" />
 
-    <TextView
+    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
         android:id="@+id/search_fab"
         android:layout_width="wrap_content"
-        android:layout_height="48dp"
-        android:layout_marginBottom="16dp"
-        android:background="@drawable/bg_fab_extended"
-        android:drawablePadding="12dp"
-        android:gravity="center"
-        android:paddingStart="12dp"
-        android:paddingEnd="20dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center"
+        android:layout_margin="16dp"
+        android:contentDescription="@plurals/search_button"
         android:text="@plurals/search_button"
         android:visibility="gone"
-        app:drawableStartCompat="@drawable/ic_search"
+        app:icon="@drawable/ic_search"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"

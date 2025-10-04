@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context=".activities.sources.BaseBrowserActivity"
+    tools:ignore="AlwaysShowAction">
+    <group android:id="@+id/web_menu_top_1">
+        <item
+            android:id="@+id/web_menu_refresh_stop"
+            android:icon="@drawable/ic_action_refresh"
+            android:title="@string/web_refresh_stop"
+            android:tooltipText="@string/web_refresh_stop"
+            app:showAsAction="always" />
+    </group>
+    <group android:id="@+id/web_menu_top_2">
+        <item
+            android:id="@+id/web_menu_bookmark"
+            android:icon="@drawable/ic_bookmark"
+            android:title="@string/web_bookmarks"
+            android:tooltipText="@string/web_bookmarks"
+            app:showAsAction="ifRoom" />
+    </group>
+    <group android:id="@+id/web_menu_top_3">
+        <item
+            android:id="@+id/web_menu_settings"
+            android:icon="@drawable/ic_settings"
+            android:title="@string/title_activity_settings"
+            android:tooltipText="@string/title_activity_settings"
+            android:visible="true"
+            app:showAsAction="never" />
+        <item
+            android:id="@+id/web_menu_adblocker"
+            android:icon="@drawable/ic_shield_on"
+            android:title="@string/web_adblocker_on"
+            android:tooltipText="@string/web_adblocker_on"
+            app:showAsAction="never" />
+        <item
+            android:id="@+id/web_menu_url"
+            android:icon="@drawable/ic_link"
+            android:title="@string/web_url"
+            android:tooltipText="@string/web_url"
+            app:showAsAction="never" />
+        <item
+            android:id="@+id/help"
+            android:icon="@drawable/ic_help_outline"
+            android:title="@string/help_generic"
+            android:tooltipText="@string/help_generic"
+            app:showAsAction="never" />
+    </group>
+</menu>

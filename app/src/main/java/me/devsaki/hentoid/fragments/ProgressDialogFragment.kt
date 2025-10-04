@@ -6,7 +6,8 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.annotation.PluralsRes
 import androidx.fragment.app.DialogFragment
-import androidx.fragment.app.FragmentManager
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentActivity
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.databinding.DialogProgressBinding
 import me.devsaki.hentoid.events.ProcessEvent
@@ -14,7 +15,38 @@ import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
 
-class ProgressDialogFragment : DialogFragment() {
+class ProgressDialogFragment : BaseDialogFragment<Nothing>() {
+
+    companion object {
+        const val TITLE = "title"
+        const val PROGRESS_UNIT = "progressUnit"
+
+        fun invoke(
+            activity: FragmentActivity,
+            title: String,
+            @PluralsRes progressUnit: Int
+        ): DialogFragment {
+            val args = getArgs(title, progressUnit)
+            return invoke(activity, ProgressDialogFragment(), args, isCancelable = false)
+        }
+
+        fun invoke(
+            fragment: Fragment,
+            title: String,
+            @PluralsRes progressUnit: Int
+        ): DialogFragment {
+            val args = getArgs(title, progressUnit)
+            return invoke(fragment, ProgressDialogFragment(), args, isCancelable = false)
+        }
+
+        private fun getArgs(title: String, @PluralsRes progressUnit: Int): Bundle {
+            val args = Bundle()
+            args.putString(TITLE, title)
+            args.putInt(PROGRESS_UNIT, progressUnit)
+            return args
+        }
+    }
+
     private var binding: DialogProgressBinding? = null
     private var dialogTitle: String? = null
 
@@ -35,10 +67,9 @@ class ProgressDialogFragment : DialogFragment() {
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedState: Bundle?
-    ): View {
+    ): View? {
         binding = DialogProgressBinding.inflate(inflater, container, false)
-        isCancelable = false
-        return binding!!.root
+        return binding?.root
     }
 
     override fun onViewCreated(rootView: View, savedInstanceState: Bundle?) {
@@ -61,7 +92,8 @@ class ProgressDialogFragment : DialogFragment() {
         binding?.apply {
             bar.max = event.elementsTotal
             bar.isIndeterminate = false
-            if (ProcessEvent.EventType.PROGRESS == event.eventType) {
+            val nbProcessed = event.elementsOK + event.elementsKO
+            if (ProcessEvent.Type.PROGRESS == event.eventType) {
                 progress.text = getString(
                     R.string.generic_progress,
                     event.elementsOK + event.elementsKO,
@@ -71,9 +103,10 @@ class ProgressDialogFragment : DialogFragment() {
                         event.elementsOK + event.elementsKO
                     )
                 )
-                bar.progress = event.elementsOK + event.elementsKO
-            } else if (ProcessEvent.EventType.COMPLETE == event.eventType) {
-                dismiss()
+                bar.progress = nbProcessed
+            }
+            if (ProcessEvent.Type.COMPLETE == event.eventType || (nbProcessed > 0 && nbProcessed == event.elementsTotal)) {
+                dismissAllowingStateLoss()
             }
         }
     }
@@ -86,25 +119,6 @@ class ProgressDialogFragment : DialogFragment() {
             bar.isIndeterminate = false
         }
         EventBus.getDefault().removeStickyEvent(event)
-        if (ProcessEvent.EventType.COMPLETE == event.eventType) dismiss()
-    }
-
-    companion object {
-        const val TITLE = "title"
-        const val PROGRESS_UNIT = "progressUnit"
-
-        fun invoke(
-            fragmentManager: FragmentManager,
-            title: String,
-            @PluralsRes progressUnit: Int
-        ): DialogFragment {
-            val fragment = ProgressDialogFragment()
-            val args = Bundle()
-            args.putString(TITLE, title)
-            args.putInt(PROGRESS_UNIT, progressUnit)
-            fragment.arguments = args
-            fragment.show(fragmentManager, null)
-            return fragment
-        }
+        if (ProcessEvent.Type.COMPLETE == event.eventType) dismissAllowingStateLoss()
     }
 }

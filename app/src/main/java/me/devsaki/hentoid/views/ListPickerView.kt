@@ -4,13 +4,12 @@ import android.content.Context
 import android.content.DialogInterface
 import android.util.AttributeSet
 import android.view.LayoutInflater
-import androidx.appcompat.app.AlertDialog
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.isVisible
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.databinding.WidgetListPickerBinding
-import me.devsaki.hentoid.util.ThemeHelper
+import me.devsaki.hentoid.util.getIdForCurrentTheme
 
 
 class ListPickerView : ConstraintLayout {
@@ -18,12 +17,16 @@ class ListPickerView : ConstraintLayout {
 
     private var onIndexChangeListener: ((Int) -> Unit)? = null
     private var onValueChangeListener: ((String) -> Unit)? = null
-    private var values: List<String> = emptyList()
 
     var entries: List<String> = emptyList()
         set(value) {
             field = value.toList()
             index = 0
+        }
+
+    var values: List<String> = emptyList()
+        set(value) {
+            field = value.toList()
         }
 
     var index: Int = -1
@@ -41,6 +44,13 @@ class ListPickerView : ConstraintLayout {
             else ""
         }
 
+    var title: String = ""
+        set(value) {
+            field = value
+            binding.title.isVisible = value.isNotEmpty()
+            binding.title.text = value
+        }
+
 
     constructor(context: Context) : super(context)
 
@@ -56,11 +66,12 @@ class ListPickerView : ConstraintLayout {
     private fun initialize(context: Context, attrs: AttributeSet?) {
         val arr = context.obtainStyledAttributes(attrs, R.styleable.ListPickerView)
         try {
-            val title = arr.getString(R.styleable.ListPickerView_title) ?: ""
+            val rawTitle = arr.getString(R.styleable.ListPickerView_title)
+            if (rawTitle != null) title = rawTitle
             val rawEntries = arr.getTextArray(R.styleable.ListPickerView_entries)
-            if (rawEntries != null) entries = rawEntries.map { cs -> cs.toString() }
+            if (rawEntries != null) entries = rawEntries.map { it.toString() }
             val rawValues = arr.getTextArray(R.styleable.ListPickerView_values)
-            if (rawValues != null) values = rawValues.map { cs -> cs.toString() }
+            if (rawValues != null) values = rawValues.map { it.toString() }
 
             binding.let {
                 it.root.clipToOutline = true
@@ -90,7 +101,7 @@ class ListPickerView : ConstraintLayout {
     private fun onClick() {
         val materialDialog = MaterialAlertDialogBuilder(
             context,
-            ThemeHelper.getIdForCurrentTheme(context, R.style.Theme_Light_Dialog)
+            context.getIdForCurrentTheme(R.style.Theme_Light_Dialog)
         )
             .setSingleChoiceItems(
                 entries.toTypedArray(),

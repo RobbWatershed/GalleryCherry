@@ -6,28 +6,30 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <!-- Somehow needed by Firebase for reliable local dispatching on non-Google Play devices -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <!-- Required to install update packages when targeting API 25 or higher -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
-    <!-- Required to run keep-alive service when targeting API 28 or higher -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <!-- Required to install update packages when targeting API 29 or higher -->
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <!-- Required to fire notifications when targeting API 33 or higher -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Required to run Workers calling setForegroundAsync -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <!-- Still required when targeting API34 for pre-API34 phones  -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 
     <application
         android:name=".core.HentoidApp"
         android:allowBackup="false"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@mipmap/app_launcher"
         android:label="@string/app_name"
         android:largeHeap="true"
         android:localeConfig="@xml/locales_config"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:roundIcon="@mipmap/app_launcher_round"
         android:supportsRtl="false"
         android:theme="@style/Theme.Light"
         android:usesCleartextTraffic="true"
@@ -36,6 +38,16 @@
         <meta-data
             android:name="android.webkit.WebView.MetricsOptOut"
             android:value="true" />
+
+        <!-- Collection off by default; enabled by settings -->
+        <meta-data
+            android:name="firebase_analytics_collection_enabled"
+            android:value="false" />
+
+        <!-- No Advertising ID collection -->
+        <meta-data
+            android:name="google_analytics_adid_collection_enabled"
+            android:value="false" />
 
         <activity
             android:name=".activities.MissingWebViewActivity"
@@ -55,6 +67,9 @@
             android:name=".activities.IntroActivity"
             android:label="@string/app_intro" />
         <activity
+            android:name=".activities.sources.WelcomeActivity"
+            android:configChanges="orientation|screenSize" />
+        <activity
             android:name=".activities.sources.XhamsterActivity"
             android:configChanges="orientation|screenSize" />
         <activity
@@ -68,6 +83,9 @@
             android:configChanges="orientation|screenSize" />
         <activity
             android:name=".activities.sources.NextpicturezActivity"
+            android:configChanges="orientation|screenSize" />
+        <activity
+            android:name=".activities.sources.PorncomixActivity"
             android:configChanges="orientation|screenSize" />
         <activity
             android:name=".activities.sources.HellpornoActivity"
@@ -115,6 +133,24 @@
             android:name=".activities.sources.CosplayTeleActivity"
             android:configChanges="orientation|screenSize" />
         <activity
+            android:name=".activities.sources.DeviantArtActivity"
+            android:configChanges="orientation|screenSize" />
+        <activity
+            android:name=".activities.sources.MangagoActivity"
+            android:configChanges="orientation|screenSize" />
+        <activity
+            android:name=".activities.sources.HiperdexActivity"
+            android:configChanges="orientation|screenSize" />
+        <activity
+            android:name=".activities.sources.NovelcrowActivity"
+            android:configChanges="orientation|screenSize" />
+        <activity
+            android:name=".activities.sources.TmoActivity"
+            android:configChanges="orientation|screenSize" />
+        <activity
+            android:name=".activities.sources.KemonoActivity"
+            android:configChanges="orientation|screenSize" />
+        <activity
             android:name=".activities.LibraryActivity"
             android:configChanges="orientation|screenSize"
             android:label="@string/title_activity_downloads"
@@ -134,7 +170,7 @@
                 android:value=".activities.LibraryActivity" />
         </activity>
         <activity
-            android:name=".activities.PrefsActivity"
+            android:name=".activities.settings.SettingsActivity"
             android:configChanges="orientation|screenSize"
             android:label="@string/title_activity_settings"
             android:parentActivityName=".activities.LibraryActivity"
@@ -165,8 +201,12 @@
                 android:value=".activities.LibraryActivity" />
         </activity>
         <activity
-            android:name=".activities.DrawerEditActivity"
-            android:label="@string/title_activity_drawer_edit"
+            android:name=".activities.settings.SettingsSourceSelectActivity"
+            android:label="@string/pref_drawer_sources_title"
+            tools:ignore="UnusedAttribute" />
+        <activity
+            android:name=".activities.settings.SettingsSourceSpecificsActivity"
+            android:label="@string/title_activity_source_specifics"
             tools:ignore="UnusedAttribute" />
         <activity
             android:name=".activities.DuplicateDetectorActivity"
@@ -182,7 +222,7 @@
             android:resizeableActivity="false"
             android:screenOrientation="portrait" />
         <activity
-            android:name=".activities.PinPreferenceActivity"
+            android:name=".activities.settings.SettingsPinActivity"
             android:resizeableActivity="false"
             android:screenOrientation="portrait" />
         <activity
@@ -194,9 +234,21 @@
             android:label="@string/title_activity_rules"
             tools:ignore="UnusedAttribute" />
         <activity
-            android:name=".activities.StoragePreferenceActivity"
+            android:name=".activities.settings.SettingsStorageActivity"
             android:label="@string/title_activity_storage"
             tools:ignore="UnusedAttribute" />
+        <activity
+            android:name=".activities.TextIntentActivity"
+            android:exported="true"
+            android:icon="@drawable/ic_hentoid"
+            android:label="@string/launch"
+            android:theme="@style/Theme.Invisible">
+            <intent-filter>
+                <action android:name="android.intent.action.PROCESS_TEXT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
         <activity
             android:name=".activities.IntentActivity"
             android:exported="true"
@@ -376,6 +428,94 @@
                     android:pathPattern="/gallery/..*/..*"
                     android:scheme="https" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="anchira.to"
+                    android:pathPattern="/g/..*/..*"
+                    android:scheme="https" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="deviantart.com"
+                    android:pathPattern="/..*/gallery/"
+                    android:scheme="https" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="deviantart.com"
+                    android:pathPattern="/..*/art/"
+                    android:scheme="https" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="mangago.me"
+                    android:pathPattern="/..*/art/"
+                    android:scheme="https" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="hiperdex.com"
+                    android:pathPattern="/manga/..*/"
+                    android:scheme="https" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="novelcrow.com"
+                    android:pathPattern="/comic/..*/"
+                    android:scheme="https" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="tmohentai.com"
+                    android:pathPattern="/contents/..*"
+                    android:scheme="https" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="kemono.cr"
+                    android:pathPattern="/..*/user/..*/post/..*"
+                    android:scheme="https" />
+            </intent-filter>
         </activity>
 
         <activity
@@ -397,19 +537,31 @@
                 android:value=".activities.LibraryActivity" />
         </activity>
 
-        <!-- Services -->
-
-        <service android:name=".services.UpdateCheckService" />
+        <!-- Workers -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            tools:node="merge" />
 
         <!-- Receivers -->
 
         <receiver android:name=".receiver.DownloadNotificationDeleteReceiver" />
 
-        <receiver android:name=".receiver.ArchiveNotificationSuccessReceiver" />
-
         <receiver android:name=".receiver.DownloadNotificationPauseReceiver" />
 
+        <receiver android:name=".receiver.DownloadNotificationCancelReceiver" />
+
+        <receiver android:name=".receiver.ArchiveNotificationSuccessReceiver" />
+
+        <receiver android:name=".receiver.ArchiveNotificationStopReceiver" />
+
         <receiver android:name=".receiver.DuplicateNotificationStopReceiver" />
+
+        <receiver android:name=".receiver.TransformNotificationStopReceiver" />
+
+        <receiver android:name=".receiver.SplitNotificationCancelReceiver" />
+
+        <receiver android:name=".receiver.MergeNotificationCancelReceiver" />
 
         <receiver android:name=".receiver.AppUpdateDownloadReceiver" />
 

@@ -65,3 +65,7 @@ signing.gradle
 /app/src/main/res/values-*/array_url_blacklist.xml
 /app/src/main/res/values-*/array_url_whitelist.xml
 /app/src/main/res/values-*/donottranslate.xml
+
+.externalNativeBuild
+.cxx
+/.kotlin/sessions/kotlin-compiler-*.salive

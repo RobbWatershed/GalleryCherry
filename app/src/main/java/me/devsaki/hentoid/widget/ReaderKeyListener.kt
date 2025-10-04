@@ -3,10 +3,13 @@ package me.devsaki.hentoid.widget
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewConfiguration
-import com.annimon.stream.function.Consumer
 import kotlinx.coroutines.CoroutineScope
-import me.devsaki.hentoid.util.DebouncerK
-import me.devsaki.hentoid.util.Preferences
+import me.devsaki.hentoid.core.Consumer
+import me.devsaki.hentoid.util.Debouncer
+import me.devsaki.hentoid.util.Settings
+
+const val COOLDOWN = 1000
+const val TURBO_COOLDOWN = 500
 
 class ReaderKeyListener(scope: CoroutineScope) : View.OnKeyListener {
     private var onVolumeDownListener: Consumer<Boolean>? = null
@@ -21,13 +24,13 @@ class ReaderKeyListener(scope: CoroutineScope) : View.OnKeyListener {
 
     // Internal variables
     private var nextNotifyTime = Long.MAX_VALUE
-    private val simpleTapDebouncer: DebouncerK<Consumer<Boolean>>
+    private val simpleTapDebouncer: Debouncer<Consumer<Boolean>>
     private val longPressTimeout = ViewConfiguration.getLongPressTimeout()
 
     init {
         simpleTapDebouncer =
-            DebouncerK(scope, longPressTimeout.toLong()) { consumer: Consumer<Boolean> ->
-                consumer.accept(false)
+            Debouncer(scope, longPressTimeout.toLong()) { consumer: Consumer<Boolean> ->
+                consumer.invoke(false)
             }
     }
 
@@ -57,17 +60,17 @@ class ReaderKeyListener(scope: CoroutineScope) : View.OnKeyListener {
     }
 
     private fun isTurboEnabled(): Boolean {
-        return !Preferences.isReaderVolumeToSwitchBooks()
+        return !Settings.isReaderVolumeToSwitchBooks
     }
 
     private fun isDetectLongPress(): Boolean {
-        return Preferences.isReaderVolumeToSwitchBooks()
+        return Settings.isReaderVolumeToSwitchBooks
     }
 
     private fun isVolumeKey(keyCode: Int, targetKeyCode: Int): Boolean {
         // Ignore volume keys when disabled in preferences
-        if (!Preferences.isReaderVolumeToTurn()) return false
-        if (Preferences.isReaderInvertVolumeRocker()) {
+        if (!Settings.isReaderVolumeToTurn) return false
+        if (Settings.isReaderInvertVolumeRocker) {
             if (targetKeyCode == KeyEvent.KEYCODE_VOLUME_DOWN) return keyCode == KeyEvent.KEYCODE_VOLUME_UP else if (targetKeyCode == KeyEvent.KEYCODE_VOLUME_UP) return keyCode == KeyEvent.KEYCODE_VOLUME_DOWN
         }
         return keyCode == targetKeyCode
@@ -79,9 +82,9 @@ class ReaderKeyListener(scope: CoroutineScope) : View.OnKeyListener {
             onVolumeDownListener
         } else if (isVolumeKey(keyCode, KeyEvent.KEYCODE_VOLUME_UP)) {
             onVolumeUpListener
-        } else if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT && Preferences.isReaderKeyboardToTurn()) {
+        } else if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT && Settings.isReaderKeyboardToTurn) {
             onKeyLeftListener
-        } else if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && Preferences.isReaderKeyboardToTurn()) {
+        } else if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && Settings.isReaderKeyboardToTurn) {
             onKeyRightListener
         } else if (keyCode == KeyEvent.KEYCODE_BACK) {
             onBackListener
@@ -94,12 +97,12 @@ class ReaderKeyListener(scope: CoroutineScope) : View.OnKeyListener {
                 simpleTapDebouncer.submit(listener)
                 event.eventTime + longPressTimeout
             } else {
-                listener.accept(false)
+                listener.invoke(false)
                 event.eventTime + COOLDOWN
             }
         } else if (event.eventTime >= nextNotifyTime) { // Long down
             simpleTapDebouncer.clear()
-            listener.accept(true)
+            listener.invoke(true)
             nextNotifyTime = event.eventTime + if (isTurboEnabled()) TURBO_COOLDOWN else COOLDOWN
         }
         return true
@@ -112,10 +115,5 @@ class ReaderKeyListener(scope: CoroutineScope) : View.OnKeyListener {
         onKeyRightListener = null
         onBackListener = null
         simpleTapDebouncer.clear()
-    }
-
-    companion object {
-        const val COOLDOWN = 1000
-        const val TURBO_COOLDOWN = 500
     }
 }

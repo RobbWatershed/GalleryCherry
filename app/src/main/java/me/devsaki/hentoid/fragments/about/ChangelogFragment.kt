@@ -12,19 +12,17 @@ import com.mikepenz.fastadapter.FastAdapter
 import com.mikepenz.fastadapter.adapters.ItemAdapter
 import me.devsaki.hentoid.BuildConfig
 import me.devsaki.hentoid.R
-import me.devsaki.hentoid.databinding.FragmentChangelogBinding
-import me.devsaki.hentoid.util.AppHelper
+import me.devsaki.hentoid.core.runUpdateDownloadWorker
+import me.devsaki.hentoid.databinding.FragmentAboutChangelogBinding
 import me.devsaki.hentoid.viewholders.GitHubReleaseItem
 import me.devsaki.hentoid.viewmodels.ChangelogViewModel
 import me.devsaki.hentoid.workers.UpdateDownloadWorker
 import timber.log.Timber
-import java.util.*
 
 // TODO - invisible init while loading
-class ChangelogFragment : Fragment(R.layout.fragment_changelog) {
+class ChangelogFragment : Fragment(R.layout.fragment_about_changelog) {
 
-    private var _binding: FragmentChangelogBinding? = null
-    private val binding get() = _binding!!
+    private var binding: FragmentAboutChangelogBinding? = null
 
     private val viewModel by viewModels<ChangelogViewModel>()
 
@@ -32,61 +30,60 @@ class ChangelogFragment : Fragment(R.layout.fragment_changelog) {
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View {
-        _binding = FragmentChangelogBinding.inflate(inflater, container, false)
-        return binding.root
+    ): View? {
+        binding = FragmentAboutChangelogBinding.inflate(inflater, container, false)
+        return binding?.root
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
-        _binding = null
+        binding = null
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        binding?.apply {
+            changelogRecycler.setHasFixedSize(true)
 
-        binding.toolbar.setNavigationOnClickListener { requireActivity().finish() }
-
-        binding.changelogRecycler.setHasFixedSize(true)
-
-        // TODO - observe update availability through event bus instead of parsing changelog
-        viewModel.successValueLive.observe(viewLifecycleOwner) { releasesInfo ->
-            val releases: MutableList<GitHubReleaseItem> = ArrayList()
-            var latestTagName = ""
-            var latestApkUrl = ""
-            for (r in releasesInfo) {
-                if (r.isPublished) {
-                    val release = GitHubReleaseItem(r)
-                    if (release.isTagPrior(BuildConfig.VERSION_NAME)) releases.add(release)
-                    if (latestTagName.isEmpty()) {
-                        latestTagName = release.tagName
-                        latestApkUrl = release.apkUrl
+            // TODO - observe update availability through event bus instead of parsing changelog
+            viewModel.successValueLive.observe(viewLifecycleOwner) { releasesInfo ->
+                val releases: MutableList<GitHubReleaseItem> = ArrayList()
+                var latestTagName = ""
+                var latestApkUrl = ""
+                for (r in releasesInfo) {
+                    if (r.isPublished()) {
+                        val release = GitHubReleaseItem(r)
+                        if (release.isTagPrior(BuildConfig.VERSION_NAME)) releases.add(release)
+                        if (latestTagName.isEmpty()) {
+                            latestTagName = release.tagName
+                            latestApkUrl = release.apkUrl
+                        }
                     }
                 }
-            }
-            val itemAdapter = ItemAdapter<GitHubReleaseItem>()
-            itemAdapter.add(releases)
-            binding.changelogRecycler.adapter = FastAdapter.with(itemAdapter)
-            if (releasesInfo.size > releases.size) {
-                binding.changelogDownloadLatestText.text =
-                    getString(R.string.get_latest, latestTagName)
-                binding.changelogDownloadLatestText.visibility = View.VISIBLE
-                binding.changelogDownloadLatestButton.visibility = View.VISIBLE
+                val itemAdapter = ItemAdapter<GitHubReleaseItem>()
+                itemAdapter.add(releases)
+                changelogRecycler.adapter = FastAdapter.with(itemAdapter)
+                if (releasesInfo.size > releases.size) {
+                    changelogDownloadLatestText.text =
+                        getString(R.string.get_latest, latestTagName)
+                    changelogDownloadLatestText.visibility = View.VISIBLE
+                    changelogDownloadLatestButton.visibility = View.VISIBLE
 
-                // TODO these 2 should be in a container layout which should be used for click listeners
-                binding.changelogDownloadLatestText.setOnClickListener {
-                    onDownloadClick(
-                        view.context,
-                        latestApkUrl
-                    )
+                    // TODO these 2 should be in a container layout which should be used for click listeners
+                    changelogDownloadLatestText.setOnClickListener {
+                        onDownloadClick(
+                            view.context,
+                            latestApkUrl
+                        )
+                    }
+                    changelogDownloadLatestButton.setOnClickListener {
+                        onDownloadClick(
+                            view.context,
+                            latestApkUrl
+                        )
+                    }
                 }
-                binding.changelogDownloadLatestButton.setOnClickListener {
-                    onDownloadClick(
-                        view.context,
-                        latestApkUrl
-                    )
-                }
+                // TODO show RecyclerView
             }
-            // TODO show RecyclerView
         }
 
         viewModel.errorValueLive.observe(viewLifecycleOwner) { t ->
@@ -99,7 +96,7 @@ class ChangelogFragment : Fragment(R.layout.fragment_changelog) {
         // Download the latest update (equivalent to tapping the "Update available" notification)
         if (!UpdateDownloadWorker.isRunning(context) && apkUrl.isNotEmpty()) {
             Toast.makeText(context, R.string.downloading_update, Toast.LENGTH_SHORT).show()
-            AppHelper.runUpdateDownloadWorker(context, apkUrl)
+            context.runUpdateDownloadWorker(apkUrl)
         }
     }
 }

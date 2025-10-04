@@ -3,8 +3,6 @@ package me.devsaki.hentoid.customssiv.util
 import android.content.Context
 import android.os.Handler
 
-import com.annimon.stream.function.Consumer
-
 /**
  * Utility class for debouncing values to consumer functions
  *
@@ -15,7 +13,11 @@ import com.annimon.stream.function.Consumer
  * @param <T> type of value that will be debounced
  * @see android.os.Looper
 </T> */
-class Debouncer<T>(context: Context, private val delayMs: Long, private val callback: Consumer<T>) {
+internal class Debouncer<T>(
+    context: Context,
+    private val delayMs: Long,
+    private val callback: (T) -> Unit
+) {
 
     private val handler = Handler(context.mainLooper)
 
@@ -25,6 +27,6 @@ class Debouncer<T>(context: Context, private val delayMs: Long, private val call
 
     fun submit(t: T) {
         clear()
-        handler.postDelayed({ callback.accept(t) }, delayMs)
+        handler.postDelayed({ callback.invoke(t) }, delayMs)
     }
 }

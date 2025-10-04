@@ -1,6 +1,7 @@
 package me.devsaki.hentoid.fragments
 
 import android.app.Activity
+import android.app.Dialog
 import android.app.SearchManager
 import android.app.SearchableInfo
 import android.content.Context
@@ -9,14 +10,16 @@ import android.text.TextUtils
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import androidx.appcompat.widget.SearchView
-import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import com.google.android.flexbox.AlignItems
 import com.google.android.flexbox.FlexWrap
 import com.google.android.flexbox.FlexboxLayoutManager
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.activities.bundles.SearchActivityBundle
@@ -25,15 +28,15 @@ import me.devsaki.hentoid.database.domains.Attribute
 import me.devsaki.hentoid.databinding.IncludeSearchBottomPanelBinding
 import me.devsaki.hentoid.enums.AttributeType
 import me.devsaki.hentoid.ui.BlinkAnimation
+import me.devsaki.hentoid.util.AttributeQueryResult
 import me.devsaki.hentoid.util.Debouncer
-import me.devsaki.hentoid.util.DebouncerK
 import me.devsaki.hentoid.util.LanguageHelper
-import me.devsaki.hentoid.util.SearchHelper.AttributeQueryResult
-import me.devsaki.hentoid.util.StringHelper
-import me.devsaki.hentoid.util.ThemeHelper
+import me.devsaki.hentoid.util.capitalizeString
+import me.devsaki.hentoid.util.setStyle
 import me.devsaki.hentoid.viewmodels.SearchViewModel
 import me.devsaki.hentoid.viewmodels.ViewModelFactory
 import timber.log.Timber
+
 
 /**
  * Bottom fragment that displays the available attributes in the advanced search screen
@@ -58,7 +61,7 @@ class SearchBottomSheetFragment : BottomSheetDialogFragment() {
      *
      * @see Debouncer
      */
-    private lateinit var searchMasterDataDebouncer: DebouncerK<String>
+    private lateinit var searchMasterDataDebouncer: Debouncer<String>
 
     // Container where all suggested attributes are loaded
     private lateinit var attributeAdapter: AvailableAttributeAdapter
@@ -101,16 +104,31 @@ class SearchBottomSheetFragment : BottomSheetDialogFragment() {
             viewModel.setAttributeTypes(selectedAttributeTypes)
             viewModel.setGroup(groupId)
         }
-        searchMasterDataDebouncer = DebouncerK(this.lifecycleScope, 1000) { filter: String ->
+        searchMasterDataDebouncer = Debouncer(this.lifecycleScope, 1000) { filter: String ->
             this.searchMasterData(filter)
         }
+    }
+
+    // https://stackoverflow.com/questions/46861306/how-to-disable-bottomsheetdialogfragment-dragging
+    override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
+        val bottomSheetDialog = super.onCreateDialog(savedInstanceState) as BottomSheetDialog
+        bottomSheetDialog.setOnShowListener {
+            val bottomSheet = bottomSheetDialog
+                .findViewById<FrameLayout>(com.google.android.material.R.id.design_bottom_sheet)
+
+            if (bottomSheet != null) {
+                val behavior: BottomSheetBehavior<*> = BottomSheetBehavior.from(bottomSheet)
+                behavior.isDraggable = false
+            }
+        }
+        return bottomSheetDialog
     }
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View {
+    ): View? {
         binding = IncludeSearchBottomPanelBinding.inflate(inflater, container, false)
         val mainAttr = selectedAttributeTypes[0]
 
@@ -120,7 +138,7 @@ class SearchBottomSheetFragment : BottomSheetDialogFragment() {
 
             // Image that displays current metadata type title (e.g. "Character search")
             tagWaitTitle.text = getString(
-                R.string.search_category, StringHelper.capitalizeString(
+                R.string.search_category, capitalizeString(
                     getString(mainAttr.accusativeName)
                 )
             )
@@ -131,17 +149,13 @@ class SearchBottomSheetFragment : BottomSheetDialogFragment() {
             tagSuggestion.layoutManager = layoutManager
             attributeAdapter = AvailableAttributeAdapter()
             attributeAdapter.setOnScrollToEndListener { loadMore() }
-            attributeAdapter.setOnClickListener { button: View ->
-                onAttributeChosen(
-                    button
-                )
-            }
+            attributeAdapter.setOnClickListener { onAttributeChosen(it) }
             tagSuggestion.adapter = attributeAdapter
 
             tagFilter.setSearchableInfo(getSearchableInfo(requireActivity())) // Associate searchable configuration with the SearchView
             val attrTypesNames = selectedAttributeTypes
-                .map { at -> at.accusativeName }
-                .map { resId -> getString(resId) }
+                .map { it.accusativeName }
+                .map { getString(it) }
             tagFilter.queryHint =
                 resources.getString(R.string.search_prompt, TextUtils.join(", ", attrTypesNames))
             tagFilter.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
@@ -157,7 +171,7 @@ class SearchBottomSheetFragment : BottomSheetDialogFragment() {
                 }
             })
         }
-        return binding!!.root
+        return binding?.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -315,10 +329,9 @@ class SearchBottomSheetFragment : BottomSheetDialogFragment() {
             builder.excludeMode = excludeClicked
             val searchBottomSheetFragment = SearchBottomSheetFragment()
             searchBottomSheetFragment.arguments = builder.bundle
-            ThemeHelper.setStyle(
-                context,
+            context.setStyle(
                 searchBottomSheetFragment,
-                DialogFragment.STYLE_NORMAL,
+                STYLE_NORMAL,
                 R.style.Theme_Light_BottomSheetDialog
             )
             searchBottomSheetFragment.show(fragmentManager, "searchBottomSheetFragment")

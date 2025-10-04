@@ -1,8 +1,8 @@
 package me.devsaki.hentoid.widget
 
-import android.content.Context
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import kotlinx.coroutines.CoroutineScope
 import me.devsaki.hentoid.util.Debouncer
 
 class ScrollPositionListener(private val onPositionChangeListener: (Int) -> Unit) :
@@ -24,12 +24,14 @@ class ScrollPositionListener(private val onPositionChangeListener: (Int) -> Unit
 
     private var deltaEventDebouncer: Debouncer<Int>? = null
 
+    private var onPositionReachedListener: ((Int) -> Unit)? = null
+
     private var onStartOutOfBoundScroll: Runnable? = null
     private var onEndOutOfBoundScroll: Runnable? = null
 
 
-    fun setDeltaYListener(context: Context, deltaYListener: (Int) -> Unit) {
-        deltaEventDebouncer = Debouncer(context, 75) { i: Int ->
+    fun setDeltaYListener(scope: CoroutineScope, deltaYListener: (Int) -> Unit) {
+        deltaEventDebouncer = Debouncer(scope, 75) { i: Int ->
             deltaYListener.invoke(i - mInitialOffsetY)
             mInitialOffsetY = -1
         }
@@ -43,19 +45,28 @@ class ScrollPositionListener(private val onPositionChangeListener: (Int) -> Unit
         onEndOutOfBoundScroll = onEndOutOfBoundScrollListener
     }
 
+    /**
+     * Listener triggered when the scroller reaches a point where a position become partially visible
+     * (as opposed to onPositionChangeListener which is triggered when the new position takes up more than half the screen)
+     */
+    fun setOnPositionReachedListener(onPositionReachedListener: ((Int) -> Unit)?) {
+        this.onPositionReachedListener = onPositionReachedListener
+    }
+
     override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
         super.onScrolled(recyclerView, dx, dy)
         if (mInitialOffsetY < 0) mInitialOffsetY = totalScrolledY
         totalScrolledY += dy
         totalScrolledX += dx
         deltaEventDebouncer?.submit(totalScrolledY)
-        val llm = recyclerView.layoutManager as LinearLayoutManager?
-        if (llm != null) {
+        (recyclerView.layoutManager as LinearLayoutManager?)?.let { llm ->
             val firstVisibleItemPosition = llm.findFirstVisibleItemPosition()
             val lastCompletelyVisibleItemPosition = llm.findLastCompletelyVisibleItemPosition()
             onPositionChangeListener.invoke(
                 firstVisibleItemPosition.coerceAtLeast(lastCompletelyVisibleItemPosition)
             )
+            if (dy >= 0) onPositionReachedListener?.invoke(llm.findLastVisibleItemPosition())
+            if (dy <= 0) onPositionReachedListener?.invoke(llm.findFirstVisibleItemPosition())
         }
     }
 
@@ -84,14 +95,14 @@ class ScrollPositionListener(private val onPositionChangeListener: (Int) -> Unit
                 if (!(llm.findLastVisibleItemPosition() == llm.itemCount - 1 || 0 == llm.findFirstVisibleItemPosition())) return
                 val onEndOut = onEndOutOfBoundScroll
                 val onStartOut = onStartOutOfBoundScroll
-                if (null == onEndOut || null == onStartOut) return
+                if (null == onEndOut && null == onStartOut) return
                 var scrollDirection = 0
                 if (llm is PrefetchLinearLayoutManager) scrollDirection = llm.rawDeltaPx
                 if (recyclerView.computeHorizontalScrollOffset() == dragStartPositionX && !isSettlingX && llm.canScrollHorizontally()) {
-                    if (!llm.reverseLayout && scrollDirection >= 0 || llm.reverseLayout && scrollDirection < 0) onEndOut.run() else onStartOut.run()
+                    if (!llm.reverseLayout && scrollDirection >= 0 || llm.reverseLayout && scrollDirection < 0) onEndOut?.run() else onStartOut?.run()
                 }
                 if (recyclerView.computeVerticalScrollOffset() == dragStartPositionY && !isSettlingY && llm.canScrollVertically()) {
-                    if (!llm.reverseLayout && scrollDirection >= 0 || llm.reverseLayout && scrollDirection < 0) onEndOut.run() else onStartOut.run()
+                    if (!llm.reverseLayout && scrollDirection >= 0 || llm.reverseLayout && scrollDirection < 0) onEndOut?.run() else onStartOut?.run()
                 }
             }
         }

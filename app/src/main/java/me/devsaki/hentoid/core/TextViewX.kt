@@ -4,7 +4,9 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.widget.TextView
 import androidx.lifecycle.LifecycleCoroutineScope
-import me.devsaki.hentoid.util.DebouncerK
+import me.devsaki.hentoid.util.Debouncer
+import kotlin.math.max
+import kotlin.math.min
 
 fun TextView.setOnTextChangedListener(
     scope: LifecycleCoroutineScope,
@@ -12,7 +14,7 @@ fun TextView.setOnTextChangedListener(
 ) {
     addTextChangedListener(
         object : TextWatcher {
-            private val debouncer: DebouncerK<String> = DebouncerK(scope, 750) { s: String ->
+            private val debouncer: Debouncer<String> = Debouncer(scope, 750) { s: String ->
                 listener.invoke(s)
             }
 
@@ -39,4 +41,19 @@ fun TextView.setOnTextChangedListener(
             }
         }
     )
+}
+
+
+fun TextView.setMiddleEllipsis() {
+    if (maxLines > 0 && maxLines < Int.MAX_VALUE) {
+        layout?.let {
+            val lineEndIndex = it.getLineEnd(min(lineCount, maxLines) - 1)
+            if (lineEndIndex < text.lastIndex || lineCount > maxLines) {
+                val partLength = max(0, (lineEndIndex / 2) - (2 * lineCount - 1))
+                val part1 = text.substring(0, partLength)
+                val part2 = text.substring(text.lastIndex - partLength)
+                text = "$part1…$part2"
+            }
+        }
+    }
 }

@@ -19,7 +19,6 @@
         android:layout_width="24dp"
         android:layout_height="24dp"
         android:layout_gravity="center"
-        android:layout_marginStart="12dp"
         android:adjustViewBounds="true"
         android:scaleType="centerInside"
         android:src="@drawable/ic_info"
@@ -37,9 +36,9 @@
         android:minHeight="@dimen/drawer_item_height"
         android:textSize="@dimen/text_body_1"
         app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/drawer_item_handle"
         app:layout_constraintStart_toEndOf="@id/drawer_item_icon"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintEnd_toStartOf="@id/drawer_item_handle"
         tools:text="@string/app_name" />
 
     <ImageView

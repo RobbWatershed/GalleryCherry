@@ -12,7 +12,7 @@ import kotlinx.coroutines.withContext
 import me.devsaki.hentoid.database.CollectionDAO
 import me.devsaki.hentoid.database.domains.RenamingRule
 import me.devsaki.hentoid.enums.AttributeType
-import me.devsaki.hentoid.util.Helper
+import me.devsaki.hentoid.util.updateRenamingRulesJson
 
 
 class RulesEditViewModel(
@@ -59,23 +59,30 @@ class RulesEditViewModel(
     fun createRule(type: AttributeType, source: String, target: String) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
-                dao.insertRenamingRule(RenamingRule(type, source, target))
-                Helper.updateRenamingRulesJson(
+                dao.insertRenamingRule(
+                    RenamingRule(
+                        attributeType = type,
+                        sourceName = source,
+                        targetName = target
+                    )
+                )
+                updateRenamingRulesJson(
                     getApplication<Application>().applicationContext, dao
                 )
             }
         }
     }
 
-    fun editRule(id: Long, source: String, target: String) {
+    fun editRule(id: Long, type: AttributeType, source: String, target: String) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 val existingRule = dao.selectRenamingRule(id)
                 existingRule?.let {
+                    existingRule.attributeType = type
                     existingRule.sourceName = source
                     existingRule.targetName = target
                     dao.insertRenamingRule(existingRule)
-                    Helper.updateRenamingRulesJson(
+                    updateRenamingRulesJson(
                         getApplication<Application>().applicationContext, dao
                     )
                 }
@@ -87,7 +94,7 @@ class RulesEditViewModel(
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 dao.deleteRenamingRules(itemIds)
-                Helper.updateRenamingRulesJson(
+                updateRenamingRulesJson(
                     getApplication<Application>().applicationContext, dao
                 )
             }

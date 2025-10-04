@@ -4,27 +4,29 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.application
+import androidx.lifecycle.viewModelScope
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
-import io.reactivex.Completable
-import io.reactivex.Single
-import io.reactivex.android.schedulers.AndroidSchedulers
-import io.reactivex.disposables.CompositeDisposable
-import io.reactivex.disposables.Disposables
-import io.reactivex.schedulers.Schedulers
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.database.CollectionDAO
 import me.devsaki.hentoid.database.domains.Attribute
 import me.devsaki.hentoid.database.domains.Content
-import me.devsaki.hentoid.database.domains.GroupItem
 import me.devsaki.hentoid.database.domains.RenamingRule
 import me.devsaki.hentoid.enums.AttributeType
-import me.devsaki.hentoid.util.ContentHelper
-import me.devsaki.hentoid.util.GroupHelper
-import me.devsaki.hentoid.util.Helper
-import me.devsaki.hentoid.util.Preferences
-import me.devsaki.hentoid.util.SearchHelper.AttributeQueryResult
+import me.devsaki.hentoid.util.AttributeQueryResult
+import me.devsaki.hentoid.util.Location
+import me.devsaki.hentoid.util.Settings
+import me.devsaki.hentoid.util.Type
+import me.devsaki.hentoid.util.addAttribute
+import me.devsaki.hentoid.util.persistJson
+import me.devsaki.hentoid.util.setContentCover
+import me.devsaki.hentoid.util.updateGroupsJson
+import me.devsaki.hentoid.util.updateRenamingRulesJson
 import me.devsaki.hentoid.workers.UpdateJsonWorker
 import me.devsaki.hentoid.workers.data.UpdateJsonData
 import timber.log.Timber
@@ -35,11 +37,6 @@ class MetadataEditViewModel(
     application: Application,
     private val dao: CollectionDAO
 ) : AndroidViewModel(application) {
-
-    // Disposables (to cleanup Rx calls and avoid memory leaks)
-    private val compositeDisposable = CompositeDisposable()
-    private var filterDisposable = Disposables.empty()
-    private var leaveDisposable = Disposables.empty()
 
     // LIVEDATAS
     private val contentList = MutableLiveData<List<Content>>()
@@ -56,9 +53,7 @@ class MetadataEditViewModel(
 
     override fun onCleared() {
         super.onCleared()
-        filterDisposable.dispose()
         dao.cleanup()
-        compositeDisposable.clear()
     }
 
 
@@ -96,12 +91,10 @@ class MetadataEditViewModel(
      * @param contentId  IDs of the Contents to load
      */
     fun loadContent(contentId: LongArray) {
-        val contents = dao.selectContent(contentId.filter { id -> id > 0 }.toLongArray()).toList()
+        val contents = dao.selectContent(contentId.filter { it > 0 }.toLongArray()).toList()
         val rawAttrs = ArrayList<Attribute>()
-        contents.forEach { c ->
-            rawAttrs.addAll(c.attributes)
-        }
-        val attrsCount = rawAttrs.groupingBy { a -> a }.eachCount()
+        contents.forEach { rawAttrs.addAll(it.attributes) }
+        val attrsCount = rawAttrs.groupingBy { it }.eachCount()
         attrsCount.entries.forEach { it.key.count = it.value }
 
         contentList.postValue(contents)
@@ -110,18 +103,18 @@ class MetadataEditViewModel(
 
     fun setCover(order: Int) {
         val content = contentList.value?.get(0) ?: return
-        val imageFiles = content.imageFiles ?: return
+        val imageFiles = content.imageFiles
 
-        val img = imageFiles.find { it.order == order }
-        if (img != null)
-            compositeDisposable.add(
-                Single.fromCallable { ContentHelper.setContentCover(content, imageFiles, img) }
-                    .subscribeOn(Schedulers.io())
-                    .subscribe({
+        imageFiles.find { it.order == order }?.let { img ->
+            viewModelScope.launch {
+                try {
+                    if (setContentCover(application, content, imageFiles, img))
                         contentList.postValue(mutableListOf(content))
-                    }
-                    ) { t: Throwable? -> Timber.e(t) }
-            )
+                } catch (t: Throwable) {
+                    Timber.e(t)
+                }
+            }
+        }
     }
 
     /**
@@ -141,25 +134,24 @@ class MetadataEditViewModel(
      * @param itemsPerPage Number of items per result "page"
      */
     fun setAttributeQuery(query: String, pageNum: Int, itemsPerPage: Int) {
-        filterDisposable.dispose()
-        filterDisposable = Single.fromCallable {
-            dao.selectAttributeMasterDataPaged(
-                attributeTypes.value!!,
-                query,
-                -1,
-                emptyList(),
-                ContentHelper.Location.ANY,
-                ContentHelper.Type.ANY,
-                true,
-                pageNum,
-                itemsPerPage,
-                Preferences.getSearchAttributesSortOrder()
-            )
-        }.subscribeOn(Schedulers.io())
-            .observeOn(AndroidSchedulers.mainThread())
-            .subscribe { value: AttributeQueryResult ->
-                libraryAttributes.postValue(value)
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                val result = dao.selectAttributeMasterDataPaged(
+                    attributeTypes.value!!,
+                    query,
+                    -1,
+                    emptySet(),
+                    Location.ANY,
+                    Type.ANY,
+                    true,
+                    pageNum,
+                    itemsPerPage,
+                    Settings.searchAttributesSortOrder
+                )
+                libraryAttributes.postValue(result)
+                dao.cleanup()
             }
+        }
     }
 
     /**
@@ -193,7 +185,7 @@ class MetadataEditViewModel(
     }
 
     fun createAssignNewAttribute(attrName: String, type: AttributeType): Attribute {
-        val attr = ContentHelper.addAttribute(type, attrName, dao)
+        val attr = addAttribute(type, attrName, dao)
         addContentAttribute(attr)
         return attr
     }
@@ -255,12 +247,17 @@ class MetadataEditViewModel(
     }
 
     fun saveContent() {
-        leaveDisposable = Completable.fromRunnable { doSaveContent() }
-            .subscribeOn(Schedulers.io())
-            .observeOn(AndroidSchedulers.mainThread())
-            .subscribe(
-                { leaveDisposable.dispose() }
-            ) { t: Throwable? -> Timber.e(t) }
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                try {
+                    doSaveContent()
+                } catch (t: Throwable) {
+                    Timber.e(t)
+                } finally {
+                    dao.cleanup()
+                }
+            }
+        }
     }
 
     private fun doSaveContent() {
@@ -270,102 +267,93 @@ class MetadataEditViewModel(
             it.computeAuthor()
 
             // Save Content itself
-            it.imageFiles?.let { imgs ->
-                dao.insertImageFiles(imgs)
-            }
+            it.imageFiles.let { imgs -> dao.insertImageFiles(imgs) }
             dao.insertContent(it)
 
-            // Assign Content to each artist/circle group
-            GroupHelper.removeContentFromGrouping(
-                me.devsaki.hentoid.enums.Grouping.ARTIST,
-                it,
-                dao
-            )
-            var artistFound = false
-            it.attributes.forEach { attr ->
-                if (attr.type == AttributeType.ARTIST || attr.type == AttributeType.CIRCLE) {
-                    GroupHelper.addContentToAttributeGroup(attr.group.target, attr, it, dao)
-                    artistFound = true
-                }
-            }
-            if (!artistFound) {
-                // Add to the "no artist" group if no artist has been found
-                val group = GroupHelper.getOrCreateNoArtistGroup(getApplication(), dao)
-                val item = GroupItem(it, group, -1)
-                dao.insertGroupItem(item)
-            }
+            // Cleanup
+            dao.deleteEmptyArtistGroups()
         }
 
-        // Save all JSONs
-        val builder = UpdateJsonData.Builder()
-        builder.setContentIds(Helper.getPrimitiveArrayFromList(contentList.value?.map { c -> c.id }))
-        builder.setUpdateGroups(true)
+        contentList.value?.let {
+            // Save all JSONs
+            val builder = UpdateJsonData.Builder()
+            builder.setContentIds(it.map { c -> c.id }.toLongArray())
+            builder.setUpdateGroups(true)
 
-        val workManager = WorkManager.getInstance(getApplication())
-        workManager.enqueueUniqueWork(
-            R.id.udpate_json_service.toString(),
-            ExistingWorkPolicy.APPEND_OR_REPLACE,
-            OneTimeWorkRequestBuilder<UpdateJsonWorker>()
-                .setInputData(builder.data)
-                .build()
-        )
+            val workManager = WorkManager.getInstance(getApplication())
+            workManager.enqueueUniqueWork(
+                R.id.udpate_json_service.toString(),
+                ExistingWorkPolicy.APPEND_OR_REPLACE,
+                OneTimeWorkRequestBuilder<UpdateJsonWorker>()
+                    .setInputData(builder.data)
+                    .build()
+            )
+        }
     }
 
     fun renameAttribute(newName: String, id: Long, createRule: Boolean) {
-        leaveDisposable = Completable.fromRunnable { doRenameAttribute(newName, id, createRule) }
-            .subscribeOn(Schedulers.io())
-            .observeOn(AndroidSchedulers.mainThread())
-            .subscribe(
-                { leaveDisposable.dispose() }
-            ) { t: Throwable? -> Timber.e(t) }
-    }
-
-    private fun doRenameAttribute(newName: String, id: Long, createRule: Boolean) {
-        val attr = dao.selectAttribute(id) ?: return
-
-        // Update displayed attributes
-        val newAttrs = ArrayList<Attribute>()
-        if (contentAttributes.value != null) newAttrs.addAll(contentAttributes.value!!) // Create new instance to make ListAdapter.submitList happy
-        newAttrs.remove(attr)
-
-        // Persist rule
-        if (createRule) {
-            val newRule = RenamingRule(attr.type, attr.name, newName)
-            val existingRules = HashSet(dao.selectRenamingRules(AttributeType.UNDEFINED, null))
-            if (!existingRules.contains(newRule)) {
-                dao.insertRenamingRule(newRule)
-                Helper.updateRenamingRulesJson(getApplication(), dao)
+        viewModelScope.launch {
+            try {
+                doRenameAttribute(newName, id, createRule)
+            } catch (t: Throwable) {
+                Timber.e(t)
             }
         }
+    }
 
-        // Update attribute
-        attr.name = newName
-        attr.displayName = newName
-        dao.insertAttribute(attr)
+    private suspend fun doRenameAttribute(newName: String, id: Long, createRule: Boolean) =
+        withContext(Dispatchers.IO) {
+            val attr = dao.selectAttribute(id) ?: return@withContext
 
-        newAttrs.add(attr)
-        contentAttributes.postValue(newAttrs)
+            // Update displayed attributes
+            val newAttrs = ArrayList<Attribute>()
+            if (contentAttributes.value != null) newAttrs.addAll(contentAttributes.value!!) // Create new instance to make ListAdapter.submitList happy
+            newAttrs.remove(attr)
 
-        // Update corresponding group if needed
-        val group = attr.linkedGroup
-        if (group != null) {
-            group.name = newName
-            dao.insertGroup(group)
-            GroupHelper.updateGroupsJson(getApplication(), dao)
-        }
-
-        // Mark all related books for update
-        val contents = attr.contents
-        if (contents != null && !contents.isEmpty()) {
-            contents.forEach {
-                // Update the 'author' pre-calculated field for all related books if needed
-                if (attr.type.equals(AttributeType.ARTIST) || attr.type.equals(AttributeType.CIRCLE)) {
-                    it.computeAuthor()
-                    ContentHelper.persistJson(getApplication(), it)
+            // Persist rule
+            if (createRule) {
+                val newRule = RenamingRule(
+                    attributeType = attr.type,
+                    sourceName = attr.name,
+                    targetName = newName
+                )
+                val existingRules = HashSet(dao.selectRenamingRules(AttributeType.UNDEFINED, null))
+                if (!existingRules.contains(newRule)) {
+                    dao.insertRenamingRule(newRule)
+                    updateRenamingRulesJson(getApplication(), dao)
                 }
-                it.lastEditDate = Instant.now().toEpochMilli()
-                dao.insertContent(it)
+            }
+
+            // Update attribute
+            attr.name = newName
+            attr.displayName = newName
+            dao.insertAttribute(attr)
+
+            newAttrs.add(attr)
+            contentAttributes.postValue(newAttrs)
+
+            // Update corresponding group if needed
+            val group = attr.getLinkedGroup()
+            if (group != null) {
+                group.name = newName
+                dao.insertGroup(group)
+                updateGroupsJson(getApplication(), dao)
+            }
+            dao.cleanup()
+
+            // Mark all related books for update
+            val contents = attr.contents
+            if (!contents.isEmpty()) {
+                contents.forEach {
+                    // Update the 'author' pre-calculated field for all related books if needed
+                    if (attr.type == AttributeType.ARTIST || attr.type == AttributeType.CIRCLE) {
+                        it.computeAuthor()
+                        persistJson(getApplication(), it)
+                    }
+                    it.lastEditDate = Instant.now().toEpochMilli()
+                    dao.insertContent(it)
+                }
+                dao.cleanup()
             }
         }
-    }
 }

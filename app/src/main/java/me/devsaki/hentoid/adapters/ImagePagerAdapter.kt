@@ -4,59 +4,116 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Point
-import android.graphics.drawable.Drawable
-import android.net.Uri
-import android.os.Build
-import android.renderscript.RenderScript
 import android.view.LayoutInflater
 import android.view.View
-import android.view.View.OnTouchListener
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.annotation.StringRes
+import androidx.core.net.toUri
 import androidx.core.view.isVisible
+import androidx.lifecycle.findViewTreeLifecycleOwner
+import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
-import com.bumptech.glide.load.DataSource
-import com.bumptech.glide.load.MultiTransformation
-import com.bumptech.glide.load.Transformation
-import com.bumptech.glide.load.engine.GlideException
-import com.bumptech.glide.load.resource.UnitTransformation
-import com.bumptech.glide.load.resource.bitmap.CenterInside
-import com.bumptech.glide.request.RequestListener
-import com.bumptech.glide.request.target.Target
+import coil3.SingletonImageLoader
+import coil3.dispose
+import coil3.executeBlocking
+import coil3.imageLoader
+import coil3.request.ErrorResult
+import coil3.request.ImageRequest
+import coil3.request.SuccessResult
+import coil3.request.allowConversionToBitmap
+import coil3.request.allowHardware
+import coil3.request.target
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import me.devsaki.hentoid.R
-import me.devsaki.hentoid.core.HentoidApp
+import me.devsaki.hentoid.core.BiConsumer
+import me.devsaki.hentoid.core.requireById
 import me.devsaki.hentoid.customssiv.CustomSubsamplingScaleImageView
+import me.devsaki.hentoid.customssiv.CustomSubsamplingScaleImageView.AutoRotateMethod
 import me.devsaki.hentoid.customssiv.CustomSubsamplingScaleImageView.OnImageEventListener
-import me.devsaki.hentoid.customssiv.ImageSource
+import me.devsaki.hentoid.customssiv.CustomSubsamplingScaleImageView.ScaleType
+import me.devsaki.hentoid.customssiv.uri
 import me.devsaki.hentoid.database.domains.ImageFile
 import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.fragments.reader.ReaderPagerFragment
-import me.devsaki.hentoid.util.Preferences
-import me.devsaki.hentoid.util.file.FileHelper
-import me.devsaki.hentoid.util.image.ImageTransform
-import me.devsaki.hentoid.util.image.SmartRotateTransformation
+import me.devsaki.hentoid.gles_renderer.GPUImage
+import me.devsaki.hentoid.util.Settings
+import me.devsaki.hentoid.util.Settings.Value.VIEWER_DIRECTION_LTR
+import me.devsaki.hentoid.util.Settings.Value.VIEWER_DISPLAY_FILL
+import me.devsaki.hentoid.util.Settings.Value.VIEWER_DISPLAY_STRETCH
+import me.devsaki.hentoid.util.Settings.Value.VIEWER_ORIENTATION_HORIZONTAL
+import me.devsaki.hentoid.util.Settings.Value.VIEWER_ORIENTATION_VERTICAL
+import me.devsaki.hentoid.util.Settings.Value.VIEWER_SEPARATING_BARS_LARGE
+import me.devsaki.hentoid.util.Settings.Value.VIEWER_SEPARATING_BARS_MEDIUM
+import me.devsaki.hentoid.util.Settings.Value.VIEWER_SEPARATING_BARS_SMALL
+import me.devsaki.hentoid.util.file.getInputStream
+import me.devsaki.hentoid.util.getScreenDimensionsPx
+import me.devsaki.hentoid.util.image.MIME_IMAGE_AVIF
+import me.devsaki.hentoid.util.image.MIME_IMAGE_GIF
+import me.devsaki.hentoid.util.image.MIME_IMAGE_JXL
+import me.devsaki.hentoid.util.image.MIME_IMAGE_PNG
+import me.devsaki.hentoid.util.image.MIME_IMAGE_WEBP
+import me.devsaki.hentoid.util.image.getMimeTypeFromPictureBinary
+import me.devsaki.hentoid.util.image.isImageAnimated
+import me.devsaki.hentoid.util.image.needsRotating
+import me.devsaki.hentoid.views.ZoomableRecyclerView
+import me.devsaki.hentoid.widget.OnZoneTapListener
 import timber.log.Timber
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.math.abs
 import kotlin.math.roundToInt
+
+private val IMAGE_DIFF_CALLBACK: DiffUtil.ItemCallback<ImageFile> =
+    object : DiffUtil.ItemCallback<ImageFile>() {
+        override fun areItemsTheSame(
+            oldItem: ImageFile, newItem: ImageFile
+        ): Boolean {
+            return oldItem.uniqueHash() == newItem.uniqueHash()
+        }
+
+        override fun areContentsTheSame(
+            oldItem: ImageFile, newItem: ImageFile
+        ): Boolean {
+            return (oldItem == newItem)
+        }
+    }
 
 class ImagePagerAdapter(context: Context) :
     ListAdapter<ImageFile, ImagePagerAdapter.ImageViewHolder>(IMAGE_DIFF_CALLBACK) {
 
-    enum class ViewType(val value: Int) {
-        DEFAULT(0), IMAGEVIEW_STRETCH(1), SSIV_VERTICAL(2)
+    enum class ImageType(val value: Int) {
+        IMG_TYPE_OTHER(0), // PNGs, JPEGs and WEBPs -> use CustomSubsamplingScaleImageView; will fallback to Coil if animation detected
+        IMG_TYPE_GIF(1), // Static and animated GIFs -> use Coil
+        IMG_TYPE_APNG(2), // Animated PNGs -> use Coil
+        IMG_TYPE_AWEBP(3), // Animated WEBPs -> use Coil
+        IMG_TYPE_JXL(4), // JXL -> use Coil
+        IMG_TYPE_AVIF(5), // AVIF -> use Coil
+        IMG_TYPE_AAVIF(6) // Animated AVIF -> use APNG4Android
     }
 
-    private val pageMinHeight =
-        HentoidApp.getInstance().resources.getDimension(R.dimen.page_min_height).toInt()
+    // Cached image types
+    private val cachedImageTypes: MutableMap<Long, ImageType> = HashMap()
 
-    private var itemTouchListener: OnTouchListener? = null
-    private var recyclerView: RecyclerView? = null
+    private val pageMinHeight = context.resources.getDimension(R.dimen.page_min_height).toInt()
+    private val screenWidth: Int
+    private val screenHeight: Int
+
+    private var itemTouchListener: OnZoneTapListener? = null
+    private var scaleListener: BiConsumer<Int, Float>? = null
+
+    private var recyclerView: ZoomableRecyclerView? = null
     private val initialAbsoluteScales: MutableMap<Int, Float> = HashMap()
     private val absoluteScales: MutableMap<Int, Float> = HashMap()
+    private var isGlInit = false
+    private val glEsRenderer: GPUImage by lazy {
+        isGlInit = true
+        GPUImage(context)
+    }
 
     // To preload images before they appear on screen with CustomSubsamplingScaleImageView
     private var maxBitmapWidth = -1
@@ -65,182 +122,106 @@ class ImagePagerAdapter(context: Context) :
     // Direction user is curently reading the book with
     private var isScrollLTR = true
 
-    // Single instance of RenderScript
-    private var rs: RenderScript? = null
-
     // Cached prefs
+    private var colorDepth = Bitmap.Config.RGB_565
     private var separatingBarsHeight = 0
+    private var twoPagesMode = false
 
+    private var doubleTapZoomEnabled = false
     private var longTapZoomEnabled = false
-    private var autoRotate = false
+    private var autoRotate = Settings.Value.READER_AUTO_ROTATE_NONE
     private var doubleTapZoomCap = 0f
 
 
     init {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) rs = RenderScript.create(context)
+        getScreenDimensionsPx(context).let {
+            screenWidth = it.x
+            screenHeight = it.y
+        }
         refreshPrefs()
     }
 
     // Book prefs have to be set explicitely because the cached Content linked from each ImageFile
     // might not have the latest properties
     fun refreshPrefs() {
-        val separatingBarsPrefs = Preferences.getReaderSeparatingBars()
+        val separatingBarsPrefs = Settings.readerSeparatingBars
         separatingBarsHeight = when (separatingBarsPrefs) {
-            Preferences.Constant.VIEWER_SEPARATING_BARS_SMALL -> 4
-            Preferences.Constant.VIEWER_SEPARATING_BARS_MEDIUM -> 16
-            Preferences.Constant.VIEWER_SEPARATING_BARS_LARGE -> 64
+            VIEWER_SEPARATING_BARS_SMALL -> 4
+            VIEWER_SEPARATING_BARS_MEDIUM -> 16
+            VIEWER_SEPARATING_BARS_LARGE -> 64
             else -> 0
         }
-        longTapZoomEnabled = Preferences.isReaderHoldToZoom()
-        autoRotate = Preferences.isReaderAutoRotate()
+        doubleTapZoomEnabled = Settings.isReaderDoubleTapToZoom
+        longTapZoomEnabled = Settings.isReaderHoldToZoom
+        autoRotate = Settings.readerAutoRotate
 
-        val doubleTapZoomCapCode = Preferences.getReaderCapTapZoom()
+        val doubleTapZoomCapCode = Settings.readerCapTapZoom
         doubleTapZoomCap =
-            if (Preferences.Constant.VIEWER_CAP_TAP_ZOOM_NONE == doubleTapZoomCapCode) -1f else doubleTapZoomCapCode.toFloat()
+            if (Settings.Value.VIEWER_CAP_TAP_ZOOM_NONE == doubleTapZoomCapCode) -1f else doubleTapZoomCapCode.toFloat()
+
+        colorDepth =
+            if (0 == Settings.readerColorDepth) Bitmap.Config.RGB_565 else Bitmap.Config.ARGB_8888
     }
 
-    fun setRecyclerView(v: RecyclerView?) {
+    fun setRecyclerView(v: ZoomableRecyclerView?) {
         recyclerView = v
     }
 
-    fun setItemTouchListener(itemTouchListener: OnTouchListener?) {
+    fun setItemTouchListener(itemTouchListener: OnZoneTapListener?) {
         this.itemTouchListener = itemTouchListener
     }
 
-    private fun getImageType(img: ImageFile?): Int {
-        if (null == img) return IMG_TYPE_OTHER
-        val extension = FileHelper.getExtension(img.fileUri)
-        if ("gif".equals(extension, ignoreCase = true) || img.mimeType.contains("gif")) {
-            return IMG_TYPE_GIF
-        }
-        if ("apng".equals(extension, ignoreCase = true) || img.mimeType.contains("apng")) {
-            return IMG_TYPE_APNG
-        }
-        return if ("webp".equals(extension, ignoreCase = true) || img.mimeType.contains("webp")) {
-            IMG_TYPE_AWEBP
-        } else IMG_TYPE_OTHER
-    }
+    private fun getImageType(context: Context, img: ImageFile): ImageType {
+        if (img.fileUri.isBlank()) return ImageType.IMG_TYPE_OTHER
 
-    private fun getImageViewType(displayParams: ReaderPagerFragment.DisplayParams): Int {
-        return if (Preferences.Constant.VIEWER_DISPLAY_STRETCH == displayParams.displayMode) ViewType.IMAGEVIEW_STRETCH.value
-        else if (Preferences.Constant.VIEWER_ORIENTATION_VERTICAL == displayParams.orientation) ViewType.SSIV_VERTICAL.value
-        else ViewType.DEFAULT.value
+        try {
+            getInputStream(context, img.fileUri.toUri()).use { input ->
+                val header = ByteArray(400)
+                if (input.read(header) > 0) {
+                    val mime = getMimeTypeFromPictureBinary(header)
+                    val isAnimated = isImageAnimated(header)
+                    if (isAnimated) {
+                        when (mime) {
+                            MIME_IMAGE_PNG -> return ImageType.IMG_TYPE_APNG
+                            MIME_IMAGE_WEBP -> return ImageType.IMG_TYPE_AWEBP
+                            MIME_IMAGE_GIF -> return ImageType.IMG_TYPE_GIF
+                            MIME_IMAGE_AVIF -> return ImageType.IMG_TYPE_AAVIF
+                        }
+                    } else {
+                        when (mime) {
+                            MIME_IMAGE_GIF -> return ImageType.IMG_TYPE_GIF
+                            MIME_IMAGE_JXL -> return ImageType.IMG_TYPE_JXL
+                            MIME_IMAGE_AVIF -> return ImageType.IMG_TYPE_AVIF
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Timber.w(e, "Unable to open image file")
+        }
+        return ImageType.IMG_TYPE_OTHER
     }
 
     override fun onCreateViewHolder(viewGroup: ViewGroup, viewType: Int): ImageViewHolder {
         val inflater = LayoutInflater.from(viewGroup.context)
-        val view: View = inflater.inflate(R.layout.item_reader_image, viewGroup, false)
+        val view = inflater.inflate(R.layout.item_reader_image, viewGroup, false)
+        view.setViewTreeLifecycleOwner(viewGroup.findViewTreeLifecycleOwner())
         return ImageViewHolder(view)
     }
 
-    @SuppressLint("ClickableViewAccessibility")
-    fun reset(holder: ImageViewHolder) {
-        holder.apply {
-            val image = rootView.findViewById<ImageView>(R.id.imageview)
-            image.isClickable = true
-            image.isFocusable = true
-            image.scaleType = ImageView.ScaleType.FIT_CENTER
-            image.setOnTouchListener(null)
-
-            val ssiv = rootView.findViewById<CustomSubsamplingScaleImageView>(R.id.ssiv)
-            ssiv.setIgnoreTouchEvents(false)
-            ssiv.setDirection(CustomSubsamplingScaleImageView.Direction.HORIZONTAL)
-            ssiv.preferredBitmapConfig = Bitmap.Config.RGB_565
-            ssiv.setDoubleTapZoomDuration(500)
-            ssiv.setOnTouchListener(null)
-
-            rootView.minimumHeight = 0
-        }
-    }
-
-    // TODO make all that method less ugly
     override fun onBindViewHolder(holder: ImageViewHolder, position: Int) {
-        Timber.d("Picture %d : BindViewHolder", position)
+        Timber.d("Picture $position : BindViewHolder")
 
-        val displayParams = getDisplayParamsForPosition(position)
-        val imgViewType = getImageViewType(displayParams)
+        val displayParams = getDisplayParamsForPosition(position) ?: return
 
-        reset(holder)
-
-        holder.apply {
-            viewerOrientation = displayParams.orientation
-            displayMode = displayParams.displayMode
-            isSmoothRendering = displayParams.isSmoothRendering
-
-            if (ViewType.DEFAULT.value == imgViewType) {
-                // ImageView shouldn't react to click events when in vertical mode (controlled by ZoomableFrame / ZoomableRecyclerView)
-                if (Preferences.Constant.VIEWER_ORIENTATION_VERTICAL == viewerOrientation) {
-                    val image = rootView.findViewById<View>(R.id.imageview)
-                    image.isClickable = false
-                    image.isFocusable = false
-                }
-            } else if (ViewType.IMAGEVIEW_STRETCH.value == imgViewType) {
-                val image = rootView.findViewById<ImageView>(R.id.imageview)
-                image.scaleType = ImageView.ScaleType.FIT_XY
-            } else if (ViewType.SSIV_VERTICAL.value == imgViewType) {
-                val image = rootView.findViewById<CustomSubsamplingScaleImageView>(R.id.ssiv)
-                image.setIgnoreTouchEvents(true)
-                image.setDirection(CustomSubsamplingScaleImageView.Direction.VERTICAL)
-            }
-            // Avoid stacking 0-px tall images on screen and load all of them at the same time
-            if (Preferences.Constant.VIEWER_ORIENTATION_VERTICAL == viewerOrientation)
-                rootView.minimumHeight = pageMinHeight
-
-            val imageType = getImageType(getImageAt(position))
-            if (forceImageView != null) { // ImageView has been forced
-                switchImageView(forceImageView!!)
-                forceImageView = null // Reset force flag
-            } else if (IMG_TYPE_GIF == imageType || IMG_TYPE_APNG == imageType)
-                switchImageView(true)
-            else switchImageView(imgViewType == ViewType.IMAGEVIEW_STRETCH.value)
-
-            // Initialize SSIV when required
-            if (imgViewType == ViewType.DEFAULT.value && Preferences.Constant.VIEWER_ORIENTATION_HORIZONTAL == viewerOrientation && !isImageView) {
-                // Needs ARGB_8888 to be able to resize images using RenderScript
-                if (displayParams.isSmoothRendering) ssiv.preferredBitmapConfig =
-                    Bitmap.Config.ARGB_8888
-
-                ssiv.setPreloadDimensions(itemView.width, imgView.height)
-                if (!Preferences.isReaderZoomTransitions()) ssiv.setDoubleTapZoomDuration(10)
-
-                val scrollLTR =
-                    Preferences.Constant.VIEWER_DIRECTION_LTR == displayParams.direction && isScrollLTR
-                ssiv.setOffsetLeftSide(scrollLTR)
-
-                ssiv.setScaleListener { s: Double ->
-                    onAbsoluteScaleChanged(position, s)
-                }
-            }
-            val layoutStyle =
-                if (Preferences.Constant.VIEWER_ORIENTATION_VERTICAL == viewerOrientation) ViewGroup.LayoutParams.WRAP_CONTENT else ViewGroup.LayoutParams.MATCH_PARENT
-            val layoutParams = imgView.layoutParams
-            layoutParams.width = ViewGroup.LayoutParams.MATCH_PARENT
-            layoutParams.height = layoutStyle
-            imgView.layoutParams = layoutParams
-            if (Preferences.Constant.VIEWER_ORIENTATION_HORIZONTAL == viewerOrientation)
-                imgView.setOnTouchListener(itemTouchListener)
-
-            var imageAvailable = true
-            val img = getImageAt(position)
-            if (img != null && img.fileUri.isNotEmpty()) setImage(img)
-            else imageAvailable = false
-
-            val isStreaming = img != null && !imageAvailable && img.status == StatusContent.ONLINE
-            val isExtracting = img != null && !imageAvailable && !img.url.startsWith("http")
-            if (noImgTxt != null) {
-                @StringRes var text: Int = R.string.image_not_found
-                if (isStreaming) text = R.string.image_streaming else if (isExtracting) text =
-                    R.string.image_extracting
-                noImgTxt.setText(text)
-                noImgTxt.visibility = if (!imageAvailable) View.VISIBLE else View.GONE
-            }
-        }
+        holder.reset()
+        holder.bind(displayParams, position)
     }
 
     override fun onViewRecycled(holder: ImageViewHolder) {
         // Set the holder back to its original constraints while in vertical mode
         // (not doing this will cause super high memory usage by trying to load _all_ images)
-        if (Preferences.Constant.VIEWER_ORIENTATION_VERTICAL == holder.viewerOrientation) {
+        if (VIEWER_ORIENTATION_VERTICAL == holder.viewerOrientation) {
             holder.rootView.minimumHeight = pageMinHeight
             val layoutParams = holder.rootView.layoutParams
             layoutParams.width = ViewGroup.LayoutParams.MATCH_PARENT
@@ -249,7 +230,7 @@ class ImagePagerAdapter(context: Context) :
         }
 
         // Free the SSIV's resources
-        if (!holder.isImageView) holder.ssiv.clear()
+        holder.clear()
         super.onViewRecycled(holder)
     }
 
@@ -258,7 +239,9 @@ class ImagePagerAdapter(context: Context) :
     }
 
     fun destroy() {
-        rs?.destroy()
+        if (isGlInit) glEsRenderer.clear()
+        scaleListener = null
+        itemTouchListener = null
     }
 
     fun reset() {
@@ -266,20 +249,25 @@ class ImagePagerAdapter(context: Context) :
         initialAbsoluteScales.clear()
     }
 
-    private fun getDisplayParamsForPosition(position: Int): ReaderPagerFragment.DisplayParams {
-        val bookPreferences = getItem(position).content.target.bookPreferences
-        return ReaderPagerFragment.DisplayParams(
-            Preferences.getContentBrowseMode(bookPreferences),
-            Preferences.getContentDisplayMode(bookPreferences),
-            Preferences.isContentSmoothRendering(bookPreferences)
-        )
+    private fun getDisplayParamsForPosition(position: Int): ReaderPagerFragment.DisplayParams? {
+        val img = getItem(position)
+        val content = img.linkedContent
+        if (content != null) {
+            val bookPreferences = content.bookPreferences
+            return ReaderPagerFragment.DisplayParams(
+                Settings.getContentBrowseMode(content.site, bookPreferences),
+                Settings.getContentDisplayMode(content.site, bookPreferences),
+                Settings.getContent2PagesMode(bookPreferences),
+                Settings.isContentSmoothRendering(bookPreferences),
+                false
+            )
+        }
+        return null
     }
 
     fun getDimensionsAtPosition(position: Int): Point {
-        if (recyclerView != null) {
-            val holder =
-                recyclerView!!.findViewHolderForAdapterPosition(position) as ImageViewHolder?
-            if (holder != null) return holder.dimensions
+        (recyclerView?.findViewHolderForAdapterPosition(position) as ImageViewHolder?)?.let {
+            return it.dimensions
         }
         return Point()
     }
@@ -288,10 +276,8 @@ class ImagePagerAdapter(context: Context) :
         if (absoluteScales.containsKey(position)) {
             val result = absoluteScales[position]
             if (result != null) return result
-        } else if (recyclerView != null) {
-            val holder =
-                recyclerView!!.findViewHolderForAdapterPosition(position) as ImageViewHolder?
-            if (holder != null) return holder.absoluteScale
+        } else (recyclerView?.findViewHolderForAdapterPosition(position) as ImageViewHolder?)?.let {
+            return it.absoluteScale
         }
         return 0f
     }
@@ -306,38 +292,44 @@ class ImagePagerAdapter(context: Context) :
     }
 
     fun setRelativeScaleAtPosition(position: Int, targetRelativeScale: Float) {
-        if (recyclerView != null) {
-            val holder =
-                recyclerView!!.findViewHolderForAdapterPosition(position) as ImageViewHolder?
-            if (holder != null && initialAbsoluteScales.containsKey(position)) {
-                val initialScale = initialAbsoluteScales[position]
-                if (initialScale != null) holder.absoluteScale = targetRelativeScale * initialScale
+        recyclerView?.apply {
+            (findViewHolderForAdapterPosition(position) as ImageViewHolder?)?.let { holder ->
+                if (initialAbsoluteScales.containsKey(position)) {
+                    initialAbsoluteScales[position]?.let { initialScale ->
+                        holder.absoluteScale = targetRelativeScale * initialScale
+                    }
+                }
             }
         }
+    }
+
+    suspend fun getSSivAtPosition(position: Int): Boolean = withContext(Dispatchers.Default) {
+        (recyclerView?.findViewHolderForAdapterPosition(position) as ImageViewHolder?)?.isImageView() == false
     }
 
     fun resetScaleAtPosition(position: Int) {
-        if (recyclerView != null) {
-            val holder =
-                recyclerView!!.findViewHolderForAdapterPosition(position) as ImageViewHolder?
-            holder?.resetScale()
-        }
+        (recyclerView?.findViewHolderForAdapterPosition(position) as ImageViewHolder?)?.resetScale()
     }
 
     fun multiplyScale(multiplier: Float) {
-        if (recyclerView != null) {
-            for (i in 0 until itemCount) {
-                val holder = recyclerView!!.findViewHolderForAdapterPosition(i) as ImageViewHolder?
-                holder?.multiplyVirtualScale(multiplier)
-            }
+        for (i in 0 until itemCount) {
+            (recyclerView?.findViewHolderForAdapterPosition(i) as ImageViewHolder?)
+                ?.multiplyVirtualScale(multiplier)
         }
     }
 
-    private fun onAbsoluteScaleChanged(position: Int, scale: Double) {
+    private fun onAbsoluteScaleChanged(position: Int, scale: Float) {
         Timber.d(">> position %d -> scale %s", position, scale)
-        if (!initialAbsoluteScales.containsKey(position)) initialAbsoluteScales[position] =
-            scale.toFloat()
-        absoluteScales[position] = scale.toFloat()
+        if (!initialAbsoluteScales.containsKey(position)) initialAbsoluteScales[position] = scale
+        if (!absoluteScales.containsKey(position)) absoluteScales[position] = scale
+        if (abs(scale - absoluteScales[position]!!) > 0.01) {
+            absoluteScales[position] = scale
+            scaleListener?.invoke(position, scale)
+        }
+    }
+
+    fun setOnScaleListener(scaleListener: BiConsumer<Int, Float>?) {
+        this.scaleListener = scaleListener
     }
 
     fun setMaxDimensions(maxWidth: Int, maxHeight: Int) {
@@ -349,73 +341,250 @@ class ImagePagerAdapter(context: Context) :
         this.isScrollLTR = isScrollLTR
     }
 
+    fun setTwoPagesMode(value: Boolean) {
+        if (twoPagesMode != value) twoPagesMode = value
+    }
+
+    // ====================== VIEWHOLDER
 
     inner class ImageViewHolder(val rootView: View) : RecyclerView.ViewHolder(rootView),
-        OnImageEventListener, RequestListener<Drawable> {
-        val ssiv: CustomSubsamplingScaleImageView = itemView.findViewById(R.id.ssiv)
-        private val imageView: ImageView = itemView.findViewById(R.id.imageview)
-        val noImgTxt: TextView? = itemView.findViewById(R.id.viewer_no_page_txt)
+        OnImageEventListener {
+        private val ssiv: CustomSubsamplingScaleImageView = rootView.requireById(R.id.ssiv)
+        private val imageView: ImageView = rootView.requireById(R.id.imageview)
+        private val noImgTxt: TextView = rootView.requireById(R.id.viewer_no_page_txt)
 
-        lateinit var imgView: View
+        private var imgView: View? = null
 
-        var displayMode: Int = 0
-        var viewerOrientation: Int = 0
-        var isSmoothRendering: Boolean = false
+        private var displayMode = 0
+        var viewerOrientation = 0
+        private var isSmoothRendering = false
+        private var isHalfWidth = false
 
-        var isImageView = false
-        var forceImageView: Boolean? = null
+        private var isImageView = false
+
+        //        private var forceImageView: Boolean? = null
         private var img: ImageFile? = null
         private var scaleMultiplier = 1f // When used with ZoomableFrame in vertical mode
 
-        init {
-            noImgTxt?.visibility = View.GONE
+        private var isLoading = AtomicBoolean(false)
+
+        fun bind(
+            displayParams: ReaderPagerFragment.DisplayParams,
+            position: Int
+        ) {
+            viewerOrientation = displayParams.orientation
+            displayMode = displayParams.displayMode
+            isSmoothRendering = displayParams.isSmoothRendering
+            isHalfWidth = displayParams.twoPages
+            val isVertical = VIEWER_ORIENTATION_VERTICAL == viewerOrientation
+
+            if (isVertical) {
+                ssiv.setDirection(CustomSubsamplingScaleImageView.Direction.VERTICAL)
+                // Avoid stacking 0-px tall images on screen and load all of them at the same time
+                rootView.minimumHeight = pageMinHeight
+            }
+            // ImageView shouldn't react to click events when in vertical mode (controlled by ZoomableFrame / ZoomableRecyclerView)
+            imageView.isClickable = !(isVertical || isHalfWidth)
+            imageView.isFocusable = !(isVertical || isHalfWidth)
+
+            // WARNING following line must be coherent with what happens in setTapListener
+            ssiv.setIgnoreTouchEvents(isVertical || isHalfWidth)
+
+            val img = getImageAt(position)
+            var imgType: ImageType = ImageType.IMG_TYPE_OTHER
+            img?.let {
+                imgType =
+                    if (cachedImageTypes.containsKey(it.id)) cachedImageTypes.getValue(it.id)
+                    else getImageType(rootView.context, it)
+            }
+
+            if (ImageType.IMG_TYPE_GIF == imgType || ImageType.IMG_TYPE_APNG == imgType || ImageType.IMG_TYPE_AWEBP == imgType || ImageType.IMG_TYPE_JXL == imgType || ImageType.IMG_TYPE_AVIF == imgType || ImageType.IMG_TYPE_AAVIF == imgType) {
+                // Formats that aren't supported by SSIV
+                useImageView(isImageView = true, isClickThrough = true)
+            } else useImageView(false, isVertical || isHalfWidth) // Use SSIV by default
+
+            // Initialize SSIV when required
+            if (!isVertical && !isImageView) {
+                ssiv.setGlEsRenderer(if (isSmoothRendering) glEsRenderer else null)
+                // Only valid for horizontal
+                ssiv.setPreloadDimensions(
+                    if (isHalfWidth) screenWidth / 2 else screenWidth,
+                    screenHeight
+                )
+                if (!Settings.isReaderZoomTransitions) ssiv.setDoubleTapZoomDuration(10)
+
+                val scrollLTR = VIEWER_DIRECTION_LTR == displayParams.direction && isScrollLTR
+                ssiv.setOffsetLeftSide(scrollLTR)
+                ssiv.setScaleListener { onAbsoluteScaleChanged(position, it) }
+                ssiv.setSmartCrop(Settings.isReaderSmartCrop)
+            }
+
+            // Image layout constraints
+            // NB : Will be rewritten once images have been loaded
+            val layoutStyle =
+                if (isVertical) ViewGroup.LayoutParams.WRAP_CONTENT else ViewGroup.LayoutParams.MATCH_PARENT
+
+            imgView?.layoutParams?.let {
+                val layoutParams = it
+                layoutParams.width = ViewGroup.LayoutParams.MATCH_PARENT
+                layoutParams.height = layoutStyle
+                imgView?.layoutParams = layoutParams
+            }
+
+            var imageAvailable = true
+            if (img != null && img.fileUri.isNotEmpty()) setImage(img, imgType)
+            else imageAvailable = false
+
+            val isStreaming = img != null && !imageAvailable && img.status == StatusContent.ONLINE
+            val isExtracting = img != null && !imageAvailable && !img.url.startsWith("http")
+
+            @StringRes var text: Int = R.string.image_not_found
+            if (isStreaming) text = R.string.image_streaming
+            else if (isExtracting) text = R.string.image_extracting
+            noImgTxt.setText(text)
+            noImgTxt.isVisible = !imageAvailable
         }
 
-        fun setImage(img: ImageFile) {
+        fun clear() {
+            if (isImageView) imageView.dispose()
+            else ssiv.clear()
+            isLoading.set(false)
+        }
+
+        @SuppressLint("ClickableViewAccessibility")
+        fun reset() {
+            clear()
+            imageView.isClickable = true
+            imageView.isFocusable = true
+            imageView.scaleType = ImageView.ScaleType.FIT_CENTER
+            imageView.setOnTouchListener(null)
+            imageView.rotation = 0f
+
+            ssiv.setIgnoreTouchEvents(false)
+            ssiv.setDirection(CustomSubsamplingScaleImageView.Direction.HORIZONTAL)
+            ssiv.setPreferredBitmapConfig(colorDepth)
+            ssiv.setDoubleTapZoomDuration(500)
+            ssiv.setOnTouchListener(null)
+
+            rootView.minimumHeight = 0
+            noImgTxt.isVisible = false
+        }
+
+        private fun setImage(img: ImageFile, imgType: ImageType) {
             this.img = img
-            val imgType: Int = getImageType(img)
-            val uri = Uri.parse(img.fileUri)
-            Timber.d("Picture %d : binding viewholder %s %s", absoluteAdapterPosition, imgType, uri)
+            val uri = img.fileUri.toUri()
+            isLoading.set(true)
+            noImgTxt.isVisible = false
+            Timber.d("Picture $absoluteAdapterPosition : binding viewholder $imgType $uri")
             if (!isImageView) { // SubsamplingScaleImageView
-                Timber.d("Using SSIV")
+                Timber.d("Picture $absoluteAdapterPosition : Using SSIV")
                 ssiv.recycle()
-                ssiv.setMinimumScaleType(scaleType)
-                ssiv.setOnImageEventListener(this)
+                ssiv.setMinimumScaleType(ssivScaleType)
+                ssiv.setOnImageEventListener(this@ImageViewHolder)
+                ssiv.setDoubleTapZoomEnabled(doubleTapZoomEnabled)
                 ssiv.setLongTapZoomEnabled(longTapZoomEnabled)
                 ssiv.setDoubleTapZoomCap(doubleTapZoomCap)
-                ssiv.setAutoRotate(autoRotate)
+                ssiv.setAutoRotate(
+                    when (autoRotate) {
+                        Settings.Value.READER_AUTO_ROTATE_LEFT -> AutoRotateMethod.LEFT
+                        Settings.Value.READER_AUTO_ROTATE_RIGHT -> AutoRotateMethod.RIGHT
+                        else -> AutoRotateMethod.NONE
+                    }
+                )
                 // 120 dpi = equivalent to the web browser's max zoom level
                 ssiv.setMinimumDpi(120)
                 ssiv.setDoubleTapZoomDpi(120)
                 if (maxBitmapWidth > 0) ssiv.setMaxTileSize(maxBitmapWidth, maxBitmapHeight)
-                if (isSmoothRendering) ssiv.setRenderScript(rs) else ssiv.setRenderScript(null)
-                ssiv.setImage(ImageSource.uri(uri))
+                ssiv.setImage(uri(uri))
             } else { // ImageView
                 val view = imgView as ImageView
-                Timber.d("Using Glide")
-                val centerInside: Transformation<Bitmap> = CenterInside()
-                val smartRotate90 = if (autoRotate) SmartRotateTransformation(
-                    90f, ImageTransform.screenWidth, ImageTransform.screenHeight
-                ) else UnitTransformation.get()
-                Glide.with(view).load(uri)
-                    .optionalTransform(MultiTransformation(centerInside, smartRotate90))
-                    .listener(this).into(view)
+                Timber.d("Picture $absoluteAdapterPosition : Using Coil")
+
+                val isChangeDims = when (autoRotate) {
+                    Settings.Value.READER_AUTO_ROTATE_NONE -> false
+                    else -> {
+                        // Preload the pic to get its dimensions
+                        val dims = view.context.let { ctx ->
+                            val request = ImageRequest.Builder(ctx)
+                                .data(uri)
+                                .diskCacheKey(uri.toString())
+                                .memoryCacheKey(uri.toString())
+                                .allowHardware(imgType != ImageType.IMG_TYPE_JXL && imgType != ImageType.IMG_TYPE_AVIF)
+                                .allowConversionToBitmap(false)
+                                .build()
+                            // TODO does that block the UI thread?
+                            view.context.imageLoader.executeBlocking(request).image?.let {
+                                Point(it.width, it.height)
+                            } ?: Point(0, 0)
+                        }
+                        needsRotating(screenWidth, screenHeight, dims.x, dims.y)
+                    }
+                }
+
+                recyclerView?.let {
+                    val imgLayoutParams = imageView.layoutParams
+                    imgLayoutParams.width =
+                        if (isChangeDims) it.height else ViewGroup.LayoutParams.MATCH_PARENT
+                    imgLayoutParams.height =
+                        if (isChangeDims) it.width else ViewGroup.LayoutParams.MATCH_PARENT
+                    imageView.layoutParams = imgLayoutParams
+                }
+
+                imageView.scaleType = scaleType
+
+                // Custom loader to handle JXL and AVIF
+                // (doesn't support Hardware bitmaps : https://github.com/awxkee/jxl-coder-coil/issues/7)
+                view.context.let { ctx ->
+                    val imageLoader = SingletonImageLoader.get(ctx)
+                    val request = ImageRequest.Builder(ctx)
+                        .data(uri)
+                        .diskCacheKey(uri.toString())
+                        .memoryCacheKey(uri.toString())
+                        .target(imageView)
+                        .allowHardware(imgType != ImageType.IMG_TYPE_JXL && imgType != ImageType.IMG_TYPE_AVIF)
+                        .listener(
+                            onError = { _, err -> onCoilLoadFailed(err) },
+                            onSuccess = { _, res -> onCoilLoadSuccess(res) }
+                        )
+                        .allowConversionToBitmap(false)
+                    imageLoader.enqueue(request.build())
+                }
+            }
+            Timber.d("Picture $absoluteAdapterPosition : binding viewholder END $imgType $uri")
+        }
+
+        fun setTapListener() {
+            // ImageView or vertical mode => ZoomableRecycleView handles gestures
+            if (isImageView || VIEWER_ORIENTATION_VERTICAL == viewerOrientation || isHalfWidth) {
+                Timber.d("$absoluteAdapterPosition setTapListener on recyclerView")
+                imgView?.setOnTouchListener(null)
+            } else { // Single-page, horizontal SSIV => SSIV handles gestures
+                Timber.d("$absoluteAdapterPosition setTapListener on imageView")
+                imgView?.setOnTouchListener(itemTouchListener)
             }
         }
 
-        private val scaleType: Int
-            get() = if (Preferences.Constant.VIEWER_DISPLAY_FILL == displayMode) {
-                CustomSubsamplingScaleImageView.ScaleType.SMART_FILL
-            } else {
-                CustomSubsamplingScaleImageView.ScaleType.CENTER_INSIDE
-            }
+        fun isImageView(): Boolean {
+            return isImageView
+        }
+
+        private val ssivScaleType: ScaleType
+            get() = if (VIEWER_DISPLAY_FILL == displayMode) ScaleType.SMART_FILL
+            else if (VIEWER_DISPLAY_STRETCH == displayMode) ScaleType.STRETCH_SCREEN
+            else if (VIEWER_ORIENTATION_VERTICAL == viewerOrientation) ScaleType.FIT_WIDTH
+            else ScaleType.CENTER_INSIDE
+
+        private val scaleType: ImageView.ScaleType
+            get() = if (VIEWER_DISPLAY_FILL == displayMode) ImageView.ScaleType.FIT_CENTER
+            else if (VIEWER_DISPLAY_STRETCH == displayMode) ImageView.ScaleType.FIT_XY
+            else ImageView.ScaleType.FIT_CENTER
 
         // ImageView
-        // TODO doesn't work for Glide as it doesn't use ImageView's scaling
+        // TODO doesn't work for Coil as it doesn't use ImageView's scaling
         var absoluteScale: Float
             get() {
                 return if (!isImageView) {
-                    ssiv.virtualScale
+                    ssiv.getVirtualScale()
                 } else { // ImageView
                     imageView.scaleX
                 }
@@ -430,7 +599,7 @@ class ImagePagerAdapter(context: Context) :
 
         fun resetScale() {
             if (!isImageView) {
-                if (ssiv.isImageLoaded && ssiv.isReady && ssiv.isLaidOut) {
+                if (ssiv.isImageLoaded() && ssiv.isReady() && ssiv.isLaidOut) {
                     scaleMultiplier = 0f
                     ssiv.resetScale()
                 }
@@ -439,9 +608,9 @@ class ImagePagerAdapter(context: Context) :
 
         fun multiplyVirtualScale(multiplier: Float) {
             if (!isImageView) {
-                if (ssiv.isImageLoaded && ssiv.isReady && ssiv.isLaidOut) {
-                    val rawScale = ssiv.virtualScale / scaleMultiplier
-                    ssiv.virtualScale = rawScale * multiplier
+                if (ssiv.isImageLoaded() && ssiv.isReady() && ssiv.isLaidOut) {
+                    val rawScale = ssiv.getVirtualScale() / scaleMultiplier
+                    ssiv.setVirtualScale(rawScale * multiplier)
                     scaleMultiplier = multiplier
                 }
             }
@@ -457,68 +626,103 @@ class ImagePagerAdapter(context: Context) :
                 }
             }
 
-        private fun adjustHeight(imgWidth: Int, imgHeight: Int, resizeSmallPics: Boolean) {
-            val rootLayoutStyle =
-                if (Preferences.Constant.VIEWER_ORIENTATION_VERTICAL == viewerOrientation) ViewGroup.LayoutParams.WRAP_CONTENT else ViewGroup.LayoutParams.MATCH_PARENT
-            val layoutParams = rootView.layoutParams
-            layoutParams.width = ViewGroup.LayoutParams.MATCH_PARENT
-            layoutParams.height = rootLayoutStyle
-            rootView.layoutParams = layoutParams
-            var targetImgHeight = imgHeight
-            // If we display a picture smaller than the screen dimensions, we have to zoom it
-            if (resizeSmallPics && imgHeight < ImageTransform.screenHeight && imgWidth < ImageTransform.screenWidth) {
-                targetImgHeight =
-                    (imgHeight * getTargetScale(imgWidth, imgHeight, displayMode)).roundToInt()
-                val imgLayoutParams = imgView.layoutParams
-                imgLayoutParams.width = ViewGroup.LayoutParams.MATCH_PARENT
-                imgLayoutParams.height = ViewGroup.LayoutParams.MATCH_PARENT
-                imgView.layoutParams = imgLayoutParams
-            }
-            val targetHeight: Int = targetImgHeight + separatingBarsHeight
-            rootView.minimumHeight = targetHeight
-        }
-
         private fun getTargetScale(imgWidth: Int, imgHeight: Int, displayMode: Int): Float {
-            return if (Preferences.Constant.VIEWER_DISPLAY_FILL == displayMode) { // Fill screen
+            return if (VIEWER_DISPLAY_FILL == displayMode) { // Fill screen
                 if (imgHeight > imgWidth) {
                     // Fit to width
-                    ImageTransform.screenWidth / imgWidth.toFloat()
+                    screenWidth / imgWidth.toFloat()
                 } else {
-                    if (ImageTransform.screenHeight > ImageTransform.screenWidth) ImageTransform.screenHeight / imgHeight.toFloat() // Fit to height when in portrait mode
-                    else ImageTransform.screenWidth / imgWidth.toFloat() // Fit to width when in landscape mode
+                    if (screenHeight > screenWidth) screenHeight / imgHeight.toFloat() // Fit to height when in portrait mode
+                    else screenWidth / imgWidth.toFloat() // Fit to width when in landscape mode
                 }
             } else { // Fit screen
-                (ImageTransform.screenWidth / imgWidth.toFloat()).coerceAtMost(ImageTransform.screenHeight / imgHeight.toFloat())
+                (screenWidth / imgWidth.toFloat()).coerceAtMost(screenHeight / imgHeight.toFloat())
             }
         }
 
-        fun switchImageView(isImageView: Boolean) {
+        private fun useImageView(isImageView: Boolean, isClickThrough: Boolean = false) {
             Timber.d(
-                "Picture %d : switching to %s",
+                "Picture %d : using %s (%s)",
                 absoluteAdapterPosition,
-                if (isImageView) "imageView" else "ssiv"
+                if (isImageView) "imageView" else "ssiv",
+                isClickThrough
             )
             ssiv.isVisible = !isImageView
             imageView.isVisible = isImageView
             imgView = if (isImageView) imageView else ssiv
+            if (isImageView) {
+                // ImageView shouldn't react to click events when frame is zoomable (controlled by ZoomableFrame / ZoomableRecyclerView)
+                imageView.isClickable = !isClickThrough
+                imageView.isFocusable = !isClickThrough
+            }
+            ssiv.setIgnoreTouchEvents(isClickThrough)
+
             this.isImageView = isImageView
+            setTapListener()
         }
 
-        private fun forceImageView() {
-            switchImageView(true)
-            forceImageView = true
+        private fun adjustDimensions(
+            imgWidth: Int,
+            imgHeight: Int,
+            adjustImgHeight: Boolean,
+            resizeSmallPics: Boolean,
+            doAutoRotate: Boolean
+        ) {
+            imgView?.rotation =
+                if (doAutoRotate && needsRotating(screenWidth, screenHeight, imgWidth, imgHeight)) {
+                    when (autoRotate) {
+                        Settings.Value.READER_AUTO_ROTATE_LEFT -> 90f
+                        Settings.Value.READER_AUTO_ROTATE_RIGHT -> -90f
+                        else -> 0f
+                    }
+                } else {
+                    0f
+                }
+
+            // Root view layout
+            val rootLayoutStyle =
+                if (VIEWER_ORIENTATION_VERTICAL == viewerOrientation) ViewGroup.LayoutParams.WRAP_CONTENT else ViewGroup.LayoutParams.MATCH_PARENT
+            val layoutParams = rootView.layoutParams
+            layoutParams.width =
+                if (isHalfWidth) screenWidth / 2 else ViewGroup.LayoutParams.MATCH_PARENT
+            layoutParams.height = rootLayoutStyle
+            rootView.layoutParams = layoutParams
+
+            // Image view height (for vertical mode)
+            if (adjustImgHeight) {
+                var targetImgHeight = imgHeight
+                // If we display a picture smaller than the screen dimensions, we have to zoom it
+                if (resizeSmallPics && imgHeight < screenHeight && imgWidth < screenWidth) {
+                    targetImgHeight =
+                        (imgHeight * getTargetScale(imgWidth, imgHeight, displayMode)).roundToInt()
+
+                    imgView?.layoutParams?.let {
+                        val imgLayoutParams = it
+                        imgLayoutParams.width = ViewGroup.LayoutParams.MATCH_PARENT
+                        imgLayoutParams.height = ViewGroup.LayoutParams.MATCH_PARENT
+                        imgView?.layoutParams = imgLayoutParams
+                    }
+
+                }
+                rootView.minimumHeight = targetImgHeight + separatingBarsHeight
+            }
         }
 
         // == SUBSAMPLINGSCALEVIEW CALLBACKS
         override fun onReady() {
-            if (Preferences.Constant.VIEWER_ORIENTATION_VERTICAL == viewerOrientation) {
-                val scaleView = imgView as CustomSubsamplingScaleImageView
-                adjustHeight(0, (scaleView.absoluteScale * scaleView.sHeight).toInt(), false)
-            }
+            isLoading.set(false) // All that's left is to load tiles => consider the job done already
+            val scaleView = imgView as CustomSubsamplingScaleImageView
+            adjustDimensions(
+                0,
+                (scaleView.getAbsoluteScale() * scaleView.getSHeight()).toInt(),
+                VIEWER_ORIENTATION_VERTICAL == viewerOrientation,
+                resizeSmallPics = false,
+                doAutoRotate = false
+            )
         }
 
         override fun onImageLoaded() {
-            // Nothing special
+            isLoading.set(false)
         }
 
         override fun onPreviewLoadError(e: Throwable) {
@@ -528,14 +732,10 @@ class ImagePagerAdapter(context: Context) :
         override fun onImageLoadError(e: Throwable) {
             Timber.d(
                 e,
-                "Picture %d : SSIV loading failed; reloading with Glide : %s",
+                "Picture %d : SSIV loading failed: %s",
                 absoluteAdapterPosition,
                 img!!.fileUri
             )
-            // Fall back to Glide
-            forceImageView()
-            // Reload adapter
-            notifyItemChanged(layoutPosition)
         }
 
         override fun onTileLoadError(e: Throwable) {
@@ -546,59 +746,29 @@ class ImagePagerAdapter(context: Context) :
             // Nothing special
         }
 
-        // == GLIDE CALLBACKS
-        override fun onLoadFailed(
-            e: GlideException?,
-            model: Any?,
-            target: Target<Drawable?>,
-            isFirstResource: Boolean
-        ): Boolean {
+        // == COIL CALLBACKS
+        private fun onCoilLoadFailed(err: ErrorResult) {
             Timber.d(
-                e, "Picture %d : Glide loading failed : %s", absoluteAdapterPosition, img!!.fileUri
+                err.throwable,
+                "Picture %d : Coil loading failed : %s",
+                absoluteAdapterPosition,
+                img!!.fileUri
             )
-            if (noImgTxt != null) noImgTxt.visibility = View.VISIBLE
-            return false
+            if (isImageView) noImgTxt.visibility = View.VISIBLE
+            isLoading.set(false)
         }
 
-        override fun onResourceReady(
-            resource: Drawable,
-            model: Any,
-            target: Target<Drawable>,
-            dataSource: DataSource,
-            isFirstResource: Boolean
-        ): Boolean {
-            if (Preferences.Constant.VIEWER_ORIENTATION_VERTICAL == viewerOrientation)
-                adjustHeight(resource.intrinsicWidth, resource.intrinsicHeight, true)
+        private fun onCoilLoadSuccess(result: SuccessResult): Boolean {
+            noImgTxt.visibility = View.GONE
+            adjustDimensions(
+                result.image.width,
+                result.image.height,
+                VIEWER_ORIENTATION_VERTICAL == viewerOrientation,
+                true,
+                VIEWER_ORIENTATION_HORIZONTAL == viewerOrientation
+            )
+            isLoading.set(false)
             return false
         }
-    }
-
-    companion object {
-        // PNGs, JPEGs and WEBPs -> use CustomSubsamplingScaleImageView; will fallback to Glide if animation detected
-        const val IMG_TYPE_OTHER = 0
-
-        // Static and animated GIFs -> use APNG4Android library
-        const val IMG_TYPE_GIF = 1
-
-        // Animated PNGs -> use APNG4Android library
-        const val IMG_TYPE_APNG = 2
-
-        // Animated WEBPs -> use APNG4Android library
-        const val IMG_TYPE_AWEBP = 3
-
-        val IMAGE_DIFF_CALLBACK: DiffUtil.ItemCallback<ImageFile> =
-            object : DiffUtil.ItemCallback<ImageFile>() {
-                override fun areItemsTheSame(
-                    oldItem: ImageFile, newItem: ImageFile
-                ): Boolean {
-                    return oldItem.uniqueHash() == newItem.uniqueHash()
-                }
-
-                override fun areContentsTheSame(
-                    oldItem: ImageFile, newItem: ImageFile
-                ): Boolean {
-                    return (oldItem == newItem)
-                }
-            }
     }
 }

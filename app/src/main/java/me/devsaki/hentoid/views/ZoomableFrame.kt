@@ -8,6 +8,7 @@ import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.ScaleGestureDetector.SimpleOnScaleGestureListener
 import android.widget.FrameLayout
+import androidx.core.view.isNotEmpty
 import kotlin.math.roundToInt
 
 /**
@@ -19,7 +20,7 @@ import kotlin.math.roundToInt
  */
 class ZoomableFrame : FrameLayout {
 
-    private var enabled = true
+    var frameEnabled = true
 
 
     constructor (context: Context) : super(context)
@@ -49,7 +50,7 @@ class ZoomableFrame : FrameLayout {
     private var recycler: ZoomableRecyclerView? = null
 
     private fun getRecycler(): ZoomableRecyclerView? {
-        if (null == recycler && childCount > 0) recycler = getChildAt(0) as ZoomableRecyclerView
+        if (null == recycler && isNotEmpty()) recycler = getChildAt(0) as ZoomableRecyclerView
         return recycler
     }
 
@@ -58,10 +59,11 @@ class ZoomableFrame : FrameLayout {
      * Dispatches a touch event to the detectors.
      */
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
-        if (enabled) {
+        if (frameEnabled) {
             scaleDetector.onTouchEvent(ev)
             flingDetector.onTouchEvent(ev)
         }
+        // Must return the default value; if not, events don't even reach the RecyclerView
         return super.dispatchTouchEvent(ev)
     }
 
@@ -70,17 +72,17 @@ class ZoomableFrame : FrameLayout {
      */
     inner class ScaleListener : SimpleOnScaleGestureListener() {
         override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
-            if (enabled) getRecycler()?.onScaleBegin()
-            return enabled
+            if (frameEnabled) getRecycler()?.onScaleBegin()
+            return frameEnabled
         }
 
         override fun onScale(detector: ScaleGestureDetector): Boolean {
-            if (enabled) getRecycler()?.onScale(detector.scaleFactor)
-            return enabled
+            if (frameEnabled) getRecycler()?.onScale(detector.scaleFactor)
+            return frameEnabled
         }
 
         override fun onScaleEnd(detector: ScaleGestureDetector) {
-            if (enabled) getRecycler()?.onScaleEnd()
+            if (frameEnabled) getRecycler()?.onScaleEnd()
         }
     }
 
@@ -88,28 +90,19 @@ class ZoomableFrame : FrameLayout {
      * Fling listener used to delegate events to the recycler view.
      */
     inner class FlingListener : SimpleOnGestureListener() {
+
         override fun onFling(
-            e1: MotionEvent,
+            e1: MotionEvent?,
             e2: MotionEvent,
             velocityX: Float,
             velocityY: Float
         ): Boolean {
-            val recycler = getRecycler()
-            return if (enabled && null != recycler) recycler.zoomFling(
-                velocityX.roundToInt(), velocityY.roundToInt()
-            ) else false
+            if (!frameEnabled) return false
+            return getRecycler()?.zoomFling(velocityX.roundToInt(), velocityY.roundToInt()) == true
         }
 
         override fun onDown(e: MotionEvent): Boolean {
-            return enabled
+            return frameEnabled
         }
-    }
-
-    fun enable() {
-        enabled = true
-    }
-
-    fun disable() {
-        enabled = false
     }
 }

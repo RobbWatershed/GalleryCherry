@@ -7,6 +7,16 @@
     android:layout_gravity="center"
     android:clipToPadding="false">
 
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?android:attr/actionBarSize"
+        android:background="?colorPrimary"
+        android:elevation="@dimen/toolbar_layout_elevation"
+        android:gravity="center_vertical"
+        app:layout_constraintTop_toTopOf="parent"
+        app:menu="@menu/library_merge_menu" />
+
     <me.devsaki.hentoid.views.MaxHeightRecyclerView
         android:id="@+id/list"
         android:layout_width="match_parent"
@@ -18,15 +28,16 @@
         android:scrollbarAlwaysDrawVerticalTrack="true"
         android:scrollbars="vertical"
         app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/toolbar"
         app:maxHeight="350dp"
-        tools:listitem="@layout/item_drawer_edit" />
+        tools:listitem="@layout/item_library_merge_split" />
 
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/title_new"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="@string/new_title"
+        app:endIconMode="clear_text"
         app:layout_constraintTop_toBottomOf="@id/list">
 
         <com.google.android.material.textfield.TextInputEditText
@@ -37,25 +48,39 @@
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.materialswitch.MaterialSwitch
+        android:id="@+id/merge_one_chapter_per_book_switch"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="8dp"
+        android:text="@string/merge_use_book_title"
+        app:layout_constraintTop_toBottomOf="@id/title_new" />
+
+    <com.google.android.material.materialswitch.MaterialSwitch
+        android:id="@+id/merge_keep_first_book_chapters_switch"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:enabled="false"
+        android:paddingStart="8dp"
+        android:text="@string/keep_chapters_first_book_title"
+        app:layout_constraintTop_toBottomOf="@id/merge_one_chapter_per_book_switch" />
+
+    <com.google.android.material.materialswitch.MaterialSwitch
         android:id="@+id/merge_delete_switch"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:paddingStart="8dp"
         android:text="@string/merge_delete_after_merging"
-        app:layout_constraintTop_toBottomOf="@id/title_new" />
+        app:layout_constraintTop_toBottomOf="@id/merge_keep_first_book_chapters_switch" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/action_button"
-        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        style="@style/Widget.Material3.Button.TonalButton.Icon"
         android:layout_width="match_parent"
         android:layout_height="?android:attr/actionBarSize"
         android:layout_margin="8dp"
         android:layout_marginTop="8dp"
         android:text="@string/merge_merge"
-        android:textColor="?colorSecondary"
-        android:textSize="@dimen/text_body_1"
         app:icon="@drawable/ic_action_merge"
-        app:iconTint="?colorSecondary"
         app:layout_constraintTop_toBottomOf="@id/merge_delete_switch" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

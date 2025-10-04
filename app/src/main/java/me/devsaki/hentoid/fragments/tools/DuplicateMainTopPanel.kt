@@ -8,7 +8,6 @@ import android.widget.FrameLayout
 import android.widget.PopupWindow
 import android.widget.ProgressBar
 import android.widget.TextView
-import androidx.core.view.ViewCompat
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModelProvider
@@ -19,10 +18,12 @@ import me.devsaki.hentoid.core.isFinishing
 import me.devsaki.hentoid.databinding.IncludeDuplicateControlsBinding
 import me.devsaki.hentoid.events.ProcessEvent
 import me.devsaki.hentoid.ui.BlinkAnimation
-import me.devsaki.hentoid.util.Preferences
+import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.viewmodels.DuplicateViewModel
 import me.devsaki.hentoid.viewmodels.ViewModelFactory
 import me.devsaki.hentoid.workers.DuplicateDetectorWorker
+import me.devsaki.hentoid.workers.STEP_COVER_INDEX
+import me.devsaki.hentoid.workers.STEP_DUPLICATES
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
@@ -85,7 +86,7 @@ class DuplicateMainTopPanel(activity: DuplicateDetectorActivity) : DefaultLifecy
 
     fun showAsDropDown(anchor: View) {
         if (!isShowing
-            && ViewCompat.isAttachedToWindow(anchor)
+            && anchor.isAttachedToWindow
             && !anchor.context.isFinishing()
         ) {
             updateUI(anchor.context)
@@ -118,12 +119,12 @@ class DuplicateMainTopPanel(activity: DuplicateDetectorActivity) : DefaultLifecy
         binding.useTitle.setOnCheckedChangeListener { _, _ -> onMainCriteriaChanged() }
         binding.useCover.setOnCheckedChangeListener { _, _ -> onMainCriteriaChanged() }
 
-        binding.useTitle.isChecked = Preferences.isDuplicateUseTitle()
-        binding.useCover.isChecked = Preferences.isDuplicateUseCover()
-        binding.useArtist.isChecked = Preferences.isDuplicateUseArtist()
-        binding.useSameLanguage.isChecked = Preferences.isDuplicateUseSameLanguage()
-        binding.ignoreChapters.isChecked = Preferences.isDuplicateIgnoreChapters()
-        binding.useSensitivity.index = Preferences.getDuplicateSensitivity()
+        binding.useTitle.isChecked = Settings.duplicateUseTitle
+        binding.useCover.isChecked = Settings.duplicateUseCover
+        binding.useArtist.isChecked = Settings.duplicateUseArtist
+        binding.useSameLanguage.isChecked = Settings.duplicateUseSameLanguage
+        binding.ignoreChapters.isChecked = Settings.duplicateIgnoreChapters
+        binding.useSensitivity.index = Settings.duplicateSensitivity
         updateUI(context)
     }
 
@@ -153,12 +154,12 @@ class DuplicateMainTopPanel(activity: DuplicateDetectorActivity) : DefaultLifecy
     }
 
     private fun onScanClick() {
-        Preferences.setDuplicateUseTitle(binding.useTitle.isChecked)
-        Preferences.setDuplicateUseCover(binding.useCover.isChecked)
-        Preferences.setDuplicateUseArtist(binding.useArtist.isChecked)
-        Preferences.setDuplicateUseSameLanguage(binding.useSameLanguage.isChecked)
-        Preferences.setDuplicateIgnoreChapters(binding.ignoreChapters.isChecked)
-        Preferences.setDuplicateSensitivity(binding.useSensitivity.index)
+        Settings.duplicateUseTitle = binding.useTitle.isChecked
+        Settings.duplicateUseCover = binding.useCover.isChecked
+        Settings.duplicateUseArtist = binding.useArtist.isChecked
+        Settings.duplicateUseSameLanguage = binding.useSameLanguage.isChecked
+        Settings.duplicateIgnoreChapters = binding.ignoreChapters.isChecked
+        Settings.duplicateSensitivity = binding.useSensitivity.index
 
         activateScanUi()
 
@@ -228,11 +229,11 @@ class DuplicateMainTopPanel(activity: DuplicateDetectorActivity) : DefaultLifecy
         if (event.processId != R.id.duplicate_index && event.processId != R.id.duplicate_detect) return
 
         val progressBar: ProgressBar =
-            if (DuplicateDetectorWorker.STEP_COVER_INDEX == event.step) binding.indexPicturesPb else binding.detectBooksPb
+            if (STEP_COVER_INDEX == event.step) binding.indexPicturesPb else binding.detectBooksPb
         val progressBarTxt: TextView =
-            if (DuplicateDetectorWorker.STEP_COVER_INDEX == event.step) binding.indexPicturesPbTxt else binding.detectBooksPbTxt
+            if (STEP_COVER_INDEX == event.step) binding.indexPicturesPbTxt else binding.detectBooksPbTxt
 
-        if (DuplicateDetectorWorker.STEP_COVER_INDEX == event.step) {
+        if (STEP_COVER_INDEX == event.step) {
             if (null == binding.detectBooksPbTxt.animation) {
                 binding.detectBooksPbTxt.startAnimation(BlinkAnimation(750, 20))
                 binding.detectBooksPbTxt.text =
@@ -248,7 +249,7 @@ class DuplicateMainTopPanel(activity: DuplicateDetectorActivity) : DefaultLifecy
         progressBarTxt.text = String.format("%d / %d", progressBar.progress, progressBar.max)
         progressBarTxt.visibility = View.VISIBLE
 
-        if (ProcessEvent.EventType.COMPLETE == event.eventType && DuplicateDetectorWorker.STEP_DUPLICATES == event.step) {
+        if (ProcessEvent.Type.COMPLETE == event.eventType && STEP_DUPLICATES == event.step) {
             disableScanUi()
         } else if (binding.scanFab.visibility == View.VISIBLE && DuplicateDetectorWorker.isRunning(
                 binding.scanFab.context
@@ -264,7 +265,7 @@ class DuplicateMainTopPanel(activity: DuplicateDetectorActivity) : DefaultLifecy
 
         EventBus.getDefault().removeStickyEvent(event)
 
-        if (ProcessEvent.EventType.COMPLETE == event.eventType && DuplicateDetectorWorker.STEP_DUPLICATES == event.step) {
+        if (ProcessEvent.Type.COMPLETE == event.eventType && STEP_DUPLICATES == event.step) {
             disableScanUi()
         } else if (binding.scanFab.visibility == View.VISIBLE && DuplicateDetectorWorker.isRunning(
                 binding.scanFab.context

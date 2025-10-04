@@ -412,7 +412,7 @@
     <string name="new_group_name">Назва нової групи\?</string>
     <string name="group_edit_name">Редагувати назву групи</string>
     <string name="book_edit_title">Редагувати назву книги</string>
-    <string name="delete_progress">Видаляю книги</string>
+    <string name="delete_books_progress">Видаляю книги</string>
     <string name="purge_progress">Знищаю книги</string>
     <string name="cancel_queue_progress">Скасовую елементи черги</string>
     <plurals name="delete_success_books">
@@ -435,7 +435,6 @@
         <item quantity="many"><x:g id="count" example="5">%d</x:g> книг успішно заархівовані</item>
     </plurals>
     <string name="notif_archive_fail">Архівація не вдалася</string>
-    <string name="notif_archive_fail_details">Не вдалося архівувати принаймні одну книгу</string>
     <plurals name="archive_success">
         <item quantity="one"><x:g id="count" example="1">%d</x:g> книга заархівована в Завантаженнях</item>
         <item quantity="few"><x:g id="count" example="2">%d</x:g> книги заархівовані в Завантаженнях</item>
@@ -538,7 +537,6 @@
         <item quantity="few">Видалити групи та книги</item>
         <item quantity="many">Видалити групи та книги</item>
     </plurals>
-    <string name="group_delete_nothing">Нема чого видаляти — увімкніть опцію \"Дозволити видаляти зовнішній контент\"</string>
 	<string name="clear_rating">Очистити рейтинг</string>
 
     <!-- Merge & split -->
@@ -806,11 +804,6 @@
     <string name="duplicate_use_same_language">Лише тей же мовою</string>
     <string name="duplicate_ignore_chapters">Ігнорувати глави та сіквели</string>
     <string name="duplicate_use_sensitivity">Чутливість</string>
-    <string-array name="duplicate_use_sensitivities">
-        <item>Слабка</item>
-        <item>Звичайна</item>
-        <item>Сильна</item>
-    </string-array>
     <string name="duplicate_find_action">Розпочати пошук</string>
     <string name="duplicate_index_covers">Індексую обкладинки</string>
     <string name="duplicate_find">Визначаю дублікати</string>
@@ -860,13 +853,12 @@
     <string name="notif_archive_title">Архівування контенту</string>
     <string name="notif_delete_title">Видалення контенту</string>
     <string name="notif_delete_complete">Видалення завершено</string>
-    <plurals name="notif_delete_complete_details">
+    <plurals name="notif_process_complete_details">
         <item quantity="one">Видалено: <x:g id="number" example="1">%d</x:g></item>
         <item quantity="few">Видалено: <x:g id="number" example="1">%d</x:g></item>
         <item quantity="many">Видалено: <x:g id="number" example="1">%d</x:g></item>
     </plurals>
     <string name="notif_delete_fail">Видалення не вдалося</string>
-    <string name="notif_delete_fail_details">Не вдалося видалити принаймні одну книгу</string>
 
     <!-- Startup -->
     <string name="title_startup">Запуск</string>
@@ -917,7 +909,4 @@
     <string name="u_kilobyte">КБ</string>
     <string name="u_megabyte">МБ</string>
     <string name="u_gigabyte">ГБ</string>
-    <string name="u_terabyte">ТБ</string>
-    <string name="u_petabyte">ПБ</string>
-    <string name="u_exabyte">ЕБ</string>
 </resources>

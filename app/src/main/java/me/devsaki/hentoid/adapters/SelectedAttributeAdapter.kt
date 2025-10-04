@@ -14,7 +14,22 @@ import me.devsaki.hentoid.viewholders.AttributeViewHolder
  * <p>
  * Can only be removed when prerequisites are met : see comments in {@link me.devsaki.hentoid.fragments.SearchBottomSheetFragment}
  */
-class SelectedAttributeAdapter() : ListAdapter<Attribute, AttributeViewHolder>(DIFF_CALLBACK) {
+private val DIFF_CALLBACK: DiffUtil.ItemCallback<Attribute> =
+    object : DiffUtil.ItemCallback<Attribute>() {
+        override fun areItemsTheSame(
+            oldAttr: Attribute, newAttr: Attribute
+        ): Boolean {
+            return oldAttr.id == newAttr.id
+        }
+
+        override fun areContentsTheSame(
+            oldAttr: Attribute, newAttr: Attribute
+        ): Boolean {
+            return oldAttr.name == newAttr.name && oldAttr.type == newAttr.type
+        }
+    }
+
+class SelectedAttributeAdapter : ListAdapter<Attribute, AttributeViewHolder>(DIFF_CALLBACK) {
     private var onClickListener: View.OnClickListener? = null
 
 
@@ -24,29 +39,12 @@ class SelectedAttributeAdapter() : ListAdapter<Attribute, AttributeViewHolder>(D
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): AttributeViewHolder {
         val view: View =
-            LayoutInflater.from(parent.context).inflate(R.layout.item_badge, parent, false)
+            LayoutInflater.from(parent.context).inflate(R.layout.item_badge_input, parent, false)
         return AttributeViewHolder(view)
     }
 
     override fun onBindViewHolder(holder: AttributeViewHolder, position: Int) {
-        holder.bindTo(getItem(position))
+        holder.bindTo(getItem(position), false)
         holder.itemView.setOnClickListener(onClickListener)
-    }
-
-    companion object {
-        val DIFF_CALLBACK: DiffUtil.ItemCallback<Attribute> =
-            object : DiffUtil.ItemCallback<Attribute>() {
-                override fun areItemsTheSame(
-                    oldAttr: Attribute, newAttr: Attribute
-                ): Boolean {
-                    return oldAttr.id == newAttr.id
-                }
-
-                override fun areContentsTheSame(
-                    oldAttr: Attribute, newAttr: Attribute
-                ): Boolean {
-                    return oldAttr.name == newAttr.name && oldAttr.type == newAttr.type
-                }
-            }
     }
 }

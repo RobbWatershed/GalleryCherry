@@ -36,9 +36,11 @@
     <string name="resume">Resume</string>
     <string name="cancel">Cancel</string>
     <string name="cancel_all">Cancel all</string>
+    <string name="reset">Reset</string>
     <string name="freeze">Toggle freeze</string>
     <string name="menu_completed_single">Mark as completed</string>
     <string name="menu_reset_read">Mark as unread</string>
+    <string name="menu_rate">Rate</string>
     <string name="service_running">Service is already running</string>
     <string name="open_folder">Open folder</string>
     <string name="_default">default</string>
@@ -46,15 +48,30 @@
     <string name="none">None</string>
     <string name="help_generic">Help</string>
     <string name="actions_generic">Actions</string>
+    <string name="enabled_generic">Enabled</string>
     <string name="disabled_generic">Disabled</string>
     <string name="create_generic">Create</string>
     <string name="edit_generic">Edit</string>
     <string name="remove_generic">Remove</string>
+    <string name="invalid_selection_generic">Invalid selection</string>
+    <string name="user_generic">User</string>
+    <string name="copy_generic">Copy</string>
 
+    <!-- Colours -->
+    <string name="white">White</string>
+    <string name="light_grey">Light grey</string>
+    <string name="dark_grey">Dark grey</string>
+    <string name="black">Black</string>
+
+    <!-- Navigation panel -->
+    <string name="title_submenu_library">My Library</string>
+    <string name="title_submenu_content">Content</string>
+    <string name="title_submenu_settings">Advanced</string>
 
     <!-- Activities -->
     <string name="title_activity_downloads">Library</string>
     <string name="title_activity_queue">Queue</string>
+    <string name="title_activity_browser">Browser</string>
     <string name="title_activity_settings">Settings</string>
     <string name="title_activity_about">About</string>
     <string name="title_activity_app_lock">App Lock</string>
@@ -73,6 +90,7 @@
     <string name="refresh_step2">Scan site folders</string>
     <string name="refresh_step3_init">Scanning library…</string>
     <string name="refresh_step3">Scan library (<x:g example="1" id="number">%1$d</x:g> / <x:g example="7" id="total">%2$d</x:g>)</string>
+    <string name="refresh_step3_nomax">Scan library (<x:g example="1" id="number">%1$d</x:g>)</string>
     <string name="refresh_step4_init">Importing queue…</string>
     <string name="refresh_select_folder">Please select an existing primary folder. Its location is displayed on screen.</string>
     <string name="refresh_allow_write">Please allow write permission</string>
@@ -88,6 +106,7 @@
     <string name="menu_edit_cancel">Cancel editing</string>
     <string name="menu_edit_warning_custom">New custom ordering will overwrite the previous one.</string>
     <string name="menu_sort_filter">Sort and filter</string>
+    <string name="menu_sort">Sort</string>
     <string name="menu_delete_single">Delete</string>
     <string name="menu_change_group">Move to group</string>
     <string name="menu_open_folder">Open containing folder</string>
@@ -102,12 +121,14 @@
     <string name="menu_archive">Archive</string>
     <string name="menu_archive_help">Archive the book to a ZIP file</string>
     <string name="library_search_hint">Title, artist, tag or book ID</string>
+    <string name="group_search_hint">Group title</string>
     <string name="send_to">Share with:</string>
     <string name="open_settings">Open settings</string>
     <string name="app_settings">App settings</string>
     <string name="book_settings">Book settings</string>
     <string name="alert_browser_mode">Browser mode active : no storage access</string>
     <string name="alert_low_memory">Your device is low on storage!</string>
+    <string name="alert_low_memory_db">The Hentoid database is low on storage!\nPlease backup and remove books.</string>
     <string name="alert_permissions_lost">File permissions have been lost</string>
     <string name="alert_notifications">Notifications are disabled!</string>
     <string name="fix_permissions">Fix</string>
@@ -193,6 +214,7 @@
     <string name="mode_stream">Streaming</string>
     <string name="redl_scratch">Redownload from scratch</string>
     <string name="redl_refresh">Update metadata only</string>
+    <string name="filter_by_source">Filter by source</string>
 
     <!-- Import downloads -->
     <string name="import_downloads_title">Import downloads</string>
@@ -203,10 +225,18 @@
     <string name="import_streamed">Import as streamed books</string>
     <string name="importing_downloads">Importing downloads…</string>
 
+    <!-- Import bookmarks -->
+    <string name="import_bookmarks_title">Import bookmarks</string>
+    <plurals name="import_bookmarks_found">
+        <item quantity="one"><x:g example="1" id="downloads">%d</x:g> valid bookmark found</item>
+        <item quantity="other"><x:g example="2" id="downloads">%d</x:g> valid bookmarks found</item>
+    </plurals>
+    <string name="import_current_site">Only import %s bookmarks</string>
+
     <!-- TextViews -->
+    <string name="work_untitled">[No data]</string>
     <string name="work_series">Series: <x:g example="original" id="series">%s</x:g></string>
     <string name="work_artist">Artist: <x:g example="hayao miyazaki" id="artist">%s</x:g></string>
-    <string name="work_model">Model: %s</string>
     <plurals name="work_pages_missing">
         <item quantity="one">(<x:g example="1" id="number">%d</x:g> missing)</item>
         <item quantity="other">(<x:g example="2" id="number">%d</x:g> missing)</item>
@@ -219,7 +249,6 @@
     <string name="work_pages_duplicate_dialog_library">Pages (in library): %d</string>
     <string name="work_pages_duplicate_dialog_queue">Pages (in queue): %d</string>
     <string name="work_pages_duplicate_dialog_source">Pages (this source): %d</string>
-    <string name="library_metrics_storage"><x:g example="3.88" id="size_mb">%.0f</x:g> MB</string>
     <string name="redownload_queue_progress">Redownloading selected books</string>
     <string name="errortype_parsing">Parsing</string>
     <string name="errortype_networking">Networking</string>
@@ -243,6 +272,7 @@
     <string name="external_library_subtitle">Archives, 3rd party books</string>
     <string name="add_external">Add external location</string>
     <string name="location_storage">%1$s (%2$d%%) free</string>
+    <string name="location_storage_err">Usage stats unavailable</string>
     <string name="storage_action_change">Change location…</string>
     <string name="storage_action_remove">Detach</string>
     <string name="storage_remove_ask">Detach selected location?\nNB : Books will not be deleted</string>
@@ -256,17 +286,28 @@
     <string name="storage_merge_complete">Merge complete</string>
     <string name="storage_strategy_title">Download strategy : %s</string>
     <string name="storage_strategy_balance">Balance free space</string>
-    <string name="storage_strategy_balance_desc">GalleryCherry downloads to whichever location has more free space, trying to maintain balance. Does not move books already in the library.</string>
+    <string name="storage_strategy_balance_desc">Hentoid downloads to whichever location has more free space, trying to maintain balance. Does not move books already in the library.</string>
     <string name="storage_strategy_fallover">Fallover</string>
-    <string name="storage_strategy_fallover_desc">GalleryCherry downloads to Location 1 until %d%% of capacity is filled, then downloads to Location 2.</string>
+    <string name="storage_strategy_fallover_desc">Hentoid downloads to Location 1 until %d%% of capacity is filled, then downloads to Location 2.</string>
     <string name="storage_fallover_threshold">Low space threshold (%%)</string>
     <string name="storage_set_strategy">Set download strategy</string>
     <string name="storage_stats">Statistics</string>
     <string name="storage_stats_view">View usage statistics</string>
+    <string name="import_ext_name_pattern">Name pattern</string>
+    <string name="import_ext_name_pattern_a">[Artist] Title</string>
+    <string name="import_ext_name_pattern_b">Artist - Title</string>
+    <string name="import_ext_name_pattern_c">Title (Artist)</string>
+    <string name="import_ext_test_pattern">Test pattern</string>
+    <string name="import_ext_test_file_name">File name</string>
+    <string name="import_ext_test_title_warning">WARNING : No title pattern set</string>
+    <string name="import_ext_test_artist_warning">WARNING : No artist pattern set</string>
+    <string name="import_ext_test_title_not_found">No title found</string>
+    <string name="import_ext_test_artist_not_found">No artist found</string>
 
     <!-- Refresh library -->
     <string name="refresh_title">Refresh location</string>
     <string name="refresh_caption">Automatically refresh library data by rescanning files and folders.</string>
+    <string name="refresh_quick">Quick refresh</string>
     <string name="refresh_options">Cleanup options</string>
     <string name="refresh_location_internal">Primary library (all)</string>
     <string name="refresh_location_internal_1">Primary library 1</string>
@@ -280,16 +321,32 @@
     <string name="refresh_options_remove_1">Remove folders where JSON file is absent (recommended)</string>
     <string name="refresh_options_remove_2">Remove folders where no image has been downloaded</string>
     <string name="refresh_options_remove_or">or</string>
+    <string name="refresh_auto_processing">Auto-refreshing external library (%d/%d)</string>
 
-    <!-- Delete all except favs -->
-    <string name="delete_title">Delete all except favourites</string>
-    <string name="keep_fav_books">Keep favourite books</string>
-    <string name="keep_fav_groups">Keep favourite groups</string>
+    <!-- Mass operations -->
+    <string name="mass_operation">Operation</string>
+    <string name="mass_operation_1">Delete</string>
+    <string name="mass_operation_2">Switch to streaming</string>
+    <string name="mass_operation_scope">Scope</string>
+    <string name="mass_operation_scope_1">Current filter of the library screen</string>
+    <string name="mass_operation_scope_2">All books except current filter of the library screen</string>
+    <string name="mass_external_tip">Note : External books will be deleted by this operation</string>
+    <string name="keep_fav_groups">Do not process books inside favourite groups</string>
     <plurals name="book_keep">
         <item quantity="one">Keep <x:g example="1" id="number">%1$d</x:g> book</item>
         <item quantity="other">Keep <x:g example="2" id="number">%1$d</x:g> books</item>
     </plurals>
+    <plurals name="book_delete">
+        <item quantity="one">Delete <x:g example="1" id="number">%1$d</x:g> book</item>
+        <item quantity="other">Delete <x:g example="2" id="number">%1$d</x:g> books</item>
+    </plurals>
+    <plurals name="book_stream">
+        <item quantity="one">Switch <x:g example="1" id="number">%1$d</x:g> book to streaming</item>
+        <item quantity="other">Switch <x:g example="2" id="number">%1$d</x:g> books to streaming</item>
+    </plurals>
+    <string name="mass_delete_confirm">I know what I\'m doing</string>
     <string name="mass_delete_action">Mass delete</string>
+    <string name="mass_stream_action">Mass switch to stream</string>
     <string name="generic_progress" tools:ignore="MissingTranslation"><x:g example="7" id="number">%1$d</x:g> / <x:g example="42" id="total">%2$d</x:g> <x:g example="books" id="type">%3$s</x:g></string>
     <plurals name="book_progress">
         <item quantity="one"><x:g example="1" id="number">%1$d</x:g> / <x:g example="42" id="total">%2$d</x:g> book</item>
@@ -383,13 +440,12 @@
     <string name="import_other_external_inside_primary">Primary and external locations must have separate base folders</string>
     <string name="import_other">Import has stopped</string>
     <string name="import_unexpected">Import has stopped unexpectedly</string>
-    <string name="cleanup_folders">Do you want to cleanup your library while refreshing ?\nCleanup removes all empty folders and renames the others according to the current naming and max length preference.</string>
-    <string name="action_refresh">Just refresh</string>
-    <string name="action_refresh_cleanup">Refresh and cleanup</string>
     <string name="task_done">Task complete - see details in the log</string>
     <string name="content_not_found">Error - content not found</string>
-    <string name="contents_detected">GalleryCherry has recognized an existing library in this location.\nDo you want to import this library\?</string>
+    <string name="contents_detected">Hentoid has recognized an existing library in this location.\nDo you want to import this library\?</string>
     <string name="library_imports_title">Library imports</string>
+    <string name="library_metrics_storage_mb">%.0f MB</string>
+    <string name="library_metrics_storage_gb">%.2f GB</string>
     <string name="starting_import">Starting import…</string>
     <string name="importing_library">Importing Library</string>
     <string name="import_complete">Import complete</string>
@@ -406,8 +462,8 @@
     <string name="memory_title">Storage usage</string>
     <string name="memory_total">Total: <x:g example="100 MB" id="total">%s</x:g></string>
     <string name="memory_free">Free: <x:g example="50 MB" id="total">%s</x:g></string>
-    <string name="memory_hentoid_main">GalleryCherry (primary): <x:g example="2 MB" id="total">%s</x:g></string>
-    <string name="memory_hentoid_ext">GalleryCherry (external): <x:g example="3 MB" id="total">%s</x:g></string>
+    <string name="memory_hentoid_main">Hentoid (primary): <x:g example="2 MB" id="total">%s</x:g></string>
+    <string name="memory_hentoid_ext">Hentoid (external): <x:g example="3 MB" id="total">%s</x:g></string>
     <string name="memory_database">Database: <x:g example="1.52 MB" id="size_mb">%1$s</x:g> (<x:g example="40%" id="percentage">%2$.1f%%</x:g> full)</string>
     <string name="memory_details">View details (primary)</string>
     <string name="memory_details_source">Source</string>
@@ -423,7 +479,7 @@
     <string name="log_import_external">External library import/refresh</string>
     <string name="log_import">Primary library import/refresh</string>
     <string name="log_cleanup">Primary library cleanup</string>
-    <string name="log_api29_migration">Library migration from GalleryCherry v1.11</string>
+    <string name="log_api29_migration">Library migration from Hentoid v1.11</string>
 
     <!-- Errors -->
     <string name="error_write_permission">You don\'t have permission to write in that folder, try another folder.</string>
@@ -458,11 +514,19 @@
     <string name="redownload_limit">Cannot redownload more than 1000 books at once</string>
     <string name="stream_limit">Cannot stream more than 1000 books at once</string>
     <string name="transform_limit">Cannot transform more than 1000 books at once</string>
+    <string name="archive_limit">Cannot archive more than 1000 books at once</string>
     <string name="new_group_name">Name of the new group\?</string>
     <string name="group_edit_name">Edit group name</string>
     <string name="book_edit_title">Edit book title</string>
-    <string name="delete_progress">Deleting books</string>
-    <string name="purge_progress">Purging books</string>
+    <string name="delete_books_progress">Deleting books</string>
+    <string name="delete_pages_progress">Deleting pages</string>
+    <string name="delete_chapters_progress">Deleting chapters</string>
+    <string name="delete_images_progress">Deleting images</string>
+    <string name="delete_items_progress">Deleting items</string>
+    <string name="clean_items_progress">Cleaning items</string>
+    <string name="purge_progress">Purging…</string>
+    <string name="stream_progress">Streaming…</string>
+    <string name="delete_progress">Deleting…</string>
     <string name="cancel_queue_progress">Canceling queue items</string>
     <plurals name="delete_success_books">
         <item quantity="one"><x:g example="1" id="count">%d</x:g> book</item>
@@ -481,7 +545,10 @@
         <item quantity="other"><x:g example="2" id="count">%d</x:g> books archived successfully</item>
     </plurals>
     <string name="notif_archive_fail">Archival failed</string>
-    <string name="notif_archive_fail_details">At least one book failed to be archived</string>
+    <plurals name="notif_archive_fail_details">
+        <item quantity="one"><x:g example="1" id="count">%d</x:g> book failed to be archived</item>
+        <item quantity="other"><x:g example="2" id="count">%d</x:g> books failed to be archived</item>
+    </plurals>
     <plurals name="archive_success">
         <item quantity="one"><x:g example="1" id="count">%d</x:g> book archived in your Download folder</item>
         <item quantity="other"><x:g example="2" id="count">%d</x:g> books archived in your Download folder</item>
@@ -490,6 +557,7 @@
     <string name="stream_missing_webview">Streaming canceled - WebView is unavailable</string>
     <string name="stream_updating_webview">Streaming canceled - WebView is updating</string>
     <string name="download_canceled">Download canceled - book unavailable online</string>
+    <string name="download_canceled_merged">Download canceled - at least one chapter is unavailable online</string>
     <string name="download_missing_webview">Download canceled - WebView is unavailable</string>
     <string name="download_updating_webview">Download canceled - WebView is updating</string>
     <string name="press_back_again">Press back twice (quickly) to exit.</string>
@@ -509,27 +577,7 @@
         <item quantity="one"><x:g example="1" id="number">%1$d</x:g>/<x:g example="7" id="total">%2$d</x:g> result</item>
         <item quantity="other"><x:g example="2" id="number">%1$d</x:g>/<x:g example="7" id="total">%2$d</x:g> results</item>
     </plurals>
-
-    <!-- Reddit -->
-    <string name="landing_history_title">Type or select subreddit</string>
-    <string name="reddit_navigate">Navigate</string>
-    <string name="reddit_dl">Download</string>
-    <string name="reddit_noauth">You are not authenticated !</string>
-    <string name="reddit_noauth_explanation">You need to sign in with Reddit to be able to downloads images in your saved posts.</string>
-    <string name="reddit_noauth_action">SIGN IN WITH REDDIT</string>
-    <string name="reddit_auth">You are authenticated</string>
-    <string name="reddit_auth_img_count">%s new items to download</string>
-    <string name="reddit_auth_noimg">No new items to download</string>
-    <string name="reddit_auth_img_note">Note : Animated pictures hosted by gfycat are not supported by GalleryCherry</string>
-    <string name="reddit_auth_action">DOWNLOAD</string>
-
-    <!-- Hina -->
-    <string name="hina_loading">Loading…</string>
-    <string name="hina_loading_failed">Loading failed - Please try another search</string>
-    <string name="hina_no_results">No results found</string>
-    <string name="hina_no_library">Hina access failed !</string>
-
-    <string name="restart_needed">"Changes will be applied after GalleryCherry is restarted"</string>
+    <string name="restart_needed">"Changes will be applied after Hentoid is restarted"</string>
     <plurals name="redownload_confirm" tools:ignore="ImpliedQuantity">
         <item quantity="one">Redownload selected book from scratch\?</item>
         <item quantity="other">Redownload selected books from scratch\?</item>
@@ -591,23 +639,33 @@
         <item quantity="one">Delete group + books</item>
         <item quantity="other">Delete groups + books</item>
     </plurals>
-    <string name="group_delete_nothing">Nothing to delete - check "Allow deleting external content" to change that</string>
+    <string name="group_delete_nothing">Selected groups can\'t be deleted manually</string>
     <string name="clear_rating">Clear rating</string>
     <string name="clear_search_history_confirm">Clear search history?</string>
     <string name="fav_pages">Favourite pages</string>
+    <string name="add_root">Add root folder</string>
+    <string name="add_root_fail">Couldn\'t add root folder</string>
+    <string name="up_level">Up one level</string>
 
     <!-- Merge & split -->
+    <string name="notif_split_merge">Split / merge</string>
     <string name="merge_merge">Merge</string>
+    <string name="reorder_progress">Reordering pages…</string>
     <string name="merge_progress">Merging books…</string>
     <string name="split_progress">Splitting book…</string>
     <string name="merge_split">Split</string>
     <string name="new_title">New title</string>
+    <string name="keep_chapters_first_book_title">Keep all chapters of the first book</string>
+    <string name="merge_use_book_title">Create one chapter per book</string>
     <string name="merge_delete_after_merging">Delete these books after merging</string>
+    <string name="split_delete_after_splitting">Delete these chapters after splitting</string>
     <string name="split_select_help">Hold and drag to select\nEach selected chapter creates one new book</string>
     <string name="split_no_chapters">No chapters created yet :-(</string>
     <string name="split_create_chapters">Create chapters</string>
-    <string name="merge_success">Content merged</string>
-    <string name="split_success">Content split</string>
+    <string name="merge_success">Content merged successfuly</string>
+    <string name="split_success">Content split successfuly</string>
+    <string name="merge_fail">Content failed to be merged</string>
+    <string name="split_fail">Content failed to be split</string>
 
     <!-- Groupings -->
     <string name="groups_flat">All books</string>
@@ -615,7 +673,10 @@
     <string name="groups_by_dl_date">By Download date (processed)</string>
     <string name="groups_dynamic">Saved searches</string>
     <string name="groups_custom">Custom groups</string>
+    <string name="groups_folders">Folders</string>
     <string name="no_artist_group_name">[no artist]</string>
+    <string name="no_circle_group_name">[no circle]</string>
+    <string name="no_artist_circle_group_name">[no artist, no circle]</string>
 
     <!-- Sort / filter bottom panel -->
     <string name="sort_ascending">Ascending</string>
@@ -637,6 +698,7 @@
     <string name="sort_uplodad_date">Upload date</string>
     <string name="library_filters_title">Filters</string>
     <string name="library_filter_favourite_help">Toggle display of favourite books</string>
+    <string name="library_filter_nonfavourite_help">Toggle display of non-favourite books</string>
     <string name="filter_completed">Show completed books only</string>
     <string name="filter_not_completed">Show not completed books only</string>
     <string name="filter_rating">Filter by rating</string>
@@ -674,7 +736,7 @@
     <string name="alert_red">The download button is currently broken for this site.</string>
     <string name="alert_grey">This site currently has serious stability issues. The app has nothing to do about it. Please try again later.</string>
     <string name="alert_black">This site is currently unavailable for real. The app has nothing to do about it. Please try again later.</string>
-    <string name="alert_wip">The GalleryCherry dev team is working on a fix. You will be notified by the app when a new version is ready.</string>
+    <string name="alert_wip">The Hentoid dev team is working on a fix. You will be notified by the app when a new version is ready.</string>
     <string name="alert_fix_available">A fix is available on the latest version of the app. Please update.</string>
 
     <!-- App Lock -->
@@ -686,29 +748,41 @@
     <string name="pin_current">Enter Current PIN</string>
     <string name="pin_new">Enter New PIN</string>
     <string name="pin_new_confirm">Confirm New PIN</string>
-    <string name="pin_explanation">App Lock prevents unauthorized use of this app by requiring a 4-digit PIN when launched</string>
+    <string name="pin_explanation">App Lock prevents unauthorized use of this app by requiring a 4-digit PIN or a biometric check when launched</string>
     <string name="pin_lock_on_restore">Lock when restored\nfrom background</string>
+    <string name="lock_type">Lock type</string>
+    <string name="lock_type_pin">PIN</string>
+    <string name="lock_type_biometric">Biometric</string>
+    <string name="app_lock_biometrics_fail">Couldn\'t find any fitting biometric system</string>
+    <string name="biometric_dialog_title">Biometric lock</string>
+    <string name="biometric_dialog_subtitle_lock">Confirm before locking</string>
+    <string name="biometric_dialog_subtitle_unlock">Unlock with biometrics</string>
 
     <!-- About Activity -->
-    <string name="about1"><b>GalleryCherry</b> is a XXX galleries archiving app. GalleryCherry is a fork from Hentoid, originally created by <b>Cesar Arasaki</b>.</string>
-    <string name="personalDataStatement1"><b>PERSONAL DATA PRIVACY STATEMENT</b>\n\GalleryCherry is a free and open-source software maintained by the GalleryCherry Community (join us on Discord - see link above)</string>
-    <string name="personalDataStatement2">GalleryCherry collects the following personal data and sends them to Google for processing through the firebase library:\n  - Session ID\n  - IP address</string>
+    <string name="about1"><b>Hentoid</b> is a Doujinshi &amp; H-Manga archiving app. Hentoid was originally created by <b>Cesar Arasaki</b>.</string>
+    <string name="personalDataStatement1"><b>PERSONAL DATA PRIVACY STATEMENT</b>\n\nHentoid is a free and open-source software maintained by the Hentoid Community (join us on Discord - see link above)</string>
+    <string name="personalDataStatement2">Hentoid collects the following personal data and sends them to Google for processing through the firebase library:\n  - Session ID\n  - IP address</string>
     <string name="personalDataStatement3">The abovementioned data is removed from Firebase live and backup system within 180 days (see https://firebase.google.com/support/privacy/ for more details)\n\nNo other personal data is collected nor sent to any other party.</string>
-    <string name="about_github_wiki_url" translatable="false">https://github.com/RobbWatershed/GalleryCherry/wiki</string>
-    <string name="about_licenses">Display Licenses</string>
-    <string name="about_app_version" tools:ignore="MissingTranslation">GalleryCherry v<x:g example="1.15.20" id="ver_name">%1$s</x:g> (<x:g example="130" id="ver_code">%2$d</x:g>)</string>
+    <string name="about_licenses">Licenses</string>
+    <string name="about_achievements">Achievements</string>
+    <string name="about_app_version" tools:ignore="MissingTranslation">Hentoid v<x:g example="1.15.20" id="ver_name">%1$s</x:g> (<x:g example="130" id="ver_code">%2$d</x:g>)</string>
     <string name="about_chrome_version" tools:ignore="MissingTranslation">Chrome v<x:g example="98" id="chrome_ver">%1$d</x:g></string>
     <string name="about_chrome_unavailable">WebView is unavailable</string>
     <string name="about_chrome_updating">WebView is updating right now</string>
 
-    <!-- Web browser -->
+    <!-- Browser -->
+    <string name="active_sites">Active sites</string>
+    <string name="recent_history">Recent history</string>
     <string name="web_gallery">Back to latest gallery page</string>
     <string name="web_home">Back to library</string>
     <string name="web_back">Back</string>
     <string name="web_forward">Forward</string>
     <string name="web_bookmarks">Bookmarks</string>
     <string name="web_refresh_stop">Refresh/stop</string>
-    <string name="web_copy_url">Get link</string>
+    <string name="web_url">Use link</string>
+    <string name="web_adblocker_on">Adblocker (on)</string>
+    <string name="web_adblocker_off">Adblocker (off)</string>
+    <string name="web_open_ext_browser">External browser</string>
     <string name="web_download">Download</string>
     <string name="web_unparsable">This content cannot be downloaded. Sorry~</string>
     <string name="web_url_clipboard">URL copied to clipboard</string>
@@ -719,11 +793,14 @@
     <string name="unbookmark_current">Remove bookmark on current page</string>
     <string name="bookmark_copy_url">Copy bookmark URL to clipboard</string>
     <string name="bookmark_toggle_welcome">Toggle bookmark URL as welcome page</string>
+    <string name="bookmark_change_site">Change site</string>
     <string name="bookmark_edit_title">Edit bookmark title</string>
+    <string name="bookmark_sort_ask">Custom order will be lost. Continue?</string>
     <string name="alert_unwanted_tags">This book is tagged with <x:g example="bad" id="tag">%s</x:g></string>
     <string name="bookmark_homepage">Homepage</string>
     <string name="torrent_dl_fail">Downloading torrent failed: <x:g id="torrent">%s</x:g></string>
     <string name="web_storage_permission_denied">Storage permission denied - cannot use the downloader</string>
+    <string name="web_all_sites">All sites</string>
 
     <!-- Web browser (site specifics) -->
     <string name="help_web_exh_account">Please use or create an exHentai account</string>
@@ -749,7 +826,6 @@
     <string name="category_category">Category</string>
     <string name="category_translator">Translator</string>
     <string name="category_publisher">Publisher</string>
-    <string name="category_model">Model</string>
     <string name="category_undefined">Undefined</string>
     <!-- Used near items or in prompts (e.g. "Search artist"): Accusative case -->
     <string name="object_artist">Artist</string>
@@ -763,7 +839,6 @@
     <string name="object_category">Category</string>
     <string name="object_translator">Translator</string>
     <string name="object_publisher">Publisher</string>
-    <string name="object_model">Model</string>
     <string name="object_undefined">Undefined</string>
     <plurals name="search_button">
         <item quantity="one"><x:g example="1" id="count">%s</x:g> Result found</item>
@@ -778,20 +853,21 @@
     <string name="search_type_entries_3">Streamed</string>
     <string name="search_type_entries_4">Archive</string>
     <string name="search_type_entries_5">Placeholder</string>
-
-    <!-- DB migration & Maintenance -->
+    <string name="search_type_entries_6">PDF</string>
 
     <!-- Image reader -->
     <string name="no_images">Could not load the book: No image found</string>
     <string name="loading_archive">Loading: <x:g example="1" id="number">%1$d</x:g>/<x:g example="42" id="total">%2$d</x:g></string>
     <string name="loading_image">Loading image: <x:g example="50%" id="percentage">%d%%</x:g></string>
     <string name="viewer_img_details"><x:g example="800" id="dimen_x">%1$d</x:g> x <x:g example="600" id="dimen_y">%2$d</x:g> (scale <x:g example="100%" id="scale_percentage">%3$.0f%%</x:g>) - <x:g example="544.40 KB" id="file_size">%4$s</x:g></string>
-    <string name="viewer_choose_direction">Choose your reading direction</string>
+    <string name="viewer_choose_direction">Choose reading direction</string>
     <string name="viewer_direction_ltr">Left to right</string>
     <string name="viewer_direction_rtl">Right to left</string>
     <string name="viewer_direction_ttb">Top to bottom</string>
+    <string name="reader_two_pages_mode">Two pages (book) mode</string>
     <string name="viewer_slideshow">Slideshow</string>
     <string name="viewer_slideshow_help">Slideshow mode</string>
+    <string name="viewer_order_reverse">Reverse order</string>
     <string name="viewer_order_shuffle">Shuffle pages</string>
     <string name="viewer_order_123">Reorder pages</string>
     <string name="viewer_order_shuffle_help">Toggle page shuffling</string>
@@ -802,6 +878,8 @@
     <string name="viewer_delete_book">Delete book</string>
     <string name="copy_download_folder_success">Copied to Downloads folder</string>
     <string name="copy_download_folder_fail">Could not write to Downloads folder</string>
+    <string name="copy_target_folder_success">Copied to target folder</string>
+    <string name="copy_target_folder_fail">Could not write to target folder</string>
     <string name="viewer_ask_delete_page">Delete this page\?</string>
     <string name="information_help">Information</string>
     <string name="previous_book_help">Previous book</string>
@@ -822,7 +900,6 @@
     <string name="image_extracting">Extracting image…</string>
     <string name="book_prefs">Book settings</string>
     <string name="goto_app_prefs">App settings</string>
-    <string name="use_app_prefs">Use app settings (<x:g example="Left to right" id="app_default">%s</x:g>)</string>
     <string name="page_favourite_success">Page favourited</string>
     <string name="page_unfavourite_success">Page unfavourited</string>
     <string name="book_favourite_success">Book favourited</string>
@@ -832,10 +909,13 @@
     <string name="viewer_reparse_book">Reparse book</string>
     <string name="menu_edit_chapters">Edit chapters</string>
     <string name="gallery_title">Gallery</string>
+    <string name="gallery_title_edit">Chapters editor</string>
+    <string name="gallery_title_add">Chapters creator</string>
     <string name="gallery_chapter_prefix">Chapter</string>
     <string name="gallery_edit_chapters_help">To create or remove a chapter, tap its first page</string>
     <string name="gallery_clear_chapters">Clear all chapters</string>
     <string name="gallery_add_remove_chapters">Add &amp; remove chapters</string>
+    <string name="gallery_edit_name">Edit name</string>
     <string name="gallery_display_page"><x:g example="&gt;" id="startMarker">%1$s</x:g>Page <x:g example="2" id="number">%2$d</x:g><x:g example="♥" id="isFavourite">%3$s</x:g><x:g example="&lt;" id="endMarker">%4$s</x:g></string>
     <string name="gallery_display_chapter">Chp <x:g example="2" id="number">%d</x:g></string>
     <string name="gallery_no_chapter">No chapter</string>
@@ -851,19 +931,24 @@
     <string name="slideshow_start">Starting slideshow (delay <x:g example="0.5" id="time">%.1f</x:g>s)</string>
     <string name="slideshow_start_vertical">Starting slideshow (<x:g example="fast" id="speed">%s</x:g>)</string>
     <string name="slideshow_stop">Slideshow stopped</string>
-    <string name="ask_clear_chapters">Clear all chapters?</string>
+    <string name="ask_clear_chapters">Reset all chapters?</string>
     <string name="view_book">View book</string>
+    <plurals name="ask_delete_chapters">
+        <item quantity="one">Delete selected chapter\?\nNB : This will delete image files</item>
+        <item quantity="other">Delete <x:g example="2" id="count">%d</x:g> selected chapters\?\nNB : This will delete image files</item>
+    </plurals>
+    <plurals name="ask_delete_chapters_no_imgs">
+        <item quantity="one">Delete selected chapter\?\nNB : This will not delete image files</item>
+        <item quantity="other">Delete <x:g example="2" id="count">%d</x:g> selected chapters\?\nNB : This will not delete image files</item>
+    </plurals>
 
     <!-- Changelog -->
-    <string name="view_changelog">View changelog</string>
-    <string name="view_changelog_flagged">View changelog*</string>
+    <string name="view_changelog">Changelog</string>
+    <string name="view_changelog_flagged">Changelog*</string>
     <string name="changelog">Changelog</string>
     <string name="get_latest">Get the latest version (<x:g example="1.18.1" id="version">%1$s</x:g>)</string>
     <string name="update_success">Update successful!</string>
     <string name="starting_download">Starting download</string>
-
-    <!-- Edit drawer -->
-    <string name="title_activity_drawer_edit">Edit menu</string>
 
     <!-- Duplicate detector -->
     <string name="title_activity_duplicate_detector">Duplicate detector</string>
@@ -874,9 +959,9 @@
     <string name="duplicate_ignore_chapters">Ignore chapters and sequels</string>
     <string name="duplicate_use_sensitivity">Sensitivity</string>
     <string-array name="duplicate_use_sensitivities">
-        <item>Permissive</item>
-        <item>Standard</item>
-        <item>Strict</item>
+        <item>Loosely similar</item>
+        <item>Similar</item>
+        <item>Very similar</item>
     </string-array>
     <string name="duplicate_find_action">Find duplicates</string>
     <string name="duplicate_index_covers">Indexing cover pictures</string>
@@ -923,6 +1008,8 @@
     <string name="duplicate_alert_download_book">Download book</string>
     <string name="duplicate_alert_download_pages">Download extra pages</string>
     <string name="duplicate_wait_index">Indexing…</string>
+    <string name="duplicate_in_library">In library</string>
+    <string name="duplicate_in_queue">In queue</string>
 
     <!-- Metadata editor -->
     <string name="meta_cover_multiple_warning">Cover cannot be changed for multiple books</string>
@@ -946,11 +1033,14 @@
     <string name="method">Method</string>
     <string name="resize_method_1">Max % of screen dimensions</string>
     <string name="resize_method_2">Absolute max dimensions</string>
-    <string name="resize_method_3">% of original image size</string>
+    <string name="resize_method_3">% of original image dimensions</string>
+    <string name="resize_method_4">AI upscale 2x</string>
+    <string name="resize_method_5">Manhwa split/merge</string>
     <string name="resize_method_1_prompt">% of screen dimensions</string>
     <string name="resize_method_2_prompt_max_height">Max height (mangas)</string>
     <string name="resize_method_2_prompt_max_width">Max width (manhwas, webtoons)</string>
     <string name="resize_method_3_prompt">% of original size</string>
+    <string name="resize_method_5_prompt">Number of images per chapter</string>
     <string name="transform_transcoding">Transcoding</string>
     <string name="transcode_method_1">Same encoder for all pictures</string>
     <string name="transcode_method_2">Differentiate lossy and lossless pictures</string>
@@ -963,12 +1053,15 @@
     <string name="transcode_encoder_jpeg">JPEG</string>
     <string name="encoder_quality">Quality</string>
     <string name="encoder_warning">WEBP format is limited to 16383 pixels in width and height. Larger pictures will automatically be encoded to PNG or JPG.</string>
+    <string name="retransform_warning">%d pages have already been transformed. Transforming them multiple times may result in noticeable quality loss.\nWe advise redownloading original images and transforming them one single time.</string>
+    <string name="ai_rescale_warning">Upscaling pictures with AI will use your GPU intensively. The whole operation may take a few minutes.</string>
+    <string name="dimensions_warning">The settings you\'ve chosen will create images with very large dimensions. Are you certain that\'s what you want?</string>
     <string name="preview">Preview</string>
     <string name="transform">Transform</string>
     <string name="transform_unsupported">Transformation unsupported</string>
     <string name="transform_start">Transforming images</string>
     <string name="transform_progress">Transforming images</string>
-    <string name="transform_complete">Transforming complete</string>
+    <string name="transform_complete">Transformation complete</string>
     <plurals name="transform_complete_details">
         <item quantity="one"><x:g example="1" id="number">%d</x:g> image transformed successfully</item>
         <item quantity="other"><x:g example="1" id="number">%d</x:g> images transformed successfully</item>
@@ -977,16 +1070,40 @@
     <string name="previous_page">Previous page</string>
     <string name="next_page">Next page</string>
 
+    <!-- Archive dialog -->
+    <string name="target_folder">Target folder</string>
+    <string name="archive_format">Archive format</string>
+    <string name="background_color">Background color</string>
+    <string name="folder_device_downloads">Device\'s Downloads folder</string>
+    <string name="folder_other">Choose folder…</string>
+    <string name="archive_overwrite">Overwrite existing archives</string>
+    <string name="archive_delete_after_archiving">Delete books after successful archiving</string>
+    <plurals name="create_archive">
+        <item quantity="one">Create archive</item>
+        <item quantity="other">Create archives</item>
+    </plurals>
+
     <!-- Generic delete & purge -->
     <string name="notif_archive_title">Content archival</string>
     <string name="notif_delete_title">Content deletion</string>
     <string name="notif_delete_complete">Deletion complete</string>
-    <plurals name="notif_delete_complete_details">
-        <item quantity="one"><x:g example="1" id="number">%d</x:g> deleted successfully</item>
-        <item quantity="other"><x:g example="1" id="number">%d</x:g> deleted successfully</item>
+    <string name="notif_delete_prepurge_complete">Redownload/Stream pre-purge complete</string>
+    <string name="notif_stream_complete">Streaming complete</string>
+    <plurals name="notif_process_complete_details">
+        <item quantity="one"><x:g example="1" id="number">%d</x:g> book processed successfully</item>
+        <item quantity="other"><x:g example="2" id="number">%d</x:g> books processed successfully</item>
+    </plurals>
+    <plurals name="notif_process_complete_details_generic">
+        <item quantity="one"><x:g example="1" id="number">%d</x:g> item processed successfully</item>
+        <item quantity="other"><x:g example="2" id="number">%d</x:g> items processed successfully</item>
     </plurals>
     <string name="notif_delete_fail">Deletion failed</string>
-    <string name="notif_delete_fail_details">At least one book failed to be deleted</string>
+    <string name="notif_delete_prepurge_fail">Redownload/Stream pre-purge failed</string>
+    <string name="notif_stream_fail">Streaming failed</string>
+    <plurals name="notif_delete_fail_details">
+        <item quantity="one"><x:g example="1" id="number">%d</x:g> item failed</item>
+        <item quantity="other"><x:g example="2" id="number">%d</x:g> items failed</item>
+    </plurals>
 
     <!-- Update Json service -->
     <string name="notif_json_title">JSON update</string>
@@ -1000,8 +1117,11 @@
 
     <!-- Missing WebView -->
     <string name="missing_web_view_title">WebView is not installed or disabled</string>
-    <string name="missing_web_view">GalleryCherry has been unable to find Android\'s built-in Web Viewer for apps.\nWithout it you can\'t browse sources, redownload books; you really can\'t do much that requires Internet.\n\nIt is most likely that it\'s actually installed on your system, but disabled: please go to <b>Settings</b> &gt; <b>Apps</b> &gt; <b>Disabled apps</b> and enable <b>Android System WebView</b>.\n\nIf you can\'t find the app, please install it from your device\'s <b><a href="https://play.google.com/store/apps/details?id=com.google.android.webview">App Store</a></b>.</string>
+    <string name="missing_web_view">Hentoid has been unable to find Android\'s built-in Web Viewer for apps.\nWithout it you can\'t browse sources, redownload books; you really can\'t do much that requires Internet.\n\nIt is most likely that it\'s actually installed on your system, but disabled: please go to <b>Settings</b> &gt; <b>Apps</b> &gt; <b>Disabled apps</b> and enable <b>Android System WebView</b>.\n\nIf you can\'t find the app, please install it from your device\'s <b><a href="https://play.google.com/store/apps/details?id=com.google.android.webview">App Store</a></b>.</string>
     <string name="missing_web_view_library">Back to library</string>
+
+    <!-- Launch text selection -->
+    <string name="launch">Launch</string>
 
     <!-- Group names -->
     <string name="group_today">Today</string>
@@ -1016,25 +1136,27 @@
     <string name="theme_light">Light</string>
     <string name="theme_deep_red">Deep Red</string>
     <string name="theme_dark">Dark</string>
+    <string name="theme_you">Material You</string>
 
     <!-- Book languages detected by the app -->
-    <string name="lang_en">english</string>
-    <string name="lang_zh">chinese</string>
-    <string name="lang_ja">japanese</string>
-    <string name="lang_ko">korean</string>
-    <string name="lang_es">spanish</string>
-    <string name="lang_ru">russian</string>
-    <string name="lang_pt">portuguese</string>
-    <string name="lang_th">thai</string>
-    <string name="lang_fr">french</string>
-    <string name="lang_vi">vietnamese</string>
-    <string name="lang_it">italian</string>
-    <string name="lang_de">german</string>
-    <string name="lang_pl">polish</string>
-    <string name="lang_id">indonesian</string>
-    <string name="lang_hu">hungarian</string>
-    <string name="lang_tr">turkish</string>
-    <string name="lang_cs">czech</string>
+    <string name="lang_sv">Swedsih</string>
+    <string name="lang_en">English</string>
+    <string name="lang_zh">Chinese</string>
+    <string name="lang_ja">Japanese</string>
+    <string name="lang_ko">Korean</string>
+    <string name="lang_es">Spanish</string>
+    <string name="lang_ru">Russian</string>
+    <string name="lang_pt">Portuguese</string>
+    <string name="lang_th">Thai</string>
+    <string name="lang_fr">French</string>
+    <string name="lang_vi">Vietnamese</string>
+    <string name="lang_it">Italian</string>
+    <string name="lang_de">German</string>
+    <string name="lang_pl">Polish</string>
+    <string name="lang_id">Indonesian</string>
+    <string name="lang_hu">Hungarian</string>
+    <string name="lang_tr">Turkish</string>
+    <string name="lang_cs">Czech</string>
 
     <!-- Misc -->
     <string name="select_file_manager">Select your file manager</string>
@@ -1042,7 +1164,4 @@
     <string name="u_kilobyte" tools:ignore="MissingTranslation">KB</string>
     <string name="u_megabyte" tools:ignore="MissingTranslation">MB</string>
     <string name="u_gigabyte" tools:ignore="MissingTranslation">GB</string>
-    <string name="u_terabyte" tools:ignore="MissingTranslation">TB</string>
-    <string name="u_petabyte" tools:ignore="MissingTranslation">PB</string>
-    <string name="u_exabyte" tools:ignore="MissingTranslation">EB</string>
 </resources>

@@ -14,8 +14,8 @@ import android.view.animation.DecelerateInterpolator
 import androidx.core.util.Consumer
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import me.devsaki.hentoid.util.Helper
-import me.devsaki.hentoid.util.Preferences
+import me.devsaki.hentoid.util.Settings
+import me.devsaki.hentoid.util.coerceIn
 import me.devsaki.hentoid.widget.OnZoneTapListener
 import me.devsaki.hentoid.widget.ViewZoomGestureListener
 import timber.log.Timber
@@ -24,10 +24,14 @@ import kotlin.math.roundToInt
 
 /**
  * Zoomable RecyclerView that supports gestures
- * To be used inside a {@link ZoomableFrame}
+ * Must be used inside a {@link ZoomableFrame}
  * <p>
  * Credits go to the Tachiyomi team
  */
+private const val ANIMATOR_DURATION_TIME = 200L
+private const val DEFAULT_SCALE = 1f
+private const val MAX_SCALE = 3f
+
 class ZoomableRecyclerView : RecyclerView {
 
     private var isZooming = false
@@ -44,8 +48,8 @@ class ZoomableRecyclerView : RecyclerView {
         private set
 
     private val listener = GestureListener()
-    private var scaleListener: Consumer<Double>? = null
     private val detector = Detector(context, listener)
+    private var scaleListener: Consumer<Double>? = null
     private var getMaxDimensionsListener: Consumer<Point>? = null
 
     private var tapListener: OnZoneTapListener? = null
@@ -55,6 +59,7 @@ class ZoomableRecyclerView : RecyclerView {
     private var maxBitmapDimensions: Point? = null
 
     private var longTapZoomEnabled = true
+    private var doubleTapZoomEnabled = true
 
 
     constructor(context: Context) : super(context)
@@ -71,8 +76,10 @@ class ZoomableRecyclerView : RecyclerView {
     override fun onDraw(c: Canvas) {
         super.onDraw(c)
         if (null == maxBitmapDimensions && getMaxDimensionsListener != null) {
-            maxBitmapDimensions = Point(c.maximumBitmapWidth, c.maximumBitmapHeight)
-            getMaxDimensionsListener!!.accept(maxBitmapDimensions)
+            Point(c.maximumBitmapWidth, c.maximumBitmapHeight).let {
+                maxBitmapDimensions = it
+                getMaxDimensionsListener?.accept(it)
+            }
         }
     }
 
@@ -80,7 +87,7 @@ class ZoomableRecyclerView : RecyclerView {
         this.getMaxDimensionsListener = getMaxDimensionsListener
     }
 
-    fun setTapListener(tapListener: OnZoneTapListener) {
+    fun setTapListener(tapListener: OnZoneTapListener?) {
         this.tapListener = tapListener
     }
 
@@ -92,21 +99,23 @@ class ZoomableRecyclerView : RecyclerView {
         this.scaleListener = scaleListener
     }
 
-    fun setLongTapZoomEnabled(longTapZoomEnabled: Boolean) {
-        this.longTapZoomEnabled = longTapZoomEnabled
+    fun setLongTapZoomEnabled(value: Boolean) {
+        longTapZoomEnabled = value
+    }
+
+    fun setDoubleTapZoomEnabled(value: Boolean) {
+        doubleTapZoomEnabled = value
     }
 
     interface LongTapListener {
         fun onListen(ev: MotionEvent?): Boolean
     }
 
-
     override fun onMeasure(widthSpec: Int, heightSpec: Int) {
         halfWidth = MeasureSpec.getSize(widthSpec) / 2
         halfHeight = MeasureSpec.getSize(heightSpec) / 2
         super.onMeasure(widthSpec, heightSpec)
     }
-
 
     override fun onTouchEvent(e: MotionEvent): Boolean {
         detector.onTouchEvent(e)
@@ -136,12 +145,12 @@ class ZoomableRecyclerView : RecyclerView {
 
     private fun getPositionX(positionX: Float): Float {
         val maxPositionX = halfWidth * (scale - 1)
-        return Helper.coerceIn(positionX, -maxPositionX, maxPositionX)
+        return coerceIn(positionX, -maxPositionX, maxPositionX)
     }
 
     private fun getPositionY(positionY: Float): Float {
         val maxPositionY = halfHeight * (scale - 1)
-        return Helper.coerceIn(positionY, -maxPositionY, maxPositionY)
+        return coerceIn(positionY, -maxPositionY, maxPositionY)
     }
 
     fun resetScale() {
@@ -168,11 +177,11 @@ class ZoomableRecyclerView : RecyclerView {
         }
         val scaleAnimator = ValueAnimator.ofFloat(fromScale, toScale)
         scaleAnimator.addUpdateListener { animation: ValueAnimator ->
-            setScaleRate(animation.animatedValue as Float)
+            setViewScaleRate(animation.animatedValue as Float)
         }
         animatorSet.playTogether(translationXAnimator, translationYAnimator, scaleAnimator)
         animatorSet.duration =
-            if (Preferences.isReaderZoomTransitions()) ANIMATOR_DURATION_TIME else 0
+            if (Settings.isReaderZoomTransitions) ANIMATOR_DURATION_TIME else 0
         animatorSet.interpolator = DecelerateInterpolator()
         animatorSet.start()
         animatorSet.addListener(object : Animator.AnimatorListener {
@@ -183,7 +192,7 @@ class ZoomableRecyclerView : RecyclerView {
             override fun onAnimationEnd(animation: Animator) {
                 isZooming = false
                 scale = toScale
-                if (scaleListener != null) scaleListener!!.accept(scale.toDouble())
+                scaleListener?.accept(scale.toDouble())
             }
 
             override fun onAnimationCancel(animation: Animator) {
@@ -226,16 +235,17 @@ class ZoomableRecyclerView : RecyclerView {
         return true
     }
 
-    private fun setScaleRate(rate: Float) {
+    // This is where magic happens
+    private fun setViewScaleRate(rate: Float) {
         scaleX = rate
         scaleY = rate
     }
 
     fun onScale(scaleFactor: Float) {
         scale *= scaleFactor
-        scale = Helper.coerceIn(scale, DEFAULT_SCALE, MAX_SCALE)
-        Timber.i(">> scale %s -> %s", scaleFactor, scale)
-        setScaleRate(scale)
+        scale = coerceIn(scale, DEFAULT_SCALE, MAX_SCALE)
+        Timber.d(">> scale %s -> %s", scaleFactor, scale)
+        setViewScaleRate(scale)
         if (scale != DEFAULT_SCALE) {
             x = getPositionX(x)
             y = getPositionY(y)
@@ -243,7 +253,7 @@ class ZoomableRecyclerView : RecyclerView {
             x = 0f
             y = 0f
         }
-        if (scaleListener != null) scaleListener!!.accept(scale.toDouble())
+        scaleListener?.accept(scale.toDouble())
     }
 
     fun onScaleBegin() {
@@ -265,12 +275,7 @@ class ZoomableRecyclerView : RecyclerView {
         }
 
         override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
-            val llm: LayoutManager? = layoutManager
-            if (llm is LinearLayoutManager) {
-                val orientation = llm.orientation
-                if (orientation == LinearLayoutManager.VERTICAL)
-                    tapListener?.onSingleTapConfirmedAction(e)
-            }
+            tapListener?.onSingleTapConfirmedAction(e)
             return false
         }
 
@@ -291,6 +296,7 @@ class ZoomableRecyclerView : RecyclerView {
         }
 
         override fun onDoubleTapConfirmed(ev: MotionEvent) {
+            if (!doubleTapZoomEnabled) return
             if (!isZooming) {
                 if (scaleX != DEFAULT_SCALE) {
                     zoom(scale, DEFAULT_SCALE, x, 0f, y, 0f)
@@ -313,6 +319,7 @@ class ZoomableRecyclerView : RecyclerView {
         private var isZoomDragging = false
         var isDoubleTapping = false
         var isQuickScaling = false
+
         override fun onTouchEvent(ev: MotionEvent): Boolean {
             val action = ev.actionMasked
             val actionIndex = ev.actionIndex
@@ -354,19 +361,13 @@ class ZoomableRecyclerView : RecyclerView {
             if (!isZoomDragging && scale > DEFAULT_SCALE) {
                 var startScroll = false
                 if (abs(dx) > touchSlop) {
-                    if (dx < 0) {
-                        dx += touchSlop
-                    } else {
-                        dx -= touchSlop
-                    }
+                    if (dx < 0) dx += touchSlop
+                    else dx -= touchSlop
                     startScroll = true
                 }
                 if (abs(dy) > touchSlop) {
-                    if (dy < 0) {
-                        dy += touchSlop
-                    } else {
-                        dy -= touchSlop
-                    }
+                    if (dy < 0) dy += touchSlop
+                    else dy -= touchSlop
                     startScroll = true
                 }
                 if (startScroll) {
@@ -399,18 +400,8 @@ class ZoomableRecyclerView : RecyclerView {
         }
 
         private fun zoomScrollBy(dx: Int, dy: Int) {
-            if (dx != 0) {
-                x = getPositionX(x + dx)
-            }
-            if (dy != 0) {
-                y = getPositionY(y + dy)
-            }
+            if (dx != 0) x = getPositionX(x + dx)
+            if (dy != 0) y = getPositionY(y + dy)
         }
-    }
-
-    companion object {
-        const val ANIMATOR_DURATION_TIME: Long = 200
-        const val DEFAULT_SCALE = 1f
-        const val MAX_SCALE = 3f
     }
 }

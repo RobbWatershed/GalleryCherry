@@ -10,12 +10,12 @@ import me.devsaki.hentoid.R
 import me.devsaki.hentoid.activities.QueueActivity
 import me.devsaki.hentoid.activities.bundles.QueueActivityBundle
 import me.devsaki.hentoid.enums.Site
-import me.devsaki.hentoid.util.notification.Notification
+import me.devsaki.hentoid.util.notification.BaseNotification
 
-class UserActionNotification(val site: Site, private val oldCookie: String) : Notification {
+class UserActionNotification(val site: Site, private val oldCookie: String) : BaseNotification() {
 
     override fun onCreateNotification(context: Context): android.app.Notification =
-        NotificationCompat.Builder(context, UserActionNotificationChannel.ID)
+        NotificationCompat.Builder(context, ID)
             .setSmallIcon(R.drawable.ic_cherry_icon)
             .setContentTitle(context.resources.getText(R.string.notification_user_action_needed))
             .setContentText(context.resources.getText(R.string.notification_action_dl_revive))

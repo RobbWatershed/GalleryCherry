@@ -379,7 +379,7 @@
     <string name="new_group_name">Neve az új csoportnak\?</string>
     <string name="group_edit_name">Csoport nevének szerkesztése</string>
     <string name="book_edit_title">Könyv címének szerkesztése</string>
-    <string name="delete_progress">Könyvek törlése</string>
+    <string name="delete_books_progress">Könyvek törlése</string>
     <string name="purge_progress">Könyvek elégetése</string>
     <string name="cancel_queue_progress">Várakozási sorban lévő elemek megszakítása</string>
     <plurals name="delete_success_books">
@@ -399,7 +399,6 @@
         <item quantity="other"><x:g example="2" id="count">%d</x:g> könyvek sikeresen archiválva</item>
     </plurals>
     <string name="notif_archive_fail">Archiválás sikertelen</string>
-    <string name="notif_archive_fail_details">Legalább egy könyv archiválása nem sikerült</string>
     <plurals name="archive_success">
         <item quantity="one"><x:g example="1" id="count">%d</x:g> könyv archiválásra került a Letöltési mappádba</item>
         <item quantity="other"><x:g example="2" id="count">%d</x:g> könyvek archiválásra kerültek a Letöltési mappádba</item>
@@ -488,7 +487,6 @@
         <item quantity="one">Csoport és könyvek törlése</item>
         <item quantity="other">Csoportok és könyvek törlése</item>
     </plurals>
-    <string name="group_delete_nothing">Nincs mit törölni - ellenőrizze a \"Külső tartalom törlésének engedélyezése\" lehetőséget, hogy ez törölhető lehessen</string>
     <string name="clear_rating">Értékelés törlése</string>
     <string name="clear_search_history_confirm">Keresési előzmény törlése?</string>
 <string name="merge_merge">Egyesítés</string>
@@ -725,11 +723,6 @@
     <string name="duplicate_use_same_language">Csak ugyanazon a nyelven</string>
     <string name="duplicate_ignore_chapters">Fejezetek és folytatások figyelmen kívül hagyása</string>
     <string name="duplicate_use_sensitivity">Érzékenység</string>
-    <string-array name="duplicate_use_sensitivities">
-        <item>Engedékeny</item>
-        <item>Szabványos</item>
-        <item>Szigorú</item>
-    </string-array>
     <string name="duplicate_find_action">Duplikátumok keresése</string>
     <string name="duplicate_index_covers">Borítóképek indexelése</string>
     <string name="duplicate_find">Duplikált könyvek észlelése</string>
@@ -786,12 +779,11 @@
 <string name="notif_archive_title">Tartalom archiválása</string>
     <string name="notif_delete_title">Tartalom törlése</string>
     <string name="notif_delete_complete">A törlés sikeres</string>
-    <plurals name="notif_delete_complete_details">
+    <plurals name="notif_process_complete_details">
         <item quantity="one"><x:g example="1" id="number">%d</x:g> sikeresen törölve</item>
         <item quantity="other"><x:g example="1" id="number">%d</x:g> sikeresen törölve</item>
     </plurals>
     <string name="notif_delete_fail">A törlés sikertelen</string>
-    <string name="notif_delete_fail_details">Legalább egy könyvet nem sikerült törölni</string>
 
 
 <string name="title_startup">Indítás</string>
@@ -832,7 +824,4 @@
     <string name="u_kilobyte" tools:ignore="MissingTranslation">KB</string>
     <string name="u_megabyte" tools:ignore="MissingTranslation">MB</string>
     <string name="u_gigabyte" tools:ignore="MissingTranslation">GB</string>
-    <string name="u_terabyte" tools:ignore="MissingTranslation">TB</string>
-    <string name="u_petabyte" tools:ignore="MissingTranslation">PB</string>
-    <string name="u_exabyte" tools:ignore="MissingTranslation">EB</string>
 </resources>

@@ -106,6 +106,23 @@
 
         </com.google.android.material.textfield.TextInputLayout>
 
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/resize_method_5_images"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/resize_method_5_prompt"
+            android:visibility="gone"
+            app:counterMaxLength="3"
+            app:layout_constraintTop_toBottomOf="@id/resize_method_3_ratio">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:imeOptions="flagNoPersonalizedLearning"
+                android:inputType="number" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
         <TextView
             android:id="@+id/transcode_header"
             android:layout_width="match_parent"
@@ -114,7 +131,7 @@
             android:text="@string/transform_transcoding"
             android:textSize="@dimen/text_header_6"
             android:textStyle="bold"
-            app:layout_constraintTop_toBottomOf="@id/resize_method_3_ratio" />
+            app:layout_constraintTop_toBottomOf="@id/resize_method_5_images" />
 
         <me.devsaki.hentoid.views.ListPickerView
             android:id="@+id/transcode_method"
@@ -174,35 +191,22 @@
 
         </com.google.android.material.textfield.TextInputLayout>
 
-        <TextView
-            android:id="@+id/encoder_warning"
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/warnings_list"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:background="@color/white_opacity_25"
-            android:paddingStart="56dp"
-            android:paddingTop="8dp"
-            android:paddingEnd="8dp"
-            android:paddingBottom="8dp"
-            android:text="@string/encoder_warning"
-            android:textStyle="italic"
-            android:visibility="gone"
-            app:layout_constraintTop_toBottomOf="@id/encoder_quality"
-            tools:visibility="visible" />
-
-        <ImageView
-            android:id="@+id/encoder_warning_icon"
-            android:layout_width="56dp"
-            android:layout_height="56dp"
-            android:adjustViewBounds="true"
+            android:clipToPadding="false"
+            android:fadeScrollbars="false"
             android:padding="8dp"
-            android:src="@drawable/ic_warning"
+            android:scrollbarAlwaysDrawVerticalTrack="true"
+            android:scrollbars="vertical"
             android:visibility="gone"
-            app:layout_constraintBottom_toBottomOf="@id/encoder_warning"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="@id/encoder_warning"
-            app:tint="@color/white_opacity_87"
-            tools:ignore="ContentDescription"
+            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/encoder_quality"
+            app:maxHeight="120dp"
+            tools:layout_height="120dp"
+            tools:listitem="@layout/item_drawer"
             tools:visibility="visible" />
 
         <TextView
@@ -213,15 +217,15 @@
             android:text="@string/preview"
             android:textSize="@dimen/text_header_6"
             android:textStyle="bold"
-            app:layout_constraintEnd_toStartOf="@id/preview_progress"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/encoder_warning" />
+            app:layout_constraintTop_toBottomOf="@id/warnings_list"
+            tools:ignore="ContentDescription" />
 
-        <ProgressBar
+        <com.google.android.material.progressindicator.LinearProgressIndicator
             android:id="@+id/preview_progress"
-            style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+            style="@style/Widget.Material3.LinearProgressIndicator"
             android:layout_width="0dp"
-            android:layout_height="4dp"
+            android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:layout_marginTop="4dp"
             android:indeterminate="true"
@@ -234,15 +238,17 @@
 
         <ImageView
             android:id="@+id/thumb"
-            android:layout_width="75dp"
-            android:layout_height="100dp"
+            android:layout_width="81dp"
+            android:layout_height="108dp"
             android:layout_marginTop="4dp"
             android:adjustViewBounds="true"
+            android:clickable="true"
+            android:contentDescription="@string/preview"
+            android:focusable="true"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/preview_header"
-            tools:ignore="ContentDescription"
-            tools:src="@drawable/ic_hentoid_trans"
-            tools:tint="@color/light_gray" />
+            tools:src="@drawable/ic_hentoid_shape"
+            tools:tint="@color/medium_gray" />
 
         <TextView
             android:id="@+id/preview_name"
@@ -282,53 +288,51 @@
             app:layout_constraintTop_toBottomOf="@id/preview_dims"
             tools:text="548 KB ➤ 450 KB" />
 
-        <ImageButton
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/prev_page_btn"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:background="@color/transparent"
-            android:clickable="true"
-            android:focusable="true"
-            android:scaleType="fitCenter"
-            android:src="@drawable/ic_action_previous_item"
+            style="?attr/materialIconButtonFilledTonalStyle"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:tooltipText="@string/previous_page"
+            app:icon="@drawable/ic_action_previous_item"
             app:layout_constraintBottom_toBottomOf="@id/thumb"
             app:layout_constraintEnd_toStartOf="@id/next_page_btn"
             app:layout_constraintStart_toEndOf="@id/thumb"
-            app:tint="?colorOnPrimary"
-            tools:ignore="ContentDescription"
-            tools:targetApi="o" />
+            tools:ignore="ContentDescription" />
 
-        <ImageButton
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/next_page_btn"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_marginStart="8dp"
-            android:background="@color/transparent"
-            android:clickable="true"
-            android:focusable="true"
-            android:scaleType="fitCenter"
-            android:src="@drawable/ic_action_next_item"
+            style="?attr/materialIconButtonFilledTonalStyle"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:tooltipText="@string/next_page"
+            app:icon="@drawable/ic_action_next_item"
             app:layout_constraintBottom_toBottomOf="@id/thumb"
             app:layout_constraintStart_toEndOf="@id/prev_page_btn"
-            app:tint="?colorOnPrimary"
-            tools:ignore="ContentDescription"
-            tools:targetApi="o" />
+            tools:ignore="ContentDescription" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/action_button"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            style="@style/Widget.Material3.Button.TonalButton.Icon"
             android:layout_width="match_parent"
             android:layout_height="?android:attr/actionBarSize"
             android:layout_marginTop="8dp"
             android:text="@string/transform"
-            android:textColor="?colorSecondary"
-            android:textSize="@dimen/text_body_1"
             app:icon="@drawable/ic_action_transform"
-            app:iconSize="24dp"
-            app:iconTint="?colorSecondary"
             app:layout_constraintTop_toBottomOf="@id/thumb" />
+
+        <ImageView
+            android:id="@+id/preview"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:ignore="ContentDescription" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </ScrollView>

@@ -9,18 +9,22 @@ import com.google.android.material.snackbar.Snackbar
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.events.ProcessEvent
 import me.devsaki.hentoid.fragments.tools.ToolsFragment
-import me.devsaki.hentoid.util.file.FileHelper
+import me.devsaki.hentoid.util.file.openFile
+import me.devsaki.hentoid.util.useLegacyInsets
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
 
 class ToolsActivity : BaseActivity() {
+    enum class MassOperation {
+        DELETE, STREAM
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
+        useLegacyInsets()
         supportFragmentManager.commit {
-            replace(android.R.id.content, ToolsFragment.newInstance())
+            replace(android.R.id.content, ToolsFragment())
         }
     }
 
@@ -47,15 +51,20 @@ class ToolsActivity : BaseActivity() {
 
     @Subscribe(sticky = true, threadMode = ThreadMode.MAIN)
     fun onImportEventComplete(event: ProcessEvent) {
-        if (ProcessEvent.EventType.COMPLETE == event.eventType
-            && event.logFile != null
+        if (ProcessEvent.Type.COMPLETE == event.eventType
             && (event.processId == R.id.import_external || event.processId == R.id.import_primary)
         ) {
-            val contentView = findViewById<View>(android.R.id.content)
-            val snackbar =
-                Snackbar.make(contentView, R.string.task_done, BaseTransientBottomBar.LENGTH_LONG)
-            snackbar.setAction(R.string.read_log) { FileHelper.openFile(this, event.logFile) }
-            snackbar.show()
+            event.logFile?.let { logFile ->
+                val contentView = findViewById<View>(android.R.id.content)
+                val snackbar =
+                    Snackbar.make(
+                        contentView,
+                        R.string.task_done,
+                        BaseTransientBottomBar.LENGTH_LONG
+                    )
+                snackbar.setAction(R.string.read_log) { openFile(this, logFile) }
+                snackbar.show()
+            }
         }
     }
 }

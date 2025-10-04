@@ -4,11 +4,10 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="48dp"
-    android:padding="8dp"
-    tools:targetApi="o">
+    android:padding="8dp">
 
     <ImageView
-        android:id="@+id/material_drawer_icon"
+        android:id="@+id/expand_handle"
         android:layout_width="48dp"
         android:layout_height="48dp"
         android:padding="8dp"
@@ -18,25 +17,54 @@
         app:layout_constraintTop_toTopOf="parent"
         tools:ignore="ContentDescription" />
 
+    <ImageView
+        android:id="@+id/selected_flag"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:padding="8dp"
+        android:src="@drawable/ic_checked_circle"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toEndOf="@id/expand_handle"
+        app:layout_constraintTop_toTopOf="parent"
+        app:tint="?colorSecondary"
+        tools:ignore="ContentDescription"
+        tools:visibility="visible" />
+
+    <ImageView
+        android:id="@+id/ivCover"
+        android:layout_width="36dp"
+        android:layout_height="48dp"
+        android:adjustViewBounds="true"
+        android:clickable="false"
+        android:focusable="false"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toEndOf="@id/selected_flag"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:ignore="ContentDescription"
+        tools:src="@drawable/ic_hentoid_shape"
+        tools:tint="@color/medium_gray" />
+
     <TextView
         android:id="@+id/material_drawer_name"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginStart="4dp"
         android:fontFamily="sans-serif-medium"
         android:gravity="center_vertical|start"
-        android:lines="1"
-        android:singleLine="true"
+        android:maxLines="2"
         android:textDirection="anyRtl"
         android:textSize="@dimen/text_body_2"
         app:layout_constraintEnd_toStartOf="@id/ivReorder"
-        app:layout_constraintStart_toEndOf="@id/material_drawer_icon"
+        app:layout_constraintStart_toEndOf="@id/ivCover"
         app:layout_constraintTop_toTopOf="parent"
-        tools:text="Some drawer text" />
+        tools:text="Some drawer text that might just be longer than one line" />
 
     <TextView
         android:id="@+id/material_drawer_description"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:layout_marginStart="4dp"
         android:fontFamily="sans-serif"
         android:gravity="center_vertical|start"
         android:lines="1"
@@ -44,7 +72,7 @@
         android:textDirection="anyRtl"
         android:textSize="@dimen/caption"
         app:layout_constraintEnd_toStartOf="@id/ivReorder"
-        app:layout_constraintStart_toEndOf="@id/material_drawer_icon"
+        app:layout_constraintStart_toEndOf="@id/ivCover"
         app:layout_constraintTop_toBottomOf="@id/material_drawer_name"
         tools:text="Some drawer text" />
 

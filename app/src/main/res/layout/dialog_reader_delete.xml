@@ -17,7 +17,7 @@
 
     <RadioGroup
         android:id="@+id/delete_mode"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         app:layout_constraintStart_toStartOf="parent"
@@ -25,14 +25,14 @@
 
         <RadioButton
             android:id="@+id/delete_mode_page"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/page_delete_help"
             android:textColor="?colorOnSurface" />
 
         <RadioButton
             android:id="@+id/delete_mode_book"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/viewer_delete_book"
             android:textColor="?colorOnSurface" />
@@ -40,15 +40,12 @@
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/action_button"
-        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        style="@style/Widget.Material3.Button.TonalButton.Icon"
         android:layout_width="match_parent"
         android:layout_height="?android:attr/actionBarSize"
         android:layout_marginTop="8dp"
         android:text="@string/menu_delete_single"
-        android:textColor="?colorSecondary"
-        android:textSize="@dimen/text_body_1"
         app:icon="@drawable/ic_action_delete"
-        app:iconTint="?colorSecondary"
         app:layout_constraintTop_toBottomOf="@id/delete_mode" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

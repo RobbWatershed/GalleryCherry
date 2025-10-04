@@ -2,17 +2,16 @@ package me.devsaki.hentoid.notification.download
 
 import android.content.Context
 import androidx.core.app.NotificationCompat
-
 import me.devsaki.hentoid.R
-import me.devsaki.hentoid.util.notification.Notification
+import me.devsaki.hentoid.util.notification.BaseNotification
 
 class DownloadWarningNotification(
     private val title: String,
     private val absolutePath: String
-) : Notification {
+) : BaseNotification() {
 
     override fun onCreateNotification(context: Context): android.app.Notification =
-        NotificationCompat.Builder(context, DownloadNotificationChannel.ID)
+        NotificationCompat.Builder(context, ID)
             .setSmallIcon(R.drawable.ic_cherry_icon_warning)
             .setContentTitle(context.getString(R.string.download_notif_failed))
             .setStyle(getBigStyle(context))
@@ -21,6 +20,6 @@ class DownloadWarningNotification(
 
     private fun getBigStyle(context: Context): NotificationCompat.BigTextStyle {
         return NotificationCompat.BigTextStyle()
-            .bigText( context.getString(R.string.download_notif_failed_details, title, absolutePath))
+            .bigText(context.getString(R.string.download_notif_failed_details, title, absolutePath))
     }
 }

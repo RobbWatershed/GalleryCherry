@@ -3,78 +3,126 @@ package me.devsaki.hentoid.workers
 import android.content.Context
 import android.graphics.BitmapFactory
 import android.graphics.Point
+import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import androidx.work.Data
 import androidx.work.WorkerParameters
-import com.bumptech.glide.Glide
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.database.CollectionDAO
 import me.devsaki.hentoid.database.ObjectBoxDAO
 import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.database.domains.ImageFile
+import me.devsaki.hentoid.notification.transform.TransformCompleteNotification
 import me.devsaki.hentoid.notification.transform.TransformProgressNotification
-import me.devsaki.hentoid.util.file.FileHelper
-import me.devsaki.hentoid.util.image.ImageHelper
-import me.devsaki.hentoid.util.image.ImageTransform
-import me.devsaki.hentoid.util.notification.Notification
+import me.devsaki.hentoid.util.AchievementsManager
+import me.devsaki.hentoid.util.ProgressManager
+import me.devsaki.hentoid.util.Settings
+import me.devsaki.hentoid.util.createJson
+import me.devsaki.hentoid.util.file.Beholder
+import me.devsaki.hentoid.util.file.copyFile
+import me.devsaki.hentoid.util.file.getDocumentFromTreeUri
+import me.devsaki.hentoid.util.file.getDocumentFromTreeUriString
+import me.devsaki.hentoid.util.file.getExtensionFromMimeType
+import me.devsaki.hentoid.util.file.getInputStream
+import me.devsaki.hentoid.util.file.getMimeTypeFromFileName
+import me.devsaki.hentoid.util.file.getOrCreateCacheFolder
+import me.devsaki.hentoid.util.file.getParent
+import me.devsaki.hentoid.util.file.saveBinary
+import me.devsaki.hentoid.util.getStorageRoot
+import me.devsaki.hentoid.util.image.TransformParams
+import me.devsaki.hentoid.util.image.clearCoilCache
+import me.devsaki.hentoid.util.image.determineEncoder
+import me.devsaki.hentoid.util.image.isImageLossless
+import me.devsaki.hentoid.util.image.transform
+import me.devsaki.hentoid.util.image.transformManhwaChapter
+import me.devsaki.hentoid.util.network.UriParts
+import me.devsaki.hentoid.util.notification.BaseNotification
+import me.devsaki.hentoid.util.pause
+import me.devsaki.hentoid.util.updateJson
+import me.robb.ai_upscale.AiUpscaler
+import okio.IOException
+import timber.log.Timber
+import java.io.File
+import java.nio.ByteBuffer
 import java.time.Instant
 import java.util.concurrent.atomic.AtomicInteger
+
 
 class TransformWorker(context: Context, parameters: WorkerParameters) :
     BaseWorker(context, parameters, R.id.transform_service, null) {
 
-    private val dao: CollectionDAO
+    private val dao: CollectionDAO = ObjectBoxDAO()
+    private var upscaler: AiUpscaler? = null
+
     private var totalItems = 0
     private var nbOK = 0
     private var nbKO = 0
+    private lateinit var globalProgress: ProgressManager
+    private lateinit var progressNotification: TransformProgressNotification
+    private var targetDirectory: DocumentFile? = null
 
-    init {
-        dao = ObjectBoxDAO(context)
-    }
 
-
-    override fun getStartNotification(): Notification {
-        return TransformProgressNotification(0, 0)
+    override fun getStartNotification(): BaseNotification {
+        return TransformProgressNotification(0, 0, 0f)
     }
 
     override fun onInterrupt() {
-        // Nothing
+        targetDirectory?.delete()
     }
 
-    override fun onClear() {
+    override suspend fun onClear(logFile: DocumentFile?) {
+        inputData.getLongArray("IDS")?.let { contentIds ->
+            dao.updateContentsProcessedFlagById(contentIds.filter { it > 0 }, false)
+        }
         dao.cleanup()
+        upscaler?.cleanup()
 
-        // Reset Glide cache as it gets confused by the resizing
-        Glide.get(applicationContext).clearDiskCache()
+        // Reset Coil cache as it gets confused by the resizing
+        clearCoilCache(applicationContext)
     }
 
-    override fun getToWork(input: Data) {
+    override suspend fun getToWork(input: Data) {
         val contentIds = inputData.getLongArray("IDS")
         val paramsStr = inputData.getString("PARAMS")
         require(contentIds != null)
         require(paramsStr != null)
         require(paramsStr.isNotEmpty())
 
-        val moshi = Moshi.Builder()
-            .addLast(KotlinJsonAdapterFactory())
-            .build()
+        val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
 
-        val params = moshi.adapter(ImageTransform.Params::class.java).fromJson(paramsStr)
+        val params = moshi.adapter(TransformParams::class.java).fromJson(paramsStr)
         require(params != null)
+
+        if (params.resizeEnabled && 3 == params.resizeMethod) { // AI upscale
+            AiUpscaler().let {
+                upscaler = it
+                it.init(
+                    applicationContext.resources.assets,
+                    "realsr/models-nose/up2x-no-denoise.param",
+                    "realsr/models-nose/up2x-no-denoise.bin"
+                )
+            }
+        }
 
         transform(contentIds, params)
     }
 
-    private fun transform(contentIds: LongArray, params: ImageTransform.Params) {
+    private suspend fun transform(contentIds: LongArray, params: TransformParams) {
         // Flag contents as "being deleted" (triggers blink animation; lock operations)
         // +count the total number of images to convert
+        dao.updateContentsProcessedFlagById(contentIds.filter { it > 0 }, true)
+
         contentIds.forEach {
-            if (it > 0) dao.updateContentDeleteFlag(it, true)
             totalItems += dao.selectDownloadedImagesFromContent(it).count { i -> i.isReadable }
             if (isStopped) return
         }
+
+        globalProgress = ProgressManager(totalItems)
+        launchProgressNotification()
 
         // Process images
         contentIds.forEach {
@@ -85,82 +133,222 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
         notifyProcessEnd()
     }
 
-    private fun transformContent(content: Content, params: ImageTransform.Params) {
-        val contentFolder =
-            FileHelper.getDocumentFromTreeUriString(applicationContext, content.storageUri)
-        val images = content.imageList
-        if (contentFolder != null) {
-            val imagesWithoutChapters = images
-                .filter { i -> null == i.linkedChapter }
-                .filter { i -> i.isReadable }
-            transformChapter(imagesWithoutChapters, contentFolder, params)
+    private suspend fun transformContent(content: Content, params: TransformParams) {
+        val ctx = applicationContext
+        // Copy to keep it intact after switching to new ones
+        val sourceImages = content.imageList.toList()
+        Timber.d("Transforming Content BEGIN ${content.title}")
 
-            val chapteredImgs = images
-                .filterNot { i -> null == i.linkedChapter }
-                .filter { i -> i.isReadable }
-                .groupBy { i -> i.linkedChapter!!.id }
+        // Create target folder
+        val sourceAndTarget = try {
+            withContext(Dispatchers.IO) {
+                val sourceFolder = getDocumentFromTreeUriString(ctx, content.storageUri)
+                    ?: throw java.io.IOException("Source folder not found")
+                // Split / merge manhwa => Need target folder
+                val target = if (4 == params.resizeMethod) {
+                    val sourceFolder = getDocumentFromTreeUriString(ctx, content.storageUri)
+                        ?: throw java.io.IOException("Source folder not found")
+                    val root = content.getStorageRoot()
+                        ?: throw java.io.IOException("Storage root not found")
+                    val parentUri = getParent(ctx, root, sourceFolder.uri)
+                        ?: throw java.io.IOException("Parent Uri not found")
+                    val parent = getDocumentFromTreeUri(ctx, parentUri)
+                        ?: throw java.io.IOException("Parent folder not found")
+                    parent.createDirectory((sourceFolder.name ?: "") + "_T")
+                        ?: throw java.io.IOException("Target folder couldn't be created")
+                } else null
+                Pair(sourceFolder, target)
+            }
+        } catch (e: IOException) {
+            Timber.w(e)
+            nbKO += sourceImages.size
+            return
+        }
+        val sourceFolder = sourceAndTarget.first
+        val targetFolder = sourceAndTarget.second
+        targetDirectory = targetFolder
 
-            chapteredImgs.forEach {
-                transformChapter(it.value, contentFolder, params)
+        val transformedImages = ArrayList<ImageFile>()
+
+        if (targetFolder != null) {
+            // Don't scan new folder when it's being populated
+            Beholder.ignoreFolder(targetFolder)
+
+            // Transfer 'unreadable pics' (i.e. separate cover)
+            sourceImages.filter { !it.isReadable }.forEach { img ->
+                val name = UriParts(img.fileUri).fileNameFull
+                copyFile(
+                    ctx,
+                    img.fileUri.toUri(),
+                    targetFolder,
+                    getMimeTypeFromFileName(name),
+                    name
+                )?.let { newUri ->
+                    img.fileUri = newUri.toString()
+                    transformedImages.add(img)
+                }
+            }
+        }
+
+        var isKO = false
+        val imagesWithoutChapters =
+            sourceImages.filter { null == it.linkedChapter }.filter { it.isReadable }
+        if (imagesWithoutChapters.isNotEmpty()) {
+            val newImgs = transformChapter(
+                imagesWithoutChapters,
+                1,
+                sourceFolder,
+                targetFolder,
+                params
+            )
+            if (newImgs.isEmpty()) isKO = true
+            else transformedImages.addAll(newImgs)
+        }
+
+        val chapteredImgs =
+            sourceImages.filterNot { null == it.linkedChapter }.filter { it.isReadable }
+                .groupBy { it.linkedChapter!!.id }
+
+        chapteredImgs.filter { it.value.isNotEmpty() }.forEach { chImgs ->
+            val newImgs = transformChapter(
+                chImgs.value,
+                transformedImages.size + 1,
+                sourceFolder,
+                targetFolder,
+                params
+            )
+            if (newImgs.isEmpty()) isKO = true
+            else {
+                // Map new images to existing Content and Chapter
+                newImgs.forEach {
+                    it.content.targetId = content.id
+                    it.chapterId = chImgs.key
+                }
+                transformedImages.addAll(newImgs)
+            }
+        }
+
+        if (!isKO && !isStopped) {
+            // Update Content
+            withContext(Dispatchers.IO) {
+                content.setImageFiles(transformedImages)
+                dao.insertImageFiles(transformedImages)
+                content.qtyPages = transformedImages.count { it.isReadable }
+                content.computeSize()
+                content.lastEditDate = Instant.now().toEpochMilli()
+                content.isBeingProcessed = false
+                targetFolder?.let { content.storageUri = it.uri.toString() }
+                dao.insertContentCore(content)
+                if (targetFolder != null) createJson(ctx, content)
+                else updateJson(ctx, content)
+                dao.cleanup()
             }
 
-            dao.insertImageFiles(images)
-            content.computeSize()
-            content.lastEditDate = Instant.now().toEpochMilli()
-            content.setIsBeingProcessed(false)
-            dao.insertContentCore(content)
+            // Remove old folder with old images
+            if (targetFolder != null) sourceFolder.delete()
         } else {
-            nbKO += images.size
-            notifyProcessProgress()
+            nbKO += sourceImages.size
+
+            // Remove processed images
+            targetFolder?.delete()
+        }
+        Timber.d("Transforming Content END ${content.title}")
+
+        // Achievements
+        if (!isStopped && !isKO) {
+            if (upscaler != null) { // AI upscale
+                Settings.nbAIRescale += 1
+                if (Settings.nbAIRescale >= 2) AchievementsManager.trigger(20)
+            }
+            val pagesTotal = sourceImages.count { it.isReadable }
+            if (pagesTotal >= 50) AchievementsManager.trigger(27)
+            if (pagesTotal >= 100) AchievementsManager.trigger(28)
         }
     }
 
-    private fun transformChapter(
+    private suspend fun transformChapter(
         imgs: List<ImageFile>,
-        contentFolder: DocumentFile,
-        params: ImageTransform.Params
-    ) {
+        firstIndex: Int,
+        sourceFolder: DocumentFile,
+        targetFolder: DocumentFile?,
+        params: TransformParams
+    ): List<ImageFile> {
         val nbManhwa = AtomicInteger(0)
         params.forceManhwa = false
-        imgs.forEach {
-            transformImage(it, contentFolder, params, nbManhwa, imgs.size)
-            if (isStopped) return
+
+        if (4 == params.resizeMethod) {
+            // Split / merge manhwa
+            targetFolder ?: return emptyList()
+            return transformManhwaChapter(
+                applicationContext,
+                imgs,
+                firstIndex,
+                targetFolder.uri,
+                params,
+                false,
+                this::isStopped
+            ) { p ->
+                if (p.second) nextOK() else nextKO()
+                globalProgress.setProgress(p.first.toString(), 1f)
+                launchProgressNotification()
+            }
+        } else {
+            val result = ArrayList<ImageFile>()
+            // Per image individual transform
+            imgs.forEach {
+                result.add(transformImage(it, sourceFolder, params, nbManhwa, imgs.size))
+                if (isStopped) return@forEach
+            }
+            return result
         }
     }
 
     @Suppress("ReplaceArrayEqualityOpWithArraysEquals")
-    private fun transformImage(
+    private suspend fun transformImage(
         img: ImageFile,
         contentFolder: DocumentFile,
-        params: ImageTransform.Params,
+        params: TransformParams,
         nbManhwa: AtomicInteger,
         nbPages: Int
-    ) {
-        val sourceFile = FileHelper.getDocumentFromTreeUriString(applicationContext, img.fileUri)
-        if (null == sourceFile) {
+    ): ImageFile {
+        val sourceFile = withContext(Dispatchers.IO) {
+            getDocumentFromTreeUriString(applicationContext, img.fileUri)
+        } ?: run {
             nextKO()
-            return
+            return img
         }
-        val rawData = FileHelper.getInputStream(applicationContext, sourceFile).use {
-            return@use it.readBytes()
+        val rawData = withContext(Dispatchers.IO) {
+            getInputStream(applicationContext, sourceFile).use {
+                return@use it.readBytes()
+            }
         }
-        val isLossless = ImageHelper.isImageLossless(rawData)
+        val imageId = img.fileUri
+        val metadataOpts = BitmapFactory.Options()
+        metadataOpts.inJustDecodeBounds = true
+
+        val targetData: ByteArray
+        if (upscaler != null) { // AI upscale
+            targetData = upscale(imageId, rawData)
+        } else { // regular resize
+            BitmapFactory.decodeByteArray(rawData, 0, rawData.size, metadataOpts)
+            val isManhwa = metadataOpts.outHeight * 1.0 / metadataOpts.outWidth > 3
+
+            if (isManhwa) nbManhwa.incrementAndGet()
+            params.forceManhwa = nbManhwa.get() * 1.0 / nbPages > 0.9
+
+            targetData = transform(rawData, params)
+        }
+        if (isStopped) return img
+        if (targetData == rawData) return img // Unchanged picture
+
+        // Save transformed image data back to original image file
+        val isLossless = isImageLossless(rawData)
         val sourceName = sourceFile.name ?: ""
-        val options = BitmapFactory.Options()
-        options.inJustDecodeBounds = true
-        BitmapFactory.decodeByteArray(rawData, 0, rawData.size, options)
-        val isManhwa = options.outHeight * 1.0 / options.outWidth > 3
 
-        if (isManhwa) nbManhwa.incrementAndGet()
-        params.forceManhwa = nbManhwa.get() * 1.0 / nbPages > 0.9
-
-        val targetData = ImageTransform.transform(rawData, params)
-        if (targetData == rawData) return // Unchanged picture
-
-        BitmapFactory.decodeByteArray(targetData, 0, targetData.size, options)
-        val targetDims = Point(options.outWidth, options.outHeight)
-        val targetMime = ImageTransform.determineEncoder(isLossless, targetDims, params).mimeType
-        val targetName = img.name + "." + FileHelper.getExtensionFromMimeType(targetMime)
+        BitmapFactory.decodeByteArray(targetData, 0, targetData.size, metadataOpts)
+        val targetDims = Point(metadataOpts.outWidth, metadataOpts.outHeight)
+        val targetMime = determineEncoder(isLossless, targetDims, params).mimeType
+        val targetName = img.name + "." + getExtensionFromMimeType(targetMime)
         val newFile = sourceName != targetName
 
         val targetUri = if (!newFile) sourceFile.uri
@@ -170,30 +358,92 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
             targetFile?.uri
         }
         if (targetUri != null) {
-            FileHelper.saveBinary(applicationContext, targetUri, targetData)
+            saveBinary(applicationContext, targetUri, targetData)
             // Update image properties
             img.fileUri = targetUri.toString()
             img.size = targetData.size.toLong()
-            img.mimeType = targetMime
+            img.isTransformed = true
+
             nextOK()
-        } else nextKO()
+            globalProgress.setProgress(imageId, 1f)
+            launchProgressNotification()
+        } else {
+            nextKO()
+            launchProgressNotification()
+        }
+        return img
+    }
+
+    private fun upscale(imgId: String, rawData: ByteArray): ByteArray {
+        val cacheDir =
+            getOrCreateCacheFolder(applicationContext, "upscale") ?: return rawData
+        val outputFile = File(cacheDir, "upscale.png")
+        val progress = ByteBuffer.allocateDirect(1)
+        val killSwitch = ByteBuffer.allocateDirect(1)
+        val dataIn = ByteBuffer.allocateDirect(rawData.size)
+        dataIn.put(rawData)
+
+        upscaler?.let {
+            try {
+                killSwitch.put(0, 0)
+                val res = it.upscale(
+                    dataIn, outputFile.absolutePath, progress, killSwitch
+                )
+                // Fail => exit immediately
+                if (res != 0) progress.put(0, 100)
+
+                // Poll while processing
+                val intervalSeconds = 3
+                var iterations = 0
+                while (iterations < 180 / intervalSeconds) { // max 3 minutes
+                    pause(intervalSeconds * 1000)
+
+                    if (isStopped) {
+                        Timber.d("Kill order sent")
+                        killSwitch.put(0, 1)
+                        return rawData
+                    }
+
+                    val p = progress.get(0)
+                    globalProgress.setProgress(imgId, p / 100f)
+                    launchProgressNotification()
+
+                    iterations++
+                    if (p >= 100) break
+                }
+            } finally {
+                // can't recycle ByteBuffer dataIn
+            }
+        }
+
+        getInputStream(applicationContext, outputFile.toUri()).use { input ->
+            return input.readBytes()
+        }
     }
 
     private fun nextOK() {
         nbOK++
-        notifyProcessProgress()
     }
 
     private fun nextKO() {
         nbKO++
-        notifyProcessProgress()
     }
 
-    private fun notifyProcessProgress() {
-        notificationManager.notify(TransformProgressNotification(nbOK + nbKO, totalItems))
+    override fun runProgressNotification() {
+        if (!this::progressNotification.isInitialized) {
+            progressNotification = TransformProgressNotification(
+                nbOK + nbKO, totalItems, globalProgress.getGlobalProgress()
+            )
+        } else {
+            progressNotification.maxItems = totalItems
+            progressNotification.processedItems = nbOK + nbKO
+            progressNotification.progress = globalProgress.getGlobalProgress()
+        }
+        if (isStopped) return
+        notificationManager.notify(progressNotification)
     }
 
     private fun notifyProcessEnd() {
-        notificationManager.notify(TransformProgressNotification(nbOK, nbKO))
+        notificationManager.notifyLast(TransformCompleteNotification(nbOK, nbKO > 0))
     }
 }

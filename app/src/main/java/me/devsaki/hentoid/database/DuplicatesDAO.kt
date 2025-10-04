@@ -1,41 +1,34 @@
 package me.devsaki.hentoid.database
 
-import android.content.Context
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MediatorLiveData
 import io.objectbox.android.ObjectBoxLiveData
-import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.database.domains.DuplicateEntry
 
-class DuplicatesDAO(ctx: Context) {
-    private val duplicatesDb: DuplicatesDB = DuplicatesDB.getInstance(ctx)
-    private val db: ObjectBoxDB = ObjectBoxDB.getInstance(ctx)
-
+class DuplicatesDAO {
     fun cleanup() {
-        db.closeThreadResources()
-        duplicatesDb.closeThreadResources()
+        ObjectBoxDB.cleanup()
+        DuplicatesDB.cleanup()
     }
 
     fun getEntries(): List<DuplicateEntry> {
-        val entries = duplicatesDb.selectEntriesQ().find()
+        val entries = DuplicatesDB.selectEntriesQ().safeFind()
 
         // Get all contents in one go
         val contentIds = entries.map { it.referenceId }
-        val contents = db.selectContentById(contentIds)
-        if (contents != null) {
-            val contentsMap = contents.groupBy { it.id }
+        val contents = ObjectBoxDB.selectContentById(contentIds)
+        val contentsMap = contents.groupBy { it.id }
 
-            // Map them back to the corresponding entry
-            for (entry in entries) {
-                entry.referenceContent = contentsMap[entry.referenceId]?.get(0)
-                entry.duplicateContent = contentsMap[entry.duplicateId]?.get(0)
-            }
+        // Map them back to the corresponding entry
+        for (entry in entries) {
+            entry.referenceContent = contentsMap[entry.referenceId]?.get(0)
+            entry.duplicateContent = contentsMap[entry.duplicateId]?.get(0)
         }
         return entries
     }
 
     fun getEntriesLive(): LiveData<List<DuplicateEntry>> {
-        val livedata = ObjectBoxLiveData(duplicatesDb.selectEntriesQ())
+        val livedata = ObjectBoxLiveData(DuplicatesDB.selectEntriesQ())
 
         // Get all contents in one go
         val livedata2 = MediatorLiveData<List<DuplicateEntry>>()
@@ -48,8 +41,8 @@ class DuplicatesDAO(ctx: Context) {
     }
 
     private fun enrichWithContent(e: DuplicateEntry): DuplicateEntry {
-        val items: List<Content>? = db.selectContentById(mutableListOf(e.referenceId, e.duplicateId))
-        if (items != null && items.size > 1) {
+        val items = ObjectBoxDB.selectContentById(mutableListOf(e.referenceId, e.duplicateId))
+        if (items.size > 1) {
             e.referenceContent = items[0]
             e.duplicateContent = items[1]
         }
@@ -57,14 +50,14 @@ class DuplicatesDAO(ctx: Context) {
     }
 
     fun clearEntries() {
-        duplicatesDb.clearEntries()
+        DuplicatesDB.clearEntries()
     }
 
     fun insertEntries(entry: List<DuplicateEntry>) {
-        duplicatesDb.insertEntries(entry)
+        DuplicatesDB.insertEntries(entry)
     }
 
     fun delete(entry: DuplicateEntry) {
-        duplicatesDb.delete(entry)
+        DuplicatesDB.delete(entry)
     }
 }

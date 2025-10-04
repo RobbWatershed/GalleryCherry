@@ -9,32 +9,33 @@
         android:id="@+id/background_bottom_bar"
         android:layout_width="0dp"
         android:layout_height="64dp"
-        android:background="?colorPrimary"
+        android:background="?bar"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent">
 
-        <ImageButton
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/action_button"
-            android:layout_width="64dp"
-            android:layout_height="64dp"
-            android:background="@drawable/selector_button_solid"
-            android:scaleType="fitCenter"
-            android:src="@drawable/ic_action_play"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
+            style="?attr/materialIconButtonFilledTonalStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:icon="@drawable/ic_action_play"
+            app:layout_constraintBottom_toBottomOf="@id/queueDownloadPreparationProgressBar"
+            app:layout_constraintTop_toTopOf="@id/queueDownloadPreparationProgressBar"
+            app:layout_constraintStart_toStartOf="@id/queueDownloadPreparationProgressBar"
+            app:layout_constraintEnd_toEndOf="@id/queueDownloadPreparationProgressBar"
             tools:ignore="ContentDescription" />
 
         <com.google.android.material.progressindicator.CircularProgressIndicator
             android:id="@+id/queueDownloadPreparationProgressBar"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
             android:clickable="false"
             android:focusable="false"
-            android:progress="33"
+            android:progress="76"
             android:visibility="invisible"
-            app:indicatorColor="@color/secondary_light"
-            app:indicatorSize="?android:attr/actionBarSize"
+            app:indicatorColor="?colorSecondary"
+            app:indicatorSize="56dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             tools:visibility="visible" />

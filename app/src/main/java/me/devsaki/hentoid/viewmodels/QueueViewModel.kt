@@ -9,31 +9,33 @@ import androidx.lifecycle.viewModelScope
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequest
 import androidx.work.WorkManager
-import com.annimon.stream.Optional
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.database.CollectionDAO
 import me.devsaki.hentoid.database.domains.Content
+import me.devsaki.hentoid.database.domains.DownloadMode
 import me.devsaki.hentoid.database.domains.ErrorRecord
 import me.devsaki.hentoid.database.domains.QueueRecord
 import me.devsaki.hentoid.enums.ErrorType
+import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.events.DownloadCommandEvent
 import me.devsaki.hentoid.events.DownloadEvent
 import me.devsaki.hentoid.events.ProcessEvent
-import me.devsaki.hentoid.util.ContentHelper
-import me.devsaki.hentoid.util.Preferences
+import me.devsaki.hentoid.util.QueuePosition
+import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.download.ContentQueueManager
 import me.devsaki.hentoid.util.exception.EmptyResultException
+import me.devsaki.hentoid.util.removeQueuedContent
+import me.devsaki.hentoid.util.reparseFromScratch
+import me.devsaki.hentoid.util.updateQueueJson
+import me.devsaki.hentoid.workers.BaseDeleteWorker
 import me.devsaki.hentoid.workers.DeleteWorker
 import me.devsaki.hentoid.workers.PurgeWorker
 import me.devsaki.hentoid.workers.data.DeleteData
-import org.apache.commons.lang3.tuple.ImmutablePair
 import org.greenrobot.eventbus.EventBus
-import timber.log.Timber
-import java.time.Instant
 import java.util.concurrent.atomic.AtomicInteger
 
 
@@ -93,21 +95,21 @@ class QueueViewModel(
         searchErrorContentUniversal()
     }
 
-    fun searchQueueUniversal(query: String? = null) {
+    fun searchQueueUniversal(query: String? = null, source: Site? = null) {
         if (currentQueueSource != null) queue.removeSource(currentQueueSource!!)
         currentQueueSource =
-            if (query.isNullOrEmpty()) dao.selectQueueLive()
-            else dao.selectQueueLive(query)
-        queue.addSource(currentQueueSource!!) { value -> queue.setValue(value) }
+            if (query.isNullOrEmpty() && (null == source || Site.NONE == source)) dao.selectQueueLive()
+            else dao.selectQueueLive(query, source)
+        queue.addSource(currentQueueSource!!) { value -> queue.value = value }
         newSearch.value = true
     }
 
-    fun searchErrorContentUniversal(query: String? = null) {
+    fun searchErrorContentUniversal(query: String? = null, source: Site? = null) {
         if (currentErrorsSource != null) errors.removeSource(currentErrorsSource!!)
         currentErrorsSource =
-            if (query.isNullOrEmpty()) dao.selectErrorContentLive()
-            else dao.selectErrorContentLive(query)
-        errors.addSource(currentErrorsSource!!) { value -> errors.setValue(value) }
+            if (query.isNullOrEmpty() && (null == source || Site.NONE == source)) dao.selectErrorContentLive()
+            else dao.selectErrorContentLive(query, source)
+        errors.addSource(currentErrorsSource!!) { value -> errors.value = value }
         newSearch.value = true
     }
 
@@ -117,10 +119,9 @@ class QueueViewModel(
     // =========================
     fun moveAbsolute(oldPosition: Int, newPosition: Int) {
         if (oldPosition == newPosition) return
-        Timber.d(">> move %s to %s", oldPosition, newPosition)
 
         // Get unpaged data to be sure we have everything in one collection
-        val localQueue = dao.selectQueue()
+        val localQueue = dao.selectQueue().toMutableList()
         if (oldPosition < 0 || oldPosition >= localQueue.size) return
 
         // Move the item
@@ -134,15 +135,15 @@ class QueueViewModel(
         localQueue[newPosition] = fromValue
 
         // Renumber everything
-        var index = 1
-        for (qr in localQueue) qr.rank = index++
+        localQueue.forEachIndexed { idx, qr -> qr.rank = idx + 1 }
 
         // Update queue in DB
         dao.updateQueue(localQueue)
 
-        // If the 1st item is involved, signal it being skipped
-        if (0 == newPosition || 0 == oldPosition) EventBus.getDefault()
-            .post(DownloadCommandEvent(DownloadCommandEvent.Type.EV_SKIP))
+        // If the 1st unfrozen item is involved, signal it being skipped
+        val firstUnfrozenIdx = localQueue.indexOfFirst { !it.frozen }
+        if (firstUnfrozenIdx == newPosition || firstUnfrozenIdx == oldPosition)
+            EventBus.getDefault().post(DownloadCommandEvent(DownloadCommandEvent.Type.EV_SKIP))
     }
 
     /**
@@ -164,18 +165,22 @@ class QueueViewModel(
      */
     fun moveBottom(relativePositions: List<Int>) {
         val absolutePositions = relativeToAbsolutePositions(relativePositions)
-        val dbQueue = dao.selectQueue() ?: return
+        val dbQueue = dao.selectQueue()
         val endPos = dbQueue.size - 1
         for ((processed, oldPos) in absolutePositions.withIndex()) {
             moveAbsolute(oldPos - processed, endPos)
         }
     }
 
+    /**
+     * Translate given relative queue positions to absolute positions
+     * (useful when the queue is filtered by a query)
+     */
     private fun relativeToAbsolutePositions(relativePositions: List<Int>): List<Int> {
         val result: MutableList<Int> = ArrayList()
         val currentQueue = queue.value
         val dbQueue = dao.selectQueue()
-        if (null == currentQueue || null == dbQueue) return relativePositions
+        if (null == currentQueue) return relativePositions
         for (position in relativePositions) {
             for (i in dbQueue.indices) if (dbQueue[i].id == currentQueue[position].id) {
                 result.add(i)
@@ -226,20 +231,23 @@ class QueueViewModel(
 
     fun remove(contentList: List<Content>) {
         val builder = DeleteData.Builder()
+        builder.setOperation(BaseDeleteWorker.Operation.DELETE)
         if (contentList.isNotEmpty()) builder.setQueueIds(
-            contentList.map { c -> c.id }.filter { id -> id > 0 }
+            contentList.map { it.id }.filter { it > 0 }
         )
         val workManager = WorkManager.getInstance(getApplication())
         workManager.enqueueUniqueWork(
             R.id.delete_service_delete.toString(),
             ExistingWorkPolicy.APPEND_OR_REPLACE,
-            OneTimeWorkRequest.Builder(DeleteWorker::class.java).setInputData(builder.data).build()
+            OneTimeWorkRequest.Builder(DeleteWorker::class.java).setInputData(builder.data)
+                .build()
         )
     }
 
     private fun purgeItem(content: Content) {
         val builder = DeleteData.Builder()
-        builder.setContentPurgeIds(listOf(content.id))
+        builder.setOperation(BaseDeleteWorker.Operation.PURGE)
+        builder.setContentIds(listOf(content.id))
         val workManager = WorkManager.getInstance(getApplication())
         workManager.enqueueUniqueWork(
             R.id.delete_service_purge.toString(),
@@ -251,16 +259,19 @@ class QueueViewModel(
     fun cancelAll() {
         val localQueue = dao.selectQueue()
         if (localQueue.isEmpty()) return
-        val contentIdList = localQueue.map { qr -> qr.content.targetId }.filter { id -> id > 0 }
+        val contentIdList = localQueue.map { it.content.targetId }.filter { it > 0 }
         EventBus.getDefault().post(DownloadCommandEvent(DownloadCommandEvent.Type.EV_PAUSE))
         val builder = DeleteData.Builder()
+        builder.setOperation(BaseDeleteWorker.Operation.DELETE)
         if (contentIdList.isNotEmpty()) builder.setQueueIds(contentIdList)
         builder.setDeleteAllQueueRecords(true)
         val workManager = WorkManager.getInstance(getApplication())
         workManager.enqueueUniqueWork(
             R.id.delete_service_delete.toString(),
             ExistingWorkPolicy.APPEND_OR_REPLACE,
-            OneTimeWorkRequest.Builder(DeleteWorker::class.java).setInputData(builder.data).build()
+            OneTimeWorkRequest.Builder(DeleteWorker::class.java)
+                .setInputData(builder.data)
+                .build()
         )
     }
 
@@ -279,35 +290,36 @@ class QueueViewModel(
         contentList: List<Content>,
         reparseContent: Boolean,
         reparseImages: Boolean,
-        position: Int,
+        position: QueuePosition,
         onSuccess: (Int) -> Unit,
         onError: (Throwable) -> Unit
     ) {
-        val targetImageStatus = if (reparseImages) StatusContent.ERROR else null
+        val sourceImageStatus = if (reparseImages) null else StatusContent.ERROR
+        val targetImageStatus = if (reparseImages) StatusContent.ERROR else StatusContent.SAVED
         val errorCount = AtomicInteger(0)
         val okCount = AtomicInteger(0)
 
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 contentList.forEach {
-                    val res = if (reparseContent) ContentHelper.reparseFromScratch(it)
-                    else ImmutablePair(it, Optional.of(it))
+                    val res = if (reparseContent) reparseFromScratch(it)
+                    else it
 
-                    if (res.right.isPresent) {
-                        val content = res.right.get()
+                    if (res != null) {
                         // Non-blocking performance bottleneck; run in a dedicated worker
-                        if (reparseImages) purgeItem(content)
+                        if (reparseImages) purgeItem(res)
                         okCount.incrementAndGet()
                         dao.addContentToQueue(
-                            content, targetImageStatus, position, -1, content.replacementTitle,
+                            res, sourceImageStatus, targetImageStatus, position,
+                            -1, res.replacementTitle,
                             ContentQueueManager.isQueueActive(getApplication())
                         )
                     } else {
                         // As we're in the download queue, an item whose content is unreachable should directly get to the error queue
-                        val c = dao.selectContent(res.left.id)
+                        val c = dao.selectContent(it.id)
                         if (c != null) {
                             // Remove the content from the regular queue
-                            ContentHelper.removeQueuedContent(
+                            removeQueuedContent(
                                 getApplication(),
                                 dao,
                                 c,
@@ -322,21 +334,20 @@ class QueueViewModel(
                                     ErrorType.PARSING,
                                     c.galleryUrl,
                                     "Book",
-                                    "Redownload from scratch -> Content unreachable",
-                                    Instant.now()
+                                    "Redownload from scratch -> Content unreachable"
                                 )
                             )
                             c.setErrorLog(errors)
                             dao.insertContent(c)
                             // Save the regular queue
-                            ContentHelper.updateQueueJson(getApplication(), dao)
+                            updateQueueJson(getApplication(), dao)
                         }
                         errorCount.incrementAndGet()
                         onError.invoke(EmptyResultException("Redownload from scratch -> Content unreachable"))
                     }
                     EventBus.getDefault().post(
                         ProcessEvent(
-                            ProcessEvent.EventType.PROGRESS,
+                            ProcessEvent.Type.PROGRESS,
                             R.id.generic_progress,
                             0,
                             okCount.get(),
@@ -345,11 +356,11 @@ class QueueViewModel(
                         )
                     )
                 } // For each content
-                if (Preferences.isQueueAutostart())
+                if (Settings.isQueueAutostart)
                     ContentQueueManager.resumeQueue(getApplication())
                 EventBus.getDefault().postSticky(
                     ProcessEvent(
-                        ProcessEvent.EventType.COMPLETE,
+                        ProcessEvent.Type.COMPLETE,
                         R.id.generic_progress,
                         0,
                         okCount.get(),
@@ -357,7 +368,8 @@ class QueueViewModel(
                         contentList.size
                     )
                 )
-            }
+                dao.cleanup()
+            } // Dispatchers.IO
             onSuccess.invoke(contentList.size - errorCount.get())
         }
     }
@@ -366,34 +378,32 @@ class QueueViewModel(
         contentHashToShowFirst.value = hash
     }
 
-    fun setDownloadMode(contentIds: List<Long>, downloadMode: Int) {
-        viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                contentIds.forEach {
-                    val theContent = dao.selectContent(it)
-                    if (theContent != null && !theContent.isBeingProcessed) {
-                        theContent.downloadMode = downloadMode
-                        dao.insertContent(theContent)
-                    }
+    fun setDownloadMode(contentIds: List<Long>, downloadMode: DownloadMode) {
+        viewModelScope.launch(Dispatchers.IO) {
+            contentIds.forEach {
+                val theContent = dao.selectContent(it)
+                if (theContent != null && !theContent.isBeingProcessed) {
+                    theContent.downloadMode = downloadMode
+                    dao.insertContent(theContent)
                 }
-                ContentHelper.updateQueueJson(getApplication(), dao)
-                // Force display by updating queue
-                dao.updateQueue(dao.selectQueue())
             }
+            updateQueueJson(getApplication(), dao)
+            // Force display by updating queue
+            dao.updateQueue(dao.selectQueue())
+            dao.cleanup()
         }
     }
 
     fun toogleFreeze(recordId: List<Long>) {
-        viewModelScope.launch {
-            launch(Dispatchers.IO) {
-                val queue = dao.selectQueue()
-                queue.forEach {
-                    if (recordId.contains(it.id)) it.isFrozen = !it.isFrozen
-                }
-                dao.updateQueue(queue)
-                // Update queue JSON
-                ContentHelper.updateQueueJson(getApplication(), dao)
+        viewModelScope.launch(Dispatchers.IO) {
+            val queue = dao.selectQueue()
+            queue.forEach {
+                if (recordId.contains(it.id)) it.frozen = !it.frozen
             }
+            dao.updateQueue(queue)
+            // Update queue JSON
+            updateQueueJson(getApplication(), dao)
+            dao.cleanup()
         }
     }
 }

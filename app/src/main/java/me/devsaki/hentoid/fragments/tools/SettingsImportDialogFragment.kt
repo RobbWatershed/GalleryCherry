@@ -8,8 +8,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.documentfile.provider.DocumentFile
-import androidx.fragment.app.DialogFragment
-import androidx.fragment.app.FragmentManager
+import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.snackbar.BaseTransientBottomBar
 import com.google.android.material.snackbar.Snackbar
@@ -17,37 +16,42 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.devsaki.hentoid.R
+import me.devsaki.hentoid.database.ObjectBoxDAO
 import me.devsaki.hentoid.databinding.DialogToolsSettingsImportBinding
+import me.devsaki.hentoid.fragments.BaseDialogFragment
 import me.devsaki.hentoid.json.JsonSettings
-import me.devsaki.hentoid.util.ImportHelper
-import me.devsaki.hentoid.util.ImportHelper.PickFileContract
-import me.devsaki.hentoid.util.JsonHelper
-import me.devsaki.hentoid.util.Preferences
-import org.apache.commons.lang3.tuple.ImmutablePair
+import me.devsaki.hentoid.util.PickFileContract
+import me.devsaki.hentoid.util.PickerResult
+import me.devsaki.hentoid.util.Settings
+import me.devsaki.hentoid.util.importRenamingRules
+import me.devsaki.hentoid.util.jsonToObject
 import timber.log.Timber
 import java.io.IOException
 
 /**
  * Dialog for the settings metadata import feature
  */
-class SettingsImportDialogFragment : DialogFragment() {
+class SettingsImportDialogFragment : BaseDialogFragment<Nothing>() {
+    companion object {
+        fun invoke(fragment: Fragment) {
+            invoke(fragment, SettingsImportDialogFragment())
+        }
+    }
+
     private var binding: DialogToolsSettingsImportBinding? = null
     private var dismissHandler: Handler? = null
 
 
-    private val pickFile = registerForActivityResult(
-        PickFileContract()
-    ) { result: ImmutablePair<Int, Uri> ->
-        onFilePickerResult(result.left, result.right)
-    }
+    private val pickFile = registerForActivityResult(PickFileContract())
+    { result -> onFilePickerResult(result.first, result.second) }
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedState: Bundle?
-    ): View {
+    ): View? {
         binding = DialogToolsSettingsImportBinding.inflate(inflater, container, false)
-        return binding!!.root
+        return binding?.root
     }
 
     override fun onViewCreated(rootView: View, savedInstanceState: Bundle?) {
@@ -62,35 +66,33 @@ class SettingsImportDialogFragment : DialogFragment() {
         super.onDestroyView()
     }
 
-    private fun onFilePickerResult(resultCode: Int, uri: Uri) {
+    private fun onFilePickerResult(resultCode: PickerResult, uri: Uri) {
         binding?.apply {
             when (resultCode) {
-                ImportHelper.PickerResult.OK -> {
+                PickerResult.OK -> {
                     // File selected
                     val doc = DocumentFile.fromSingleUri(requireContext(), uri) ?: return
                     selectFileBtn.visibility = View.GONE
                     checkFile(doc)
                 }
 
-                ImportHelper.PickerResult.KO_CANCELED -> Snackbar.make(
+                PickerResult.KO_CANCELED -> Snackbar.make(
                     root,
                     R.string.import_canceled,
                     BaseTransientBottomBar.LENGTH_LONG
                 ).show()
 
-                ImportHelper.PickerResult.KO_NO_URI -> Snackbar.make(
+                PickerResult.KO_NO_URI -> Snackbar.make(
                     root,
                     R.string.import_invalid,
                     BaseTransientBottomBar.LENGTH_LONG
                 ).show()
 
-                ImportHelper.PickerResult.KO_OTHER -> Snackbar.make(
+                PickerResult.KO_OTHER -> Snackbar.make(
                     root,
                     R.string.import_other,
                     BaseTransientBottomBar.LENGTH_LONG
                 ).show()
-
-                else -> {}
             }
         }
     }
@@ -133,8 +135,8 @@ class SettingsImportDialogFragment : DialogFragment() {
     }
 
     private fun deserialiseJson(jsonFile: DocumentFile): JsonSettings? {
-        val result: JsonSettings = try {
-            JsonHelper.jsonToObject(requireContext(), jsonFile, JsonSettings::class.java)
+        val result = try {
+            jsonToObject(requireContext(), jsonFile, JsonSettings::class.java)
         } catch (e: IOException) {
             Timber.w(e)
             return null
@@ -144,7 +146,23 @@ class SettingsImportDialogFragment : DialogFragment() {
 
     private fun runImport(settings: JsonSettings) {
         isCancelable = false
-        Preferences.importInformation(settings.settings)
+        Settings.importInformation(settings.settings)
+
+        val rules = settings.getEntityRenamingRules()
+        if (rules.isNotEmpty()) {
+            lifecycleScope.launch {
+                withContext(Dispatchers.IO) {
+                    val dao = ObjectBoxDAO()
+                    try {
+                        importRenamingRules(dao, rules)
+                    } catch (e: Exception) {
+                        Timber.w(e)
+                    } finally {
+                        dao.cleanup()
+                    }
+                }
+            }
+        }
         finish()
     }
 
@@ -159,13 +177,6 @@ class SettingsImportDialogFragment : DialogFragment() {
 
         // Dismiss after 3s, for the user to be able to see the snackbar
         dismissHandler = Handler(Looper.getMainLooper())
-        dismissHandler!!.postDelayed({ dismiss() }, 3000)
-    }
-
-    companion object {
-        fun invoke(fragmentManager: FragmentManager) {
-            val fragment = SettingsImportDialogFragment()
-            fragment.show(fragmentManager, null)
-        }
+        dismissHandler?.postDelayed({ dismiss() }, 3000)
     }
 }

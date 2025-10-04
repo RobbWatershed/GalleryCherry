@@ -8,8 +8,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.documentfile.provider.DocumentFile
-import androidx.fragment.app.DialogFragment
-import androidx.fragment.app.FragmentManager
+import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequest
@@ -25,22 +24,33 @@ import me.devsaki.hentoid.databinding.DialogToolsMetaImportBinding
 import me.devsaki.hentoid.enums.Grouping
 import me.devsaki.hentoid.events.ProcessEvent
 import me.devsaki.hentoid.events.ServiceDestroyedEvent
+import me.devsaki.hentoid.fragments.BaseDialogFragment
 import me.devsaki.hentoid.json.JsonContentCollection
-import me.devsaki.hentoid.notification.import_.ImportNotificationChannel
-import me.devsaki.hentoid.util.ImportHelper
-import me.devsaki.hentoid.util.ImportHelper.PickFileContract
-import me.devsaki.hentoid.util.JsonHelper
-import me.devsaki.hentoid.util.StringHelper
+import me.devsaki.hentoid.util.PickFileContract
+import me.devsaki.hentoid.util.PickerResult
+import me.devsaki.hentoid.util.jsonToObject
 import me.devsaki.hentoid.workers.MetadataImportWorker
 import me.devsaki.hentoid.workers.data.MetadataImportData
-import org.apache.commons.lang3.tuple.ImmutablePair
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
 import timber.log.Timber
 import java.io.IOException
 
-class MetaImportDialogFragment : DialogFragment() {
+class MetaImportDialogFragment : BaseDialogFragment<Nothing>() {
+
+    companion object {
+        // Empty files import options
+        const val DONT_IMPORT = 0
+        const val IMPORT_AS_EMPTY = 1
+        const val IMPORT_AS_STREAMED = 2
+        const val IMPORT_AS_ERROR = 3
+
+        operator fun invoke(fragment: Fragment) {
+            invoke(fragment, MetaImportDialogFragment())
+        }
+    }
+
     // UI
     private var binding: DialogToolsMetaImportBinding? = null
 
@@ -48,18 +58,16 @@ class MetaImportDialogFragment : DialogFragment() {
 
 
     private val pickFile = registerForActivityResult(PickFileContract())
-    { result: ImmutablePair<Int, Uri> ->
-        onFilePickerResult(result.left, result.right)
-    }
+    { result -> onFilePickerResult(result.first, result.second) }
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedState: Bundle?
-    ): View {
+    ): View? {
         binding = DialogToolsMetaImportBinding.inflate(inflater, container, false)
         EventBus.getDefault().register(this)
-        return binding!!.root
+        return binding?.root
     }
 
     override fun onDestroyView() {
@@ -79,35 +87,33 @@ class MetaImportDialogFragment : DialogFragment() {
         }
     }
 
-    private fun onFilePickerResult(resultCode: Int, uri: Uri) {
+    private fun onFilePickerResult(resultCode: PickerResult, uri: Uri) {
         binding?.apply {
             when (resultCode) {
-                ImportHelper.PickerResult.OK -> {
+                PickerResult.OK -> {
                     // File selected
                     val doc = DocumentFile.fromSingleUri(requireContext(), uri) ?: return
                     importSelectFileBtn.visibility = View.GONE
                     checkFile(doc)
                 }
 
-                ImportHelper.PickerResult.KO_CANCELED -> Snackbar.make(
+                PickerResult.KO_CANCELED -> Snackbar.make(
                     root,
                     R.string.import_canceled,
                     BaseTransientBottomBar.LENGTH_LONG
                 ).show()
 
-                ImportHelper.PickerResult.KO_NO_URI -> Snackbar.make(
+                PickerResult.KO_NO_URI -> Snackbar.make(
                     root,
                     R.string.import_invalid,
                     BaseTransientBottomBar.LENGTH_LONG
                 ).show()
 
-                ImportHelper.PickerResult.KO_OTHER -> Snackbar.make(
+                PickerResult.KO_OTHER -> Snackbar.make(
                     root,
                     R.string.import_other,
                     BaseTransientBottomBar.LENGTH_LONG
                 ).show()
-
-                else -> {}
             }
         }
     }
@@ -129,7 +135,7 @@ class MetaImportDialogFragment : DialogFragment() {
                 onFileDeserialized(result, jsonFile)
             } catch (e: Exception) {
                 binding?.apply {
-                    val fileName = StringHelper.protect(jsonFile.name)
+                    val fileName = jsonFile.name ?: ""
                     binding?.apply {
                         importProgressText.text = resources.getString(
                             R.string.import_file_invalid,
@@ -150,7 +156,7 @@ class MetaImportDialogFragment : DialogFragment() {
         binding?.apply {
             importProgressText.visibility = View.GONE
             importProgressBar.visibility = View.GONE
-            if (null == collection || collection.isEmpty) {
+            if (null == collection || collection.isEmpty()) {
                 importFileInvalidText.text = resources.getString(
                     R.string.import_file_invalid,
                     jsonFile.name
@@ -160,7 +166,7 @@ class MetaImportDialogFragment : DialogFragment() {
                 importSelectFileBtn.visibility = View.GONE
                 importFileInvalidText.visibility = View.GONE
                 // Don't link the groups, just count the books
-                val librarySize = collection.jsonLibrary.size
+                val librarySize = collection.library.size
                 if (librarySize > 0) {
                     importFileLibraryChk.text = resources.getQuantityString(
                         R.plurals.import_file_library,
@@ -170,7 +176,7 @@ class MetaImportDialogFragment : DialogFragment() {
                     importFileLibraryChk.setOnCheckedChangeListener { _, _ -> refreshDisplay() }
                     importFileLibraryChk.visibility = View.VISIBLE
                 }
-                val mQueueSize = collection.jsonQueue.size
+                val mQueueSize = collection.queue.size
                 if (mQueueSize > 0) {
                     importFileQueueChk.text = resources.getQuantityString(
                         R.plurals.import_file_queue,
@@ -180,7 +186,7 @@ class MetaImportDialogFragment : DialogFragment() {
                     importFileQueueChk.setOnCheckedChangeListener { _, _ -> refreshDisplay() }
                     importFileQueueChk.visibility = View.VISIBLE
                 }
-                val mGroupsSize = collection.getGroups(Grouping.CUSTOM).size
+                val mGroupsSize = collection.getEntityGroups(Grouping.CUSTOM).size
                 if (mGroupsSize > 0) {
                     importFileGroupsChk.text = resources.getQuantityString(
                         R.plurals.import_file_groups,
@@ -190,7 +196,7 @@ class MetaImportDialogFragment : DialogFragment() {
                     importFileGroupsChk.setOnCheckedChangeListener { _, _ -> refreshDisplay() }
                     importFileGroupsChk.visibility = View.VISIBLE
                 }
-                val bookmarksSize = collection.bookmarks.size
+                val bookmarksSize = collection.getEntityBookmarks().size
                 if (bookmarksSize > 0) {
                     importFileBookmarksChk.text = resources.getQuantityString(
                         R.plurals.import_file_bookmarks,
@@ -230,16 +236,15 @@ class MetaImportDialogFragment : DialogFragment() {
     }
 
     private fun deserialiseJson(jsonFile: DocumentFile): JsonContentCollection? {
-        val result: JsonContentCollection = try {
-            JsonHelper.jsonToObject(
+        try {
+            return jsonToObject(
                 requireContext(), jsonFile,
                 JsonContentCollection::class.java
             )
         } catch (e: IOException) {
             Timber.w(e)
-            return null
         }
-        return result
+        return null
     }
 
     private fun runImport(
@@ -270,7 +275,7 @@ class MetaImportDialogFragment : DialogFragment() {
             builder.setIsImportQueue(importQueue)
             builder.setIsImportCustomGroups(importCustomGroups)
             builder.setIsImportBookmarks(importBookmarks)
-            ImportNotificationChannel.init(requireContext())
+            me.devsaki.hentoid.notification.import_.init(requireContext())
             importProgressText.setText(R.string.starting_import)
             importProgressBar.isIndeterminate = true
             importProgressText.visibility = View.VISIBLE
@@ -302,7 +307,7 @@ class MetaImportDialogFragment : DialogFragment() {
 
     private fun importEvent(event: ProcessEvent) {
         binding?.apply {
-            if (ProcessEvent.EventType.PROGRESS == event.eventType) {
+            if (ProcessEvent.Type.PROGRESS == event.eventType) {
                 val progress = event.elementsOK + event.elementsKO
                 val itemTxt = resources.getQuantityString(R.plurals.item, progress)
                 importProgressText.text = resources.getString(
@@ -314,7 +319,7 @@ class MetaImportDialogFragment : DialogFragment() {
                 importProgressBar.max = event.elementsTotal
                 importProgressBar.progress = progress
                 importProgressBar.isIndeterminate = false
-            } else if (ProcessEvent.EventType.COMPLETE == event.eventType) {
+            } else if (ProcessEvent.Type.COMPLETE == event.eventType) {
                 isServiceGracefulClose = true
                 Snackbar.make(
                     root,
@@ -326,10 +331,10 @@ class MetaImportDialogFragment : DialogFragment() {
                     ),
                     BaseTransientBottomBar.LENGTH_LONG
                 ).show()
+                // Dismiss after 3s, for the user to be able to see the snackbar
+                Handler(Looper.getMainLooper()).postDelayed({ dismissAllowingStateLoss() }, 3000)
             }
         }
-        // Dismiss after 3s, for the user to be able to see the snackbar
-        Handler(Looper.getMainLooper()).postDelayed({ dismissAllowingStateLoss() }, 3000)
     }
 
     /**
@@ -349,19 +354,6 @@ class MetaImportDialogFragment : DialogFragment() {
                 ).show()
             }
             Handler(Looper.getMainLooper()).postDelayed({ dismissAllowingStateLoss() }, 3000)
-        }
-    }
-
-    companion object {
-        // Empty files import options
-        const val DONT_IMPORT = 0
-        const val IMPORT_AS_EMPTY = 1
-        const val IMPORT_AS_STREAMED = 2
-        const val IMPORT_AS_ERROR = 3
-
-        operator fun invoke(fragmentManager: FragmentManager) {
-            val fragment = MetaImportDialogFragment()
-            fragment.show(fragmentManager, null)
         }
     }
 }

@@ -23,28 +23,42 @@
     <color name="dark_red">#aa0033</color>
     <color name="very_dark_red">#97002d</color>
     <color name="super_dark_red">#830027</color>
-    <color name="taupe">#ff3572</color>
-    <color name="taupe_elevated_1">#ff487f</color>
-    <color name="taupe_elevated_2">#ff5c8d</color>
-    <color name="taupe_elevated_3">#ff709b</color>
-    <color name="taupe_elevated_4">#ff83a8</color>
+
     <color name="accent_red">#ff80ab</color>
     <color name="light_red">#ffb2dd</color>
-    <color name="very_dark_pink">#6d0721</color>
+
+    <color name="taupe_m4">#261616</color> <!-- black 50 HSL -->
+    <color name="taupe_m3">#2b1818</color> <!-- black 33 HSL -->
+    <color name="taupe_m2">#2f1919</color> <!-- black 25 HSL -->
+    <color name="taupe_m1">#361b1b</color> <!-- black 12 HSL -->
+
+    <color name="taupe">#ff3572</color>
+
+    <color name="taupe_p1">#ff487f</color> <!-- white 12 HSL -->
+    <color name="taupe_p2">#ff5c8d</color> <!-- white 25 HSL -->
+    <color name="taupe_p3">#ff709b</color> <!-- white 33 HSL -->
+    <color name="taupe_p4">#ff83a8</color> <!-- white 50 HSL -->
+
 
     <!-- Neutral Colors -->
     <color name="white">#FFFFFF</color>
     <color name="black">#000000</color>
     <color name="cod_gray">#121212</color>
+    <color name="lighter_gray">#cccccc</color>
     <color name="light_gray">#aaaaaa</color>
     <color name="medium_gray">#888888</color>
     <color name="dark_gray">#FF444444</color>
+    <color name="darker_gray">#FF222222</color>
+
+    <!-- Alphas -->
     <color name="black_opacity_12">#1F000000</color>
     <color name="black_opacity_25">#40000000</color>
+    <color name="black_opacity_33">#54000000</color>
     <color name="black_opacity_50">#80000000</color>
     <color name="black_opacity_87">#DE000000</color>
     <color name="white_opacity_12">#1FFFFFFF</color>
     <color name="white_opacity_25">#40FFFFFF</color>
+    <color name="white_opacity_33">#54FFFFFF</color>
     <color name="white_opacity_50">#80FFFFFF</color>
     <color name="white_opacity_66">#AAFFFFFF</color>
     <color name="white_opacity_87">#DEFFFFFF</color>
@@ -67,5 +81,10 @@
     <color name="purple_light">@android:color/holo_purple</color>
     <color name="purple_dark">#8600C4</color>
     <color name="blue">@android:color/holo_blue_dark</color>
-    <color name="bronze">@android:color/holo_orange_light</color>
+    <color name="orange_light">@android:color/holo_orange_light</color>
+
+    <!-- Achievements colors -->
+    <color name="gold">#ffd700</color>
+    <color name="silver">#c0c0c0</color>
+    <color name="bronze">#cd7f32</color>
 </resources>

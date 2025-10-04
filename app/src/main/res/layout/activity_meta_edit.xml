@@ -4,13 +4,13 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
     tools:context=".activities.MetadataEditActivity">
 
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="?colorPrimary"
         android:elevation="@dimen/toolbar_layout_elevation"
         android:minHeight="?android:attr/actionBarSize"
         app:layout_constraintTop_toTopOf="parent"
@@ -44,8 +44,8 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvTitle"
         tools:ignore="ContentDescription"
-        tools:src="@drawable/ic_hentoid_trans"
-        tools:tint="@color/light_gray" />
+        tools:src="@drawable/ic_hentoid_shape"
+        tools:tint="@color/medium_gray" />
 
     <ImageView
         android:id="@+id/ivFlag"
@@ -69,7 +69,7 @@
         app:layout_constraintStart_toEndOf="@id/ivCover"
         app:layout_constraintTop_toBottomOf="@id/tvTitle"
         app:spanCount="2"
-        tools:listitem="@layout/item_badge" />
+        tools:listitem="@layout/item_attribute_type_filter" />
 
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/title_new"
@@ -80,6 +80,7 @@
         android:layout_marginEnd="8dp"
         android:hint="@string/new_title"
         android:visibility="gone"
+        app:endIconMode="clear_text"
         app:layout_constraintTop_toBottomOf="@id/tag_filter"
         tools:visibility="visible">
 
@@ -109,7 +110,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tag_filter"
-        tools:listitem="@layout/item_badge" />
+        tools:listitem="@layout/item_badge_suggestion" />
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/tags_fab"
@@ -117,6 +118,7 @@
         android:layout_height="wrap_content"
         android:layout_marginEnd="8dp"
         android:layout_marginBottom="8dp"
+        android:backgroundTint="?colorPrimaryDark"
         android:visibility="visible"
         app:fabSize="mini"
         app:layout_constraintBottom_toBottomOf="parent"

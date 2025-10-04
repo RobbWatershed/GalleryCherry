@@ -4,7 +4,6 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.database.CollectionDAO
@@ -13,28 +12,37 @@ import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.database.domains.ErrorRecord
 import me.devsaki.hentoid.databinding.DialogLibraryErrorsBinding
 import me.devsaki.hentoid.enums.StatusContent
-import me.devsaki.hentoid.util.LogHelper
-import me.devsaki.hentoid.util.ToastHelper
-import me.devsaki.hentoid.util.file.FileHelper
+import me.devsaki.hentoid.fragments.BaseDialogFragment
+import me.devsaki.hentoid.util.LogEntry
+import me.devsaki.hentoid.util.LogInfo
+import me.devsaki.hentoid.util.file.openFile
+import me.devsaki.hentoid.util.file.shareFile
+import me.devsaki.hentoid.util.toast
+import me.devsaki.hentoid.util.writeLog
 
 /**
  * Info dialog for download errors details
  */
-class ErrorsDialogFragment : DialogFragment(R.layout.dialog_library_errors) {
+class ErrorsDialogFragment : BaseDialogFragment<ErrorsDialogFragment.Parent>() {
 
-    // == UI
-    private var _binding: DialogLibraryErrorsBinding? = null
-    private val binding get() = _binding!!
+    companion object {
+        const val ID = "ID"
 
-    private lateinit var parent: Parent
+        fun invoke(parentFragment: Fragment, id: Long) {
+            val args = Bundle()
+            args.putLong(ID, id)
+            invoke(parentFragment, ErrorsDialogFragment(), args)
+        }
+    }
+
+    private var binding: DialogLibraryErrorsBinding? = null
 
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedState: Bundle?
     ): View {
-        _binding = DialogLibraryErrorsBinding.inflate(inflater, container, false)
-        parent = parentFragment as Parent
-        return binding.root
+        binding = DialogLibraryErrorsBinding.inflate(inflater, container, false)
+        return binding!!.root
     }
 
     override fun onViewCreated(rootView: View, savedInstanceState: Bundle?) {
@@ -45,7 +53,7 @@ class ErrorsDialogFragment : DialogFragment(R.layout.dialog_library_errors) {
         require(0L != id) { "No ID found" }
 
         val content: Content
-        val dao: CollectionDAO = ObjectBoxDAO(context)
+        val dao: CollectionDAO = ObjectBoxDAO()
         try {
             content = dao.selectContent(id)!!
         } finally {
@@ -54,16 +62,18 @@ class ErrorsDialogFragment : DialogFragment(R.layout.dialog_library_errors) {
 
         updateStats(content)
 
-        binding.redownloadBtn.setOnClickListener { redownload(content) }
-        binding.openLogBtn.setOnClickListener { showErrorLog(content) }
-        binding.shareLogBtn.setOnClickListener { shareErrorLog(content) }
+        binding?.apply {
+            redownloadBtn.setOnClickListener { redownload(content) }
+            openLogBtn.setOnClickListener { showErrorLog(content) }
+            shareLogBtn.setOnClickListener { shareErrorLog(content) }
+        }
     }
 
     private fun updateStats(content: Content) {
-        var images = 0
+        var images: Int
         var imgErrors = 0
         val context = context ?: return
-        content.imageFiles?.let {
+        content.imageFiles.let {
             images = it.size - 1 // Don't count the cover
             for (imgFile in it) if (imgFile.status == StatusContent.ERROR) imgErrors++
             if (0 == images) {
@@ -71,16 +81,16 @@ class ErrorsDialogFragment : DialogFragment(R.layout.dialog_library_errors) {
                 imgErrors = images
             }
         }
-        binding.let {
+        binding?.let {
             it.redownloadDetail.text = context.getString(
                 R.string.redownload_dialog_message, images, images - imgErrors, imgErrors
             )
-            content.errorLog?.let { log ->
+            content.errorLog.let { log ->
                 if (!log.isEmpty()) {
                     val firstError = log[0]
                     var message = context.getString(
                         R.string.redownload_first_error,
-                        context.getString(firstError.type.getName())
+                        context.getString(firstError.type.displayName)
                     )
                     if (firstError.description.isNotEmpty()) message += String.format(
                         " - %s", firstError.description
@@ -92,52 +102,36 @@ class ErrorsDialogFragment : DialogFragment(R.layout.dialog_library_errors) {
         }
     }
 
-    private fun createLog(content: Content): LogHelper.LogInfo {
-        val log: MutableList<LogHelper.LogEntry> = ArrayList()
-        val errorLogInfo = LogHelper.LogInfo("error_log" + content.id)
+    private fun createLog(content: Content): LogInfo {
+        val log: MutableList<LogEntry> = ArrayList()
+        val errorLogInfo = LogInfo("error_log" + content.id)
         errorLogInfo.setHeaderName("Error")
         errorLogInfo.setNoDataMessage("No error detected.")
+        val errorLog = content.errorLog
+        errorLogInfo.setHeader("Error log for " + content.title + " [" + content.uniqueSiteId + "@" + content.site.description + "] : " + errorLog.size + " errors")
+        for (e in errorLog) log.add(LogEntry(e.timestamp, e.toString()))
         errorLogInfo.setEntries(log)
-        val errorLog: List<ErrorRecord>? = content.errorLog
-        if (errorLog != null) {
-            errorLogInfo.setHeader("Error log for " + content.title + " [" + content.uniqueSiteId + "@" + content.site.description + "] : " + errorLog.size + " errors")
-            for (e in errorLog) log.add(LogHelper.LogEntry(e.timestamp, e.toString()))
-        }
         return errorLogInfo
     }
 
     private fun showErrorLog(content: Content) {
-        ToastHelper.toast(R.string.redownload_generating_log_file)
+        toast(R.string.redownload_generating_log_file)
         val logInfo = createLog(content)
-        val logFile = LogHelper.writeLog(requireContext(), logInfo)
-        if (logFile != null) FileHelper.openFile(requireContext(), logFile)
+        val logFile = requireContext().writeLog(logInfo)
+        if (logFile != null) openFile(requireContext(), logFile)
     }
 
     private fun shareErrorLog(content: Content) {
         val logInfo = createLog(content)
-        val logFile = LogHelper.writeLog(requireContext(), logInfo)
-        if (logFile != null) FileHelper.shareFile(
+        val logFile = requireContext().writeLog(logInfo)
+        if (logFile != null) shareFile(
             requireContext(), logFile.uri, "Error log for book ID " + content.uniqueSiteId
         )
     }
 
     private fun redownload(content: Content) {
-        parent.redownloadContent(content)
+        parent?.redownloadContent(content)
         dismiss()
-    }
-
-    companion object {
-        const val ID = "ID"
-
-        fun invoke(parentFragment: Fragment, id: Long) {
-            val fragment = ErrorsDialogFragment()
-
-            val args = Bundle()
-            args.putLong(ID, id)
-            fragment.arguments = args
-
-            fragment.show(parentFragment.childFragmentManager, null)
-        }
     }
 
     interface Parent {

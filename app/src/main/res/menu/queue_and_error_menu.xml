@@ -2,8 +2,7 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    tools:context=".activities.QueueActivity"
-    tools:targetApi="o">
+    tools:context=".activities.QueueActivity">
     <item
         android:id="@+id/action_search"
         android:icon="@drawable/ic_menu_search"
@@ -34,7 +33,7 @@
         app:showAsAction="never" />
     <item
         android:id="@+id/action_import_downloads"
-        android:icon="@drawable/ic_simple_arrow_up"
+        android:icon="@drawable/ic_action_import"
         android:title="@string/import_downloads"
         android:tooltipText="@string/import_downloads"
         app:showAsAction="never" />
@@ -55,5 +54,11 @@
         android:icon="@drawable/ic_action_delete"
         android:title="@string/cancel_all_errors"
         android:tooltipText="@string/cancel_all_errors"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/help"
+        android:icon="@drawable/ic_help_outline"
+        android:title="@string/help_generic"
+        android:tooltipText="@string/help_generic"
         app:showAsAction="never" />
 </menu>

@@ -13,9 +13,14 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.enums.Site
-import me.devsaki.hentoid.fragments.intro.*
-import me.devsaki.hentoid.util.Preferences
-import me.devsaki.hentoid.util.ThemeHelper
+import me.devsaki.hentoid.fragments.intro.EndIntroFragment
+import me.devsaki.hentoid.fragments.intro.ImportIntroFragment
+import me.devsaki.hentoid.fragments.intro.PermissionIntroFragment
+import me.devsaki.hentoid.fragments.intro.SourcesIntroFragment
+import me.devsaki.hentoid.fragments.intro.ThemeIntroFragment
+import me.devsaki.hentoid.fragments.intro.WelcomeIntroFragment
+import me.devsaki.hentoid.util.Settings
+import me.devsaki.hentoid.util.applyTheme
 
 /**
  * Welcome (Intro Slide) Activity
@@ -28,11 +33,7 @@ class IntroActivity : AppIntro2() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         addSlide(WelcomeIntroFragment())
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
-            Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
-        ) {
-            addSlide(PermissionIntroFragment())
-        }
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) addSlide(PermissionIntroFragment())
         addSlide(ImportIntroFragment())
         addSlide(ThemeIntroFragment())
         addSlide(SourcesIntroFragment())
@@ -44,7 +45,7 @@ class IntroActivity : AppIntro2() {
         setSwipeLock(true)
 
         // Set default color theme, in case user skips the slide
-        Preferences.setColorTheme(Preferences.Default.COLOR_THEME)
+        Settings.colorTheme = Settings.Value.COLOR_THEME_LIGHT
         backgroundDrawable = ContextCompat.getDrawable(this, R.drawable.bg_pin_dialog)
     }
 
@@ -56,7 +57,7 @@ class IntroActivity : AppIntro2() {
 
         if (newFragment is ImportIntroFragment) {
             // Skip Import fragment when in browser mode
-            if (Preferences.isBrowserMode()) {
+            if (Settings.isBrowserMode) {
                 if (oldFragment is PermissionIntroFragment) {
                     lifecycleScope.launch {
                         delay(75)
@@ -93,28 +94,33 @@ class IntroActivity : AppIntro2() {
     }
 
     fun setThemePrefs(pref: Int) {
-        Preferences.setColorTheme(pref)
-        ThemeHelper.applyTheme(this)
+        Settings.colorTheme = pref
+        applyTheme()
         goToNextSlide(false)
     }
 
-    private fun setSourcePrefs(sources: List<Site?>?) {
-        Preferences.setActiveSites(sources)
+    private fun setSourcePrefs(sources: List<Site>) {
+        Settings.activeSites = sources
     }
 
     // Validation of the final step of the wizard
+    @Suppress("DEPRECATION")
     override fun onDonePressed(currentFragment: Fragment?) {
-        autoEndHandler!!.removeCallbacksAndMessages(null)
-        Preferences.setIsFirstRun(false)
+        autoEndHandler?.removeCallbacksAndMessages(null)
+        Settings.isFirstRun = false
         // Need to do that to avoid a useless reloading of the library screen upon loading prefs for the first time
-        Preferences.setLibraryDisplay(Preferences.Default.LIBRARY_DISPLAY)
+        Settings.libraryDisplay = Settings.Default.LIBRARY_DISPLAY
 
         // Load library screen
         val intent = Intent(this, LibraryActivity::class.java)
         intent.flags = (Intent.FLAG_ACTIVITY_CLEAR_TOP
                 or Intent.FLAG_ACTIVITY_CLEAR_TASK)
         startActivity(intent)
-        overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
+        if (Build.VERSION.SDK_INT >= 34) {
+            overrideActivityTransition(OVERRIDE_TRANSITION_OPEN, R.anim.fade_in, R.anim.fade_out)
+        } else {
+            overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
+        }
         finish()
     }
 }

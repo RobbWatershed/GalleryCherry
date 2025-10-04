@@ -56,12 +56,6 @@
     <string name="pref_cat_advanced">Speciális</string>
     <string name="pref_refresh_library_title">Könyvtár újratöltése</string>
     <string name="pref_refresh_library_summary">A könyvtár tartalmának kézi frissítése</string>
-    <string name="pref_delete_all_except_favs_title">Minden könyv törlése a kedvencek kivételével</string>
-    <string name="pref_delete_all_except_favs_summary">A könyvtár kiürítése; csak a kedvenc könyvek megtartása\nNB: Ez nem vonatkozik a külső könyvtárra.</string>
-    <plurals name="pref_ask_delete_all_except_favs">
-        <item quantity="one"><x:g example="1" id="count">%d</x:g> könyv törlése\?</item>
-        <item quantity="other"><x:g example="2" id="count">%d</x:g> könyv törlése\?</item>
-    </plurals>
 <string name="pref_screen_browser">Böngésző</string>
     <string name="pref_browser_behaviour">Viselkedés</string>
     <string name="pref_browser_resume_last_title">Folytatás a legutóbb megtekintett oldalon</string>
@@ -188,7 +182,7 @@
     <string name="pref_viewer_maintain_horizontal_zoom">Nagyítási szint karbantartása a lapok között</string>
     <string name="pref_viewer_separating_bars">Elválasztó sávok függőleges módban</string>
     <string name="pref_viewer_display_mode">Megjelenítési mód vízszintes nézethez</string>
-    <string name="pref_viewer_rendering">Renderelési mód</string>
+    <string name="pref_viewer_rendering_mode">Renderelési mód</string>
     <string name="pref_viewer_rendering_no_android5">A sima renderelés nem érhető el az Android 5 rendszeren</string>
     <string name="pref_viewer_auto_rotate">Képek automatikus forgatása</string>
     <string name="pref_viewer_auto_rotate_summary_off">A képek nem lesznek elforgatva</string>

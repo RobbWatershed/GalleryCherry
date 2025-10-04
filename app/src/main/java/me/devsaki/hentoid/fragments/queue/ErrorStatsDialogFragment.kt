@@ -5,8 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.view.ViewCompat
-import androidx.fragment.app.DialogFragment
-import androidx.fragment.app.FragmentManager
+import androidx.fragment.app.Fragment
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.database.CollectionDAO
 import me.devsaki.hentoid.database.ObjectBoxDAO
@@ -15,11 +14,13 @@ import me.devsaki.hentoid.database.domains.ErrorRecord
 import me.devsaki.hentoid.databinding.DialogQueueErrorsBinding
 import me.devsaki.hentoid.enums.ErrorType
 import me.devsaki.hentoid.events.DownloadEvent
-import me.devsaki.hentoid.util.LogHelper
-import me.devsaki.hentoid.util.LogHelper.LogEntry
-import me.devsaki.hentoid.util.LogHelper.LogInfo
-import me.devsaki.hentoid.util.ToastHelper
-import me.devsaki.hentoid.util.file.FileHelper
+import me.devsaki.hentoid.fragments.BaseDialogFragment
+import me.devsaki.hentoid.util.LogEntry
+import me.devsaki.hentoid.util.LogInfo
+import me.devsaki.hentoid.util.file.openFile
+import me.devsaki.hentoid.util.file.shareFile
+import me.devsaki.hentoid.util.toast
+import me.devsaki.hentoid.util.writeLog
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
@@ -28,10 +29,18 @@ import java.util.EnumMap
 /**
  * Info dialog for download errors details
  */
-class ErrorStatsDialogFragment : DialogFragment(R.layout.dialog_queue_errors) {
+class ErrorStatsDialogFragment : BaseDialogFragment<Nothing>() {
+    companion object {
+        const val ID = "ID"
+        fun invoke(fragment: Fragment, id: Long) {
+            val args = Bundle()
+            args.putLong(ID, id)
+            invoke(fragment, ErrorStatsDialogFragment(), args)
+        }
+    }
+
     // == UI
-    private var _binding: DialogQueueErrorsBinding? = null
-    private val binding get() = _binding!!
+    private var binding: DialogQueueErrorsBinding? = null
 
     private var previousNbErrors = 0
     private var currentId: Long = 0
@@ -40,8 +49,8 @@ class ErrorStatsDialogFragment : DialogFragment(R.layout.dialog_queue_errors) {
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedState: Bundle?
     ): View {
-        _binding = DialogQueueErrorsBinding.inflate(inflater, container, false)
-        return binding.root
+        binding = DialogQueueErrorsBinding.inflate(inflater, container, false)
+        return binding!!.root
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -58,7 +67,7 @@ class ErrorStatsDialogFragment : DialogFragment(R.layout.dialog_queue_errors) {
         super.onViewCreated(rootView, savedInstanceState)
 
         arguments?.let {
-            binding.statsDetails.setText(R.string.downloads_loading)
+            binding?.statsDetails?.setText(R.string.downloads_loading)
             previousNbErrors = 0
             val id = it.getLong(ID, 0)
             currentId = id
@@ -73,7 +82,7 @@ class ErrorStatsDialogFragment : DialogFragment(R.layout.dialog_queue_errors) {
     }
 
     private fun updateStats(contentId: Long) {
-        val dao: CollectionDAO = ObjectBoxDAO(requireContext())
+        val dao: CollectionDAO = ObjectBoxDAO()
         val errors: List<ErrorRecord> = try {
             dao.selectErrorRecordByContentId(contentId)
         } finally {
@@ -93,34 +102,35 @@ class ErrorStatsDialogFragment : DialogFragment(R.layout.dialog_queue_errors) {
         }
         val detailsStr = StringBuilder()
         errorsByType.forEach {
-            detailsStr.append(resources.getString(it.key.getName())).append(": ")
+            detailsStr.append(resources.getString(it.key.displayName)).append(": ")
             detailsStr.append(it.value)
-            detailsStr.append(System.getProperty("line.separator"))
+            detailsStr.append(System.lineSeparator())
         }
-        binding.statsDetails.text = detailsStr.toString()
+        binding?.statsDetails?.text = detailsStr.toString()
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     fun onDownloadEvent(event: DownloadEvent) {
         if (event.eventType == DownloadEvent.Type.EV_COMPLETE) {
-            binding.statsDetails.setText(R.string.download_complete)
+            binding?.statsDetails?.setText(R.string.download_complete)
             previousNbErrors = 0
         } else if (event.eventType == DownloadEvent.Type.EV_CANCELED) {
-            binding.statsDetails.setText(R.string.download_cancelled)
+            binding?.statsDetails?.setText(R.string.download_cancelled)
             previousNbErrors = 0
         } else if (event.eventType == DownloadEvent.Type.EV_PROGRESS
             && event.pagesKO > previousNbErrors
-            && event.content != null
         ) {
-            currentId = event.content.id
-            previousNbErrors = event.pagesKO
-            updateStats(currentId)
+            event.content?.let {
+                currentId = it.id
+                previousNbErrors = event.pagesKO
+                updateStats(currentId)
+            }
         }
     }
 
     private fun createLog(): LogInfo {
         val content: Content
-        val dao: CollectionDAO = ObjectBoxDAO(context)
+        val dao: CollectionDAO = ObjectBoxDAO()
         try {
             content = dao.selectContent(currentId)!!
         } finally {
@@ -130,7 +140,6 @@ class ErrorStatsDialogFragment : DialogFragment(R.layout.dialog_queue_errors) {
         val errorLogInfo = LogInfo("error_log" + content.id)
         errorLogInfo.setHeaderName(resources.getString(R.string.error))
         errorLogInfo.setNoDataMessage(resources.getString(R.string.no_error_detected))
-        errorLogInfo.setEntries(log)
         val errorLog: List<ErrorRecord>? = content.errorLog
         if (errorLog != null) {
             errorLogInfo.setHeader(
@@ -144,36 +153,24 @@ class ErrorStatsDialogFragment : DialogFragment(R.layout.dialog_queue_errors) {
             )
             for (e in errorLog) log.add(LogEntry(e.timestamp, e.toString()))
         }
+        errorLogInfo.setEntries(log)
         return errorLogInfo
     }
 
     private fun showErrorLog() {
-        ToastHelper.toast(R.string.redownload_generating_log_file)
+        toast(R.string.redownload_generating_log_file)
         val logInfo = createLog()
-        val logFile = LogHelper.writeLog(requireContext(), logInfo)
-        if (logFile != null) FileHelper.openFile(requireContext(), logFile)
+        val logFile = requireContext().writeLog(logInfo)
+        if (logFile != null) openFile(requireContext(), logFile)
     }
 
     private fun shareErrorLog() {
         val logInfo = createLog()
-        val logFile = LogHelper.writeLog(requireContext(), logInfo)
-        if (logFile != null) FileHelper.shareFile(
+        val logFile = requireContext().writeLog(logInfo)
+        if (logFile != null) shareFile(
             requireContext(),
             logFile.uri,
             resources.getString(R.string.error_log_header_queue)
         )
-    }
-
-    companion object {
-        const val ID = "ID"
-        fun invoke(fragmentManager: FragmentManager, id: Long) {
-            val fragment = ErrorStatsDialogFragment()
-
-            val args = Bundle()
-            args.putLong(ID, id)
-            fragment.arguments = args
-
-            fragment.show(fragmentManager, null)
-        }
     }
 }

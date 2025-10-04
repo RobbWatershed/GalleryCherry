@@ -3,8 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     tools:context=".activities.LibraryActivity"
-    tools:ignore="AlwaysShowAction"
-    tools:targetApi="o">
+    tools:ignore="AlwaysShowAction">
     <item
         android:id="@+id/action_edit_confirm"
         android:icon="@drawable/ic_checked"
@@ -19,4 +18,10 @@
         android:tooltipText="@string/menu_edit_cancel"
         android:visible="true"
         app:showAsAction="always" />
+    <item
+        android:id="@+id/help"
+        android:icon="@drawable/ic_help_outline"
+        android:title="@string/help_generic"
+        android:tooltipText="@string/help_generic"
+        app:showAsAction="ifRoom" />
 </menu>

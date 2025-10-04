@@ -6,11 +6,12 @@
     android:layout_height="wrap_content"
     android:layout_gravity="center"
     android:clipToPadding="false"
-    android:padding="16dp">
+    android:padding="16dp"
+    android:theme="@style/Theme.Light.DialogFragment">
 
     <RadioButton
-        android:id="@+id/change_group_existing_radio"
-        android:layout_width="wrap_content"
+        android:id="@+id/existing_radio"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:checked="false"
         android:text="@string/group_existing"
@@ -19,29 +20,29 @@
         app:layout_constraintTop_toTopOf="parent" />
 
     <me.devsaki.hentoid.views.ListPickerView
-        android:id="@+id/change_group_existing_list"
+        android:id="@+id/existing_list"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
         android:textSize="@dimen/text_body_1"
         android:visibility="gone"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/change_group_existing_radio"
+        app:layout_constraintTop_toBottomOf="@id/existing_radio"
         tools:visibility="visible" />
 
     <RadioButton
-        android:id="@+id/change_group_new_radio"
-        android:layout_width="wrap_content"
+        android:id="@+id/new_radio"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:checked="false"
         android:text="@string/group_new"
         android:textColor="?colorOnSurface"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/change_group_existing_list" />
+        app:layout_constraintTop_toBottomOf="@id/existing_list" />
 
     <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/change_group_new_name"
+        android:id="@+id/new_name_txt"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
@@ -49,7 +50,7 @@
         android:hint="@string/group_new_name"
         android:visibility="gone"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/change_group_new_radio"
+        app:layout_constraintTop_toBottomOf="@id/new_radio"
         tools:visibility="visible">
 
         <com.google.android.material.textfield.TextInputEditText
@@ -59,27 +60,24 @@
     </com.google.android.material.textfield.TextInputLayout>
 
     <RadioButton
-        android:id="@+id/remove_group_radio"
-        android:layout_width="wrap_content"
+        android:id="@+id/detach_radio"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:checked="false"
         android:text="@string/group_remove"
         android:textColor="?colorOnSurface"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/change_group_new_name" />
+        app:layout_constraintTop_toBottomOf="@id/new_name_txt" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/action_button"
-        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        style="@style/Widget.Material3.Button.TonalButton.Icon"
         android:layout_width="match_parent"
         android:layout_height="?android:attr/actionBarSize"
         android:layout_marginTop="8dp"
         android:text="@string/menu_change_group"
-        android:textColor="?colorSecondary"
-        android:textSize="@dimen/text_body_1"
         app:icon="@drawable/ic_folder_edit"
-        app:iconTint="?colorSecondary"
-        app:layout_constraintTop_toBottomOf="@id/remove_group_radio" />
+        app:layout_constraintTop_toBottomOf="@id/detach_radio" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

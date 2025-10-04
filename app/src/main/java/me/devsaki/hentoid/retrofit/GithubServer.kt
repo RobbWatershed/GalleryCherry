@@ -2,15 +2,14 @@ package me.devsaki.hentoid.retrofit
 
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.adapters.Rfc3339DateJsonAdapter
-import io.reactivex.Single
 import me.devsaki.hentoid.BuildConfig
 import me.devsaki.hentoid.json.GithubRelease
-import me.devsaki.hentoid.util.network.OkHttpClientSingleton
+import me.devsaki.hentoid.util.network.OkHttpClientManager
+import retrofit2.Call
 import retrofit2.Retrofit
-import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory
 import retrofit2.converter.moshi.MoshiConverterFactory
 import retrofit2.http.GET
-import java.util.*
+import java.util.Date
 
 object GithubServer {
 
@@ -26,11 +25,11 @@ object GithubServer {
         init()
     }
 
+    // Must have a public init method to reset the connexion pool when updating DoH settings
     fun init() {
         api = Retrofit.Builder()
             .baseUrl(BuildConfig.GITHUB_API_URL)
-            .client(OkHttpClientSingleton.getInstance())
-            .addCallAdapterFactory(RxJava2CallAdapterFactory.createAsync())
+            .client(OkHttpClientManager.getInstance())
             .addConverterFactory(MoshiConverterFactory.create(moshi).asLenient())
             .build()
             .create(Api::class.java)
@@ -38,9 +37,9 @@ object GithubServer {
 
     interface Api {
         @get:GET("releases")
-        val releases: Single<List<GithubRelease>>
+        val releases: Call<List<GithubRelease>>
 
         @get:GET("releases/latest")
-        val latestRelease: Single<GithubRelease>
+        val latestRelease: Call<GithubRelease>
     }
 }

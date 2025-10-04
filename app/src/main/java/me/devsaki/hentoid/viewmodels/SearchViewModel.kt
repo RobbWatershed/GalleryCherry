@@ -13,8 +13,9 @@ import kotlinx.coroutines.withContext
 import me.devsaki.hentoid.database.CollectionDAO
 import me.devsaki.hentoid.database.domains.Attribute
 import me.devsaki.hentoid.enums.AttributeType
-import me.devsaki.hentoid.util.ContentHelper
-import me.devsaki.hentoid.util.SearchHelper.AttributeQueryResult
+import me.devsaki.hentoid.util.AttributeQueryResult
+import me.devsaki.hentoid.util.Location
+import me.devsaki.hentoid.util.Type
 import java.util.Objects
 
 class SearchViewModel(
@@ -42,11 +43,9 @@ class SearchViewModel(
     private var selectedGroup: Long = -1
 
     // Location and type (bottom spinners)
-    @ContentHelper.Location
-    private var location = ContentHelper.Location.ANY
+    private var location = Location.ANY
 
-    @ContentHelper.Type
-    private var contentType = ContentHelper.Type.ANY
+    private var contentType = Type.ANY
 
 
     init {
@@ -80,22 +79,21 @@ class SearchViewModel(
      * @param itemsPerPage Number of items per result "page"
      */
     fun setAttributeQuery(query: String, pageNum: Int, itemsPerPage: Int) {
-        viewModelScope.launch {
-            val result = withContext(Dispatchers.IO) {
-                dao.selectAttributeMasterDataPaged(
-                    attributeTypes!!,
-                    query,
-                    selectedGroup,
-                    selectedAttributes.value,
-                    location,
-                    contentType,
-                    false,
-                    pageNum,
-                    itemsPerPage,
-                    attributeSortOrder
-                )
-            }
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = dao.selectAttributeMasterDataPaged(
+                attributeTypes!!,
+                query,
+                selectedGroup,
+                selectedAttributes.value!!.toSet(),
+                location,
+                contentType,
+                false,
+                pageNum,
+                itemsPerPage,
+                attributeSortOrder
+            )
             availableAttributes.postValue(result)
+            dao.cleanup()
         }
     }
 
@@ -143,12 +141,12 @@ class SearchViewModel(
         setSelectedAttributes(selectedAttributesList)
     }
 
-    fun setLocation(@ContentHelper.Location location: Int) {
+    fun setLocation(location: Location) {
         this.location = location
         update()
     }
 
-    fun setContentType(@ContentHelper.Type contentType: Int) {
+    fun setContentType(contentType: Type) {
         this.contentType = contentType
         update()
     }
@@ -166,25 +164,23 @@ class SearchViewModel(
      */
     private fun countAttributesPerType() {
         viewModelScope.launch {
-            val result = withContext(Dispatchers.IO) {
-                dao.countAttributesPerType(
+            val result : SparseIntArray
+            withContext(Dispatchers.IO) {
+                result = dao.countAttributesPerType(
                     selectedGroup,
-                    selectedAttributes.value,
+                    selectedAttributes.value!!.toSet(),
                     location,
                     contentType
                 )
+                dao.cleanup()
             }
             // Result has to take into account the number of attributes already selected (hence unavailable)
-            val selectedAttrs =
-                selectedAttributes.value
-            if (selectedAttrs != null) {
-                for (a in selectedAttrs) {
-                    // if attribute is excluded already, there's no need to reduce attrPerType value,
-                    // since attr is no longer amongst results
-                    if (!a.isExcluded) {
-                        var countForType = result[a.type.code]
-                        if (countForType > 0) result.put(a.type.code, --countForType)
-                    }
+            selectedAttributes.value?.forEach {
+                // if attribute is excluded already, there's no need to reduce attrPerType value,
+                // since attr is no longer amongst results
+                if (!it.isExcluded) {
+                    var countForType = result[it.type.code]
+                    if (countForType > 0) result.put(it.type.code, --countForType)
                 }
             }
             nbAttributesPerType.postValue(result)
@@ -199,7 +195,7 @@ class SearchViewModel(
             selectedContentCount.removeSource(it)
         }
         currentSelectedContentCountInternal =
-            dao.countBooks(selectedGroup, selectedAttributes.value, location, contentType)
+            dao.countBooks(selectedGroup, selectedAttributes.value?.toSet(), location, contentType)
         selectedContentCount.addSource(currentSelectedContentCountInternal!!)
         { value -> selectedContentCount.setValue(value) }
     }

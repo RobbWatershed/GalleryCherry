@@ -1,5 +1,7 @@
 package me.devsaki.hentoid.util;
 
+import static me.devsaki.hentoid.util.DuplicateHelperKt.computeTitleScore;
+
 import android.content.Context;
 
 import androidx.test.core.app.ApplicationProvider;
@@ -53,13 +55,14 @@ public class TextDupeDetectorTest {
         System.out.printf("%d lines loaded\n", vals1.size());
 
         float tolerance = 0.01f;
-        int sensitivity = 0; // 0=permissive; 2=strict
+        int sensitivity = 0; // 0=loosely similar; 2=very similar
         boolean ignoreChapters = true;
 
         Cosine c = new Cosine();
         for (String s1 : vals1) {
-            Content c1 = new Content().setTitle(s1);
-            DuplicateHelper.DuplicateCandidate dc1 = new DuplicateHelper.DuplicateCandidate(c1, true, false, false, false, ignoreChapters, Long.MIN_VALUE);
+            Content c1 = new Content();
+            c1.setTitle(s1);
+            DuplicateCandidate dc1 = new DuplicateCandidate(c1, true, false, false, false, ignoreChapters, Long.MIN_VALUE);
             //String s1c = StringHelper.cleanup(s1);
             //Triple<String, Integer, Integer> s1cp = DuplicateHelper.Companion.sanitizeTitle(s1c);
             for (String s2 : vals1) {
@@ -67,11 +70,12 @@ public class TextDupeDetectorTest {
                 //noinspection StringEquality
                 if (s1 == s2) continue; // Test _both_ combinations
 
-                Content c2 = new Content().setTitle(s2);
-                DuplicateHelper.DuplicateCandidate dc2 = new DuplicateHelper.DuplicateCandidate(c2, true, false, false, false, ignoreChapters, Long.MIN_VALUE);
+                Content c2 = new Content();
+                c2.setTitle(s2);
+                DuplicateCandidate dc2 = new DuplicateCandidate(c2, true, false, false, false, ignoreChapters, Long.MIN_VALUE);
                 //String s2c = StringHelper.cleanup(s2);
                 //Triple<String, Integer, Integer> s2cp = DuplicateHelper.Companion.sanitizeTitle(s2c);
-                double score = DuplicateHelper.Companion.computeTitleScore(c, dc1, dc2, ignoreChapters, sensitivity);
+                double score = computeTitleScore(c, dc1, dc2, ignoreChapters, sensitivity);
                 if (score > 0) {
                     System.out.printf("[%.4f] %s > %s\n", score, dc1.getTitleCleanup(), dc2.getTitleCleanup());
                     /*

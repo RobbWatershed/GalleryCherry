@@ -1,10 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:x="urn:oasis:names:tc:xliff:document:1.2">
+    <!-- Search -->
+    <string name="searchpreference_search">Search…</string>
+    <string name="searchpreference_clear">Clear</string>
+    <string name="searchpreference_more">More</string>
+    <string name="searchpreference_clear_history">Clear history</string>
+    <string name="searchpreference_no_results">No results</string>
+
+    <!-- Sources -->
+    <string name="pref_screen_sources">Sources</string>
+    <string name="pref_drawer_sources_title">Manage sources</string>
+    <string name="title_activity_source_specifics">Source-specific settings</string>
+
     <!-- Interface -->
     <string name="pref_screen_interface">Interface &amp; Navigation</string>
+    <string name="pref_cat_navigation">Navigation panel</string>
+    <string name="pref_navigation_nostalgia_mode">Nostalgia mode</string>
+    <string name="pref_nostalgia_summary_off">Navigation drawer doesn\'t display active sites</string>
+    <string name="pref_nostalgia_summary_on">Navigation drawer displays active sites</string>
     <string name="pref_cat_library">Library</string>
-    <string name="pref_drawer_sources_title">Manage sources</string>
-    <string name="pref_drawer_sources_summary">Enable, disable and reorganize sources appearing on the left navigation drawer</string>
+    <string name="pref_drawer_sources_summary">Enable, disable and reorganize sites appearing on the left navigation drawer</string>
     <string name="pref_library_display_title">Display type</string>
     <string name="pref_library_display_summary">Type of display for books and groups\nCurrent: <x:g example="List" id="display_type">%s</x:g></string>
     <string name="pref_endless_scroll_title">Endless Scroll</string>
@@ -15,6 +30,15 @@
     <string name="pref_top_fab_title">Go to Top button</string>
     <string name="pref_top_fab_summary_off">Button disabled</string>
     <string name="pref_top_fab_summary_on">Button enabled</string>
+    <string name="pref_cat_library_grid">Library / Grid view customization</string>
+    <string name="pref_display_grid_title_title">Title</string>
+    <string name="pref_display_grid_lang_title">Language flag</string>
+    <string name="pref_display_grid_fav_title">Set favourite</string>
+    <string name="pref_display_grid_rating_title">Set rating</string>
+    <string name="pref_display_grid_source_title">View source</string>
+    <string name="pref_display_grid_storage_title">Storage information</string>
+    <string name="pref_grid_card_width_title">Book display width</string>
+    <string name="library_display_group_figure_title">Group figure</string>
     <string name="pref_cat_search">Advanced search</string>
     <string name="pref_attributes_list_order_title">Sorting order of displayed metadata</string>
     <string name="pref_attributes_list_count_title">Count available books</string>
@@ -25,15 +49,18 @@
     <string name="pref_color_theme_summary">Current theme: <x:g example="Deep Red" id="theme_name">%s</x:g></string>
     <string name="pref_misc">Miscellaneous</string>
     <string name="pref_cat_language">Interface Language</string>
+    <string name="pref_plug_reactions">Plug reactions</string>
     <string name="pref_force_english_title">Force English locale</string>
     <string name="pref_force_english_summary_off">Use your device\'s language\nif the translation is available</string>
     <string name="pref_force_english_summary_on">Use English</string>
+    <string name="use_app_prefs">App settings (<x:g example="Left to right" id="app_default">%s</x:g>)</string>
+    <string name="use_source_prefs">Source settings (<x:g example="Left to right" id="source_default">%s</x:g>)</string>
 
     <!-- Storage -->
     <string name="pref_screen_storage">Storage</string>
-    <string name="pref_cat_downloads_folder">GalleryCherry library</string>
+    <string name="pref_cat_downloads_folder">Hentoid library</string>
     <string name="pref_select_folder_title">Select Downloads Folder</string>
-    <string name="pref_select_folder_summary">Select where GalleryCherry will store your downloads</string>
+    <string name="pref_select_folder_summary">Select where Hentoid will store your downloads</string>
     <string name="pref_import_queue_empty_title">Queue empty imported books as errors</string>
     <string name="pref_import_queue_empty_on">Empty imported books will be added to the queue as errors</string>
     <string name="pref_import_queue_empty_off">Empty imported books will be added to the library</string>
@@ -52,20 +79,18 @@
     <string name="pref_external_library_title">External library</string>
     <string name="pref_external_library_summary_empty">No external library is set</string>
     <string name="pref_external_library_delete_title">Allow deleting external content</string>
-    <string name="pref_external_library_delete_on">GalleryCherry can delete books and pages in the external library</string>
-    <string name="pref_external_library_delete_off">GalleryCherry can\'t delete books nor pages in the external library</string>
+    <string name="pref_external_library_delete_on">Hentoid can delete books and pages in the external library</string>
+    <string name="pref_external_library_delete_off">Hentoid can\'t delete books nor pages in the external library</string>
+    <string name="pref_external_library_ext_name_pattern">File naming pattern</string>
     <string name="pref_external_library_detach_title">Detach external library</string>
-    <string name="pref_external_library_detach_summary">Don\'t include the external library into GalleryCherry anymore</string>
+    <string name="pref_external_library_detach_summary">Don\'t include the external library into Hentoid anymore</string>
     <string name="pref_cat_eh">E-hentai / ExHentai</string>
+    <string name="pref_cat_hitomi">Hitomi</string>
     <string name="pref_cat_advanced">Advanced</string>
     <string name="pref_refresh_library_title">Refresh library</string>
     <string name="pref_refresh_library_summary">Manually refresh library contents</string>
-    <string name="pref_delete_all_except_favs_title">Delete all books except favourites</string>
-    <string name="pref_delete_all_except_favs_summary">Purge the library; keep favourite books only\nNB: Does not apply to the external library</string>
-    <plurals name="pref_ask_delete_all_except_favs">
-        <item quantity="one">Delete <x:g example="1" id="count">%d</x:g> book\?</item>
-        <item quantity="other">Delete <x:g example="2" id="count">%d</x:g> books\?</item>
-    </plurals>
+    <string name="mass_operations_title">Mass operations</string>
+    <string name="mass_operations_summary">Mass operations on the library</string>
 
     <!-- Browser -->
     <string name="pref_screen_browser">Browser</string>
@@ -98,6 +123,9 @@
     <string name="pref_browser_mark_merged_title">Mark merged books</string>
     <string name="pref_browser_mark_merged_off">Merged books have no special display</string>
     <string name="pref_browser_mark_merged_on">Merged books are marked\nNB: does not work on all sites</string>
+    <string name="pref_browser_mark_queued_title">Mark queued books</string>
+    <string name="pref_browser_mark_queued_off">Queued books have no special display</string>
+    <string name="pref_browser_mark_queued_on">Queued books are marked\nNB: does not work on all sites</string>
     <string name="pref_browser_mark_blocked_title">Mark books with blocked tags</string>
     <string name="pref_browser_mark_blocked_off">Books with blocked tags have no special display</string>
     <string name="pref_browser_mark_blocked_on">Books with blocked tags are marked\nNB: does not work on all sites</string>
@@ -107,13 +135,12 @@
     <string name="pref_browser_augmented_title">Augmented browser</string>
     <string name="pref_browser_augmented_off">Using vanilla behaviour</string>
     <string name="pref_browser_augmented_on">Using ad space removal and fast parsing</string>
-    <string name="pref_browser_override_overview_title">Disable Page Overview</string>
-    <string name="pref_browser_override_overview_summary_off">Disables page overview and allows you to set your preferred initial zoom level below</string>
-    <string name="pref_browser_override_overview_summary_on">Tweak the setting below to set your initial zoom level\nNote: Only affects hitomi and e-hentai</string>
-    <string name="pref_browser_initial_zoom_title">Initial Zoom Level</string>
-    <string name="pref_browser_initial_zoom_summary">Zoom level of browser page on initial page load\nCurrently: <x:g example="20%" id="percentage">%s%%</x:g></string>
+    <string name="pref_browser_force_lightmode_title">Force light mode</string>
+    <string name="pref_browser_force_lightmode_off">Browser decides whether it displays pages using dark or light mode, according to the app\'s theme</string>
+    <string name="pref_browser_force_lightmode_on">Browser always uses light mode</string>
     <string name="pref_browser_dns_title">DNS over HTTPS</string>
-    <string name="pref_browser_clear_cookies">Clear all cookies</string>
+    <string name="pref_browser_clear_cookies">Clear cookies</string>
+    <string name="pref_browser_clear_cookies_site">Site</string>
     <string name="pref_browser_clear_cookies_ok">Cookies cleared successfully</string>
     <string name="pref_browser_clear_cookies_ko">No cookie to clear</string>
     <string name="pref_browser_clear_cookies_missing_webview">WebView is unavailable, can\'t clear cookies now</string>
@@ -123,6 +150,9 @@
     <string name="pref_browser_language_filter_on">Language filter button is enabled\nNB: Only works on Hitomi</string>
     <string name="pref_browser_language_filter_setting_title">Language filter setting</string>
     <string name="pref_browser_language_filter_setting_summary">Tip: Enter the language in English</string>
+    <string name="pref_browser_lock_favs_panel_title">Lock favourites panel</string>
+    <string name="pref_browser_lock_favs_panel_off">Favourites right panel can be opened by swiping</string>
+    <string name="pref_browser_lock_favs_panel_on">Favourites right panel cannot be opened by swiping</string>
 
     <!-- Downloader -->
     <string name="pref_screen_downloader">Downloader</string>
@@ -151,7 +181,10 @@
     <string name="download_eh_hires_title">Download hi-res pictures</string>
     <string name="pref_dl_eh_hires_on">Download hi-res pictures when available\nCAUTION:Enabling this option will consume your E-hentai/Exhentai image view limit much faster</string>
     <string name="pref_dl_eh_hires_off">Download pictures that are displayed on the website</string>
-    <string name="pref_dl_threads_quantity_title">Number of parallel downloads</string>
+    <string name="download_hitomi_avif_title">Download in AVIF format</string>
+    <string name="download_hitomi_avif_on">Download pictures in AVIF format when available</string>
+    <string name="download_hitomi_avif_off">Download pictures in WEBP format</string>
+    <string name="pref_dl_threads_quantity_title">Parallel downloads</string>
     <string name="pref_dl_threads_quantity_summary">Number of images downloaded simultaneously\nCurrently: <x:g example="5" id="number">%s</x:g></string>
     <string name="pref_dl_speed_cap_title">Download speed limit</string>
     <string name="pref_dl_http_429_default_delay_title">HTTP 429 default delay (seconds)</string>
@@ -166,13 +199,14 @@
     <string name="pref_screenshot_summary_on">Screenshots enabled</string>
     <string name="pref_analytics_preference_title">Firebase Analytics</string>
     <string name="pref_analytics_preference_summary_off">Analytics Tracking is currently disabled.\nEnabling it will help us improve the app by tracking crashes &amp; exceptions.</string>
-    <string name="pref_analytics_preference_summary_on">Analytics Tracking is on.\nThanks for helping improve GalleryCherry!</string>
+    <string name="pref_analytics_preference_summary_on">Analytics Tracking is on.\nThanks for helping improve Hentoid!</string>
 
     <!-- Updates -->
     <string name="pref_screen_updates">Updates</string>
     <string name="pref_check_updates_manual_title">Manual Update Check</string>
     <string name="pref_check_updates_manual_summary">Manually check for updates right now</string>
     <string name="pref_check_updates_manual_checking">Checking for updates…</string>
+    <string name="pref_check_updates_manual_new">New update found! - Install using the notification</string>
     <string name="pref_check_updates_manual_no_new">No update found - Already using the latest version</string>
     <string name="pref_check_updates_manual_no_connection">Could not check for updates. Check your connection or try again later</string>
     <string name="pref_check_updates_title">Automatic Updates</string>
@@ -194,6 +228,7 @@
     <string name="pref_viewer_book_switch">Book switch control</string>
     <string name="pref_viewer_book_switch_volume">Volume button (long tap)</string>
     <string name="pref_viewer_zoom">Zoom control</string>
+    <string name="pref_viewer_zoom_double_tap">Double tap to zoom</string>
     <string name="pref_viewer_zoom_holding">Temp zoom while holding</string>
     <string name="pref_viewer_cap_tap_zoom">Cap double &amp; long tap zoom</string>
     <string name="pref_viewer_visuals">Visuals</string>
@@ -205,9 +240,14 @@
     <string name="pref_viewer_tap_transitions">Enable page turn animation</string>
     <string name="pref_viewer_zoom_transitions">Enable zoom animation</string>
     <string name="pref_viewer_maintain_horizontal_zoom">Maintain zoom level between pages</string>
+    <string name="pref_viewer_smart_crop">Smart cropping</string>
+    <string name="pref_viewer_smart_crop_summary_off">Images are displayed as is</string>
+    <string name="pref_viewer_smart_crop_summary_on">Solid borders are automatically removed</string>
     <string name="pref_viewer_separating_bars">Separating bars in vertical mode</string>
     <string name="pref_viewer_display_mode">Display mode for horizontal viewing</string>
-    <string name="pref_viewer_rendering">Rendering mode</string>
+    <string name="pref_viewer_rendering">Rendering</string>
+    <string name="pref_viewer_rendering_mode">Rendering mode</string>
+    <string name="pref_viewer_color_depth">Color depth</string>
     <string name="pref_viewer_rendering_no_android5">Smooth rendering is not available on Android 5</string>
     <string name="pref_viewer_auto_rotate">Auto-rotate pictures</string>
     <string name="pref_viewer_auto_rotate_summary_off">Pictures are not rotated</string>
@@ -226,7 +266,14 @@
     <string name="pref_viewer_continuous_summary_on">Using next page on last page loads the next book</string>
     <string name="pref_viewer_read_threshold">Mark book as read after N pages</string>
     <string name="pref_viewer_ratio_completed_threshold">Mark book as completed after N% pages</string>
-    <string name="pref_viewer_slideshow_delay">Slideshow / Delay between each page (horizontal display)</string>
-    <string name="pref_viewer_slideshow_delay_vertical">Slideshow / Scrolling speed (vertical display)</string>
+    <string name="pref_viewer_slideshow_delay">Delay between each page (horizontal display)</string>
+    <string name="pref_viewer_slideshow_delay_vertical">Scrolling speed (vertical display)</string>
+    <string name="pref_viewer_slideshow_loop">Loop</string>
     <string name="doh_warning">Some websites won\'t work well with DNS over HTTPS. Use an external DNS app if you experience issues during navigation (e.g. blank pages, unresponsive login forms)</string>
+    <string name="material_you_warning">Your device doesn\'t support Material You; switching back to Light theme</string>
+
+    <!-- Misc -->
+    <string name="pref_text_select_menu_title">Text select menu</string>
+    <string name="pref_text_select_menu_summary_off">You device\'s text select menu doesn\'t allow you to launch nuke codes with Hentoid</string>
+    <string name="pref_text_select_menu_summary_on">You device\'s text select menu allows you to launch nuke codes with Hentoid</string>
 </resources>

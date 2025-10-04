@@ -11,8 +11,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.addCallback
-import androidx.appcompat.widget.SearchView
-import androidx.core.view.inputmethod.EditorInfoCompat
+import androidx.core.net.toUri
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
@@ -29,18 +28,31 @@ import com.mikepenz.fastadapter.drag.ItemTouchCallback
 import com.mikepenz.fastadapter.listeners.ClickEventHook
 import com.mikepenz.fastadapter.select.getSelectExtension
 import com.mikepenz.fastadapter.swipe.SimpleSwipeDrawerCallback
-import io.reactivex.disposables.CompositeDisposable
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.activities.QueueActivity
+import me.devsaki.hentoid.activities.bundles.SearchActivityBundle
+import me.devsaki.hentoid.core.URL_GITHUB_WIKI_DOWNLOAD
+import me.devsaki.hentoid.core.startBrowserActivity
 import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.databinding.FragmentQueueErrorsBinding
+import me.devsaki.hentoid.enums.AttributeType
+import me.devsaki.hentoid.enums.Site
+import me.devsaki.hentoid.events.CommunicationEvent
 import me.devsaki.hentoid.events.ProcessEvent
 import me.devsaki.hentoid.fragments.ProgressDialogFragment
-import me.devsaki.hentoid.util.*
+import me.devsaki.hentoid.fragments.SelectSiteDialogFragment
+import me.devsaki.hentoid.util.Debouncer
+import me.devsaki.hentoid.util.dimensAsDp
+import me.devsaki.hentoid.util.getIdForCurrentTheme
+import me.devsaki.hentoid.util.openReader
+import me.devsaki.hentoid.util.toast
+import me.devsaki.hentoid.util.viewContentGalleryPage
 import me.devsaki.hentoid.viewholders.ContentItem
 import me.devsaki.hentoid.viewholders.ISwipeableViewHolder
 import me.devsaki.hentoid.viewmodels.QueueViewModel
 import me.devsaki.hentoid.viewmodels.ViewModelFactory
+import me.devsaki.hentoid.widget.DragSelectTouchListener
+import me.devsaki.hentoid.widget.DragSelectionProcessor
 import me.devsaki.hentoid.widget.FastAdapterPreClickSelectHelper
 import me.zhanghai.android.fastscroll.FastScrollerBuilder
 import org.greenrobot.eventbus.EventBus
@@ -48,7 +60,6 @@ import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
 import timber.log.Timber
 import java.lang.ref.WeakReference
-import java.util.*
 
 /**
  * Presents the list of downloads with errors
@@ -57,8 +68,7 @@ class ErrorsFragment : Fragment(R.layout.fragment_queue_errors), ItemTouchCallba
     ErrorsDialogFragment.Parent, SimpleSwipeDrawerCallback.ItemSwipeCallback {
 
     // == UI
-    private var _binding: FragmentQueueErrorsBinding? = null
-    private val binding get() = _binding!!
+    private var binding: FragmentQueueErrorsBinding? = null
 
     // === COMMUNICATION
     private var callback: OnBackPressedCallback? = null
@@ -72,31 +82,27 @@ class ErrorsFragment : Fragment(R.layout.fragment_queue_errors), ItemTouchCallba
     private val itemAdapter = ItemAdapter<ContentItem>()
     private val fastAdapter = FastAdapter.with(itemAdapter)
     private val selectExtension = fastAdapter.getSelectExtension()
+    private var mDragSelectTouchListener: DragSelectTouchListener? = null
 
     // Helper for swiping items
     private lateinit var touchHelper: ItemTouchHelper
 
 
     // === VARIABLES
+    // Indicate whether this tab is enabled (active on screen) or not
+    private var enabled = true
+
     // Used to show a given item at first display
     private var contentHashToDisplayFirst: Long = 0
 
     // Used to start processing when the recyclerView has finished updating
-    private lateinit var listRefreshDebouncer: DebouncerK<Int>
-
-    // Used to avoid closing search panel immediately when user uses backspace to correct what he typed
-    private lateinit var searchClearDebouncer: DebouncerK<Int>
+    private lateinit var listRefreshDebouncer: Debouncer<Int>
 
     // Indicate if the fragment is currently canceling all items
     private var isDeletingAll = false
 
-    // Current text search query
-    private var query = ""
-
-    // Used to ignore native calls to onQueryTextChange
-    private var invalidateNextQueryTextChange = false
-
-    private val compositeDisposable = CompositeDisposable()
+    // Set of sources of all unfiltered queue items
+    private val unfilteredSources = HashSet<Site>()
 
 
     override fun onAttach(context: Context) {
@@ -104,14 +110,8 @@ class ErrorsFragment : Fragment(R.layout.fragment_queue_errors), ItemTouchCallba
         check(requireActivity() is QueueActivity) { "Parent activity has to be a QueueActivity" }
         activity = WeakReference(requireActivity() as QueueActivity)
 
-        listRefreshDebouncer = DebouncerK(lifecycleScope, 75)
+        listRefreshDebouncer = Debouncer(lifecycleScope, 75)
         { topItemPosition: Int -> this.onRecyclerUpdated(topItemPosition) }
-
-        searchClearDebouncer = DebouncerK(lifecycleScope, 1500)
-        {
-            query = ""
-            viewModel.searchErrorContentUniversal(query)
-        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -129,7 +129,6 @@ class ErrorsFragment : Fragment(R.layout.fragment_queue_errors), ItemTouchCallba
 
     override fun onDestroy() {
         if (EventBus.getDefault().isRegistered(this)) EventBus.getDefault().unregister(this)
-        compositeDisposable.clear()
         super.onDestroy()
     }
 
@@ -138,7 +137,7 @@ class ErrorsFragment : Fragment(R.layout.fragment_queue_errors), ItemTouchCallba
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        _binding = FragmentQueueErrorsBinding.inflate(inflater, container, false)
+        binding = FragmentQueueErrorsBinding.inflate(inflater, container, false)
 
         val initItem = ContentItem(ContentItem.ViewType.ERRORS)
         fastAdapter.registerItemFactory(initItem.type, initItem)
@@ -154,44 +153,68 @@ class ErrorsFragment : Fragment(R.layout.fragment_queue_errors), ItemTouchCallba
                 }
             }
         }
-        val helper = FastAdapterPreClickSelectHelper(selectExtension)
+        val helper = FastAdapterPreClickSelectHelper(fastAdapter, selectExtension)
         fastAdapter.onPreClickListener =
-            { v: View?, adapter: IAdapter<ContentItem>?, item: ContentItem, position: Int? ->
-                helper.onPreClickListener(
-                    v,
-                    adapter,
-                    item,
-                    position
-                )
-            }
+            { _, _, _, position: Int -> helper.onPreClickListener(position) }
         fastAdapter.onPreLongClickListener =
-            { v: View?, adapter: IAdapter<ContentItem>?, item: ContentItem, position: Int? ->
-                helper.onPreLongClickListener(
-                    v,
-                    adapter,
-                    item,
-                    position
-                )
+            { _, _, _, p ->
+                // Warning : specific code for drag selection
+                mDragSelectTouchListener?.startDragSelection(p)
+                helper.onPreLongClickListener(p)
             }
 
-        binding.queueList.adapter = fastAdapter
-        binding.queueList.setHasFixedSize(true)
+        binding?.queueList?.let { queueList ->
+            queueList.adapter = fastAdapter
+            queueList.setHasFixedSize(true)
 
-        // Swiping
-        val swipeCallback = SimpleSwipeDrawerCallback(ItemTouchHelper.LEFT, this)
-            .withSwipeLeft(Helper.dimensAsDp(requireContext(), R.dimen.delete_drawer_width_list))
-            .withSensitivity(1.5f)
-            .withSurfaceThreshold(0.3f)
+            // Swiping
+            val swipeCallback = SimpleSwipeDrawerCallback(ItemTouchHelper.LEFT, this)
+                .withSwipeLeft(dimensAsDp(requireContext(), R.dimen.delete_drawer_width_list))
+                .withSensitivity(1.5f)
+                .withSurfaceThreshold(0.3f)
 
-        touchHelper = ItemTouchHelper(swipeCallback)
-        touchHelper.attachToRecyclerView(binding.queueList)
+            touchHelper = ItemTouchHelper(swipeCallback)
+            touchHelper.attachToRecyclerView(queueList)
 
-        // Item click listener
-        fastAdapter.onClickListener =
-            { _: View?, _: IAdapter<ContentItem>, i: ContentItem, _: Int? -> onItemClick(i) }
+            // Item click listener
+            fastAdapter.onClickListener =
+                { _: View?, _: IAdapter<ContentItem>, i: ContentItem, _: Int? -> onItemClick(i) }
 
-        // Fast scroller
-        FastScrollerBuilder(binding.queueList).build()
+            // Fast scroller
+            FastScrollerBuilder(queueList).build()
+
+            // Select / deselect on swipe
+            val onDragSelectionListener: DragSelectTouchListener.OnDragSelectListener =
+                DragSelectionProcessor(object : DragSelectionProcessor.ISelectionHandler {
+                    override val selection: Set<Int>
+                        get() = selectExtension.selections
+
+                    override fun isSelected(index: Int): Boolean {
+                        return selectExtension.selections.contains(index)
+                    }
+
+                    override fun updateSelection(
+                        start: Int,
+                        end: Int,
+                        isSelected: Boolean,
+                        calledFromOnStart: Boolean
+                    ) {
+                        if (isSelected) IntRange(start, end).forEach {
+                            selectExtension.select(
+                                it,
+                                fireEvent = false,
+                                considerSelectableFlag = true
+                            )
+                        }
+                        else selectExtension.deselect(IntRange(start, end).toMutableList())
+                    }
+                }).withMode(DragSelectionProcessor.Mode.Simple)
+
+            DragSelectTouchListener().withSelectListener(onDragSelectionListener).let {
+                mDragSelectTouchListener = it
+                queueList.addOnItemTouchListener(it)
+            }
+        }
 
         initToolbar()
         initSelectionToolbar()
@@ -199,12 +222,12 @@ class ErrorsFragment : Fragment(R.layout.fragment_queue_errors), ItemTouchCallba
 
         addCustomBackControl()
 
-        return binding.root
+        return binding!!.root
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
-        _binding = null
+        binding = null
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -256,57 +279,6 @@ class ErrorsFragment : Fragment(R.layout.fragment_queue_errors), ItemTouchCallba
 
     private fun initToolbar() {
         activity.get()?.getToolbar()?.let {
-            val searchMenu = it.menu.findItem(R.id.action_search)
-            val mainSearchView = searchMenu?.actionView as SearchView?
-            mainSearchView?.findViewById<View>(androidx.appcompat.R.id.search_close_btn)
-                ?.setOnClickListener {
-                    invalidateNextQueryTextChange = true
-                    mainSearchView.setQuery("", false)
-                    mainSearchView.isIconified = true
-                    viewModel.searchErrorContentUniversal("")
-                }
-            searchMenu?.setOnActionExpandListener(
-                object : MenuItem.OnActionExpandListener {
-                    override fun onMenuItemActionExpand(item: MenuItem): Boolean {
-                        invalidateNextQueryTextChange = true
-
-                        // Re-sets the query on screen, since default behaviour removes it right after collapse _and_ expand
-                        if (query.isNotEmpty()) // Use of handler allows to set the value _after_ the UI has auto-cleared it
-                        // Without that handler the view displays with an empty value
-                            Handler(Looper.getMainLooper()).postDelayed({
-                                invalidateNextQueryTextChange = true
-                                mainSearchView?.setQuery(query, false)
-                            }, 100)
-                        return true
-                    }
-
-                    override fun onMenuItemActionCollapse(item: MenuItem): Boolean {
-                        invalidateNextQueryTextChange = true
-                        return true
-                    }
-                })
-
-            mainSearchView?.imeOptions = EditorInfoCompat.IME_FLAG_NO_PERSONALIZED_LEARNING
-            mainSearchView?.setIconifiedByDefault(true)
-            mainSearchView?.queryHint = getString(R.string.library_search_hint)
-            // Change display when text query is typed
-            mainSearchView?.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
-                override fun onQueryTextSubmit(s: String): Boolean {
-                    query = s.trim()
-                    viewModel.searchErrorContentUniversal(query)
-                    mainSearchView.clearFocus()
-                    return true
-                }
-
-                override fun onQueryTextChange(s: String): Boolean {
-                    if (invalidateNextQueryTextChange) { // Should not happen when search panel is closing or opening
-                        invalidateNextQueryTextChange = false
-                    } else if (s.isEmpty()) {
-                        searchClearDebouncer.submit(0)
-                    } else searchClearDebouncer.clear();
-                    return true
-                }
-            })
             it.menu.findItem(R.id.action_redownload_all).setOnMenuItemClickListener {
                 onRedownloadAllClick()
                 true
@@ -317,6 +289,10 @@ class ErrorsFragment : Fragment(R.layout.fragment_queue_errors), ItemTouchCallba
             }
             it.menu.findItem(R.id.action_invert_queue).setOnMenuItemClickListener {
                 viewModel.invertQueue()
+                true
+            }
+            it.menu.findItem(R.id.help).setOnMenuItemClickListener {
+                context?.startBrowserActivity(URL_GITHUB_WIKI_DOWNLOAD)
                 true
             }
         }
@@ -359,7 +335,9 @@ class ErrorsFragment : Fragment(R.layout.fragment_queue_errors), ItemTouchCallba
                 var count = 0
                 selectExtension.apply {
                     while (selections.size < itemAdapter.adapterItemCount && ++count < 5)
-                        select(IntRange(0, itemAdapter.adapterItemCount - 1))
+                        IntRange(0, itemAdapter.adapterItemCount - 1).forEach {
+                            select(it, fireEvent = false, considerSelectableFlag = true)
+                        }
                 }
                 keepToolbar = true
             }
@@ -395,11 +373,11 @@ class ErrorsFragment : Fragment(R.layout.fragment_queue_errors), ItemTouchCallba
                 item: ContentItem
             ) {
                 val c = item.content
-                if (c != null) ContentHelper.viewContentGalleryPage(v.context, c)
+                if (c != null) viewContentGalleryPage(v.context, c)
             }
 
             override fun onBind(viewHolder: RecyclerView.ViewHolder): View? {
-                return if (viewHolder is ContentItem.ContentViewHolder) {
+                return if (viewHolder is ContentItem.ViewHolder) {
                     viewHolder.siteButton
                 } else super.onBind(viewHolder)
             }
@@ -418,7 +396,7 @@ class ErrorsFragment : Fragment(R.layout.fragment_queue_errors), ItemTouchCallba
             }
 
             override fun onBind(viewHolder: RecyclerView.ViewHolder): View? {
-                return if (viewHolder is ContentItem.ContentViewHolder) {
+                return if (viewHolder is ContentItem.ViewHolder) {
                     viewHolder.errorButton
                 } else super.onBind(viewHolder)
             }
@@ -437,7 +415,7 @@ class ErrorsFragment : Fragment(R.layout.fragment_queue_errors), ItemTouchCallba
             }
 
             override fun onBind(viewHolder: RecyclerView.ViewHolder): View? {
-                return if (viewHolder is ContentItem.ContentViewHolder) {
+                return if (viewHolder is ContentItem.ViewHolder) {
                     viewHolder.downloadButton
                 } else super.onBind(viewHolder)
             }
@@ -455,12 +433,20 @@ class ErrorsFragment : Fragment(R.layout.fragment_queue_errors), ItemTouchCallba
         if (isDeletingAll && result.isNotEmpty()) return
 
         // Update list visibility
-        binding.errorsEmptyTxt.visibility = if (result.isEmpty()) View.VISIBLE else View.GONE
+        binding?.errorsEmptyTxt?.visibility = if (result.isEmpty()) View.VISIBLE else View.GONE
+
+        // Save sources list if queue is unfiltered
+        activity.get()?.let { act ->
+            if (!act.isSearchActive()) {
+                unfilteredSources.clear()
+                unfilteredSources.addAll(result.map { it.site })
+            }
+        }
 
         // Update displayed books
         val contentItems = result.map { c ->
             ContentItem(c, touchHelper, ContentItem.ViewType.ERRORS)
-            { item: ContentItem -> onDeleteSwipedBook(item) }
+            { item -> onDeleteSwipedBook(item) }
         }.distinct()
         set(itemAdapter, contentItems)
         Handler(Looper.getMainLooper()).postDelayed({ differEndCallback() }, 150)
@@ -483,7 +469,7 @@ class ErrorsFragment : Fragment(R.layout.fragment_queue_errors), ItemTouchCallba
      * Activated when all _displayed_ items are placed on their definitive position
      */
     private fun onRecyclerUpdated(topItemPosition: Int) {
-        (binding.queueList.layoutManager as LinearLayoutManager).scrollToPositionWithOffset(
+        (binding?.queueList?.layoutManager as LinearLayoutManager?)?.scrollToPositionWithOffset(
             topItemPosition,
             0
         ) // Used to restore position after activity has been stopped and recreated
@@ -497,15 +483,15 @@ class ErrorsFragment : Fragment(R.layout.fragment_queue_errors), ItemTouchCallba
     private fun onItemClick(item: ContentItem): Boolean {
         if (selectExtension.selections.isEmpty()) {
             val c = item.content
-            if (c != null && !ContentHelper.openReader(
+            if (c != null && !openReader(
                     requireContext(),
                     c,
                     -1,
                     null,
-                    false,
-                    false
+                    forceShowGallery = false,
+                    newTask = false
                 )
-            ) ToastHelper.toast(R.string.err_no_content)
+            ) toast(R.string.err_no_content)
             return true
         }
         return false
@@ -527,7 +513,7 @@ class ErrorsFragment : Fragment(R.layout.fragment_queue_errors), ItemTouchCallba
         if (c.size > 2) {
             isDeletingAll = true
             ProgressDialogFragment.invoke(
-                parentFragmentManager,
+                this,
                 resources.getString(R.string.cancel_queue_progress),
                 R.plurals.book
             )
@@ -538,7 +524,7 @@ class ErrorsFragment : Fragment(R.layout.fragment_queue_errors), ItemTouchCallba
     private fun doCancelAll() {
         isDeletingAll = true
         ProgressDialogFragment.invoke(
-            parentFragmentManager,
+            this,
             resources.getString(R.string.cancel_queue_progress),
             R.plurals.book
         )
@@ -549,8 +535,37 @@ class ErrorsFragment : Fragment(R.layout.fragment_queue_errors), ItemTouchCallba
     fun onProcessStickyEvent(event: ProcessEvent) {
         // Filter on cancel complete event
         if (R.id.generic_progress != event.processId) return
-        if (event.eventType == ProcessEvent.EventType.COMPLETE) onDeleteComplete()
+        if (event.eventType == ProcessEvent.Type.COMPLETE) onDeleteComplete()
         EventBus.getDefault().removeStickyEvent(event)
+    }
+
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    fun onActivityEvent(event: CommunicationEvent) {
+        if (event.recipient != CommunicationEvent.Recipient.QUEUE && event.recipient != CommunicationEvent.Recipient.ALL) return
+        when (event.type) {
+            CommunicationEvent.Type.SEARCH -> searchErrors(event.message)
+            CommunicationEvent.Type.ADVANCED_SEARCH -> onFilterSourcesClick()
+            CommunicationEvent.Type.ENABLE -> onEnable()
+            CommunicationEvent.Type.DISABLE -> onDisable()
+            else -> {}
+        }
+    }
+
+    private fun searchErrors(uri: String) {
+        val searchArgs = SearchActivityBundle.parseSearchUri(uri.toUri())
+        val sourceAttr = searchArgs.attributes.firstOrNull { AttributeType.SOURCE == it.type }
+        val site = if (sourceAttr != null) Site.searchByName(sourceAttr.name) else null
+        viewModel.searchErrorContentUniversal(searchArgs.query, site)
+    }
+
+    private fun onEnable() {
+        enabled = true
+        callback?.isEnabled = true
+    }
+
+    private fun onDisable() {
+        enabled = false
+        callback?.isEnabled = false
     }
 
     private fun onDeleteComplete() {
@@ -568,7 +583,7 @@ class ErrorsFragment : Fragment(R.layout.fragment_queue_errors), ItemTouchCallba
         if (1 == itemAdapter.adapterItemCount) redownloadAll() else  // Ask if there's more than 1 item
             MaterialAlertDialogBuilder(
                 requireContext(),
-                ThemeHelper.getIdForCurrentTheme(requireContext(), R.style.Theme_Light_Dialog)
+                requireContext().getIdForCurrentTheme(R.style.Theme_Light_Dialog)
             )
                 .setIcon(R.drawable.ic_warning)
                 .setTitle(R.string.app_name)
@@ -600,7 +615,7 @@ class ErrorsFragment : Fragment(R.layout.fragment_queue_errors), ItemTouchCallba
         if (1 == itemAdapter.adapterItemCount) doCancelAll() else  // Ask if there's more than 1 item
             MaterialAlertDialogBuilder(
                 requireContext(),
-                ThemeHelper.getIdForCurrentTheme(requireContext(), R.style.Theme_Light_Dialog)
+                requireContext().getIdForCurrentTheme(R.style.Theme_Light_Dialog)
             )
                 .setIcon(R.drawable.ic_warning)
                 .setTitle(R.string.app_name)
@@ -642,7 +657,7 @@ class ErrorsFragment : Fragment(R.layout.fragment_queue_errors), ItemTouchCallba
 
     override fun itemSwiped(position: Int, direction: Int) {
         val vh: RecyclerView.ViewHolder? =
-            binding.queueList.findViewHolderForAdapterPosition(position)
+            binding?.queueList?.findViewHolderForAdapterPosition(position)
         if (vh is ISwipeableViewHolder) {
             (vh as ISwipeableViewHolder).onSwiped()
         }
@@ -650,7 +665,7 @@ class ErrorsFragment : Fragment(R.layout.fragment_queue_errors), ItemTouchCallba
 
     override fun itemUnswiped(position: Int) {
         val vh: RecyclerView.ViewHolder? =
-            binding.queueList.findViewHolderForAdapterPosition(position)
+            binding?.queueList?.findViewHolderForAdapterPosition(position)
         if (vh is ISwipeableViewHolder) {
             (vh as ISwipeableViewHolder).onUnswiped()
         }
@@ -682,7 +697,7 @@ class ErrorsFragment : Fragment(R.layout.fragment_queue_errors), ItemTouchCallba
         val message = resources.getQuantityString(R.plurals.redownload_confirm, contents.size)
         MaterialAlertDialogBuilder(
             requireContext(),
-            ThemeHelper.getIdForCurrentTheme(requireContext(), R.style.Theme_Light_Dialog)
+            requireContext().getIdForCurrentTheme(R.style.Theme_Light_Dialog)
         )
             .setIcon(R.drawable.ic_warning)
             .setCancelable(false)
@@ -718,7 +733,7 @@ class ErrorsFragment : Fragment(R.layout.fragment_queue_errors), ItemTouchCallba
     private fun redownloadSelected() {
         selectExtension.let {
             activity.get()?.redownloadContent(
-                it.selectedItems.mapNotNull { obj: ContentItem -> obj.content },
+                it.selectedItems.mapNotNull { obj -> obj.content },
                 reparseContent = false,
                 reparseImages = false
             )
@@ -726,7 +741,7 @@ class ErrorsFragment : Fragment(R.layout.fragment_queue_errors), ItemTouchCallba
     }
 
     private fun redownloadAll() {
-        val contents = itemAdapter.adapterItems.mapNotNull { obj: ContentItem -> obj.content }
+        val contents = itemAdapter.adapterItems.mapNotNull { obj -> obj.content }
         if (contents.isNotEmpty())
             activity.get()?.redownloadContent(
                 contents,
@@ -780,5 +795,17 @@ class ErrorsFragment : Fragment(R.layout.fragment_queue_errors), ItemTouchCallba
                 }
             }
             .create().show()
+    }
+
+    private fun onFilterSourcesClick() {
+        if (!enabled) return
+        val sources =
+            Site.entries.filter { e -> unfilteredSources.contains(e) }.map { s -> s.code }
+        SelectSiteDialogFragment.invoke(
+            this,
+            getString(R.string.filter_by_source),
+            sources,
+            parentIsActivity = true
+        )
     }
 }

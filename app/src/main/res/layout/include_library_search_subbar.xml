@@ -1,61 +1,56 @@
 <?xml version="1.0" encoding="utf-8"?>
-<merge xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    tools:parentTag="androidx.constraintlayout.widget.ConstraintLayout">
+    android:id="@+id/background"
+    android:layout_width="match_parent"
+    android:layout_height="?android:attr/actionBarSize"
+    android:background="?subbar_1">
 
-    <View
-        android:id="@+id/advanced_search_background"
-        android:layout_width="match_parent"
-        android:layout_height="52dp"
-        android:background="@color/dark_gray"
-        android:visibility="gone"
-        app:layout_constraintTop_toBottomOf="@id/library_toolbar"
-        tools:visibility="visible" />
-
-    <TextView
+    <Button
         android:id="@+id/advanced_search_btn"
-        style="@style/TextButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:gravity="center"
+        style="@style/Widget.Material3.Button.TextButton"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:gravity="start|center_vertical"
         android:text="@string/title_activity_search"
+        android:textAllCaps="true"
+        android:textColor="@color/white_opacity_87"
         android:visibility="gone"
+        app:layout_constraintEnd_toStartOf="@id/search_save_btn"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@id/advanced_search_background"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:ignore="ContentDescription"
         tools:visibility="visible" />
 
-    <ImageView
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/search_save_btn"
-        android:layout_width="32dp"
-        android:layout_height="32dp"
+        style="?attr/materialIconButtonFilledTonalStyle"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
         android:layout_marginEnd="8dp"
-        android:adjustViewBounds="true"
-        android:clickable="true"
-        android:focusable="true"
-        android:padding="4dp"
-        android:src="@drawable/ic_folder_new"
+        android:tooltipText="@string/previous_book_help"
         android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="@id/advanced_search_background"
+        app:icon="@drawable/ic_folder_new"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@id/search_clear_btn"
-        app:layout_constraintTop_toTopOf="@id/advanced_search_background"
+        app:layout_constraintTop_toTopOf="parent"
         tools:ignore="ContentDescription"
         tools:visibility="visible" />
 
     <ImageView
         android:id="@+id/search_clear_btn"
-        android:layout_width="32dp"
-        android:layout_height="32dp"
-        android:layout_marginEnd="8dp"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
         android:adjustViewBounds="true"
         android:clickable="true"
         android:focusable="true"
-        android:padding="4dp"
+        android:padding="12dp"
         android:src="@drawable/ic_cancel"
         android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="@id/advanced_search_background"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@id/advanced_search_background"
+        app:layout_constraintTop_toTopOf="parent"
         tools:ignore="ContentDescription"
         tools:visibility="visible" />
-</merge>
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -7,8 +7,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.core.content.ContextCompat
 import androidx.documentfile.provider.DocumentFile
-import androidx.fragment.app.DialogFragment
-import androidx.fragment.app.FragmentManager
+import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.mikepenz.fastadapter.FastAdapter
 import com.mikepenz.fastadapter.adapters.ItemAdapter
@@ -22,15 +21,27 @@ import kotlinx.coroutines.withContext
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.databinding.DialogToolsAppLogsBinding
 import me.devsaki.hentoid.enums.StorageLocation
-import me.devsaki.hentoid.util.Helper
-import me.devsaki.hentoid.util.Preferences
-import me.devsaki.hentoid.util.file.FileHelper
+import me.devsaki.hentoid.fragments.BaseDialogFragment
+import me.devsaki.hentoid.util.Settings
+import me.devsaki.hentoid.util.dimensAsDp
+import me.devsaki.hentoid.util.file.getDocumentFromTreeUriString
+import me.devsaki.hentoid.util.file.listFiles
+import me.devsaki.hentoid.util.file.openFile
+import me.devsaki.hentoid.util.file.shareFile
+import me.devsaki.hentoid.util.formatEpochToDate
+import me.devsaki.hentoid.util.getThemedColor
 import me.devsaki.hentoid.viewholders.TextItem
 import timber.log.Timber
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-class LogsDialogFragment : DialogFragment(R.layout.dialog_tools_app_logs) {
+class LogsDialogFragment : BaseDialogFragment<Nothing>() {
+
+    companion object {
+        fun invoke(fragment: Fragment) {
+            invoke(fragment, LogsDialogFragment())
+        }
+    }
 
     // == UI
     private var binding: DialogToolsAppLogsBinding? = null
@@ -75,7 +86,7 @@ class LogsDialogFragment : DialogFragment(R.layout.dialog_tools_app_logs) {
         for (file in files) {
             var fileName = file.name
             fileName = fileName?.lowercase(Locale.getDefault()) ?: ""
-            val timeStr = Helper.formatEpochToDate(file.lastModified(), formatter)
+            val timeStr = formatEpochToDate(file.lastModified(), formatter)
             val label = "$fileName ($timeStr)"
             itemAdapter.add(TextItem(label, file, false))
         }
@@ -84,12 +95,12 @@ class LogsDialogFragment : DialogFragment(R.layout.dialog_tools_app_logs) {
     private suspend fun getLogs(): List<DocumentFile> {
         return withContext(Dispatchers.IO) {
             val rootFolder =
-                FileHelper.getDocumentFromTreeUriString(
+                getDocumentFromTreeUriString(
                     requireContext(),
-                    Preferences.getStorageUri(StorageLocation.PRIMARY_1)
+                    Settings.getStorageUri(StorageLocation.PRIMARY_1)
                 ) ?: return@withContext emptyList<DocumentFile>()
 
-            var files = FileHelper.listFiles(
+            var files = listFiles(
                 requireContext(), rootFolder
             ) { displayName: String ->
                 displayName.lowercase(
@@ -103,7 +114,7 @@ class LogsDialogFragment : DialogFragment(R.layout.dialog_tools_app_logs) {
     }
 
     private fun onItemClick(item: TextItem<DocumentFile>): Boolean {
-        val document = item.getTag() ?: return false
+        val document = item.getObject() ?: return false
         val powerMenu = PowerMenu.Builder(requireContext())
             .addItem(
                 PowerMenuItem(
@@ -124,16 +135,16 @@ class LogsDialogFragment : DialogFragment(R.layout.dialog_tools_app_logs) {
             .setLifecycleOwner(requireActivity())
             .setTextColor(ContextCompat.getColor(requireContext(), R.color.white_opacity_87))
             .setTextTypeface(Typeface.DEFAULT)
-            .setMenuColor(ContextCompat.getColor(requireContext(), R.color.dark_gray))
-            .setTextSize(Helper.dimensAsDp(requireContext(), R.dimen.text_subtitle_1))
+            .setMenuColor(requireContext().getThemedColor(R.color.subbar_1_light))
+            .setTextSize(dimensAsDp(requireContext(), R.dimen.text_subtitle_1))
             .setAutoDismiss(true)
             .build()
         powerMenu.onMenuItemClickListener =
             OnMenuItemClickListener { p, _ ->
                 if (0 == p) {
-                    FileHelper.openFile(requireContext(), document)
+                    openFile(requireContext(), document)
                 } else {
-                    FileHelper.shareFile(
+                    shareFile(
                         requireContext(),
                         document.uri,
                         item.text
@@ -143,12 +154,5 @@ class LogsDialogFragment : DialogFragment(R.layout.dialog_tools_app_logs) {
         powerMenu.setIconColor(ContextCompat.getColor(requireContext(), R.color.white_opacity_87))
         powerMenu.showAtCenter(binding?.root)
         return true
-    }
-
-    companion object {
-        fun invoke(fragmentManager: FragmentManager) {
-            val fragment = LogsDialogFragment()
-            fragment.show(fragmentManager, null)
-        }
     }
 }

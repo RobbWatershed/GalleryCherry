@@ -4,8 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/transparent"
-    tools:targetApi="o">
+    android:background="@color/transparent">
 
     <!-- Bottom background -->
 
@@ -21,88 +20,68 @@
 
     <!-- Bottom controls -->
 
-    <ImageButton
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/info_btn"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
+        style="?attr/materialIconButtonOutlinedStyle"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
         android:layout_marginStart="8dp"
-        android:background="@color/transparent"
-        android:clickable="true"
-        android:focusable="true"
-        android:scaleType="fitCenter"
-        android:src="@drawable/ic_info"
         android:tooltipText="@string/information_help"
+        app:icon="@drawable/ic_info"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:tint="?colorOnPrimary"
         tools:ignore="ContentDescription" />
 
-    <ImageButton
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/prev_book_btn"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:background="@color/transparent"
-        android:clickable="true"
-        android:focusable="true"
-        android:scaleType="fitCenter"
-        android:src="@drawable/ic_action_previous_item"
+        style="?attr/materialIconButtonOutlinedStyle"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
         android:tooltipText="@string/previous_book_help"
+        app:icon="@drawable/ic_action_previous_item"
         android:visibility="invisible"
+        tools:visibility="visible"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@id/favourite_action_btn"
         app:layout_constraintStart_toEndOf="@id/info_btn"
-        app:tint="?colorOnPrimary"
-        tools:ignore="ContentDescription"
-        tools:visibility="visible" />
+        tools:ignore="ContentDescription" />
 
-    <ImageButton
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/favourite_action_btn"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:background="@color/transparent"
-        android:clickable="true"
-        android:focusable="true"
-        android:scaleType="fitCenter"
-        android:src="@drawable/ic_fav_bottom_half"
+        style="?attr/materialIconButtonOutlinedStyle"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
         android:tooltipText="@string/fav_help"
+        app:icon="@drawable/ic_fav_bottom_half"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@id/next_book_btn"
         app:layout_constraintStart_toEndOf="@id/prev_book_btn"
-        app:tint="?colorOnPrimary"
         tools:ignore="ContentDescription" />
 
-    <ImageButton
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/next_book_btn"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:background="@color/transparent"
-        android:clickable="true"
-        android:focusable="true"
-        android:scaleType="fitCenter"
-        android:src="@drawable/ic_action_next_item"
+        style="?attr/materialIconButtonOutlinedStyle"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
         android:tooltipText="@string/next_book_help"
+        app:icon="@drawable/ic_action_next_item"
         android:visibility="invisible"
+        tools:visibility="visible"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@id/gallery_btn"
         app:layout_constraintStart_toEndOf="@id/favourite_action_btn"
-        app:tint="?colorOnPrimary"
-        tools:ignore="ContentDescription"
-        tools:visibility="visible" />
+        tools:ignore="ContentDescription" />
 
-    <ImageButton
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/gallery_btn"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
+        style="?attr/materialIconButtonOutlinedStyle"
         android:layout_marginEnd="8dp"
-        android:background="@color/transparent"
-        android:clickable="true"
-        android:focusable="true"
-        android:scaleType="fitCenter"
-        android:src="@drawable/ic_view_gallery"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
         android:tooltipText="@string/gallery_help"
+        app:icon="@drawable/ic_view_gallery"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:tint="?colorOnPrimary"
         tools:ignore="ContentDescription" />
 
     <!-- Progress bar -->
@@ -141,7 +120,7 @@
         app:layout_constraintStart_toEndOf="@id/pager_left_txt"
         app:thumbColor="?colorSecondary"
         app:tickVisible="false"
-        app:trackColorActive="@color/accent_red"
+        app:trackColorActive="?colorSecondary"
         app:trackColorInactive="@color/white_opacity_25" />
 
     <TextView
@@ -226,7 +205,7 @@
         tools:ignore="ContentDescription" />
 
     <androidx.appcompat.widget.Toolbar
-        android:id="@+id/viewer_pager_toolbar"
+        android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?android:attr/actionBarSize"
         android:background="?colorPrimaryVariant"
@@ -236,20 +215,20 @@
         app:menu="@menu/reader_pager_menu"
         app:navigationIcon="@drawable/ic_arrow_back" />
 
-    <ProgressBar
+    <com.google.android.material.progressindicator.LinearProgressIndicator
         android:id="@+id/progress_bar"
-        style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+        style="@style/Widget.Material3.LinearProgressIndicator"
         android:layout_width="match_parent"
         android:layout_height="2dp"
         android:layout_gravity="top"
         android:visibility="gone"
-        app:layout_constraintTop_toBottomOf="@id/viewer_pager_toolbar"
+        app:layout_constraintTop_toBottomOf="@id/toolbar"
         tools:visibility="visible" />
 
     <com.google.android.material.slider.Slider
         android:id="@+id/slideshow_delay_slider"
         style="@style/App.Slider"
-        android:layout_width="0dp"
+        android:layout_width="360dp"
         android:layout_height="wrap_content"
         android:padding="8dp"
         android:stepSize="1.0"
@@ -259,7 +238,7 @@
         android:visibility="gone"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/viewer_pager_toolbar"
+        app:layout_constraintTop_toBottomOf="@id/toolbar"
         app:thumbColor="?colorSecondary"
         app:tickColor="?colorSecondary"
         app:tickVisible="true"

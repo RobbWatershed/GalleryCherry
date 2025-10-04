@@ -13,8 +13,7 @@ import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.viewholders.SiteItem
 
 class SourcesIntroFragment : Fragment(R.layout.intro_slide_06) {
-    private var _binding: IntroSlide06Binding? = null
-    private val binding get() = _binding!!
+    private var binding: IntroSlide06Binding? = null
 
     private val itemAdapter = ItemAdapter<SiteItem>()
 
@@ -22,23 +21,26 @@ class SourcesIntroFragment : Fragment(R.layout.intro_slide_06) {
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View {
-        _binding = IntroSlide06Binding.inflate(inflater, container, false)
+    ): View? {
+        binding = IntroSlide06Binding.inflate(inflater, container, false)
 
         // Recycler
         val items: MutableList<SiteItem> = ArrayList()
-        for (s in Site.values()) if (s.isVisible) items.add(SiteItem(s, true, false))
+        for (s in Site.entries.sortedBy { s -> s.description })
+            if (s.isVisible) items.add(
+                SiteItem(s, selected = true, showHandle = false)
+            )
         itemAdapter.set(items)
 
         val fastAdapter: FastAdapter<SiteItem> = FastAdapter.with(itemAdapter)
-        binding.list.adapter = fastAdapter
+        binding?.list?.adapter = fastAdapter
 
-        return binding.root
+        return binding?.root
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
-        _binding = null
+        binding = null
     }
 
     fun getSelection(): List<Site> {

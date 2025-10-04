@@ -3,13 +3,13 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/item"
-    android:layout_width="@dimen/card_grid_width"
-    android:layout_height="@dimen/card_grid_height"
-    android:layout_marginTop="@dimen/default_cardview_vertical_padding"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="1dp"
+    android:layout_marginEnd="1dp"
     android:clickable="true"
     android:focusable="true"
-    android:longClickable="true"
-    tools:targetApi="o">
+    android:longClickable="true">
 
     <ImageView
         android:id="@+id/delete_btn"
@@ -18,17 +18,19 @@
         android:layout_gravity="end"
         android:background="@drawable/selector_button_neutral"
         android:clickable="true"
+        android:contentDescription="@string/viewer_delete_book"
         android:focusable="true"
         android:padding="8dp"
         android:src="@drawable/ic_action_delete"
+        android:tooltipText="@string/viewer_delete_book"
         app:tint="?colorSecondary"
         tools:ignore="ContentDescription" />
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/item_card"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@drawable/bg_book_card"
+        android:layout_height="wrap_content"
+        android:background="?card_surface"
         android:clickable="true"
         android:duplicateParentState="true"
         android:elevation="6dp"
@@ -38,7 +40,7 @@
 
         <!-- Dummy UI element to be able to attach to the top in library mode -->
         <View
-            android:id="@+id/pbDownload"
+            android:id="@+id/dummy_view"
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:visibility="gone"
@@ -47,15 +49,16 @@
 
         <ImageView
             android:id="@+id/ivCover"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:adjustViewBounds="true"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:adjustViewBounds="false"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintDimensionRatio="W, 1:1"
             app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintVertical_bias="0.0"
             tools:ignore="ContentDescription"
-            tools:src="@drawable/ic_hentoid_trans"
-            tools:tint="@color/light_gray" />
+            tools:src="@drawable/ic_hentoid_shape"
+            tools:tint="@color/lighter_gray" />
 
         <ImageView
             android:id="@+id/ivFlag"
@@ -74,13 +77,13 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:background="@color/black_opacity_25"
-            android:ellipsize="middle"
-            android:maxLines="2"
+            android:background="@color/black_opacity_50"
+            android:ellipsize="end"
+            android:maxLines="1"
             android:paddingStart="8dp"
             android:paddingEnd="8dp"
-            android:textColor="?colorSecondary"
-            android:textSize="@dimen/text_subtitle_1"
+            android:textColor="@color/white_opacity_87"
+            android:textSize="@dimen/card_book_title"
             android:textStyle="bold"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@id/lineNew"
@@ -96,53 +99,46 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <ImageView
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/ivFavourite"
+            style="?attr/materialIconButtonOutlinedStyle"
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:layout_marginStart="8dp"
             android:layout_marginTop="8dp"
-            android:background="@color/transparent"
-            android:clickable="true"
-            android:focusable="true"
-            android:padding="8dp"
-            android:src="@drawable/ic_fav_empty"
             android:tooltipText="@string/fav_help"
+            app:icon="@drawable/ic_fav_empty"
+            app:iconTint="?colorSecondary"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:tint="?colorSecondary"
             tools:ignore="ContentDescription" />
 
-        <ImageView
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/iv_rating"
+            style="?attr/materialIconButtonOutlinedStyle"
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:layout_marginStart="8dp"
             android:layout_marginTop="8dp"
-            android:padding="8dp"
-            android:src="@drawable/ic_star_5"
+            app:iconTint="?colorSecondary"
             android:tooltipText="@string/rating_help"
+            app:icon="@drawable/ic_star_5"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/ivFavourite"
-            app:layout_constraintVertical_bias="1.0"
-            app:tint="?colorSecondary"
             tools:ignore="ContentDescription" />
 
-        <ImageView
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/queue_site_button"
+            style="?attr/materialIconButtonOutlinedStyle"
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:layout_marginStart="8dp"
-            android:layout_marginTop="8dp"
-            android:clickable="true"
-            android:focusable="true"
-            android:padding="8dp"
+            app:iconTint="?colorSecondary"
             android:tooltipText="@string/view_source_help"
+            app:icon="@drawable/ic_hentoid_shape"
+            app:layout_constraintBottom_toTopOf="@id/tvTitle"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/iv_rating"
-            app:tint="?colorSecondary"
-            tools:ignore="ContentDescription"
-            tools:src="@drawable/ic_hentoid_shape" />
+            tools:ignore="ContentDescription" />
 
         <ImageView
             android:id="@+id/ivExternal"
@@ -171,6 +167,19 @@
             app:layout_constraintTop_toBottomOf="@id/ivExternal"
             app:tint="@color/medium_gray"
             tools:ignore="ContentDescription" />
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/selection_border"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:background="@drawable/bg_rectangle_border"
+            android:clickable="false"
+            android:focusable="false"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

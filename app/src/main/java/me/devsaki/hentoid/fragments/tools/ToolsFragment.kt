@@ -2,6 +2,7 @@ package me.devsaki.hentoid.fragments.tools
 
 import android.os.Bundle
 import android.view.View
+import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.commit
 import androidx.lifecycle.lifecycleScope
 import androidx.preference.Preference
@@ -10,8 +11,7 @@ import androidx.preference.PreferenceScreen
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
-import com.google.android.material.snackbar.BaseTransientBottomBar
-import com.google.android.material.snackbar.Snackbar
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -19,28 +19,37 @@ import kotlinx.coroutines.withContext
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.activities.DuplicateDetectorActivity
 import me.devsaki.hentoid.activities.RenamingRulesActivity
+import me.devsaki.hentoid.activities.ToolsActivity
+import me.devsaki.hentoid.activities.bundles.ToolsBundle
 import me.devsaki.hentoid.core.clearAppCache
 import me.devsaki.hentoid.core.clearWebviewCache
 import me.devsaki.hentoid.core.startLocalActivity
 import me.devsaki.hentoid.core.withArguments
+import me.devsaki.hentoid.database.CollectionDAO
+import me.devsaki.hentoid.database.ObjectBoxDAO
+import me.devsaki.hentoid.enums.AttributeType
 import me.devsaki.hentoid.fragments.ProgressDialogFragment
 import me.devsaki.hentoid.json.JsonSettings
-import me.devsaki.hentoid.util.Helper
-import me.devsaki.hentoid.util.JsonHelper
-import me.devsaki.hentoid.util.Preferences
-import me.devsaki.hentoid.util.ToastHelper
-import me.devsaki.hentoid.util.file.FileHelper
+import me.devsaki.hentoid.util.Settings
+import me.devsaki.hentoid.util.exportToDownloadsFolder
+import me.devsaki.hentoid.util.file.StorageCache
+import me.devsaki.hentoid.util.file.formatHumanReadableSize
+import me.devsaki.hentoid.util.getAppHeapBytes
+import me.devsaki.hentoid.util.getAppTotalRamBytes
+import me.devsaki.hentoid.util.getSystemHeapBytes
 import me.devsaki.hentoid.util.network.WebkitPackageHelper
+import me.devsaki.hentoid.util.serializeToJson
+import me.devsaki.hentoid.util.toast
+import me.devsaki.hentoid.workers.BaseDeleteWorker
 import me.devsaki.hentoid.workers.DeleteWorker
 import me.devsaki.hentoid.workers.data.DeleteData
 import timber.log.Timber
-import java.io.ByteArrayInputStream
-import java.io.IOException
 import java.nio.charset.StandardCharsets
 
 
 @Suppress("PrivatePropertyName")
-class ToolsFragment : PreferenceFragmentCompat(), MassDeleteFragment.Companion.Parent {
+class ToolsFragment : PreferenceFragmentCompat(),
+    MassOperationsDialogFragment.Parent {
 
     private val DUPLICATE_DETECTOR_KEY = "tools_duplicate_detector"
     private val EXPORT_LIBRARY = "export_library"
@@ -48,20 +57,25 @@ class ToolsFragment : PreferenceFragmentCompat(), MassDeleteFragment.Companion.P
     private val EXPORT_SETTINGS = "export_settings"
     private val IMPORT_SETTINGS = "import_settings"
     private val ACCESS_RENAMING_RULES = "tools_renaming_rules"
+    private val RAM = "tools_ram_usage"
     private val ACCESS_LATEST_LOGS = "tools_latest_logs"
     private val CLEAR_BROWSER_CACHE = "cache_browser"
     private val CLEAR_APP_CACHE = "cache_app"
+    private val MASS_OPERATIONS = "mass_operations"
+
 
     private var rootView: View? = null
-
-    companion object {
-        fun newInstance(): ToolsFragment {
-            return ToolsFragment()
-        }
-    }
+    private var contentSearchBundle: Bundle? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        activity?.intent?.extras?.let { extras ->
+            val parser = ToolsBundle(extras)
+            contentSearchBundle = parser.contentSearchBundle
+        }
+        view.fitsSystemWindows = true
+
         rootView = view
     }
 
@@ -81,18 +95,18 @@ class ToolsFragment : PreferenceFragmentCompat(), MassDeleteFragment.Companion.P
                 true
             }
 
-            Preferences.Key.DELETE_ALL_EXCEPT_FAVS -> {
-                MassDeleteFragment.invoke(this.childFragmentManager)
+            MASS_OPERATIONS -> {
+                MassOperationsDialogFragment.invoke(this, contentSearchBundle)
                 true
             }
 
             EXPORT_LIBRARY -> {
-                MetaExportDialogFragment.invoke(parentFragmentManager)
+                MetaExportDialogFragment.invoke(this)
                 true
             }
 
             IMPORT_LIBRARY -> {
-                MetaImportDialogFragment.invoke(parentFragmentManager)
+                MetaImportDialogFragment.invoke(this)
                 true
             }
 
@@ -102,13 +116,13 @@ class ToolsFragment : PreferenceFragmentCompat(), MassDeleteFragment.Companion.P
             }
 
             IMPORT_SETTINGS -> {
-                SettingsImportDialogFragment.invoke(parentFragmentManager)
+                SettingsImportDialogFragment.invoke(this)
                 true
             }
 
             CLEAR_BROWSER_CACHE -> {
                 context?.clearWebviewCache {
-                    ToastHelper.toast(
+                    toast(
                         if (it) R.string.tools_cache_browser_success else
                             if (WebkitPackageHelper.getWebViewUpdating()) R.string.tools_cache_browser_updating_webview
                             else R.string.tools_cache_browser_missing_webview
@@ -118,8 +132,15 @@ class ToolsFragment : PreferenceFragmentCompat(), MassDeleteFragment.Companion.P
             }
 
             CLEAR_APP_CACHE -> {
-                context?.clearAppCache()
-                ToastHelper.toast(R.string.tools_cache_app_success)
+                lifecycleScope.launch {
+                    withContext(Dispatchers.IO) {
+                        context?.apply {
+                            clearAppCache()
+                            StorageCache.clearAll(this)
+                        }
+                    }
+                    toast(R.string.tools_cache_app_success)
+                }
                 true
             }
 
@@ -128,8 +149,37 @@ class ToolsFragment : PreferenceFragmentCompat(), MassDeleteFragment.Companion.P
                 true
             }
 
+            RAM -> {
+                val usedAppHeap =
+                    formatHumanReadableSize(
+                        getAppHeapBytes().first,
+                        resources
+                    )
+                val usedAppTotal =
+                    formatHumanReadableSize(getAppTotalRamBytes(), resources)
+                val systemHeap = getSystemHeapBytes(requireContext())
+                val systemHeapUsed = formatHumanReadableSize(
+                    systemHeap.first,
+                    resources
+                )
+                val systemHeapFree = formatHumanReadableSize(
+                    systemHeap.second,
+                    resources
+                )
+                val msg =
+                    "Used app RAM (heap) : $usedAppHeap\nUsed app RAM (total) : $usedAppTotal\nSystem heap (used) : $systemHeapUsed\nSystem heap (free) : $systemHeapFree"
+                val materialDialog: AlertDialog = MaterialAlertDialogBuilder(requireContext())
+                    .setMessage(msg)
+                    .setCancelable(true)
+                    .create()
+
+                materialDialog.setIcon(R.drawable.ic_memory)
+                materialDialog.show()
+                true
+            }
+
             ACCESS_LATEST_LOGS -> {
-                LogsDialogFragment.invoke(parentFragmentManager)
+                LogsDialogFragment.invoke(this)
                 true
             }
 
@@ -150,89 +200,61 @@ class ToolsFragment : PreferenceFragmentCompat(), MassDeleteFragment.Companion.P
     private fun onExportSettings() {
         lifecycleScope.launch {
             val result = withContext(Dispatchers.IO) {
+                val dao = ObjectBoxDAO()
                 try {
-                    val settings = getExportedSettings()
-                    return@withContext JsonHelper.serializeToJson(
-                        settings,
-                        JsonSettings::class.java
-                    )
+                    val settings = getExportedSettings(dao)
+                    return@withContext serializeToJson(settings, JsonSettings::class.java)
                 } catch (e: Exception) {
                     Timber.w(e)
+                } finally {
+                    dao.cleanup()
                 }
                 return@withContext ""
             }
             coroutineScope {
-                if (result.isNotEmpty()) onJsonSerialized(result)
+                if (result.isNotEmpty()) onSettingsJsonSerialized(result)
             }
         }
     }
 
-    private fun getExportedSettings(): JsonSettings {
+    private fun getExportedSettings(dao: CollectionDAO): JsonSettings {
         val jsonSettings = JsonSettings()
 
-        jsonSettings.settings = Preferences.extractPortableInformation()
+        jsonSettings.settings = Settings.extractPortableInformation()
+        jsonSettings.replaceRenamingRules(dao.selectRenamingRules(AttributeType.UNDEFINED, null))
 
         return jsonSettings
     }
 
-    private fun onJsonSerialized(json: String) {
-        // Use a random number to avoid erasing older exports by mistake
-        var targetFileName = Helper.getRandomInt(9999).toString() + ".json"
-        targetFileName = "settings-$targetFileName"
-
-        rootView?.let {
-            try {
-                FileHelper.openNewDownloadOutputStream(
-                    requireContext(),
-                    targetFileName,
-                    JsonHelper.JSON_MIME_TYPE
-                ).use { newDownload ->
-                    ByteArrayInputStream(json.toByteArray(StandardCharsets.UTF_8))
-                        .use { input ->
-                            Helper.copy(
-                                input,
-                                newDownload
-                            )
-                        }
-                }
-                Snackbar.make(
-                    it,
-                    R.string.copy_download_folder_success,
-                    BaseTransientBottomBar.LENGTH_LONG
-                )
-                    .setAction(R.string.open_folder) {
-                        FileHelper.openFile(
-                            requireContext(),
-                            FileHelper.getDownloadsFolder()
-                        )
-                    }
-                    .show()
-            } catch (e: IOException) {
-                Snackbar.make(
-                    it,
-                    R.string.copy_download_folder_fail,
-                    BaseTransientBottomBar.LENGTH_LONG
-                ).show()
-            } catch (e: IllegalArgumentException) {
-                Snackbar.make(
-                    it,
-                    R.string.copy_download_folder_fail,
-                    BaseTransientBottomBar.LENGTH_LONG
-                ).show()
-            }
-        }
+    private fun onSettingsJsonSerialized(json: String) {
+        exportToDownloadsFolder(
+            requireContext(),
+            json.toByteArray(StandardCharsets.UTF_8),
+            "settings.json",
+            rootView
+        )
     }
 
-    override fun onMassDelete(keepBookPrefs: Boolean, keepGroupPrefs: Boolean) {
+    override fun onMassProcess(
+        operation: ToolsActivity.MassOperation,
+        invertScope: Boolean,
+        keepGroupPrefs: Boolean
+    ) {
         ProgressDialogFragment.invoke(
-            parentFragmentManager,
-            resources.getString(R.string.delete_title),
+            this,
+            resources.getString(R.string.mass_operations_title),
             R.plurals.book
         )
 
         val builder = DeleteData.Builder()
-        builder.setDeleteAllContentExceptFavsBooks(keepBookPrefs)
-        builder.setDeleteAllContentExceptFavsGroups(keepGroupPrefs)
+        builder.setContentFilter(contentSearchBundle ?: Bundle())
+        val op = when (operation) {
+            ToolsActivity.MassOperation.DELETE -> BaseDeleteWorker.Operation.DELETE
+            ToolsActivity.MassOperation.STREAM -> BaseDeleteWorker.Operation.STREAM
+        }
+        builder.setOperation(op)
+        builder.setInvertFilterScope(invertScope)
+        builder.setKeepFavGroups(keepGroupPrefs)
 
         val workManager = WorkManager.getInstance(requireContext())
         workManager.enqueueUniqueWork(

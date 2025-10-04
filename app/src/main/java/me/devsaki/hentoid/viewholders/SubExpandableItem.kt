@@ -1,21 +1,27 @@
 package me.devsaki.hentoid.viewholders
 
-import android.graphics.Color
 import android.view.MotionEvent
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.annotation.StringRes
-import androidx.core.view.ViewCompat
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
-import com.mikepenz.fastadapter.*
+import coil3.load
+import com.mikepenz.fastadapter.ClickListener
+import com.mikepenz.fastadapter.FastAdapter
+import com.mikepenz.fastadapter.IAdapter
+import com.mikepenz.fastadapter.IClickable
+import com.mikepenz.fastadapter.ISubItem
 import com.mikepenz.fastadapter.drag.IExtendedDraggable
 import com.mikepenz.fastadapter.expandable.items.AbstractExpandableItem
 import com.mikepenz.fastadapter.listeners.TouchEventHook
 import com.mikepenz.fastadapter.ui.utils.FastAdapterUIUtils
 import com.mikepenz.fastadapter.ui.utils.StringHolder
 import me.devsaki.hentoid.R
+import me.devsaki.hentoid.core.requireById
+import me.devsaki.hentoid.core.setMiddleEllipsis
+import me.devsaki.hentoid.database.domains.ImageFile
 
 /**
  * Inspired by mikepenz
@@ -36,7 +42,9 @@ class SubExpandableItem<T>(
 
     var header: String? = null
     var description: StringHolder? = null
-    private var draggable: Boolean = false
+    var cover: ImageFile? = null
+    private var selectable = false
+    private var draggable = false
 
     private var mOnClickListener: ClickListener<SubExpandableItem<T>>? = null
 
@@ -50,15 +58,14 @@ class SubExpandableItem<T>(
     override var onItemClickListener: ClickListener<SubExpandableItem<T>>? =
         { v: View?, adapter: IAdapter<SubExpandableItem<T>>, item: SubExpandableItem<T>, position: Int ->
             if (item.subItems.isNotEmpty()) {
-                v?.findViewById<View>(R.id.material_drawer_icon)?.let {
+                v?.findViewById<View>(R.id.expand_handle)?.let {
                     if (!item.isExpanded) {
-                        ViewCompat.animate(it).rotation(180f).start()
+                        it.animate().rotation(180f).start()
                     } else {
-                        ViewCompat.animate(it).rotation(0f).start()
+                        it.animate().rotation(0f).start()
                     }
                 }
             }
-
             mOnClickListener?.invoke(v, adapter, item, position) ?: true
         }
         set(onClickListener) {
@@ -69,11 +76,10 @@ class SubExpandableItem<T>(
         get() = null
         set(_) {}
 
-    //this might not be true for your application
     override var isSelectable: Boolean
-        get() = subItems.isEmpty()
+        get() = selectable
         set(value) {
-            super.isSelectable = value
+            selectable = value
         }
 
     /**
@@ -107,6 +113,11 @@ class SubExpandableItem<T>(
         return this
     }
 
+    fun withCover(imageFile: ImageFile?): SubExpandableItem<T> {
+        this.cover = imageFile
+        return this
+    }
+
     fun withDraggable(value: Boolean): SubExpandableItem<T> {
         this.draggable = value
         return this
@@ -125,27 +136,44 @@ class SubExpandableItem<T>(
 
         //set the background for the item
         holder.view.clearAnimation()
-        ViewCompat.setBackground(
-            holder.view,
-            FastAdapterUIUtils.getSelectableBackground(ctx, Color.RED, true)
+        holder.view.background = FastAdapterUIUtils.getSelectableBackground(
+            ctx,
+            ctx.getColor(R.color.white_opacity_25),
+            true
         )
-        //set the text for the name
+
+        // Texts
         holder.name.text = name
-        //set the text for the description or hide
+        holder.name.post {
+            holder.name.setMiddleEllipsis()
+        }
         StringHolder.applyToOrHide(description, holder.description)
+
+        // Cover
+        attachCover(holder.cover)
 
         holder.dragHandle.visibility = if (draggable) View.VISIBLE else View.GONE
 
-        if (subItems.isEmpty()) {
-            holder.icon.visibility = View.GONE
-        } else {
-            holder.icon.visibility = View.VISIBLE
-        }
+        if (subItems.isEmpty() || isSelected) holder.expandHandle.visibility = View.GONE
+        else holder.expandHandle.visibility = View.VISIBLE
 
-        if (isExpanded) {
-            holder.icon.rotation = 0f
-        } else {
-            holder.icon.rotation = 180f
+        // TODO don't show subItems when selected ?
+        holder.selectedFlag.visibility = if (isSelected) View.VISIBLE else View.GONE
+
+        if (isExpanded) holder.expandHandle.rotation = 0f
+        else holder.expandHandle.rotation = 180f
+    }
+
+    private fun attachCover(ivCover: ImageView) {
+        cover?.apply {
+            val thumbLocation = usableUri
+            if (thumbLocation.isEmpty()) {
+                ivCover.visibility = View.INVISIBLE
+                return
+            }
+            ivCover.visibility = View.VISIBLE
+            // Use content's cookies to load image (useful for ExHentai when viewing queue screen)
+            ivCover.load(thumbLocation)
         }
     }
 
@@ -154,7 +182,7 @@ class SubExpandableItem<T>(
         holder.name.text = null
         holder.description.text = null
         //make sure all animations are stopped
-        holder.icon.clearAnimation()
+        holder.expandHandle.clearAnimation()
     }
 
     override fun getViewHolder(v: View): ViewHolder {
@@ -165,16 +193,20 @@ class SubExpandableItem<T>(
      * our ViewHolder
      */
     class ViewHolder(val view: View) : RecyclerView.ViewHolder(view) {
-        var name: TextView = view.findViewById(R.id.material_drawer_name)
-        var description: TextView = view.findViewById(R.id.material_drawer_description)
-        var icon: ImageView = view.findViewById(R.id.material_drawer_icon)
-        var dragHandle: ImageView = view.findViewById(R.id.ivReorder)
+        val name: TextView = view.requireById(R.id.material_drawer_name)
+        val description: TextView = view.requireById(R.id.material_drawer_description)
+        val expandHandle: ImageView = view.requireById(R.id.expand_handle)
+        val selectedFlag: ImageView = view.requireById(R.id.selected_flag)
+        val dragHandle: ImageView = view.requireById(R.id.ivReorder)
+        val cover: ImageView = view.requireById(R.id.ivCover)
     }
 
-    override val isDraggable: Boolean
-        get() = draggable
     override val touchHelper: ItemTouchHelper
         get() = mTouchHelper
+
+    // Dragging
+    override val isDraggable: Boolean
+        get() = draggable
 
     override fun getDragView(viewHolder: ViewHolder): View {
         return viewHolder.dragHandle

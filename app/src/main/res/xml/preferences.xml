@@ -1,6 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
+    <com.bytehamster.lib.preferencesearch.SearchPreference android:key="searchPreference" />
+    <PreferenceScreen
+        android:icon="@drawable/ic_attribute_source"
+        android:key="sources"
+        android:title="@string/pref_screen_sources">
+        <Preference
+            android:key="pref_drawer_sources"
+            android:summary="@string/pref_drawer_sources_summary"
+            android:title="@string/pref_drawer_sources_title"
+            app:iconSpaceReserved="false" />
+        <Preference
+            android:key="pref_source_specifics"
+            android:summary="@string/title_activity_source_specifics"
+            android:title="@string/title_activity_source_specifics"
+            app:iconSpaceReserved="false" />
+    </PreferenceScreen>
     <PreferenceScreen
         android:icon="@drawable/ic_ui"
         android:key="interface"
@@ -8,15 +24,21 @@
         <PreferenceCategory
             android:title="@string/pref_cat_library"
             app:iconSpaceReserved="false">
-            <Preference
-                android:key="pref_drawer_sources"
-                android:summary="@string/pref_drawer_sources_summary"
-                android:title="@string/pref_drawer_sources_title"
+            <CheckBoxPreference
+                android:defaultValue="@string/pref_navigation_nostalgia_mode_default"
+                android:key="navigation_nostalgia_mode"
+                android:summaryOff="@string/pref_nostalgia_summary_off"
+                android:summaryOn="@string/pref_nostalgia_summary_on"
+                android:title="@string/pref_navigation_nostalgia_mode"
                 app:iconSpaceReserved="false" />
+        </PreferenceCategory>
+        <PreferenceCategory
+            android:title="@string/pref_cat_library"
+            app:iconSpaceReserved="false">
             <ListPreference
                 android:defaultValue="@string/pref_library_display_default"
                 android:entries="@array/pref_library_display_entries"
-                android:entryValues="@array/pref_library_display_values"
+                android:entryValues="@array/int_two"
                 android:key="pref_library_display"
                 android:summary="@string/pref_library_display_summary"
                 android:title="@string/pref_library_display_title"
@@ -47,13 +69,65 @@
                 android:title="@string/pref_top_fab_title"
                 app:iconSpaceReserved="false" />
         </PreferenceCategory>
+
+        <PreferenceCategory
+            android:title="@string/pref_cat_library_grid"
+            app:iconSpaceReserved="false">
+            <CheckBoxPreference
+                android:defaultValue="@string/pref_grid_display_title_default"
+                android:key="LIBRARY_DISPLAY_GRID_TITLE"
+                android:title="@string/pref_display_grid_title_title"
+                app:iconSpaceReserved="false" />
+            <CheckBoxPreference
+                android:defaultValue="@string/pref_grid_display_lang_default"
+                android:key="LIBRARY_DISPLAY_GRID_LANG"
+                android:title="@string/pref_display_grid_lang_title"
+                app:iconSpaceReserved="false" />
+            <CheckBoxPreference
+                android:defaultValue="@string/pref_grid_display_fav_default"
+                android:key="LIBRARY_DISPLAY_GRID_FAV"
+                android:title="@string/pref_display_grid_fav_title"
+                app:iconSpaceReserved="false" />
+            <CheckBoxPreference
+                android:defaultValue="@string/pref_grid_display_rating_default"
+                android:key="LIBRARY_DISPLAY_GRID_RATING"
+                android:title="@string/pref_display_grid_rating_title"
+                app:iconSpaceReserved="false" />
+            <CheckBoxPreference
+                android:defaultValue="@string/pref_grid_display_source_default"
+                android:key="LIBRARY_DISPLAY_GRID_SOURCE"
+                android:title="@string/pref_display_grid_source_title"
+                app:iconSpaceReserved="false" />
+            <CheckBoxPreference
+                android:defaultValue="@string/pref_grid_display_storage_default"
+                android:key="LIBRARY_DISPLAY_GRID_STORAGE"
+                android:title="@string/pref_display_grid_storage_title"
+                app:iconSpaceReserved="false" />
+            <ListPreference
+                android:defaultValue="@string/library_display_group_figure_default"
+                android:entries="@array/library_display_group_figure_entries"
+                android:entryValues="@array/library_display_group_figure_values"
+                android:key="library_display_group_figure"
+                android:summary="@string/pref_attributes_list_order_summary"
+                android:title="@string/library_display_group_figure_title"
+                app:iconSpaceReserved="false" />
+            <ListPreference
+                android:defaultValue="@string/pref_grid_card_width_default"
+                android:entries="@array/pref_grid_card_width_entries"
+                android:entryValues="@array/pref_grid_card_width_values"
+                android:key="grid_card_width"
+                android:summary="@string/pref_attributes_list_order_summary"
+                android:title="@string/pref_grid_card_width_title"
+                app:iconSpaceReserved="false" />
+        </PreferenceCategory>
+
         <PreferenceCategory
             android:title="@string/pref_cat_search"
             app:iconSpaceReserved="false">
             <ListPreference
                 android:defaultValue="@string/pref_attributes_list_order_default"
                 android:entries="@array/pref_attribute_list_order_entries"
-                android:entryValues="@array/pref_attribute_list_order_values"
+                android:entryValues="@array/int_two"
                 android:key="pref_order_attribute_lists"
                 android:summary="@string/pref_attributes_list_order_summary"
                 android:title="@string/pref_attributes_list_order_title"
@@ -68,12 +142,23 @@
                 app:iconSpaceReserved="false" />
         </PreferenceCategory>
         <PreferenceCategory
+            android:title="@string/pref_misc"
+            app:iconSpaceReserved="false">
+            <CheckBoxPreference
+                android:defaultValue="@string/pref_plug_reactions_on_default"
+                android:key="plug_reactions_on"
+                android:summaryOff="@string/off"
+                android:summaryOn="@string/on"
+                android:title="@string/pref_plug_reactions"
+                app:iconSpaceReserved="false" />
+        </PreferenceCategory>
+        <PreferenceCategory
             android:title="@string/pref_cat_theme"
             app:iconSpaceReserved="false">
             <ListPreference
                 android:defaultValue="@string/pref_color_theme_default"
                 android:entries="@array/pref_color_theme_entries"
-                android:entryValues="@array/pref_color_theme_values"
+                android:entryValues="@array/int_four"
                 android:key="pref_color_theme"
                 android:summary="@string/pref_color_theme_summary"
                 android:title="@string/pref_color_theme_title"
@@ -115,7 +200,7 @@
                 android:layout_height="wrap_content"
                 android:defaultValue="@string/pref_folder_naming_content_default"
                 android:entries="@array/pref_folder_naming_content_entries"
-                android:entryValues="@array/pref_folder_naming_content_entry_values"
+                android:entryValues="@array/int_four"
                 android:key="pref_folder_naming_content_lists"
                 android:summary="@string/pref_folder_naming_content_summary"
                 android:title="@string/pref_folder_naming_content_title"
@@ -140,20 +225,29 @@
                 android:summaryOn="@string/pref_external_library_delete_on"
                 android:title="@string/pref_external_library_delete_title"
                 app:iconSpaceReserved="false" />
+            <Preference
+                android:key="ext_import_pattern"
+                android:title="@string/pref_external_library_ext_name_pattern"
+                app:iconSpaceReserved="false" />
         </PreferenceCategory>
     </PreferenceScreen>
 
     <PreferenceScreen
-        android:icon="@drawable/ic_attribute_source"
+        android:icon="@drawable/ic_browser"
         android:key="browser"
         android:title="@string/pref_screen_browser">
+        <Preference
+            android:key="pref_source_specifics"
+            android:summary="@string/title_activity_source_specifics"
+            android:title="@string/title_activity_source_specifics"
+            app:iconSpaceReserved="false" />
         <PreferenceCategory
             android:title="@string/pref_browser_behaviour"
             app:iconSpaceReserved="false">
             <ListPreference
                 android:defaultValue="@string/pref_browser_dl_action_default"
                 android:entries="@array/pref_viewer_dl_action_entries"
-                android:entryValues="@array/pref_viewer_dl_action_values"
+                android:entryValues="@array/int_three"
                 android:key="pref_browser_dl_action"
                 android:summary="@string/pref_generic_summary"
                 android:title="@string/pref_browser_dl_action_title"
@@ -193,6 +287,13 @@
                 android:summary="@string/pref_browser_language_filter_setting_summary"
                 android:title="@string/pref_browser_language_filter_setting_title"
                 app:iconSpaceReserved="false" />
+            <CheckBoxPreference
+                android:defaultValue="@string/pref_browser_lock_favs_panel_default"
+                android:key="web_lock_favs_panel"
+                android:summaryOff="@string/pref_browser_lock_favs_panel_off"
+                android:summaryOn="@string/pref_browser_lock_favs_panel_on"
+                android:title="@string/pref_browser_lock_favs_panel_title"
+                app:iconSpaceReserved="false" />
         </PreferenceCategory>
         <PreferenceCategory
             android:title="@string/pref_browser_duplicate_detector"
@@ -226,6 +327,15 @@
                 android:key="duplicate_browser_use_cover"
                 android:title="@string/pref_browser_duplicate_use_cover_title"
                 app:iconSpaceReserved="false" />
+            <ListPreference
+                android:defaultValue="@string/duplicate_browser_sensitivity_default"
+                android:dependency="download_duplicate_ask"
+                android:entries="@array/duplicate_use_sensitivities"
+                android:entryValues="@array/int_three"
+                android:key="duplicate_browser_sensitivity"
+                android:summary="@string/pref_generic_summary"
+                android:title="@string/duplicate_use_sensitivity"
+                app:iconSpaceReserved="false" />
             <CheckBoxPreference
                 android:defaultValue="@string/pref_browser_duplicate_try_pages_default"
                 android:dependency="download_duplicate_ask"
@@ -244,7 +354,8 @@
                 android:summaryOff="@string/pref_browser_augmented_off"
                 android:summaryOn="@string/pref_browser_augmented_on"
                 android:title="@string/pref_browser_augmented_title"
-                app:iconSpaceReserved="false" />
+                app:iconSpaceReserved="false"
+                app:sites="ANY" />
             <CheckBoxPreference
                 android:defaultValue="@string/pref_browser_mark_downloaded_default"
                 android:key="browser_mark_downloaded"
@@ -258,6 +369,13 @@
                 android:summaryOff="@string/pref_browser_mark_merged_off"
                 android:summaryOn="@string/pref_browser_mark_merged_on"
                 android:title="@string/pref_browser_mark_merged_title"
+                app:iconSpaceReserved="false" />
+            <CheckBoxPreference
+                android:defaultValue="@string/pref_browser_mark_queued_default"
+                android:key="browser_mark_queued"
+                android:summaryOff="@string/pref_browser_mark_queued_off"
+                android:summaryOn="@string/pref_browser_mark_queued_on"
+                android:title="@string/pref_browser_mark_queued_title"
                 app:iconSpaceReserved="false" />
             <CheckBoxPreference
                 android:defaultValue="@string/pref_browser_mark_blocked_default"
@@ -280,20 +398,11 @@
                 android:title="@string/pref_browser_nhentai_invisible_blacklist_title"
                 app:iconSpaceReserved="false" />
             <CheckBoxPreference
-                android:defaultValue="@string/pref_browser_override_overview_default"
-                android:key="pref_webview_override_overview_lists"
-                android:summaryOff="@string/pref_browser_override_overview_summary_off"
-                android:summaryOn="@string/pref_browser_override_overview_summary_on"
-                android:title="@string/pref_browser_override_overview_title"
-                app:iconSpaceReserved="false" />
-            <ListPreference
-                android:defaultValue="@string/pref_browser_initial_zoom_default"
-                android:dependency="pref_webview_override_overview_lists"
-                android:entries="@array/pref_webview_initial_zoom_entries"
-                android:entryValues="@array/pref_webview_initial_zoom_values"
-                android:key="pref_webview_initial_zoom_lists"
-                android:summary="@string/pref_browser_initial_zoom_summary"
-                android:title="@string/pref_browser_initial_zoom_title"
+                android:defaultValue="@string/pref_browser_force_lightmode_default"
+                android:key="WEB_FORCE_LIGHTMODE"
+                android:summaryOff="@string/pref_browser_force_lightmode_off"
+                android:summaryOn="@string/pref_browser_force_lightmode_on"
+                android:title="@string/pref_browser_force_lightmode_title"
                 app:iconSpaceReserved="false" />
         </PreferenceCategory>
         <PreferenceCategory
@@ -328,7 +437,7 @@
         <ListPreference
             android:defaultValue="@string/pref_queue_new_position_default"
             android:entries="@array/pref_queue_new_position_entries"
-            android:entryValues="@array/pref_queue_new_position_values"
+            android:entryValues="@array/int_three"
             android:key="pref_queue_new_position"
             android:summary="@string/pref_attributes_list_order_summary"
             android:title="@string/pref_queue_new_position_title"
@@ -376,7 +485,7 @@
             <ListPreference
                 android:defaultValue="@string/pref_dl_blocked_tags_behaviour_default"
                 android:entries="@array/pref_dl_blocked_tags_behaviour_entries"
-                android:entryValues="@array/pref_dl_blocked_tags_behaviour_values"
+                android:entryValues="@array/int_two"
                 android:key="pref_dl_blocked_tags_behaviour"
                 android:summary="@string/pref_attributes_list_order_summary"
                 android:title="@string/pref_dl_blocked_tags_behaviour_title"
@@ -420,7 +529,22 @@
                 android:summaryOff="@string/pref_dl_eh_hires_off"
                 android:summaryOn="@string/pref_dl_eh_hires_on"
                 android:title="@string/download_eh_hires_title"
-                app:iconSpaceReserved="false" />
+                app:iconSpaceReserved="false"
+                app:isGlobal="true"
+                app:sites="EHENTAI,EXHENTAI" />
+        </PreferenceCategory>
+        <PreferenceCategory
+            android:title="@string/pref_cat_hitomi"
+            app:iconSpaceReserved="false">
+            <CheckBoxPreference
+                android:defaultValue="@string/pref_dl_eh_hires_default"
+                android:key="pref_dl_hitomi_avif"
+                android:summaryOff="@string/download_hitomi_avif_off"
+                android:summaryOn="@string/download_hitomi_avif_on"
+                android:title="@string/download_hitomi_avif_title"
+                app:iconSpaceReserved="false"
+                app:isGlobal="true"
+                app:sites="HITOMI" />
         </PreferenceCategory>
         <PreferenceCategory
             android:title="@string/pref_cat_advanced"
@@ -432,7 +556,8 @@
                 android:key="pref_dl_threads_quantity_lists"
                 android:summary="@string/pref_dl_threads_quantity_summary"
                 android:title="@string/pref_dl_threads_quantity_title"
-                app:iconSpaceReserved="false" />
+                app:iconSpaceReserved="false"
+                app:sites="ANY" />
             <ListPreference
                 android:defaultValue="@string/pref_dl_speed_cap_default"
                 android:entries="@array/pref_dl_speed_cap_entries"
@@ -491,11 +616,12 @@
                 <ListPreference
                     android:defaultValue="@string/pref_viewer_browse_mode_default"
                     android:entries="@array/pref_viewer_browse_mode_entries"
-                    android:entryValues="@array/pref_viewer_browse_mode_values"
+                    android:entryValues="@array/int_three"
                     android:key="pref_viewer_browse_mode"
                     android:summary="@string/pref_generic_summary"
                     android:title="@string/pref_viewer_browse_mode"
-                    app:iconSpaceReserved="false" />
+                    app:iconSpaceReserved="false"
+                    app:sites="ANY" />
             </PreferenceCategory>
             <PreferenceCategory
                 android:title="@string/pref_viewer_page_turn"
@@ -552,6 +678,11 @@
                 android:title="@string/pref_viewer_zoom"
                 app:iconSpaceReserved="false">
                 <CheckBoxPreference
+                    android:defaultValue="@bool/pref_viewer_zoom_double_tap_default"
+                    android:key="pref_viewer_double_tap_zoom"
+                    android:title="@string/pref_viewer_zoom_double_tap"
+                    app:iconSpaceReserved="false" />
+                <CheckBoxPreference
                     android:defaultValue="@bool/pref_viewer_zoom_holding_default"
                     android:key="pref_viewer_zoom_holding"
                     android:title="@string/pref_viewer_zoom_holding"
@@ -581,21 +712,6 @@
                 android:key="pref_viewer_display_notch"
                 android:title="@string/pref_viewer_display_notch"
                 app:iconSpaceReserved="false" />
-            <ListPreference
-                android:defaultValue="@string/pref_viewer_rendering_default"
-                android:entries="@array/pref_viewer_rendering_entries"
-                android:entryValues="@array/pref_viewer_rendering_values"
-                android:key="pref_viewer_rendering"
-                android:summary="@string/pref_generic_summary"
-                android:title="@string/pref_viewer_rendering"
-                app:iconSpaceReserved="false" />
-            <CheckBoxPreference
-                android:defaultValue="@bool/pref_viewer_auto_rotate_default"
-                android:key="pref_viewer_auto_rotate"
-                android:summaryOff="@string/pref_viewer_auto_rotate_summary_off"
-                android:summaryOn="@string/pref_viewer_auto_rotate_summary_on"
-                android:title="@string/pref_viewer_auto_rotate"
-                app:iconSpaceReserved="false" />
             <CheckBoxPreference
                 android:defaultValue="@bool/pref_viewer_display_pagenum_default"
                 android:key="pref_viewer_display_pagenum"
@@ -611,13 +727,48 @@
                 android:key="pref_viewer_zoom_transitions"
                 android:title="@string/pref_viewer_zoom_transitions"
                 app:iconSpaceReserved="false" />
+            <ListPreference
+                android:defaultValue="@string/pref_viewer_auto_rotate_default"
+                android:entries="@array/pref_viewer_auto_rotate_entries"
+                android:entryValues="@array/int_three"
+                android:key="pref_viewer_auto_rotate_mode"
+                android:summary="@string/pref_generic_summary"
+                android:title="@string/pref_viewer_auto_rotate"
+                app:iconSpaceReserved="false" />
+            <PreferenceCategory
+                android:title="@string/pref_viewer_rendering"
+                app:iconSpaceReserved="false">
+                <ListPreference
+                    android:defaultValue="@string/pref_viewer_rendering_default"
+                    android:entries="@array/pref_viewer_rendering_entries"
+                    android:entryValues="@array/int_two"
+                    android:key="pref_viewer_rendering"
+                    android:summary="@string/pref_generic_summary"
+                    android:title="@string/pref_viewer_rendering_mode"
+                    app:iconSpaceReserved="false" />
+                <ListPreference
+                    android:defaultValue="@string/pref_viewer_rendering_default"
+                    android:entries="@array/pref_viewer_color_depth_entries"
+                    android:entryValues="@array/int_two"
+                    android:key="viewer_color_depth"
+                    android:summary="@string/pref_generic_summary"
+                    android:title="@string/pref_viewer_color_depth"
+                    app:iconSpaceReserved="false" />
+                <CheckBoxPreference
+                    android:defaultValue="@bool/pref_viewer_smart_crop_default"
+                    android:key="reader_smart_crop"
+                    android:summaryOff="@string/pref_viewer_smart_crop_summary_off"
+                    android:summaryOn="@string/pref_viewer_smart_crop_summary_on"
+                    android:title="@string/pref_viewer_smart_crop"
+                    app:iconSpaceReserved="false" />
+            </PreferenceCategory>
             <PreferenceCategory
                 android:title="@string/pref_viewer_horizontal_reader"
                 app:iconSpaceReserved="false">
                 <ListPreference
                     android:defaultValue="@string/pref_viewer_display_mode_default"
                     android:entries="@array/pref_viewer_display_mode_entries"
-                    android:entryValues="@array/pref_viewer_display_mode_values"
+                    android:entryValues="@array/int_three"
                     android:key="pref_viewer_image_display"
                     android:summary="@string/pref_generic_summary"
                     android:title="@string/pref_viewer_display_mode"
@@ -627,6 +778,11 @@
                     android:key="pref_viewer_maintain_horizontal_zoom"
                     android:title="@string/pref_viewer_maintain_horizontal_zoom"
                     app:iconSpaceReserved="false" />
+                <CheckBoxPreference
+                    android:defaultValue="@bool/pref_viewer_two_pages_mode"
+                    android:key="reader_two_pages"
+                    android:title="@string/reader_two_pages_mode"
+                    app:iconSpaceReserved="false" />
             </PreferenceCategory>
             <PreferenceCategory
                 android:title="@string/pref_viewer_vertical_reader"
@@ -634,7 +790,7 @@
                 <ListPreference
                     android:defaultValue="@string/pref_viewer_separating_bars_default"
                     android:entries="@array/pref_viewer_separating_bars_entries"
-                    android:entryValues="@array/pref_viewer_separating_bars_values"
+                    android:entryValues="@array/int_four"
                     android:key="pref_viewer_separating_bars"
                     android:summary="@string/pref_generic_summary"
                     android:title="@string/pref_viewer_separating_bars"
@@ -700,22 +856,34 @@
                 android:summary="@string/pref_generic_summary"
                 android:title="@string/pref_viewer_ratio_completed_threshold"
                 app:iconSpaceReserved="false" />
-            <ListPreference
-                android:defaultValue="@string/pref_viewer_slideshow_delay_default"
-                android:entries="@array/pref_viewer_slideshow_delay_entries"
-                android:entryValues="@array/pref_viewer_slideshow_delay_values"
-                android:key="pref_viewer_slideshow_delay"
-                android:summary="@string/pref_generic_summary"
-                android:title="@string/pref_viewer_slideshow_delay"
-                app:iconSpaceReserved="false" />
-            <ListPreference
-                android:defaultValue="@string/pref_viewer_slideshow_delay_vertical_default"
-                android:entries="@array/pref_viewer_slideshow_delay_entries_vertical"
-                android:entryValues="@array/pref_viewer_slideshow_delay_values"
-                android:key="pref_viewer_slideshow_delay_vertical"
-                android:summary="@string/pref_generic_summary"
-                android:title="@string/pref_viewer_slideshow_delay_vertical"
-                app:iconSpaceReserved="false" />
+            <PreferenceCategory
+                android:title="@string/viewer_slideshow"
+                app:iconSpaceReserved="false">
+                <ListPreference
+                    android:defaultValue="@string/pref_viewer_slideshow_delay_default"
+                    android:entries="@array/pref_viewer_slideshow_delay_entries"
+                    android:entryValues="@array/pref_viewer_slideshow_delay_values"
+                    android:key="pref_viewer_slideshow_delay"
+                    android:summary="@string/pref_generic_summary"
+                    android:title="@string/pref_viewer_slideshow_delay"
+                    app:iconSpaceReserved="false" />
+                <ListPreference
+                    android:defaultValue="@string/pref_viewer_slideshow_delay_vertical_default"
+                    android:entries="@array/pref_viewer_slideshow_delay_entries_vertical"
+                    android:entryValues="@array/pref_viewer_slideshow_delay_values"
+                    android:key="pref_viewer_slideshow_delay_vertical"
+                    android:summary="@string/pref_generic_summary"
+                    android:title="@string/pref_viewer_slideshow_delay_vertical"
+                    app:iconSpaceReserved="false" />
+                <ListPreference
+                    android:defaultValue="@string/pref_viewer_slideshow_delay_vertical_default"
+                    android:entries="@array/pref_viewer_slideshow_loop_entries"
+                    android:entryValues="@array/pref_viewer_slideshow_loop_values"
+                    android:key="viewer_slideshow_loop"
+                    android:summary="@string/pref_generic_summary"
+                    android:title="@string/pref_viewer_slideshow_loop"
+                    app:iconSpaceReserved="false" />
+            </PreferenceCategory>
         </PreferenceScreen>
 
     </PreferenceScreen>
@@ -748,6 +916,14 @@
         android:summaryOff="@string/pref_screenshot_summary_off"
         android:summaryOn="@string/pref_screenshot_summary_on"
         android:title="@string/pref_screenshot_title"
+        app:iconSpaceReserved="false" />
+
+    <CheckBoxPreference
+        android:defaultValue="@string/pref_text_select_menu_default"
+        android:key="TEXT_SELECT_MENU"
+        android:summaryOff="@string/pref_text_select_menu_summary_off"
+        android:summaryOn="@string/pref_text_select_menu_summary_on"
+        android:title="@string/pref_text_select_menu_title"
         app:iconSpaceReserved="false" />
 
 </PreferenceScreen>

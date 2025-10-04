@@ -8,11 +8,12 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ProgressBar
 import androidx.appcompat.app.AlertDialog
+import androidx.core.net.toUri
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.BaseTransientBottomBar
 import com.google.android.material.snackbar.Snackbar
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -23,27 +24,30 @@ import me.devsaki.hentoid.databinding.IntroSlide04Binding
 import me.devsaki.hentoid.enums.StorageLocation
 import me.devsaki.hentoid.events.ProcessEvent
 import me.devsaki.hentoid.ui.BlinkAnimation
-import me.devsaki.hentoid.util.ImportHelper
-import me.devsaki.hentoid.util.ImportHelper.setAndScanPrimaryFolder
-import me.devsaki.hentoid.util.Preferences
-import me.devsaki.hentoid.util.file.FileHelper
-import me.devsaki.hentoid.workers.PrimaryImportWorker
+import me.devsaki.hentoid.util.PickFolderContract
+import me.devsaki.hentoid.util.PickerResult
+import me.devsaki.hentoid.util.ProcessFolderResult
+import me.devsaki.hentoid.util.Settings
+import me.devsaki.hentoid.util.file.getFullPathFromUri
+import me.devsaki.hentoid.util.setAndScanPrimaryFolder
+import me.devsaki.hentoid.util.showExistingLibraryDialog
+import me.devsaki.hentoid.workers.STEP_2_BOOK_FOLDERS
+import me.devsaki.hentoid.workers.STEP_3_BOOKS
+import me.devsaki.hentoid.workers.STEP_4_QUEUE_FINAL
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
 
 class ImportIntroFragment : Fragment(R.layout.intro_slide_04) {
 
-    private var _binding: IntroSlide04Binding? = null
-    private var _mergedBinding: IncludeImportStepsBinding? = null
-    private val binding get() = _binding!!
-    private val mergedBinding get() = _mergedBinding!!
+    private var binding: IntroSlide04Binding? = null
+    private var mergedBinding: IncludeImportStepsBinding? = null
 
     // True when that screen has been validated once
     private var isDone = false
 
-    private val pickFolder = registerForActivityResult(ImportHelper.PickFolderContract()) { res ->
-        onFolderPickerResult(res.left, res.right)
+    private val pickFolder = registerForActivityResult(PickFolderContract()) { res ->
+        onFolderPickerResult(res.first, res.second)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -60,11 +64,11 @@ class ImportIntroFragment : Fragment(R.layout.intro_slide_04) {
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View {
-        _binding = IntroSlide04Binding.inflate(inflater, container, false)
+    ): View? {
+        binding = IntroSlide04Binding.inflate(inflater, container, false)
         // We need to manually bind the merged view - it won't work at runtime with the main view alone
-        _mergedBinding = IncludeImportStepsBinding.bind(binding.root)
-        return binding.root
+        mergedBinding = IncludeImportStepsBinding.bind(binding!!.root)
+        return binding?.root
     }
 
     /**
@@ -73,160 +77,180 @@ class ImportIntroFragment : Fragment(R.layout.intro_slide_04) {
      */
     fun reset() {
         if (!isDone) return
-        Preferences.setStorageUri(StorageLocation.PRIMARY_1, "")
+        Settings.setStorageUri(StorageLocation.PRIMARY_1, "")
 
-        mergedBinding.importStep1Button.visibility = View.VISIBLE
-        mergedBinding.importStep1Folder.text = ""
-        mergedBinding.importStep1Check.visibility = View.GONE
-        mergedBinding.importStep2.visibility = View.GONE
-        mergedBinding.importStep2Check.visibility = View.GONE
-        mergedBinding.importStep3.visibility = View.GONE
-        mergedBinding.importStep3Check.visibility = View.GONE
-        mergedBinding.importStep4.visibility = View.GONE
-        mergedBinding.importStep4Check.visibility = View.GONE
+        mergedBinding?.apply {
+            importStep1Button.visibility = View.VISIBLE
+            importStep1Folder.text = ""
+            importStep1Check.visibility = View.GONE
+            importStep2.visibility = View.GONE
+            importStep2Check.visibility = View.GONE
+            importStep3.visibility = View.GONE
+            importStep3Check.visibility = View.GONE
+            importStep4.visibility = View.GONE
+            importStep4Check.visibility = View.GONE
+        }
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
-        _binding = null
+        binding = null
+        mergedBinding = null
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        mergedBinding.importStep1Button.setOnClickListener {
-            binding.skipBtn.visibility = View.INVISIBLE
-            pickFolder.launch(StorageLocation.PRIMARY_1)
+        mergedBinding?.apply {
+            importStep1Button.setOnClickListener {
+                binding?.skipBtn?.visibility = View.INVISIBLE
+                pickFolder.launch(StorageLocation.PRIMARY_1)
+            }
+            importStep1Button.visibility = View.VISIBLE
         }
-        mergedBinding.importStep1Button.visibility = View.VISIBLE
 
-        binding.skipBtn.setOnClickListener { askSkip() }
+        binding?.skipBtn?.setOnClickListener { askSkip() }
     }
 
     override fun onResume() {
         super.onResume()
-        binding.root.visibility = if (Preferences.isBrowserMode()) View.INVISIBLE else View.VISIBLE
+        binding?.root?.visibility =
+            if (Settings.isBrowserMode) View.INVISIBLE else View.VISIBLE
     }
 
-    private fun onFolderPickerResult(resultCode: Int, treeUri: Uri?) {
+    private fun onFolderPickerResult(resultCode: PickerResult, treeUri: Uri?) {
         when (resultCode) {
-            ImportHelper.PickerResult.OK -> {
+            PickerResult.OK -> {
                 if (null == treeUri) return
-                binding.waitTxt.visibility = View.VISIBLE
-                val animation = BlinkAnimation(750, 20)
-                binding.waitTxt.startAnimation(animation)
+                binding?.apply {
+                    waitTxt.visibility = View.VISIBLE
+                    val animation = BlinkAnimation(750, 20)
+                    waitTxt.startAnimation(animation)
 
-                val scope = CoroutineScope(Dispatchers.Main)
-                scope.launch {
-                    val result = withContext(Dispatchers.IO) {
-                        setAndScanPrimaryFolder(
-                            requireContext(),
-                            treeUri,
-                            StorageLocation.PRIMARY_1,
-                            true,
-                            null
-                        )
+                    lifecycleScope.launch {
+                        val result = withContext(Dispatchers.IO) {
+                            setAndScanPrimaryFolder(
+                                requireContext(),
+                                treeUri,
+                                StorageLocation.PRIMARY_1,
+                                true,
+                                null
+                            )
+                        }
+                        waitTxt.clearAnimation()
+                        waitTxt.visibility = View.GONE
+                        onScanHentoidFolderResult(result.first, result.second)
                     }
-                    binding.waitTxt.clearAnimation()
-                    binding.waitTxt.visibility = View.GONE
-                    onScanHentoidFolderResult(result.left, result.right)
                 }
             }
 
-            ImportHelper.PickerResult.KO_CANCELED -> {
-                Snackbar.make(
-                    binding.root,
-                    R.string.import_canceled,
-                    BaseTransientBottomBar.LENGTH_LONG
-                ).show()
-                binding.skipBtn.visibility = View.VISIBLE
+            PickerResult.KO_CANCELED -> {
+                binding?.apply {
+                    Snackbar.make(
+                        root,
+                        R.string.import_canceled,
+                        BaseTransientBottomBar.LENGTH_LONG
+                    ).show()
+                    skipBtn.visibility = View.VISIBLE
+                }
             }
 
-            ImportHelper.PickerResult.KO_OTHER, ImportHelper.PickerResult.KO_NO_URI -> {
-                Snackbar.make(
-                    binding.root,
+            PickerResult.KO_OTHER, PickerResult.KO_NO_URI -> {
+                binding?.apply {
+                    Snackbar.make(
+                        root,
+                        R.string.import_other,
+                        BaseTransientBottomBar.LENGTH_LONG
+                    ).show()
+                    skipBtn.visibility = View.VISIBLE
+                }
+            }
+        }
+    }
+
+    private fun onScanHentoidFolderResult(resultCode: ProcessFolderResult, rootUri: String) {
+        binding?.apply {
+            when (resultCode) {
+                ProcessFolderResult.OK_EMPTY_FOLDER -> nextStep()
+                ProcessFolderResult.OK_LIBRARY_DETECTED -> { // Import service is already launched by the Helper; nothing else to do
+                    updateOnSelectFolder()
+                    return
+                }
+
+                ProcessFolderResult.OK_LIBRARY_DETECTED_ASK -> {
+                    updateOnSelectFolder()
+                    showExistingLibraryDialog(
+                        requireContext(),
+                        StorageLocation.PRIMARY_1,
+                        rootUri
+                    ) { onCancelExistingLibraryDialog() }
+                    return
+                }
+
+                ProcessFolderResult.KO_INVALID_FOLDER -> Snackbar.make(
+                    root,
+                    R.string.import_invalid,
+                    BaseTransientBottomBar.LENGTH_LONG
+                ).show()
+
+                ProcessFolderResult.KO_APP_FOLDER -> Snackbar.make(
+                    root,
+                    R.string.import_invalid,
+                    BaseTransientBottomBar.LENGTH_LONG
+                ).show()
+
+                ProcessFolderResult.KO_DOWNLOAD_FOLDER -> Snackbar.make(
+                    root,
+                    R.string.import_download_folder,
+                    BaseTransientBottomBar.LENGTH_LONG
+                ).show()
+
+                ProcessFolderResult.KO_CREATE_FAIL -> Snackbar.make(
+                    root,
+                    R.string.import_create_fail,
+                    BaseTransientBottomBar.LENGTH_LONG
+                ).show()
+
+                ProcessFolderResult.KO_ALREADY_RUNNING -> Snackbar.make(
+                    root,
+                    R.string.service_running,
+                    BaseTransientBottomBar.LENGTH_LONG
+                ).show()
+
+                ProcessFolderResult.KO_OTHER -> Snackbar.make(
+                    root,
                     R.string.import_other,
                     BaseTransientBottomBar.LENGTH_LONG
                 ).show()
-                binding.skipBtn.visibility = View.VISIBLE
+
+                else -> { /* Nothing*/
+                }
             }
+            skipBtn.visibility = View.VISIBLE
         }
-    }
-
-    private fun onScanHentoidFolderResult(resultCode: Int, rootUri: String) {
-        when (resultCode) {
-            ImportHelper.ProcessFolderResult.OK_EMPTY_FOLDER -> nextStep()
-            ImportHelper.ProcessFolderResult.OK_LIBRARY_DETECTED -> { // Import service is already launched by the Helper; nothing else to do
-                updateOnSelectFolder()
-                return
-            }
-
-            ImportHelper.ProcessFolderResult.OK_LIBRARY_DETECTED_ASK -> {
-                updateOnSelectFolder()
-                ImportHelper.showExistingLibraryDialog(
-                    requireContext(),
-                    StorageLocation.PRIMARY_1,
-                    rootUri
-                ) { onCancelExistingLibraryDialog() }
-                return
-            }
-
-            ImportHelper.ProcessFolderResult.KO_INVALID_FOLDER -> Snackbar.make(
-                binding.root,
-                R.string.import_invalid,
-                BaseTransientBottomBar.LENGTH_LONG
-            ).show()
-
-            ImportHelper.ProcessFolderResult.KO_APP_FOLDER -> Snackbar.make(
-                binding.root,
-                R.string.import_invalid,
-                BaseTransientBottomBar.LENGTH_LONG
-            ).show()
-
-            ImportHelper.ProcessFolderResult.KO_DOWNLOAD_FOLDER -> Snackbar.make(
-                binding.root,
-                R.string.import_download_folder,
-                BaseTransientBottomBar.LENGTH_LONG
-            ).show()
-
-            ImportHelper.ProcessFolderResult.KO_CREATE_FAIL -> Snackbar.make(
-                binding.root,
-                R.string.import_create_fail,
-                BaseTransientBottomBar.LENGTH_LONG
-            ).show()
-
-            ImportHelper.ProcessFolderResult.KO_ALREADY_RUNNING -> Snackbar.make(
-                binding.root,
-                R.string.service_running,
-                BaseTransientBottomBar.LENGTH_LONG
-            ).show()
-
-            ImportHelper.ProcessFolderResult.KO_OTHER -> Snackbar.make(
-                binding.root,
-                R.string.import_other,
-                BaseTransientBottomBar.LENGTH_LONG
-            ).show()
-        }
-        binding.skipBtn.visibility = View.VISIBLE
     }
 
     private fun updateOnSelectFolder() {
-        mergedBinding.importStep1Button.visibility = View.INVISIBLE
-        mergedBinding.importStep1Folder.text = FileHelper.getFullPathFromTreeUri(
-            requireContext(),
-            Uri.parse(Preferences.getStorageUri(StorageLocation.PRIMARY_1))
-        )
-        mergedBinding.importStep1Check.visibility = View.VISIBLE
-        mergedBinding.importStep2.visibility = View.VISIBLE
-        mergedBinding.importStep2Bar.isIndeterminate = true
-        binding.skipBtn.visibility = View.INVISIBLE
+        mergedBinding?.apply {
+            importStep1Button.visibility = View.INVISIBLE
+            importStep1Folder.text = getFullPathFromUri(
+                requireContext(),
+                Settings.getStorageUri(StorageLocation.PRIMARY_1).toUri()
+            )
+            importStep1Check.visibility = View.VISIBLE
+            importStep2.visibility = View.VISIBLE
+            importStep2Bar.isIndeterminate = true
+        }
+        binding?.skipBtn?.visibility = View.INVISIBLE
     }
 
     private fun onCancelExistingLibraryDialog() {
         // Revert back to initial state where only the "Select folder" button is visible
-        mergedBinding.importStep1Button.visibility = View.VISIBLE
-        mergedBinding.importStep1Folder.text = ""
-        mergedBinding.importStep1Check.visibility = View.INVISIBLE
-        mergedBinding.importStep2.visibility = View.INVISIBLE
-        binding.skipBtn.visibility = View.VISIBLE
+        mergedBinding?.apply {
+            importStep1Button.visibility = View.VISIBLE
+            importStep1Folder.text = ""
+            importStep1Check.visibility = View.INVISIBLE
+            importStep2.visibility = View.INVISIBLE
+        }
+        binding?.skipBtn?.visibility = View.VISIBLE
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
@@ -241,20 +265,20 @@ class ImportIntroFragment : Fragment(R.layout.intro_slide_04) {
     }
 
     private fun processEvent(event: ProcessEvent) {
-        mergedBinding.apply {
+        mergedBinding?.apply {
             val progressBar: ProgressBar = when (event.step) {
-                PrimaryImportWorker.STEP_2_BOOK_FOLDERS -> importStep2Bar
-                PrimaryImportWorker.STEP_3_BOOKS -> importStep3Bar
+                STEP_2_BOOK_FOLDERS -> importStep2Bar
+                STEP_3_BOOKS -> importStep3Bar
                 else -> importStep4Bar
             }
 
-            if (ProcessEvent.EventType.PROGRESS == event.eventType) {
+            if (ProcessEvent.Type.PROGRESS == event.eventType) {
                 if (event.elementsTotal > -1) {
                     progressBar.isIndeterminate = false
                     progressBar.max = event.elementsTotal
                     progressBar.progress = event.elementsOK + event.elementsKO
                 } else progressBar.isIndeterminate = true
-                if (PrimaryImportWorker.STEP_3_BOOKS == event.step) {
+                if (STEP_3_BOOKS == event.step) {
                     importStep2Check.visibility = View.VISIBLE
                     importStep3.visibility = View.VISIBLE
                     importStep3Text.text = resources.getString(
@@ -262,18 +286,18 @@ class ImportIntroFragment : Fragment(R.layout.intro_slide_04) {
                         event.elementsKO + event.elementsOK,
                         event.elementsTotal
                     )
-                } else if (PrimaryImportWorker.STEP_4_QUEUE_FINAL == event.step) {
+                } else if (STEP_4_QUEUE_FINAL == event.step) {
                     importStep3Check.visibility = View.VISIBLE
                     importStep4.visibility = View.VISIBLE
                 }
-            } else if (ProcessEvent.EventType.COMPLETE == event.eventType) {
-                when {
-                    PrimaryImportWorker.STEP_2_BOOK_FOLDERS == event.step -> {
+            } else if (ProcessEvent.Type.COMPLETE == event.eventType) {
+                when (event.step) {
+                    STEP_2_BOOK_FOLDERS -> {
                         importStep2Check.visibility = View.VISIBLE
                         importStep3.visibility = View.VISIBLE
                     }
 
-                    PrimaryImportWorker.STEP_3_BOOKS == event.step -> {
+                    STEP_3_BOOKS -> {
                         importStep3Text.text = resources.getString(
                             R.string.refresh_step3,
                             event.elementsTotal,
@@ -283,9 +307,9 @@ class ImportIntroFragment : Fragment(R.layout.intro_slide_04) {
                         importStep4.visibility = View.VISIBLE
                     }
 
-                    PrimaryImportWorker.STEP_4_QUEUE_FINAL == event.step -> {
+                    STEP_4_QUEUE_FINAL -> {
                         importStep4Check.visibility = View.VISIBLE
-                        nextStep()
+                        if (!isDone) nextStep()
                     }
                 }
             }
@@ -305,10 +329,11 @@ class ImportIntroFragment : Fragment(R.layout.intro_slide_04) {
         materialDialog.show()
     }
 
+    @Synchronized
     private fun nextStep() {
         val parentActivity = requireActivity() as IntroActivity
         parentActivity.nextStep()
-        binding.skipBtn.visibility = View.VISIBLE
+        binding?.skipBtn?.visibility = View.VISIBLE
         isDone = true
     }
 }

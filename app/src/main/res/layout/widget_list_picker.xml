@@ -3,17 +3,17 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="48dp"
-    android:background="@drawable/bg_rounded_rect"
-    android:padding="4dp"
-    tools:targetApi="o">
+    android:layout_height="match_parent"
+    android:background="@drawable/selector_listpicker"
+    android:minHeight="48dp"
+    android:padding="4dp">
 
     <TextView
         android:id="@+id/title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:background="@color/transparent"
         android:textAlignment="viewStart"
-        android:textColor="?colorOnPrimary"
         android:textSize="@dimen/text_body_1"
         android:textStyle="bold"
         app:layout_constraintBottom_toTopOf="@id/description"
@@ -25,8 +25,8 @@
         android:id="@+id/description"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:background="@color/transparent"
         android:textAlignment="viewStart"
-        android:textColor="?colorOnPrimary"
         android:textSize="@dimen/caption"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"

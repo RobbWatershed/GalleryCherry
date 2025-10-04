@@ -1,12 +1,12 @@
 package me.devsaki.hentoid.activities
 
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.util.SparseIntArray
 import android.view.View
 import android.widget.CheckBox
 import android.widget.TextView
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView.AdapterDataObserver
@@ -19,8 +19,11 @@ import me.devsaki.hentoid.database.domains.Attribute
 import me.devsaki.hentoid.databinding.ActivitySearchBinding
 import me.devsaki.hentoid.enums.AttributeType
 import me.devsaki.hentoid.fragments.SearchBottomSheetFragment.Companion.invoke
-import me.devsaki.hentoid.util.SearchHelper.AdvancedSearchCriteria
-import me.devsaki.hentoid.util.StringHelper
+import me.devsaki.hentoid.util.Location
+import me.devsaki.hentoid.util.SearchCriteria
+import me.devsaki.hentoid.util.Type
+import me.devsaki.hentoid.util.applyTheme
+import me.devsaki.hentoid.util.capitalizeString
 import me.devsaki.hentoid.viewmodels.SearchViewModel
 import me.devsaki.hentoid.viewmodels.ViewModelFactory
 import timber.log.Timber
@@ -43,16 +46,18 @@ class SearchActivity : BaseActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        applyTheme()
+
         binding = ActivitySearchBinding.inflate(layoutInflater)
         setContentView(binding!!.root)
 
         val intent = intent
-        var preSelectedCriteria: AdvancedSearchCriteria? = null
+        var preSelectedCriteria: SearchCriteria? = null
         if (intent != null && intent.extras != null) {
             val parser = SearchActivityBundle(intent.extras!!)
-            val searchUri = Uri.parse(parser.uri)
+            val searchUri = parser.uri.toUri()
             excludeClicked = parser.excludeMode
-            if (searchUri != null) preSelectedCriteria = parseSearchUri(searchUri)
+            preSelectedCriteria = parseSearchUri(searchUri)
         }
         binding?.apply {
             toolbar.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
@@ -62,36 +67,32 @@ class SearchActivity : BaseActivity() {
                 onAttrButtonClick(
                     excludeClicked,
                     AttributeType.TAG,
-                    AttributeType.MODEL
+                    AttributeType.MODEL,
+                    AttributeType.CATEGORY
                 )
             } // Everything but source !
             textCategoryAny.isEnabled = true
             textCategoryTag.setOnClickListener {
-                onAttrButtonClick(
-                    excludeClicked, AttributeType.TAG
-                )
+                onAttrButtonClick(excludeClicked, AttributeType.TAG)
             }
             textCategoryModel.setOnClickListener {
                 onAttrButtonClick(
                     excludeClicked, AttributeType.MODEL
                 )
             }
+            textCategoryCategory.setOnClickListener {
+                onAttrButtonClick(excludeClicked, AttributeType.CATEGORY)
+            }
             textCategorySource.setOnClickListener {
-                onAttrButtonClick(
-                    excludeClicked, AttributeType.SOURCE
-                )
+                onAttrButtonClick(excludeClicked, AttributeType.SOURCE)
             }
-            excludeCheckbox.setOnClickListener { view: View ->
-                onExcludeClick(view)
-            }
+            excludeCheckbox.setOnClickListener { onExcludeClick(it) }
             excludeCheckbox.isChecked = excludeClicked
             val llm =
                 LinearLayoutManager(this@SearchActivity, LinearLayoutManager.HORIZONTAL, false)
             searchTags.layoutManager = llm
             selectedAttributeAdapter = SelectedAttributeAdapter()
-            selectedAttributeAdapter.setOnClickListener { button: View ->
-                onSelectedAttributeClick(button)
-            }
+            selectedAttributeAdapter.setOnClickListener { onSelectedAttributeClick(it) }
             selectedAttributeAdapter.registerAdapterDataObserver(object : AdapterDataObserver() {
                 // Auto-Scroll to last added item
                 override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
@@ -109,29 +110,30 @@ class SearchActivity : BaseActivity() {
             viewModel.nbAttributesPerType.observe(this@SearchActivity) { attrCount: SparseIntArray ->
                 onQueryUpdated(attrCount)
             }
-            viewModel.selectedAttributes.observe(this@SearchActivity) { selectedAttributes: List<Attribute> ->
-                onSelectedAttributesChanged(selectedAttributes)
+            viewModel.selectedAttributes.observe(this@SearchActivity) {
+                onSelectedAttributesChanged(it)
             }
             viewModel.selectedContentCount.observe(this@SearchActivity) { count: Int ->
                 onBooksCounted(count)
             }
             if (preSelectedCriteria != null) {
-                if (preSelectedCriteria.attributes.isNotEmpty()) viewModel.setSelectedAttributes(
-                    preSelectedCriteria.attributes
+                if (preSelectedCriteria.attributes.isNotEmpty())
+                    viewModel.setSelectedAttributes(preSelectedCriteria.attributes.toList())
+                if (preSelectedCriteria.location.value > 0) viewModel.setLocation(
+                    preSelectedCriteria.location
                 )
-                if (preSelectedCriteria.location > 0) viewModel.setLocation(preSelectedCriteria.location)
-                locationPicker.index = preSelectedCriteria.location
-                if (preSelectedCriteria.contentType > 0) viewModel.setContentType(
+                locationPicker.index = preSelectedCriteria.location.value
+                if (preSelectedCriteria.contentType.value > 0) viewModel.setContentType(
                     preSelectedCriteria.contentType
                 )
-                typePicker.index = preSelectedCriteria.contentType
+                typePicker.index = preSelectedCriteria.contentType.value
             } else {
                 locationPicker.index = 0
                 typePicker.index = 0
                 viewModel.update()
             }
-            locationPicker.setOnIndexChangeListener { index: Int -> viewModel.setLocation(index) }
-            typePicker.setOnIndexChangeListener { index: Int -> viewModel.setContentType(index) }
+            locationPicker.setOnIndexChangeListener { index -> viewModel.setLocation(Location.entries.first { it.value == index }) }
+            typePicker.setOnIndexChangeListener { index -> viewModel.setContentType(Type.entries.first { it.value == index }) }
         }
     }
 
@@ -146,7 +148,8 @@ class SearchActivity : BaseActivity() {
         binding?.apply {
             val builder = SearchActivityBundle()
             builder.uri = buildSearchUri(
-                selectedAttributeAdapter.currentList,
+                selectedAttributeAdapter.currentList.toSet(),
+                null,
                 "",
                 locationPicker.index,
                 typePicker.index
@@ -159,18 +162,17 @@ class SearchActivity : BaseActivity() {
     override fun onRestoreInstanceState(savedInstanceState: Bundle) {
         super.onRestoreInstanceState(savedInstanceState)
         excludeClicked = savedInstanceState.getBoolean("exclude")
-        val searchUri = Uri.parse(SearchActivityBundle(savedInstanceState).uri)
-        if (searchUri != null) {
-            val (attributes, _, location, contentType) = parseSearchUri(searchUri)
-            if (attributes.isNotEmpty()) viewModel.setSelectedAttributes(attributes)
+        val searchUri = SearchActivityBundle(savedInstanceState).uri.toUri()
+        parseSearchUri(searchUri).apply {
+            if (attributes.isNotEmpty()) viewModel.setSelectedAttributes(attributes.toList())
             binding?.apply {
-                if (location > 0) {
+                if (location.value > 0) {
                     viewModel.setLocation(location)
-                    locationPicker.index = location
+                    locationPicker.index = location.value
                 }
-                if (contentType > 0) {
+                if (contentType.value > 0) {
                     viewModel.setContentType(contentType)
-                    typePicker.index = contentType
+                    typePicker.index = contentType.value
                 }
             }
         }
@@ -185,6 +187,9 @@ class SearchActivity : BaseActivity() {
         binding?.apply {
             updateAttributeTypeButton(textCategoryTag, attrCount, AttributeType.TAG)
             updateAttributeTypeButton(textCategoryModel, attrCount, AttributeType.MODEL)
+            updateAttributeTypeButton(
+                textCategoryCategory, attrCount, AttributeType.CATEGORY
+            )
             updateAttributeTypeButton(textCategorySource, attrCount, AttributeType.SOURCE)
         }
     }
@@ -207,7 +212,7 @@ class SearchActivity : BaseActivity() {
         var count = 0
         for (type in types) count += attrCount[type.code, 0]
         button.text = String.format(
-            "%s (%s)", StringHelper.capitalizeString(getString(types[0].displayName)), count
+            "%s (%s)", capitalizeString(getString(types[0].displayName)), count
         )
         button.isEnabled = count > 0
     }
@@ -278,7 +283,8 @@ class SearchActivity : BaseActivity() {
     private fun searchBooks() {
         binding?.apply {
             val searchUri = buildSearchUri(
-                selectedAttributeAdapter.currentList,
+                selectedAttributeAdapter.currentList.toSet(),
+                null,
                 "",
                 locationPicker.index,
                 typePicker.index

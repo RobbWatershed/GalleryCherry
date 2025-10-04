@@ -3,12 +3,20 @@ package me.devsaki.hentoid.activities
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.view.MenuItem
 import android.view.View
 import android.view.WindowManager
+import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
+import androidx.core.view.GravityCompat
+import androidx.core.view.inputmethod.EditorInfoCompat
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2.OnPageChangeCallback
 import com.google.android.material.badge.BadgeDrawable
@@ -16,41 +24,45 @@ import com.google.android.material.snackbar.BaseTransientBottomBar
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
-import com.google.firebase.analytics.FirebaseAnalytics
 import com.skydoves.powermenu.PowerMenuItem
-import io.reactivex.Observable
-import io.reactivex.android.schedulers.AndroidSchedulers
-import io.reactivex.disposables.Disposable
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.activities.bundles.QueueActivityBundle
+import me.devsaki.hentoid.activities.bundles.SearchActivityBundle
+import me.devsaki.hentoid.core.initDrawerLayout
+import me.devsaki.hentoid.database.domains.Attribute
 import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.database.domains.QueueRecord
 import me.devsaki.hentoid.databinding.ActivityQueueBinding
 import me.devsaki.hentoid.enums.Site
+import me.devsaki.hentoid.events.CommunicationEvent
 import me.devsaki.hentoid.events.DownloadCommandEvent
 import me.devsaki.hentoid.events.DownloadReviveEvent
 import me.devsaki.hentoid.fragments.ProgressDialogFragment
+import me.devsaki.hentoid.fragments.SelectSiteDialogFragment
 import me.devsaki.hentoid.fragments.queue.ErrorsFragment
 import me.devsaki.hentoid.fragments.queue.QueueFragment
-import me.devsaki.hentoid.util.Helper
-import me.devsaki.hentoid.util.Preferences
-import me.devsaki.hentoid.util.ThemeHelper
-import me.devsaki.hentoid.util.ToastHelper
+import me.devsaki.hentoid.util.Debouncer
+import me.devsaki.hentoid.util.QueuePosition
+import me.devsaki.hentoid.util.Settings
+import me.devsaki.hentoid.util.applyTheme
 import me.devsaki.hentoid.util.network.CloudflareHelper
 import me.devsaki.hentoid.util.network.WebkitPackageHelper
 import me.devsaki.hentoid.util.notification.NotificationManager
+import me.devsaki.hentoid.util.toast
+import me.devsaki.hentoid.util.tryShowMenuIcons
 import me.devsaki.hentoid.viewmodels.QueueViewModel
 import me.devsaki.hentoid.viewmodels.ViewModelFactory
-import me.devsaki.hentoid.widget.AddQueueMenu.Companion.show
+import me.devsaki.hentoid.widget.showAddQueueMenu
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
 import timber.log.Timber
-import java.util.concurrent.TimeUnit
+import java.util.Timer
+import kotlin.concurrent.timer
 import kotlin.math.roundToInt
 
 
-class QueueActivity : BaseActivity() {
+class QueueActivity : BaseActivity(), SelectSiteDialogFragment.Parent {
 
     // == Communication
     private lateinit var viewModel: QueueViewModel
@@ -62,19 +74,39 @@ class QueueActivity : BaseActivity() {
 
     // == Vars
     private var cloudflareHelper: CloudflareHelper? = null
-    private var reviveDisposable: Disposable? = null
+    private var reviveTimer: Timer? = null
+
+    // Used to avoid closing search panel immediately when user uses backspace to correct what he typed
+    private lateinit var searchClearDebouncer: Debouncer<Int>
+
+    // Current search criteria
+    private var query = ""
+    private var sourceFilter: Site? = null
+
+    // Used to ignore native calls to onQueryTextChange
+    private var invalidateNextQueryTextChange = false
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        ThemeHelper.applyTheme(this)
+        applyTheme()
 
         binding = ActivityQueueBinding.inflate(layoutInflater)
         setContentView(binding?.root)
 
+        searchClearDebouncer = Debouncer(lifecycleScope, 1500)
+        {
+            query = ""
+            signalCurrentFragment(CommunicationEvent.Type.SEARCH, buildSearchQuery())
+            binding?.apply {
+                searchClearBtn.visibility = View.GONE
+            }
+        }
+
         binding?.let {
-            Helper.tryShowMenuIcons(this, it.queueToolbar.menu)
-            it.queueToolbar.setNavigationOnClickListener { finish() }
+            initDrawerLayout(it.drawerLayout, it.toolbar)
+
+            tryShowMenuIcons(this, it.toolbar.menu)
             it.downloadReviveCancel.setOnClickListener { clearReviveDownload() }
 
             // Instantiate a ViewPager and a PagerAdapter.
@@ -107,12 +139,19 @@ class QueueActivity : BaseActivity() {
         viewModel.getQueue().observe(this) { onQueueChanged(it) }
         viewModel.getErrors().observe(this) { onErrorsChanged(it) }
 
-        if (!Preferences.getRecentVisibility()) {
+        if (!Settings.recentVisibility) {
             window.setFlags(
                 WindowManager.LayoutParams.FLAG_SECURE,
                 WindowManager.LayoutParams.FLAG_SECURE
             )
         }
+
+        // Link to search source filter dialog
+        binding?.searchSourceBtn?.setOnClickListener {
+            signalCurrentFragment(CommunicationEvent.Type.ADVANCED_SEARCH, "")
+        }
+
+        initToolbar()
 
         val intent = intent
         if (intent?.extras != null) processIntent(intent.extras!!)
@@ -120,11 +159,97 @@ class QueueActivity : BaseActivity() {
         if (!EventBus.getDefault().isRegistered(this)) EventBus.getDefault().register(this)
     }
 
+    private fun initToolbar() {
+        binding?.toolbar?.let {
+            val searchMenu = it.menu.findItem(R.id.action_search)
+            val actionSearchView = searchMenu?.actionView as SearchView?
+            actionSearchView?.findViewById<View>(androidx.appcompat.R.id.search_close_btn)
+                ?.setOnClickListener {
+                    invalidateNextQueryTextChange = true
+                    actionSearchView.setQuery("", false)
+                    actionSearchView.isIconified = true
+                    query = ""
+                    signalCurrentFragment(CommunicationEvent.Type.SEARCH, buildSearchQuery())
+                }
+            searchMenu.setOnActionExpandListener(object : MenuItem.OnActionExpandListener {
+                override fun onMenuItemActionExpand(item: MenuItem): Boolean {
+                    showSearchSubBar()
+                    invalidateNextQueryTextChange = true
+
+                    // Re-sets the query on screen, since default behaviour removes it right after collapse _and_ expand
+                    if (query.isNotEmpty()) // Use of handler allows to set the value _after_ the UI has auto-cleared it
+                    // Without that handler the view displays with an empty value
+                        Handler(Looper.getMainLooper()).postDelayed({
+                            invalidateNextQueryTextChange = true
+                            actionSearchView?.setQuery(query, false)
+                        }, 100)
+                    return true
+                }
+
+                override fun onMenuItemActionCollapse(item: MenuItem): Boolean {
+                    if (!isSearchActive()) hideSearchSubBar()
+                    invalidateNextQueryTextChange = true
+                    return true
+                }
+            })
+            actionSearchView?.imeOptions = EditorInfoCompat.IME_FLAG_NO_PERSONALIZED_LEARNING
+            actionSearchView?.setIconifiedByDefault(true)
+            actionSearchView?.queryHint = getString(R.string.library_search_hint)
+            // Change display when text query is typed
+            actionSearchView?.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+                override fun onQueryTextSubmit(s: String): Boolean {
+                    query = s.trim()
+                    signalCurrentFragment(CommunicationEvent.Type.SEARCH, buildSearchQuery())
+                    actionSearchView.clearFocus()
+                    return true
+                }
+
+                override fun onQueryTextChange(s: String): Boolean {
+                    if (invalidateNextQueryTextChange) { // Should not happen when search panel is closing or opening
+                        invalidateNextQueryTextChange = false
+                    } else if (s.isEmpty()) {
+                        searchClearDebouncer.submit(1)
+                    } else searchClearDebouncer.clear()
+                    return true
+                }
+            })
+
+            // Clear search
+            binding?.searchClearBtn?.setOnClickListener {
+                query = ""
+                sourceFilter = null
+                actionSearchView?.setQuery("", false)
+                hideSearchSubBar()
+                signalCurrentFragment(CommunicationEvent.Type.SEARCH, buildSearchQuery())
+            }
+        }
+    }
+
+    private fun showSearchSubBar(
+        site: Site? = null,
+        showClear: Boolean? = null
+    ) {
+        binding?.apply {
+            if (null == site) searchSourceBtn.text = getString(R.string.filter_by_source)
+            else searchSourceBtn.text = site.description
+
+            if (showClear != null) searchClearBtn.isVisible = showClear
+            searchSourceBar.isVisible = true
+        }
+    }
+
+    fun hideSearchSubBar() {
+        binding?.apply {
+            searchSourceBar.visibility = View.GONE
+            searchClearBtn.visibility = View.GONE
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         if (EventBus.getDefault().isRegistered(this)) EventBus.getDefault().unregister(this)
         cloudflareHelper?.clear()
-        reviveDisposable?.dispose()
+        reviveTimer?.cancel()
         binding = null
     }
 
@@ -141,7 +266,7 @@ class QueueActivity : BaseActivity() {
             if (parser.isErrorsTab) binding?.queuePager?.currentItem = 1
             viewModel.setContentToShowFirst(contentHash)
         }
-        val revivedSite = Site.searchByCode(parser.reviveDownloadForSiteCode.toLong())
+        val revivedSite = Site.searchByCode(parser.reviveDownloadForSiteCode)
         val oldCookie = parser.reviveOldCookie
         if (revivedSite != Site.NONE && oldCookie.isNotEmpty()) reviveDownload(
             revivedSite,
@@ -151,35 +276,34 @@ class QueueActivity : BaseActivity() {
 
     private fun onTabSelected(binding: ActivityQueueBinding, position: Int) {
         // Update permanent toolbar
-        binding.queueToolbar.menu.let {
-            it.findItem(R.id.action_invert_queue).isVisible = (0 == position)
-            it.findItem(R.id.action_import_downloads).isVisible = (0 == position)
-            it.findItem(R.id.action_cancel_all).isVisible = (0 == position)
-            it.findItem(R.id.action_cancel_all_errors).isVisible = (1 == position)
-            it.findItem(R.id.action_redownload_all).isVisible = (1 == position)
+        binding.toolbar.menu.apply {
+            findItem(R.id.action_invert_queue).isVisible = (0 == position)
+            findItem(R.id.action_import_downloads).isVisible = (0 == position)
+            findItem(R.id.action_cancel_all).isVisible = (0 == position)
+            findItem(R.id.action_cancel_all_errors).isVisible = (1 == position)
+            findItem(R.id.action_redownload_all).isVisible = (1 == position)
             // NB : That doesn't mean it should be visible at all times on tab 0 !
-            if (1 == position) it.findItem(R.id.action_error_stats).isVisible = false
+            if (1 == position) findItem(R.id.action_error_stats).isVisible = false
         }
 
         // Update selection toolbar
-        binding.queueSelectionToolbar.visibility = View.GONE
-        binding.queueSelectionToolbar.menu.clear()
-        if (0 == position) binding.queueSelectionToolbar.inflateMenu(R.menu.queue_queue_selection_menu)
-        else binding.queueSelectionToolbar.inflateMenu(R.menu.queue_error_selection_menu)
-        Helper.tryShowMenuIcons(this, binding.queueSelectionToolbar.menu)
+        binding.selectionToolbar.apply {
+            visibility = View.GONE
+            menu.clear()
+            if (0 == position) inflateMenu(R.menu.queue_queue_selection_menu)
+            else inflateMenu(R.menu.queue_error_selection_menu)
+            tryShowMenuIcons(this@QueueActivity, menu)
+        }
 
-        // Log the view of the tab
-        val bundle = Bundle()
-        bundle.putInt("tag", position)
-        FirebaseAnalytics.getInstance(this).logEvent("view_queue_tab", bundle)
+        enableCurrentFragment()
     }
 
     fun getToolbar(): Toolbar? {
-        return binding?.queueToolbar
+        return binding?.toolbar
     }
 
     fun getSelectionToolbar(): Toolbar? {
-        return binding?.queueSelectionToolbar
+        return binding?.selectionToolbar
     }
 
     private fun onQueueChanged(result: List<QueueRecord>) {
@@ -224,23 +348,21 @@ class QueueActivity : BaseActivity() {
         reparseContent: Boolean,
         reparseImages: Boolean
     ) {
-        binding?.let {
-            if (Preferences.getQueueNewDownloadPosition() == Preferences.Constant.QUEUE_NEW_DOWNLOADS_POSITION_ASK) {
-                show(
-                    this, it.queueTabs, this
-                ) { position: Int, _: PowerMenuItem? ->
+        binding?.let { b ->
+            if (Settings.queueNewDownloadPosition == Settings.Value.QUEUE_NEW_DOWNLOADS_POSITION_ASK) {
+                showAddQueueMenu(this, b.queueTabs, this) { position: Int, _: PowerMenuItem? ->
                     redownloadContent(
                         contentList,
                         reparseContent,
                         reparseImages,
-                        if (0 == position) Preferences.Constant.QUEUE_NEW_DOWNLOADS_POSITION_TOP else Preferences.Constant.QUEUE_NEW_DOWNLOADS_POSITION_BOTTOM
+                        if (0 == position) QueuePosition.TOP else QueuePosition.BOTTOM
                     )
                 }
             } else redownloadContent(
                 contentList,
                 reparseContent,
                 reparseImages,
-                Preferences.getQueueNewDownloadPosition()
+                QueuePosition.entries.first { it.value == Settings.queueNewDownloadPosition }
             )
         }
     }
@@ -258,30 +380,32 @@ class QueueActivity : BaseActivity() {
         contentList: List<Content>,
         reparseContent: Boolean,
         reparseImages: Boolean,
-        position: Int
+        position: QueuePosition
     ) {
         if (!WebkitPackageHelper.getWebViewAvailable()) {
             if (WebkitPackageHelper.getWebViewUpdating())
-                ToastHelper.toast(R.string.redownloaded_updating_webview)
-            else ToastHelper.toast(R.string.redownloaded_missing_webview)
+                toast(R.string.redownloaded_updating_webview)
+            else toast(R.string.redownloaded_missing_webview)
             return
         }
         if (reparseContent || reparseImages) ProgressDialogFragment.invoke(
-            supportFragmentManager,
+            this,
             resources.getString(R.string.redownload_queue_progress),
             R.plurals.book
         )
-        viewModel.redownloadContent(contentList, reparseContent, reparseImages, position,
+        viewModel.redownloadContent(
+            contentList, reparseContent, reparseImages, position,
             { nbSuccess: Int ->
                 val message = resources.getQuantityString(
                     R.plurals.redownloaded_scratch,
                     nbSuccess, nbSuccess, contentList.size
                 )
                 binding?.let {
-                    Snackbar.make(it.root, message, BaseTransientBottomBar.LENGTH_LONG)
-                        .setAnchorView(it.snackbarLocation).show()
+                    val snack = Snackbar.make(it.root, message, BaseTransientBottomBar.LENGTH_LONG)
+                    snack.setAction(R.string.view_queue) { binding?.queuePager?.currentItem = 0 }
+                    snack.setAnchorView(it.snackbarLocation).show()
                 }
-            }, { t: Throwable -> Timber.i(t) }
+            }, { Timber.i(it) }
         )
     }
 
@@ -308,9 +432,8 @@ class QueueActivity : BaseActivity() {
     private fun reviveDownload(revivedSite: Site, oldCookie: String) {
         Timber.d(">> REVIVAL ASKED @ %s", revivedSite.url)
         if (!WebkitPackageHelper.getWebViewAvailable()) {
-            if (WebkitPackageHelper.getWebViewUpdating()) ToastHelper.toast(R.string.revive_updating_webview) else ToastHelper.toast(
-                R.string.revive_missing_webview
-            )
+            if (WebkitPackageHelper.getWebViewUpdating()) toast(R.string.revive_updating_webview)
+            else toast(R.string.revive_missing_webview)
             return
         }
 
@@ -325,14 +448,16 @@ class QueueActivity : BaseActivity() {
             changeReviveUIVisibility(true)
 
             // Start progress UI
-            reviveDisposable = Observable.timer(1500, TimeUnit.MILLISECONDS)
-                .repeat()
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe { _ ->
+            reviveTimer?.cancel()
+            reviveTimer = timer("revive-timer", false, 1500, 1500) {
+                // Timer task is not on the UI thread
+                val handler = Handler(Looper.getMainLooper())
+                handler.post {
                     val currentProgress: Int = it.downloadReviveProgress.progress
                     if (currentProgress > 0) it.downloadReviveProgress.progress =
                         currentProgress - 1
                 }
+            }
 
             // Try passing CF
             if (null == cloudflareHelper) cloudflareHelper = CloudflareHelper()
@@ -346,7 +471,77 @@ class QueueActivity : BaseActivity() {
 
     private fun clearReviveDownload() {
         changeReviveUIVisibility(false)
-        reviveDisposable?.dispose()
+        reviveTimer?.cancel()
         cloudflareHelper?.clear()
+    }
+
+    fun isSearchActive(): Boolean {
+        return getQuery().isNotEmpty() || sourceFilter != null
+    }
+
+    private fun getQuery(): String {
+        return query
+    }
+
+    fun buildSearchQuery(): String {
+        val attrs = sourceFilter?.let { setOf(Attribute(it)) } ?: emptySet()
+        return SearchActivityBundle.buildSearchUri(attrs, query = query).toString()
+    }
+
+    override fun onSiteSelected(site: Site, altCode: Int) {
+        sourceFilter = site
+        showSearchSubBar(site, showClear = true)
+        signalCurrentFragment(CommunicationEvent.Type.SEARCH, buildSearchQuery())
+    }
+
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    override fun onCommunicationEvent(event: CommunicationEvent) {
+        super.onCommunicationEvent(event)
+        if (CommunicationEvent.Type.CLOSE_DRAWER == event.type) closeNavigationDrawer()
+    }
+
+    fun closeNavigationDrawer() {
+        binding?.drawerLayout?.closeDrawer(GravityCompat.START)
+    }
+
+    private fun enableCurrentFragment() {
+        binding?.apply {
+            enableFragment(queuePager.currentItem)
+        }
+    }
+
+    private fun enableFragment(fragmentIndex: Int) {
+        EventBus.getDefault().post(
+            CommunicationEvent(
+                CommunicationEvent.Type.ENABLE,
+                if (0 == fragmentIndex) CommunicationEvent.Recipient.QUEUE else CommunicationEvent.Recipient.ERRORS
+            )
+        )
+        EventBus.getDefault().post(
+            CommunicationEvent(
+                CommunicationEvent.Type.DISABLE,
+                if (0 == fragmentIndex) CommunicationEvent.Recipient.ERRORS else CommunicationEvent.Recipient.QUEUE
+            )
+        )
+    }
+
+    private fun signalCurrentFragment(eventType: CommunicationEvent.Type, message: String = "") {
+        binding?.apply {
+            signalFragment(queuePager.currentItem, eventType, message)
+        }
+    }
+
+    private fun signalFragment(
+        fragmentIndex: Int,
+        eventType: CommunicationEvent.Type,
+        message: String
+    ) {
+        EventBus.getDefault().post(
+            CommunicationEvent(
+                eventType,
+                if (0 == fragmentIndex) CommunicationEvent.Recipient.QUEUE else CommunicationEvent.Recipient.ERRORS,
+                message
+            )
+        )
     }
 }

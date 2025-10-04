@@ -3,8 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     tools:context=".activities.LibraryActivity"
-    tools:ignore="AlwaysShowAction"
-    tools:targetApi="o">
+    tools:ignore="AlwaysShowAction">
     <item
         android:id="@+id/action_search"
         android:icon="@drawable/ic_menu_search"
@@ -47,13 +46,6 @@
         android:title="@string/menu_edit_cancel"
         android:tooltipText="@string/menu_edit_cancel"
         android:visible="false"
-        app:showAsAction="always" />
-    <item
-        android:id="@+id/action_browse_groups"
-        android:icon="@drawable/ic_folders"
-        android:title="@string/groups"
-        android:tooltipText="@string/groups"
-        android:visible="true"
         app:showAsAction="always" />
     <item
         android:id="@+id/action_sort_filter"

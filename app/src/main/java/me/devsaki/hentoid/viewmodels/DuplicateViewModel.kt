@@ -19,14 +19,14 @@ import me.devsaki.hentoid.database.CollectionDAO
 import me.devsaki.hentoid.database.DuplicatesDAO
 import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.database.domains.DuplicateEntry
-import me.devsaki.hentoid.notification.duplicates.DuplicateNotificationChannel
-import me.devsaki.hentoid.util.ContentHelper
+import me.devsaki.hentoid.events.ProcessEvent
 import me.devsaki.hentoid.util.exception.ContentNotProcessedException
+import me.devsaki.hentoid.workers.BaseDeleteWorker
 import me.devsaki.hentoid.workers.DeleteWorker
 import me.devsaki.hentoid.workers.DuplicateDetectorWorker
 import me.devsaki.hentoid.workers.data.DeleteData
 import me.devsaki.hentoid.workers.data.DuplicateData
-import okhttp3.internal.toImmutableList
+import org.greenrobot.eventbus.EventBus
 import timber.log.Timber
 import java.util.concurrent.TimeUnit
 
@@ -68,7 +68,7 @@ class DuplicateViewModel(
         builder.setIgnoreChapters(ignoreChapters)
         builder.setSensitivity(sensitivity)
 
-        DuplicateNotificationChannel.init(getApplication())
+        me.devsaki.hentoid.notification.duplicates.init(getApplication())
         val workManager = WorkManager.getInstance(getApplication())
         workManager.enqueueUniqueWork(
             R.id.duplicate_detector_service.toString(),
@@ -86,9 +86,8 @@ class DuplicateViewModel(
     }
 
     fun setContent(content: Content) {
-        if (null == allDuplicates.value) return
         val selectedDupes =
-            allDuplicates.value!!.filter { it.referenceId == content.id }.toMutableList()
+            allDuplicates.value?.filter { it.referenceId == content.id }?.toMutableList() ?: return
         // Add reference item on top
         val refEntry = DuplicateEntry(
             content.id,
@@ -105,18 +104,14 @@ class DuplicateViewModel(
         selectedDuplicates.postValue(selectedDupes)
     }
 
-    fun setBookChoice(content: Content, choice: Boolean) {
-        if (null == selectedDuplicates.value) return
-        val selectedDupes = selectedDuplicates.value!!.toImmutableList()
-        for (dupe in selectedDupes) {
-            if (dupe.duplicateId == content.id) dupe.keep = choice
-        }
+    fun setBookChoice(content: Content, isKeep: Boolean) {
+        val selectedDupes = selectedDuplicates.value?.toMutableList() ?: return
+        selectedDupes.forEach { if (it.duplicateId == content.id) it.keep = isKeep }
         selectedDuplicates.postValue(selectedDupes)
     }
 
     fun applyChoices(onComplete: Runnable) {
-        if (null == selectedDuplicates.value) return
-        val selectedDupes = selectedDuplicates.value!!.toImmutableList()
+        val selectedDupes = selectedDuplicates.value ?: return
 
         // Mark as "is being deleted" to trigger blink animation
         val deleteList = ArrayList<Long>()
@@ -144,6 +139,7 @@ class DuplicateViewModel(
                     // Don't delete the fake reference entry that has been put there for display
                     if (it.titleScore <= 1f) duplicatesDao.delete(it)
                 }
+                dao.cleanup()
             }
             onComplete.run()
         }
@@ -152,6 +148,7 @@ class DuplicateViewModel(
     fun remove(contentList: List<Long>) {
         val builder = DeleteData.Builder()
         if (contentList.isNotEmpty()) builder.setContentIds(contentList)
+        builder.setOperation(BaseDeleteWorker.Operation.DELETE)
         val workManager = WorkManager.getInstance(getApplication())
         workManager.enqueue(
             OneTimeWorkRequest.Builder(DeleteWorker::class.java).setInputData(builder.data).build()
@@ -161,20 +158,29 @@ class DuplicateViewModel(
     fun mergeContents(
         contentList: List<Content>,
         newTitle: String,
+        useBookAsChapter: Boolean,
         deleteAfterMerging: Boolean,
         onSuccess: Runnable
     ) {
         if (contentList.isEmpty()) return
-        if (null == selectedDuplicates.value) return
-
-        val selectedDupes = selectedDuplicates.value!!.toImmutableList()
+        val selectedDupes = selectedDuplicates.value ?: return
         val context = getApplication<Application>().applicationContext
 
         viewModelScope.launch {
             val result = withContext(Dispatchers.IO) {
                 try {
                     // Create merged book
-                    ContentHelper.mergeContents(context, contentList, newTitle, dao)
+                    me.devsaki.hentoid.util.mergeContents(
+                        context,
+                        contentList,
+                        newTitle,
+                        useBookAsChapter,
+                        false,
+                        dao,
+                        { false },
+                        this@DuplicateViewModel::onMergeProgress,
+                        this@DuplicateViewModel::onMergeComplete
+                    )
 
                     // Mark as "is being deleted" to trigger blink animation
                     if (deleteAfterMerging) {
@@ -198,10 +204,38 @@ class DuplicateViewModel(
                     return@withContext true
                 } catch (e: ContentNotProcessedException) {
                     Timber.e(e)
+                } finally {
+                    dao.cleanup()
                 }
                 return@withContext false
             }
             if (result) onSuccess.run()
         }
+    }
+
+    private fun onMergeProgress(nb: Int, max: Int, name: String) {
+        EventBus.getDefault().post(
+            ProcessEvent(
+                ProcessEvent.Type.PROGRESS,
+                R.id.generic_progress,
+                0,
+                nb,
+                0,
+                max
+            )
+        )
+    }
+
+    private fun onMergeComplete() {
+        EventBus.getDefault().postSticky(
+            ProcessEvent(
+                ProcessEvent.Type.COMPLETE,
+                R.id.generic_progress,
+                0,
+                100,
+                0,
+                100
+            )
+        )
     }
 }

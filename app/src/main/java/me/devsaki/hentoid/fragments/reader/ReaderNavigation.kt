@@ -2,6 +2,7 @@ package me.devsaki.hentoid.fragments.reader
 
 import android.view.View
 import android.widget.TextView
+import android.widget.Toast
 import androidx.core.view.isVisible
 import com.google.android.material.slider.Slider
 import me.devsaki.hentoid.R
@@ -10,16 +11,18 @@ import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.database.domains.ImageFile
 import me.devsaki.hentoid.databinding.FragmentReaderPagerBinding
 import me.devsaki.hentoid.databinding.IncludeReaderControlsOverlayBinding
-import me.devsaki.hentoid.ui.InputDialog
-import me.devsaki.hentoid.util.Helper
-import me.devsaki.hentoid.util.Preferences
-import me.devsaki.hentoid.util.ToastHelper
+import me.devsaki.hentoid.ui.invokeNumberInputDialog
+import me.devsaki.hentoid.util.Settings
+import me.devsaki.hentoid.util.Settings.Value.VIEWER_DIRECTION_LTR
+import me.devsaki.hentoid.util.Settings.Value.VIEWER_DIRECTION_RTL
+import me.devsaki.hentoid.util.coerceIn
 import java.util.Locale
 
 class ReaderNavigation(private val pager: Pager, inBinding: FragmentReaderPagerBinding) {
     // == UI
     private var superBinding: FragmentReaderPagerBinding? = null
     private var binding: IncludeReaderControlsOverlayBinding? = null
+    private var chapterToast: Toast? = null
 
     // Bottom bar controls (proxies for left or right position, depending on current reading direction)
     private var pageCurrentNumber: TextView? = null
@@ -47,14 +50,14 @@ class ReaderNavigation(private val pager: Pager, inBinding: FragmentReaderPagerB
             it.pageSlider.addOnChangeListener { _, value, fromUser ->
                 if (fromUser) {
                     var offset = 0
-                    if (Preferences.isReaderChapteredNavigation()) {
-                        val currentChapter = getCurrentChapter()
-                        if (currentChapter != null) {
-                            val chapImgs = currentChapter.readableImageFiles
-                            if (chapImgs.isNotEmpty()) offset = chapImgs[0].order - 1
+                    if (Settings.isReaderChapteredNavigation) {
+                        getCurrentChapter()?.apply {
+                            val chapImgs = readableImageFiles
+                            if (chapImgs.isNotEmpty()) offset =
+                                pager.indexFromPageNum(chapImgs[0].order)
                         }
                     }
-                    pager.seekToPosition(0.coerceAtLeast(offset + value.toInt()))
+                    pager.seekToIndex(0.coerceAtLeast(offset + value.toInt()))
                 }
             }
             it.pageSlider.addOnSliderTouchListener(object : Slider.OnSliderTouchListener {
@@ -86,11 +89,11 @@ class ReaderNavigation(private val pager: Pager, inBinding: FragmentReaderPagerB
      * @param content Current book
      */
     fun onContentChanged(content: Content) {
-        val direction = Preferences.getContentDirection(content.bookPreferences)
+        val direction = Settings.getContentDirection(content.site, content.bookPreferences)
         nextFunctionalButton =
-            if (Preferences.Constant.VIEWER_DIRECTION_LTR == direction) binding?.nextBookBtn else binding?.prevBookBtn
+            if (VIEWER_DIRECTION_LTR == direction) binding?.nextBookBtn else binding?.prevBookBtn
         prevFunctionalButton =
-            if (Preferences.Constant.VIEWER_DIRECTION_LTR == direction) binding?.prevBookBtn else binding?.nextBookBtn
+            if (VIEWER_DIRECTION_LTR == direction) binding?.prevBookBtn else binding?.nextBookBtn
         isContentFirst = content.isFirst
         isContentLast = content.isLast
         isContentDynamic = content.isDynamic
@@ -98,19 +101,23 @@ class ReaderNavigation(private val pager: Pager, inBinding: FragmentReaderPagerB
 
     fun onImagesChanged(images: List<ImageFile>) {
         this.images = images
-        chapters = images.mapNotNull { obj: ImageFile -> obj.linkedChapter }
-            .sortedBy { obj: Chapter -> obj.order }.distinct().toList()
+        chapters = images.mapNotNull { it.linkedChapter }
+            .sortedBy { it.order }.distinct().toList()
 
         // Can't access the gallery when there's no page to display
         binding?.apply {
             if (images.isNotEmpty()) galleryBtn.visibility = View.VISIBLE
-            else galleryBtn.visibility = View.GONE
+            else galleryBtn.visibility = View.INVISIBLE
         }
         maxPageNumber = images.count { obj: ImageFile -> obj.isReadable }
     }
 
     private fun onChapterChanged(chapter: Chapter) {
-        ToastHelper.toast(chapter.name)
+        binding?.pageSlider?.apply {
+            chapterToast?.cancel()
+            chapterToast = Toast.makeText(context, chapter.name, Toast.LENGTH_SHORT)
+            chapterToast?.show()
+        }
         updateNextPrevButtonsChapter(chapter)
     }
 
@@ -124,22 +131,22 @@ class ReaderNavigation(private val pager: Pager, inBinding: FragmentReaderPagerB
 
     fun setDirection(direction: Int) {
         binding?.apply {
-            if (Preferences.Constant.VIEWER_DIRECTION_LTR == direction) {
+            if (VIEWER_DIRECTION_LTR == direction) {
                 pageCurrentNumber = pagerLeftTxt
                 pageMaxNumber = pagerRightTxt
                 pageSlider.rotationY = 0f
-                prevBookBtn.setOnClickListener { previousFunctional() }
-                nextBookBtn.setOnClickListener { nextFunctional() }
-            } else if (Preferences.Constant.VIEWER_DIRECTION_RTL == direction) {
+                prevBookBtn.setOnClickListener { previousContainer() }
+                nextBookBtn.setOnClickListener { nextContainer() }
+            } else if (VIEWER_DIRECTION_RTL == direction) {
                 pageCurrentNumber = pagerRightTxt
                 pageMaxNumber = pagerLeftTxt
                 pageSlider.rotationY = 180f
-                prevBookBtn.setOnClickListener { nextFunctional() }
-                nextBookBtn.setOnClickListener { previousFunctional() }
+                prevBookBtn.setOnClickListener { nextContainer() }
+                nextBookBtn.setOnClickListener { previousContainer() }
             }
             pageMaxNumber?.setOnClickListener(null)
             pageCurrentNumber?.setOnClickListener {
-                InputDialog.invokeNumberInputDialog(
+                invokeNumberInputDialog(
                     pageSlider.context,
                     R.string.goto_page
                 ) { absPageNum: Int ->
@@ -154,9 +161,9 @@ class ReaderNavigation(private val pager: Pager, inBinding: FragmentReaderPagerB
      */
     fun updatePageControls() {
         val img = pager.currentImg ?: return
-        var pageNum = if (isContentDynamic) img.displayOrder + 1 else img.order
+        var pageNum = img.displayOrder + 1
         var pageOffset = 0
-        if (Preferences.isReaderChapteredNavigation() && !isContentDynamic) {
+        if (Settings.isReaderChapteredNavigation && !isContentDynamic) {
             val newChap = getCurrentChapter()
             if (newChap != null) {
                 if (null != currentChapter && newChap.uniqueHash() != currentChapter!!.uniqueHash())
@@ -172,7 +179,7 @@ class ReaderNavigation(private val pager: Pager, inBinding: FragmentReaderPagerB
             currentChapter = null
         }
         var maxPageNum = maxPageNumber
-        if (Preferences.isReaderChapteredNavigation() && currentChapter != null) {
+        if (Settings.isReaderChapteredNavigation && currentChapter != null) {
             maxPageNum = currentChapter!!.readableImageFiles.size
         }
         pageCurrentNumber?.text = String.format(Locale.ENGLISH, "%d", pageNum)
@@ -189,32 +196,36 @@ class ReaderNavigation(private val pager: Pager, inBinding: FragmentReaderPagerB
             if (!it.imagePreviewCenter.isVisible) {
                 val sliderMaxPos = 1.coerceAtLeast(maxPageNum - 1)
                 // Next line to avoid setting a max position inferior to current position
-                it.pageSlider.value = Helper.coerceIn(
+                it.pageSlider.value = coerceIn(
                     it.pageSlider.value,
                     0f,
                     sliderMaxPos.toFloat()
                 )
                 it.pageSlider.valueTo = sliderMaxPos.toFloat()
                 val imageIndex = getCurrentImageIndex()
-                if (imageIndex > -1) it.pageSlider.value = Helper.coerceIn(
+                if (imageIndex > -1) it.pageSlider.value = coerceIn(
                     imageIndex.toFloat(),
                     0f,
                     sliderMaxPos.toFloat()
                 )
             }
         }
-        if (!Preferences.isReaderChapteredNavigation() || null == chapters || chapters!!.isEmpty()) {
+        if (!Settings.isReaderChapteredNavigation || null == chapters || chapters!!.isEmpty()) {
             prevFunctionalButton?.visibility = if (isContentFirst) View.INVISIBLE else View.VISIBLE
             nextFunctionalButton?.visibility = if (isContentLast) View.INVISIBLE else View.VISIBLE
         } else updateNextPrevButtonsChapter(currentChapter)
     }
 
-    fun previousFunctional() {
-        if (!Preferences.isReaderChapteredNavigation()) pager.previousBook() else if (!previousChapter()) pager.previousBook()
+    fun previousContainer(): Boolean {
+        return if (!Settings.isReaderChapteredNavigation) pager.previousBook()
+        else if (!previousChapter()) pager.previousBook()
+        else true
     }
 
-    fun nextFunctional() {
-        if (!Preferences.isReaderChapteredNavigation()) pager.nextBook() else if (!nextChapter()) pager.nextBook()
+    fun nextContainer(): Boolean {
+        return if (!Settings.isReaderChapteredNavigation) pager.nextBook()
+        else if (!nextChapter()) pager.nextBook()
+        else true
     }
 
     private fun previousChapter(): Boolean {
@@ -267,7 +278,7 @@ class ReaderNavigation(private val pager: Pager, inBinding: FragmentReaderPagerB
         val currentImg = pager.currentImg
         val currentChapter = getCurrentChapter()
         // Absolute index
-        return if (!Preferences.isReaderChapteredNavigation() || null == currentChapter) {
+        return if (!Settings.isReaderChapteredNavigation || null == currentChapter) {
             indexAmong(currentImg, images)
         } else { // Relative to current chapter
             indexAmong(currentImg, currentChapter.readableImageFiles)
@@ -276,16 +287,17 @@ class ReaderNavigation(private val pager: Pager, inBinding: FragmentReaderPagerB
 
     private fun indexAmong(img: ImageFile?, imgs: List<ImageFile>?): Int {
         if (img != null && imgs != null) {
-            for (i in imgs.indices) if (imgs[i].uniqueHash() == img.uniqueHash()) return i
+            for (i in imgs.indices) if (imgs[i].id == img.id) return i
         }
         return -1
     }
 
     interface Pager {
         fun goToPage(absPageNum: Int)
-        fun seekToPosition(absIndex: Int)
-        fun nextBook()
-        fun previousBook()
+        fun seekToIndex(absIndex: Int)
+        fun indexFromPageNum(pageNum: Int): Int
+        fun nextBook(): Boolean
+        fun previousBook(): Boolean
         val currentImg: ImageFile?
     }
 }

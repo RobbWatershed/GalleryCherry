@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <item name="update_check_service" type="id" />
     <item name="startup_service" type="id" />
     <item name="update_download_service" type="id" />
     <item name="download_service" type="id" />
@@ -11,7 +12,12 @@
     <item name="transform_service" type="id" />
     <item name="delete_service_delete" type="id" />
     <item name="delete_service_purge" type="id" />
+    <item name="delete_service_stream" type="id" />
+    <item name="archive_service" type="id" />
     <item name="duplicate_detector_service" type="id" />
+    <item name="split_service" type="id" />
+    <item name="merge_service" type="id" />
+    <item name="reorder_service" type="id" />
     <item name="archive_processing" type="id" />
     <item name="delete_processing" type="id" />
 

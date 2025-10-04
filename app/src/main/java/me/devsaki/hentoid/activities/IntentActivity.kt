@@ -7,7 +7,7 @@ import androidx.appcompat.app.AppCompatActivity
 import me.devsaki.hentoid.core.AppStartup
 import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.enums.Site
-import me.devsaki.hentoid.util.ContentHelper
+import me.devsaki.hentoid.util.viewContentGalleryPage
 import timber.log.Timber
 
 
@@ -24,7 +24,7 @@ class IntentActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        AppStartup().initApp(this,
+        AppStartup.initApp(this,
             { f -> onMainProgress(f) },
             { f -> onSecondaryProgress(f) }
         ) { onInitComplete() }
@@ -73,7 +73,7 @@ class IntentActivity : AppCompatActivity() {
         val content = Content()
         content.site = site
         content.url = parsedPath
-        ContentHelper.viewContentGalleryPage(this, content, true)
+        viewContentGalleryPage(this, content, true)
     }
 
     private fun parsePath(site: Site, data: Uri): String? {

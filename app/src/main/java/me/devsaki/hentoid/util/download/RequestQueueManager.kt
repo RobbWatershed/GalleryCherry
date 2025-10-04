@@ -3,14 +3,17 @@ package me.devsaki.hentoid.util.download
 import android.app.ActivityManager
 import android.content.Context
 import android.net.Uri
-import com.annimon.stream.function.BiConsumer
+import androidx.core.net.toUri
 import com.google.firebase.crashlytics.FirebaseCrashlytics
-import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import me.devsaki.hentoid.util.Helper
-import me.devsaki.hentoid.util.Preferences
-import me.devsaki.hentoid.util.network.OkHttpClientSingleton
+import me.devsaki.hentoid.core.BiConsumer
+import me.devsaki.hentoid.core.HentoidApp
+import me.devsaki.hentoid.util.Settings
+import me.devsaki.hentoid.util.network.OkHttpClientManager
+import me.devsaki.hentoid.util.pause
 import timber.log.Timber
 import java.util.Collections
 import java.util.LinkedList
@@ -28,8 +31,10 @@ class RequestQueueManager private constructor(
     private var mRequestQueue: RequestQueue? = null
 
     // Maximum number of allowed parallel download threads (-1 = not capped)
+    /*
     var downloadThreadCap = -1
         private set
+     */
 
     // Actual number of allowed parallel download threads
     private var downloadThreadCount = 0
@@ -42,7 +47,8 @@ class RequestQueueManager private constructor(
 
 
     init {
-        downloadThreadCount = getPreferredThreadCount(context)
+        downloadThreadCount =
+            getPreferredThreadCount(context, Settings.Value.DOWNLOAD_THREAD_COUNT_AUTO)
         init(resetActiveRequests = false, cancelQueue = true)
     }
 
@@ -58,7 +64,7 @@ class RequestQueueManager private constructor(
         if (cancelQueue) cancelQueue()
         else if (resetOkHttp || resetActiveRequests) mRequestQueue?.stop()
 
-        if (resetOkHttp) OkHttpClientSingleton.reset()
+        if (resetOkHttp) OkHttpClientManager.reset()
 
         mRequestQueue = RequestQueue(this::onRequestSuccess, this::onRequestError)
         start()
@@ -67,14 +73,16 @@ class RequestQueueManager private constructor(
     /**
      * Initialize the request queue
      *
-     * @param ctx         Context to use
-     * @param nbDlThreads Number of parallel downloads to use; -1 to use automated recommendation
-     * @param cancelQueue True if queued requests should be canceled; false if it should be kept intact
+     * @param ctx               Context to use
+     * @param nbDlThreads       Number of parallel downloads to use; 0 to use automated recommendation
+     * @param cancelQueue       True if queued requests should be canceled; false if it should be kept intact
      */
-    fun initUsingDownloadThreadCount(ctx: Context, nbDlThreads: Int, cancelQueue: Boolean) {
-        downloadThreadCap = nbDlThreads
-        downloadThreadCount = nbDlThreads
-        if (-1 == downloadThreadCap) downloadThreadCount = getPreferredThreadCount(ctx)
+    fun initUsingDownloadThreadCount(
+        ctx: Context,
+        nbDlThreads: Int,
+        cancelQueue: Boolean
+    ) {
+        downloadThreadCount = getPreferredThreadCount(ctx, nbDlThreads)
         init(false, cancelQueue)
     }
 
@@ -83,13 +91,14 @@ class RequestQueueManager private constructor(
      *
      * @param resetOkHttp If true, also reset the underlying OkHttp connections
      */
+    @OptIn(DelicateCoroutinesApi::class)
     fun resetRequestQueue(resetOkHttp: Boolean) {
         init(true, cancelQueue = false, resetOkHttp = resetOkHttp)
         // Requeue interrupted requests
         synchronized(activeRequests) {
             Timber.d("resetRequestQueue :: Requeuing %d requests", activeRequests.size)
             for (order in activeRequests)
-                CoroutineScope(Dispatchers.Default).launch { executeRequest(order, false) }
+                GlobalScope.launch(Dispatchers.Default) { executeRequest(order, false) }
         }
         refill()
     }
@@ -114,8 +123,9 @@ class RequestQueueManager private constructor(
      *
      * @param order Request to add to the queue
      */
+    @OptIn(DelicateCoroutinesApi::class)
     fun queueRequest(order: RequestOrder) {
-        CoroutineScope(Dispatchers.Default).launch {
+        GlobalScope.launch(Dispatchers.Default) {
             if (isNewRequestAllowed()) executeRequest(order) else {
                 synchronized(waitingRequestQueue) {
                     waitingRequestQueue.add(order)
@@ -134,16 +144,16 @@ class RequestQueueManager private constructor(
      */
     private fun isNewRequestAllowed(): Boolean {
         val remainingSlots = downloadThreadCount - nbActiveRequests
-        if (remainingSlots < 1) return false
-        return true
+        return remainingSlots >= 1
     }
 
     /**
      * Refill the queue with the allowed number of requests
      */
+    @OptIn(DelicateCoroutinesApi::class)
     private fun refill() {
         if (nbActiveRequests < downloadThreadCount) {
-            CoroutineScope(Dispatchers.Default).launch {
+            GlobalScope.launch(Dispatchers.Default) {
                 try {
                     doRefill()
                 } catch (e: Exception) {
@@ -159,7 +169,7 @@ class RequestQueueManager private constructor(
     private suspend fun doRefill() {
         var newRequestAllowed = isNewRequestAllowed()
         while (!newRequestAllowed && 0 == nbActiveRequests) { // Dry queue
-            Helper.pause(250)
+            pause(250)
             newRequestAllowed = isNewRequestAllowed()
         }
         if (newRequestAllowed) {
@@ -183,11 +193,11 @@ class RequestQueueManager private constructor(
             if (!it.active) return
             if (insert) synchronized(activeRequests) { activeRequests.add(order) }
             DownloadRateLimiter.take()
-            it.executeRequest(order)
+            it.executeRequest(HentoidApp.getInstance(), order)
             synchronized(waitingRequestQueue) {
                 Timber.d(
                     "Requests queue ::: request executed for host %s - current total (%d active + %d waiting)",
-                    Uri.parse(order.url).host,
+                    order.url.toUri().host,
                     nbActiveRequests,
                     waitingRequestQueue.size
                 )
@@ -205,7 +215,7 @@ class RequestQueueManager private constructor(
             activeRequests.remove(request)
             Timber.v(
                 "Global requests queue ::: request removed for host %s - current total %s",
-                Uri.parse(request.url).host,
+                request.url.toUri().host,
                 nbActiveRequests
             )
         }
@@ -215,13 +225,13 @@ class RequestQueueManager private constructor(
 
     private fun onRequestSuccess(request: RequestOrder, resultFileUri: Uri) {
         onRequestCompleted(request)
-        onSuccess.accept(request, resultFileUri)
+        onSuccess.invoke(request, resultFileUri)
     }
 
     private fun onRequestError(request: RequestOrder, err: RequestOrder.NetworkError) {
         onRequestCompleted(request)
         // Don't propagate interruptions
-        if (err.type != RequestOrder.NetworkErrorType.INTERRUPTED) onError.accept(request, err)
+        if (err.type != RequestOrder.NetworkErrorType.INTERRUPTED) onError.invoke(request, err)
         else Timber.d("Downloader : Interruption detected for %s : %s", request.url, err.message)
     }
 
@@ -241,9 +251,9 @@ class RequestQueueManager private constructor(
      * @param context Context to use
      * @return Number of parallel downloads (download thread count) chosen by the user
      */
-    private fun getPreferredThreadCount(context: Context): Int {
-        var result = Preferences.getDownloadThreadCount()
-        if (result == Preferences.Constant.DOWNLOAD_THREAD_COUNT_AUTO) {
+    private fun getPreferredThreadCount(context: Context, siteDlThreadCount: Int): Int {
+        var result = siteDlThreadCount
+        if (result == Settings.Value.DOWNLOAD_THREAD_COUNT_AUTO) {
             result = getSuggestedThreadCount(context)
         }
         return result

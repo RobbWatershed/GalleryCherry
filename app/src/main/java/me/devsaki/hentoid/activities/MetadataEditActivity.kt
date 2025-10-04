@@ -1,8 +1,6 @@
 package me.devsaki.hentoid.activities
 
-import android.graphics.Bitmap
 import android.graphics.Typeface
-import android.net.Uri
 import android.os.Bundle
 import android.view.MenuItem
 import android.view.View
@@ -13,10 +11,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.Transformation
-import com.bumptech.glide.load.resource.bitmap.CenterInside
-import com.bumptech.glide.request.RequestOptions
+import coil3.load
 import com.google.android.flexbox.AlignItems
 import com.google.android.flexbox.FlexWrap
 import com.google.android.flexbox.FlexboxLayoutManager
@@ -35,26 +30,29 @@ import com.skydoves.powermenu.PowerMenuItem
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.activities.bundles.AttributeItemBundle
 import me.devsaki.hentoid.activities.bundles.MetaEditActivityBundle
+import me.devsaki.hentoid.core.URL_GITHUB_WIKI_EDIT_METADATA
 import me.devsaki.hentoid.core.setOnTextChangedListener
+import me.devsaki.hentoid.core.startBrowserActivity
 import me.devsaki.hentoid.database.domains.Attribute
 import me.devsaki.hentoid.database.domains.AttributeMap
 import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.databinding.ActivityMetaEditBinding
 import me.devsaki.hentoid.enums.AttributeType
 import me.devsaki.hentoid.fragments.metadata.AttributeTypePickerDialogFragment
-import me.devsaki.hentoid.fragments.metadata.GalleyPickerDialogFragment
+import me.devsaki.hentoid.fragments.metadata.GalleryPickerDialogFragment
 import me.devsaki.hentoid.fragments.metadata.MetaEditBottomSheetFragment
 import me.devsaki.hentoid.fragments.metadata.MetaRenameDialogFragment
-import me.devsaki.hentoid.util.ContentHelper
-import me.devsaki.hentoid.util.Helper
-import me.devsaki.hentoid.util.ThemeHelper
+import me.devsaki.hentoid.util.applyTheme
+import me.devsaki.hentoid.util.dimensAsDp
+import me.devsaki.hentoid.util.getFlagResourceId
+import me.devsaki.hentoid.util.getThemedColor
 import me.devsaki.hentoid.viewholders.AttributeItem
 import me.devsaki.hentoid.viewholders.AttributeTypeFilterItem
 import me.devsaki.hentoid.viewmodels.MetadataEditViewModel
 import me.devsaki.hentoid.viewmodels.ViewModelFactory
 
 
-class MetadataEditActivity : BaseActivity(), GalleyPickerDialogFragment.Parent,
+class MetadataEditActivity : BaseActivity(), GalleryPickerDialogFragment.Parent,
     AttributeTypePickerDialogFragment.Parent, MetaRenameDialogFragment.Parent {
 
     // == Communication
@@ -122,7 +120,7 @@ class MetadataEditActivity : BaseActivity(), GalleyPickerDialogFragment.Parent,
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        ThemeHelper.applyTheme(this)
+        applyTheme()
 
         binding = ActivityMetaEditBinding.inflate(layoutInflater)
         binding?.let {
@@ -174,20 +172,20 @@ class MetadataEditActivity : BaseActivity(), GalleyPickerDialogFragment.Parent,
     }
 
     private fun updateAttrsFilter() {
-        val items = allAttributeTypes.map { attrType ->
+        val items = allAttributeTypes.map {
             AttributeTypeFilterItem(
-                attrType,
+                it,
                 selectedAttributeTypes.size < allAttributeTypes.size
-                        && selectedAttributeTypes.contains(attrType)
+                        && selectedAttributeTypes.contains(it)
             )
         }
         itemFilterAdapter.set(items)
     }
 
     private fun updateAttrsList() {
-        val items = contentAttributes.filter { a -> selectedAttributeTypes.contains(a.type) }
+        val items = contentAttributes.filter { selectedAttributeTypes.contains(it.type) }
             .sortedWith(compareBy({ it.type }, { -it.count }, { it.name }))
-            .map { attr -> AttributeItem(attr, contents.size > 1) }
+            .map { AttributeItem(it, contents.size > 1, true) }
 
         FastAdapterDiffUtil.set(itemAdapter, items, attributeItemDiffCallback)
     }
@@ -208,18 +206,9 @@ class MetadataEditActivity : BaseActivity(), GalleyPickerDialogFragment.Parent,
             } else {
                 it.ivCover.visibility = View.VISIBLE
                 if (thumbLocation.startsWith("http")) {
-                    val glideUrl = ContentHelper.bindOnlineCover(contents[0], thumbLocation)
-                    if (glideUrl != null) {
-                        Glide.with(it.ivCover)
-                            .load(glideUrl)
-                            .apply(glideRequestOptions)
-                            .into(it.ivCover)
-                    }
+                    it.ivCover.load(thumbLocation)
                 } else  // From stored picture
-                    Glide.with(it.ivCover)
-                        .load(Uri.parse(thumbLocation))
-                        .apply(glideRequestOptions)
-                        .into(it.ivCover)
+                    it.ivCover.load(thumbLocation)
             }
 
             // Flag (language)
@@ -235,7 +224,7 @@ class MetadataEditActivity : BaseActivity(), GalleyPickerDialogFragment.Parent,
         attrContainer.putAttributes(mergeAttributeMaps(contents, setOf(AttributeType.LANGUAGE)))
         if (1 == contents.size) {
             binding?.ivFlag?.visibility = View.VISIBLE
-            @DrawableRes val resId = ContentHelper.getFlagResourceId(this, attrContainer)
+            @DrawableRes val resId = getFlagResourceId(this, attrContainer)
             if (resId != 0) {
                 binding?.ivFlag?.setImageResource(resId)
             } else {
@@ -304,11 +293,11 @@ class MetadataEditActivity : BaseActivity(), GalleyPickerDialogFragment.Parent,
 
             // Flag
             it.ivFlag.setOnClickListener {
-                binding?.let { b2 ->
+                binding?.apply {
                     viewModel.setAttributeTypes(listOf(AttributeType.LANGUAGE))
-                    b2.titleNew.visibility = View.GONE
-                    b2.tags.visibility = View.VISIBLE
-                    b2.tagsFab.visibility = View.VISIBLE
+                    titleNew.visibility = View.GONE
+                    tags.visibility = View.VISIBLE
+                    tagsFab.visibility = View.VISIBLE
                 }
             }
 
@@ -322,20 +311,10 @@ class MetadataEditActivity : BaseActivity(), GalleyPickerDialogFragment.Parent,
                             BaseTransientBottomBar.LENGTH_SHORT
                         ).show()
                     } else {
-                        if (contents[0].isArchive) {
-                            Snackbar.make(
-                                b2.root,
-                                R.string.meta_cover_archive_warning,
-                                BaseTransientBottomBar.LENGTH_SHORT
-                            ).show()
-                        } else {
-                            val imgs = contents[0].imageFiles?.filter { i -> i.isReadable }
-                            if (imgs != null) {
-                                b2.titleNew.visibility = View.GONE
-                                b2.tagsFab.visibility = View.GONE
-                                GalleyPickerDialogFragment.invoke(supportFragmentManager, imgs)
-                            }
-                        }
+                        val imgs = contents[0].imageFiles.filter { i -> i.isReadable }
+                        b2.titleNew.visibility = View.GONE
+                        b2.tagsFab.visibility = View.GONE
+                        GalleryPickerDialogFragment.invoke(this, imgs)
                     }
                 }
             }
@@ -357,10 +336,12 @@ class MetadataEditActivity : BaseActivity(), GalleyPickerDialogFragment.Parent,
         }
     }
 
+    @Suppress("SameReturnValue")
     private fun onToolbarItemClicked(menuItem: MenuItem): Boolean {
         when (menuItem.itemId) {
             R.id.action_edit_confirm -> confirmEdit()
             R.id.action_edit_cancel -> cancelEdit()
+            R.id.help -> startBrowserActivity(URL_GITHUB_WIKI_EDIT_METADATA)
             else -> return true
         }
         return true
@@ -422,9 +403,9 @@ class MetadataEditActivity : BaseActivity(), GalleyPickerDialogFragment.Parent,
             .setLifecycleOwner(this)
             .setTextColor(ContextCompat.getColor(this, R.color.white_opacity_87))
             .setTextTypeface(Typeface.DEFAULT)
-            .setMenuColor(ContextCompat.getColor(this, R.color.dark_gray))
+            .setMenuColor(this.getThemedColor(R.color.subbar_1_light))
             .setWidth(resources.getDimension(R.dimen.popup_menu_width).toInt())
-            .setTextSize(Helper.dimensAsDp(this, R.dimen.text_subtitle_1))
+            .setTextSize(dimensAsDp(this, R.dimen.text_subtitle_1))
             .setAutoDismiss(true)
 
         if (contents.size > 1)
@@ -539,11 +520,5 @@ class MetadataEditActivity : BaseActivity(), GalleyPickerDialogFragment.Parent,
 
     override fun onRenameAttribute(newName: String, id: Long, createRule: Boolean) {
         viewModel.renameAttribute(newName, id, createRule)
-    }
-
-    companion object {
-        val centerInside: Transformation<Bitmap> = CenterInside()
-        val glideRequestOptions = RequestOptions()
-            .optionalTransform(centerInside)
     }
 }
