@@ -15,6 +15,10 @@ object RedditOAuthApiServer {
 
     lateinit var API: Api
 
+    init {
+        init()
+    }
+
     fun init() {
         API = Retrofit.Builder()
             .baseUrl(REDDIT_API_URL)

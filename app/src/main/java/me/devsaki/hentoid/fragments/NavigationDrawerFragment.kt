@@ -31,6 +31,7 @@ import me.devsaki.hentoid.activities.bundles.ReaderActivityBundle
 import me.devsaki.hentoid.activities.bundles.ToolsBundle
 import me.devsaki.hentoid.activities.settings.SettingsActivity
 import me.devsaki.hentoid.activities.settings.SettingsSourceSelectActivity
+import me.devsaki.hentoid.activities.sources.RedditLaunchActivity
 import me.devsaki.hentoid.activities.sources.WelcomeActivity
 import me.devsaki.hentoid.core.requireById
 import me.devsaki.hentoid.database.domains.Content
@@ -122,6 +123,11 @@ class NavigationDrawerFragment : Fragment(R.layout.fragment_navigation_drawer),
                         val site = Site.searchByCode(code)
                         if (!site.isVisible) {
                             launchActivity(WelcomeActivity::class.java)
+                        } else if (site == Site.REDDIT) { // Specific launcher for Reddit
+                            launchActivity(
+                                RedditLaunchActivity::class.java,
+                                reorderToFront = this@NavigationDrawerFragment.site.isVisible
+                            )
                         } else {
                             Timber.d("${this@NavigationDrawerFragment.site} ${this@NavigationDrawerFragment.site.isVisible}")
                             launchActivity(
