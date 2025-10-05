@@ -1529,33 +1529,32 @@ fun getRatingResourceId(rating: Int): Int {
 }
 
 /**
- * Format the given Content's artists for display
+ * Format the given Content's model for display
  *
  * @param context Context to use
- * @param content Content to get the formatted artists for
- * @return Given Content's artists formatted for display
+ * @param content Content to get the formatted model for
+ * @return Given Content's model formatted for display
  */
-fun formatArtistForDisplay(
+fun formatModelForDisplay(
     context: Context,
     content: Content
 ): String {
     val attributes: MutableList<Attribute> = ArrayList()
 
-    content.attributeMap[AttributeType.ARTIST]?.let { attributes.addAll(it) }
-    content.attributeMap[AttributeType.CIRCLE]?.let { attributes.addAll(it) }
+    content.attributeMap[AttributeType.MODEL]?.let { attributes.addAll(it) }
 
     if (attributes.isEmpty()) {
         return context.getString(
-            R.string.work_artist,
+            R.string.work_model,
             context.resources.getString(R.string.work_untitled)
         )
     } else {
-        val allArtists: MutableList<String?> = ArrayList()
+        val allModels: MutableList<String?> = ArrayList()
         for (attribute in attributes) {
-            allArtists.add(attribute.name)
+            allModels.add(attribute.name)
         }
-        val artists = TextUtils.join(", ", allArtists)
-        return context.getString(R.string.work_artist, artists)
+        val models = TextUtils.join(", ", allModels)
+        return context.getString(R.string.work_model, models)
     }
 }
 

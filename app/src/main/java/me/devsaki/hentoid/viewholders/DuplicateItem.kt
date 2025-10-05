@@ -20,7 +20,7 @@ import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.ui.BlinkAnimation
 import me.devsaki.hentoid.util.Settings
-import me.devsaki.hentoid.util.formatArtistForDisplay
+import me.devsaki.hentoid.util.formatModelForDisplay
 import me.devsaki.hentoid.util.getFlagResourceId
 import me.devsaki.hentoid.util.getRatingResourceId
 import me.devsaki.hentoid.util.getThemedColor
@@ -165,7 +165,7 @@ class DuplicateItem(result: DuplicateEntry, private val viewType: ViewType) :
         }
 
         private fun attachArtist(content: Content) {
-            tvArtist?.text = formatArtistForDisplay(tvArtist.context, content)
+            tvArtist?.text = formatModelForDisplay(tvArtist.context, content)
         }
 
         private fun attachPages(content: Content) {

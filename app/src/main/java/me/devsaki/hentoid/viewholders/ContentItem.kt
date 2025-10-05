@@ -43,7 +43,7 @@ import me.devsaki.hentoid.ui.BlinkAnimation
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.download.ContentQueueManager.isQueueActive
 import me.devsaki.hentoid.util.download.ContentQueueManager.isQueuePaused
-import me.devsaki.hentoid.util.formatArtistForDisplay
+import me.devsaki.hentoid.util.formatModelForDisplay
 import me.devsaki.hentoid.util.formatSeriesForDisplay
 import me.devsaki.hentoid.util.formatTagsForDisplay
 import me.devsaki.hentoid.util.generateIdForPlaceholder
@@ -241,7 +241,7 @@ class ContentItem : AbstractItem<ContentItem.ViewHolder>,
         private val ivCover: ImageView = view.requireById(R.id.ivCover)
         private val ivFlag: ImageView? = view.findViewById(R.id.ivFlag)
         private val ivSite: MaterialButton? = view.findViewById(R.id.queue_site_button)
-        private val tvArtist: TextView? = view.findViewById(R.id.tvArtist)
+        private val tvModel: TextView? = view.findViewById(R.id.tvArtist)
         private val ivPages: ImageView? = view.findViewById(R.id.ivPages)
         private val tvPages: TextView? = view.findViewById(R.id.tvPages)
         private val ivOnline: ImageView? = view.findViewById(R.id.ivOnline)
@@ -335,7 +335,7 @@ class ContentItem : AbstractItem<ContentItem.ViewHolder>,
             item.content?.let {
                 attachCompleted(it)
                 attachReadingProgress(it)
-                attachArtist(it)
+                attachModel(it)
                 attachSeries(it)
                 attachTags(it)
                 attachFlag(it, isGrid)
@@ -440,9 +440,9 @@ class ContentItem : AbstractItem<ContentItem.ViewHolder>,
             }
         }
 
-        private fun attachArtist(content: Content) {
-            tvArtist?.apply {
-                text = formatArtistForDisplay(context, content)
+        private fun attachModel(content: Content) {
+            tvModel?.apply {
+                text = formatModelForDisplay(context, content)
             }
         }
 

@@ -237,6 +237,7 @@
     <string name="work_untitled">[No data]</string>
     <string name="work_series">Series: <x:g example="original" id="series">%s</x:g></string>
     <string name="work_artist">Artist: <x:g example="hayao miyazaki" id="artist">%s</x:g></string>
+    <string name="work_model">Model: <x:g example="countrygirl" id="model">%s</x:g></string>
     <plurals name="work_pages_missing">
         <item quantity="one">(<x:g example="1" id="number">%d</x:g> missing)</item>
         <item quantity="other">(<x:g example="2" id="number">%d</x:g> missing)</item>

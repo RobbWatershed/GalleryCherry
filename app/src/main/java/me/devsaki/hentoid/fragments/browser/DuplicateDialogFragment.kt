@@ -17,7 +17,7 @@ import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.fragments.BaseDialogFragment
 import me.devsaki.hentoid.util.Settings
-import me.devsaki.hentoid.util.formatArtistForDisplay
+import me.devsaki.hentoid.util.formatModelForDisplay
 import me.devsaki.hentoid.util.getFlagResourceId
 import me.devsaki.hentoid.util.isInQueue
 import me.devsaki.hentoid.util.openReader
@@ -122,7 +122,7 @@ class DuplicateDialogFragment : BaseDialogFragment<DuplicateDialogFragment.Paren
             } else {
                 ivFlag.visibility = View.GONE
             }
-            tvArtist.text = formatArtistForDisplay(context, libraryContent)
+            tvArtist.text = formatModelForDisplay(context, libraryContent)
             tvPagesLibrary.visibility =
                 if (0 == libraryContent.qtyPages) View.INVISIBLE else View.VISIBLE
             val stringRes: Int =

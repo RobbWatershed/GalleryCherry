@@ -19,7 +19,7 @@ import me.devsaki.hentoid.R
 import me.devsaki.hentoid.database.ObjectBoxDAO
 import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.databinding.IncludeReaderContentBottomPanelBinding
-import me.devsaki.hentoid.util.formatArtistForDisplay
+import me.devsaki.hentoid.util.formatModelForDisplay
 import me.devsaki.hentoid.util.formatTagsForDisplay
 import me.devsaki.hentoid.util.openReader
 import me.devsaki.hentoid.util.setStyle
@@ -127,7 +127,7 @@ class ReaderContentBottomSheetFragment : BottomSheetDialogFragment() {
             }
 
             contentTitle.text = content.title
-            contentArtist.text = formatArtistForDisplay(requireContext(), content)
+            contentArtist.text = formatModelForDisplay(requireContext(), content)
             updateFavouriteDisplay(content.favourite)
             updateRatingDisplay(content.rating)
             val tagTxt = formatTagsForDisplay(content)
