@@ -359,8 +359,8 @@
     <string name="memory_title">Використання памʼяті</string>
     <string name="memory_total">Всього: <x:g id="total" example="100 МБ">%s</x:g></string>
     <string name="memory_free">Вільно: <x:g id="total" example="50 МБ">%s</x:g></string>
-    <string name="memory_GalleryCherry_main">GalleryCherry (основне сховище): <x:g id="total" example="2 МБ">%s</x:g></string>
-    <string name="memory_GalleryCherry_ext">GalleryCherry (зовнішнє сховище): <x:g id="total" example="3 МБ">%s</x:g></string>
+    <string name="memory_hentoid_main">GalleryCherry (основне сховище): <x:g id="total" example="2 МБ">%s</x:g></string>
+    <string name="memory_hentoid_ext">GalleryCherry (зовнішнє сховище): <x:g id="total" example="3 МБ">%s</x:g></string>
     <string name="memory_database">База даних: <x:g id="size_mb" example="1.52 МБ">%1$s</x:g> (заповнено на <x:g id="percentage" example="40%">%2$.1f%%</x:g>)</string>
     <string name="memory_details">Подробиці (основне сховище)</string>
     <string name="memory_details_source">Джерело</string>

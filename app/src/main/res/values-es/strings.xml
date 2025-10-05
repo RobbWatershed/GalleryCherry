@@ -601,8 +601,8 @@
     <string name="memory_details_size">Tamaño</string>
     <string name="memory_details_source">Origen</string>
     <string name="memory_free">Libre: %s</string>
-    <string name="memory_GalleryCherry_ext">GalleryCherry (externa): %s</string>
-    <string name="memory_GalleryCherry_main">GalleryCherry (principal): %s</string>
+    <string name="memory_hentoid_ext">GalleryCherry (externa): %s</string>
+    <string name="memory_hentoid_main">GalleryCherry (principal): %s</string>
     <string name="memory_title">Uso del almacenamiento</string>
     <string name="memory_total">Total: %s</string>
     <string name="menu_archive">Archivar</string>

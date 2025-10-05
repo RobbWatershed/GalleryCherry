@@ -79,15 +79,6 @@
             android:name=".activities.sources.PornPicsActivity"
             android:configChanges="orientation|screenSize" />
         <activity
-            android:name=".activities.sources.JpegworldActivity"
-            android:configChanges="orientation|screenSize" />
-        <activity
-            android:name=".activities.sources.NextpicturezActivity"
-            android:configChanges="orientation|screenSize" />
-        <activity
-            android:name=".activities.sources.HellpornoActivity"
-            android:configChanges="orientation|screenSize" />
-        <activity
             android:name=".activities.sources.PornPicGalleriesActivity"
             android:configChanges="orientation|screenSize" />
         <activity
@@ -103,9 +94,6 @@
             android:name=".activities.sources.JjgirlsActivity"
             android:configChanges="orientation|screenSize" />
         <activity
-            android:name=".activities.sources.Jjgirls2Activity"
-            android:configChanges="orientation|screenSize" />
-        <activity
             android:name=".activities.sources.BabeTodayActivity"
             android:configChanges="orientation|screenSize" />
         <activity
@@ -113,9 +101,6 @@
             android:configChanges="orientation|screenSize" />
         <activity
             android:name=".activities.sources.FapalityActivity"
-            android:configChanges="orientation|screenSize" />
-        <activity
-            android:name=".activities.sources.AsianSisterActivity"
             android:configChanges="orientation|screenSize" />
         <activity
             android:name=".activities.sources.JapBeautiesActivity"
@@ -219,7 +204,7 @@
         <activity
             android:name=".activities.TextIntentActivity"
             android:exported="true"
-            android:icon="@drawable/ic_hentoid"
+            android:icon="@drawable/ic_cherry_icon"
             android:label="@string/launch"
             android:theme="@style/Theme.Invisible">
             <intent-filter>

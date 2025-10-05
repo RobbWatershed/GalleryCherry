@@ -12,20 +12,20 @@ import io.objectbox.annotation.Uid
 import io.objectbox.converter.PropertyConverter
 import io.objectbox.relation.ToMany
 import io.objectbox.relation.ToOne
-import me.devsaki.hentoid.activities.sources.BabeTodayActivityK
+import me.devsaki.hentoid.activities.sources.BabeTodayActivity
 import me.devsaki.hentoid.activities.sources.BaseBrowserActivity
-import me.devsaki.hentoid.activities.sources.CosplayTeleActivityK
-import me.devsaki.hentoid.activities.sources.FapalityActivityK
-import me.devsaki.hentoid.activities.sources.JapBeautiesActivityK
-import me.devsaki.hentoid.activities.sources.Link2GalleriesActivityK
+import me.devsaki.hentoid.activities.sources.CosplayTeleActivity
+import me.devsaki.hentoid.activities.sources.FapalityActivity
+import me.devsaki.hentoid.activities.sources.JapBeautiesActivity
+import me.devsaki.hentoid.activities.sources.Link2GalleriesActivity
 import me.devsaki.hentoid.activities.sources.LusciousActivity
-import me.devsaki.hentoid.activities.sources.PicsXActivityK
-import me.devsaki.hentoid.activities.sources.PornPicGalleriesActivityK
-import me.devsaki.hentoid.activities.sources.PornPicsActivityK
-import me.devsaki.hentoid.activities.sources.RedditActivityK
-import me.devsaki.hentoid.activities.sources.SxyPixActivityK
-import me.devsaki.hentoid.activities.sources.XhamsterActivityK
-import me.devsaki.hentoid.activities.sources.XnxxActivityK
+import me.devsaki.hentoid.activities.sources.PicsXActivity
+import me.devsaki.hentoid.activities.sources.PornPicGalleriesActivity
+import me.devsaki.hentoid.activities.sources.PornPicsActivity
+import me.devsaki.hentoid.activities.sources.RedditActivity
+import me.devsaki.hentoid.activities.sources.SxyPixActivity
+import me.devsaki.hentoid.activities.sources.XhamsterActivity
+import me.devsaki.hentoid.activities.sources.XnxxActivity
 import me.devsaki.hentoid.database.domains.ImageFile.Companion.fromImageUrl
 import me.devsaki.hentoid.database.safeReach
 import me.devsaki.hentoid.enums.Grouping
@@ -173,20 +173,20 @@ data class Content(
     companion object {
         fun getWebActivityClass(site: Site): Class<out AppCompatActivity> {
             return when (site) {
-                Site.XHAMSTER -> XhamsterActivityK::class.java
-                Site.XNXX -> XnxxActivityK::class.java
-                Site.PORNPICS -> PornPicsActivityK::class.java
-                Site.PORNPICGALLERIES -> PornPicGalleriesActivityK::class.java
-                Site.LINK2GALLERIES -> Link2GalleriesActivityK::class.java
-                Site.REDDIT -> RedditActivityK::class.java
-                Site.JJGIRLS -> SxyPixActivityK::class.java
-                Site.BABETODAY -> BabeTodayActivityK::class.java
+                Site.XHAMSTER -> XhamsterActivity::class.java
+                Site.XNXX -> XnxxActivity::class.java
+                Site.PORNPICS -> PornPicsActivity::class.java
+                Site.PORNPICGALLERIES -> PornPicGalleriesActivity::class.java
+                Site.LINK2GALLERIES -> Link2GalleriesActivity::class.java
+                Site.REDDIT -> RedditActivity::class.java
+                Site.JJGIRLS -> SxyPixActivity::class.java
+                Site.BABETODAY -> BabeTodayActivity::class.java
                 Site.LUSCIOUS -> LusciousActivity::class.java
-                Site.FAPALITY -> FapalityActivityK::class.java
-                Site.JAPBEAUTIES -> JapBeautiesActivityK::class.java
-                Site.SXYPIX -> SxyPixActivityK::class.java
-                Site.PICS_X -> PicsXActivityK::class.java
-                Site.COSPLAYTELE -> CosplayTeleActivityK::class.java
+                Site.FAPALITY -> FapalityActivity::class.java
+                Site.JAPBEAUTIES -> JapBeautiesActivity::class.java
+                Site.SXYPIX -> SxyPixActivity::class.java
+                Site.PICS_X -> PicsXActivity::class.java
+                Site.COSPLAYTELE -> CosplayTeleActivity::class.java
                 else -> BaseBrowserActivity::class.java
             }
         }

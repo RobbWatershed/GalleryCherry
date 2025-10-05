@@ -6,7 +6,7 @@ private const val DOMAIN_FILTER = "xhamster.com"
 private val GALLERY_FILTER = arrayOf("/gallery/(?!null)")
 private val DIRTY_ELEMENTS = arrayOf("section.advertisement")
 
-class XhamsterActivityK : BaseBrowserActivity() {
+class XhamsterActivity : BaseBrowserActivity() {
     override fun getStartSite(): Site {
         return Site.XHAMSTER
     }

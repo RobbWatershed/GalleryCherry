@@ -562,8 +562,8 @@
     <string name="memory_details_size">Storlek</string>
     <string name="memory_details_source">Källa</string>
     <string name="memory_free">Fritt: %s</string>
-    <string name="memory_GalleryCherry_ext">GalleryCherry (extern): %s</string>
-    <string name="memory_GalleryCherry_main">GalleryCherry (primär): %s</string>
+    <string name="memory_hentoid_ext">GalleryCherry (extern): %s</string>
+    <string name="memory_hentoid_main">GalleryCherry (primär): %s</string>
     <string name="memory_title">Användning av lagring</string>
     <string name="memory_total">Totalt: %s</string>
     <string name="menu_archive">Arkiv</string>

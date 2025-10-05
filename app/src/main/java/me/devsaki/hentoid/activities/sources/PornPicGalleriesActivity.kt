@@ -4,7 +4,7 @@ import me.devsaki.hentoid.enums.Site
 
 private val GALLERY_FILTER = arrayOf(".*")
 
-class PornPicGalleriesActivityK : BaseBrowserActivity() {
+class PornPicGalleriesActivity : BaseBrowserActivity() {
     override fun getStartSite(): Site {
         return Site.PORNPICGALLERIES
     }

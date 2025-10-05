@@ -7,7 +7,7 @@ private val GALLERY_FILTER = arrayOf("cosplaytele.com/[\\w-]+/$")
 private val DIRTY_ELEMENTS = arrayOf<String>()
 private val JS_CONTENT_BLACKLIST = arrayOf("mobilePopunderTargetBlankLinks")
 
-class CosplayTeleActivityK : BaseBrowserActivity() {
+class CosplayTeleActivity : BaseBrowserActivity() {
     override fun getStartSite(): Site {
         return Site.COSPLAYTELE
     }

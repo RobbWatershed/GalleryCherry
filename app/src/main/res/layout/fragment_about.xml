@@ -15,7 +15,7 @@
             android:id="@+id/appLogo"
             android:layout_width="120dp"
             android:layout_height="120dp"
-            android:src="@drawable/ic_hentoid"
+            android:src="@drawable/ic_cherry_icon"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             tools:ignore="ContentDescription" />
@@ -30,7 +30,7 @@
             app:layout_constraintHorizontal_bias="0.0"
             app:layout_constraintStart_toEndOf="@id/appLogo"
             app:layout_constraintTop_toTopOf="parent"
-            tools:text="Hentoid X.X.X (bbb)" />
+            tools:text="GalleryCherry X.X.X (bbb)" />
 
         <TextView
             android:id="@+id/tv_chrome_version_name"

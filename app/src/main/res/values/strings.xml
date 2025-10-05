@@ -462,8 +462,8 @@
     <string name="memory_title">Storage usage</string>
     <string name="memory_total">Total: <x:g example="100 MB" id="total">%s</x:g></string>
     <string name="memory_free">Free: <x:g example="50 MB" id="total">%s</x:g></string>
-    <string name="memory_GalleryCherry_main">GalleryCherry (primary): <x:g example="2 MB" id="total">%s</x:g></string>
-    <string name="memory_GalleryCherry_ext">GalleryCherry (external): <x:g example="3 MB" id="total">%s</x:g></string>
+    <string name="memory_hentoid_main">GalleryCherry (primary): <x:g example="2 MB" id="total">%s</x:g></string>
+    <string name="memory_hentoid_ext">GalleryCherry (external): <x:g example="3 MB" id="total">%s</x:g></string>
     <string name="memory_database">Database: <x:g example="1.52 MB" id="size_mb">%1$s</x:g> (<x:g example="40%" id="percentage">%2$.1f%%</x:g> full)</string>
     <string name="memory_details">View details (primary)</string>
     <string name="memory_details_source">Source</string>

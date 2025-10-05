@@ -6,7 +6,7 @@ private const val DOMAIN_FILTER = "fapality.com"
 private val GALLERY_FILTER = arrayOf("fapality.com/.*/[0-9]+/.*/\$")
 private val DIRTY_ELEMENTS = arrayOf(".had\",\"a[rel^='nofollow noopener']")
 
-class FapalityActivityK : BaseBrowserActivity() {
+class FapalityActivity : BaseBrowserActivity() {
     override fun getStartSite(): Site {
         return Site.FAPALITY
     }

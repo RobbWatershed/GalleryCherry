@@ -6,7 +6,7 @@ private const val DOMAIN_FILTER = "babe.today"
 private val GALLERY_FILTER =
     arrayOf("https://babe.today/[%\\w\\-_/]+$", "https://m.babe.today/[%\\w\\-_/]+$")
 
-class BabeTodayActivityK : BaseBrowserActivity() {
+class BabeTodayActivity : BaseBrowserActivity() {
     override fun getStartSite(): Site {
         return Site.BABETODAY
     }

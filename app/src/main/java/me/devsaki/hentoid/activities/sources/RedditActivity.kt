@@ -27,7 +27,7 @@ private const val DOMAIN_FILTER = "reddit.com"
 private val GALLERY_FILTER = arrayOf("§§§")
 private const val OAUTH_REDIRECT_URL = "https://github.com/RobbWatershed/GalleryCherry"
 
-class RedditActivityK : BaseBrowserActivity() {
+class RedditActivity : BaseBrowserActivity() {
     override fun getStartSite(): Site {
         return Site.REDDIT
     }

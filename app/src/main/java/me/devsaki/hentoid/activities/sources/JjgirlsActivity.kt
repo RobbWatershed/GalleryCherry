@@ -6,7 +6,7 @@ private const val DOMAIN_FILTER = "jjgirls.com"
 private val GALLERY_FILTER = arrayOf("jjgirls.com/.*/.*/.*/$")
 private val DIRTY_ELEMENTS = arrayOf(".unit-main", ".unit-dt-blk", ".unit-mobblk")
 
-class JjgirlsActivityK : BaseBrowserActivity() {
+class JjgirlsActivity : BaseBrowserActivity() {
     override fun getStartSite(): Site {
         return Site.JJGIRLS
     }

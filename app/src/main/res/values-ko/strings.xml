@@ -291,8 +291,8 @@
     <string name="memory_title">저장공간 사용량</string>
     <string name="memory_total">전체 공간: %s</string>
     <string name="memory_free">잔여 공간: %s</string>
-    <string name="memory_GalleryCherry_main">GalleryCherry (기본): %s</string>
-    <string name="memory_GalleryCherry_ext">GalleryCherry (외부): %s</string>
+    <string name="memory_hentoid_main">GalleryCherry (기본): %s</string>
+    <string name="memory_hentoid_ext">GalleryCherry (외부): %s</string>
     <string name="memory_database">데이터베이스: %1$s (%2$.1f%% 사용)</string>
     <string name="memory_details">상세 정보 보기 (기본)</string>
     <string name="memory_details_source">대상</string>

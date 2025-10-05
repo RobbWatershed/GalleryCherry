@@ -6,7 +6,7 @@ private const val DOMAIN_FILTER = "pics-x.com"
 private val GALLERY_FILTER = arrayOf("pics-x.com/gallery/[\\w_%\\-]+")
 private val DIRTY_ELEMENTS = arrayOf(".unit-main", ".unit-dt-blk", ".unit-mobblk")
 
-class PicsXActivityK : BaseBrowserActivity() {
+class PicsXActivity : BaseBrowserActivity() {
     override fun getStartSite(): Site {
         return Site.PICS_X
     }

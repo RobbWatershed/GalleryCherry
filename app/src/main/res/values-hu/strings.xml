@@ -336,8 +336,8 @@
 <string name="memory_title">Tárhely használat</string>
     <string name="memory_total">Összesen: <x:g example="100 MB" id="total">%s</x:g></string>
     <string name="memory_free">Szabad: <x:g example="50 MB" id="total">%s</x:g></string>
-    <string name="memory_GalleryCherry_main">GalleryCherry (elsődleges): <x:g example="2 MB" id="total">%s</x:g></string>
-    <string name="memory_GalleryCherry_ext">GalleryCherry (külső): <x:g example="3 MB" id="total">%s</x:g></string>
+    <string name="memory_hentoid_main">GalleryCherry (elsődleges): <x:g example="2 MB" id="total">%s</x:g></string>
+    <string name="memory_hentoid_ext">GalleryCherry (külső): <x:g example="3 MB" id="total">%s</x:g></string>
     <string name="memory_database">Adatbázis: <x:g example="1.52 MB" id="size_mb">%1$s</x:g> (<x:g example="40%" id="percentage">%2$.1f%%</x:g> tele)</string>
     <string name="memory_details">Részletek megtekintése (elsődleges)</string>
     <string name="memory_details_source">Forrás</string>

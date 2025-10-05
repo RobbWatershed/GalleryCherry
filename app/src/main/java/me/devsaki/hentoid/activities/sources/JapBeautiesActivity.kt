@@ -7,7 +7,7 @@ private val GALLERY_FILTER =
     arrayOf("japanesebeauties.one/[\\w_%\\-]+/[\\w_%\\-]+/[\\w_%\\-]+/([\\w_%\\-]+){0,1}$")
 private val DIRTY_ELEMENTS = arrayOf(".unit-main", ".unit-dt-blk", ".unit-mobblk")
 
-class JapBeautiesActivityK : BaseBrowserActivity() {
+class JapBeautiesActivity : BaseBrowserActivity() {
     override fun getStartSite(): Site {
         return Site.JAPBEAUTIES
     }

@@ -291,8 +291,8 @@
     <string name="memory_title">ストレージの使用量</string>
     <string name="memory_total">合計：%s</string>
     <string name="memory_free">この端末で使用できる残りの空き容量：%s</string>
-    <string name="memory_GalleryCherry_main">GalleryCherry (一次): %s</string>
-    <string name="memory_GalleryCherry_ext">GalleryCherry(外部): %s</string>
+    <string name="memory_hentoid_main">GalleryCherry (一次): %s</string>
+    <string name="memory_hentoid_ext">GalleryCherry(外部): %s</string>
     <string name="memory_database">データベース：%1$s (%2$.1f%% 満杯)</string>
     <string name="memory_details">詳細を表示（プライマリ）</string>
     <string name="memory_details_source">ソース</string>
