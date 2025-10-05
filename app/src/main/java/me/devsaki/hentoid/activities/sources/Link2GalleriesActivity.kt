@@ -2,7 +2,7 @@ package me.devsaki.hentoid.activities.sources
 
 import me.devsaki.hentoid.enums.Site
 
-private val GALLERY_FILTER = arrayOf(".*")
+private val GALLERY_FILTER = emptyArray<String>()
 
 class Link2GalleriesActivity : BaseBrowserActivity() {
     override fun getStartSite(): Site {

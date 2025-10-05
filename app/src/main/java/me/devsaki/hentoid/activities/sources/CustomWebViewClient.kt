@@ -317,8 +317,9 @@ open class CustomWebViewClient : WebViewClient {
      * @return True if the given URL represents a book gallery page
      */
     open fun isGalleryPage(url: String): Boolean {
-        if (galleryUrlPattern.isEmpty()) return false
-        if (url != mainPageUrl) return false // Warning : this breaks asynchronous calls
+        // Specific case when there's no gallery filter
+        if (galleryUrlPattern.isEmpty()) return (url == mainPageUrl)
+
         for (p in galleryUrlPattern) {
             val matcher = p.matcher(url)
             if (matcher.find()) return true
