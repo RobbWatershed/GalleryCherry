@@ -1,86 +1,98 @@
-package me.devsaki.hentoid.parsers.content;
+package me.devsaki.hentoid.parsers.content
 
-import androidx.annotation.NonNull;
+import me.devsaki.hentoid.database.domains.Attribute
+import me.devsaki.hentoid.database.domains.AttributeMap
+import me.devsaki.hentoid.database.domains.Content
+import me.devsaki.hentoid.database.domains.ImageFile
+import me.devsaki.hentoid.enums.AttributeType
+import me.devsaki.hentoid.enums.Site
+import me.devsaki.hentoid.enums.StatusContent
+import me.devsaki.hentoid.parsers.parseAttributes
+import org.jsoup.nodes.Element
+import pl.droidsonroids.jspoon.annotation.Selector
 
-import org.jsoup.nodes.Element;
+private const val PORNSTARS_MARKER = "Pornstars : "
+private const val TAGS_MARKER = " - Tags : "
 
-import java.util.ArrayList;
-import java.util.List;
-
-import javax.annotation.Nonnull;
-
-import me.devsaki.hentoid.database.domains.Attribute;
-import me.devsaki.hentoid.database.domains.AttributeMap;
-import me.devsaki.hentoid.database.domains.Content;
-import me.devsaki.hentoid.database.domains.ImageFile;
-import me.devsaki.hentoid.enums.AttributeType;
-import me.devsaki.hentoid.enums.Site;
-import me.devsaki.hentoid.enums.StatusContent;
-import me.devsaki.hentoid.parsers.ParseHelper;
-import pl.droidsonroids.jspoon.annotation.Selector;
-
-public class XnxxContent extends BaseContentParser {
-
-    private static String PORNSTARS_MARKER = "Pornstars : ";
-    private static String TAGS_MARKER = " - Tags : ";
+class XnxxContentK : BaseContentParser() {
 
     @Selector(value = "head meta[name='twitter:url']", attr = "content", defValue = "")
-    private String galleryUrl;
+    private lateinit var galleryUrl: String
+
     @Selector(value = "head title")
-    private String title;
+    private var title: String? = null
+
     @Selector(value = ".descriptionGalleryPage")
-    private String rawMetadata;
+    private var rawMetadata: String? = null
+
     @Selector(value = ".descriptionGalleryPage a")
-    private List<Element> tags;
+    private var tags: MutableList<Element>? = null
+
     @Selector(value = ".downloadLink", attr = "href")
-    private List<String> imageLinks;
+    private var imageLinks: MutableList<String>? = null
 
 
-    public Content update(@NonNull final Content content, @Nonnull String url, boolean updateImages) {
-        content.setSite(Site.XNXX);
+    override fun update(content: Content, url: String, updateImages: Boolean): Content {
+        content.site = Site.XNXX
 
-        int galleryIndex = title.lastIndexOf("gallery");
-        if (galleryIndex > -1)
-            content.setTitle(title.substring(0, title.lastIndexOf("gallery") - 1));
-        else content.setTitle(title);
+        title?.let {
+            val galleryIndex = it.lastIndexOf("gallery")
+            if (galleryIndex > -1) content.title = it.substring(0, it.lastIndexOf("gallery") - 1)
+            else content.title = it
+        }
 
-        String theUrl = galleryUrl.isEmpty() ? url : galleryUrl;
-        content.setUrl(theUrl.replace(Site.XNXX.getUrl(), "").replace("gallery/", ""));
+        val theUrl = galleryUrl.ifEmpty { url }
+        content.url = theUrl.replace(Site.XNXX.url, "").replace("gallery/", "")
 
-        AttributeMap attributes = new AttributeMap();
+        val attributes = AttributeMap()
+
 
         // Models
-        if (rawMetadata != null && rawMetadata.contains(PORNSTARS_MARKER)) {
-            int tagsPosition = rawMetadata.indexOf(TAGS_MARKER);
+        rawMetadata?.let { rm ->
+            if (rm.contains(PORNSTARS_MARKER)) {
+                val tagsPosition = rm.indexOf(TAGS_MARKER)
+                val stars = if (tagsPosition > -1) rm.substring(0, tagsPosition)
+                    .replace(PORNSTARS_MARKER, "")
+                    .split(",")
+                else rm.replace(PORNSTARS_MARKER, "").split(",")
 
-            String[] stars;
-            if (tagsPosition > -1)
-                stars = rawMetadata.substring(0, tagsPosition).replace(PORNSTARS_MARKER, "").split(",");
-            else
-                stars = rawMetadata.replace(PORNSTARS_MARKER, "").split(",");
-
-            for (String s : stars) {
-                attributes.add(new Attribute(AttributeType.MODEL, s.trim(), "/" + s.trim(), Site.XNXX));
+                for (s in stars) {
+                    attributes.add(
+                        Attribute(
+                            AttributeType.MODEL,
+                            s.trim(),
+                            "/" + s.trim(),
+                            Site.XNXX
+                        )
+                    )
+                }
             }
         }
 
         if (tags != null) {
-            ParseHelper.parseAttributes(attributes, AttributeType.TAG, tags, true, Site.XNXX);
+            parseAttributes(attributes, AttributeType.TAG, tags, true, Site.XNXX)
         }
-        content.addAttributes(attributes);
+        content.addAttributes(attributes)
 
         if (updateImages) {
-            List<ImageFile> images = new ArrayList<>();
+            val images: MutableList<ImageFile> = ArrayList()
 
-            int order = 1;
-            for (String s : imageLinks) {
-                images.add(ImageFile.fromImageUrl(order++, s, StatusContent.SAVED, imageLinks.size()));
+            var order = 1
+            imageLinks?.forEach { s ->
+                images.add(
+                    ImageFile.fromImageUrl(
+                        order++,
+                        s,
+                        StatusContent.SAVED,
+                        imageLinks!!.size
+                    )
+                )
             }
-            if (images.size() > 0) content.setCoverImageUrl(images.get(0).getUrl());
-            content.setImageFiles(images);
-            content.setQtyPages(images.size());
+            if (images.isNotEmpty()) content.coverImageUrl = images[0].url
+            content.setImageFiles(images)
+            content.qtyPages = images.size
         }
 
-        return content;
+        return content
     }
 }

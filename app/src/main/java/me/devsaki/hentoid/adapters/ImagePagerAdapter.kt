@@ -17,7 +17,6 @@ import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
 import coil3.SingletonImageLoader
 import coil3.dispose
 import coil3.executeBlocking

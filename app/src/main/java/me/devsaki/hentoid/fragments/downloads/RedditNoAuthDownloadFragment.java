@@ -1,5 +1,7 @@
 package me.devsaki.hentoid.fragments.downloads;
 
+import static androidx.core.view.ViewCompat.requireViewById;
+
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -12,10 +14,8 @@ import androidx.fragment.app.Fragment;
 import me.devsaki.hentoid.R;
 import me.devsaki.hentoid.database.domains.Content;
 import me.devsaki.hentoid.enums.Site;
-import me.devsaki.hentoid.util.ContentHelper;
-import me.devsaki.hentoid.util.OauthSessionManager;
-
-import static androidx.core.view.ViewCompat.requireViewById;
+import me.devsaki.hentoid.util.ContentHelperKt;
+import me.devsaki.hentoid.util.OAuthSessionManager;
 
 public class RedditNoAuthDownloadFragment extends Fragment {
 
@@ -57,9 +57,8 @@ public class RedditNoAuthDownloadFragment extends Fragment {
         button.setOnClickListener(v -> onNoAuthClick());
     }
 
-    private void onNoAuthClick()
-    {
-        OauthSessionManager.OauthSession session = OauthSessionManager.getInstance().addSession(Site.REDDIT);
+    private void onNoAuthClick() {
+        OAuthSessionManager.OauthSession session = OAuthSessionManager.INSTANCE.addSession(Site.REDDIT);
         session.setState(Double.toString(Math.random()));
         session.setClientId(CLIENT_ID);
         session.setRedirectUri(REDIRECT_URI);
@@ -70,6 +69,6 @@ public class RedditNoAuthDownloadFragment extends Fragment {
         Content content = new Content();
         content.setSite(Site.REDDIT);
         content.setUrl(authUrl);
-        ContentHelper.viewContentGalleryPage(requireContext(), content, true);
+        ContentHelperKt.viewContentGalleryPage(requireContext(), content, true);
     }
 }

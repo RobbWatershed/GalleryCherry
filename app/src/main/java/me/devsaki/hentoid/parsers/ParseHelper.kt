@@ -158,7 +158,7 @@ private fun parseAttribute(
         element.ownText()
     } else {
         val e = element.selectFirst(".$childElementClass")
-        if (e != null) e.ownText() else ""
+        e?.ownText() ?: ""
     }
     name = cleanup(name)
     name = removeBrackets(name)

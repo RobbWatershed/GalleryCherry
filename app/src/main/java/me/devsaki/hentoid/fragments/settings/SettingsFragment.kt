@@ -37,11 +37,10 @@ import me.devsaki.hentoid.core.startLocalActivity
 import me.devsaki.hentoid.core.withArguments
 import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.enums.Theme
-import me.devsaki.hentoid.retrofit.DeviantArtServer
 import me.devsaki.hentoid.retrofit.GithubServer
-import me.devsaki.hentoid.retrofit.sources.EHentaiServer
+import me.devsaki.hentoid.retrofit.RedditOAuthApiServer
+import me.devsaki.hentoid.retrofit.RedditPublicApiServer
 import me.devsaki.hentoid.retrofit.sources.LusciousServer
-import me.devsaki.hentoid.retrofit.sources.PixivServer
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.applyTheme
 import me.devsaki.hentoid.util.download.DownloadSpeedLimiter
@@ -264,10 +263,9 @@ class SettingsFragment : PreferenceFragmentCompat(),
                 RequestQueueManager.getInstance()?.resetRequestQueue(true)
                 // Reset all retrofit clients
                 GithubServer.init()
-                EHentaiServer.init()
                 LusciousServer.init()
-                PixivServer.init()
-                DeviantArtServer.init()
+                RedditOAuthApiServer.init()
+                RedditPublicApiServer.init()
             }
         }
     }

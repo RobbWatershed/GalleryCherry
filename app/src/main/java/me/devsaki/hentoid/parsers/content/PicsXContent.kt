@@ -1,48 +1,46 @@
-package me.devsaki.hentoid.parsers.content;
+package me.devsaki.hentoid.parsers.content
 
-import androidx.annotation.NonNull;
+import me.devsaki.hentoid.database.domains.Content
+import me.devsaki.hentoid.database.domains.ImageFile
+import me.devsaki.hentoid.enums.Site
+import me.devsaki.hentoid.enums.StatusContent
+import me.devsaki.hentoid.parsers.images.PicsXParser
+import me.devsaki.hentoid.parsers.urlsToImageFiles
+import org.jsoup.nodes.Element
+import pl.droidsonroids.jspoon.annotation.Selector
 
-import org.jsoup.nodes.Element;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import javax.annotation.Nonnull;
-
-import me.devsaki.hentoid.database.domains.Content;
-import me.devsaki.hentoid.database.domains.ImageFile;
-import me.devsaki.hentoid.enums.Site;
-import me.devsaki.hentoid.enums.StatusContent;
-import me.devsaki.hentoid.parsers.ParseHelper;
-import me.devsaki.hentoid.parsers.images.PicsXParser;
-import pl.droidsonroids.jspoon.annotation.Selector;
-
-public class PicsXContent extends BaseContentParser {
+class PicsXContent : BaseContentParser() {
 
     @Selector(value = "head [property=og:title]", attr = "content", defValue = "")
-    private String title;
+    private lateinit var title: String
 
     @Selector(value = ".image-container img")
-    private List<Element> images;
+    private var images: MutableList<Element>? = null
 
     @Selector(value = "#images-container script")
-    private List<Element> imageData;
+    private var imageData: MutableList<Element>? = null
 
-    public Content update(@NonNull final Content content, @Nonnull String url, boolean updateImages) {
-        content.setSite(Site.PICS_X);
-        content.setUrl(url.replace(Site.PICS_X.getUrl() + "gallery", ""));
-        content.setTitle(title);
+    override fun update(content: Content, url: String, updateImages: Boolean): Content {
+        content.site = Site.PICS_X
+        content.url = url.replace(Site.PICS_X.url + "gallery", "")
+        content.title = title
 
         if (updateImages) {
-            List<ImageFile> imageFiles = new ArrayList<>();
-            List<String> imgUrls = PicsXParser.parseImages(images, imageData);
-            if (!imgUrls.isEmpty())
-                imageFiles.addAll(ParseHelper.urlsToImageFiles(imgUrls, imgUrls.get(0), StatusContent.SAVED));
+            val imageFiles: MutableList<ImageFile> = ArrayList()
+            val imgUrls =
+                PicsXParser.parseImages(images ?: mutableListOf(), imageData ?: mutableListOf())
+            if (!imgUrls.isEmpty()) imageFiles.addAll(
+                urlsToImageFiles(
+                    imgUrls,
+                    imgUrls[0],
+                    StatusContent.SAVED
+                )
+            )
 
-            content.setImageFiles(imageFiles);
-            content.setQtyPages(imageFiles.size() - 1);
+            content.setImageFiles(imageFiles)
+            content.qtyPages = imageFiles.size - 1
         }
 
-        return content;
+        return content
     }
 }

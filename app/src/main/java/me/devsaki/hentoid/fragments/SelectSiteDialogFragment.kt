@@ -95,7 +95,7 @@ class SelectSiteDialogFragment : BaseDialogFragment<SelectSiteDialogFragment.Par
         val userTxt = resources.getString(R.string.user_generic).lowercase()
         sites.forEach {
             items.add(DrawerItem.fromSite(it))
-            if (showAltSites && it == Site.PIXIV) {
+            if (showAltSites) {
                 val item = DrawerItem<Site>(
                     it.description.uppercase() + " ($userTxt)",
                     it.ico,

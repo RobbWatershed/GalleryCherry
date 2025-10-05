@@ -1,196 +1,205 @@
-package me.devsaki.hentoid.fragments.downloads;
+package me.devsaki.hentoid.fragments.downloads
 
-import static androidx.core.view.ViewCompat.requireViewById;
-import static io.reactivex.android.schedulers.AndroidSchedulers.mainThread;
+import android.content.Intent
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.TextView
+import androidx.core.view.ViewCompat
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import me.devsaki.hentoid.R
+import me.devsaki.hentoid.activities.QueueActivity
+import me.devsaki.hentoid.database.CollectionDAO
+import me.devsaki.hentoid.database.ObjectBoxDAO
+import me.devsaki.hentoid.database.domains.Content
+import me.devsaki.hentoid.database.domains.ImageFile
+import me.devsaki.hentoid.enums.Site
+import me.devsaki.hentoid.enums.StatusContent
+import me.devsaki.hentoid.parsers.urlsToImageFiles
+import me.devsaki.hentoid.retrofit.RedditOAuthApiServer
+import me.devsaki.hentoid.util.OAuthSessionManager
+import me.devsaki.hentoid.util.download.ContentQueueManager.resumeQueue
+import me.devsaki.hentoid.util.image.isSupportedImage
+import timber.log.Timber
+import java.util.Collections
 
-import android.content.Intent;
-import android.os.Bundle;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.TextView;
+class RedditAuthDownloadFragment : Fragment() {
+    private var imgCount: TextView? = null
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.fragment.app.Fragment;
+    private var currentContent: Content? = null
 
-import com.annimon.stream.Stream;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
-import io.reactivex.disposables.CompositeDisposable;
-import me.devsaki.hentoid.R;
-import me.devsaki.hentoid.activities.QueueActivity;
-import me.devsaki.hentoid.database.CollectionDAO;
-import me.devsaki.hentoid.database.ObjectBoxDAO;
-import me.devsaki.hentoid.database.domains.Content;
-import me.devsaki.hentoid.database.domains.ImageFile;
-import me.devsaki.hentoid.database.domains.QueueRecord;
-import me.devsaki.hentoid.enums.Site;
-import me.devsaki.hentoid.enums.StatusContent;
-import me.devsaki.hentoid.parsers.ParseHelper;
-import me.devsaki.hentoid.retrofit.RedditOAuthApiServer;
-import me.devsaki.hentoid.util.OauthSessionManager;
-import me.devsaki.hentoid.util.download.ContentQueueManager;
-import me.devsaki.hentoid.util.image.ImageHelper;
-import me.devsaki.hentoid.util.network.HttpHelper;
-import timber.log.Timber;
-
-public class RedditAuthDownloadFragment extends Fragment {
-
-    private final CompositeDisposable compositeDisposable = new CompositeDisposable();
-    private TextView imgCount;
-
-    private Content currentContent = null;
-    private List<ImageFile> imageSet = null; // Set of existing and new images of the Reddit album
-    private CollectionDAO db = null;
+    // Set of existing and new images of the Reddit album
+    private var imageSet: MutableList<ImageFile>? = null
+    private var db: CollectionDAO? = null
 
 
-    static RedditAuthDownloadFragment newInstance() {
-        RedditAuthDownloadFragment f = new RedditAuthDownloadFragment();
+    companion object {
+        fun newInstance(): RedditAuthDownloadFragment {
+            val f = RedditAuthDownloadFragment()
 
-        Bundle args = new Bundle();
-        f.setArguments(args);
+            val args = Bundle()
+            f.setArguments(args)
 
-        return f;
+            return f
+        }
     }
 
-    @Nullable
-    @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedState) {
-        return inflater.inflate(R.layout.fragment_reddit_download_auth, container, false);
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedState: Bundle?
+    ): View? {
+        return inflater.inflate(R.layout.fragment_reddit_download_auth, container, false)
     }
 
-    @Override
-    public void onDestroyView() {
-        compositeDisposable.clear();
-        super.onDestroyView();
+    override fun onDestroyView() {
+        db?.cleanup()
+        super.onDestroyView()
     }
 
-    @Override
-    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
-        imgCount = requireViewById(view, R.id.reddit_auth_img_count);
+        imgCount = ViewCompat.requireViewById<TextView?>(view, R.id.reddit_auth_img_count)
 
-        View button = requireViewById(view, R.id.reddit_auth_action);
-        button.setOnClickListener(v -> onDownloadClick());
+        val button: View = ViewCompat.requireViewById(view, R.id.reddit_auth_action)
+        button.setOnClickListener { v -> onDownloadClick() }
 
         // Load saved items
-        OauthSessionManager.OauthSession session = OauthSessionManager.getInstance().getSessionBySite(Site.REDDIT);
+        val session = OAuthSessionManager.getSessionBySite(Site.REDDIT)
         if (session != null) {
-            compositeDisposable.add(
-                    RedditOAuthApiServer.API.getUserSavedPosts(session.getUserName(), "bearer " + session.getAccessToken())
-                            .observeOn(mainThread())
-                            .subscribe(t -> onSavedItemsSuccess(t.toImageList()),
-                                    this::onSavedItemsError)
-            );
-        } else Timber.e("Session has not been initialized");
+            lifecycleScope.launch {
+                withContext(Dispatchers.IO) {
+                    try {
+                        RedditOAuthApiServer.API.getUserSavedPosts(
+                            session.userName,
+                            "bearer ${session.accessToken}"
+                        ).execute().body()?.let {
+                            onSavedItemsSuccess(it.toImageList())
+                        }
+                    } catch (t: Throwable) {
+                        onSavedItemsError(t)
+                    }
+                }
+            }
+        } else Timber.e("Session has not been initialized")
     }
 
-    private boolean isImageSupported(String imgUrl) {
-        String extension = HttpHelper.getExtensionFromUri(imgUrl);
-        return ImageHelper.INSTANCE.isImageExtensionSupported(extension);
+    private fun isImageSupported(imgUrl: String): Boolean {
+        return isSupportedImage(imgUrl)
     }
 
-    private void onSavedItemsSuccess(List<String> savedUrls) { // TODO don't display placeholder when load is not complete - use a "loading..." image
+    private fun onSavedItemsSuccess(savedUrls: MutableList<String>) { // TODO don't display placeholder when load is not complete - use a "loading..." image
+        var savedUrls = savedUrls
         if (savedUrls.isEmpty()) {
-            imgCount.setText(R.string.reddit_auth_noimg);
-            return;
+            imgCount?.setText(R.string.reddit_auth_noimg)
+            return
         }
 
         // Remove duplicates and unsupported files from saved URLs
-        savedUrls = Stream.of(savedUrls).distinct().withoutNulls().filter(this::isImageSupported).toList();
+        savedUrls = savedUrls.toList().distinct().filter { isImageSupported(it) }.toMutableList()
+
         // Reverse the list as Reddit puts most recent first and Hentoid does the opposite
-        Collections.reverse(savedUrls);
+        savedUrls.reverse()
 
-        int newImageNumber = 0;
+        var newImageNumber: Int
 
-        db = new ObjectBoxDAO(requireContext());
-        Content contentDB = db.selectContentBySourceAndUrl(Site.REDDIT, "", "");
+        db = ObjectBoxDAO()
+        val contentDB = db!!.selectContentBySourceAndUrl(Site.REDDIT, "", "")
 
         if (null == contentDB) {    // The book has just been detected -> finalize before saving in DB
 
             // Create a new image set based on saved Urls, adding the cover in the process
-            String coverUrl = savedUrls.isEmpty() ? "" : savedUrls.get(0);
-            List<ImageFile> newImages = ParseHelper.urlsToImageFiles(savedUrls, coverUrl, StatusContent.SAVED);
 
-            Timber.d("Reddit : new content created (%s pages)", newImages.size());
-            currentContent = new Content().setSite(Site.REDDIT).setUrl("").setTitle("Reddit");
-            currentContent.setStatus(StatusContent.SAVED);
-            db.insertContent(currentContent);
-            imageSet = newImages;
-            newImageNumber = newImages.size() - 1; // Don't count the cover
+            val coverUrl = if (savedUrls.isEmpty()) "" else savedUrls[0]
+            val newImages =
+                urlsToImageFiles(savedUrls, coverUrl, StatusContent.SAVED).toMutableList()
+
+            Timber.d("Reddit : new content created (%s pages)", newImages.size)
+            currentContent = Content(site = Site.REDDIT, dbUrl = "", title = "Reddit")
+            currentContent!!.status = StatusContent.SAVED
+            db?.insertContent(currentContent!!)
+            imageSet = newImages
+            newImageNumber = newImages.size - 1 // Don't count the cover
         } else { // TODO duplicated code with BaseWebActivity
             // Create a new image set based on saved Urls, ignoring the cover that should already be there
-            List<ImageFile> newImages = ParseHelper.urlsToImageFiles(savedUrls, null, StatusContent.SAVED);
+            val newImages = urlsToImageFiles(savedUrls, "", StatusContent.SAVED).toMutableList()
+
             // Ignore the images that are already contained in the central booru book
-            List<ImageFile> existingImages = contentDB.getImageFiles();
-            if (existingImages != null) {
-                if (!existingImages.isEmpty()) {
-                    newImages.removeAll(existingImages);
-                    Timber.d("Reddit : adding %s new pages to existing content (%s pages)", newImages.size(), existingImages.size());
+            val existingImages: MutableList<ImageFile> = contentDB.imageFiles
+            if (!existingImages.isEmpty()) {
+                newImages.removeAll(existingImages)
+                Timber.d(
+                    "Reddit : adding %s new pages to existing content (%s pages)",
+                    newImages.size,
+                    existingImages.size
+                )
 
-                    // Recompute the name of existing images to align them with the formatting of the new ones
-                    Collections.sort(existingImages, ImageFile.ORDER_COMPARATOR);
-                    int order = 0;
-                    for (ImageFile img : existingImages) {
-                        img.setOrder(order++);
-                        img.computeNameFromOrder();
-                    }
-                    // Reindex new images according to their future position in the existing album
-                    for (ImageFile img : newImages) {
-                        img.setOrder(order++);
-                        img.computeNameFromOrder();
-                    }
+                // Recompute the name of existing images to align them with the formatting of the new ones
+                Collections.sort<ImageFile?>(existingImages, ImageFile.ORDER_COMPARATOR)
+                var order = 0
+                for (img in existingImages) {
+                    img.order = order++
+                    img.computeName(3)
                 }
-
-                imageSet = new ArrayList<>(existingImages);
-                imageSet.addAll(newImages);
-
-                newImageNumber = newImages.size();
+                // Reindex new images according to their future position in the existing album
+                for (img in newImages) {
+                    img.order = order++
+                    img.computeName(3)
+                }
             }
-            currentContent = contentDB;
+
+            imageSet = ArrayList<ImageFile>(existingImages)
+            imageSet!!.addAll(newImages)
+
+            newImageNumber = newImages.size
+            currentContent = contentDB
         }
-        Timber.d("Reddit : final image set : %s pages", imageSet.size());
+        Timber.d("Reddit : final image set : %s pages", imageSet!!.size)
 
         // Display size of new images on screen
-        if (newImageNumber > 0)
-            imgCount.setText(String.format(requireContext().getString(R.string.reddit_auth_img_count), newImageNumber + ""));
-        else
-            imgCount.setText(R.string.reddit_auth_noimg);
+        if (newImageNumber > 0) imgCount?.text = String.format(
+            requireContext().getString(R.string.reddit_auth_img_count),
+            newImageNumber.toString()
+        )
+        else imgCount?.setText(R.string.reddit_auth_noimg)
     }
 
-    private void onSavedItemsError(Throwable t) {
-        Timber.e(t, "Error fetching Reddit saved items");
+    private fun onSavedItemsError(t: Throwable?) {
+        Timber.e(t, "Error fetching Reddit saved items")
     }
 
-    private void onDownloadClick() {
+    private fun onDownloadClick() {
         // Save new images to DB
-        currentContent.setQtyPages(imageSet.size() - 1); // Don't count the cover
-        currentContent.setStatus(StatusContent.DOWNLOADING);
-        long contentId = db.insertContent(currentContent);
+        currentContent!!.qtyPages = imageSet!!.size - 1 // Don't count the cover
+        currentContent!!.status = StatusContent.DOWNLOADING
+        val contentId = db!!.insertContent(currentContent!!)
 
-        for (ImageFile img : imageSet) img.setStatus(StatusContent.SAVED);
-        db.replaceImageList(contentId, imageSet);
-
-        List<QueueRecord> queue = db.selectQueue();
-        int lastIndex = 1;
-        if (!queue.isEmpty()) {
-            lastIndex = queue.get(queue.size() - 1).getRank() + 1;
+        imageSet?.let { ims ->
+            ims.forEach { it.status = StatusContent.SAVED }
+            db?.replaceImageList(contentId, ims)
         }
-        db.insertQueue(contentId, lastIndex);
 
-        ContentQueueManager.INSTANCE.resumeQueue(requireContext());
-        viewQueue();
+        val queue = db!!.selectQueue()
+        var lastIndex = 1
+        if (!queue.isEmpty()) {
+            lastIndex = queue[queue.size - 1].rank + 1
+        }
+        db?.insertQueue(contentId, lastIndex)
+
+        resumeQueue(requireContext())
+        viewQueue()
     }
 
-    private void viewQueue() {
-        Intent intent = new Intent(requireContext(), QueueActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        requireContext().startActivity(intent);
-        requireActivity().finish();
+    private fun viewQueue() {
+        val intent = Intent(requireContext(), QueueActivity::class.java)
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        requireContext().startActivity(intent)
+        requireActivity().finish()
     }
 }

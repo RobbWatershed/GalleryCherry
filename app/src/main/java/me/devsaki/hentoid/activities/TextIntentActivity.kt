@@ -12,6 +12,7 @@ import timber.log.Timber
 
 /**
  * Activity that handles text intents ("Send to Hentoid" when selecting text on other apps)
+ * NB : Pointless for Cherry
  */
 class TextIntentActivity : AppCompatActivity() {
 
@@ -36,7 +37,7 @@ class TextIntentActivity : AppCompatActivity() {
         // process the text
         if (isNumeric(text)) {
             launchBrowserFor(
-                this, Content.getGalleryUrlFromId(Site.NHENTAI, text, -1)
+                this, Content.getGalleryUrlFromId(Site.REDDIT, text, -1)
             )
         }
         finish()

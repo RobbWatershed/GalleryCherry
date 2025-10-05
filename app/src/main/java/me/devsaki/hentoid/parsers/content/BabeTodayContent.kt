@@ -1,75 +1,80 @@
-package me.devsaki.hentoid.parsers.content;
+package me.devsaki.hentoid.parsers.content
 
-import static me.devsaki.hentoid.parsers.content.SmartContent.addLinksToImages;
+import me.devsaki.hentoid.database.domains.AttributeMap
+import me.devsaki.hentoid.database.domains.Content
+import me.devsaki.hentoid.database.domains.ImageFile
+import me.devsaki.hentoid.enums.AttributeType
+import me.devsaki.hentoid.enums.Site
+import me.devsaki.hentoid.parsers.content.SmartContent.Companion.addLinksToImages
+import me.devsaki.hentoid.parsers.parseAttributes
+import org.jsoup.nodes.Element
+import pl.droidsonroids.jspoon.annotation.Selector
 
-import androidx.annotation.NonNull;
-
-import com.annimon.stream.Stream;
-
-import org.jsoup.nodes.Element;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import javax.annotation.Nonnull;
-
-import me.devsaki.hentoid.database.domains.AttributeMap;
-import me.devsaki.hentoid.database.domains.Content;
-import me.devsaki.hentoid.database.domains.ImageFile;
-import me.devsaki.hentoid.enums.AttributeType;
-import me.devsaki.hentoid.enums.Site;
-import me.devsaki.hentoid.parsers.ParseHelper;
-import pl.droidsonroids.jspoon.annotation.Selector;
-
-public class BabeTodayContent extends BaseContentParser {
+class BabeTodayContent : BaseContentParser() {
 
     @Selector("head title")
-    private String title;
+    private var title: String? = null
 
     @Selector(value = "a[href^='/mobile/']", attr = "href")
-    private List<Element> tags;
+    private var tags: MutableList<Element>? = null
 
     @Selector(value = "a[href*='.jpg']", attr = "href")
-    private List<String> imageLinksJpg;
-    @Selector(value = "a[href*='.jpeg']", attr = "href")
-    private List<String> imageLinksJpeg;
-    @Selector(value = "a[href*='.png']", attr = "href")
-    private List<String> imageLinksPng;
+    private var imageLinksJpg: MutableList<String>? = null
 
-    private List<String> imageLinks = new ArrayList<>();
+    @Selector(value = "a[href*='.jpeg']", attr = "href")
+    private var imageLinksJpeg: MutableList<String>? = null
+
+    @Selector(value = "a[href*='.png']", attr = "href")
+    private var imageLinksPng: MutableList<String>? = null
+
+    private val imageLinks: MutableList<String> = ArrayList()
 
     // Remove duplicates in found images and stored them to an unified container
-    private void processImages() {
-        if (null != imageLinksJpg)
-            imageLinks.addAll(Stream.of(imageLinksJpg).distinct().map(c -> c.replace("//", "https://")).toList());
-        if (null != imageLinksJpeg)
-            imageLinks.addAll(Stream.of(imageLinksJpeg).distinct().map(c -> c.replace("//", "https://")).toList());
-        if (null != imageLinksPng)
-            imageLinks.addAll(Stream.of(imageLinksPng).distinct().map(c -> c.replace("//", "https://")).toList());
-    }
-
-    public Content update(@NonNull final Content content, @Nonnull String url, boolean updateImages) {
-        content.setSite(Site.BABETODAY);
-
-        content.setUrl(url);
-        content.setTitle(title);
-
-        AttributeMap attributes = new AttributeMap();
-        // Remove 1st tag (sponsor site)
-        if (tags != null && !tags.isEmpty()) tags.remove(0);
-        ParseHelper.parseAttributes(attributes, AttributeType.TAG, tags, true, Site.BABETODAY);
-        content.addAttributes(attributes);
-
-        if (updateImages) {
-            List<ImageFile> images = new ArrayList<>();
-            processImages();
-            addLinksToImages(imageLinks, images, url);
-            if (!images.isEmpty()) content.setCoverImageUrl(images.get(0).getUrl());
-
-            content.setQtyPages(images.size());
-            content.setImageFiles(images);
+    private fun processImages() {
+        imageLinksJpg?.let { l ->
+            imageLinks.addAll(
+                l.distinct().map { it.replace("//", "https://") }
+            )
         }
 
-        return content;
+        imageLinksJpeg?.let { l ->
+            imageLinks.addAll(
+                l.distinct().map { it.replace("//", "https://") }
+            )
+        }
+
+        imageLinksPng?.let { l ->
+            imageLinks.addAll(
+                l.distinct().map { it.replace("//", "https://") }
+            )
+        }
+    }
+
+    override fun update(content: Content, url: String, updateImages: Boolean): Content {
+        content.site = Site.BABETODAY
+
+        content.url = url
+        content.title = title ?: NO_TITLE
+
+        val attributes = AttributeMap()
+
+        // Remove 1st tag (sponsor site)
+        tags?.let {
+            if (!it.isEmpty()) it.removeAt(0)
+        }
+        parseAttributes(attributes, AttributeType.TAG, tags, true, Site.BABETODAY)
+        content.addAttributes(attributes)
+
+        if (updateImages) {
+            val images = ArrayList<ImageFile>()
+            processImages()
+            addLinksToImages(imageLinks, images, url)
+            if (!images.isEmpty()) content.coverImageUrl = images[0].url
+
+            content.qtyPages = images.size
+            content.setImageFiles(images)
+        }
+
+        return content
     }
 }

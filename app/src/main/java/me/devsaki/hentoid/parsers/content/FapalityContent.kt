@@ -1,53 +1,51 @@
-package me.devsaki.hentoid.parsers.content;
+package me.devsaki.hentoid.parsers.content
 
-import androidx.annotation.NonNull;
+import me.devsaki.hentoid.database.domains.AttributeMap
+import me.devsaki.hentoid.database.domains.Content
+import me.devsaki.hentoid.enums.AttributeType
+import me.devsaki.hentoid.enums.Site
+import me.devsaki.hentoid.parsers.parseAttributes
+import org.jsoup.nodes.Element
+import pl.droidsonroids.jspoon.annotation.Selector
 
-import org.jsoup.nodes.Element;
-
-import java.util.List;
-
-import javax.annotation.Nonnull;
-
-import me.devsaki.hentoid.database.domains.AttributeMap;
-import me.devsaki.hentoid.database.domains.Content;
-import me.devsaki.hentoid.enums.AttributeType;
-import me.devsaki.hentoid.enums.Site;
-import me.devsaki.hentoid.parsers.ParseHelper;
-import pl.droidsonroids.jspoon.annotation.Selector;
-
-public class FapalityContent extends BaseContentParser {
+class FapalityContent : BaseContentParser() {
 
     @Selector("h1")
-    private List<Element> titles;
+    private var titles: MutableList<Element>? = null
+
     @Selector(value = ".tags_list a")
-    private List<Element> tags;
+    private var tags: MutableList<Element>? = null
+
     @Selector(value = "img[itemprop]", attr = "src")
-    private List<String> thumbs;
+    private var thumbs: MutableList<String>? = null
 
 
-    public Content update(@NonNull final Content content, @Nonnull String url, boolean updateImages) {
-        content.setSite(Site.FAPALITY);
-        int photosIndex = url.indexOf("/photos/");
-        content.setUrl(url.substring(photosIndex + 8));
+    override fun update(content: Content, url: String, updateImages: Boolean): Content {
+        content.site = Site.FAPALITY
+        val photosIndex = url.indexOf("/photos/")
+        content.url = url.substring(photosIndex + 8)
 
-        String title = "";
-        if (titles != null && !titles.isEmpty()) {
-            title = titles.get(0).text();
-            int titleEnd = title.lastIndexOf(" - ");
-            if (titleEnd > -1)
-                title = title.substring(0, title.lastIndexOf(" - "));
+        var title = ""
+        titles?.let {
+            if (!it.isEmpty()) {
+                title = it[0].text()
+                val titleEnd = title.lastIndexOf(" - ")
+                if (titleEnd > -1) title = title.substring(0, title.lastIndexOf(" - "))
+            }
         }
-        content.setTitle(title);
+        content.title = title
 
-        AttributeMap attributes = new AttributeMap();
-        ParseHelper.parseAttributes(attributes, AttributeType.TAG, tags, true, Site.FAPALITY);
-        content.addAttributes(attributes);
+        val attributes = AttributeMap()
+        parseAttributes(attributes, AttributeType.TAG, tags, true, Site.FAPALITY)
+        content.addAttributes(attributes)
 
-        if (updateImages) {
-            if (!thumbs.isEmpty()) content.setCoverImageUrl(thumbs.get(0));
-            content.setQtyPages(thumbs.size());
+        thumbs?.let {
+            if (updateImages) {
+                if (!it.isEmpty()) content.coverImageUrl = it[0]
+                content.qtyPages = it.size
+            }
         }
 
-        return content;
+        return content
     }
 }

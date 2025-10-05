@@ -13,23 +13,25 @@ import me.devsaki.hentoid.util.jsonToObject
 import timber.log.Timber
 import java.io.IOException
 
-class LusciousActivity : BaseBrowserActivity() {
+private const val DOMAIN_FILTER = "luscious.net"
+val LUSCIOUS_GALLERY_FILTER = arrayOf(
+    "operationName=AlbumGet",  // Fetch using GraphQL call
+    "luscious.net/[\\w\\-]+/[\\w\\-]+_[0-9]+/$" // Actual gallery page URL (NB : only works for the first viewed gallery, or when manually reloading a page)
+)
+//private static final String[] REMOVABLE_ELEMENTS = {".ad_banner"}; <-- doesn't work; added dynamically on an element tagged with a neutral-looking class
 
-    companion object {
-        private const val DOMAIN_FILTER = "luscious.net"
-        val GALLERY_FILTER = arrayOf(
-            "operationName=AlbumGet",  // Fetch using GraphQL call
-            "luscious.net/[\\w\\-]+/[\\w\\-]+_[0-9]+/$" // Actual gallery page URL (NB : only works for the first viewed gallery, or when manually reloading a page)
-        )
-        //private static final String[] REMOVABLE_ELEMENTS = {".ad_banner"}; <-- doesn't work; added dynamically on an element tagged with a neutral-looking class
-    }
+class LusciousActivity : BaseBrowserActivity() {
 
     override fun getStartSite(): Site {
         return Site.LUSCIOUS
     }
 
+    override fun allowMixedContent(): Boolean {
+        return false
+    }
+
     override fun createWebClient(): CustomWebViewClient {
-        val client = LusciousWebClient(getStartSite(), GALLERY_FILTER, this)
+        val client = LusciousWebClient(getStartSite(), LUSCIOUS_GALLERY_FILTER, this)
         client.restrictTo(DOMAIN_FILTER)
         client.adBlocker.addToJsUrlWhitelist(DOMAIN_FILTER)
         client.setJsStartupScripts("luscious_adblock.js")

@@ -38,6 +38,8 @@ interface CollectionDAO {
 
     fun selectContentByStorageUri(folderUri: String, onlyFlagged: Boolean): Content?
 
+    fun selectContentBySourceAndUrl(site: Site, contentUrl: String, coverUrl: String?): Content?
+
     fun selectContentByStorageRootUri(rootUri: String): List<Content>
 
     fun selectContentByUrlOrCover(
@@ -272,6 +274,8 @@ interface CollectionDAO {
         replacementTitle: String?,
         isQueueActive: Boolean
     )
+
+    fun insertQueue(contentId: Long, order: Int)
 
     fun updateQueue(queue: List<QueueRecord>)
 

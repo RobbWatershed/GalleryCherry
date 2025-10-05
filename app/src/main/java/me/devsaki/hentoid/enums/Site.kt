@@ -11,88 +11,50 @@ import timber.log.Timber
 
 // Safe-for-work/wife/gf option; not used anymore and kept here for retrocompatibility
 private val INVISIBLE_SITES = setOf(
-    Site.EDOUJIN,  // Dead
-    Site.NEXUS,  // Dead
-    Site.HBROWSE,  // Dead
-    Site.HENTAICAFE,  // Dead
-    Site.KSK,  // Dead
-    Site.ANCHIRA,  // Dead
-    Site.FAKKU,  // Old Fakku; kept for retrocompatibility
-    Site.FAKKU2,  // Dropped after Fakku decided to flag downloading accounts and IPs
-    Site.ASMHENTAI_COMICS,  // Does not work directly
-    Site.PANDA,  // Dropped; kept for retrocompatibility
-    Site.ANY, // Technical fallback
+    Site.HELLPORNO, // Removed their pictures section
+    Site.JJGIRLS2, // Abandoned in favour of babe.today
+    Site.HINA, // Dead service
+    Site.ASIANSISTER, // Redirected to sisterasian.com; only hosts videos now
+    Site.JPEGWORLD, // Dead site
+    Site.NEXTPICTUREZ, // Dead site
     Site.NONE // Technical fallback
 )
 
 enum class Site(val code: Int, val description: String, val url: String, val ico: Int) {
-    // NOTE : to maintain compatiblity with saved JSON files and prefs, do _not_ edit either existing names or codes
-    // Legacy support for old fakku archives
-    FAKKU(0, "Fakku", "https://www.fakku.net", R.drawable.ic_site_fakku),
-    PURURIN(1, "Pururin", "https://pururin.me", R.drawable.ic_site_pururin),
-    HITOMI(2, "hitomi", "https://hitomi.la", R.drawable.ic_site_hitomi),
-    NHENTAI(3, "nhentai", "https://nhentai.net", R.drawable.ic_site_nhentai),
-    TSUMINO(4, "tsumino", "https://www.tsumino.com", R.drawable.ic_site_tsumino),
-    HENTAICAFE(5, "hentaicafe", "https://hentai.cafe", R.drawable.ic_site_hentaicafe),
-    ASMHENTAI(6, "asmhentai", "https://asmhentai.com", R.drawable.ic_site_asmhentai),
-    ASMHENTAI_COMICS(
-        7,
-        "asmhentai comics",
-        "https://comics.asmhentai.com",
-        R.drawable.ic_site_asmcomics
+    XHAMSTER(0, "XHamster", "https://m.xhamster.com/photos/", R.drawable.ic_site_xhamster),
+    XNXX(1, "XNXX", "https://multi.xnxx.com/", R.drawable.ic_site_xnxx),
+    PORNPICS(2, "Pornpics", "https://www.pornpics.com/", R.drawable.ic_site_pornpics),
+    JPEGWORLD(3, "Jpegworld", "https://www.jpegworld.com/", R.drawable.ic_site_jpegworld),
+    NEXTPICTUREZ(
+        4,
+        "Nextpicturez",
+        "http://www.nextpicturez.com/",
+        R.drawable.ic_site_nextpicturez
     ),
-    EHENTAI(8, "e-hentai", "https://e-hentai.org", R.drawable.ic_site_ehentai),
-    FAKKU2(9, "Fakku", "https://www.fakku.net", R.drawable.ic_site_fakku),
-    NEXUS(10, "Hentai Nexus", "https://hentainexus.com", R.drawable.ic_site_nexus),
-    MUSES(11, "8Muses", "https://www.8muses.com", R.drawable.ic_site_8muses),
-    DOUJINS(12, "doujins.com", "https://doujins.com/", R.drawable.ic_site_doujins),
-    LUSCIOUS(
-        13,
-        "luscious.net",
-        "https://members.luscious.net/manga/",
-        R.drawable.ic_site_luscious
+    HELLPORNO(5, "Hellporno", "https://hellporno.com/albums/", R.drawable.ic_site_hellporno),
+    PORNPICGALLERIES(6, "Pornpicgalleries", "http://pornpicgalleries.com/", R.drawable.ic_site_ppg),
+    LINK2GALLERIES(7, "Link2galleries", "https://www.link2galleries.com/", R.drawable.ic_site_l2g),
+    REDDIT(8, "Reddit", "https://www.reddit.com/", R.drawable.ic_social_reddit),
+    JJGIRLS(9, "JJGirls (Jap)", "https://jjgirls.com/mobile/", R.drawable.ic_site_jjgirls),
+    LUSCIOUS(10, "luscious.net", "https://members.luscious.net/porn/", R.drawable.ic_site_luscious),
+    FAPALITY(11, "Fapality", "https://fapality.com/photos/", R.drawable.ic_site_fapality),
+    HINA(12, "Hina", "https://github.com/ixilia/hina", R.drawable.ic_site_hina),
+    ASIANSISTER(13, "Asiansister", "https://asiansister.com/", R.drawable.ic_site_asiansister),
+    JJGIRLS2(14, "JJGirls (Western)", "https://jjgirls.com/pornpics/", R.drawable.ic_site_jjgirls),
+    BABETODAY(15, "Babe.today", "https://babe.today/", R.drawable.ic_site_jjgirls),
+    JAPBEAUTIES(
+        16,
+        "Japanese beauties",
+        "https://japanesebeauties.one/",
+        R.drawable.ic_cherry_icon
     ),
-    EXHENTAI(14, "exhentai", "https://exhentai.org", R.drawable.ic_site_exhentai),
-    PORNCOMIX(15, "porncomixonline", "https://porncomix.online/", R.drawable.ic_site_porncomix),
-    HBROWSE(16, "Hbrowse", "https://www.hbrowse.com/", R.drawable.ic_site_hbrowse),
-    HENTAI2READ(17, "Hentai2Read", "https://hentai2read.com/", R.drawable.ic_site_hentai2read),
-    HENTAIFOX(18, "Hentaifox", "https://hentaifox.com", R.drawable.ic_site_hentaifox),
-    MRM(19, "MyReadingManga", "https://myreadingmanga.info/", R.drawable.ic_site_mrm),
-    MANHWA(20, "ManwhaHentai", "https://manhwahentai.me/", R.drawable.ic_site_manhwa),
-    IMHENTAI(21, "Imhentai", "https://imhentai.xxx", R.drawable.ic_site_imhentai),
-    TOONILY(22, "Toonily", "https://toonily.com/", R.drawable.ic_site_toonily),
-    ALLPORNCOMIC(23, "Allporncomic", "https://allporncomic.com/", R.drawable.ic_site_allporncomic),
-    PIXIV(24, "Pixiv", "https://www.pixiv.net/", R.drawable.ic_site_pixiv),
-    MANHWA18(25, "Manhwa18", "https://manhwa18.net/", R.drawable.ic_site_manhwa18),
-    MULTPORN(26, "Multporn", "https://multporn.net/", R.drawable.ic_site_multporn),
-    SIMPLY(27, "Simply Hentai", "https://www.simply-hentai.com/", R.drawable.ic_site_simply),
-    HDPORNCOMICS(
-        28,
-        "HD Porn Comics",
-        "https://hdporncomics.com/",
-        R.drawable.ic_site_hdporncomics
-    ),
-    EDOUJIN(29, "Edoujin", "https://ehentaimanga.com/", R.drawable.ic_site_edoujin),
-    KSK(30, "Koushoku", "https://ksk.moe", R.drawable.ic_site_ksk),
-    ANCHIRA(31, "Anchira", "https://anchira.to", R.drawable.ic_site_anchira),
-    DEVIANTART(32, "DeviantArt", "https://www.deviantart.com/", R.drawable.ic_site_deviantart),
-    MANGAGO(33, "Mangago", "https://www.mangago.me/", R.drawable.ic_site_mangago),
-    HIPERDEX(34, "Hiperdex", "https://hiperdex.com/", R.drawable.ic_site_hiperdex),
-    NOVELCROW(35, "Novelcrow", "https://novelcrow.com/", R.drawable.ic_site_novelcrow),
-    TMO(36, "TMOHentai", "https://tmohentai.com/", R.drawable.ic_site_tmo),
-    KEMONO(37, "Kemono.cr", "https://kemono.cr/", R.drawable.ic_site_kemono),
+    SXYPIX(17, "SXYPIX", "https://sxypix.com/", R.drawable.ic_site_sxypix),
+    PICS_X(18, "PICS-X", "https://pics-x.com/", R.drawable.ic_site_pics_x),
+    COSPLAYTELE(19, "CosplayTele", "https://cosplaytele.com/", R.drawable.ic_fav_full),
 
     // Used for associating attributes to sites in Preferences
-    ANY(97, "any", "", R.drawable.ic_hentoid_shape),
-
-    // External library; fallback site
-    NONE(98, "none", "", R.drawable.ic_hentoid_shape),
-    PANDA(
-        99,
-        "panda",
-        "https://www.mangapanda.com",
-        R.drawable.ic_site_panda
-    ); // Safe-for-work/wife/gf option; not used anymore and kept here for retrocompatibility
+    ANY(97, "any", "", R.drawable.ic_cherry_icon),
+    NONE(98, "none", "", R.drawable.ic_attribute_source); // External library; fallback site
 
     // Default values overridden in sites.json
     var useMobileAgent = true
@@ -139,7 +101,7 @@ enum class Site(val code: Int, val description: String, val url: String, val ico
 
     val folder: String
         get() {
-            return if (this == FAKKU) "Downloads" else description
+            return description
         }
 
     val userAgent: String

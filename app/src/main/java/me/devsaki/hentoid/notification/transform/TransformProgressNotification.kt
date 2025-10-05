@@ -22,7 +22,7 @@ class TransformProgressNotification(
 
         if (!this::builder.isInitialized) {
             builder = NotificationCompat.Builder(context, ID)
-                .setSmallIcon(R.drawable.ic_hentoid_shape)
+                .setSmallIcon(R.drawable.ic_cherry_icon)
                 .setContentText("")
                 .setColor(context.getThemedColor(R.color.secondary_light))
                 .addAction(

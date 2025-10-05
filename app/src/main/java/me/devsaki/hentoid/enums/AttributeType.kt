@@ -26,7 +26,7 @@ enum class AttributeType(
         1,
         R.string.category_publisher,
         R.string.object_publisher,
-        R.drawable.ic_hentoid_shape,
+        R.drawable.ic_cherry_icon,
         R.color.black
     ),
     LANGUAGE(
@@ -47,7 +47,7 @@ enum class AttributeType(
         4,
         R.string.category_translator,
         R.string.object_translator,
-        R.drawable.ic_hentoid_shape,
+        R.drawable.ic_cherry_icon,
         R.color.black
     ),
     SERIE(
@@ -61,7 +61,7 @@ enum class AttributeType(
         6,
         R.string.category_uploader,
         R.string.object_uploader,
-        R.drawable.ic_hentoid_shape,
+        R.drawable.ic_cherry_icon,
         R.color.black
     ),
     CIRCLE(
@@ -82,7 +82,7 @@ enum class AttributeType(
         9,
         R.string.category_category,
         R.string.object_category,
-        R.drawable.ic_hentoid_shape,
+        R.drawable.ic_cherry_icon,
         R.color.dark_gray
     ),
 
@@ -94,6 +94,7 @@ enum class AttributeType(
         R.drawable.ic_attribute_source,
         R.color.green
     ),
+    MODEL(11, R.string.object_model, R.string.object_model, R.drawable.ic_attribute_character, R.color.bronze),
     UNDEFINED(
         99,
         R.string.category_undefined,

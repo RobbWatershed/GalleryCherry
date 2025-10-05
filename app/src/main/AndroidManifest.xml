@@ -85,9 +85,6 @@
             android:name=".activities.sources.NextpicturezActivity"
             android:configChanges="orientation|screenSize" />
         <activity
-            android:name=".activities.sources.PorncomixActivity"
-            android:configChanges="orientation|screenSize" />
-        <activity
             android:name=".activities.sources.HellpornoActivity"
             android:configChanges="orientation|screenSize" />
         <activity
@@ -131,24 +128,6 @@
             android:configChanges="orientation|screenSize" />
         <activity
             android:name=".activities.sources.CosplayTeleActivity"
-            android:configChanges="orientation|screenSize" />
-        <activity
-            android:name=".activities.sources.DeviantArtActivity"
-            android:configChanges="orientation|screenSize" />
-        <activity
-            android:name=".activities.sources.MangagoActivity"
-            android:configChanges="orientation|screenSize" />
-        <activity
-            android:name=".activities.sources.HiperdexActivity"
-            android:configChanges="orientation|screenSize" />
-        <activity
-            android:name=".activities.sources.NovelcrowActivity"
-            android:configChanges="orientation|screenSize" />
-        <activity
-            android:name=".activities.sources.TmoActivity"
-            android:configChanges="orientation|screenSize" />
-        <activity
-            android:name=".activities.sources.KemonoActivity"
             android:configChanges="orientation|screenSize" />
         <activity
             android:name=".activities.LibraryActivity"
@@ -426,94 +405,6 @@
                 <data
                     android:host="pics-x.com"
                     android:pathPattern="/gallery/..*/..*"
-                    android:scheme="https" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <data
-                    android:host="anchira.to"
-                    android:pathPattern="/g/..*/..*"
-                    android:scheme="https" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <data
-                    android:host="deviantart.com"
-                    android:pathPattern="/..*/gallery/"
-                    android:scheme="https" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <data
-                    android:host="deviantart.com"
-                    android:pathPattern="/..*/art/"
-                    android:scheme="https" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <data
-                    android:host="mangago.me"
-                    android:pathPattern="/..*/art/"
-                    android:scheme="https" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <data
-                    android:host="hiperdex.com"
-                    android:pathPattern="/manga/..*/"
-                    android:scheme="https" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <data
-                    android:host="novelcrow.com"
-                    android:pathPattern="/comic/..*/"
-                    android:scheme="https" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <data
-                    android:host="tmohentai.com"
-                    android:pathPattern="/contents/..*"
-                    android:scheme="https" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <data
-                    android:host="kemono.cr"
-                    android:pathPattern="/..*/user/..*/post/..*"
                     android:scheme="https" />
             </intent-filter>
         </activity>

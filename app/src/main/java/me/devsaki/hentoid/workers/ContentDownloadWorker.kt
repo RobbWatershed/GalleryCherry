@@ -12,7 +12,6 @@ import me.devsaki.hentoid.core.CLOUDFLARE_COOKIE
 import me.devsaki.hentoid.core.HentoidApp.Companion.isInForeground
 import me.devsaki.hentoid.core.JSON_FILE_NAME_V2
 import me.devsaki.hentoid.core.THUMB_FILE_NAME
-import me.devsaki.hentoid.core.UGOIRA_CACHE_FOLDER
 import me.devsaki.hentoid.database.CollectionDAO
 import me.devsaki.hentoid.database.ObjectBoxDAO
 import me.devsaki.hentoid.database.domains.Attribute
@@ -30,7 +29,6 @@ import me.devsaki.hentoid.events.DownloadCommandEvent
 import me.devsaki.hentoid.events.DownloadEvent
 import me.devsaki.hentoid.events.DownloadReviveEvent
 import me.devsaki.hentoid.json.JsonContent
-import me.devsaki.hentoid.json.sources.pixiv.UGOIRA_FRAMES_TYPE
 import me.devsaki.hentoid.notification.download.DownloadErrorNotification
 import me.devsaki.hentoid.notification.download.DownloadProgressNotification
 import me.devsaki.hentoid.notification.download.DownloadSuccessNotification
@@ -53,7 +51,6 @@ import me.devsaki.hentoid.util.download.RequestOrder
 import me.devsaki.hentoid.util.download.RequestOrder.NetworkError
 import me.devsaki.hentoid.util.download.RequestQueueManager
 import me.devsaki.hentoid.util.download.RequestQueueManager.Companion.getInstance
-import me.devsaki.hentoid.util.download.downloadToFile
 import me.devsaki.hentoid.util.download.getDownloadLocation
 import me.devsaki.hentoid.util.exception.AccountException
 import me.devsaki.hentoid.util.exception.CaptchaException
@@ -64,19 +61,11 @@ import me.devsaki.hentoid.util.exception.ParseException
 import me.devsaki.hentoid.util.exception.PreparationInterruptedException
 import me.devsaki.hentoid.util.fetchImageURLs
 import me.devsaki.hentoid.util.file.MemoryUsageFigures
-import me.devsaki.hentoid.util.file.ZIP_MIME_TYPE
-import me.devsaki.hentoid.util.file.copyFile
-import me.devsaki.hentoid.util.file.extractArchiveEntries
-import me.devsaki.hentoid.util.file.fileSizeFromUri
 import me.devsaki.hentoid.util.file.formatHumanReadableSize
 import me.devsaki.hentoid.util.file.getDocumentFromTreeUriString
 import me.devsaki.hentoid.util.file.getFileFromSingleUri
-import me.devsaki.hentoid.util.file.getOrCreateCacheFolder
 import me.devsaki.hentoid.util.getOrCreateContentDownloadDir
-import me.devsaki.hentoid.util.image.MIME_IMAGE_GIF
-import me.devsaki.hentoid.util.image.assembleGif
 import me.devsaki.hentoid.util.jsonToFile
-import me.devsaki.hentoid.util.jsonToObject
 import me.devsaki.hentoid.util.moveContentToCustomGroup
 import me.devsaki.hentoid.util.network.Connectivity
 import me.devsaki.hentoid.util.network.DownloadSpeedCalculator.addSampleNow
@@ -99,7 +88,6 @@ import me.devsaki.hentoid.util.updateQueueJson
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import timber.log.Timber
-import java.io.File
 import java.io.IOException
 import java.security.InvalidParameterException
 import java.time.Instant
@@ -531,15 +519,6 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
                 GlobalScope.launch(Dispatchers.IO) {
                     pagesToParse.forEach {
                         parsePageforImage(it, targetFolder, content)
-                    }
-                }
-            }
-
-            // Parse ugoiras for images
-            if (ugoirasToDownload.isNotEmpty()) {
-                GlobalScope.launch(Dispatchers.IO) {
-                    ugoirasToDownload.forEach {
-                        downloadAndUnzipUgoira(it, targetFolder, content.site)
                     }
                 }
             }
@@ -1295,123 +1274,6 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
             )
         } else {
             throw ParseException("Failed to parse backup URL")
-        }
-    }
-
-    /**
-     * Download and unzip the given Ugoira to the given folder as an animated GIF file
-     * NB : Ugoiuras are Pixiv's own animated pictures
-     *
-     * @param img  Link to the Ugoira file
-     * @param dir  Folder to save the picture to
-     * @param site Correponding site
-     */
-    private suspend fun downloadAndUnzipUgoira(
-        img: ImageFile,
-        dir: DocumentFile,
-        site: Site
-    ) {
-        var isError = false
-        var errorMsg = ""
-        val ugoiraCacheFolder = getOrCreateCacheFolder(
-            applicationContext, UGOIRA_CACHE_FOLDER + File.separator + img.id
-        )
-        if (null == ugoiraCacheFolder) return
-
-        val targetFileName = img.name
-        try {
-            // == Download archive
-            val result = downloadToFile(
-                applicationContext,
-                site,
-                img.url,
-                webkitRequestHeadersToOkHttpHeaders(
-                    getRequestHeaders(
-                        img.url,
-                        img.downloadParams
-                    ), img.url
-                ),
-                Uri.fromFile(ugoiraCacheFolder),
-                targetFileName,
-                downloadInterrupted,
-                ZIP_MIME_TYPE,
-                resourceId = img.order
-            )
-
-            val targetFileUri = result
-                ?: throw IOException("Couldn't download ugoira file : resource not available")
-
-            // == Extract all frames
-            applicationContext.extractArchiveEntries(
-                targetFileUri,
-                ugoiraCacheFolder,
-                null,  // Extract everything; keep original names
-                { downloadInterrupted.get() }
-            )
-
-            // == Build the GIF using download params and extracted pics
-            val frames: MutableList<Pair<Uri, Int>> = ArrayList()
-
-            // Get frame information
-            val downloadParams = parseDownloadParams(img.downloadParams)
-            val ugoiraFramesStr = downloadParams[KEY_DL_PARAMS_UGOIRA_FRAMES]
-                ?: throw IOException("Couldn't read ugoira frames string")
-
-            val ugoiraFrames = jsonToObject<List<Pair<String, Int>>>(
-                ugoiraFramesStr,
-                UGOIRA_FRAMES_TYPE
-            ) ?: throw IOException("Couldn't read ugoira frames")
-
-            // Map frame name to the downloaded file
-            for (frame in ugoiraFrames) {
-                val files = ugoiraCacheFolder.listFiles { pathname ->
-                    pathname.name.endsWith(frame.first)
-                }
-                if (files != null && files.isNotEmpty()) {
-                    frames.add(Pair(Uri.fromFile(files[0]), frame.second))
-                }
-            }
-
-            // Assemble the GIF
-            val ugoiraGifFile = assembleGif(
-                applicationContext,
-                ugoiraCacheFolder,
-                frames
-            ) ?: throw IOException("Couldn't assemble ugoira file")
-
-            // Save it to the book folder
-            val finalImgUri = copyFile(
-                applicationContext,
-                ugoiraGifFile,
-                dir,
-                MIME_IMAGE_GIF,
-                img.name + ".gif"
-            ) ?: throw IOException("Couldn't copy result ugoira file")
-
-            img.size = fileSizeFromUri(
-                applicationContext,
-                ugoiraGifFile
-            )
-            updateImageProperties(img, true, finalImgUri.toString())
-        } catch (e: Exception) {
-            Timber.w(e)
-            isError = true
-            errorMsg = e.message ?: ""
-        } finally {
-            if (!ugoiraCacheFolder.delete()) Timber.w(
-                "Couldn't delete ugoira folder %s",
-                ugoiraCacheFolder.absolutePath
-            )
-        }
-        if (isError) {
-            updateImageProperties(img, false, "")
-            logErrorRecord(
-                img.content.targetId,
-                ErrorType.IMG_PROCESSING,
-                img.url,
-                img.name,
-                errorMsg
-            )
         }
     }
 

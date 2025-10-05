@@ -19,8 +19,6 @@ import me.devsaki.hentoid.core.DEFAULT_PRIMARY_FOLDER
 import me.devsaki.hentoid.core.DEFAULT_PRIMARY_FOLDER_OLD
 import me.devsaki.hentoid.core.HentoidApp.LifeCycleListener.Companion.disable
 import me.devsaki.hentoid.core.JSON_ARCHIVE_SUFFIX
-import me.devsaki.hentoid.core.JSON_FILE_NAME
-import me.devsaki.hentoid.core.JSON_FILE_NAME_OLD
 import me.devsaki.hentoid.core.JSON_FILE_NAME_V2
 import me.devsaki.hentoid.core.THUMB_FILE_NAME
 import me.devsaki.hentoid.core.WORK_CLOSEABLE
@@ -109,8 +107,6 @@ private val hentoidFolderNames =
 private val hentoidContentJson =
     NameFilter { displayName: String ->
         displayName.equals(JSON_FILE_NAME_V2, ignoreCase = true)
-                || displayName.equals(JSON_FILE_NAME, ignoreCase = true)
-                || displayName.equals(JSON_FILE_NAME_OLD, ignoreCase = true)
     }
 
 /**
@@ -1587,8 +1583,7 @@ fun parseBookmarks(input: InputStream): List<SiteBookmark> {
             val l = line.trim().lowercase()
             if (l.isNotBlank()) {
                 var site = Site.NONE
-                if (isNumeric(l)) site = Site.NHENTAI
-                else if (l.startsWith("http")) {
+                if (l.startsWith("http")) {
                     site = Site.searchByUrl(l) ?: Site.NONE
                 }
                 if (site != Site.NONE && site.isVisible) result.add(

@@ -1,62 +1,81 @@
-package me.devsaki.hentoid.parsers.content;
+package me.devsaki.hentoid.parsers.content
 
-import androidx.annotation.NonNull;
+import me.devsaki.hentoid.database.domains.AttributeMap
+import me.devsaki.hentoid.database.domains.Content
+import me.devsaki.hentoid.enums.AttributeType
+import me.devsaki.hentoid.enums.Site
+import me.devsaki.hentoid.enums.StatusContent
+import me.devsaki.hentoid.parsers.parseAttribute
+import me.devsaki.hentoid.parsers.urlsToImageFiles
+import org.jsoup.nodes.Element
+import pl.droidsonroids.jspoon.annotation.Selector
+import java.util.Locale
 
-import org.jsoup.nodes.Element;
-
-import java.util.List;
-
-import javax.annotation.Nonnull;
-
-import me.devsaki.hentoid.database.domains.AttributeMap;
-import me.devsaki.hentoid.database.domains.Content;
-import me.devsaki.hentoid.database.domains.ImageFile;
-import me.devsaki.hentoid.enums.AttributeType;
-import me.devsaki.hentoid.enums.Site;
-import me.devsaki.hentoid.enums.StatusContent;
-import me.devsaki.hentoid.parsers.ParseHelper;
-import pl.droidsonroids.jspoon.annotation.Selector;
-
-public class CosplayTeleContent extends BaseContentParser {
-
-    private String GALLERY_FOLDER = "/galleries/";
+class CosplayTeleContent : BaseContentParser() {
 
     @Selector(value = "head meta[name='description']", attr = "content", defValue = "")
-    private String title;
+    private lateinit var title: String
+
     @Selector(value = ".article-inner strong")
-    private List<Element> tags;
+    private var tags: MutableList<Element>? = null
+
     @Selector(value = ".gallery-icon a", attr = "href")
-    private List<String> imageLinks;
+    private var imageLinks: MutableList<String>? = null
 
 
-    public Content update(@NonNull final Content content, @Nonnull String url, boolean updateImages) {
-        content.setSite(Site.COSPLAYTELE);
+    override fun update(content: Content, url: String, updateImages: Boolean): Content {
+        content.site = Site.COSPLAYTELE
 
-        content.setUrl(url);
-        content.setTitle(title);
+        content.url = url
+        content.title = title
 
-        AttributeMap attributes = new AttributeMap();
-        for (Element tag : tags) {
-            if (0 == tag.childrenSize()) continue;
-            String tagStr = tag.toString().toLowerCase();
-            Element elt = tag.child(0);
+        val attributes = AttributeMap()
+        tags?.forEach { tag ->
+            if (0 == tag.childrenSize()) return@forEach
+            val tagStr = tag.toString().lowercase(Locale.getDefault())
+            val elt = tag.child(0)
             if (tagStr.contains("cosplayer")) {
-                ParseHelper.parseAttribute(attributes, AttributeType.MODEL, elt, true, Site.COSPLAYTELE);
+                parseAttribute(
+                    attributes,
+                    AttributeType.MODEL,
+                    elt,
+                    true,
+                    Site.COSPLAYTELE
+                )
             } else if (tagStr.contains("appears in")) {
-                ParseHelper.parseAttribute(attributes, AttributeType.SERIE, elt, true, Site.COSPLAYTELE);
+                parseAttribute(
+                    attributes,
+                    AttributeType.SERIE,
+                    elt,
+                    true,
+                    Site.COSPLAYTELE
+                )
             } else if (tagStr.contains("character")) {
-                ParseHelper.parseAttribute(attributes, AttributeType.CHARACTER, elt, true, Site.COSPLAYTELE);
+                parseAttribute(
+                    attributes,
+                    AttributeType.CHARACTER,
+                    elt,
+                    true,
+                    Site.COSPLAYTELE
+                )
             }
         }
-        content.addAttributes(attributes);
+        content.addAttributes(attributes)
 
-        if (updateImages && !imageLinks.isEmpty()) {
-            List<ImageFile> images = ParseHelper.urlsToImageFiles(imageLinks, imageLinks.get(0), StatusContent.SAVED);
-            if (!images.isEmpty()) content.setCoverImageUrl(images.get(0).getUrl());
-            content.setImageFiles(images);
-            content.setQtyPages(images.size() - 1);
+        imageLinks?.let { links ->
+            if (updateImages && !links.isEmpty()) {
+                val images =
+                    urlsToImageFiles(
+                        links,
+                        links[0],
+                        StatusContent.SAVED
+                    )
+                if (!images.isEmpty()) content.coverImageUrl = images[0].url
+                content.setImageFiles(images)
+                content.qtyPages = images.size - 1
+            }
         }
 
-        return content;
+        return content
     }
 }

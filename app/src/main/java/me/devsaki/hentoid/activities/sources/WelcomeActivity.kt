@@ -8,6 +8,10 @@ class WelcomeActivity : BaseBrowserActivity() {
         return Site.NONE
     }
 
+    override fun allowMixedContent(): Boolean {
+        return false
+    }
+
     override fun createWebClient(): CustomWebViewClient {
         return CustomWebViewClient(getStartSite(), arrayOf(""))
     }

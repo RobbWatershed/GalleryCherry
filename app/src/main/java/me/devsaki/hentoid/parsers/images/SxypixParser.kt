@@ -1,81 +1,65 @@
-package me.devsaki.hentoid.parsers.images;
+package me.devsaki.hentoid.parsers.images
 
-import static me.devsaki.hentoid.util.network.HttpHelper.POST_MIME_TYPE;
+import me.devsaki.hentoid.database.domains.Content
+import me.devsaki.hentoid.parsers.getImgSrc
+import me.devsaki.hentoid.util.jsonToObject
+import me.devsaki.hentoid.util.network.POST_MIME_TYPE
+import me.devsaki.hentoid.util.network.getOnlineDocument
+import me.devsaki.hentoid.util.network.postOnlineResource
+import org.jsoup.Jsoup
 
-import com.annimon.stream.Stream;
+class SxypixParser : BaseImageListParser() {
 
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
+    private class SxypixGalleryK {
+        private val r = ArrayList<String>()
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.Collectors;
+        val pics: List<String>
+            get() {
+                if (r.isEmpty()) return mutableListOf()
 
-import me.devsaki.hentoid.database.domains.Content;
-import me.devsaki.hentoid.parsers.ParseHelper;
-import me.devsaki.hentoid.util.JsonHelper;
-import me.devsaki.hentoid.util.network.HttpHelper;
-import okhttp3.Response;
+                val res = ArrayList<String>()
+                for (s in r) {
+                    val doc = Jsoup.parse(s)
+                    var elts = doc.select(".gall_pix_el")
+                    if (elts.isEmpty()) elts = doc.select(".gall_pix_pix")
 
-/**
- * Handles parsing of content from Sxypix
- */
-public class SxypixParser extends BaseImageListParser {
-
-    @SuppressWarnings({"unused, MismatchedQueryAndUpdateOfCollection", "squid:S1172", "squid:S1068"})
-    private static class SxypixGallery {
-        private List<String> r;
-
-        public List<String> getPics() {
-            if (r.isEmpty()) return Collections.emptyList();
-
-            List<String> res = new ArrayList<>();
-            for (String s : r) {
-                Document doc = Jsoup.parse(s);
-                Elements elts = doc.select(".gall_pix_el");
-                if (elts.isEmpty()) elts = doc.select(".gall_pix_pix");
-
-                if (elts.isEmpty()) return Collections.emptyList();
-                List<String> pics = elts.stream().map(ParseHelper::getImgSrc).collect(Collectors.toUnmodifiableList());
-                res.addAll(Stream.of(pics)
-                        .map(s2 -> s2.replace("\\/", "/"))
-                        .map(s3 -> "https:" + s3)
-                        .toList()
-                );
-
+                    if (elts.isEmpty()) return emptyList()
+                    val pics = elts.map { getImgSrc(it) }
+                    res.addAll(
+                        pics
+                            .map({ s2 -> s2.replace("\\/", "/") })
+                            .map({ s3 -> "https:$s3" })
+                            .toList()
+                    )
+                }
+                return res
             }
-            return res;
-        }
     }
 
-    @Override
-    protected List<String> parseImages(Content content) throws IOException {
-        String subdomain = "";
-        String aid = "";
-        String ghash = "";
+    override fun parseImages(content: Content): List<String> {
+        var subdomain = ""
+        var aid = ""
+        var ghash = ""
 
-        Document doc = HttpHelper.getOnlineDocument(content.getGalleryUrl());
+        val doc = getOnlineDocument(content.galleryUrl)
         if (doc != null) {
-            Element elt = doc.selectFirst(".gallgrid");
+            val elt = doc.selectFirst(".gallgrid")
             if (elt != null) {
-                subdomain = elt.attr("data-x");
-                aid = elt.attr("data-aid");
-                ghash = elt.attr("data-ghash");
+                subdomain = elt.attr("data-x")
+                aid = elt.attr("data-aid")
+                ghash = elt.attr("data-ghash")
             }
         }
 
-        try (Response res = HttpHelper.postOnlineResource(
-                "https://sxypix.com/php/gall.php",
-                null,
-                false, false, false,
-                "x=" + subdomain + "&ghash=" + ghash + "&aid=" + aid,
-                POST_MIME_TYPE)) {
-            SxypixGallery g = JsonHelper.jsonToObject(res.body().string(), SxypixGallery.class);
-            return new ArrayList<>(g.getPics());
+        postOnlineResource(
+            "https://sxypix.com/php/gall.php",
+            null,
+            useMobileAgent = false, useHentoidAgent = false, useWebviewAgent = false,
+            body = "x=$subdomain&ghash=$ghash&aid=$aid",
+            mimeType = POST_MIME_TYPE
+        ).use { res ->
+            val g = jsonToObject(res.body.string(), SxypixGalleryK::class.java)
+            return g?.pics ?: emptyList()
         }
     }
 }

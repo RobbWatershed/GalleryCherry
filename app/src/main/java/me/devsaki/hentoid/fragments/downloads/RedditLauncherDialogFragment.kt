@@ -1,70 +1,66 @@
-package me.devsaki.hentoid.fragments.downloads;
+package me.devsaki.hentoid.fragments.downloads
 
-import android.os.Bundle;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import androidx.core.view.ViewCompat
+import androidx.fragment.app.DialogFragment
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentManager
+import androidx.viewpager.widget.ViewPager
+import com.google.android.material.tabs.TabLayout
+import me.devsaki.hentoid.R
+import me.devsaki.hentoid.adapters.RedditTabsAdapter
+import me.devsaki.hentoid.enums.Site
+import me.devsaki.hentoid.util.OAuthSessionManager
+import java.time.Instant
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.fragment.app.DialogFragment;
-import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentManager;
-import androidx.viewpager.widget.ViewPager;
+private const val DEFAULT_URL = "/r/nsfw"
 
-import com.google.android.material.tabs.TabLayout;
-
-import me.devsaki.hentoid.R;
-import me.devsaki.hentoid.adapters.RedditTabsAdapter;
-import me.devsaki.hentoid.enums.Site;
-import me.devsaki.hentoid.util.OauthSessionManager;
-
-import static androidx.core.view.ViewCompat.requireViewById;
-
-import java.time.Instant;
-
-/**
- * Created by Robb on 09/2019
- * Launcher dialog for landing page history
- */
-public class RedditLauncherDialogFragment extends DialogFragment {
-
-    private static final String DEFAULT_URL = "/r/nsfw";
-
-
-    public static void invoke(FragmentManager fragmentManager) {
-        RedditLauncherDialogFragment fragment = new RedditLauncherDialogFragment();
-        fragment.show(fragmentManager, null);
+class RedditLauncherDialogFragmentK : DialogFragment() {
+    companion object {
+        fun invoke(fragmentManager: FragmentManager) {
+            val fragment = RedditLauncherDialogFragmentK()
+            fragment.show(fragmentManager, null)
+        }
     }
 
-    @Nullable
-    @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedState) {
-        return inflater.inflate(R.layout.dialog_reddit_launcher, container, false);
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedState: Bundle?
+    ): View? {
+        return inflater.inflate(R.layout.dialog_reddit_launcher, container, false)
     }
 
-    @Override
-    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
-        ViewPager viewPager = requireViewById(view, R.id.reddit_launcher_pager);
-        TabLayout tabs = requireViewById(view, R.id.reddit_launcher_tabs);
+        val viewPager: ViewPager = ViewCompat.requireViewById(view, R.id.reddit_launcher_pager)
+        val tabs: TabLayout = ViewCompat.requireViewById(view, R.id.reddit_launcher_tabs)
 
-        Fragment redditDownloadFragment;
-        OauthSessionManager.OauthSession session = OauthSessionManager.getInstance().getSessionBySite(Site.REDDIT);
-        if (session != null && session.getExpiry().isAfter(Instant.now()))
-            redditDownloadFragment = RedditAuthDownloadFragment.newInstance();
-        else
-            redditDownloadFragment = RedditNoAuthDownloadFragment.newInstance();
+        val redditDownloadFragment: Fragment?
+        val session = OAuthSessionManager.getSessionBySite(Site.REDDIT)
+        redditDownloadFragment =
+            if (session != null && session.expiry.isAfter(Instant.now()))
+                RedditAuthDownloadFragment.newInstance()
+            else RedditNoAuthDownloadFragment.newInstance()
 
-        RedditTabsAdapter redditTabsAdapter = new RedditTabsAdapter(getChildFragmentManager());
-        redditTabsAdapter.addTabFragment(LandingHistoryFragment.newInstance(requireActivity(), Site.REDDIT, DEFAULT_URL), "Browse");
-        redditTabsAdapter.addTabFragment(redditDownloadFragment, "Download");
-        viewPager.setAdapter(redditTabsAdapter);
+        val redditTabsAdapter = RedditTabsAdapter(getChildFragmentManager())
+        redditTabsAdapter.addTabFragment(
+            LandingHistoryFragmentK.newInstance(
+                requireActivity(),
+                Site.REDDIT,
+                DEFAULT_URL
+            ), "Browse"
+        )
+        redditTabsAdapter.addTabFragment(redditDownloadFragment, "Download")
+        viewPager.setAdapter(redditTabsAdapter)
 
-        tabs.setupWithViewPager(viewPager);
+        tabs.setupWithViewPager(viewPager)
 
-        tabs.getTabAt(0).setIcon(R.drawable.ic_chrono);
-        tabs.getTabAt(1).setIcon(R.drawable.ic_action_download);
+        tabs.getTabAt(0)?.setIcon(R.drawable.ic_chrono)
+        tabs.getTabAt(1)?.setIcon(R.drawable.ic_action_download)
     }
 }

@@ -150,6 +150,7 @@ object Settings {
     fun getGroupingDisplayG(): Grouping {
         return Grouping.Companion.searchById(groupingDisplay)
     }
+
     val navigationNostalgiaMode: Boolean by BoolSetting(Key.NOSTALGIA_MODE, false)
 
     var artistGroupVisibility: Int by IntSettingStr(
@@ -518,6 +519,7 @@ object Settings {
 
     // APP-WIDE
     var isFirstRun: Boolean by BoolSetting(Key.FIRST_RUN, true)
+
     // Used to detect when LibraryActivity opens for the first time to force-open navigation drawer
     var isFirstRunProcessComplete: Boolean by BoolSetting(Key.WELCOME_DONE, false)
     var lastKnownAppVersionCode: Int by IntSettingStr(Key.LAST_KNOWN_APP_VERSION_CODE, 0)
@@ -737,16 +739,17 @@ object Settings {
     // IMPORTANT : Any value change must be mirrored in res/values/array_preferences.xml
     object Value {
         private val DEFAULT_SITES = arrayOf(
-            Site.NHENTAI,
-            Site.HITOMI,
-            Site.ASMHENTAI,
-            Site.TSUMINO,
-            Site.PURURIN,
-            Site.EHENTAI,
-            Site.FAKKU2,
-            Site.NEXUS,
-            Site.MUSES,
-            Site.DOUJINS
+            Site.XHAMSTER,
+            Site.XNXX,
+            Site.PORNPICS,
+            Site.JPEGWORLD,
+            Site.NEXTPICTUREZ,
+            Site.HELLPORNO,
+            Site.PORNPICGALLERIES,
+            Site.LINK2GALLERIES,
+            Site.REDDIT,
+            Site.JJGIRLS,
+            Site.FAPALITY
         )
         val ACTIVE_SITES: String = TextUtils.join(",", DEFAULT_SITES.map { it.code })
 

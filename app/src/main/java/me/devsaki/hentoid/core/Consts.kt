@@ -51,12 +51,12 @@ const val WORK_CLOSEABLE = "closeable"
 const val CLOUDFLARE_COOKIE = "cf_clearance"
 
 
+const val URL_DISCORD = "https://discord.gg/waTF8vw"
+
 const val URL_GITHUB = "https://github.com/RobbWatershed/GalleryCherry"
 const val URL_GITHUB_WIKI = "https://github.com/RobbWatershed/GalleryCherry/wiki"
 const val URL_GITHUB_WIKI_TRANSFER =
     "https://github.com/avluis/Hentoid/wiki/Transferring-your-collection-between-devices"
-const val URL_GITHUB_WIKI_STORAGE = "https://github.com/avluis/Hentoid/wiki/Storage-management"
-const val URL_DISCORD = "https://discord.gg/waTF8vw"
 const val URL_GITHUB_WIKI_STORAGE = "https://github.com/avluis/Hentoid/wiki/Storage-management"
 const val URL_GITHUB_WIKI_DOWNLOAD = "https://github.com/avluis/Hentoid/wiki/Downloading"
 const val URL_GITHUB_WIKI_EDIT_METADATA = "https://github.com/avluis/Hentoid/wiki/Editing-metadata"

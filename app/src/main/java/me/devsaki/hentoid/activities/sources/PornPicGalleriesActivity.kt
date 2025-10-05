@@ -1,25 +1,21 @@
-package me.devsaki.hentoid.activities.sources;
+package me.devsaki.hentoid.activities.sources
 
-import me.devsaki.hentoid.enums.Site;
+import me.devsaki.hentoid.enums.Site
 
-public class PornPicGalleriesActivity extends BaseWebActivity {
+private val GALLERY_FILTER = arrayOf(".*")
 
-    private static final String[] GALLERY_FILTER = {".*"};
-
-    Site getStartSite() {
-        return Site.PORNPICGALLERIES;
+class PornPicGalleriesActivityK : BaseBrowserActivity() {
+    override fun getStartSite(): Site {
+        return Site.PORNPICGALLERIES
     }
 
-    @Override
-    boolean allowMixedContent() {
-        return false;
+    override fun allowMixedContent(): Boolean {
+        return false
     }
 
 
-    @Override
-    protected CustomWebViewClient createWebClient() {
-        CustomWebViewClient client = new CustomWebViewClient(getStartSite(), GALLERY_FILTER, this);
+    override fun createWebClient(): CustomWebViewClient {
         //client.adBlocker.addUrlWhitelist(getStartSite().getUrl()); blocks too many things when the gallery filter is open and there's no JS grey list
-        return client;
+        return CustomWebViewClient(getStartSite(), GALLERY_FILTER, this)
     }
 }

@@ -120,6 +120,9 @@ open class CustomWebViewClient : WebViewClient {
     // Loading state of the HTML code of the current webpage (used to trigger the action button)
     private val isHtmlLoaded = AtomicBoolean(false)
 
+    // Flag to automatically prevent augmented browser to be used
+    var preventAugmentedBrowser: Boolean = false
+
     // URL string of the main page (used for custom CSS loading)
     private var mainPageUrl: String? = null
 
@@ -360,7 +363,7 @@ open class CustomWebViewClient : WebViewClient {
      * false if the webview has to handle the display (OkHttp will be used as a 2nd request for parsing)
      */
     private fun canUseSingleOkHttpRequest(): Boolean {
-        return (Settings.isBrowserAugmented(site) && (getChromeVersion() < 45 || getChromeVersion() > 71))
+        return (!preventAugmentedBrowser && Settings.isBrowserAugmented(site) && (getChromeVersion() < 45 || getChromeVersion() > 71))
     }
 
     override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {

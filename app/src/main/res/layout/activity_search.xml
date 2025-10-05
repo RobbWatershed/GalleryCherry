@@ -124,18 +124,6 @@
         app:layout_constraintStart_toEndOf="@id/guideline_middle"
         app:layout_constraintTop_toBottomOf="@id/textCategoryTag" />
 
-    <TextView
-        android:id="@+id/textCategorySource"
-        style="@style/SearchCategoryButton"
-        android:text="@string/category_source"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginEnd="4dp"
-        app:layout_constraintEnd_toStartOf="@id/guideline_middle"
-        app:layout_constraintHorizontal_bias="0.0"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/textCategoryModel" />
-
     <com.google.android.material.divider.MaterialDivider
         android:id="@+id/horz_divider"
         android:layout_width="0dp"

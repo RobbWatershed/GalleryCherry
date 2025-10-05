@@ -22,22 +22,23 @@ import java.util.Objects
 import kotlin.math.floor
 import kotlin.math.log10
 
+
 @Entity
 data class ImageFile(
     @Id
     var id: Long = 0,
-    @Uid(4786164809804019689L)
+    @Uid(4786164809804019689)
     var dbOrder: Int = -1,
-    @Uid(8847017078500757224L)
+    @Uid(8847017078500757224)
     var dbUrl: String = "",
-    @Uid(4756936261641767706L)
+    @Uid(8840907152959868045)
     var dbPageUrl: String = "",
     var name: String = "",
     var fileUri: String = "",
     var read: Boolean = false,
     @Index // Added to speed up the "favourite pages" book
     var favourite: Boolean = false,
-    @Uid(946562145146984364L)
+    @Uid(7916378603458666917)
     var dbIsCover: Boolean = false,
     @Convert(converter = StatusContent.Converter::class, dbType = Integer::class)
     var status: StatusContent = StatusContent.UNHANDLED_ERROR,
@@ -186,6 +187,9 @@ data class ImageFile(
                 imgFile.name = name
             }
         }
+
+        val ORDER_COMPARATOR =
+            Comparator { a: ImageFile, b: ImageFile -> a.order.compareTo(b.order) }
     }
 
     var isCover: Boolean

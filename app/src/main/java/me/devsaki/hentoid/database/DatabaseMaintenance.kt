@@ -149,53 +149,7 @@ object DatabaseMaintenance {
         withContext(Dispatchers.IO) {
             val db = MaintenanceDAO()
             try {
-                // Update URLs from deprecated Hitomi image covers
-                Timber.i("Upgrading Hitomi covers : start")
-                var contents = db.selectContentWithOldHitomiCovers()
-                Timber.i("Upgrading Hitomi covers : %s books detected", contents.size)
-                var max = contents.size
-                var pos = 1f
-                for (c in contents) {
-                    val url =
-                        c.coverImageUrl.replace("/smallbigtn/", "/webpbigtn/")
-                            .replace(".jpg", ".webp")
-                    c.coverImageUrl = url
-                    db.insertContentCore(c)
-                    withContext(Dispatchers.Main) { emitter(pos++ / max) }
-                }
-                Timber.i("Upgrading Hitomi covers : done")
-
-                // Update URLs from deprecated M18 image covers
-                Timber.i("Fixing M18 covers : start")
-                contents = db.selectDownloadedM18Books()
-                contents = contents.filter { c -> isM18WrongCover(c) }
-                Timber.i("Fixing M18 covers : %s books detected", contents.size)
-                max = contents.size
-                pos = 1f
-                for (c in contents) {
-                    val images: MutableList<ImageFile> = c.imageList.toMutableList()
-                    val newCover =
-                        ImageFile.newCover(c.coverImageUrl, StatusContent.ONLINE)
-                    newCover.contentId = c.id
-                    images.add(0, newCover)
-                    images[1].isCover = false
-                    db.insertImageFiles(images)
-                    withContext(Dispatchers.Main) { emitter(pos++ / max) }
-                }
-                Timber.i("Fixing M18 covers : done")
-
-                // Update URLs from incomplete NH image covers
-                Timber.i("Fixing NH covers : start")
-                contents = db.selectDownloadedNHBooksIncompleteCover()
-                Timber.i("Fixing NH covers : %s books detected", contents.size)
-                max = contents.size
-                pos = 1f
-                for (c in contents) {
-                    c.coverImageUrl = "https:" + c.coverImageUrl
-                    db.insertContentCore(c)
-                    withContext(Dispatchers.Main) { emitter(pos++ / max) }
-                }
-                Timber.i("Fixing NH covers : done")
+                // Nothing so far
             } finally {
                 db.cleanup()
             }

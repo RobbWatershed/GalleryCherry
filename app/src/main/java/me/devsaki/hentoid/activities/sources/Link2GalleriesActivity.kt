@@ -1,23 +1,20 @@
-package me.devsaki.hentoid.activities.sources;
+package me.devsaki.hentoid.activities.sources
 
-import me.devsaki.hentoid.enums.Site;
+import me.devsaki.hentoid.enums.Site
 
-public class Link2GalleriesActivity extends BaseWebActivity {
+private val GALLERY_FILTER = arrayOf(".*")
 
-    private static final String[] GALLERY_FILTER = {".*"};
-
-    Site getStartSite() {
-        return Site.LINK2GALLERIES;
+class Link2GalleriesActivityK : BaseBrowserActivity() {
+    override fun getStartSite(): Site {
+        return Site.LINK2GALLERIES
     }
 
-    @Override
-    boolean allowMixedContent() {
-        return false;
+    override fun allowMixedContent(): Boolean {
+        return false
     }
 
 
-    @Override
-    protected CustomWebViewClient createWebClient() {
-        return new CustomWebViewClient(getStartSite(), GALLERY_FILTER, this);
+    override fun createWebClient(): CustomWebViewClient {
+        return CustomWebViewClient(getStartSite(), GALLERY_FILTER, this)
     }
 }

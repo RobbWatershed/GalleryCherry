@@ -18,6 +18,7 @@ import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
 import android.webkit.WebBackForwardList
 import android.webkit.WebChromeClient
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebView.HitTestResult
 import androidx.activity.OnBackPressedCallback
@@ -48,7 +49,6 @@ import me.devsaki.hentoid.activities.bundles.SettingsBundle
 import me.devsaki.hentoid.activities.settings.SettingsActivity
 import me.devsaki.hentoid.core.BiConsumer
 import me.devsaki.hentoid.core.URL_GITHUB_WIKI_DOWNLOAD
-import me.devsaki.hentoid.core.URL_GITHUB_WIKI_STORAGE
 import me.devsaki.hentoid.core.initDrawerLayout
 import me.devsaki.hentoid.core.startBrowserActivity
 import me.devsaki.hentoid.database.CollectionDAO
@@ -243,6 +243,8 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
     protected abstract fun createWebClient(): CustomWebViewClient
 
     abstract fun getStartSite(): Site
+
+    abstract fun allowMixedContent(): Boolean
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -597,6 +599,11 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         webSettings.useWideViewPort = true
         webSettings.javaScriptEnabled = true
         webSettings.loadWithOverviewMode = true
+
+        if (allowMixedContent() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            webSettings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+        }
+
         fetchHandler?.let { webView.addJavascriptInterface(FetchHandler(it), "fetchHandler") }
         xhrHandler?.let { webView.addJavascriptInterface(XhrHandler(it), "xhrHandler") }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -1786,20 +1793,6 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
             if (Settings.isBrowserMarkDownloaded || Settings.isBrowserMarkMerged || Settings.isBrowserMarkQueued || Settings.isBrowserMarkBlockedTags) getAssetAsString(
                 assets, "downloaded.css", sb
             )
-            if (getStartSite() == Site.NHENTAI && Settings.isBrowserNhentaiInvisibleBlacklist) getAssetAsString(
-                assets, "nhentai_invisible_blacklist.css", sb
-            )
-            if (getStartSite() == Site.IMHENTAI) getAssetAsString(
-                assets, "imhentai.css", sb
-            )
-            if (getStartSite() == Site.NHENTAI) getAssetAsString(
-                assets, "nhentai.css", sb
-            )
-            if (getStartSite() == Site.KSK) getAssetAsString(
-                assets, "ksk.css", sb
-            )
-            if (getStartSite() == Site.PIXIV && Settings.isBrowserAugmented(getStartSite()))
-                getAssetAsString(assets, "pixiv.css", sb)
             internalCustomCss = sb.toString()
         }
         return internalCustomCss!!

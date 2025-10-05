@@ -1,39 +1,39 @@
-package me.devsaki.hentoid.retrofit;
+package me.devsaki.hentoid.retrofit
 
-import io.reactivex.Single;
-import me.devsaki.hentoid.json.sources.RedditUser;
-import me.devsaki.hentoid.json.sources.RedditUserSavedPosts;
-import me.devsaki.hentoid.util.network.OkHttpClientSingleton;
-import retrofit2.Retrofit;
-import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
-import retrofit2.converter.moshi.MoshiConverterFactory;
-import retrofit2.http.GET;
-import retrofit2.http.Header;
-import retrofit2.http.Path;
+import me.devsaki.hentoid.json.sources.RedditUser
+import me.devsaki.hentoid.json.sources.RedditUserSavedPosts
+import me.devsaki.hentoid.util.network.OkHttpClientManager.getInstance
+import retrofit2.Call
+import retrofit2.Retrofit
+import retrofit2.converter.moshi.MoshiConverterFactory
+import retrofit2.http.GET
+import retrofit2.http.Header
+import retrofit2.http.Path
 
-public class RedditOAuthApiServer {
+object RedditOAuthApiServer {
+    private const val REDDIT_API_URL: String = "https://oauth.reddit.com/"
 
-    private static final String REDDIT_API_URL = "https://oauth.reddit.com/";
+    lateinit var API: Api
 
-    public static final Api API = new Retrofit.Builder()
+    fun init() {
+        API = Retrofit.Builder()
             .baseUrl(REDDIT_API_URL)
-            .client(OkHttpClientSingleton.getInstance())
-            .addCallAdapterFactory(RxJava2CallAdapterFactory.createAsync())
-            .addConverterFactory(MoshiConverterFactory.create())
+            .client(getInstance())
+            .addConverterFactory(MoshiConverterFactory.create().asLenient())
             .build()
-            .create(Api.class);
+            .create(Api::class.java)
+    }
 
-    public interface Api {
-
+    interface Api {
         @GET("api/v1/me")
-        Single<RedditUser> getUser(
-                @Header("Authorization") String authorization
-        );
+        fun getUser(
+            @Header("Authorization") authorization: String
+        ): Call<RedditUser>
 
         @GET("user/{username}/saved")
-        Single<RedditUserSavedPosts> getUserSavedPosts(
-                @Path("username") String username,
-                @Header("Authorization") String authorization
-        );
+        fun getUserSavedPosts(
+            @Path("username") username: String,
+            @Header("Authorization") authorization: String
+        ): Call<RedditUserSavedPosts>
     }
 }

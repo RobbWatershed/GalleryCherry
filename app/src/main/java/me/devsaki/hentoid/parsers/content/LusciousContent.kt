@@ -1,7 +1,7 @@
 package me.devsaki.hentoid.parsers.content
 
 import androidx.core.net.toUri
-import me.devsaki.hentoid.activities.sources.LusciousActivity.Companion.GALLERY_FILTER
+import me.devsaki.hentoid.activities.sources.LUSCIOUS_GALLERY_FILTER
 import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.enums.StatusContent
@@ -16,7 +16,7 @@ import java.io.IOException
 class LusciousContent : BaseContentParser() {
     override fun update(content: Content, url: String, updateImages: Boolean): Content {
         val bookId: String =
-            if (url.contains(GALLERY_FILTER[0])) { // Triggered by a graphQL request
+            if (url.contains(LUSCIOUS_GALLERY_FILTER[0])) { // Triggered by a graphQL request
                 val vars = url.toUri().getQueryParameter("variables")
                 if (vars.isNullOrEmpty()) {
                     Timber.w("No variable field found in %s", url)

@@ -12,7 +12,6 @@ import me.devsaki.hentoid.database.domains.QueueRecord
 import me.devsaki.hentoid.database.domains.QueueRecord_
 import me.devsaki.hentoid.database.domains.SearchRecord
 import me.devsaki.hentoid.database.domains.SearchRecord_
-import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.util.getQueueTabStatuses
 
 /**
@@ -21,27 +20,6 @@ import me.devsaki.hentoid.util.getQueueTabStatuses
 class MaintenanceDAO {
     fun cleanup() {
         ObjectBoxDB.cleanup()
-    }
-
-    fun selectContentWithOldHitomiCovers(): List<Content> {
-        return ObjectBoxDB.store.boxFor(Content::class.java).query()
-            .equal(Content_.site, Site.HITOMI.code.toLong()).contains(
-                Content_.coverImageUrl, "/smallbigtn/", QueryBuilder.StringOrder.CASE_INSENSITIVE
-            ).safeFind()
-    }
-
-    fun selectDownloadedM18Books(): List<Content> {
-        return ObjectBoxDB.store.boxFor(Content::class.java).query()
-            .equal(Content_.site, Site.MANHWA18.code.toLong())
-            .`in`(Content_.status, ObjectBoxDB.libraryStatus).safeFind()
-    }
-
-    fun selectDownloadedNHBooksIncompleteCover(): List<Content> {
-        return ObjectBoxDB.store.boxFor(Content::class.java).query()
-            .equal(Content_.site, Site.NHENTAI.code.toLong())
-            .`in`(Content_.status, ObjectBoxDB.libraryStatus)
-            .startsWith(Content_.coverImageUrl, "//", QueryBuilder.StringOrder.CASE_INSENSITIVE)
-            .safeFind()
     }
 
     fun selecChaptersEmptyName(): List<Chapter> {

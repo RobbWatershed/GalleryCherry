@@ -1,21 +1,16 @@
-package me.devsaki.hentoid.activities.sources;
+package me.devsaki.hentoid.activities.sources
 
-import android.os.Bundle;
-
-import androidx.appcompat.app.AppCompatActivity;
-
-import me.devsaki.hentoid.fragments.downloads.RedditLauncherDialogFragment;
+import android.os.Bundle
+import androidx.appcompat.app.AppCompatActivity
+import me.devsaki.hentoid.fragments.downloads.RedditLauncherDialogFragmentK
 
 /**
- * Created by Robb on 09/2019
  * Landing page history launcher for Reddit
  */
-public class RedditLaunchActivity extends AppCompatActivity {
+class RedditLaunchActivity : AppCompatActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-
-        RedditLauncherDialogFragment.invoke(getSupportFragmentManager());
+        RedditLauncherDialogFragmentK.invoke(supportFragmentManager)
     }
 }

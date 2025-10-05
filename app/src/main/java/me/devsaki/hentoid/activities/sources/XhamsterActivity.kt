@@ -1,27 +1,25 @@
-package me.devsaki.hentoid.activities.sources;
+package me.devsaki.hentoid.activities.sources
 
-import me.devsaki.hentoid.enums.Site;
+import me.devsaki.hentoid.enums.Site
 
-public class XhamsterActivity extends BaseWebActivity {
+private const val DOMAIN_FILTER = "xhamster.com"
+private val GALLERY_FILTER = arrayOf("/gallery/(?!null)")
+private val DIRTY_ELEMENTS = arrayOf("section.advertisement")
 
-    private static final String DOMAIN_FILTER = "xhamster.com";
-    private static final String[] GALLERY_FILTER = {"/gallery/(?!null)"};
-    private static final String[] DIRTY_ELEMENTS = {"section.advertisement"};
-
-    Site getStartSite() {
-        return Site.XHAMSTER;
+class XhamsterActivityK : BaseBrowserActivity() {
+    override fun getStartSite(): Site {
+        return Site.XHAMSTER
     }
 
-    @Override
-    boolean allowMixedContent() {
-        return false;
+    override fun allowMixedContent(): Boolean {
+        return false
     }
 
-    @Override
-    protected CustomWebViewClient createWebClient() {
-        CustomWebViewClient client = new CustomWebViewClient(getStartSite(), GALLERY_FILTER, this);
-        client.restrictTo(DOMAIN_FILTER);
-        client.addRemovableElements(DIRTY_ELEMENTS);
-        return client;
+
+    override fun createWebClient(): CustomWebViewClient {
+        val client = CustomWebViewClient(getStartSite(), GALLERY_FILTER, this)
+        client.restrictTo(DOMAIN_FILTER)
+        client.addRemovableElements(*DIRTY_ELEMENTS)
+        return client
     }
 }

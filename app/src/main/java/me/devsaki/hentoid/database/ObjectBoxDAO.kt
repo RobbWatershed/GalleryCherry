@@ -49,6 +49,7 @@ import java.time.Instant
 import kotlin.math.ceil
 import kotlin.math.min
 
+
 class ObjectBoxDAO : CollectionDAO {
     override fun cleanup() {
         ObjectBoxDB.cleanup()
@@ -363,6 +364,16 @@ class ObjectBoxDAO : CollectionDAO {
     // Find any book that has the given quality of pages _and_ size
     override fun selectContentsByQtyPageAndSize(qtyPage: Int, size: Long): Set<Content> {
         return ObjectBoxDB.selectContentsByQtyPageAndSize(qtyPage, size)
+    }
+
+    override fun selectContentBySourceAndUrl(
+        site: Site,
+        contentUrl: String,
+        coverUrl: String?
+    ): Content? {
+        val coverUrlStart =
+            if (coverUrl != null) Content.getNeutralCoverUrlRoot(coverUrl, site) else ""
+        return ObjectBoxDB.selectContentBySourceAndUrl(site, contentUrl, coverUrlStart)
     }
 
     override fun selectAllSourceUrls(site: Site): Set<String> {
@@ -1154,6 +1165,10 @@ class ObjectBoxDAO : CollectionDAO {
         var index = 1
         for (qr in queue) qr.rank = index++
         ObjectBoxDB.updateQueue(queue)
+    }
+
+    override fun insertQueue(contentId: Long, order: Int) {
+        ObjectBoxDB.insertQueue(contentId, order)
     }
 
     private fun getDynamicGroupContent(groupId: Long): LongArray {

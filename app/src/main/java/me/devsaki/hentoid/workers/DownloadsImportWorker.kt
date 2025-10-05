@@ -24,7 +24,6 @@ import me.devsaki.hentoid.util.download.ContentQueueManager.resumeQueue
 import me.devsaki.hentoid.util.file.getFileFromSingleUriString
 import me.devsaki.hentoid.util.file.getInputStream
 import me.devsaki.hentoid.util.isInQueue
-import me.devsaki.hentoid.util.isNumeric
 import me.devsaki.hentoid.util.network.CloudflareHelper
 import me.devsaki.hentoid.util.network.CloudflareHelper.CloudflareProtectedException
 import me.devsaki.hentoid.util.notification.BaseNotification
@@ -92,7 +91,7 @@ class DownloadsImportWorker(
         }
         val downloads = getInputStream(context, file).use {
             val urls = parseBookmarks(it)
-            urls.map { it.url }
+            urls.map { u -> u.url }
         }
         if (downloads.isEmpty()) {
             trace(Log.ERROR, "Downloads file %s is empty", fileUri)
@@ -102,12 +101,7 @@ class DownloadsImportWorker(
         val dao = ObjectBoxDAO()
         try {
             for (s in downloads) {
-                var galleryUrl = s
-                if (isNumeric(galleryUrl)) galleryUrl = Content.getGalleryUrlFromId(
-                    Site.NHENTAI,
-                    galleryUrl
-                ) // We assume any launch code is Nhentai's
-                importGallery(galleryUrl, queuePosition, importAsStreamed, false, dao)
+                importGallery(s, queuePosition, importAsStreamed, false, dao)
             }
         } finally {
             dao.cleanup()

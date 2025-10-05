@@ -1,59 +1,29 @@
-package me.devsaki.hentoid.adapters;
+package me.devsaki.hentoid.adapters
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentManager;
-import androidx.fragment.app.FragmentPagerAdapter;
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentManager
+import androidx.fragment.app.FragmentPagerAdapter
 
-import java.util.ArrayList;
-import java.util.List;
-
-public class RedditTabsAdapter extends FragmentPagerAdapter {
-
-    private final List<TabFragmentInfo> tabFragments = new ArrayList<>();
+class RedditTabsAdapter(val fm: FragmentManager) :
+    FragmentPagerAdapter(fm, BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT) {
+    private val tabFragments: MutableList<TabFragmentInfo> = ArrayList<TabFragmentInfo>()
 
 
-    public RedditTabsAdapter(@NonNull FragmentManager fm) {
-        super(fm, BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT);
+    fun addTabFragment(f: Fragment, title: String) {
+        tabFragments.add(TabFragmentInfo(f, title))
     }
 
-    public void addTabFragment(Fragment f, String title) {
-        tabFragments.add(new TabFragmentInfo(f, title));
+    override fun getItem(position: Int): Fragment {
+        return tabFragments[position].fragment
     }
 
-    @NonNull
-    @Override
-    public Fragment getItem(int position) {
-        return tabFragments.get(position).getFragment();
+    override fun getCount(): Int {
+        return tabFragments.size
     }
 
-    @Override
-    public int getCount() {
-        return tabFragments.size();
+    override fun getPageTitle(position: Int): CharSequence? {
+        return tabFragments[position].title
     }
 
-    @Nullable
-    @Override
-    public CharSequence getPageTitle(int position) {
-        return tabFragments.get(position).getTitle();
-    }
-
-    public class TabFragmentInfo {
-        private final Fragment fragment;
-        private final String title;
-
-        TabFragmentInfo(Fragment f, String title) {
-            this.fragment = f;
-            this.title = title;
-        }
-
-        public Fragment getFragment() {
-            return fragment;
-        }
-
-        public String getTitle() {
-            return title;
-        }
-    }
+    class TabFragmentInfo internal constructor(val fragment: Fragment, val title: String)
 }

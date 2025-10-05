@@ -1,30 +1,27 @@
-package me.devsaki.hentoid.activities.sources;
+package me.devsaki.hentoid.activities.sources
 
-import me.devsaki.hentoid.enums.Site;
+import me.devsaki.hentoid.enums.Site
 
-public class CosplayTeleActivity extends BaseWebActivity {
+private const val DOMAIN_FILTER = "cosplaytele.com"
+private val GALLERY_FILTER = arrayOf("cosplaytele.com/[\\w-]+/$")
+private val DIRTY_ELEMENTS = arrayOf<String>()
+private val JS_CONTENT_BLACKLIST = arrayOf("mobilePopunderTargetBlankLinks")
 
-    private static final String DOMAIN_FILTER = "cosplaytele.com";
-    private static final String[] DIRTY_ELEMENTS = {};
-    private static final String[] GALLERY_FILTER = {"cosplaytele.com/[\\w-]+/$"};
-    private static final String[] JS_CONTENT_BLACKLIST = {"mobilePopunderTargetBlankLinks"};
-
-    Site getStartSite() {
-        return Site.COSPLAYTELE;
+class CosplayTeleActivityK : BaseBrowserActivity() {
+    override fun getStartSite(): Site {
+        return Site.COSPLAYTELE
     }
 
-    @Override
-    boolean allowMixedContent() {
-        return false;
+    override fun allowMixedContent(): Boolean {
+        return false
     }
 
 
-    @Override
-    protected CustomWebViewClient createWebClient() {
-        CustomWebViewClient client = new CustomWebViewClient(getStartSite(), GALLERY_FILTER, this);
-        client.restrictTo(DOMAIN_FILTER);
-        client.addRemovableElements(DIRTY_ELEMENTS);
-        for (String s : JS_CONTENT_BLACKLIST) client.adBlocker.addJsContentBlacklist(s);
-        return client;
+    override fun createWebClient(): CustomWebViewClient {
+        val client = CustomWebViewClient(getStartSite(), GALLERY_FILTER, this)
+        client.restrictTo(DOMAIN_FILTER)
+        client.addRemovableElements(*DIRTY_ELEMENTS)
+        for (s in JS_CONTENT_BLACKLIST) client.adBlocker.addJsContentBlacklist(s)
+        return client
     }
 }

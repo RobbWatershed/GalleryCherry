@@ -15,8 +15,6 @@ import kotlinx.coroutines.withContext
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.core.BOOKMARKS_JSON_FILE_NAME
 import me.devsaki.hentoid.core.GROUPS_JSON_FILE_NAME
-import me.devsaki.hentoid.core.JSON_FILE_NAME
-import me.devsaki.hentoid.core.JSON_FILE_NAME_OLD
 import me.devsaki.hentoid.core.JSON_FILE_NAME_V2
 import me.devsaki.hentoid.core.QUEUE_JSON_FILE_NAME
 import me.devsaki.hentoid.core.READER_CACHE
@@ -24,14 +22,12 @@ import me.devsaki.hentoid.core.RENAMING_RULES_JSON_FILE_NAME
 import me.devsaki.hentoid.database.CollectionDAO
 import me.devsaki.hentoid.database.DuplicatesDAO
 import me.devsaki.hentoid.database.ObjectBoxDAO
-import me.devsaki.hentoid.database.domains.Attribute
 import me.devsaki.hentoid.database.domains.Chapter
 import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.database.domains.DownloadMode
 import me.devsaki.hentoid.database.domains.ErrorRecord
 import me.devsaki.hentoid.database.domains.ImageFile
 import me.devsaki.hentoid.database.domains.QueueRecord
-import me.devsaki.hentoid.enums.AttributeType
 import me.devsaki.hentoid.enums.ErrorType
 import me.devsaki.hentoid.enums.Grouping
 import me.devsaki.hentoid.enums.Site
@@ -39,11 +35,8 @@ import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.enums.StorageLocation
 import me.devsaki.hentoid.events.DownloadCommandEvent
 import me.devsaki.hentoid.events.ProcessEvent
-import me.devsaki.hentoid.json.ContentV1
-import me.devsaki.hentoid.json.DoujinBuilder
 import me.devsaki.hentoid.json.JsonContent
 import me.devsaki.hentoid.json.JsonContentCollection
-import me.devsaki.hentoid.json.URLBuilder
 import me.devsaki.hentoid.notification.import_.ImportCompleteNotification
 import me.devsaki.hentoid.notification.import_.ImportProgressNotification
 import me.devsaki.hentoid.notification.import_.ImportStartNotification
@@ -1207,152 +1200,10 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
         bookFiles: List<DocumentFile>,
         dao: CollectionDAO
     ): Content? {
-        var file = bookFiles.firstOrNull { f ->
+        val file = bookFiles.firstOrNull { f ->
             (f.name ?: "") == JSON_FILE_NAME_V2
         }
-        if (file != null) return importJsonV2(context, file, folder, dao)
-        file = bookFiles.firstOrNull { f -> (f.name ?: "") == JSON_FILE_NAME }
-        if (file != null) return importJsonV1(context, file, folder)
-        file = bookFiles.firstOrNull { f -> (f.name ?: "") == JSON_FILE_NAME_OLD }
-        return if (file != null) importJsonLegacy(context, file, folder) else null
-    }
-
-    @Suppress("deprecation")
-    private fun from(urlBuilders: List<URLBuilder>?, site: Site): List<Attribute>? {
-        var attributes: MutableList<Attribute>? = null
-        if (urlBuilders == null) {
-            return null
-        }
-        if (urlBuilders.isNotEmpty()) {
-            attributes = ArrayList()
-            for (urlBuilder in urlBuilders) {
-                val attribute = from(urlBuilder, AttributeType.TAG, site)
-                if (attribute != null) {
-                    attributes.add(attribute)
-                }
-            }
-        }
-        return attributes
-    }
-
-    @Suppress("deprecation")
-    private fun from(urlBuilder: URLBuilder?, type: AttributeType, site: Site): Attribute? {
-        return if (urlBuilder == null) {
-            null
-        } else try {
-            if (urlBuilder.description == null) {
-                throw ParseException("Problems loading attribute v2.")
-            }
-            Attribute(type, urlBuilder.description, urlBuilder.getId(), site)
-        } catch (e: Exception) {
-            Timber.e(e, "Parsing URL to attribute")
-            null
-        }
-    }
-
-    @CheckResult
-    @Suppress("deprecation")
-    @Throws(ParseException::class)
-    private fun importJsonLegacy(
-        context: Context,
-        json: DocumentFile,
-        parentFolder: DocumentFile
-    ): Content {
-        try {
-            jsonToObject(context, json, DoujinBuilder::class.java)?.let { doujinBuilder ->
-                val content = ContentV1()
-                content.setUrl(doujinBuilder.getId())
-                content.htmlDescription = doujinBuilder.description
-                content.title = doujinBuilder.title
-                content.setSeries(
-                    from(
-                        doujinBuilder.series,
-                        AttributeType.SERIE, content.getSite()
-                    )
-                )
-                val artist = from(
-                    doujinBuilder.artist,
-                    AttributeType.ARTIST, content.getSite()
-                )
-                var artists: MutableList<Attribute?>? = null
-                if (artist != null) {
-                    artists = ArrayList(1)
-                    artists.add(artist)
-                }
-                content.setArtists(artists)
-                content.setCoverImageUrl(doujinBuilder.urlImageTitle)
-                content.setQtyPages(doujinBuilder.qtyPages)
-                val translator = from(
-                    doujinBuilder.translator,
-                    AttributeType.TRANSLATOR, content.getSite()
-                )
-                var translators: MutableList<Attribute?>? = null
-                if (translator != null) {
-                    translators = ArrayList(1)
-                    translators.add(translator)
-                }
-                content.setTranslators(translators)
-                content.setTags(from(doujinBuilder.lstTags, content.getSite()))
-                content.setLanguage(
-                    from(
-                        doujinBuilder.language,
-                        AttributeType.LANGUAGE,
-                        content.getSite()
-                    )
-                )
-                content.setMigratedStatus()
-                content.setDownloadDate(Instant.now().toEpochMilli())
-                val contentV2 = content.toV2Content()
-                contentV2.setStorageDoc(parentFolder)
-                val newJson = jsonToFile(
-                    context, JsonContent(contentV2),
-                    JsonContent::class.java, parentFolder, JSON_FILE_NAME_V2
-                )
-                contentV2.jsonUri = newJson.uri.toString()
-                return contentV2
-            }
-            throw ParseException("Error reading JSON (old) file")
-        } catch (e: IOException) {
-            Timber.e(e, "Error reading JSON (old) file")
-            throw ParseException("Error reading JSON (old) file : " + e.message)
-        } catch (e: JsonDataException) {
-            Timber.e(e, "Error reading JSON (old) file")
-            throw ParseException("Error reading JSON (old) file : " + e.message)
-        }
-    }
-
-    @CheckResult
-    @Suppress("deprecation")
-    @Throws(ParseException::class)
-    private fun importJsonV1(
-        context: Context,
-        json: DocumentFile,
-        parentFolder: DocumentFile
-    ): Content {
-        try {
-            jsonToObject(context, json, ContentV1::class.java)?.let { content ->
-                if (content.status != StatusContent.DOWNLOADED
-                    && content.status != StatusContent.ERROR
-                ) {
-                    content.setMigratedStatus()
-                }
-                val contentV2 = content.toV2Content()
-                contentV2.setStorageDoc(parentFolder)
-                val newJson = jsonToFile(
-                    context, JsonContent(contentV2),
-                    JsonContent::class.java, parentFolder, JSON_FILE_NAME_V2
-                )
-                contentV2.jsonUri = newJson.uri.toString()
-                return contentV2
-            }
-            throw ParseException("Error reading JSON (v1) file")
-        } catch (e: IOException) {
-            Timber.e(e, "Error reading JSON (v1) file")
-            throw ParseException("Error reading JSON (v1) file : " + e.message)
-        } catch (e: JsonDataException) {
-            Timber.e(e, "Error reading JSON (v1) file")
-            throw ParseException("Error reading JSON (v1) file : " + e.message)
-        }
+        return if (file != null) importJsonV2(context, file, folder, dao) else null
     }
 
     @CheckResult

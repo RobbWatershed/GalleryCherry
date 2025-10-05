@@ -30,6 +30,8 @@ import me.devsaki.hentoid.database.domains.GroupItem_
 import me.devsaki.hentoid.database.domains.Group_
 import me.devsaki.hentoid.database.domains.ImageFile
 import me.devsaki.hentoid.database.domains.ImageFile_
+import me.devsaki.hentoid.database.domains.LandingRecord
+import me.devsaki.hentoid.database.domains.LandingRecord_
 import me.devsaki.hentoid.database.domains.MyObjectBox
 import me.devsaki.hentoid.database.domains.QueueRecord
 import me.devsaki.hentoid.database.domains.QueueRecord_
@@ -512,6 +514,35 @@ object ObjectBoxDB {
                 .and(Chapter_.url.endsWith(url, QueryBuilder.StringOrder.CASE_INSENSITIVE))
         ).build().use { cq ->
             return cq.property(Chapter_.contentId).findLongs()
+        }
+    }
+
+    fun selectContentBySourceAndUrl(
+        site: Site,
+        contentUrl: String,
+        coverUrlStart: String
+    ): Content? {
+        val contentUrlCondition =
+            Content_.dbUrl.notEqual("", QueryBuilder.StringOrder.CASE_INSENSITIVE)
+                .and(Content_.dbUrl.equal(contentUrl, QueryBuilder.StringOrder.CASE_INSENSITIVE))
+                .and(Content_.site.equal(site.code))
+        val chapterUrlCondition = Content_.id.oneOf(selectContentIdsByChapterUrl(contentUrl))
+        val urlCondition = contentUrlCondition.or(chapterUrlCondition)
+        if (!coverUrlStart.isEmpty()) {
+            val coverCondition =
+                Content_.coverImageUrl.notEqual("", QueryBuilder.StringOrder.CASE_INSENSITIVE).and(
+                    Content_.coverImageUrl.equal(
+                        coverUrlStart,
+                        QueryBuilder.StringOrder.CASE_INSENSITIVE
+                    )
+                ).and(Content_.site.equal(site.code))
+            return store.boxFor(Content::class.java)
+                .query(urlCondition.or(coverCondition))
+                .order(Content_.id).safeFindFirst()
+        } else {
+            return store.boxFor(Content::class.java)
+                .query(urlCondition)
+                .order(Content_.id).safeFindFirst()
         }
     }
 
@@ -1769,7 +1800,31 @@ object ObjectBoxDB {
         return store.boxFor(SiteHistory::class.java).query().safeFind()
     }
 
-    // BOOKMARKS
+
+    // REDDIT LANDING RECORDS
+
+    fun insertLandingRecord(record: LandingRecord) {
+        store.boxFor(LandingRecord::class.java).put(record)
+    }
+
+    fun selectLandingRecord(site: Site, url: String): LandingRecord? {
+        return if (!url.isEmpty()) {
+            store.boxFor(LandingRecord::class.java).query()
+                .equal(LandingRecord_.url, url, QueryBuilder.StringOrder.CASE_INSENSITIVE)
+                .equal(LandingRecord_.site, site.code.toLong())
+                .build().safeFindFirst()
+        } else null
+    }
+
+    fun selectLandingRecords(s: Site): List<LandingRecord> {
+        return store.boxFor(LandingRecord::class.java).query()
+            .equal(LandingRecord_.site, s.code.toLong())
+            .sort(LandingRecord.DATE_COMPARATOR_DESC).build().safeFind()
+    }
+
+    fun deleteAllLandingRecords() {
+        store.boxFor(LandingRecord::class.java).removeAll()
+    }
 
     // BOOKMARKS
     fun selectBookmarksQ(s: Site?): Query<SiteBookmark> {
