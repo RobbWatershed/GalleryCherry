@@ -18,6 +18,7 @@ private val INVISIBLE_SITES = setOf(
     Site.JPEGWORLD, // Dead site
     Site.NEXTPICTUREZ, // Dead site
     Site.PORNPICGALLERIES, // Dead site
+    Site.ANY, // Technical fallback
     Site.NONE // Technical fallback
 )
 
