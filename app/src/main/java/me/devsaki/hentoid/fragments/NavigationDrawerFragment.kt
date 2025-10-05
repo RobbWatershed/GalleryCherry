@@ -37,8 +37,8 @@ import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.databinding.FragmentNavigationDrawerBinding
 import me.devsaki.hentoid.enums.Grouping
 import me.devsaki.hentoid.enums.Site
-import me.devsaki.hentoid.events.CommunicationEvent
 import me.devsaki.hentoid.events.AppRepoInfoEvent
+import me.devsaki.hentoid.events.CommunicationEvent
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.getRandomInt
 import me.devsaki.hentoid.util.getTextColorForBackground
@@ -309,6 +309,7 @@ class NavigationDrawerFragment : Fragment(R.layout.fragment_navigation_drawer),
                 R.string.title_activity_browser,
                 R.drawable.ic_browser,
                 NavItem.BROWSER,
+                Site.NONE.code,
                 isSelected = origin == NavItem.BROWSER && this@NavigationDrawerFragment.site == Site.NONE
             )
             addMenu(
