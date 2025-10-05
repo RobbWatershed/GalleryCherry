@@ -20,7 +20,6 @@ import me.devsaki.hentoid.notification.transform.TransformCompleteNotification
 import me.devsaki.hentoid.notification.transform.TransformProgressNotification
 import me.devsaki.hentoid.util.AchievementsManager
 import me.devsaki.hentoid.util.ProgressManager
-import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.createJson
 import me.devsaki.hentoid.util.file.Beholder
 import me.devsaki.hentoid.util.file.copyFile
@@ -29,7 +28,6 @@ import me.devsaki.hentoid.util.file.getDocumentFromTreeUriString
 import me.devsaki.hentoid.util.file.getExtensionFromMimeType
 import me.devsaki.hentoid.util.file.getInputStream
 import me.devsaki.hentoid.util.file.getMimeTypeFromFileName
-import me.devsaki.hentoid.util.file.getOrCreateCacheFolder
 import me.devsaki.hentoid.util.file.getParent
 import me.devsaki.hentoid.util.file.saveBinary
 import me.devsaki.hentoid.util.getStorageRoot
@@ -41,13 +39,9 @@ import me.devsaki.hentoid.util.image.transform
 import me.devsaki.hentoid.util.image.transformManhwaChapter
 import me.devsaki.hentoid.util.network.UriParts
 import me.devsaki.hentoid.util.notification.BaseNotification
-import me.devsaki.hentoid.util.pause
 import me.devsaki.hentoid.util.updateJson
-import me.robb.ai_upscale.AiUpscaler
 import okio.IOException
 import timber.log.Timber
-import java.io.File
-import java.nio.ByteBuffer
 import java.time.Instant
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -56,7 +50,7 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
     BaseWorker(context, parameters, R.id.transform_service, null) {
 
     private val dao: CollectionDAO = ObjectBoxDAO()
-    private var upscaler: AiUpscaler? = null
+    //private var upscaler: AiUpscaler? = null
 
     private var totalItems = 0
     private var nbOK = 0
@@ -79,7 +73,7 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
             dao.updateContentsProcessedFlagById(contentIds.filter { it > 0 }, false)
         }
         dao.cleanup()
-        upscaler?.cleanup()
+        //upscaler?.cleanup()
 
         // Reset Coil cache as it gets confused by the resizing
         clearCoilCache(applicationContext)
@@ -97,6 +91,7 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
         val params = moshi.adapter(TransformParams::class.java).fromJson(paramsStr)
         require(params != null)
 
+        /*
         if (params.resizeEnabled && 3 == params.resizeMethod) { // AI upscale
             AiUpscaler().let {
                 upscaler = it
@@ -107,6 +102,7 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
                 )
             }
         }
+         */
 
         transform(contentIds, params)
     }
@@ -256,10 +252,12 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
 
         // Achievements
         if (!isStopped && !isKO) {
+            /*
             if (upscaler != null) { // AI upscale
                 Settings.nbAIRescale += 1
                 if (Settings.nbAIRescale >= 2) AchievementsManager.trigger(20)
             }
+             */
             val pagesTotal = sourceImages.count { it.isReadable }
             if (pagesTotal >= 50) AchievementsManager.trigger(27)
             if (pagesTotal >= 100) AchievementsManager.trigger(28)
@@ -327,17 +325,19 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
         metadataOpts.inJustDecodeBounds = true
 
         val targetData: ByteArray
+        /*
         if (upscaler != null) { // AI upscale
             targetData = upscale(imageId, rawData)
         } else { // regular resize
-            BitmapFactory.decodeByteArray(rawData, 0, rawData.size, metadataOpts)
-            val isManhwa = metadataOpts.outHeight * 1.0 / metadataOpts.outWidth > 3
+         */
+        BitmapFactory.decodeByteArray(rawData, 0, rawData.size, metadataOpts)
+        val isManhwa = metadataOpts.outHeight * 1.0 / metadataOpts.outWidth > 3
 
-            if (isManhwa) nbManhwa.incrementAndGet()
-            params.forceManhwa = nbManhwa.get() * 1.0 / nbPages > 0.9
+        if (isManhwa) nbManhwa.incrementAndGet()
+        params.forceManhwa = nbManhwa.get() * 1.0 / nbPages > 0.9
 
-            targetData = transform(rawData, params)
-        }
+        targetData = transform(rawData, params)
+//        }
         if (isStopped) return img
         if (targetData == rawData) return img // Unchanged picture
 
@@ -373,53 +373,54 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
         }
         return img
     }
+    /*
+        private fun upscale(imgId: String, rawData: ByteArray): ByteArray {
+            val cacheDir =
+                getOrCreateCacheFolder(applicationContext, "upscale") ?: return rawData
+            val outputFile = File(cacheDir, "upscale.png")
+            val progress = ByteBuffer.allocateDirect(1)
+            val killSwitch = ByteBuffer.allocateDirect(1)
+            val dataIn = ByteBuffer.allocateDirect(rawData.size)
+            dataIn.put(rawData)
 
-    private fun upscale(imgId: String, rawData: ByteArray): ByteArray {
-        val cacheDir =
-            getOrCreateCacheFolder(applicationContext, "upscale") ?: return rawData
-        val outputFile = File(cacheDir, "upscale.png")
-        val progress = ByteBuffer.allocateDirect(1)
-        val killSwitch = ByteBuffer.allocateDirect(1)
-        val dataIn = ByteBuffer.allocateDirect(rawData.size)
-        dataIn.put(rawData)
+            upscaler?.let {
+                try {
+                    killSwitch.put(0, 0)
+                    val res = it.upscale(
+                        dataIn, outputFile.absolutePath, progress, killSwitch
+                    )
+                    // Fail => exit immediately
+                    if (res != 0) progress.put(0, 100)
 
-        upscaler?.let {
-            try {
-                killSwitch.put(0, 0)
-                val res = it.upscale(
-                    dataIn, outputFile.absolutePath, progress, killSwitch
-                )
-                // Fail => exit immediately
-                if (res != 0) progress.put(0, 100)
+                    // Poll while processing
+                    val intervalSeconds = 3
+                    var iterations = 0
+                    while (iterations < 180 / intervalSeconds) { // max 3 minutes
+                        pause(intervalSeconds * 1000)
 
-                // Poll while processing
-                val intervalSeconds = 3
-                var iterations = 0
-                while (iterations < 180 / intervalSeconds) { // max 3 minutes
-                    pause(intervalSeconds * 1000)
+                        if (isStopped) {
+                            Timber.d("Kill order sent")
+                            killSwitch.put(0, 1)
+                            return rawData
+                        }
 
-                    if (isStopped) {
-                        Timber.d("Kill order sent")
-                        killSwitch.put(0, 1)
-                        return rawData
+                        val p = progress.get(0)
+                        globalProgress.setProgress(imgId, p / 100f)
+                        launchProgressNotification()
+
+                        iterations++
+                        if (p >= 100) break
                     }
-
-                    val p = progress.get(0)
-                    globalProgress.setProgress(imgId, p / 100f)
-                    launchProgressNotification()
-
-                    iterations++
-                    if (p >= 100) break
+                } finally {
+                    // can't recycle ByteBuffer dataIn
                 }
-            } finally {
-                // can't recycle ByteBuffer dataIn
+            }
+
+            getInputStream(applicationContext, outputFile.toUri()).use { input ->
+                return input.readBytes()
             }
         }
-
-        getInputStream(applicationContext, outputFile.toUri()).use { input ->
-            return input.readBytes()
-        }
-    }
+     */
 
     private fun nextOK() {
         nbOK++
