@@ -53,6 +53,8 @@ enum class Site(val code: Int, val description: String, val url: String, val ico
     SXYPIX(17, "SXYPIX", "https://sxypix.com/", R.drawable.ic_site_sxypix),
     PICS_X(18, "PICS-X", "https://pics-x.com/", R.drawable.ic_site_pics_x),
     COSPLAYTELE(19, "CosplayTele", "https://cosplaytele.com/", R.drawable.ic_fav_full),
+    GIRLSTOP(20, "GirlsTop", "https://en.girlstop.info/", R.drawable.ic_site_girlstop),
+    COOMER(21, "Coomer", "https://coomer.st", R.drawable.ic_site_kemono),
 
     // Used for associating attributes to sites in Preferences
     ANY(97, "any", "", R.drawable.ic_cherry_icon),

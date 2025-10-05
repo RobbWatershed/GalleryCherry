@@ -1,5 +1,6 @@
 package me.devsaki.hentoid.database.domains
 
+import android.text.TextUtils
 import androidx.appcompat.app.AppCompatActivity
 import androidx.documentfile.provider.DocumentFile
 import io.objectbox.annotation.Backlink
@@ -14,6 +15,7 @@ import io.objectbox.relation.ToMany
 import io.objectbox.relation.ToOne
 import me.devsaki.hentoid.activities.sources.BabeTodayActivity
 import me.devsaki.hentoid.activities.sources.BaseBrowserActivity
+import me.devsaki.hentoid.activities.sources.CoomerActivity
 import me.devsaki.hentoid.activities.sources.CosplayTeleActivity
 import me.devsaki.hentoid.activities.sources.FapalityActivity
 import me.devsaki.hentoid.activities.sources.JapBeautiesActivity
@@ -186,6 +188,7 @@ data class Content(
                 Site.SXYPIX -> SxyPixActivity::class.java
                 Site.PICS_X -> PicsXActivity::class.java
                 Site.COSPLAYTELE -> CosplayTeleActivity::class.java
+                Site.COOMER -> CoomerActivity::class.java
                 else -> BaseBrowserActivity::class.java
             }
         }
@@ -279,6 +282,19 @@ data class Content(
                 parts = url.split("_".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
                 return if (parts.size > 1) parts[1]
                 else ""
+            }
+
+            Site.COOMER -> {
+                // Service, user ID and content ID
+                val paths: List<String> = url.split("/")
+                val userIdx = paths.indexOf("user")
+                val postIdx = paths.indexOf("post")
+                val elements = ArrayList<String>()
+                if (userIdx > -1) elements.add(paths[userIdx - 1]) // Service
+                if (userIdx > -1) elements.add(paths[userIdx + 1]) // User id
+                if (postIdx > -1) elements.add(paths[postIdx + 1]) // Post id
+
+                return TextUtils.join("-", elements)
             }
 
             else -> return ""

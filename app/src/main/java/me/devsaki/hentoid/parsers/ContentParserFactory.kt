@@ -7,6 +7,7 @@ import me.devsaki.hentoid.parsers.content.ContentParser
 import me.devsaki.hentoid.parsers.content.CosplayTeleContent
 import me.devsaki.hentoid.parsers.content.FapalityContent
 import me.devsaki.hentoid.parsers.content.JjgirlsContent
+import me.devsaki.hentoid.parsers.content.KemonoContent
 import me.devsaki.hentoid.parsers.content.LusciousContent
 import me.devsaki.hentoid.parsers.content.PicsXContent
 import me.devsaki.hentoid.parsers.content.PornPicsContentK
@@ -17,6 +18,7 @@ import me.devsaki.hentoid.parsers.content.XnxxContentK
 import me.devsaki.hentoid.parsers.images.DummyParser
 import me.devsaki.hentoid.parsers.images.FapalityParser
 import me.devsaki.hentoid.parsers.images.ImageListParser
+import me.devsaki.hentoid.parsers.images.KemonoParser
 import me.devsaki.hentoid.parsers.images.LusciousParser
 import me.devsaki.hentoid.parsers.images.PicsXParser
 import me.devsaki.hentoid.parsers.images.SxypixParser
@@ -38,6 +40,7 @@ object ContentParserFactory {
             Site.PICS_X -> PicsXContent::class.java
             Site.COSPLAYTELE -> CosplayTeleContent::class.java
             Site.JAPBEAUTIES, Site.REDDIT, Site.LINK2GALLERIES, Site.NEXTPICTUREZ, Site.PORNPICGALLERIES -> SmartContent::class.java
+            Site.COOMER -> KemonoContent::class.java
             else -> SmartContent::class.java
         }
     }
@@ -53,6 +56,7 @@ object ContentParserFactory {
             Site.FAPALITY -> FapalityParser()
             Site.SXYPIX -> SxypixParser()
             Site.PICS_X -> PicsXParser()
+            Site.COOMER -> KemonoParser()
             else -> DummyParser()
         }
     }

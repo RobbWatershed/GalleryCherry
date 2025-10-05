@@ -8,15 +8,21 @@
     },
     "JJGIRLS": {
       "hasBackupURLs": true,
-      "comment" : "JJgirls uses the backup URL mechanism to fill in the gaps of fake image links leading to ads"
+      "comment": "JJgirls uses the backup URL mechanism to fill in the gaps of fake image links leading to ads"
     },
     "JJGIRLS2": {
       "hasBackupURLs": true,
-      "comment" : "JJgirls uses the backup URL mechanism to fill in the gaps of fake image links leading to ads"
+      "comment": "JJgirls uses the backup URL mechanism to fill in the gaps of fake image links leading to ads"
     },
     "BABETODAY": {
       "hasBackupURLs": true,
-      "comment" : "Babe.today uses the backup URL mechanism to fill in the gaps of fake image links leading to ads"
+      "comment": "Babe.today uses the backup URL mechanism to fill in the gaps of fake image links leading to ads"
+    },
+    "COOMER": {
+      "useHentoidAgent": false,
+      "useWebviewAgent": false,
+      "requestsCapPerSecond": 1,
+      "parallelDownloadCap": 1
     }
   }
 }
