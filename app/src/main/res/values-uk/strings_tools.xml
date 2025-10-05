@@ -8,11 +8,11 @@
     <!-- Button -->
     <string name="tools_export_library_title">Експортувати метадані</string>
     <!-- Button description -->
-    <string name="tools_export_library_summary">Експортувати книги з Hentoid в JSON</string>
+    <string name="tools_export_library_summary">Експортувати книги з GalleryCherry в JSON</string>
     <!-- Button -->
     <string name="tools_import_library_title">Імпортувати метадані</string>
     <!-- Button description -->
-    <string name="tools_import_library_summary">Відновити книги в Hentoid з JSON</string>
+    <string name="tools_import_library_summary">Відновити книги в GalleryCherry з JSON</string>
     <!-- Subheading -->
     <string name="tools_screen_cat_settings">Налаштування</string>
     <!-- Button -->

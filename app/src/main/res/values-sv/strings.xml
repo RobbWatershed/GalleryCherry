@@ -2,12 +2,12 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="_default">standard</string>
     <string name="about_achievements">Framsteg</string>
-    <string name="about_app_version">Hentoid v%1$s (%2$d)</string>
+    <string name="about_app_version">GalleryCherry v%1$s (%2$d)</string>
     <string name="about_chrome_unavailable">Webbvyn är otillgänglig</string>
     <string name="about_chrome_updating">Webbvyn uppdaterar just</string>
     <string name="about_chrome_version">Chrome v%1$d</string>
     <string name="about_licenses">Licenser</string>
-    <string name="about1">Hentoid är en Doujinshi &amp; H-Manga arkiveringsapp. Hentoid utvecklades ursprungligen av Cesar Arasaki.</string>
+    <string name="about1">GalleryCherry är en Doujinshi &amp; H-Manga arkiveringsapp. GalleryCherry utvecklades ursprungligen av Cesar Arasaki.</string>
     <string name="actions_generic">Handlingar</string>
     <string name="active_sites">Aktiva sidor</string>
     <string name="add_external">Lägg till extern plats</string>
@@ -21,13 +21,13 @@
     <string name="alert_fix_available">En lösning är tillgänglig i den senaste versionen av appen. Vänligen uppdatera.</string>
     <string name="alert_grey">Den här sidan har för tillfället allvarliga stabilitetsproblem. Appen har inget med det att göra, vänligen försök igen senare.</string>
     <string name="alert_low_memory">Din enhet börjar få slut på lagringsutrymme!</string>
-    <string name="alert_low_memory_db">Hentoid-databasen börjar få slut på lagringsutrymme! Vänligen ta backup och gör dig av med böcker.</string>
+    <string name="alert_low_memory_db">GalleryCherry-databasen börjar få slut på lagringsutrymme! Vänligen ta backup och gör dig av med böcker.</string>
     <string name="alert_notifications">Notifieringar har stängts av!</string>
     <string name="alert_orange">Var medveten om att nerladdningar kan misslyckas på den här sajten.</string>
     <string name="alert_permissions_lost">Filbehörigheter har gått förlorade</string>
     <string name="alert_red">Nerladdningsknappen är för tillfället sönder på den här sajten.</string>
     <string name="alert_unwanted_tags">Den här boken är märkt med %s</string>
-    <string name="alert_wip">Hentoids utvecklarteam arbetar på en lösning. Appen informerar dig när en lösning är färdig.</string>
+    <string name="alert_wip">GalleryCherrys utvecklarteam arbetar på en lösning. Appen informerar dig när en lösning är färdig.</string>
     <string name="app_intro">Välkommen</string>
     <string name="app_lock_biometrics_fail">Kunde inte hitta något passande biometriskt system</string>
     <string name="app_lock_disabled">Applås avstängt</string>
@@ -146,7 +146,7 @@
     </plurals>
     <string name="content_not_found">Fel - innehåll kunde inte hittas</string>
     <string name="content_removal_failed">Innehållsborttagning misslyckades</string>
-    <string name="contents_detected">Hentoid har upptäckt ett existerande bibliotek på den här platsen.\nVill du importera det här biblioteket\?</string>
+    <string name="contents_detected">GalleryCherry har upptäckt ett existerande bibliotek på den här platsen.\nVill du importera det här biblioteket\?</string>
     <string name="copy_download_folder_fail">Kunde inte skriva till nerladdningsmappen</string>
     <string name="copy_download_folder_success">Kopierade till nerladdningsmappen</string>
     <string name="copy_generic">Kopia</string>
@@ -537,7 +537,7 @@
     <string name="lock_type">Låstyp</string>
     <string name="lock_type_biometric">Biometri</string>
     <string name="lock_type_pin">PIN-kod</string>
-    <string name="log_api29_migration">Biblioteksmigration från Hentoid v1.11</string>
+    <string name="log_api29_migration">Biblioteksmigration från GalleryCherry v1.11</string>
     <string name="log_cleanup">Primärbiblioteksstädningslogg</string>
     <string name="log_import">Import/uppfräschningslogg primärbibliotek</string>
     <string name="log_import_external">Import/uppfräschningslogg externbibliotek</string>
@@ -562,8 +562,8 @@
     <string name="memory_details_size">Storlek</string>
     <string name="memory_details_source">Källa</string>
     <string name="memory_free">Fritt: %s</string>
-    <string name="memory_hentoid_ext">Hentoid (extern): %s</string>
-    <string name="memory_hentoid_main">Hentoid (primär): %s</string>
+    <string name="memory_GalleryCherry_ext">GalleryCherry (extern): %s</string>
+    <string name="memory_GalleryCherry_main">GalleryCherry (primär): %s</string>
     <string name="memory_title">Användning av lagring</string>
     <string name="memory_total">Totalt: %s</string>
     <string name="menu_archive">Arkiv</string>
@@ -614,7 +614,7 @@
     <string name="meta_tag_all_selected">Etikettera alla utvalda böcker</string>
     <string name="meta_tag_all_selected_confirm">Etikettera alla %1$d utvalda böcker med \'%2$s\'?</string>
     <string name="method">Metod</string>
-    <string name="missing_web_view">Hentoid har inte lyckats hitta Androids\ inbyggda Webbvy för appar.\nUtan den kan\ du inte surfa källor, återladdaner böcker; det finns inte mycket som du kan\ göra som kräver internetåtkomst.\n\nDet mest sannolika är att det\ faktiskt är installerat på ditt system, men har blivit avstängd.: vänligen gå till Inställningar &gt; Appar &gt; Avstängda appar och sätt på Android System WebView.\n\nOm du inte kan\ hitta appen, vänligen intallera den från din enhet\s appbutik.</string>
+    <string name="missing_web_view">GalleryCherry har inte lyckats hitta Androids\ inbyggda Webbvy för appar.\nUtan den kan\ du inte surfa källor, återladdaner böcker; det finns inte mycket som du kan\ göra som kräver internetåtkomst.\n\nDet mest sannolika är att det\ faktiskt är installerat på ditt system, men har blivit avstängd.: vänligen gå till Inställningar &gt; Appar &gt; Avstängda appar och sätt på Android System WebView.\n\nOm du inte kan\ hitta appen, vänligen intallera den från din enhet\s appbutik.</string>
     <string name="missing_web_view_library">Tillbaka till biblioteket</string>
     <string name="missing_web_view_title">Webbvyn är inte installerad eller så är den avstängd</string>
     <string name="mode_dl">Bildnedladdare</string>
@@ -721,8 +721,8 @@
     <string name="paused_no_wifi">Kan inte ladda ner - inget Wi-Fi</string>
     <string name="permissioncomplaint_snackbar">Du måste ge tillstånd innan du kan fortsätta</string>
     <string name="permissioncomplaint_snackbar_manual">Du måste manuellt ge tillstånd innan du kan fortsätta</string>
-    <string name="personalDataStatement1">SEKRETESSINFORMATION ANGÅENDE PERSONUPPGIFTER\n\nHentoid är en gratis och öppenkällkodsprogramvara underhållen av Hentoid-gemenskapen (gå med i vår Discord - se länk ovanför)</string>
-    <string name="personalDataStatement2">Hentoid samlar in följande personliga data och skickar den till Google för behandling genom Firebasebiblioteket:\n  - Sessions-ID\n  - IP-address</string>
+    <string name="personalDataStatement1">SEKRETESSINFORMATION ANGÅENDE PERSONUPPGIFTER\n\nGalleryCherry är en gratis och öppenkällkodsprogramvara underhållen av GalleryCherry-gemenskapen (gå med i vår Discord - se länk ovanför)</string>
+    <string name="personalDataStatement2">GalleryCherry samlar in följande personliga data och skickar den till Google för behandling genom Firebasebiblioteket:\n  - Sessions-ID\n  - IP-address</string>
     <string name="personalDataStatement3">Ovannämnda datan tas bort från Firebases körande samt backupsystem inom 180 dagar (se https://firebase.google.com/support/privacy/ för fler detaljer)\n\nIngen annan personlig data samlas varken in eller skickas till någon annan part.</string>
     <string name="pin_current">Mata in nuvarande PIN-kod</string>
     <string name="pin_explanation">Applås förhindrar obehörig användning av appen genom att begära en 4-siffrig PIN-kod eller en biometrikontroll innan åtkomst beviljas</string>
@@ -839,7 +839,7 @@
     <string name="resize_method_4">AI upskalning 2x</string>
     <string name="resize_method_5">Manhwa splittra/sammanslå</string>
     <string name="resize_method_5_prompt">Antalet bilder per kapitel</string>
-    <string name="restart_needed">Ändringarna börjar gälla när Hentoid återstartats</string>
+    <string name="restart_needed">Ändringarna börjar gälla när GalleryCherry återstartats</string>
     <string name="resume">Fortsätt</string>
     <string name="resume_closed">Fortsätt läsa där du slutade\?</string>
     <string name="retransform_warning">%d sidor har redan blivit transformerade. Att transformera dem flera gånger kan resultera i märkbar kvalitetsförlust.\nVi rekommenderar att ladda ner original bilderna en gång till och transformera dessa endast en gång.</string>
@@ -927,9 +927,9 @@
     <string name="storage_stats">Statistik</string>
     <string name="storage_stats_view">Läs användningsstatistik</string>
     <string name="storage_strategy_balance">Balansera fritt utrymme</string>
-    <string name="storage_strategy_balance_desc">Hentoid laddar ner till platsen med mest lagringsutrymme och försöker bibehålla en balans. Flyttar inte på böcker som redan finns i biblioteket.</string>
+    <string name="storage_strategy_balance_desc">GalleryCherry laddar ner till platsen med mest lagringsutrymme och försöker bibehålla en balans. Flyttar inte på böcker som redan finns i biblioteket.</string>
     <string name="storage_strategy_fallover">Våg</string>
-    <string name="storage_strategy_fallover_desc">Hentoid laddar ner till plats 1 tills %d%% av kapaciteten är fylld, sedan laddar den ner till plats 2.</string>
+    <string name="storage_strategy_fallover_desc">GalleryCherry laddar ner till plats 1 tills %d%% av kapaciteten är fylld, sedan laddar den ner till plats 2.</string>
     <string name="storage_strategy_title">Nerladdningsstrategi : %s</string>
     <string name="stream_canceled">Streaming avbruten - bok otillgänglig online</string>
     <string name="stream_confirm">Streama vald bok?</string>

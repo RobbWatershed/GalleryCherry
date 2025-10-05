@@ -12,7 +12,7 @@
     <string name="mass_operations_summary">Masshandlingar för biblioteket</string>
     <string name="mass_operations_title">Masshandlingar</string>
     <string name="pref_analytics_preference_summary_off">Analytics Tracking är just nu avstängd.\nAtt slå på den här inställningen kommer hjälpa oss att förbättra appen genom spårande av kraschar &amp; undantagsfall.</string>
-    <string name="pref_analytics_preference_summary_on">Analytics Tracking är påslaget.\nTack för hjälpen att förbättra Hentoid!</string>
+    <string name="pref_analytics_preference_summary_on">Analytics Tracking är påslaget.\nTack för hjälpen att förbättra GalleryCherry!</string>
     <string name="pref_analytics_preference_title">Firebase Analytics</string>
     <string name="pref_app_preview_summary_off">Appförhandsvisning i senaste appar avstängd\nTillåt om du behöver ta ett skärmskott</string>
     <string name="pref_app_preview_summary_on">App-förhandsvisning i senaste appar tillåts</string>
@@ -81,7 +81,7 @@
     <string name="pref_browser_resume_last_title">Fortsätt vid senast visad sida</string>
     <string name="pref_browser_visuals">Visuellt</string>
     <string name="pref_cat_advanced">Avancerat</string>
-    <string name="pref_cat_downloads_folder">Hentoidbibliotek</string>
+    <string name="pref_cat_downloads_folder">GalleryCherrybibliotek</string>
     <string name="pref_cat_eh">E-hentai / ExHentai</string>
     <string name="pref_cat_external">Externt bibliotek</string>
     <string name="pref_cat_hitomi">Hitomi</string>
@@ -130,10 +130,10 @@
     <string name="pref_endless_scroll_summary_off">Tillåter ändlöst skrollande i nedladdningslistan\nStänger av bläddrande</string>
     <string name="pref_endless_scroll_summary_on">Skrolla så mycket du vill\</string>
     <string name="pref_endless_scroll_title">Oändligt skrollande</string>
-    <string name="pref_external_library_delete_off">Hentoid kan varken ta bort böcker eller sidor i det externa biblioteket</string>
-    <string name="pref_external_library_delete_on">Hentoid kan ta bort böcker och sidor i det externa biblioteket</string>
+    <string name="pref_external_library_delete_off">GalleryCherry kan varken ta bort böcker eller sidor i det externa biblioteket</string>
+    <string name="pref_external_library_delete_on">GalleryCherry kan ta bort böcker och sidor i det externa biblioteket</string>
     <string name="pref_external_library_delete_title">Tillåt borttagning av externt innehåll</string>
-    <string name="pref_external_library_detach_summary">Inkludera inte längre det externa biblioteket i Hentoid </string>
+    <string name="pref_external_library_detach_summary">Inkludera inte längre det externa biblioteket i GalleryCherry </string>
     <string name="pref_external_library_detach_title">Avlägsna externt bibliotek</string>
     <string name="pref_external_library_ext_name_pattern">Fildöpningsmönster</string>
     <string name="pref_external_library_summary_empty">Inget externt bibliotek har ställts in</string>
@@ -183,10 +183,10 @@
     <string name="pref_screenshot_summary_off">App-förhandsvisning i senaste appar + skärmskott avslagna</string>
     <string name="pref_screenshot_summary_on">Skärmskott tillåts</string>
     <string name="pref_screenshot_title">Skärmskottsinställningar</string>
-    <string name="pref_select_folder_summary">Välj var Hentoid ska lagra dina nedladdningar</string>
+    <string name="pref_select_folder_summary">Välj var GalleryCherry ska lagra dina nedladdningar</string>
     <string name="pref_select_folder_title">Välj nedladdningsmapp</string>
-    <string name="pref_text_select_menu_summary_off">Din enhets textvalsmeny tillåter inte att du kör kärnvapenkoder genom Hentoid</string>
-    <string name="pref_text_select_menu_summary_on">Din enhets textvalsmeny tillåter dig att köra kärnvapenkoder genom Hentoid</string>
+    <string name="pref_text_select_menu_summary_off">Din enhets textvalsmeny tillåter inte att du kör kärnvapenkoder genom GalleryCherry</string>
+    <string name="pref_text_select_menu_summary_on">Din enhets textvalsmeny tillåter dig att köra kärnvapenkoder genom GalleryCherry</string>
     <string name="pref_text_select_menu_title">Textvalsmeny</string>
     <string name="pref_top_fab_summary_off">Knapp avstängd</string>
     <string name="pref_top_fab_summary_on">Knapp aktiverad</string>

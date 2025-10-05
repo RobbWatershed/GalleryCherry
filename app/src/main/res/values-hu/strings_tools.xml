@@ -3,9 +3,9 @@
 <string name="tools_title">Eszközök</string>
 <string name="tools_screen_import_export">Importálás / Exportálás</string>
 <string name="tools_export_library_title">Metaadat exportálása</string>
-<string name="tools_export_library_summary">Hentoid könyvek exportálása JSON fájlba</string>
+<string name="tools_export_library_summary">GalleryCherry könyvek exportálása JSON fájlba</string>
 <string name="tools_import_library_title">Metaadat importálása</string>
-<string name="tools_import_library_summary">Hentoid könyvek importálása JSON fájlból</string>
+<string name="tools_import_library_summary">GalleryCherry könyvek importálása JSON fájlból</string>
 <string name="tools_screen_cat_settings">Beállítások</string>
 <string name="tools_export_settings_title">Beállítások exportálása</string>
 <string name="tools_export_settings_summary">Beállítások exportálása JSON fájlba</string>

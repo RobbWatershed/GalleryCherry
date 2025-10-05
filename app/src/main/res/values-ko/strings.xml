@@ -88,7 +88,7 @@
     <string name="book_settings">작품 설정</string>
     <string name="alert_browser_mode">탐색 모드 활성화: 저장공간 권한 없음</string>
     <string name="alert_low_memory">기기에 저장 공간이 얼마 남지 않았습니다!</string>
-    <string name="alert_low_memory_db">Hentoid 데이터베이스에 저장 공간이 얼마 남지 않았습니다!\n작품을 백업하고 삭제해주세요.</string>
+    <string name="alert_low_memory_db">GalleryCherry 데이터베이스에 저장 공간이 얼마 남지 않았습니다!\n작품을 백업하고 삭제해주세요.</string>
     <string name="alert_permissions_lost">파일 권한을 잃었습니다</string>
     <string name="alert_notifications">알림이 비활성화되었습니다!</string>
     <string name="fix_permissions">수정</string>
@@ -281,7 +281,7 @@
     <string name="import_unexpected">불러오기가 예상치 못하게 중지됨</string>
     <string name="task_done">작업 완료 - 로그에서 세부 정보 확인</string>
     <string name="content_not_found">에러 - 컨텐츠를 찾을 수 없음</string>
-    <string name="contents_detected">Hentoid가 이 위치에 있는 기존 라이브러리를 인식했습니다.\n이 라이브러리를 가져오시겠습니까\?</string>
+    <string name="contents_detected">GalleryCherry가 이 위치에 있는 기존 라이브러리를 인식했습니다.\n이 라이브러리를 가져오시겠습니까\?</string>
     <string name="library_imports_title">라이브러리 불러오기</string>
     <string name="starting_import">불러오기 시작…</string>
     <string name="importing_library">라이브러리 불러오는 중</string>
@@ -291,8 +291,8 @@
     <string name="memory_title">저장공간 사용량</string>
     <string name="memory_total">전체 공간: %s</string>
     <string name="memory_free">잔여 공간: %s</string>
-    <string name="memory_hentoid_main">Hentoid (기본): %s</string>
-    <string name="memory_hentoid_ext">Hentoid (외부): %s</string>
+    <string name="memory_GalleryCherry_main">GalleryCherry (기본): %s</string>
+    <string name="memory_GalleryCherry_ext">GalleryCherry (외부): %s</string>
     <string name="memory_database">데이터베이스: %1$s (%2$.1f%% 사용)</string>
     <string name="memory_details">상세 정보 보기 (기본)</string>
     <string name="memory_details_source">대상</string>
@@ -306,7 +306,7 @@
     <string name="log_import_external">외부 라이브러리 가져오기/새로고침</string>
     <string name="log_import">기본 라이브러리 가져오기/새로고침</string>
     <string name="log_cleanup">기본 라이브러리 정리</string>
-    <string name="log_api29_migration">라이브러리 이동 (Hentoid v1.11)</string>
+    <string name="log_api29_migration">라이브러리 이동 (GalleryCherry v1.11)</string>
     <string name="error_write_permission">해당 폴더에 쓰기 권한이 없습니다. 다른 폴더에 시도하세요.</string>
     <string name="error_creating_folder">폴더가 유효하지 않습니다.</string>
     <string name="error_open">파일 여는 중 오류: 관련 응용 프로그램을 찾을 수 없습니다</string>
@@ -363,7 +363,7 @@
     <string name="book_launchcode">Launch code: %s</string>
     <string name="number_of_items">%d 항목</string>
     <string name="number_of_book_search_results">%1$d/%2$d 검색 결과</string>
-    <string name="restart_needed">변경 사항은 Hentoid를 재시작 한 후에 적용됩니다</string>
+    <string name="restart_needed">변경 사항은 GalleryCherry를 재시작 한 후에 적용됩니다</string>
     <string name="redownload_confirm">선택한 작품을 처음부터 다시 다운로드 하시겠습니까\?</string>
     <string name="download_confirm">선택한 작품을 다운로드 하시겠습니까\?</string>
     <string name="stream_confirm">선택한 작품을 스트리밍 형식으로 바꾸시겠습니까\?</string>
@@ -461,7 +461,7 @@
     <string name="alert_red">현재 이 사이트의 다운로드 버튼이 손상되었습니다.</string>
     <string name="alert_grey">이 사이트는 현재 심각한 안정성 문제가 있습니다. 나중에 다시 시도 해주십시오.</string>
     <string name="alert_black">이 사이트는 현재 사용할 수 없습니다. 나중에 다시 시도 해주십시오.</string>
-    <string name="alert_wip">Hentoid 개발 팀이 수정 작업을 하고 있습니다. 새 버전이 준비되면 앱에서 알려드립니다.</string>
+    <string name="alert_wip">GalleryCherry 개발 팀이 수정 작업을 하고 있습니다. 새 버전이 준비되면 앱에서 알려드립니다.</string>
     <string name="alert_fix_available">최신 버전에서 문제가 해결되었습니다. 업데이트 해주세요.</string>
     <string name="app_lock_pin">PIN 입력</string>
     <string name="app_lock_enable">앱 잠금 활성화</string>
@@ -480,12 +480,12 @@
     <string name="biometric_dialog_title">생체 인식 잠금</string>
     <string name="biometric_dialog_subtitle_lock">잠금 전 확인</string>
     <string name="biometric_dialog_subtitle_unlock">생체 인식으로 잠금 해제</string>
-    <string name="about1">Hentoid는 동인지\n&amp; H-망가 보관 앱입니다. Hentoid는 Cesar Arasaki에 의해 처음으로 만들어졌습니다.</string>
-    <string name="personalDataStatement1">개인 데이터 개인 정보 보호 정책\n\nHentoid는 커뮤니티에서 유지, 관리하는 무료 오픈 소스 소프트웨어입니다 (Discord에 참여하세요 - 위 링크 참조)</string>
-    <string name="personalDataStatement2">Hentoid는 다음 개인 데이터를 수집하고 Google로 보내서 Firebase 라이브러리를 통해 처리합니다:\n - 세션 ID\n - IP 주소</string>
+    <string name="about1">GalleryCherry는 동인지\n&amp; H-망가 보관 앱입니다. GalleryCherry는 Cesar Arasaki에 의해 처음으로 만들어졌습니다.</string>
+    <string name="personalDataStatement1">개인 데이터 개인 정보 보호 정책\n\nGalleryCherry는 커뮤니티에서 유지, 관리하는 무료 오픈 소스 소프트웨어입니다 (Discord에 참여하세요 - 위 링크 참조)</string>
+    <string name="personalDataStatement2">GalleryCherry는 다음 개인 데이터를 수집하고 Google로 보내서 Firebase 라이브러리를 통해 처리합니다:\n - 세션 ID\n - IP 주소</string>
     <string name="personalDataStatement3">위에서 언급한 데이터는 180일 이내에 Firebase 라이브 및 백업 시스템에서 제거됩니다 (자세한 내용은 https://firebase.google.com/support/privacy/ 참조)\n\n다른 개인 데이터는 수집되거나 제 3자에게 전송되지 않습니다.</string>
     <string name="about_licenses">라이센스 표시</string>
-    <string name="about_app_version">Hentoid v%1$s (%2$d)</string>
+    <string name="about_app_version">GalleryCherry v%1$s (%2$d)</string>
     <string name="about_chrome_version">Chrome v%1$d</string>
     <string name="about_chrome_unavailable">WebView 사용 불가</string>
     <string name="about_chrome_updating">WebView 업데이트 중</string>
@@ -746,7 +746,7 @@
     <string name="title_startup_progress">시작 중…</string>
     <string name="title_startup_complete">시작 완료</string>
     <string name="missing_web_view_title">WebView가 설치되지 않았거나 비활성화 되었습니다</string>
-    <string name="missing_web_view">Hentoid가 안드로이드에 내장된 앱 용 웹 뷰어를 찾지 못했습니다.\n현재 브라우저 탐색이나 작품을 다운로드 하는 등 인터넷을 사용한 작업이 불가능합니다.\n\n설정 &gt; 애플리케이션 &gt; 사용 안 함 에서 Android 시스템 WebView를 활성화하세요.\n\n앱이 존재하지 않는다면 기기의 앱 스토어에서 설치하세요.</string>
+    <string name="missing_web_view">GalleryCherry가 안드로이드에 내장된 앱 용 웹 뷰어를 찾지 못했습니다.\n현재 브라우저 탐색이나 작품을 다운로드 하는 등 인터넷을 사용한 작업이 불가능합니다.\n\n설정 &gt; 애플리케이션 &gt; 사용 안 함 에서 Android 시스템 WebView를 활성화하세요.\n\n앱이 존재하지 않는다면 기기의 앱 스토어에서 설치하세요.</string>
     <string name="missing_web_view_library">라이브러리로 돌아가기</string>
     <string name="group_today">오늘</string>
     <string name="group_7">지난 7일</string>

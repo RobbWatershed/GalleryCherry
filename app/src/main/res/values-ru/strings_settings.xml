@@ -49,10 +49,10 @@
     <string name="pref_external_library_title">Внешняя библиотека</string>
     <string name="pref_external_library_summary_empty">Внешние библиотеки не установлены</string>
     <string name="pref_external_library_delete_title">Разрешать удаление внешнего контента</string>
-    <string name="pref_external_library_delete_on">Hentoid может удалять книги и страницы во внешней библиотеке</string>
-    <string name="pref_external_library_delete_off">Hentoid не может удалять книги и страницы во внешней библиотеке</string>
+    <string name="pref_external_library_delete_on">GalleryCherry может удалять книги и страницы во внешней библиотеке</string>
+    <string name="pref_external_library_delete_off">GalleryCherry не может удалять книги и страницы во внешней библиотеке</string>
     <string name="pref_external_library_detach_title">Отключить внешнюю библиотеку</string>
-    <string name="pref_external_library_detach_summary">Не использовать внешнюю библиотеку в Hentoid</string>
+    <string name="pref_external_library_detach_summary">Не использовать внешнюю библиотеку в GalleryCherry</string>
     <string name="pref_cat_eh">E-hentai / ExHentai</string>
     <string name="pref_cat_ksk">Ksk.moe</string>
     <string name="pref_cat_advanced">Дополнительно</string>
@@ -153,7 +153,7 @@
     <string name="pref_screenshot_summary_on">Скриншоты разрешены</string>
     <string name="pref_analytics_preference_title">Аналитика Firebase</string>
     <string name="pref_analytics_preference_summary_off">Сбор аналитики выключен.\nВключите его, чтобы мы могли улучшать приложение, отслеживая сбои и ошибки в нём</string>
-    <string name="pref_analytics_preference_summary_on">Сбор аналитики включён.\nСпасибо, что помогаете нам улучшить Hentoid!</string>
+    <string name="pref_analytics_preference_summary_on">Сбор аналитики включён.\nСпасибо, что помогаете нам улучшить GalleryCherry!</string>
     <string name="pref_screen_updates">Обновления</string>
     <string name="pref_check_updates_manual_title">Проверить обновления вручную</string>
     <string name="pref_check_updates_manual_summary">Сделать проверку прямо сейчас</string>

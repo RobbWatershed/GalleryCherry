@@ -39,7 +39,7 @@
     <string name="title_activity_downloads">ライブラリー</string>
     <string name="title_activity_queue">キュー</string>
     <string name="title_activity_settings">環境設定</string>
-    <string name="title_activity_about">Hentoidについて</string>
+    <string name="title_activity_about">GalleryCherryについて</string>
     <string name="title_activity_app_lock">アプリをロック</string>
     <string name="title_activity_search">高度な検索</string>
     <string name="title_activity_meta_edit">メタデータの編集</string>
@@ -88,7 +88,7 @@
     <string name="book_settings">ブックの設定</string>
     <string name="alert_browser_mode">ブラウザモードが有効: ストレージへのアクセスなし</string>
     <string name="alert_low_memory">デバイスのストレージが不足しています！</string>
-    <string name="alert_low_memory_db">Hentoidデータベースのストレージが不足しています！\n書籍をバックアップして削除してください。</string>
+    <string name="alert_low_memory_db">GalleryCherryデータベースのストレージが不足しています！\n書籍をバックアップして削除してください。</string>
     <string name="alert_permissions_lost">ファイルのアクセス許可が失われました</string>
     <string name="alert_notifications">通知が無効になっています！</string>
     <string name="fix_permissions">修正</string>
@@ -204,9 +204,9 @@
     <string name="storage_merge_complete">マージ完了</string>
     <string name="storage_strategy_title">ダウンロード戦略：%s</string>
     <string name="storage_strategy_balance">空き容量のバランスを取る</string>
-    <string name="storage_strategy_balance_desc">Hentoidは、空き容量が多い場所にダウンロードし、バランスを維持しようとします。 ライブラリに既にある本は移動しません。</string>
+    <string name="storage_strategy_balance_desc">GalleryCherryは、空き容量が多い場所にダウンロードし、バランスを維持しようとします。 ライブラリに既にある本は移動しません。</string>
     <string name="storage_strategy_fallover">フォールオーバー</string>
-    <string name="storage_strategy_fallover_desc">Hentoidが場所１にダウンロードユニット %d%%の容量がいっぱいになった後、場所２にダウンロードします。</string>
+    <string name="storage_strategy_fallover_desc">GalleryCherryが場所１にダウンロードユニット %d%%の容量がいっぱいになった後、場所２にダウンロードします。</string>
     <string name="storage_fallover_threshold">低い空き容量の値 (%%)</string>
     <string name="storage_set_strategy">ダウンロード戦略を設定</string>
     <string name="storage_stats">統計</string>
@@ -281,7 +281,7 @@
     <string name="import_unexpected">インポートが予期せず停止しました</string>
     <string name="task_done">タスクが完了しました-ログの詳細を参照してください</string>
     <string name="content_not_found">エラー-コンテンツが見つかりません</string>
-    <string name="contents_detected">Hentoidは、この場所にある既存のライブラリを認識しました。\ nこのライブラリをインポートしますか？</string>
+    <string name="contents_detected">GalleryCherryは、この場所にある既存のライブラリを認識しました。\ nこのライブラリをインポートしますか？</string>
     <string name="library_imports_title">ライブラリのインポート</string>
     <string name="starting_import">インポートを開始しています…</string>
     <string name="importing_library">ライブラリのインポート</string>
@@ -291,8 +291,8 @@
     <string name="memory_title">ストレージの使用量</string>
     <string name="memory_total">合計：%s</string>
     <string name="memory_free">この端末で使用できる残りの空き容量：%s</string>
-    <string name="memory_hentoid_main">Hentoid (一次): %s</string>
-    <string name="memory_hentoid_ext">Hentoid(外部): %s</string>
+    <string name="memory_GalleryCherry_main">GalleryCherry (一次): %s</string>
+    <string name="memory_GalleryCherry_ext">GalleryCherry(外部): %s</string>
     <string name="memory_database">データベース：%1$s (%2$.1f%% 満杯)</string>
     <string name="memory_details">詳細を表示（プライマリ）</string>
     <string name="memory_details_source">ソース</string>
@@ -306,7 +306,7 @@
     <string name="log_import_external">外部ライブラリのインポート/更新</string>
     <string name="log_import">プライマリライブラリのインポート/更新</string>
     <string name="log_cleanup">プライマリライブラリのクリーンアップ</string>
-    <string name="log_api29_migration">Hentoidv1.11からのライブラリの移行</string>
+    <string name="log_api29_migration">GalleryCherryv1.11からのライブラリの移行</string>
     <string name="error_write_permission">そのフォルダに書き込む権限がありません。別のフォルダを試してみてください。</string>
     <string name="error_creating_folder">フォルダが無効です。</string>
     <string name="error_open">ファイルを開くときにエラーが発生しました：関連するアプリケーションが見つかりません</string>
@@ -363,7 +363,7 @@
     <string name="book_launchcode">起動コード：%s</string>
     <string name="number_of_items">%dアイテム</string>
     <string name="number_of_book_search_results">%1$d/%2$d結果</string>
-    <string name="restart_needed">「Hentoidが再起動された後、変更が適用されます」</string>
+    <string name="restart_needed">「GalleryCherryが再起動された後、変更が適用されます」</string>
     <string name="redownload_confirm">選択した本を最初から再ダウンロードしますか\？</string>
     <string name="download_confirm">選択した本をダウンロード\？</string>
     <string name="stream_confirm">選択した本をストリーミングに切り替えますか\？</string>
@@ -461,7 +461,7 @@
     <string name="alert_red">現在、このサイトのダウンロードボタンは壊れています。</string>
     <string name="alert_grey">このサイトには現在、深刻な安定性の問題があります。 アプリはそれについては何の関係もありません。 後でもう一度やり直してください。</string>
     <string name="alert_black">このサイトは現在実際には利用できません。 アプリはそれについては何の関係もありません。 後でもう一度やり直してください。</string>
-    <string name="alert_wip">Hentoid開発チームは修正に取り組んでいます。 新しいバージョンの準備ができると、アプリから通知されます。</string>
+    <string name="alert_wip">GalleryCherry開発チームは修正に取り組んでいます。 新しいバージョンの準備ができると、アプリから通知されます。</string>
     <string name="alert_fix_available">アプリの最新バージョンで修正が利用可能です。 更新してください。</string>
     <string name="app_lock_pin">PINを入力してください</string>
     <string name="app_lock_enable">アプリのロックを有効にする</string>
@@ -480,12 +480,12 @@
     <string name="biometric_dialog_title">生体認証ロック</string>
     <string name="biometric_dialog_subtitle_lock">ロックする前に確認してください</string>
     <string name="biometric_dialog_subtitle_unlock">生体認証によるロック解除</string>
-    <string name="about1">Hentoidは同人誌＆amp; H-マンガアーカイブアプリ。 Hentoidは、もともとCesar Arasakiによって作成されました。</string>
-    <string name="personalDataStatement1">個人情報のプライバシーに関する声明\n\nHentoidは、Hentoidコミュニティによって管理されている無料のオープンソースソフトウェアです（Discordに参加してください-上記のリンクを参照してください）</string>
-    <string name="personalDataStatement2">Hentoidは次の個人データを収集し、Firebaseライブラリを介して処理するためにGoogleに送信します。\n-セッションID\n-IPアドレス</string>
+    <string name="about1">GalleryCherryは同人誌＆amp; H-マンガアーカイブアプリ。 GalleryCherryは、もともとCesar Arasakiによって作成されました。</string>
+    <string name="personalDataStatement1">個人情報のプライバシーに関する声明\n\nGalleryCherryは、GalleryCherryコミュニティによって管理されている無料のオープンソースソフトウェアです（Discordに参加してください-上記のリンクを参照してください）</string>
+    <string name="personalDataStatement2">GalleryCherryは次の個人データを収集し、Firebaseライブラリを介して処理するためにGoogleに送信します。\n-セッションID\n-IPアドレス</string>
     <string name="personalDataStatement3">上記のデータは、180日以内にFirebaseのライブおよびバックアップシステムから削除されます（詳細については、https://firebase.google.com/support/privacy/を参照してください)\n\n他の個人データが収集されたり、他の人に送信されたりすることはありません パーティ。</string>
     <string name="about_licenses">ディスプレイライセンス</string>
-    <string name="about_app_version">Hentoid v%1$s (%2$d)</string>
+    <string name="about_app_version">GalleryCherry v%1$s (%2$d)</string>
     <string name="about_chrome_version">Chrome v%1$d</string>
     <string name="about_chrome_unavailable">WebViewは利用できません</string>
     <string name="about_chrome_updating">WebViewは現在更新中です</string>
@@ -746,7 +746,7 @@
     <string name="title_startup_progress">起動…</string>
     <string name="title_startup_complete">起動が完了しました</string>
     <string name="missing_web_view_title">WebViewがインストールまたは無効化されていません</string>
-    <string name="missing_web_view">Hentoidは、Androidに組み込まれているアプリ用のWebビューアを見つけることができませんでした。\ nこれがないと、ソースを閲覧したり、書籍を再ダウンロードしたりできません。 インターネットを必要とすることは実際にはできません。\n\nインターネットは実際にシステムにインストールされている可能性がありますが、無効になっています。設定に移動してください＆gt; アプリ＆gt; アプリを無効にし Android System WebViewを有効にします。\n\nアプリが見つからない場合は、デバイスのアプリストアからをインストールしてください。\".</string>
+    <string name="missing_web_view">GalleryCherryは、Androidに組み込まれているアプリ用のWebビューアを見つけることができませんでした。\ nこれがないと、ソースを閲覧したり、書籍を再ダウンロードしたりできません。 インターネットを必要とすることは実際にはできません。\n\nインターネットは実際にシステムにインストールされている可能性がありますが、無効になっています。設定に移動してください＆gt; アプリ＆gt; アプリを無効にし Android System WebViewを有効にします。\n\nアプリが見つからない場合は、デバイスのアプリストアからをインストールしてください。\".</string>
     <string name="missing_web_view_library">ライブラリに戻る</string>
     <string name="group_today">今日</string>
     <string name="group_7">過去7日間</string>

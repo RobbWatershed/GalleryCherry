@@ -128,7 +128,7 @@
     <string name="book_settings">Book settings</string>
     <string name="alert_browser_mode">Browser mode active : no storage access</string>
     <string name="alert_low_memory">Your device is low on storage!</string>
-    <string name="alert_low_memory_db">The Hentoid database is low on storage!\nPlease backup and remove books.</string>
+    <string name="alert_low_memory_db">The GalleryCherry database is low on storage!\nPlease backup and remove books.</string>
     <string name="alert_permissions_lost">File permissions have been lost</string>
     <string name="alert_notifications">Notifications are disabled!</string>
     <string name="fix_permissions">Fix</string>
@@ -208,7 +208,7 @@
     <string name="queue_bottom_bar_speed" tools:ignore="MissingTranslation"><x:g example="/102.4" id="formatted_speed_kbps">%d</x:g> KBps</string>
     <string name="download_notif_speed" tools:ignore="MissingTranslation"><x:g example="3.88" id="size_dled">%1$d</x:g><x:g example="/14.56" id="formatted_estimated_total">%2$s</x:g> MB @ <x:g example="102.4" id="speed_kbps">%3$d</x:g> KBps</string>
     <string name="download_notif_failed">Download failed</string>
-    <string name="download_notif_failed_details">Cannot download <x:g example="Cool H-Manga" id="book_name">%1$s</x:g>: unable to create folder <x:g example="/storage/emulated/0/Hentoid/nhentai/coolhmanga" id="path">%2$s</x:g>. Please check your Primary folder and retry downloading using the \'!\' button.</string>
+    <string name="download_notif_failed_details">Cannot download <x:g example="Cool H-Manga" id="book_name">%1$s</x:g>: unable to create folder <x:g example="/storage/emulated/0/GalleryCherry/nhentai/coolhmanga" id="path">%2$s</x:g>. Please check your Primary folder and retry downloading using the \'!\' button.</string>
     <string name="menu_change_dl_mode">Change download mode</string>
     <string name="mode_dl">Picture download</string>
     <string name="mode_stream">Streaming</string>
@@ -286,9 +286,9 @@
     <string name="storage_merge_complete">Merge complete</string>
     <string name="storage_strategy_title">Download strategy : %s</string>
     <string name="storage_strategy_balance">Balance free space</string>
-    <string name="storage_strategy_balance_desc">Hentoid downloads to whichever location has more free space, trying to maintain balance. Does not move books already in the library.</string>
+    <string name="storage_strategy_balance_desc">GalleryCherry downloads to whichever location has more free space, trying to maintain balance. Does not move books already in the library.</string>
     <string name="storage_strategy_fallover">Fallover</string>
-    <string name="storage_strategy_fallover_desc">Hentoid downloads to Location 1 until %d%% of capacity is filled, then downloads to Location 2.</string>
+    <string name="storage_strategy_fallover_desc">GalleryCherry downloads to Location 1 until %d%% of capacity is filled, then downloads to Location 2.</string>
     <string name="storage_fallover_threshold">Low space threshold (%%)</string>
     <string name="storage_set_strategy">Set download strategy</string>
     <string name="storage_stats">Statistics</string>
@@ -442,7 +442,7 @@
     <string name="import_unexpected">Import has stopped unexpectedly</string>
     <string name="task_done">Task complete - see details in the log</string>
     <string name="content_not_found">Error - content not found</string>
-    <string name="contents_detected">Hentoid has recognized an existing library in this location.\nDo you want to import this library\?</string>
+    <string name="contents_detected">GalleryCherry has recognized an existing library in this location.\nDo you want to import this library\?</string>
     <string name="library_imports_title">Library imports</string>
     <string name="library_metrics_storage_mb">%.0f MB</string>
     <string name="library_metrics_storage_gb">%.2f GB</string>
@@ -462,8 +462,8 @@
     <string name="memory_title">Storage usage</string>
     <string name="memory_total">Total: <x:g example="100 MB" id="total">%s</x:g></string>
     <string name="memory_free">Free: <x:g example="50 MB" id="total">%s</x:g></string>
-    <string name="memory_hentoid_main">Hentoid (primary): <x:g example="2 MB" id="total">%s</x:g></string>
-    <string name="memory_hentoid_ext">Hentoid (external): <x:g example="3 MB" id="total">%s</x:g></string>
+    <string name="memory_GalleryCherry_main">GalleryCherry (primary): <x:g example="2 MB" id="total">%s</x:g></string>
+    <string name="memory_GalleryCherry_ext">GalleryCherry (external): <x:g example="3 MB" id="total">%s</x:g></string>
     <string name="memory_database">Database: <x:g example="1.52 MB" id="size_mb">%1$s</x:g> (<x:g example="40%" id="percentage">%2$.1f%%</x:g> full)</string>
     <string name="memory_details">View details (primary)</string>
     <string name="memory_details_source">Source</string>
@@ -479,7 +479,7 @@
     <string name="log_import_external">External library import/refresh</string>
     <string name="log_import">Primary library import/refresh</string>
     <string name="log_cleanup">Primary library cleanup</string>
-    <string name="log_api29_migration">Library migration from Hentoid v1.11</string>
+    <string name="log_api29_migration">Library migration from GalleryCherry v1.11</string>
 
     <!-- Errors -->
     <string name="error_write_permission">You don\'t have permission to write in that folder, try another folder.</string>
@@ -577,7 +577,7 @@
         <item quantity="one"><x:g example="1" id="number">%1$d</x:g>/<x:g example="7" id="total">%2$d</x:g> result</item>
         <item quantity="other"><x:g example="2" id="number">%1$d</x:g>/<x:g example="7" id="total">%2$d</x:g> results</item>
     </plurals>
-    <string name="restart_needed">"Changes will be applied after Hentoid is restarted"</string>
+    <string name="restart_needed">"Changes will be applied after GalleryCherry is restarted"</string>
     <plurals name="redownload_confirm" tools:ignore="ImpliedQuantity">
         <item quantity="one">Redownload selected book from scratch\?</item>
         <item quantity="other">Redownload selected books from scratch\?</item>
@@ -736,7 +736,7 @@
     <string name="alert_red">The download button is currently broken for this site.</string>
     <string name="alert_grey">This site currently has serious stability issues. The app has nothing to do about it. Please try again later.</string>
     <string name="alert_black">This site is currently unavailable for real. The app has nothing to do about it. Please try again later.</string>
-    <string name="alert_wip">The Hentoid dev team is working on a fix. You will be notified by the app when a new version is ready.</string>
+    <string name="alert_wip">The GalleryCherry dev team is working on a fix. You will be notified by the app when a new version is ready.</string>
     <string name="alert_fix_available">A fix is available on the latest version of the app. Please update.</string>
 
     <!-- App Lock -->
@@ -759,13 +759,13 @@
     <string name="biometric_dialog_subtitle_unlock">Unlock with biometrics</string>
 
     <!-- About Activity -->
-    <string name="about1"><b>Hentoid</b> is a Doujinshi &amp; H-Manga archiving app. Hentoid was originally created by <b>Cesar Arasaki</b>.</string>
-    <string name="personalDataStatement1"><b>PERSONAL DATA PRIVACY STATEMENT</b>\n\nHentoid is a free and open-source software maintained by the Hentoid Community (join us on Discord - see link above)</string>
-    <string name="personalDataStatement2">Hentoid collects the following personal data and sends them to Google for processing through the firebase library:\n  - Session ID\n  - IP address</string>
+    <string name="about1"><b>GalleryCherry</b> is a Doujinshi &amp; H-Manga archiving app. GalleryCherry was originally created by <b>Cesar Arasaki</b>.</string>
+    <string name="personalDataStatement1"><b>PERSONAL DATA PRIVACY STATEMENT</b>\n\nGalleryCherry is a free and open-source software maintained by the GalleryCherry Community (join us on Discord - see link above)</string>
+    <string name="personalDataStatement2">GalleryCherry collects the following personal data and sends them to Google for processing through the firebase library:\n  - Session ID\n  - IP address</string>
     <string name="personalDataStatement3">The abovementioned data is removed from Firebase live and backup system within 180 days (see https://firebase.google.com/support/privacy/ for more details)\n\nNo other personal data is collected nor sent to any other party.</string>
     <string name="about_licenses">Licenses</string>
     <string name="about_achievements">Achievements</string>
-    <string name="about_app_version" tools:ignore="MissingTranslation">Hentoid v<x:g example="1.15.20" id="ver_name">%1$s</x:g> (<x:g example="130" id="ver_code">%2$d</x:g>)</string>
+    <string name="about_app_version" tools:ignore="MissingTranslation">GalleryCherry v<x:g example="1.15.20" id="ver_name">%1$s</x:g> (<x:g example="130" id="ver_code">%2$d</x:g>)</string>
     <string name="about_chrome_version" tools:ignore="MissingTranslation">Chrome v<x:g example="98" id="chrome_ver">%1$d</x:g></string>
     <string name="about_chrome_unavailable">WebView is unavailable</string>
     <string name="about_chrome_updating">WebView is updating right now</string>
@@ -1132,7 +1132,7 @@
 
     <!-- Missing WebView -->
     <string name="missing_web_view_title">WebView is not installed or disabled</string>
-    <string name="missing_web_view">Hentoid has been unable to find Android\'s built-in Web Viewer for apps.\nWithout it you can\'t browse sources, redownload books; you really can\'t do much that requires Internet.\n\nIt is most likely that it\'s actually installed on your system, but disabled: please go to <b>Settings</b> &gt; <b>Apps</b> &gt; <b>Disabled apps</b> and enable <b>Android System WebView</b>.\n\nIf you can\'t find the app, please install it from your device\'s <b><a href="https://play.google.com/store/apps/details?id=com.google.android.webview">App Store</a></b>.</string>
+    <string name="missing_web_view">GalleryCherry has been unable to find Android\'s built-in Web Viewer for apps.\nWithout it you can\'t browse sources, redownload books; you really can\'t do much that requires Internet.\n\nIt is most likely that it\'s actually installed on your system, but disabled: please go to <b>Settings</b> &gt; <b>Apps</b> &gt; <b>Disabled apps</b> and enable <b>Android System WebView</b>.\n\nIf you can\'t find the app, please install it from your device\'s <b><a href="https://play.google.com/store/apps/details?id=com.google.android.webview">App Store</a></b>.</string>
     <string name="missing_web_view_library">Back to library</string>
 
     <!-- Launch text selection -->

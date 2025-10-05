@@ -54,20 +54,20 @@
     <string name="title_activity_downloads">Бібліотека</string>
     <string name="title_activity_queue">Черга</string>
     <string name="title_activity_settings">Налаштування</string>
-    <string name="title_activity_about">Про Hentoid</string>
+    <string name="title_activity_about">Про GalleryCherry</string>
     <string name="title_activity_app_lock">Код-пароль</string>
     <string name="title_activity_search">Розширений пошук</string>
 
     <!-- API29 migration / library refresh screen -->
-    <string name="refresh_step1">Папка Hentoid</string>
+    <string name="refresh_step1">Папка GalleryCherry</string>
     <string name="refresh_step1_external">Зовнішня папка</string>
-    <string name="refresh_step1_select">Вибрати папку Hentoid</string>
+    <string name="refresh_step1_select">Вибрати папку GalleryCherry</string>
     <string name="refresh_step1_select_external">Вибрати зовнішню папку</string>
     <string name="refresh_step2">Сканую папки сайтів</string>
     <string name="refresh_step3_init">Сканую бібліотеку…</string>
     <string name="refresh_step3">Сканування бібліотеки (<x:g id="number" example="1">%1$d</x:g>/<x:g id="total" example="7">%2$d</x:g>)</string>
     <string name="refresh_step4_init">Імпорт черги…</string>
-    <string name="refresh_select_folder">Будь ласка, виберіть існуючу папку Hentoid. Її розташування показано на екрані.</string>
+    <string name="refresh_select_folder">Будь ласка, виберіть існуючу папку GalleryCherry. Її розташування показано на екрані.</string>
     <string name="refresh_allow_write">Будь ласка, підтвердіть дозвіл на запис</string>
 
     <!-- Library screen toolbar -->
@@ -184,7 +184,7 @@
     <string name="queue_bottom_bar_speed"><x:g id="formatted_speed_kbps" example="/102.4">%d</x:g> Кб/с</string>
     <string name="download_notif_speed"><x:g id="size_dled" example="3.88">%1$d</x:g><x:g id="formatted_estimated_total" example="/14.56">%2$s</x:g> МБ, <x:g id="speed_kbps" example="102.4">%3$d</x:g> Кб/c</string>
     <string name="download_notif_failed">Завантаження не вдалося</string>
-    <string name="download_notif_failed_details">Неможливо завантажити <x:g id="book_name" example="Крута хентай-манґа">%1$s</x:g>: не вдалося створити папку <x:g id="path" example="/storage/emulated/0/Hentoid/nhentai/coolhmanga">%2$s</x:g>. Будь ласка, перевірте папку Hentoid та повторіть завантаження за допомогою кнопки \'!\'.</string>
+    <string name="download_notif_failed_details">Неможливо завантажити <x:g id="book_name" example="Крута хентай-манґа">%1$s</x:g>: не вдалося створити папку <x:g id="path" example="/storage/emulated/0/GalleryCherry/nhentai/coolhmanga">%2$s</x:g>. Будь ласка, перевірте папку GalleryCherry та повторіть завантаження за допомогою кнопки \'!\'.</string>
 
     <!-- Import downloads -->
     <string name="import_downloads_title">Імпорт завантажень</string>
@@ -230,7 +230,7 @@
     <string name="refresh_title">Оновити бібліотеку</string>
     <string name="refresh_caption">Автоматично оновлювати бібліотеку, скануючи файли і папки знову.</string>
     <string name="refresh_options">Опції очищення</string>
-    <string name="refresh_location_internal">Бібліотека Hentoid</string>
+    <string name="refresh_location_internal">Бібліотека GalleryCherry</string>
     <string name="refresh_location_external">Зовнішня бібліотека</string>
     <string name="refresh_options_rename">Перейменувати всі папки відповідно до поточних параметрів назв і максимальної довжини</string>
     <string name="refresh_options_remove_placeholders">Видалити порожні книги (імпортовані тільки метадані)</string>
@@ -333,13 +333,13 @@
     <string name="import_invalid">Неможливо використувати цю папку — будь ласка, виберіть іншу</string>
     <string name="import_app_folder">Ви не можете вибрати папку додатка як зовнішню — будь ласка, виберіть іншу</string>
     <string name="import_download_folder">Ви не маєте вибирати папку з усіма завантаженнями цього пристрою — будь ласка, створіть чи виберіть іншу</string>
-    <string name="import_create_fail">Не вдалося створити папку Hentoid — будь ласка, виберіть інше розташування</string>
+    <string name="import_create_fail">Не вдалося створити папку GalleryCherry — будь ласка, виберіть інше розташування</string>
     <string name="import_invalid_uri">Папка не розпізнана — будь ласка, виберіть її знову</string>
     <string name="import_other">Імпорт зупинено</string>
     <string name="import_unexpected">Імпорт був несподівано зупинено</string>
     <string name="task_done">Завдання завершено — дивіться логи для подробиць</string>
     <string name="content_not_found">Помилка — контент не виявлено</string>
-    <string name="contents_detected">Hentoid виявив існуючу бібліотеку.\nЧи хочете ви імпортувати її\?</string>
+    <string name="contents_detected">GalleryCherry виявив існуючу бібліотеку.\nЧи хочете ви імпортувати її\?</string>
     <string name="library_imports_title">Імпорт бібліотеки</string>
     <string name="starting_import">Імпорт починається…</string>
     <string name="importing_library">Імпорт бібліотеки</string>
@@ -359,8 +359,8 @@
     <string name="memory_title">Використання памʼяті</string>
     <string name="memory_total">Всього: <x:g id="total" example="100 МБ">%s</x:g></string>
     <string name="memory_free">Вільно: <x:g id="total" example="50 МБ">%s</x:g></string>
-    <string name="memory_hentoid_main">Hentoid (основне сховище): <x:g id="total" example="2 МБ">%s</x:g></string>
-    <string name="memory_hentoid_ext">Hentoid (зовнішнє сховище): <x:g id="total" example="3 МБ">%s</x:g></string>
+    <string name="memory_GalleryCherry_main">GalleryCherry (основне сховище): <x:g id="total" example="2 МБ">%s</x:g></string>
+    <string name="memory_GalleryCherry_ext">GalleryCherry (зовнішнє сховище): <x:g id="total" example="3 МБ">%s</x:g></string>
     <string name="memory_database">База даних: <x:g id="size_mb" example="1.52 МБ">%1$s</x:g> (заповнено на <x:g id="percentage" example="40%">%2$.1f%%</x:g>)</string>
     <string name="memory_details">Подробиці (основне сховище)</string>
     <string name="memory_details_source">Джерело</string>
@@ -376,7 +376,7 @@
     <string name="log_import_external">Оновлення/імпорт зовнішнеї бібліотеки</string>
     <string name="log_import">Оновлення/імпорт основной бібліотеки</string>
     <string name="log_cleanup">Очищення основної бібліотеки</string>
-    <string name="log_api29_migration">Міграція бібліотеки з Hentoid 1.11</string>
+    <string name="log_api29_migration">Міграція бібліотеки з GalleryCherry 1.11</string>
 
     <!-- Errors -->
     <string name="error_write_permission">У вас немає прав на запис у цій папці, спробуйте іншу.</string>
@@ -465,7 +465,7 @@
         <item quantity="few"><x:g id="number" example="2">%1$d</x:g> результати з <x:g id="total" example="7">%2$d</x:g></item>
         <item quantity="many"><x:g id="number" example="5">%1$d</x:g> результатів із <x:g id="total" example="7">%2$d</x:g></item>
     </plurals>
-    <string name="restart_needed">Зміни будуть застосовані після перезапуску Hentoid</string>
+    <string name="restart_needed">Зміни будуть застосовані після перезапуску GalleryCherry</string>
     <plurals name="redownload_confirm" tools:ignore="ImpliedQuantity">
         <item quantity="one">Завантажити вибране знову\?</item>
         <item quantity="few">Завантажити вибране знову\?</item>
@@ -616,7 +616,7 @@
     <string name="alert_red">Кнопка завантаження наразі не працює на цьому сайті.</string>
     <string name="alert_grey">Цей сайт зараз працює нестабільно. Додаток не може нічого з цим зробити. Будь ласка, спробуйте пізніше.</string>
     <string name="alert_black">Цей сайт зараз недоступний. Додаток не може нічого з цим зробити. Будь ласка, спробуйте пізніше.</string>
-    <string name="alert_wip">Команда розробників Hentoid працює над виправленням. Ми повідомимо вас, коли нова версія додатка буде доступна.</string>
+    <string name="alert_wip">Команда розробників GalleryCherry працює над виправленням. Ми повідомимо вас, коли нова версія додатка буде доступна.</string>
     <string name="alert_fix_available">Виправлення доступне в останній версії програми. Будь ласка, інсталюйте оновлення.</string>
 
     <!-- App Lock -->
@@ -632,12 +632,12 @@
     <string name="pin_lock_on_restore">Блокувати при\nповторному відкритті</string>
 
     <!-- About Activity -->
-    <string name="about1"><b>Hentoid</b> — це додаток для завантаження додзінсі і хентай-манґи. Hentoid спочатку був створений <b>Сесаром Арасакі</b>.</string>
-    <string name="personalDataStatement1"><b>ЗАЯВА ПРО КОНФІДЕНЦІЙНІСТЬ ПЕРСОНАЛЬНИХ ДАНИХ</b>\n\nHentoid — це безкоштовне програмне забезпечення з відкритим кодом, розроблене спільнотою Hentoid (приєднуйтесь до нас у Discord за лінком нижче)</string>
-    <string name="personalDataStatement2">Hentoid збирає наступні персональні дані і ділиться ними з Google для обробки за допомогою бібліотеки Firebase:\n - Ідентифікатор сесії\n - IP-адреса</string>
+    <string name="about1"><b>GalleryCherry</b> — це додаток для завантаження додзінсі і хентай-манґи. GalleryCherry спочатку був створений <b>Сесаром Арасакі</b>.</string>
+    <string name="personalDataStatement1"><b>ЗАЯВА ПРО КОНФІДЕНЦІЙНІСТЬ ПЕРСОНАЛЬНИХ ДАНИХ</b>\n\nGalleryCherry — це безкоштовне програмне забезпечення з відкритим кодом, розроблене спільнотою GalleryCherry (приєднуйтесь до нас у Discord за лінком нижче)</string>
+    <string name="personalDataStatement2">GalleryCherry збирає наступні персональні дані і ділиться ними з Google для обробки за допомогою бібліотеки Firebase:\n - Ідентифікатор сесії\n - IP-адреса</string>
     <string name="personalDataStatement3">Вищезазначені дані видаляються як з діючої, так і з запасної систем Firebase протягом 180 днів (подробиці доступні на https://firebase.google.com/support/privacy/)\n\nНіякі інші персональні дані не збираються і не передаються третім особам.</string>
     <string name="about_licenses">Показати ліцензії</string>
-    <string name="about_app_version">Версія Hentoid: <x:g id="ver_name" example="1.15.20">%1$s</x:g> (<x:g id="ver_code" example="130">%2$d</x:g>)</string>
+    <string name="about_app_version">Версія GalleryCherry: <x:g id="ver_name" example="1.15.20">%1$s</x:g> (<x:g id="ver_code" example="130">%2$d</x:g>)</string>
     <string name="about_chrome_version">Версія Chrome: <x:g id="chrome_ver" example="98">%1$d</x:g></string>
     <string name="about_chrome_unavailable">WebView недоступно</string>
     <string name="about_chrome_updating">WebView зараз оновлюється</string>
@@ -867,7 +867,7 @@
 
     <!-- Missing WebView -->
     <string name="missing_web_view_title">WebView не встановлено або відключено</string>
-    <string name="missing_web_view">Hentoid не виявив вбудований спеціальний браузер Android.\nБез нього неможливо ходити по сайтах, завантажувати книги, так само як і робити багато чого, що пов\'язано з інтернетом.\n\nШвидше за все, він насправді встановлений у вас, просто відключений: будь ласка, перейдіть в <b>Налаштування</b> &gt; <b>Додатки</b> &gt; <b>Відключені</b> та включіть <b>Android System WebView</b>.\n\nЯкщо ви не можете знайти такий додаток, будь ласка, встановіть його з вашого <b><a href="https://play.google.com/store/apps/details?id=com.google.android.webview">магазину додатків</a></b>.</string>
+    <string name="missing_web_view">GalleryCherry не виявив вбудований спеціальний браузер Android.\nБез нього неможливо ходити по сайтах, завантажувати книги, так само як і робити багато чого, що пов\'язано з інтернетом.\n\nШвидше за все, він насправді встановлений у вас, просто відключений: будь ласка, перейдіть в <b>Налаштування</b> &gt; <b>Додатки</b> &gt; <b>Відключені</b> та включіть <b>Android System WebView</b>.\n\nЯкщо ви не можете знайти такий додаток, будь ласка, встановіть його з вашого <b><a href="https://play.google.com/store/apps/details?id=com.google.android.webview">магазину додатків</a></b>.</string>
     <string name="missing_web_view_library">Назад до бібліотеки</string>
 
     <!-- Group names -->

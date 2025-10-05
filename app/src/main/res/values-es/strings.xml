@@ -2,12 +2,12 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <string name="_default">predeterminado</string>
     <string name="about_achievements">Logros</string>
-    <string name="about_app_version">Hentoid v%1$s (%2$d)</string>
+    <string name="about_app_version">GalleryCherry v%1$s (%2$d)</string>
     <string name="about_chrome_unavailable">WebView no disponible</string>
     <string name="about_chrome_updating">WebView actualizándose</string>
     <string name="about_chrome_version">Chrome v%1$d</string>
     <string name="about_licenses">Mostrar licencias</string>
-    <string name="about1">Hentoid es una aplicación para archivar Doujinshi y Manga-H. Hentoid fue creada originalmente por Cesar Arasaki.</string>
+    <string name="about1">GalleryCherry es una aplicación para archivar Doujinshi y Manga-H. GalleryCherry fue creada originalmente por Cesar Arasaki.</string>
     <string name="actions_generic">Acciones</string>
     <string name="active_sites">Sitios activos</string>
     <string name="add_external">Añadir ubicación externa</string>
@@ -21,13 +21,13 @@
     <string name="alert_fix_available">Hay una solución disponible en la última versión de la aplicación. Actualiza.</string>
     <string name="alert_grey">Este sitio presenta graves problemas de estabilidad actualmente. La aplicación no tiene nada que hacer al respecto.Vuelve a intentarlo más tarde.</string>
     <string name="alert_low_memory">¡Queda poco espacio de almacenamiento!</string>
-    <string name="alert_low_memory_db">¡Queda poco espacio en la base de datos de Hentoid!\n Haz un respaldo y elimina libros.</string>
+    <string name="alert_low_memory_db">¡Queda poco espacio en la base de datos de GalleryCherry!\n Haz un respaldo y elimina libros.</string>
     <string name="alert_notifications">¡Notificaciones desactivadas!</string>
     <string name="alert_orange">Toma en cuenta que las descargas en este sitio podrían fallar.</string>
     <string name="alert_permissions_lost">Se han perdido los permisos de almacenamiento</string>
     <string name="alert_red">El botón de descarga no sirve por ahora en este sitio.</string>
     <string name="alert_unwanted_tags">Este libro tiene la etiqueta de %s</string>
-    <string name="alert_wip">El equipo de desarrollo de Hentoid está trabajando en una solución. La aplicación te notificará cuando haya una nueva versión.</string>
+    <string name="alert_wip">El equipo de desarrollo de GalleryCherry está trabajando en una solución. La aplicación te notificará cuando haya una nueva versión.</string>
     <string name="app_intro">Bienvenido</string>
     <string name="app_lock_biometrics_fail">No se encontró ningún sistema biométrico adecuado</string>
     <string name="app_lock_disabled">Bloqueo de Aplicación Deshabilitado</string>
@@ -157,7 +157,7 @@
     </plurals>
     <string name="content_not_found">Error - contenido no encontrado</string>
     <string name="content_removal_failed">Error al remover el contenido</string>
-    <string name="contents_detected">Hentoid encontró una biblioteca existente en esta ubicación.\n¿Desea importar esta biblioteca?</string>
+    <string name="contents_detected">GalleryCherry encontró una biblioteca existente en esta ubicación.\n¿Desea importar esta biblioteca?</string>
     <string name="copy_download_folder_fail">No se pudo escribir en la carpeta Descargas</string>
     <string name="copy_download_folder_success">Copiado a la carpeta Descargas</string>
     <string name="copy_generic">Copia</string>
@@ -576,7 +576,7 @@
     <string name="lock_type">Tipo de bloqueo</string>
     <string name="lock_type_biometric">Biométrico</string>
     <string name="lock_type_pin">PIN</string>
-    <string name="log_api29_migration">Migración de biblioteca desde Hentoid v1.11</string>
+    <string name="log_api29_migration">Migración de biblioteca desde GalleryCherry v1.11</string>
     <string name="log_cleanup">Limpieza de biblioteca principal</string>
     <string name="log_import">Importar/actualizar biblioteca principal</string>
     <string name="log_import_external">Importar/actualizar biblioteca externa</string>
@@ -601,8 +601,8 @@
     <string name="memory_details_size">Tamaño</string>
     <string name="memory_details_source">Origen</string>
     <string name="memory_free">Libre: %s</string>
-    <string name="memory_hentoid_ext">Hentoid (externa): %s</string>
-    <string name="memory_hentoid_main">Hentoid (principal): %s</string>
+    <string name="memory_GalleryCherry_ext">GalleryCherry (externa): %s</string>
+    <string name="memory_GalleryCherry_main">GalleryCherry (principal): %s</string>
     <string name="memory_title">Uso del almacenamiento</string>
     <string name="memory_total">Total: %s</string>
     <string name="menu_archive">Archivar</string>
@@ -653,7 +653,7 @@
     <string name="meta_tag_all_selected">Etiquetar todos los libros seleccionados</string>
     <string name="meta_tag_all_selected_confirm">¿Etiquetar los %1$d libros seleccionados con \'%2$s\'?</string>
     <string name="method">Método</string>
-    <string name="missing_web_view">Hentoid no ha podido encontrar el visor web integrado de Android para las aplicaciones.\nSin este no se puede navegar por las fuentes, volver a descargar libros, realmente no se puede hacer mucho que requiera internet.\n\nLo más probable es que sí esté instalada en tu sistema, pero deshabilitada: dirígete a Configuración &gt; Aplicaciones &gt; Aplicaciones Deshabilitadas y habilita Android System WebView.\n\nSi no encuentras la aplicación, instálala desde Google Play:.</string>
+    <string name="missing_web_view">GalleryCherry no ha podido encontrar el visor web integrado de Android para las aplicaciones.\nSin este no se puede navegar por las fuentes, volver a descargar libros, realmente no se puede hacer mucho que requiera internet.\n\nLo más probable es que sí esté instalada en tu sistema, pero deshabilitada: dirígete a Configuración &gt; Aplicaciones &gt; Aplicaciones Deshabilitadas y habilita Android System WebView.\n\nSi no encuentras la aplicación, instálala desde Google Play:.</string>
     <string name="missing_web_view_library">Volver a la biblioteca</string>
     <string name="missing_web_view_title">La WebView no está instalada o está desactivada</string>
     <string name="mode_dl">Descargar imágenes</string>
@@ -766,8 +766,8 @@
     <string name="paused_no_wifi">No se puede descargar - Sin Wi-Fi</string>
     <string name="permissioncomplaint_snackbar">Debes conceder permisos antes de poder continuar</string>
     <string name="permissioncomplaint_snackbar_manual">Debes conceder permisos manualmente antes de poder continuar</string>
-    <string name="personalDataStatement1">DECLARACIÓN DE PRIVACIDAD DE LOS DATOS PERSONALES\n\nHentoid es un software libre y de código abierto mantenido por la Comunidad Hentoid (únete a nosotros en Discord - ver el enlace más arriba)</string>
-    <string name="personalDataStatement2">Hentoid recopila los siguientes datos personales y los envía a Google para que los procese a través de la librería firebase:\n - ID de sesión\n - Dirección IP</string>
+    <string name="personalDataStatement1">DECLARACIÓN DE PRIVACIDAD DE LOS DATOS PERSONALES\n\nGalleryCherry es un software libre y de código abierto mantenido por la Comunidad GalleryCherry (únete a nosotros en Discord - ver el enlace más arriba)</string>
+    <string name="personalDataStatement2">GalleryCherry recopila los siguientes datos personales y los envía a Google para que los procese a través de la librería firebase:\n - ID de sesión\n - Dirección IP</string>
     <string name="personalDataStatement3">Los datos mencionados se eliminan del sistema Firebase live y de las copias de seguridad en un plazo de 180 días (véase https://firebase.google.com/support/privacy/ para más detalles)\n\nNo se recopilan otros datos personales ni se envían a ninguna otra parte. </string>
     <string name="pin_current">Ingresar PIN actual</string>
     <string name="pin_explanation">El Bloqueo de Aplicación evita su uso no autorizado solicitando un PIN de 4 dígitos al iniciarla</string>
@@ -882,7 +882,7 @@
     <string name="resize_method_4">Escala con IA x2</string>
     <string name="resize_method_5">Manhwa dividir/fusionar</string>
     <string name="resize_method_5_prompt">Número de imágenes por capítulo</string>
-    <string name="restart_needed">\"Los cambios se aplicarán luego de que Hentoid se reinicie\"</string>
+    <string name="restart_needed">\"Los cambios se aplicarán luego de que GalleryCherry se reinicie\"</string>
     <string name="resume">Continuar </string>
     <string name="resume_closed">¿Resumir lectura?</string>
     <string name="retransform_warning">%d de las páginas ya han sido transformadas. Hacerlo varias veces puede suponer una notable pérdida de calidad.\nAconsejamos que vuelvas a descargar las imágenes originales y las transformes una sola vez.</string>
@@ -971,9 +971,9 @@
     <string name="storage_stats">Estadísticas</string>
     <string name="storage_stats_view">Ver estadísticas de uso</string>
     <string name="storage_strategy_balance">Balancear espacio libre</string>
-    <string name="storage_strategy_balance_desc">Hentoid descarga a la ubicación con más espacio libre, tratando de mantener un balance. No mueve los libros que ya están en la biblioteca.</string>
+    <string name="storage_strategy_balance_desc">GalleryCherry descarga a la ubicación con más espacio libre, tratando de mantener un balance. No mueve los libros que ya están en la biblioteca.</string>
     <string name="storage_strategy_fallover">Colapsar</string>
-    <string name="storage_strategy_fallover_desc">Hentoid descarga en la Ubicación 1 hasta que se llene el %d%% de la capacidad, y procede a descargar en la Ubicación 2</string>
+    <string name="storage_strategy_fallover_desc">GalleryCherry descarga en la Ubicación 1 hasta que se llene el %d%% de la capacidad, y procede a descargar en la Ubicación 2</string>
     <string name="storage_strategy_title">Estrategia de descarga: %s</string>
     <string name="stream_canceled">Transmitido cancelado - libro no disponible online</string>
     <plurals name="stream_confirm">

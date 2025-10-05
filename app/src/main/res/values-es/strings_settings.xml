@@ -12,7 +12,7 @@
     <string name="mass_operations_summary">Operaciones masivas para la biblioteca</string>
     <string name="mass_operations_title">Operaciones masivas</string>
     <string name="pref_analytics_preference_summary_off">El seguimiento de Analytics se encuentra deshabilitado. Habilitarlo nos ayudará a mejorar la aplicación mediante el seguimiento de los errores y excepciones</string>
-    <string name="pref_analytics_preference_summary_on">Seguimiento de Analytics activado.\n¡Gracias por ayudarnos a mejorar Hentoid!</string>
+    <string name="pref_analytics_preference_summary_on">Seguimiento de Analytics activado.\n¡Gracias por ayudarnos a mejorar GalleryCherry!</string>
     <string name="pref_analytics_preference_title">Analytics de Firebase</string>
     <string name="pref_app_preview_summary_off">Vista previa en Aplicaciones recientes desactivada\nActiva si necesitas hacer una captura de pantalla</string>
     <string name="pref_app_preview_summary_on">Vista previa en Aplicaciones recientes activada</string>
@@ -81,7 +81,7 @@
     <string name="pref_browser_resume_last_title">Reanudar en la última página vista</string>
     <string name="pref_browser_visuals">Visuales</string>
     <string name="pref_cat_advanced">Avanzadas</string>
-    <string name="pref_cat_downloads_folder">Biblioteca de Hentoid</string>
+    <string name="pref_cat_downloads_folder">Biblioteca de GalleryCherry</string>
     <string name="pref_cat_eh">E-hentai / ExHentai</string>
     <string name="pref_cat_external">Biblioteca externa</string>
     <string name="pref_cat_hitomi">Hitomi</string>
@@ -131,10 +131,10 @@
     <string name="pref_endless_scroll_summary_off">Habilitar desplazamiento infinito en la lista de descargas\nDesactiva el paginado</string>
     <string name="pref_endless_scroll_summary_on">Desplaza a tu antojo</string>
     <string name="pref_endless_scroll_title">Desplazamiento infinito</string>
-    <string name="pref_external_library_delete_off">Hentoid no puede eliminar libros y páginas en la biblioteca externa</string>
-    <string name="pref_external_library_delete_on">Hentoid puede eliminar libros y páginas en la biblioteca externa</string>
+    <string name="pref_external_library_delete_off">GalleryCherry no puede eliminar libros y páginas en la biblioteca externa</string>
+    <string name="pref_external_library_delete_on">GalleryCherry puede eliminar libros y páginas en la biblioteca externa</string>
     <string name="pref_external_library_delete_title">Permitir que se elimine contenido externo</string>
-    <string name="pref_external_library_detach_summary">No incluir más la biblioteca externa en Hentoid</string>
+    <string name="pref_external_library_detach_summary">No incluir más la biblioteca externa en GalleryCherry</string>
     <string name="pref_external_library_detach_title">Desconectar biblioteca externa</string>
     <string name="pref_external_library_ext_name_pattern">Patrón de nombres de files</string>
     <string name="pref_external_library_summary_empty">No está configurada ninguna biblioteca externa</string>
@@ -184,10 +184,10 @@
     <string name="pref_screenshot_summary_off">Vista previa en Aplicaciones recientes y capturas de pantalla desactivadas</string>
     <string name="pref_screenshot_summary_on">Capturas de pantalla habilitadas</string>
     <string name="pref_screenshot_title">Hablitar captura de pantalla</string>
-    <string name="pref_select_folder_summary">Seleccionar en dónde almacenará tus descargas Hentoid</string>
+    <string name="pref_select_folder_summary">Seleccionar en dónde almacenará tus descargas GalleryCherry</string>
     <string name="pref_select_folder_title">Seleccionar carpeta de Descargas</string>
-    <string name="pref_text_select_menu_summary_off">El menú de selección de texto de su dispositivo no le permites ejecutar códigos nuceares en Hentoid</string>
-    <string name="pref_text_select_menu_summary_on">El menú de selección de texto de su dispositivo permites ejecutar códigos nuceares en Hentoid</string>
+    <string name="pref_text_select_menu_summary_off">El menú de selección de texto de su dispositivo no le permites ejecutar códigos nuceares en GalleryCherry</string>
+    <string name="pref_text_select_menu_summary_on">El menú de selección de texto de su dispositivo permites ejecutar códigos nuceares en GalleryCherry</string>
     <string name="pref_text_select_menu_title">Menú de selección de texto</string>
     <string name="pref_top_fab_summary_off">Botón deshabilitado</string>
     <string name="pref_top_fab_summary_on">Botón habilitado</string>

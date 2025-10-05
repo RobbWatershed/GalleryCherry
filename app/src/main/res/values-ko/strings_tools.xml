@@ -8,7 +8,7 @@
     <string name="tools_cache_browser_updating_webview">WebView를 업데이트 중입니다, 아직 캐시 삭제가 불가능합니다</string>
     <string name="tools_duplicate_detector_summary">중복된 작품 구분 및 삭제</string>
     <string name="tools_duplicate_detector_title">중복 탐지기</string>
-    <string name="tools_export_library_summary">Hentoid 작품을 JSON 파일로 내보냅니다</string>
+    <string name="tools_export_library_summary">GalleryCherry 작품을 JSON 파일로 내보냅니다</string>
     <string name="tools_export_library_title">메타데이터 내보내기</string>
     <string name="tools_export_settings_summary">설정을 JSON 파일로 내보냅니다</string>
     <string name="tools_export_settings_title">설정 내보내기</string>
@@ -17,7 +17,7 @@
     <string name="tools_import_empty_books_entries_3">가능하면 스트리밍 데이터로 불러오기</string>
     <string name="tools_import_empty_books_entries_4">오류 대기열에 추가</string>
     <string name="tools_import_empty_books_intro">만약 이미지 폴더를 찾지 못한다면…</string>
-    <string name="tools_import_library_summary">내보낸 Hentoid 작품을 JSON 파일에서 복구합니다</string>
+    <string name="tools_import_library_summary">내보낸 GalleryCherry 작품을 JSON 파일에서 복구합니다</string>
     <string name="tools_import_library_title">메타데이터 불러오기</string>
     <string name="tools_import_settings_summary">내보낸 설정을 JSON 파일에서 복구합니다</string>
     <string name="tools_import_settings_title">설정 불러오기</string>

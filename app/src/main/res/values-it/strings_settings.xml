@@ -12,7 +12,7 @@
     <string name="mass_operations_summary">Operazioni di massa della libreria</string>
     <string name="mass_operations_title">Operazioni di massa</string>
     <string name="pref_analytics_preference_summary_off">Il tracciamento analitico è attualmente disabilitato\nAbilitarlo ci aiuterà a migliorare l’app monitorando arresti anomali ed eccezioni</string>
-    <string name="pref_analytics_preference_summary_on">Il tracciamento analitico è attivo\nGrazie per aver contribuito a migliorare Hentoid!</string>
+    <string name="pref_analytics_preference_summary_on">Il tracciamento analitico è attivo\nGrazie per aver contribuito a migliorare GalleryCherry!</string>
     <string name="pref_analytics_preference_title">Analisi Firebase</string>
     <string name="pref_app_preview_summary_off">Anteprima dell’app in app recenti disabilitata\nAbilita se hai bisogno di fare uno screenshot</string>
     <string name="pref_app_preview_summary_on">Anteprima dell’app in app recenti abilitata</string>
@@ -81,7 +81,7 @@
     <string name="pref_browser_resume_last_title">Riprendi dall’ultima pagina visualizzata</string>
     <string name="pref_browser_visuals">Visualizzazione</string>
     <string name="pref_cat_advanced">Avanzato</string>
-    <string name="pref_cat_downloads_folder">Libreria di Hentoid</string>
+    <string name="pref_cat_downloads_folder">Libreria di GalleryCherry</string>
     <string name="pref_cat_eh">E-hentai / ExHentai</string>
     <string name="pref_cat_external">Libreria esterna</string>
     <string name="pref_cat_hitomi">Hitomi</string>
@@ -130,10 +130,10 @@
     <string name="pref_endless_scroll_summary_off">Abilita lo scorrimento infinito nella lista dei download\nDisabilita la paginazione</string>
     <string name="pref_endless_scroll_summary_on">Scorri quanto ti pare</string>
     <string name="pref_endless_scroll_title">Scorrimento infinito</string>
-    <string name="pref_external_library_delete_off">Hentoid non può eliminare libri o pagine nella libreria esterna</string>
-    <string name="pref_external_library_delete_on">Hentoid può eliminare libri e pagine nella libreria esterna</string>
+    <string name="pref_external_library_delete_off">GalleryCherry non può eliminare libri o pagine nella libreria esterna</string>
+    <string name="pref_external_library_delete_on">GalleryCherry può eliminare libri e pagine nella libreria esterna</string>
     <string name="pref_external_library_delete_title">Consenti l’eliminazione di contenuti esterni</string>
-    <string name="pref_external_library_detach_summary">Non includere più la libreria esterna in Hentoid</string>
+    <string name="pref_external_library_detach_summary">Non includere più la libreria esterna in GalleryCherry</string>
     <string name="pref_external_library_detach_title">Stacca la libreria esterna</string>
     <string name="pref_external_library_ext_name_pattern">Pattern denominazione dei file</string>
     <string name="pref_external_library_summary_empty">Nessuna libreria esterna impostata</string>
@@ -183,10 +183,10 @@
     <string name="pref_screenshot_summary_off">Anteprima dell’app in app recenti + screenshot disabilitati</string>
     <string name="pref_screenshot_summary_on">Screenshot abilitati</string>
     <string name="pref_screenshot_title">Abilita gli screenshot</string>
-    <string name="pref_select_folder_summary">Seleziona dove Hentoid salverà i tuoi download</string>
+    <string name="pref_select_folder_summary">Seleziona dove GalleryCherry salverà i tuoi download</string>
     <string name="pref_select_folder_title">Seleziona la cartella dei Download</string>
-    <string name="pref_text_select_menu_summary_off">Il menu di selezione testo del tuo dispositivo NON ti permette di avviare i codici nucleari con Hentoid</string>
-    <string name="pref_text_select_menu_summary_on">Il menu di selezione testo del tuo dispositivo ti permette di avviare i codici nucleari con Hentoid</string>
+    <string name="pref_text_select_menu_summary_off">Il menu di selezione testo del tuo dispositivo NON ti permette di avviare i codici nucleari con GalleryCherry</string>
+    <string name="pref_text_select_menu_summary_on">Il menu di selezione testo del tuo dispositivo ti permette di avviare i codici nucleari con GalleryCherry</string>
     <string name="pref_text_select_menu_title">Menù seleziona testo</string>
     <string name="pref_top_fab_summary_off">Pulsante disattivato</string>
     <string name="pref_top_fab_summary_on">Pulsante attivato</string>

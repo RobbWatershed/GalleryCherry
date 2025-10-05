@@ -8,11 +8,11 @@
     <!-- Button -->
     <string name="tools_export_library_title">Exportera metadata</string>
     <!-- Button description -->
-    <string name="tools_export_library_summary">Exportera Hentoid böcker till en JSON-fil</string>
+    <string name="tools_export_library_summary">Exportera GalleryCherry böcker till en JSON-fil</string>
     <!-- Button -->
     <string name="tools_import_library_title">Importera metadata</string>
     <!-- Button description -->
-    <string name="tools_import_library_summary">Återställ exporterade Hentoid-böcker från en JSON-fil</string>
+    <string name="tools_import_library_summary">Återställ exporterade GalleryCherry-böcker från en JSON-fil</string>
     <!-- Subheading -->
     <string name="tools_screen_cat_settings">Inställningar</string>
     <!-- Button -->

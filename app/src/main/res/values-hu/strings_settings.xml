@@ -28,9 +28,9 @@
     <string name="pref_force_english_summary_off">Használja az eszköz nyelvét\amennyiben elérhető fordítás az alkalmazáshoz</string>
     <string name="pref_force_english_summary_on">Angol nyelv használata</string>
 <string name="pref_screen_storage">Tárhely</string>
-    <string name="pref_cat_downloads_folder">Hentoid könyvtár</string>
+    <string name="pref_cat_downloads_folder">GalleryCherry könyvtár</string>
     <string name="pref_select_folder_title">Letöltési mappa kiválasztása</string>
-    <string name="pref_select_folder_summary">Válassza ki, hol tárolja a Hentoid a letöltéseket</string>
+    <string name="pref_select_folder_summary">Válassza ki, hol tárolja a GalleryCherry a letöltéseket</string>
     <string name="pref_import_queue_empty_title">Üres importált könyvek hibának megjelölése</string>
     <string name="pref_import_queue_empty_on">Az üres importált könyvek hibaként lesznek elkönyvelve</string>
     <string name="pref_import_queue_empty_off">Az üres importált könyvek hozzá lesznek adva a könyvtárhoz</string>
@@ -49,10 +49,10 @@
     <string name="pref_external_library_title">Külső könyvtár</string>
     <string name="pref_external_library_summary_empty">Nincs külső könyvtár beállítva</string>
     <string name="pref_external_library_delete_title">Külső tartalom törlésének engedélyezése</string>
-    <string name="pref_external_library_delete_on">Hentoid törölheti a könyveket és oldalakat a külső könyvtárból</string>
-    <string name="pref_external_library_delete_off">Hentoid nem törölheti a könyveket és az oldalakat a külső könyvtárból</string>
+    <string name="pref_external_library_delete_on">GalleryCherry törölheti a könyveket és oldalakat a külső könyvtárból</string>
+    <string name="pref_external_library_delete_off">GalleryCherry nem törölheti a könyveket és az oldalakat a külső könyvtárból</string>
     <string name="pref_external_library_detach_title">Külső könyvtár lecsatolása</string>
-    <string name="pref_external_library_detach_summary">Ne tartalmazza a külső könyvtárat többé a Hentoid alkalmazásban</string>
+    <string name="pref_external_library_detach_summary">Ne tartalmazza a külső könyvtárat többé a GalleryCherry alkalmazásban</string>
     <string name="pref_cat_advanced">Speciális</string>
     <string name="pref_refresh_library_title">Könyvtár újratöltése</string>
     <string name="pref_refresh_library_summary">A könyvtár tartalmának kézi frissítése</string>
@@ -145,7 +145,7 @@
     <string name="pref_screenshot_summary_on">Képernyőképek engedélyezve</string>
     <string name="pref_analytics_preference_title">Firebase analitika</string>
     <string name="pref_analytics_preference_summary_off">Az analitikai nyomkövetés jelenleg le van tiltva.\nAz engedélyezés segít nekünk javítani az alkalmazást az összeomlások és kivételek nyomon követésével.</string>
-    <string name="pref_analytics_preference_summary_on">Az analitikai nyomkövetés be van kapcsolva.\nKöszönjük, hogy segítesz a Hentoid fejlesztésében!</string>
+    <string name="pref_analytics_preference_summary_on">Az analitikai nyomkövetés be van kapcsolva.\nKöszönjük, hogy segítesz a GalleryCherry fejlesztésében!</string>
 <string name="pref_screen_updates">Frissítések</string>
     <string name="pref_check_updates_manual_title">Manuális frissítés ellenőrzése</string>
     <string name="pref_check_updates_manual_summary">Manuálisan ellenőrizze a frissítéseket most</string>

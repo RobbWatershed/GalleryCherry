@@ -28,7 +28,7 @@
     <string name="pref_force_english_summary_off">사용중인 기기의 언어 사용</string>
     <string name="pref_force_english_summary_on">영어 사용</string>
     <string name="pref_screen_storage">저장공간</string>
-    <string name="pref_cat_downloads_folder">Hentoid 라이브러리</string>
+    <string name="pref_cat_downloads_folder">GalleryCherry 라이브러리</string>
     <string name="pref_select_folder_title">다운로드 폴더 선택</string>
     <string name="pref_select_folder_summary">다운로드 할 위치를 선택해주세요</string>
     <string name="pref_import_queue_empty_title">불러온 작품이 비어있을 시 오류 대기열에 추가</string>
@@ -156,7 +156,7 @@
     <string name="pref_screenshot_summary_on">스크린샷 활성화됨</string>
     <string name="pref_analytics_preference_title">파이어베이스 분석</string>
     <string name="pref_analytics_preference_summary_off">추적 분석 현재 비활성화됨.\n활성화하면 충돌과 예외 발생을 추적하여 앱을 개선하는 데 도움이 됩니다.</string>
-    <string name="pref_analytics_preference_summary_on">추적 분석이 활성화됨.\nHentoid를 개선하는데 도움을 주셔서 감사합니다!</string>
+    <string name="pref_analytics_preference_summary_on">추적 분석이 활성화됨.\nGalleryCherry를 개선하는데 도움을 주셔서 감사합니다!</string>
     <string name="pref_screen_updates">업데이트</string>
     <string name="pref_check_updates_manual_title">업데이트 수동 확인</string>
     <string name="pref_check_updates_manual_summary">업데이트를 수동으로 확인합니다</string>
