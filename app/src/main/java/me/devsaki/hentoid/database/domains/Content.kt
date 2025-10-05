@@ -17,6 +17,7 @@ import me.devsaki.hentoid.activities.sources.BaseBrowserActivity
 import me.devsaki.hentoid.activities.sources.CosplayTeleActivity
 import me.devsaki.hentoid.activities.sources.FapalityActivity
 import me.devsaki.hentoid.activities.sources.JapBeautiesActivity
+import me.devsaki.hentoid.activities.sources.JjgirlsActivity
 import me.devsaki.hentoid.activities.sources.Link2GalleriesActivity
 import me.devsaki.hentoid.activities.sources.LusciousActivity
 import me.devsaki.hentoid.activities.sources.PicsXActivity
@@ -177,7 +178,7 @@ data class Content(
                 Site.PORNPICS -> PornPicsActivity::class.java
                 Site.LINK2GALLERIES -> Link2GalleriesActivity::class.java
                 Site.REDDIT -> RedditActivity::class.java
-                Site.JJGIRLS -> SxyPixActivity::class.java
+                Site.JJGIRLS -> JjgirlsActivity::class.java
                 Site.BABETODAY -> BabeTodayActivity::class.java
                 Site.LUSCIOUS -> LusciousActivity::class.java
                 Site.FAPALITY -> FapalityActivity::class.java
