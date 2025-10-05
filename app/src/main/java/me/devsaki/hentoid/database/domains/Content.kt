@@ -313,7 +313,7 @@ data class Content(
     val galleryUrl: String
         get() {
             val galleryConst = when (site) {
-                Site.PORNPICGALLERIES, Site.LINK2GALLERIES, Site.REDDIT, Site.JJGIRLS, Site.JJGIRLS2, Site.BABETODAY, Site.JAPBEAUTIES, Site.SXYPIX, Site.COSPLAYTELE -> return url // Specific case - user can go on any site (smart parser)
+                Site.PORNPICGALLERIES, Site.LINK2GALLERIES, Site.REDDIT, Site.JJGIRLS, Site.JJGIRLS2, Site.BABETODAY, Site.JAPBEAUTIES, Site.SXYPIX, Site.COSPLAYTELE, Site.GIRLSTOP, Site.COOMER -> return url // Specific case - user can go on any site (smart parser)
                 Site.HELLPORNO, Site.FAPALITY, Site.ASIANSISTER -> "" // Site landpage URL already contains the "/albums/" prefix
                 Site.PORNPICS, Site.JPEGWORLD -> "galleries/"
                 Site.LUSCIOUS -> return site.url.replace("/porn/", "") + url
