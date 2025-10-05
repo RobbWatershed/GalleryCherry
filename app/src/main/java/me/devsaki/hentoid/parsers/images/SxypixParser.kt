@@ -1,5 +1,6 @@
 package me.devsaki.hentoid.parsers.images
 
+import com.squareup.moshi.JsonClass
 import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.parsers.getImgSrc
 import me.devsaki.hentoid.util.jsonToObject
@@ -10,9 +11,8 @@ import org.jsoup.Jsoup
 
 class SxypixParser : BaseImageListParser() {
 
-    private class SxypixGalleryK {
-        private val r = ArrayList<String>()
-
+    @JsonClass(generateAdapter = true)
+    data class SxypixGallery(val r: List<String>) {
         val pics: List<String>
             get() {
                 if (r.isEmpty()) return mutableListOf()
@@ -27,8 +27,8 @@ class SxypixParser : BaseImageListParser() {
                     val pics = elts.map { getImgSrc(it) }
                     res.addAll(
                         pics
-                            .map({ s2 -> s2.replace("\\/", "/") })
-                            .map({ s3 -> "https:$s3" })
+                            .map { it.replace("\\/", "/") }
+                            .map { "https:$it" }
                             .toList()
                     )
                 }
@@ -58,7 +58,7 @@ class SxypixParser : BaseImageListParser() {
             body = "x=$subdomain&ghash=$ghash&aid=$aid",
             mimeType = POST_MIME_TYPE
         ).use { res ->
-            val g = jsonToObject(res.body.string(), SxypixGalleryK::class.java)
+            val g = jsonToObject(res.body.string(), SxypixGallery::class.java)
             return g?.pics ?: emptyList()
         }
     }
