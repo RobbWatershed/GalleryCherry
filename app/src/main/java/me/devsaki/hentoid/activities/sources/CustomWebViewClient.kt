@@ -318,6 +318,7 @@ open class CustomWebViewClient : WebViewClient {
      */
     open fun isGalleryPage(url: String): Boolean {
         if (galleryUrlPattern.isEmpty()) return false
+        if (url != mainPageUrl) return false // Warning : this breaks asynchronous calls
         for (p in galleryUrlPattern) {
             val matcher = p.matcher(url)
             if (matcher.find()) return true
