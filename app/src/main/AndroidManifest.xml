@@ -115,6 +115,9 @@
             android:name=".activities.sources.CoomerActivity"
             android:configChanges="orientation|screenSize" />
         <activity
+            android:name=".activities.sources.GirlsTopActivity"
+            android:configChanges="orientation|screenSize" />
+        <activity
             android:name=".activities.LibraryActivity"
             android:configChanges="orientation|screenSize"
             android:label="@string/title_activity_downloads"
@@ -412,6 +415,17 @@
                 <data
                     android:host="coomer.st"
                     android:pathPattern="/..*/user/..*/post/..*"
+                    android:scheme="https" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="girlstop.info"
+                    android:pathPattern="/..*"
                     android:scheme="https" />
             </intent-filter>
         </activity>

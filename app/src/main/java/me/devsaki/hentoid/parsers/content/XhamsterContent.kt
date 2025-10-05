@@ -16,7 +16,7 @@ private const val GALLERY_FOLDER = "/photos/gallery/"
 // e.g. "Big bewbs - 50 Pics | xHamster.com"
 private val TITLE_NUMBER_PATTERN = Pattern.compile(".* - (\\d+) .*amster.*")
 
-class XhamsterContentK : BaseContentParser() {
+class XhamsterContent : BaseContentParser() {
 
     @Selector(value = "head meta[name='twitter:url']", attr = "content", defValue = "")
     private lateinit var galleryUrl: String

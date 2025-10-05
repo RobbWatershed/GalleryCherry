@@ -13,7 +13,7 @@ import pl.droidsonroids.jspoon.annotation.Selector
 
 private const val GALLERY_FOLDER = "/galleries/"
 
-class PornPicsContentK : BaseContentParser() {
+class PornPicsContent : BaseContentParser() {
     @Selector(value = "head link[rel='canonical']", attr = "href", defValue = "")
     private lateinit var galleryUrl: String
 
@@ -38,7 +38,7 @@ class PornPicsContentK : BaseContentParser() {
         val theUrl = galleryUrl.ifEmpty { url }
         val galleryLocation = theUrl.indexOf(GALLERY_FOLDER) + GALLERY_FOLDER.length
         content.url = theUrl.substring(galleryLocation)
-        content.title = title!!
+        content.title = title?:NO_TITLE
 
         if (null == imageLinks || imageLinks!!.isEmpty()) {
             return Content(status = StatusContent.IGNORED)

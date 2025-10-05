@@ -6,15 +6,16 @@ import me.devsaki.hentoid.parsers.content.BabeTodayContent
 import me.devsaki.hentoid.parsers.content.ContentParser
 import me.devsaki.hentoid.parsers.content.CosplayTeleContent
 import me.devsaki.hentoid.parsers.content.FapalityContent
+import me.devsaki.hentoid.parsers.content.GirlsTopContent
 import me.devsaki.hentoid.parsers.content.JjgirlsContent
 import me.devsaki.hentoid.parsers.content.KemonoContent
 import me.devsaki.hentoid.parsers.content.LusciousContent
 import me.devsaki.hentoid.parsers.content.PicsXContent
-import me.devsaki.hentoid.parsers.content.PornPicsContentK
+import me.devsaki.hentoid.parsers.content.PornPicsContent
 import me.devsaki.hentoid.parsers.content.SmartContent
 import me.devsaki.hentoid.parsers.content.SxypixContent
-import me.devsaki.hentoid.parsers.content.XhamsterContentK
-import me.devsaki.hentoid.parsers.content.XnxxContentK
+import me.devsaki.hentoid.parsers.content.XhamsterContent
+import me.devsaki.hentoid.parsers.content.XnxxContent
 import me.devsaki.hentoid.parsers.images.DummyParser
 import me.devsaki.hentoid.parsers.images.FapalityParser
 import me.devsaki.hentoid.parsers.images.ImageListParser
@@ -29,9 +30,9 @@ object ContentParserFactory {
 
     fun getContentParserClass(site: Site): Class<out ContentParser> {
         return when (site) {
-            Site.PORNPICS -> PornPicsContentK::class.java
-            Site.XHAMSTER -> XhamsterContentK::class.java
-            Site.XNXX -> XnxxContentK::class.java
+            Site.PORNPICS -> PornPicsContent::class.java
+            Site.XHAMSTER -> XhamsterContent::class.java
+            Site.XNXX -> XnxxContent::class.java
             Site.JJGIRLS -> JjgirlsContent::class.java
             Site.BABETODAY -> BabeTodayContent::class.java
             Site.FAPALITY -> FapalityContent::class.java
@@ -41,6 +42,7 @@ object ContentParserFactory {
             Site.COSPLAYTELE -> CosplayTeleContent::class.java
             Site.JAPBEAUTIES, Site.REDDIT, Site.LINK2GALLERIES, Site.NEXTPICTUREZ, Site.PORNPICGALLERIES -> SmartContent::class.java
             Site.COOMER -> KemonoContent::class.java
+            Site.GIRLSTOP -> GirlsTopContent::class.java
             else -> SmartContent::class.java
         }
     }

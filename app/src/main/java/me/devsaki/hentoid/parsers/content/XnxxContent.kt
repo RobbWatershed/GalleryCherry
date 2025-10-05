@@ -14,7 +14,7 @@ import pl.droidsonroids.jspoon.annotation.Selector
 private const val PORNSTARS_MARKER = "Pornstars : "
 private const val TAGS_MARKER = " - Tags : "
 
-class XnxxContentK : BaseContentParser() {
+class XnxxContent : BaseContentParser() {
 
     @Selector(value = "head meta[name='twitter:url']", attr = "content", defValue = "")
     private lateinit var galleryUrl: String

@@ -18,6 +18,7 @@ import me.devsaki.hentoid.activities.sources.BaseBrowserActivity
 import me.devsaki.hentoid.activities.sources.CoomerActivity
 import me.devsaki.hentoid.activities.sources.CosplayTeleActivity
 import me.devsaki.hentoid.activities.sources.FapalityActivity
+import me.devsaki.hentoid.activities.sources.GirlsTopActivity
 import me.devsaki.hentoid.activities.sources.JapBeautiesActivity
 import me.devsaki.hentoid.activities.sources.JjgirlsActivity
 import me.devsaki.hentoid.activities.sources.Link2GalleriesActivity
@@ -189,6 +190,7 @@ data class Content(
                 Site.PICS_X -> PicsXActivity::class.java
                 Site.COSPLAYTELE -> CosplayTeleActivity::class.java
                 Site.COOMER -> CoomerActivity::class.java
+                Site.GIRLSTOP -> GirlsTopActivity::class.java
                 else -> BaseBrowserActivity::class.java
             }
         }
@@ -279,9 +281,16 @@ data class Content(
             Site.ASIANSISTER -> {
                 // ID is the first numeric part of the URL
                 // e.g. /view_51651_stuff_561_58Pn -> 51651 is the ID
-                parts = url.split("_".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+                parts = url.split("_").toTypedArray()
                 return if (parts.size > 1) parts[1]
                 else ""
+            }
+
+            Site.GIRLSTOP -> {
+                // ID is the last numeric part of the URL
+                // e.g. /aaa.php?id=51651 -> 51651 is the ID
+                parts = url.split("=").toTypedArray()
+                return parts[parts.size - 1]
             }
 
             Site.COOMER -> {
