@@ -79,9 +79,6 @@
             android:name=".activities.sources.PornPicsActivity"
             android:configChanges="orientation|screenSize" />
         <activity
-            android:name=".activities.sources.PornPicGalleriesActivity"
-            android:configChanges="orientation|screenSize" />
-        <activity
             android:name=".activities.sources.Link2GalleriesActivity"
             android:configChanges="orientation|screenSize" />
         <activity

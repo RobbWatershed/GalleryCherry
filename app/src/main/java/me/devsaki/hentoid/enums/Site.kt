@@ -17,6 +17,7 @@ private val INVISIBLE_SITES = setOf(
     Site.ASIANSISTER, // Redirected to sisterasian.com; only hosts videos now
     Site.JPEGWORLD, // Dead site
     Site.NEXTPICTUREZ, // Dead site
+    Site.PORNPICGALLERIES, // Dead site
     Site.NONE // Technical fallback
 )
 

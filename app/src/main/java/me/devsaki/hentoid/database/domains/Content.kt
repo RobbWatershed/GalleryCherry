@@ -20,7 +20,6 @@ import me.devsaki.hentoid.activities.sources.JapBeautiesActivity
 import me.devsaki.hentoid.activities.sources.Link2GalleriesActivity
 import me.devsaki.hentoid.activities.sources.LusciousActivity
 import me.devsaki.hentoid.activities.sources.PicsXActivity
-import me.devsaki.hentoid.activities.sources.PornPicGalleriesActivity
 import me.devsaki.hentoid.activities.sources.PornPicsActivity
 import me.devsaki.hentoid.activities.sources.RedditActivity
 import me.devsaki.hentoid.activities.sources.SxyPixActivity
@@ -176,7 +175,6 @@ data class Content(
                 Site.XHAMSTER -> XhamsterActivity::class.java
                 Site.XNXX -> XnxxActivity::class.java
                 Site.PORNPICS -> PornPicsActivity::class.java
-                Site.PORNPICGALLERIES -> PornPicGalleriesActivity::class.java
                 Site.LINK2GALLERIES -> Link2GalleriesActivity::class.java
                 Site.REDDIT -> RedditActivity::class.java
                 Site.JJGIRLS -> SxyPixActivity::class.java
