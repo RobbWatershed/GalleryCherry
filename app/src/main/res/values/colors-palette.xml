@@ -1,18 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!--
-    <color name="primary">@color/dark_red</color>
-    <color name="primary_variant">@color/very_dark_red</color>
-    <color name="on_primary">@color/white_opacity_87</color>
-    <color name="secondary">@color/accent_red</color>
-    <color name="secondary_variant">@color/light_red</color>
-    <color name="on_secondary">@color/white_opacity_87</color>
-    <color name="surface">@color/white</color>
-    <color name="on_surface">@color/white_opacity_87</color>
-    <color name="window_background">@color/taupe</color>
-    <color name="on_background">@color/white_opacity_87</color>
-    <color name="ripple">@color/light_red</color>
--->
     <!-- Content cards -->
     <color name="card_surface">@color/white</color>
     <color name="card_selected">@color/light_red</color>
@@ -27,17 +14,17 @@
     <color name="accent_red">#ff80ab</color>
     <color name="light_red">#ffb2dd</color>
 
-    <color name="taupe_m4">#261616</color> <!-- black 50 HSL -->
-    <color name="taupe_m3">#2b1818</color> <!-- black 33 HSL -->
-    <color name="taupe_m2">#2f1919</color> <!-- black 25 HSL -->
-    <color name="taupe_m1">#361b1b</color> <!-- black 12 HSL -->
+    <color name="taupe_m4">#a42b4b</color> <!-- black 50 LAB -->
+    <color name="taupe_m3">#ba2e55</color> <!-- black 33 LAB -->
+    <color name="taupe_m2">#c7305a</color> <!-- black 25 LAB -->
+    <color name="taupe_m1">#e13365</color> <!-- black 12 LAB -->
 
     <color name="taupe">#ff3572</color>
 
-    <color name="taupe_p1">#ff487f</color> <!-- white 12 HSL -->
-    <color name="taupe_p2">#ff5c8d</color> <!-- white 25 HSL -->
-    <color name="taupe_p3">#ff709b</color> <!-- white 33 HSL -->
-    <color name="taupe_p4">#ff83a8</color> <!-- white 50 HSL -->
+    <color name="taupe_p1">#ff5580</color> <!-- white 12 LAB -->
+    <color name="taupe_p2">#ff6b8c</color> <!-- white 25 LAB -->
+    <color name="taupe_p3">#ff7693</color> <!-- white 33 LAB -->
+    <color name="taupe_p4">#ff879e</color> <!-- white 50 LAB -->
 
 
     <!-- Neutral Colors -->
