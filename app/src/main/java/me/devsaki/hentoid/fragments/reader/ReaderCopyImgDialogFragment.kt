@@ -170,7 +170,7 @@ class ReaderCopyImgDialogFragment : BaseDialogFragment<ReaderCopyImgDialogFragme
         }
 
         img?.let {
-            val prefix = it.linkedContent?.uniqueSiteId ?: it.contentId.toString()
+            val prefix = it.linkedContent?.title?.substring(0, 12) ?: it.contentId.toString()
             val targetFileName = prefix + "-" + it.name + "." + getExtension(it.fileUri)
             try {
                 val fileUri = it.fileUri.toUri()
