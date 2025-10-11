@@ -56,7 +56,7 @@ enum class Site(val code: Int, val description: String, val url: String, val ico
     GIRLSTOP(20, "GirlsTop", "https://en.girlstop.info/", R.drawable.ic_site_girlstop),
     COOMER(21, "Coomer", "https://coomer.st", R.drawable.ic_site_kemono),
 
-    MAL(96, "MyAnimeList", "", R.drawable.ic_hentoid_shape),
+    MAL(96, "MyAnimeList", "", R.drawable.ic_cherry_icon),
 
     // Used for associating attributes to sites in Preferences
     ANY(97, "any", "", R.drawable.ic_cherry_icon),
