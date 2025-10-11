@@ -56,6 +56,8 @@ enum class Site(val code: Int, val description: String, val url: String, val ico
     GIRLSTOP(20, "GirlsTop", "https://en.girlstop.info/", R.drawable.ic_site_girlstop),
     COOMER(21, "Coomer", "https://coomer.st", R.drawable.ic_site_kemono),
 
+    MAL(96, "MyAnimeList", "", R.drawable.ic_hentoid_shape),
+
     // Used for associating attributes to sites in Preferences
     ANY(97, "any", "", R.drawable.ic_cherry_icon),
     NONE(98, "none", "", R.drawable.ic_attribute_source); // External library; fallback site
@@ -66,6 +68,8 @@ enum class Site(val code: Int, val description: String, val url: String, val ico
     var useHentoidAgent = false
         private set
     var useWebviewAgent = true
+        private set
+    var useManagedRequests = false
         private set
 
     // Download behaviour control
@@ -119,6 +123,7 @@ enum class Site(val code: Int, val description: String, val url: String, val ico
         if (jsonSite.useMobileAgent != null) useMobileAgent = jsonSite.useMobileAgent
         if (jsonSite.useHentoidAgent != null) useHentoidAgent = jsonSite.useHentoidAgent
         if (jsonSite.useWebviewAgent != null) useWebviewAgent = jsonSite.useWebviewAgent
+        if (jsonSite.useManagedRequests != null) useManagedRequests = jsonSite.useManagedRequests
         if (jsonSite.hasBackupURLs != null) hasBackupURLs = jsonSite.hasBackupURLs
         if (jsonSite.hasCoverBasedPageUpdates != null)
             hasCoverBasedPageUpdates = jsonSite.hasCoverBasedPageUpdates
