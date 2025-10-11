@@ -3,12 +3,14 @@ package me.devsaki.hentoid.parsers.content
 import android.net.Uri
 import androidx.core.net.toUri
 import me.devsaki.hentoid.database.domains.Content
+import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.util.MAP_STRINGS
 import me.devsaki.hentoid.util.serializeToJson
 
 class JjgirlsContent : SmartContent() {
     override fun toContent(url: String): Content {
         val result = super.toContent(url)
+        result.site = Site.JJGIRLS
 
         // JJgirls galleries randomly replace one of the images by an ad link
         // The URL for the original image that has been replaced can be retrieved
