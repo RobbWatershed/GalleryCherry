@@ -15,6 +15,7 @@ import io.objectbox.relation.ToMany
 import io.objectbox.relation.ToOne
 import me.devsaki.hentoid.activities.sources.BabeTodayActivity
 import me.devsaki.hentoid.activities.sources.BaseBrowserActivity
+import me.devsaki.hentoid.activities.sources.BestGirlSexyActivity
 import me.devsaki.hentoid.activities.sources.CoomerActivity
 import me.devsaki.hentoid.activities.sources.CosplayTeleActivity
 import me.devsaki.hentoid.activities.sources.FapalityActivity
@@ -49,8 +50,8 @@ import java.util.Objects
 
 enum class DownloadMode(val value: Int) {
     DOWNLOAD(Settings.Value.DL_ACTION_DL_PAGES), // Download images
-    STREAM(Settings.Value.DL_ACTION_STREAM), // Saves the book for on-demande viewing
-    ASK(Settings.Value.DL_ACTION_ASK); // Saves the book for on-demande viewing)
+    STREAM(Settings.Value.DL_ACTION_STREAM), // Saves the book for on-demand viewing
+    ASK(Settings.Value.DL_ACTION_ASK); // Saves the book for on-demand viewing)
 
     companion object {
         fun fromValue(v: Int): DownloadMode {
@@ -191,6 +192,7 @@ data class Content(
                 Site.COSPLAYTELE -> CosplayTeleActivity::class.java
                 Site.COOMER -> CoomerActivity::class.java
                 Site.GIRLSTOP -> GirlsTopActivity::class.java
+                Site.BESTGIRLSEXY -> BestGirlSexyActivity::class.java
                 else -> BaseBrowserActivity::class.java
             }
         }
@@ -266,7 +268,7 @@ data class Content(
             Site.XNXX -> return if (parts.isNotEmpty()) parts[0]
             else ""
 
-            Site.PORNPICS, Site.HELLPORNO, Site.PORNPICGALLERIES, Site.LINK2GALLERIES, Site.NEXTPICTUREZ, Site.JJGIRLS2, Site.SXYPIX, Site.PICS_X, Site.BABETODAY -> return parts[parts.size - 1]
+            Site.PORNPICS, Site.HELLPORNO, Site.PORNPICGALLERIES, Site.LINK2GALLERIES, Site.NEXTPICTUREZ, Site.JJGIRLS2, Site.SXYPIX, Site.PICS_X, Site.BABETODAY, Site.BESTGIRLSEXY -> return parts[parts.size - 1]
             Site.FAPALITY, Site.COSPLAYTELE -> return parts[parts.size - 2]
             Site.JPEGWORLD -> return url.substring(url.lastIndexOf("-") + 1, url.lastIndexOf("."))
             Site.REDDIT -> return "reddit" // One single book
@@ -313,8 +315,10 @@ data class Content(
     val galleryUrl: String
         get() {
             val galleryConst = when (site) {
-                Site.PORNPICGALLERIES, Site.LINK2GALLERIES, Site.REDDIT, Site.JJGIRLS, Site.JJGIRLS2, Site.BABETODAY, Site.JAPBEAUTIES, Site.SXYPIX, Site.COSPLAYTELE, Site.GIRLSTOP, Site.COOMER -> return url // Specific case - user can go on any site (smart parser)
-                Site.HELLPORNO, Site.FAPALITY, Site.ASIANSISTER -> "" // Site landpage URL already contains the "/albums/" prefix
+                // Specific case - user can go on any site (smart parser)
+                Site.PORNPICGALLERIES, Site.LINK2GALLERIES, Site.REDDIT, Site.JJGIRLS, Site.JJGIRLS2, Site.BABETODAY, Site.JAPBEAUTIES, Site.SXYPIX, Site.COSPLAYTELE, Site.GIRLSTOP, Site.COOMER, Site.BESTGIRLSEXY -> return url
+                // Site landpage URL already contains the "/albums/" prefix
+                Site.HELLPORNO, Site.FAPALITY, Site.ASIANSISTER -> ""
                 Site.PORNPICS, Site.JPEGWORLD -> "galleries/"
                 Site.LUSCIOUS -> return site.url.replace("/porn/", "") + url
                 else -> "gallery/"

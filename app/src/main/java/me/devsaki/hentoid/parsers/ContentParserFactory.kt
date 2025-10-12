@@ -1,8 +1,10 @@
 package me.devsaki.hentoid.parsers
 
+import me.devsaki.hentoid.activities.sources.BestGirlSexyActivity
 import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.parsers.content.BabeTodayContent
+import me.devsaki.hentoid.parsers.content.BestGirlSexyContent
 import me.devsaki.hentoid.parsers.content.ContentParser
 import me.devsaki.hentoid.parsers.content.CosplayTeleContent
 import me.devsaki.hentoid.parsers.content.FapalityContent
@@ -43,6 +45,7 @@ object ContentParserFactory {
             Site.JAPBEAUTIES, Site.REDDIT, Site.LINK2GALLERIES, Site.NEXTPICTUREZ, Site.PORNPICGALLERIES -> SmartContent::class.java
             Site.COOMER -> KemonoContent::class.java
             Site.GIRLSTOP -> GirlsTopContent::class.java
+            Site.BESTGIRLSEXY -> BestGirlSexyContent::class.java
             else -> SmartContent::class.java
         }
     }

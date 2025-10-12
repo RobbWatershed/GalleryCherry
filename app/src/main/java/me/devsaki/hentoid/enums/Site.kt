@@ -18,6 +18,7 @@ private val INVISIBLE_SITES = setOf(
     Site.JPEGWORLD, // Dead site
     Site.NEXTPICTUREZ, // Dead site
     Site.PORNPICGALLERIES, // Dead site
+    Site.MAL, // For metadata editor only
     Site.ANY, // Technical fallback
     Site.NONE // Technical fallback
 )
@@ -43,7 +44,7 @@ enum class Site(val code: Int, val description: String, val url: String, val ico
     HINA(12, "Hina", "https://github.com/ixilia/hina", R.drawable.ic_site_hina),
     ASIANSISTER(13, "Asiansister", "https://asiansister.com/", R.drawable.ic_site_asiansister),
     JJGIRLS2(14, "JJGirls (Western)", "https://jjgirls.com/pornpics/", R.drawable.ic_site_jjgirls),
-    BABETODAY(15, "Babe.today", "https://babe.today/", R.drawable.ic_site_jjgirls),
+    BABETODAY(15, "Babe.today", "https://babe.today/", R.drawable.ic_site_babetoday),
     JAPBEAUTIES(
         16,
         "Japanese beauties",
@@ -55,6 +56,7 @@ enum class Site(val code: Int, val description: String, val url: String, val ico
     COSPLAYTELE(19, "CosplayTele", "https://cosplaytele.com/", R.drawable.ic_fav_full),
     GIRLSTOP(20, "GirlsTop", "https://en.girlstop.info/", R.drawable.ic_site_girlstop),
     COOMER(21, "Coomer", "https://coomer.st", R.drawable.ic_site_kemono),
+    BESTGIRLSEXY(22, "BestGirlSexy", "https://bestgirlsexy.com/", R.drawable.ic_site_bgs),
 
     MAL(96, "MyAnimeList", "", R.drawable.ic_app),
 
