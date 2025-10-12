@@ -15,7 +15,7 @@
             android:id="@+id/appLogo"
             android:layout_width="120dp"
             android:layout_height="120dp"
-            android:src="@drawable/ic_cherry_icon"
+            android:src="@drawable/ic_app"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             tools:ignore="ContentDescription" />

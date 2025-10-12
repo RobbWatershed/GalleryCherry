@@ -207,7 +207,7 @@
         <activity
             android:name=".activities.TextIntentActivity"
             android:exported="true"
-            android:icon="@drawable/ic_cherry_icon"
+            android:icon="@drawable/ic_app"
             android:label="@string/launch"
             android:theme="@style/Theme.Invisible">
             <intent-filter>

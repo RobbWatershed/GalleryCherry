@@ -25,7 +25,7 @@ class SplitMergeProgressNotification(
 
         if (!this::builder.isInitialized) {
             builder = NotificationCompat.Builder(context, ID)
-                .setSmallIcon(R.drawable.ic_cherry_icon)
+                .setSmallIcon(R.drawable.ic_app)
                 .setContentTitle(
                     context.getString(
                         when (type) {

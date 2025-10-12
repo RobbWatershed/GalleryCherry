@@ -18,7 +18,7 @@
         app:showAsAction="ifRoom" />
     <item
         android:id="@+id/action_home"
-        android:icon="@drawable/ic_cherry_icon"
+        android:icon="@drawable/ic_app"
         android:title="@string/bookmark_homepage"
         android:tooltipText="@string/bookmark_homepage"
         app:showAsAction="always" />

@@ -32,7 +32,7 @@ class SplitMergeCompleteNotification(
         )
 
         return NotificationCompat.Builder(context, ID)
-            .setSmallIcon(R.drawable.ic_cherry_icon)
+            .setSmallIcon(R.drawable.ic_app)
             .setContentTitle(context.getString(title))
             .setContentText(content)
             .build()

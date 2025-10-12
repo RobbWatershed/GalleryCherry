@@ -48,7 +48,7 @@ enum class Site(val code: Int, val description: String, val url: String, val ico
         16,
         "Japanese beauties",
         "https://japanesebeauties.one/",
-        R.drawable.ic_cherry_icon
+        R.drawable.ic_app
     ),
     SXYPIX(17, "SXYPIX", "https://sxypix.com/", R.drawable.ic_site_sxypix),
     PICS_X(18, "PICS-X", "https://pics-x.com/", R.drawable.ic_site_pics_x),
@@ -56,10 +56,10 @@ enum class Site(val code: Int, val description: String, val url: String, val ico
     GIRLSTOP(20, "GirlsTop", "https://en.girlstop.info/", R.drawable.ic_site_girlstop),
     COOMER(21, "Coomer", "https://coomer.st", R.drawable.ic_site_kemono),
 
-    MAL(96, "MyAnimeList", "", R.drawable.ic_cherry_icon),
+    MAL(96, "MyAnimeList", "", R.drawable.ic_app),
 
     // Used for associating attributes to sites in Preferences
-    ANY(97, "any", "", R.drawable.ic_cherry_icon),
+    ANY(97, "any", "", R.drawable.ic_app),
     NONE(98, "none", "", R.drawable.ic_attribute_source); // External library; fallback site
 
     // Default values overridden in sites.json
