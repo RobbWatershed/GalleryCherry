@@ -378,8 +378,9 @@ open class CustomWebViewClient : WebViewClient {
     }
 
     override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+        val headers: Map<String, String>? = request.requestHeaders
         return shouldOverrideUrlLoadingInternal(
-            view, request.url.toString(), request.requestHeaders, request.isForMainFrame
+            view, request.url.toString(), headers ?: emptyMap(), request.isForMainFrame
         )
     }
 
@@ -600,7 +601,7 @@ open class CustomWebViewClient : WebViewClient {
         return null
     }
 
-    fun onXhrRecord(url: String, body: String) {
+    fun recordDynamicPostRequests(url: String, body: String) {
         val queue = if (postQueue.contains(url)) postQueue[url]
         else {
             val q = ConcurrentLinkedQueue<String>()

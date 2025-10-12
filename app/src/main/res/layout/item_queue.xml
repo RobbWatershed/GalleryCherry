@@ -43,7 +43,7 @@
             app:layout_constraintTop_toBottomOf="@id/pbDownload"
             app:layout_constraintTop_toTopOf="parent"
             tools:ignore="ContentDescription"
-            tools:src="@drawable/ic_cherry_outline"
+            tools:src="@drawable/ic_app"
             tools:tint="@color/lighter_gray" />
 
         <ImageView

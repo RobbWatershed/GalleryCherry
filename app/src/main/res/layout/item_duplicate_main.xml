@@ -111,7 +111,7 @@
             android:clickable="true"
             android:focusable="true"
             android:padding="8dp"
-            android:src="@drawable/ic_menu_home"
+            android:src="@drawable/ic_app"
             android:tooltipText="@string/view_source_help"
             app:layout_constraintTop_toBottomOf="@id/view_details"
             app:layout_constraintBottom_toBottomOf="parent"
