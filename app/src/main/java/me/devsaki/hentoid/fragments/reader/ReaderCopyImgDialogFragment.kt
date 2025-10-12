@@ -36,6 +36,7 @@ import me.devsaki.hentoid.util.persistLocationCredentials
 import java.io.File
 import java.io.IOException
 import java.io.OutputStream
+import kotlin.math.min
 
 class ReaderCopyImgDialogFragment : BaseDialogFragment<ReaderCopyImgDialogFragment.Parent>() {
     companion object {
@@ -170,7 +171,8 @@ class ReaderCopyImgDialogFragment : BaseDialogFragment<ReaderCopyImgDialogFragme
         }
 
         img?.let {
-            val prefix = it.linkedContent?.title?.substring(0, 12) ?: it.contentId.toString()
+            var prefix = it.linkedContent?.title ?: it.contentId.toString()
+            prefix = prefix.substring(0, min(16, prefix.length))
             val targetFileName = prefix + "-" + it.name + "." + getExtension(it.fileUri)
             try {
                 val fileUri = it.fileUri.toUri()
