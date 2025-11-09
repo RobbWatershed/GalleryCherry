@@ -12,10 +12,10 @@ import timber.log.Timber
 
 const val COOMER_DOMAIN_FILTER = "coomer.st"
 private val GALLERY_FILTER = arrayOf(
-    "$COOMER_DOMAIN_FILTER/[\\w_%\\-]+/user/[\\d\\-]+$",
-    "$COOMER_DOMAIN_FILTER/api/v1/[\\w_%\\-]+/user/[\\w\\-]+/posts-legacy$",
-    "$COOMER_DOMAIN_FILTER/[\\w_%\\-]+/user/[\\d\\-]+/post/[\\d\\-]+$",
-    "$COOMER_DOMAIN_FILTER/api/v1/[\\w_%\\-]+/user/[\\w\\-]+/post/[\\d\\-]+$"
+    "$COOMER_DOMAIN_FILTER/[\\w%\\-]+/user/[\\w\\-]+$",
+    "$COOMER_DOMAIN_FILTER/api/v1/[\\w%\\-]+/user/[\\w\\-]+/posts-legacy$",
+    "$COOMER_DOMAIN_FILTER/[\\w%\\-]+/user/[\\w\\-]+/post/[\\d\\-_]+$",
+    "$COOMER_DOMAIN_FILTER/api/v1/[\\w%\\-]+/user/[\\w\\-]+/post/[\\d\\-_]+$"
 )
 private val BLOCKED_CONTENT =
     arrayOf("popunder", "AdParameters", "trackIFrameClick", "METRICS_COLLECTOR_URL")
