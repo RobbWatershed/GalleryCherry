@@ -57,6 +57,7 @@ enum class Site(val code: Int, val description: String, val url: String, val ico
     GIRLSTOP(20, "GirlsTop", "https://en.girlstop.info/", R.drawable.ic_site_girlstop),
     COOMER(21, "Coomer", "https://coomer.st", R.drawable.ic_site_kemono),
     BESTGIRLSEXY(22, "BestGirlSexy", "https://bestgirlsexy.com/", R.drawable.ic_site_bgs),
+    FOAMGIRL(23, "FoamGirl", "https://foamgirl.net/", R.drawable.ic_site_foam),
 
     MAL(96, "MyAnimeList", "", R.drawable.ic_app),
 

@@ -1,6 +1,5 @@
 package me.devsaki.hentoid.parsers
 
-import me.devsaki.hentoid.activities.sources.BestGirlSexyActivity
 import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.parsers.content.BabeTodayContent
@@ -8,6 +7,7 @@ import me.devsaki.hentoid.parsers.content.BestGirlSexyContent
 import me.devsaki.hentoid.parsers.content.ContentParser
 import me.devsaki.hentoid.parsers.content.CosplayTeleContent
 import me.devsaki.hentoid.parsers.content.FapalityContent
+import me.devsaki.hentoid.parsers.content.FoamGirlContent
 import me.devsaki.hentoid.parsers.content.GirlsTopContent
 import me.devsaki.hentoid.parsers.content.JjgirlsContent
 import me.devsaki.hentoid.parsers.content.KemonoContent
@@ -20,6 +20,7 @@ import me.devsaki.hentoid.parsers.content.XhamsterContent
 import me.devsaki.hentoid.parsers.content.XnxxContent
 import me.devsaki.hentoid.parsers.images.DummyParser
 import me.devsaki.hentoid.parsers.images.FapalityParser
+import me.devsaki.hentoid.parsers.images.FoamGirlParser
 import me.devsaki.hentoid.parsers.images.ImageListParser
 import me.devsaki.hentoid.parsers.images.KemonoParser
 import me.devsaki.hentoid.parsers.images.LusciousParser
@@ -46,6 +47,7 @@ object ContentParserFactory {
             Site.COOMER -> KemonoContent::class.java
             Site.GIRLSTOP -> GirlsTopContent::class.java
             Site.BESTGIRLSEXY -> BestGirlSexyContent::class.java
+            Site.FOAMGIRL -> FoamGirlContent::class.java
             else -> SmartContent::class.java
         }
     }
@@ -62,6 +64,7 @@ object ContentParserFactory {
             Site.SXYPIX -> SxypixParser()
             Site.PICS_X -> PicsXParser()
             Site.COOMER -> KemonoParser()
+            Site.FOAMGIRL -> FoamGirlParser()
             else -> DummyParser()
         }
     }

@@ -19,6 +19,7 @@ import me.devsaki.hentoid.activities.sources.BestGirlSexyActivity
 import me.devsaki.hentoid.activities.sources.CoomerActivity
 import me.devsaki.hentoid.activities.sources.CosplayTeleActivity
 import me.devsaki.hentoid.activities.sources.FapalityActivity
+import me.devsaki.hentoid.activities.sources.FoamGirlActivity
 import me.devsaki.hentoid.activities.sources.GirlsTopActivity
 import me.devsaki.hentoid.activities.sources.JapBeautiesActivity
 import me.devsaki.hentoid.activities.sources.JjgirlsActivity
@@ -193,6 +194,7 @@ data class Content(
                 Site.COOMER -> CoomerActivity::class.java
                 Site.GIRLSTOP -> GirlsTopActivity::class.java
                 Site.BESTGIRLSEXY -> BestGirlSexyActivity::class.java
+                Site.FOAMGIRL -> FoamGirlActivity::class.java
                 else -> BaseBrowserActivity::class.java
             }
         }
@@ -261,8 +263,7 @@ data class Content(
 
 
     private fun computeUniqueSiteId(): String {
-        var parts: Array<String> =
-            url.split("/".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+        var parts = url.split("/").toTypedArray()
         when (site) {
             Site.XHAMSTER -> return url.substring(url.lastIndexOf("-") + 1)
             Site.XNXX -> return if (parts.isNotEmpty()) parts[0]
@@ -308,6 +309,12 @@ data class Content(
                 return TextUtils.join("-", elements)
             }
 
+            Site.FOAMGIRL -> {
+                // ID is the name of the page
+                // e.g. /5619896.html -> 5619896 is the ID
+                return (parts[parts.size - 1]).replace(".html", "")
+            }
+
             else -> return ""
         }
     }
@@ -318,7 +325,7 @@ data class Content(
                 // Specific case - user can go on any site (smart parser)
                 Site.PORNPICGALLERIES, Site.LINK2GALLERIES, Site.REDDIT, Site.JJGIRLS, Site.JJGIRLS2, Site.BABETODAY, Site.JAPBEAUTIES, Site.SXYPIX, Site.COSPLAYTELE, Site.GIRLSTOP, Site.COOMER, Site.BESTGIRLSEXY -> return url
                 // Site landpage URL already contains the "/albums/" prefix
-                Site.HELLPORNO, Site.FAPALITY, Site.ASIANSISTER -> ""
+                Site.HELLPORNO, Site.FAPALITY, Site.ASIANSISTER, Site.FOAMGIRL -> ""
                 Site.PORNPICS, Site.JPEGWORLD -> "galleries/"
                 Site.LUSCIOUS -> return site.url.replace("/porn/", "") + url
                 else -> "gallery/"

@@ -1316,7 +1316,7 @@ private suspend fun reparseFromScratch(
     url: String,
     content: Content?,
     keepUris: Boolean = false
-): Content? = withContext(Dispatchers.IO) {
+): Content? {
     val urlToLoad: String
     val site: Site?
     if (null == content) {
@@ -1326,11 +1326,11 @@ private suspend fun reparseFromScratch(
         urlToLoad = content.galleryUrl
         site = content.site
     }
-    if (null == site || Site.NONE == site) return@withContext null
+    if (null == site || Site.NONE == site) return null
 
     val fetchResponse = fetchBodyFast(urlToLoad, site, null, "text/html")
     fetchResponse.first.use { body ->
-        if (null == body) return@withContext null
+        if (null == body) return null
         val c = getContentParserClass(site)
         val jspoon = Jspoon.create()
         val htmlAdapter = jspoon.adapter(c) // Unchecked but alright
@@ -1348,7 +1348,7 @@ private suspend fun reparseFromScratch(
 
         if (newContent.status == StatusContent.IGNORED) {
             val canonicalUrl = contentParser.canonicalUrl
-            return@withContext if (canonicalUrl.isNotEmpty() && !canonicalUrl.equals(
+            return if (canonicalUrl.isNotEmpty() && !canonicalUrl.equals(
                     urlToLoad,
                     ignoreCase = true
                 )
@@ -1366,7 +1366,7 @@ private suspend fun reparseFromScratch(
         if (cookieStr.isNotEmpty()) params[HEADER_COOKIE_KEY] = cookieStr
 
         newContent.downloadParams = serializeToJson<Map<String, String>>(params, MAP_STRINGS)
-        return@withContext newContent
+        return newContent
     }
 }
 
