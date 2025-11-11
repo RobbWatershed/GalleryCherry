@@ -16,37 +16,57 @@ import java.util.concurrent.atomic.AtomicInteger
 @JsonClass(generateAdapter = true)
 data class KemonoPost(
     val id: String,
+    val user: String,
     val service: String,
     val title: String,
     val published: String?,
+    val tags: List<String>?,
+    val file: KemonoAttachment?,
     val attachments: List<KemonoAttachment>
 ) {
-    fun toChapter(
-        userId: String,
-        chapterOrder: AtomicInteger,
-        pageOrder: AtomicInteger,
-        nbPagesTotal: Int
-    ): Chapter {
-        // One result = one chapter, if it contains at least an usable picture (i.e. not exclusively MEGA links)
-        val imageUrls = attachments
+    fun getImageUrls(
+        serverMapping: Map<String?, String?>? = null
+    ): List<String> {
+        // Try using attachments
+        var result = attachments
             .filter { isSupportedImage(it.path ?: "") }
             .distinct()
             .map {
-                val server = getRandomInt(4) + 1
+                val server = serverMapping?.get(it.path) ?: (getRandomInt(4) + 1)
                 val origin = URLEncoder.encode(it.name, "UTF-8")
                 "https://n$server.$COOMER_DOMAIN_FILTER/data/${it.path}?f=$origin"
             }
+        // Add file as the sole attached image
+        if (result.isEmpty()) {
+            file?.path?.let {
+                if (isSupportedImage(it))
+                    result = listOf(
+                        "https://img.$COOMER_DOMAIN_FILTER/thumbnail/data/${it}"
+                            .replace("//", "/")
+                    )
+            }
+        }
+        return result
+    }
+
+    fun toChapter(
+        userId: String,
+        chapterOrder: AtomicInteger,
+        pageOrder: AtomicInteger
+    ): Chapter {
+        // One result = one chapter, if it contains at least an usable picture (i.e. not exclusively MEGA links)
         val chapter = Chapter(
             chapterOrder.andIncrement,
             "https://$COOMER_DOMAIN_FILTER/${service}/user/${userId}/post/${id}",
             title
         )
+        val imageUrls = getImageUrls()
         if (imageUrls.isNotEmpty()) {
             val imageFiles = urlsToImageFiles(
                 imageUrls,
                 pageOrder.get(),
                 StatusContent.SAVED,
-                nbPagesTotal,
+                imageUrls.count(),
                 chapter
             )
             pageOrder.set(imageFiles.maxOf { it.order } + 1)

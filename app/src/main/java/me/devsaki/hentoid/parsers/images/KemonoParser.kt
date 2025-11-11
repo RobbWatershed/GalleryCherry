@@ -16,7 +16,6 @@ import me.devsaki.hentoid.util.download.DownloadRateLimiter.setRateLimit
 import me.devsaki.hentoid.util.download.DownloadRateLimiter.take
 import me.devsaki.hentoid.util.exception.EmptyResultException
 import me.devsaki.hentoid.util.exception.ParseException
-import me.devsaki.hentoid.util.image.isSupportedImage
 import me.devsaki.hentoid.util.network.getCookies
 import org.greenrobot.eventbus.EventBus
 import timber.log.Timber
@@ -38,7 +37,7 @@ class KemonoParser : BaseImageListParser() {
         EventBus.getDefault().register(this)
         processedUrl = onlineContent.galleryUrl
         val result: List<ImageFile> = try {
-            getPages(onlineContent, storedContent)
+            getPages(onlineContent)
         } finally {
             EventBus.getDefault().unregister(this)
         }
@@ -46,7 +45,7 @@ class KemonoParser : BaseImageListParser() {
     }
 
     @Throws(Exception::class)
-    private fun getPages(onlineContent: Content, storedContent: Content?): List<ImageFile> {
+    private fun getPages(onlineContent: Content): List<ImageFile> {
         try {
             val useMobileAgent = Site.COOMER.useMobileAgent
             val useHentoidAgent = Site.COOMER.useHentoidAgent
@@ -166,21 +165,15 @@ class KemonoParser : BaseImageListParser() {
                     content.title = cleanup(artist.name)
 
                     // One result = one chapter, if it contains at least an usable picture (i.e. not exclusively MEGA links)
-                    val nbPagesTotal = post
-                        .flatMap { it.attachments }
-                        .filter { isSupportedImage(it.path ?: "") }
-                        .distinct()
-                        .count()
                     val chapters = kotlin.collections.ArrayList<Chapter>()
                     val chapterOrder = AtomicInteger(1)
                     val pageOrder = AtomicInteger(1)
-                    post.forEachIndexed { index, result ->
+                    post.forEachIndexed { _, result ->
                         chapters.add(
                             result.toChapter(
                                 artist.id,
                                 chapterOrder,
-                                pageOrder,
-                                nbPagesTotal
+                                pageOrder
                             )
                         )
                     }
