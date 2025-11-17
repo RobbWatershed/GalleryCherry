@@ -91,6 +91,7 @@ import timber.log.Timber
 import java.io.IOException
 import java.security.InvalidParameterException
 import java.time.Instant
+import java.time.LocalTime
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.abs
 import kotlin.math.floor
@@ -132,6 +133,9 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
     private val requestQueueManager: RequestQueueManager
     private lateinit var progressNotification: DownloadProgressNotification
 
+    // If the current instance is a scheduled run, when does it end?
+    private var scheduledEnd: LocalTime? = null
+
     init {
         EventBus.getDefault().register(this)
         requestQueueManager = getInstance(
@@ -139,6 +143,13 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
         )
         userActionNotificationManager = NotificationManager(context, R.id.user_action_notification)
         setSpeedLimitKbps(prefsSpeedCapToKbps(Settings.dlSpeedCap))
+
+        // Are we inside a scheduled run?
+        if (Settings.downloadScheduleStart > 0 && Settings.downloadScheduleEnd > 0) {
+            val scheduledTime = LocalTime.ofSecondOfDay(Settings.downloadScheduleStart * 60L)
+            if (LocalTime.now().isAfter(scheduledTime))
+                scheduledEnd = LocalTime.ofSecondOfDay(Settings.downloadScheduleEnd * 60L)
+        }
     }
 
     override fun getStartNotification(): BaseNotification {
@@ -167,6 +178,12 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
     }
 
     private suspend fun iterateQueue() = withContext(Dispatchers.IO) {
+        // Unpause queue when triggered by a scheduled job
+        if (scheduledEnd != null) {
+            dao.updateContentStatus(StatusContent.PAUSED, StatusContent.DOWNLOADING)
+            ContentQueueManager.unpauseQueue()
+            EventBus.getDefault().post(DownloadEvent(DownloadEvent.Type.EV_UNPAUSED))
+        }
         // Process these here to avoid initializing notifications for downloads that will never start
         if (isQueuePaused) {
             Timber.i("Queue is paused. Download aborted.")
@@ -640,10 +657,10 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
     /**
      * Watch download progress
      *
+     * NB1 : Download pause is managed at the Request queue level (see RequestQueueManager.pauseQueue / startQueue)
+     * NB2 : We're polling the DB because we can't observe LiveData from a background service
      *
-     * NB : download pause is managed at the Request queue level (see RequestQueueManager.pauseQueue / startQueue)
-     *
-     * @param content Content to watch (1st book of the download queue)
+     * @param content Content to watch (1st unfrozen book of the download queue)
      */
     private suspend fun watchProgress(content: Content) {
         val refreshDelayMs = 500
@@ -661,7 +678,10 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
         // Compute total downloadable pages; online (stream) pages do not count
         val totalPages = images.count { it.status != StatusContent.ONLINE }
         val contentQueueManager = ContentQueueManager
+        var isScheduledTimeOver = false
         do {
+            scheduledEnd?.let { isScheduledTimeOver = LocalTime.now().isAfter(it) }
+
             val statuses = dao.countProcessedImagesById(content.id)
             var status = statuses[StatusContent.DOWNLOADED]
 
@@ -769,9 +789,8 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
                 }
             }
 
-            // We're polling the DB because we can't observe LiveData from a background service
             pause(refreshDelayMs)
-        } while (!isDone && !downloadInterrupted.get() && !contentQueueManager.isQueuePaused)
+        } while (!isDone && !downloadInterrupted.get() && !contentQueueManager.isQueuePaused && !isScheduledTimeOver)
 
         if (isDone && !downloadInterrupted.get()) {
             // NB : no need to supply the Content itself as it has not been updated during the loop

@@ -78,8 +78,8 @@ import me.devsaki.hentoid.util.file.getFileFromSingleUri
 import me.devsaki.hentoid.util.file.getFileFromSingleUriString
 import me.devsaki.hentoid.util.file.getFileNameWithoutExtension
 import me.devsaki.hentoid.util.file.getInputStream
+import me.devsaki.hentoid.util.file.getMimeTypeFromExtension
 import me.devsaki.hentoid.util.file.getMimeTypeFromFileName
-import me.devsaki.hentoid.util.file.getMimeTypeFromFileUri
 import me.devsaki.hentoid.util.file.getOrCreateCacheFolder
 import me.devsaki.hentoid.util.file.getOutputStream
 import me.devsaki.hentoid.util.file.getParent
@@ -256,10 +256,22 @@ private val queueTabStatus = intArrayOf(StatusContent.DOWNLOADING.code, StatusCo
 var chapterStr: String = "Chapter" // Default english value; will be overriden at init
     internal set
 
+var ongoingStr: String = "Ongoing" // Default english value; will be overriden at init
+    internal set
+
+var completedStr: String = "Completed" // Default english value; will be overriden at init
+    internal set
+
+var disabledStr: String = "Disabled" // Default english value; will be overriden at init
+    internal set
+
 val VANILLA_CHAPTERNAME_PATTERN: Pattern by lazy { Pattern.compile("$chapterStr [0-9]+") }
 
 fun initResources(res: Resources) {
     chapterStr = res.getString(R.string.gallery_chapter_prefix)
+    ongoingStr = res.getString(R.string.tag_ongoing)
+    completedStr = res.getString(R.string.tag_completed)
+    disabledStr = res.getString(R.string.disabled_generic)
 }
 
 fun getLibraryStatuses(): IntArray {
@@ -679,11 +691,7 @@ fun getPathRoot(location: StorageLocation): String {
  */
 fun getPathRoot(locationUriStr: String): String {
     val pathDivider: Int = locationUriStr.lastIndexOf(URI_ELEMENTS_SEPARATOR)
-    if (pathDivider > -1) return locationUriStr.substring(
-        0,
-        pathDivider + URI_ELEMENTS_SEPARATOR.length
-    ) // Include separator
-
+    if (pathDivider > -1) return locationUriStr.take(pathDivider + URI_ELEMENTS_SEPARATOR.length) // Include separator
     return locationUriStr
 }
 
@@ -904,7 +912,7 @@ suspend fun setContentCover(
             archivePdfUri,
             libraryGridCardWidthDP,
             newCover.url,
-            { fileName -> null }, // Force creation of new file
+            { _ -> null }, // Force creation of new file
             { fileName ->
                 val file = File(targetFolder, fileName)
                 if (!file.exists() && !file.createNewFile()) throw IOException("Could not create file ${file.path}")
@@ -1036,8 +1044,8 @@ private fun formatFolderName(
     // If we are to assume NTFS and Windows, then the fully qualified file, with it's drivename, path, filename, and extension, altogether is limited to 260 characters.
     val truncLength = Settings.folderTruncationNbChars
     val titleLength = result.length
-    if (truncLength > 0 && titleLength + suffix.length > truncLength) result =
-        result.substring(0, truncLength - suffix.length - 1)
+    if (truncLength > 0 && titleLength + suffix.length > truncLength)
+        result = result.take(truncLength - suffix.length - 1)
 
     // We always add the unique ID at the end of the folder name to avoid collisions between two books with the same title from the same source
     // (e.g. different scans, different languages)
@@ -1360,8 +1368,7 @@ private suspend fun reparseFromScratch(
         newContent.clearChapters()
 
         // Save cookies for future calls during download
-        val params: MutableMap<String, String> =
-            HashMap()
+        val params: MutableMap<String, String> = HashMap()
         val cookieStr = fetchResponse.second
         if (cookieStr.isNotEmpty()) params[HEADER_COOKIE_KEY] = cookieStr
 
@@ -1908,7 +1915,7 @@ suspend fun mergeContents(
 
             for (c in contentList) {
                 if (isCanceled.invoke()) break
-                contentIdx++;
+                contentIdx++
                 var newChapter: Chapter? = null
                 // Create a default "content chapter" that represents the original book before merging
                 val contentChapter = Chapter(chapterOrder++, c.galleryUrl, c.title)
@@ -1936,9 +1943,8 @@ suspend fun mergeContents(
                             idx++
                             if (idx + imgIndex >= imgs.size) break
                             val picToUnarchive = imgs[imgIndex + idx]
-                            if (picToUnarchive.fileUri.isNotEmpty() && !picToUnarchive.fileUri.startsWith(
-                                    c.storageUri
-                                )
+                            if (picToUnarchive.fileUri.isNotEmpty()
+                                && !picToUnarchive.fileUri.startsWith(c.storageUri)
                             ) continue // thumb
                             picsToUnarchive.add(picToUnarchive)
                             unarchivedBytes += picToUnarchive.size
@@ -2021,12 +2027,14 @@ suspend fun mergeContents(
 
                     // If exists, move the picture file to the merged books' folder
                     if (isInLibrary(newImg.status)) {
+                        val referenceExt =
+                            getExtensionFromUri(img.fileUri).ifBlank { getExtensionFromUri(img.url) }
                         val newUri = copyFile(
                             context,
                             img.fileUri.toUri(),
                             targetFolder,
-                            getMimeTypeFromFileUri(img.url),
-                            newImg.name + "." + getExtensionFromUri(img.url),
+                            getMimeTypeFromExtension(referenceExt),
+                            newImg.name + "." + referenceExt,
                             true
                         )
                         if (newUri != null) {

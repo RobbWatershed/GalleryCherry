@@ -175,7 +175,7 @@ dependencies {
     implementation("io.coil-kt.coil3:coil-gif:$Coil_version")
 
     // Coil support for JXL
-    implementation 'io.github.awxkee:jxl-coder-coil:2.5.0'
+    implementation 'io.github.awxkee:jxl-coder-coil:2.5.1.1'
 
     // Coil support for AVIF
     implementation 'com.github.awxkee:avif-coder-coil:2.1.4'
@@ -229,6 +229,9 @@ dependencies {
     // Format recyclerView item as a badge https://github.com/nekocode/Badge
     implementation "com.github.nekocode:Badge:2.1"
 
+    // Time range picker
+    implementation "nl.joery.timerangepicker:timerangepicker:1.0.0"
+
 
     /**
      * NETWORKING
@@ -241,7 +244,7 @@ dependencies {
     ksp("com.squareup.moshi:moshi-kotlin-codegen:$moshi_version")
 
     // HTTP & HTTP/2 client: github.com/square/okhttp
-    def okhttpVersion = '5.1.0'
+    def okhttpVersion = '5.2.1'
     implementation "com.squareup.okhttp3:okhttp:$okhttpVersion"
     implementation "com.squareup.okhttp3:okhttp-dnsoverhttps:$okhttpVersion"
     implementation "com.squareup.okhttp3:okhttp-brotli:$okhttpVersion"
@@ -317,7 +320,7 @@ dependencies {
      * ANALYTICS
      */
     // Import the BoM for the Firebase platform
-    implementation platform('com.google.firebase:firebase-bom:33.11.0')
+    implementation platform('com.google.firebase:firebase-bom:34.4.0')
 
     // Crashlytics
     implementation 'com.google.firebase:firebase-crashlytics'

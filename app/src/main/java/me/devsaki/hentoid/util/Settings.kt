@@ -265,6 +265,10 @@ object Settings {
         Key.BROWSER_DNS_OVER_HTTPS,
         Source.NONE.value // No DNS
     )
+    val proxy: String by StringSetting(
+        Key.BROWSER_PROXY,
+        "" // No proxy
+    )
 
     // QUEUE / DOWNLOADER
     val isDownloadEhHires: Boolean by BoolSetting("pref_dl_eh_hires", false)
@@ -302,6 +306,9 @@ object Settings {
         "pref_dl_blocked_tags_behaviour",
         Value.DL_TAG_BLOCKING_BEHAVIOUR_DONT_QUEUE
     )
+    var downloadScheduleSummary: String by StringSetting("download_schedule", disabledStr)
+    var downloadScheduleStart: Int by IntSetting("download_schedule_start", 23 * 60)
+    var downloadScheduleEnd: Int by IntSetting("download_schedule_end", 6 * 60)
 
     // READER
     var isReaderResumeLastLeft: Boolean by BoolSetting("pref_viewer_resume_last_left", true)
@@ -531,7 +538,7 @@ object Settings {
     var isTextMenuOn: Boolean by BoolSetting(Key.TEXT_SELECT_MENU, false)
     var arePlugReactionsOn: Boolean by BoolSetting("plug_reactions_on", true)
     val recentVisibility: Boolean by BoolSetting(Key.APP_PREVIEW, BuildConfig.DEBUG)
-    val maxDbSizeKb: Long by LongSetting("db_max_size", 3L * 1024 * 1024) // 3GB
+    val maxDbSizeKb: Long by LongSetting("db_max_size", 4L * 1024 * 1024) // 4GB
     var colorTheme: Int by IntSettingStr(Key.COLOR_THEME, Value.COLOR_THEME_LIGHT)
 
 
@@ -680,6 +687,7 @@ object Settings {
         const val BROWSER_QUICK_DL = "pref_browser_quick_dl"
         const val BROWSER_QUICK_DL_THRESHOLD = "pref_browser_quick_dl_threshold"
         const val BROWSER_DNS_OVER_HTTPS = "pref_browser_dns_over_https"
+        const val BROWSER_PROXY = "pref_browser_proxy"
         const val BROWSER_CLEAR_COOKIES = "pref_browser_clear_cookies"
         const val BROWSER_NHENTAI_INVISIBLE_BLACKLIST = "pref_nhentai_invisible_blacklist"
         const val DL_HTTP_429_DEFAULT_DELAY = "pref_dl_http_429_default_delay"

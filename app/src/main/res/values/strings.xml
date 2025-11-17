@@ -863,6 +863,7 @@
     <string name="loading_archive">Loading: <x:g example="1" id="number">%1$d</x:g>/<x:g example="42" id="total">%2$d</x:g></string>
     <string name="loading_image">Loading image: <x:g example="50%" id="percentage">%d%%</x:g></string>
     <string name="viewer_img_details"><x:g example="800" id="dimen_x">%1$d</x:g> x <x:g example="600" id="dimen_y">%2$d</x:g> (scale <x:g example="100%" id="scale_percentage">%3$.0f%%</x:g>) - <x:g example="544.40 KB" id="file_size">%4$s</x:g></string>
+    <string name="viewer_img_details_cropped"><x:g example="800" id="dimen_x">%1$d</x:g> x <x:g example="600" id="dimen_y">%2$d</x:g>, cropped to %3$d x %4$d (scale <x:g example="100%" id="scale_percentage">%5$.0f%%</x:g>) - <x:g example="544.40 KB" id="file_size">%6$s</x:g></string>
     <string name="viewer_choose_direction">Choose reading direction</string>
     <string name="viewer_direction_ltr">Left to right</string>
     <string name="viewer_direction_rtl">Right to left</string>
@@ -1023,6 +1024,8 @@
     <string name="meta_tag_all_selected_confirm">Tag all %1$d selected books with \'%2$s\'?</string>
     <string name="meta_rename_new_name">New name</string>
     <string name="meta_rename_new_rule">Remember for future downloads</string>
+    <string name="meta_remove_all_confirm">Remove all metadata from selected books?</string>
+    <string name="meta_remove_all_tags">Remove all metadata</string>
 
     <!-- Renaming rules editor -->
     <string name="meta_rule_source">Source</string>
@@ -1054,6 +1057,8 @@
     <string name="transcode_encoder_png">PNG</string>
     <string name="transcode_encoder_webp_lossy">WEBP (lossy)</string>
     <string name="transcode_encoder_jpeg">JPEG</string>
+    <string name="transcode_encoder_jxl_lossy">JXL (lossy)</string>
+    <string name="transcode_encoder_jxl_lossless">JXL (lossless)</string>
     <string name="encoder_quality">Quality</string>
     <string name="encoder_warning">WEBP format is limited to 16383 pixels in width and height. Larger pictures will automatically be encoded to PNG or JPG.</string>
     <string name="retransform_warning">%d pages have already been transformed. Transforming them multiple times may result in noticeable quality loss.\nWe advise redownloading original images and transforming them one single time.</string>
@@ -1138,6 +1143,10 @@
 
     <!-- Launch text selection -->
     <string name="launch">Launch</string>
+
+    <!-- Tags -->
+    <string name="tag_ongoing">Ongoing</string>
+    <string name="tag_completed">Completed</string>
 
     <!-- Group names -->
     <string name="group_today">Today</string>

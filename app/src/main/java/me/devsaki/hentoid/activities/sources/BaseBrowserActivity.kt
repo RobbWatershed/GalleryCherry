@@ -459,11 +459,11 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         }
     }
 
-    override fun onStop() {
+    override fun onPause() {
         if (WebkitPackageHelper.getWebViewAvailable()) {
             webView.url?.let { viewModel.saveCurrentUrl(getStartSite(), it) }
         }
-        super.onStop()
+        super.onPause()
     }
 
     /**
@@ -1843,6 +1843,9 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
             reload = true
         } else if (Settings.Key.BROWSER_DNS_OVER_HTTPS == key) {
             webClient.setDnsOverHttpsEnabled(Settings.dnsOverHttps > -1)
+            reload = true
+        } else if (Settings.Key.BROWSER_PROXY == key) {
+            webClient.setProxyEnabled(Settings.proxy.isNotEmpty())
             reload = true
         } else if (Settings.Key.BROWSER_QUICK_DL == key) {
             if (Settings.isBrowserQuickDl) webView.setOnLongTapListener { x: Int, y: Int ->

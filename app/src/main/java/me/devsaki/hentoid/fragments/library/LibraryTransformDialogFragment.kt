@@ -1,7 +1,6 @@
 package me.devsaki.hentoid.fragments.library
 
 import android.annotation.SuppressLint
-import android.graphics.BitmapFactory
 import android.graphics.Point
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -34,6 +33,7 @@ import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.databinding.DialogLibraryTransformBinding
 import me.devsaki.hentoid.enums.PictureEncoder
 import me.devsaki.hentoid.fragments.BaseDialogFragment
+import me.devsaki.hentoid.util.Debouncer
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.file.formatHumanReadableSize
 import me.devsaki.hentoid.util.file.getBinary
@@ -42,6 +42,7 @@ import me.devsaki.hentoid.util.file.getInputStream
 import me.devsaki.hentoid.util.file.getOrCreateCacheFolder
 import me.devsaki.hentoid.util.image.TransformParams
 import me.devsaki.hentoid.util.image.determineEncoder
+import me.devsaki.hentoid.util.image.getImageDimensions
 import me.devsaki.hentoid.util.image.getMimeTypeFromPictureBinary
 import me.devsaki.hentoid.util.image.isImageLossless
 import me.devsaki.hentoid.util.image.screenHeight
@@ -71,6 +72,7 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
 
     // UI
     private var binding: DialogLibraryTransformBinding? = null
+    private lateinit var updatePreviewDebouncer: Debouncer<Unit>
 
     // === VARIABLES
     private lateinit var contentIds: LongArray
@@ -97,6 +99,13 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
         val contentIdArg = arguments?.getLongArray(KEY_CONTENTS)
         require(!(null == contentIdArg || contentIdArg.isEmpty())) { "No content IDs" }
         contentIds = contentIdArg
+
+        updatePreviewDebouncer = Debouncer(lifecycleScope, 300) { refreshPreview() }
+    }
+
+    override fun onDestroy() {
+        updatePreviewDebouncer.clear()
+        super.onDestroy()
     }
 
     override fun onCreateView(
@@ -115,23 +124,23 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
         super.onViewCreated(rootView, savedInstanceState)
 
         refreshControls(true)
-        refreshThumb()
+        updatePreviewDebouncer.submit(Unit)
 
         binding?.apply {
             resizeSwitch.setOnCheckedChangeListener { _, isChecked ->
                 Settings.isResizeEnabled = isChecked
                 refreshControls()
-                refreshThumb()
+                updatePreviewDebouncer.submit(Unit)
             }
             resizeMethod.setOnIndexChangeListener { index ->
                 Settings.resizeMethod = index
                 refreshControls()
-                refreshThumb()
+                updatePreviewDebouncer.submit(Unit)
             }
             resizeMethod1Ratio.editText?.setOnTextChangedListener(lifecycleScope) { value ->
                 if (checkRange(resizeMethod1Ratio, 100, 200)) {
                     Settings.resizeMethod1Ratio = value.toInt()
-                    refreshThumb()
+                    updatePreviewDebouncer.submit(Unit)
                 }
             }
             resizeMethod2MaxWidth.editText?.setOnTextChangedListener(lifecycleScope) { value ->
@@ -142,7 +151,7 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
                     )
                 ) {
                     Settings.resizeMethod2Width = value.toInt()
-                    refreshThumb()
+                    updatePreviewDebouncer.submit(Unit)
                 }
             }
             resizeMethod2MaxHeight.editText?.setOnTextChangedListener(lifecycleScope) { value ->
@@ -153,52 +162,52 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
                     )
                 ) {
                     Settings.resizeMethod2Height = value.toInt()
-                    refreshThumb()
+                    updatePreviewDebouncer.submit(Unit)
                 }
             }
             resizeMethod3Ratio.editText?.setOnTextChangedListener(lifecycleScope) { value ->
                 if (checkRange(resizeMethod3Ratio, 10, 100)) {
                     Settings.resizeMethod3Ratio = value.toInt()
-                    refreshThumb()
+                    updatePreviewDebouncer.submit(Unit)
                 }
             }
             resizeMethod5Images.editText?.setOnTextChangedListener(lifecycleScope) { value ->
                 if (checkRange(resizeMethod5Images, 1, 200)) {
                     Settings.resizeMethod5Images = value.toInt()
-                    refreshThumb()
+                    updatePreviewDebouncer.submit(Unit)
                 }
             }
             transcodeMethod.setOnIndexChangeListener { index ->
                 Settings.transcodeMethod = index
                 refreshControls()
-                refreshThumb()
+                updatePreviewDebouncer.submit(Unit)
             }
             encoderAll.setOnValueChangeListener { value ->
                 Settings.transcodeEncoderAll = value.toInt()
                 refreshControls()
-                refreshThumb()
+                updatePreviewDebouncer.submit(Unit)
             }
             encoderLossless.setOnValueChangeListener { value ->
                 Settings.transcodeEncoderLossless = value.toInt()
-                refreshThumb()
+                updatePreviewDebouncer.submit(Unit)
             }
             encoderLossy.setOnValueChangeListener { value ->
                 Settings.transcodeEncoderLossy = value.toInt()
-                refreshThumb()
+                updatePreviewDebouncer.submit(Unit)
             }
             encoderQuality.editText?.setOnTextChangedListener(lifecycleScope) { value ->
                 if (checkRange(encoderQuality, 75, 100)) {
                     Settings.transcodeQuality = value.toInt()
-                    refreshThumb()
+                    updatePreviewDebouncer.submit(Unit)
                 }
             }
             prevPageBtn.setOnClickListener {
                 if (pageIndex > 0) pageIndex--
-                refreshThumb()
+                updatePreviewDebouncer.submit(Unit)
             }
             nextPageBtn.setOnClickListener {
                 if (pageIndex < maxPages - 1) pageIndex++
-                refreshThumb()
+                updatePreviewDebouncer.submit(Unit)
             }
             thumb.setOnClickListener {
                 preview.isVisible = true
@@ -246,9 +255,10 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
             if (applyValues) encoderLossless.value = Settings.transcodeEncoderLossless.toString()
             encoderLossy.isVisible = (1 == transcodeMethod.index && !isAiUpscale)
             if (applyValues) encoderLossy.value = Settings.transcodeEncoderLossy.toString()
-            encoderQuality.isVisible = (1 == transcodeMethod.index
-                    || (0 == transcodeMethod.index
-                    && (Settings.transcodeEncoderAll == PictureEncoder.JPEG.value || Settings.transcodeEncoderAll == PictureEncoder.WEBP_LOSSY.value)))
+            val isEncoderAllLossy =
+                !(PictureEncoder.fromValue(Settings.transcodeEncoderAll)?.isLossless ?: false)
+            encoderQuality.isVisible =
+                (1 == transcodeMethod.index || (0 == transcodeMethod.index && isEncoderAllLossy))
             if (isAiUpscale) encoderQuality.isVisible = false
             if (applyValues) encoderQuality.editText?.setText(Settings.transcodeQuality.toString())
 
@@ -305,37 +315,31 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
 
     @Suppress("ReplaceArrayEqualityOpWithArraysEquals")
     @SuppressLint("SetTextI18n")
-    private fun refreshThumb() {
-        val rawSourceBitmap = getCurrentBitmap() ?: return
-        val rawData = rawSourceBitmap.second
-        val picName = rawSourceBitmap.first
+    private fun refreshPreview() {
+        val sourceBmp = getCurrentBitmap() ?: return
 
+        binding?.previewGrp?.visibility = View.INVISIBLE
         binding?.previewProgress?.isVisible = true
 
         lifecycleScope.launch {
-            val isLossless = isImageLossless(rawData)
-            val sourceSize = formatHumanReadableSize(rawData.size.toLong(), resources)
-            val options = BitmapFactory.Options()
-            options.inJustDecodeBounds = true
-            BitmapFactory.decodeByteArray(rawData, 0, rawData.size, options)
-            val sourceDims = Point(options.outWidth, options.outHeight)
-            val sourceMime = getMimeTypeFromPictureBinary(rawData)
-            val sourceName = picName + "." + getExtensionFromMimeType(sourceMime)
+            val isLossless = isImageLossless(sourceBmp.rawData)
+            val sourceSize = formatHumanReadableSize(sourceBmp.rawData.size.toLong(), resources)
+            val sourceDims = getImageDimensions(requireContext(), sourceBmp.uri)
+            val sourceMime = getMimeTypeFromPictureBinary(sourceBmp.rawData)
+            val sourceName = sourceBmp.name + "." + getExtensionFromMimeType(sourceMime)
             val params = buildParams()
             val targetData = withContext(Dispatchers.IO) {
                 return@withContext if (4 == params.resizeMethod) {
                     val res = transformManhwa(params, pageIndex)
-                    if (res.isEmpty()) rawData else res
-                } else transform(rawData, params, true)
+                    if (res.isEmpty()) sourceBmp.rawData else res
+                } else transform(sourceBmp.rawData, params, true)
             }
-            val unchanged = targetData == rawData
+            val unchanged = targetData == sourceBmp.rawData
 
             val targetSize = formatHumanReadableSize(targetData.size.toLong(), resources)
-            BitmapFactory.decodeByteArray(targetData, 0, targetData.size, options)
-            val targetDims = Point(options.outWidth, options.outHeight)
-            val targetMime = determineEncoder(isLossless, targetDims, params).mimeType
-            val targetName = picName + "." + getExtensionFromMimeType(targetMime)
-
+            val targetMime = determineEncoder(isLossless, Point(), params).mimeType
+            val targetName = sourceBmp.name + "." + getExtensionFromMimeType(targetMime)
+            val targetDims = getImageDimensions(requireContext(), targetName, targetData)
             targetDimsWarning = (targetDims.x > DIMS_LIMIT || targetDims.y > DIMS_LIMIT)
             refreshControls()
 
@@ -353,11 +357,12 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
                 thumb.load(targetData)
                 preview.load(targetData)
                 previewProgress.isVisible = false
+                previewGrp.visibility = View.VISIBLE
             }
         }
     }
 
-    private fun getCurrentBitmap(): Pair<String, ByteArray>? {
+    private fun getCurrentBitmap(): BitmapInfo? {
         content?.apply {
             // Get bitmap for display
             val pages = imageList.filter { it.isReadable }
@@ -366,7 +371,7 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
             val page = pages[pageIndex]
             try {
                 getInputStream(requireContext(), page.fileUri.toUri()).use {
-                    return Pair(page.name, it.readBytes())
+                    return BitmapInfo(page.fileUri, page.name, it.readBytes())
                 }
             } catch (t: Throwable) {
                 Timber.w(t)
@@ -478,6 +483,12 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
         text.error = null
         return true
     }
+
+    data class BitmapInfo(
+        val uri: String,
+        val name: String,
+        val rawData: ByteArray
+    )
 
     interface Parent {
         fun leaveSelectionMode()

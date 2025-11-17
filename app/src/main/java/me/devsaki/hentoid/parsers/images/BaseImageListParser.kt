@@ -117,7 +117,7 @@ abstract class BaseImageListParser : ImageListParser, Progressor {
     open fun onDownloadCommand(event: DownloadCommandEvent) {
         when (event.type) {
             DownloadCommandEvent.Type.EV_PAUSE, DownloadCommandEvent.Type.EV_CANCEL, DownloadCommandEvent.Type.EV_SKIP
-            -> processHalted.set(true)
+                -> processHalted.set(true)
 
             DownloadCommandEvent.Type.EV_INTERRUPT_CONTENT ->
                 if (event.content != null && event.content.galleryUrl == processedUrl) {

@@ -84,6 +84,7 @@ class NavigationDrawerFragment : Fragment(R.layout.fragment_navigation_drawer),
     private var isCustomGroupingAvailable = false
     private var isDynamicGroupingAvailable = false
     private var isFavBookAvailable = false
+    private var totalQueue = 0
 
     private lateinit var menu: Menu
 
@@ -191,7 +192,6 @@ class NavigationDrawerFragment : Fragment(R.layout.fragment_navigation_drawer),
         updateAppBtn?.setOnClickListener {
             UpdateDialogFragment.invoke(requireActivity())
         }
-        updateItems()
         if (!EventBus.getDefault().isRegistered(this)) EventBus.getDefault().register(this)
     }
 
@@ -201,6 +201,7 @@ class NavigationDrawerFragment : Fragment(R.layout.fragment_navigation_drawer),
     }
 
     private fun onTotalQueueChanged(totalQueue: Int) {
+        this.totalQueue = totalQueue
         val txt = SpannableStringBuilder.valueOf(resources.getText(R.string.title_activity_queue))
         if (totalQueue > 0) txt.append("  ").append(formatCountBadge(requireContext(), totalQueue))
         getMenu(menu, NavItem.QUEUE)?.title = txt.toSpannable()
@@ -318,9 +319,12 @@ class NavigationDrawerFragment : Fragment(R.layout.fragment_navigation_drawer),
                 Site.NONE.code,
                 isSelected = origin == NavItem.BROWSER && this@NavigationDrawerFragment.site == Site.NONE
             )
+
+            val txt = SpannableStringBuilder.valueOf(resources.getText(R.string.title_activity_queue))
+            if (totalQueue > 0) txt.append("  ").append(formatCountBadge(requireContext(), totalQueue))
             addMenu(
                 submenu2,
-                R.string.title_activity_queue,
+                txt,
                 R.drawable.ic_action_download,
                 NavItem.QUEUE,
                 isSelected = origin == NavItem.QUEUE

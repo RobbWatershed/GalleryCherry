@@ -741,7 +741,7 @@ object ObjectBoxDB {
             Content::class.java
         ).query().build()
         val metadataMap = AttributeMap()
-        metadataMap.addAll(metadata)
+        metadata?.let { metadataMap.addAll(it) }
         val hasTitleFilter = searchBundle.query.isNotEmpty()
         val sources = metadataMap[AttributeType.SOURCE]
         val hasSiteFilter =
@@ -783,7 +783,7 @@ object ObjectBoxDB {
     ): LongArray {
         if (searchBundle.sortField != Settings.Value.ORDER_FIELD_CUSTOM) return longArrayOf()
         val metadataMap = AttributeMap()
-        metadataMap.addAll(metadata)
+        metadata?.let { metadataMap.addAll(it) }
         val hasTitleFilter = searchBundle.query.isNotEmpty()
         val sources = metadataMap[AttributeType.SOURCE]
         val hasSiteFilter =

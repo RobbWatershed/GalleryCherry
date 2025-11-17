@@ -139,6 +139,7 @@
     <string name="pref_browser_force_lightmode_off">Browser decides whether it displays pages using dark or light mode, according to the app\'s theme</string>
     <string name="pref_browser_force_lightmode_on">Browser always uses light mode</string>
     <string name="pref_browser_dns_title">DNS over HTTPS</string>
+    <string name="pref_browser_proxy_title">Proxy</string>
     <string name="pref_browser_clear_cookies">Clear cookies</string>
     <string name="pref_browser_clear_cookies_site">Site</string>
     <string name="pref_browser_clear_cookies_ok">Cookies cleared successfully</string>
@@ -153,12 +154,14 @@
     <string name="pref_browser_lock_favs_panel_title">Lock favourites panel</string>
     <string name="pref_browser_lock_favs_panel_off">Favourites right panel can be opened by swiping</string>
     <string name="pref_browser_lock_favs_panel_on">Favourites right panel cannot be opened by swiping</string>
+    <string name="pref_downloader_set_time">Set time</string>
 
     <!-- Downloader -->
     <string name="pref_screen_downloader">Downloader</string>
     <string name="pref_queue_autostart_title">Auto-start download queue</string>
     <string name="pref_queue_autostart_on">Download queue will start as soon as a download is done</string>
     <string name="pref_queue_autostart_off">Download queue must be started manually</string>
+    <string name="pref_queue_schedule_title">Schedule downloads</string>
     <string name="pref_queue_wifi_only_title">Only download on Wi-Fi</string>
     <string name="pref_queue_wifi_only_on">Download queue will only start if connected to Wi-Fi</string>
     <string name="pref_queue_wifi_only_off">Download queue will start if the device is connected to any network</string>
@@ -270,6 +273,7 @@
     <string name="pref_viewer_slideshow_delay_vertical">Scrolling speed (vertical display)</string>
     <string name="pref_viewer_slideshow_loop">Loop</string>
     <string name="doh_warning">Some websites won\'t work well with DNS over HTTPS. Use an external DNS app if you experience issues during navigation (e.g. blank pages, unresponsive login forms)</string>
+    <string name="proxy_warning">Some websites won\'t work well with a proxy. Use an external DNS app if you experience issues during navigation (e.g. blank pages, unresponsive login forms)</string>
     <string name="material_you_warning">Your device doesn\'t support Material You; switching back to Light theme</string>
 
     <!-- Misc -->
