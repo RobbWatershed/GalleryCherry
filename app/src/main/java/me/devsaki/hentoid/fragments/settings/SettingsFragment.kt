@@ -316,10 +316,9 @@ class SettingsFragment : PreferenceFragmentCompat(),
                 RequestQueueManager.getInstance()?.resetRequestQueue(true)
                 // Reset all retrofit clients
                 GithubServer.init()
-                EHentaiServer.init()
                 LusciousServer.init()
-                PixivServer.init()
-                DeviantArtServer.init()
+                RedditOAuthApiServer.init()
+                RedditPublicApiServer.init()
                 KemonoServer.init()
                 JikanServer.init()
             }
