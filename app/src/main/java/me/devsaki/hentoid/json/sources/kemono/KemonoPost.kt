@@ -32,9 +32,10 @@ data class KemonoPost(
             .filter { isSupportedImage(it.path ?: "") }
             .distinct()
             .map {
-                val server = serverMapping?.get(it.path) ?: (getRandomInt(4) + 1)
+                val server = serverMapping?.get(it.path)
+                    ?: "https://n${(getRandomInt(4) + 1)}.$COOMER_DOMAIN_FILTER"
                 val origin = URLEncoder.encode(it.name, "UTF-8")
-                "https://n$server.$COOMER_DOMAIN_FILTER/data/${it.path}?f=$origin"
+                "$server/data/${it.path}?f=$origin"
             }
         // Add file as the sole attached image
         if (result.isEmpty()) {
