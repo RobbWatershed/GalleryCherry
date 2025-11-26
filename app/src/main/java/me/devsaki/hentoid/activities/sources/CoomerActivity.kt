@@ -10,12 +10,12 @@ import me.devsaki.hentoid.parsers.content.ContentParser
 import me.devsaki.hentoid.parsers.content.KemonoContent
 import timber.log.Timber
 
-const val COOMER_DOMAIN_FILTER = "coomer.st"
+const val KEMONO_DOMAIN_FILTER = "kemono.cr"
 private val GALLERY_FILTER = arrayOf(
-    "$COOMER_DOMAIN_FILTER/[\\w%\\-]+/user/[\\w\\-]+$",
-    "$COOMER_DOMAIN_FILTER/api/v1/[\\w%\\-]+/user/[\\w\\-]+/posts-legacy$",
-    "$COOMER_DOMAIN_FILTER/[\\w%\\-]+/user/[\\w\\-]+/post/[\\d\\-_]+$",
-    "$COOMER_DOMAIN_FILTER/api/v1/[\\w%\\-]+/user/[\\w\\-]+/post/[\\d\\-_]+$"
+    "$KEMONO_DOMAIN_FILTER/[\\w%\\-]+/user/[\\w\\-]+$",
+    "$KEMONO_DOMAIN_FILTER/api/v1/[\\w%\\-]+/user/[\\w\\-]+/posts[-legacy]{0,1}$",
+    "$KEMONO_DOMAIN_FILTER/[\\w%\\-]+/user/[\\w\\-]+/post/[\\d\\-]+$",
+    "$KEMONO_DOMAIN_FILTER/api/v1/[\\w%\\-]+/user/[\\w\\-]+/post/[\\d\\-]+$"
 )
 private val BLOCKED_CONTENT =
     arrayOf("popunder", "AdParameters", "trackIFrameClick", "METRICS_COLLECTOR_URL")

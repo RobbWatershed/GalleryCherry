@@ -153,12 +153,12 @@ dependencies {
     implementation 'androidx.core:core-ktx:1.17.0'
     implementation 'androidx.webkit:webkit:1.14.0'
 
-    def android_work_version = '2.10.5'
+    def android_work_version = '2.11.0'
     implementation "androidx.work:work-runtime:$android_work_version"
     implementation "androidx.work:work-runtime-ktx:$android_work_version"
 
     // For ViewModel to work
-    def android_lifecycle_version = '2.9.4'
+    def android_lifecycle_version = '2.10.0'
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$android_lifecycle_version"
     implementation "androidx.lifecycle:lifecycle-process:$android_lifecycle_version"
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:$android_lifecycle_version"
@@ -175,7 +175,7 @@ dependencies {
     implementation("io.coil-kt.coil3:coil-gif:$Coil_version")
 
     // Coil support for JXL
-    implementation 'io.github.awxkee:jxl-coder-coil:2.5.1.1'
+    implementation 'io.github.awxkee:jxl-coder-coil:2.5.2'
 
     // Coil support for AVIF
     implementation 'com.github.awxkee:avif-coder-coil:2.1.4'
@@ -244,7 +244,7 @@ dependencies {
     ksp("com.squareup.moshi:moshi-kotlin-codegen:$moshi_version")
 
     // HTTP & HTTP/2 client: github.com/square/okhttp
-    def okhttpVersion = '5.2.1'
+    def okhttpVersion = '5.3.2'
     implementation "com.squareup.okhttp3:okhttp:$okhttpVersion"
     implementation "com.squareup.okhttp3:okhttp-dnsoverhttps:$okhttpVersion"
     implementation "com.squareup.okhttp3:okhttp-brotli:$okhttpVersion"
