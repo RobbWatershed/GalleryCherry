@@ -28,7 +28,6 @@ import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.events.DownloadCommandEvent
 import me.devsaki.hentoid.events.DownloadEvent
 import me.devsaki.hentoid.events.DownloadReviveEvent
-import me.devsaki.hentoid.json.JsonContent
 import me.devsaki.hentoid.notification.download.DownloadErrorNotification
 import me.devsaki.hentoid.notification.download.DownloadProgressNotification
 import me.devsaki.hentoid.notification.download.DownloadSuccessNotification
@@ -51,9 +50,6 @@ import me.devsaki.hentoid.util.download.PrimaryDownloadManager
 import me.devsaki.hentoid.util.download.RequestOrder
 import me.devsaki.hentoid.util.download.RequestOrder.NetworkError
 import me.devsaki.hentoid.util.download.RequestQueueManager
-import me.devsaki.hentoid.util.download.RequestQueueManager.Companion.getInstance
-import me.devsaki.hentoid.util.download.downloadToFile
-import me.devsaki.hentoid.util.download.getDownloadLocation
 import me.devsaki.hentoid.util.exception.AccountException
 import me.devsaki.hentoid.util.exception.ArchiveException
 import me.devsaki.hentoid.util.exception.CaptchaException
@@ -63,15 +59,10 @@ import me.devsaki.hentoid.util.exception.LimitReachedException
 import me.devsaki.hentoid.util.exception.ParseException
 import me.devsaki.hentoid.util.exception.PreparationInterruptedException
 import me.devsaki.hentoid.util.fetchImageURLs
-import me.devsaki.hentoid.util.file.MIME_TYPE_ZIP
 import me.devsaki.hentoid.util.file.MemoryUsageFigures
-import me.devsaki.hentoid.util.file.extractArchiveEntries
 import me.devsaki.hentoid.util.file.fileSizeFromUri
 import me.devsaki.hentoid.util.file.formatHumanReadableSize
-import me.devsaki.hentoid.util.file.getOrCreateCacheFolder
 import me.devsaki.hentoid.util.getContainingFolder
-import me.devsaki.hentoid.util.image.assembleGif
-import me.devsaki.hentoid.util.jsonToObject
 import me.devsaki.hentoid.util.moveContentToCustomGroup
 import me.devsaki.hentoid.util.network.Connectivity
 import me.devsaki.hentoid.util.network.DownloadSpeedCalculator.addSampleNow

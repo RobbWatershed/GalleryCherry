@@ -40,6 +40,7 @@ import me.devsaki.hentoid.core.startLocalActivity
 import me.devsaki.hentoid.core.withArguments
 import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.enums.Theme
+import me.devsaki.hentoid.events.DownloadCommandEvent
 import me.devsaki.hentoid.retrofit.GithubServer
 import me.devsaki.hentoid.retrofit.JikanServer
 import me.devsaki.hentoid.retrofit.UpdateServer

@@ -25,5 +25,5 @@ data class KemonoArtist(
     }
 
     val iconUrl
-        get() = "https://img.$KEMONO_DOMAIN_FILTER/icons/$service/$id"
+        get() = "https://img.$COOMER_DOMAIN_FILTER/icons/$service/$id"
 }
