@@ -7,6 +7,7 @@ import io.objectbox.annotation.Index
 import io.objectbox.annotation.Transient
 import io.objectbox.annotation.Uid
 import io.objectbox.relation.ToOne
+import me.devsaki.hentoid.adapters.ImagePagerAdapter
 import me.devsaki.hentoid.core.EXT_THUMB_FILE_PREFIX
 import me.devsaki.hentoid.core.THUMB_FILE_NAME
 import me.devsaki.hentoid.database.isReachable
@@ -67,6 +68,14 @@ data class ImageFile(
     @Transient
     var displayOrder = 0
 
+    // Uri to use to display images in the viewer (read-time only)
+    @Transient
+    var displayUri = ""
+
+    // Uri to use to display images in the viewer (read-time only)
+    @Transient
+    var imageType = ImagePagerAdapter.ImageType.IMG_TYPE_UNSET
+
     // Backup URL for that picture (download-time only)
     @Transient
     var backupUrl = ""
@@ -98,6 +107,7 @@ data class ImageFile(
         this.downloadParams = img.downloadParams
         this.uniqueHash = img.uniqueHash
         this.displayOrder = img.displayOrder
+        this.displayUri = img.displayUri
         this.backupUrl = img.backupUrl
         this.isBackup = img.isBackup
         this.isForceRefresh = img.isForceRefresh
@@ -181,8 +191,7 @@ data class ImageFile(
             name: String?
         ) {
             if (name.isNullOrEmpty()) {
-                val nbMaxDigits = (floor(log10(maxPages.toDouble())) + 1).toInt()
-                imgFile.computeName(nbMaxDigits)
+                imgFile.computeName(maxPages)
             } else {
                 imgFile.name = name
             }
@@ -246,7 +255,11 @@ data class ImageFile(
         uniqueHash = 0
     }
 
-    fun computeName(nbMaxDigits: Int): ImageFile {
+    fun computeName(maxPages: Int): ImageFile {
+        return computeNameDigits((floor(log10(maxPages.toDouble()))).toInt() + 1)
+    }
+
+    private fun computeNameDigits(nbMaxDigits: Int): ImageFile {
         name = String.format(Locale.ENGLISH, "%0${nbMaxDigits}d", order)
         return this
     }
@@ -258,28 +271,25 @@ data class ImageFile(
 
     val usableUri: String
         get() {
-            var result = ""
-            if (isInLibrary(status)) result = fileUri
-            if (result.isEmpty()) result = url
-            if (result.isEmpty()) result = linkedContent?.coverImageUrl ?: ""
-
-            return result
+            if (displayUri.isNotBlank()) return displayUri
+            if (!isArchived && !isPdf && isInLibrary(status) && fileUri.isNotBlank()) return fileUri
+            if (url.isNotBlank() && url.startsWith("http")) return url
+            return if (isCover) linkedContent?.coverImageUrl ?: "" else ""
         }
 
     val isArchived: Boolean
-        get() {
-            val lowerUri = url.lowercase(Locale.getDefault())
-            for (ext in getSupportedExtensions()) {
-                if (lowerUri.contains("." + ext + File.separator)) return true
-            }
-            return false
-        }
+        get() = isContainedInFile(fileUri, getSupportedExtensions())
 
     val isPdf: Boolean
-        get() {
-            val lowerUri = url.lowercase(Locale.getDefault())
-            return (lowerUri.contains(".pdf" + File.separator))
+        get() = isContainedInFile(fileUri, setOf("pdf"))
+
+    private fun isContainedInFile(uri: String, exts: Set<String>): Boolean {
+        val lowerUri = uri.lowercase(Locale.getDefault())
+        for (ext in exts) {
+            if (lowerUri.contains("." + ext + File.separator)) return true
         }
+        return false
+    }
 
     val isOnline: Boolean
         get() {
@@ -303,7 +313,7 @@ data class ImageFile(
         val imageFile = other as ImageFile
         if (imageFile.isForceRefresh || isForceRefresh) return false
 
-        return id == imageFile.id && url == imageFile.url && pageUrl == imageFile.pageUrl && fileUri == imageFile.fileUri && order == imageFile.order && isCover == imageFile.isCover && favourite == imageFile.favourite && chapter.targetId == imageFile.chapter.targetId
+        return id == imageFile.id && url == imageFile.url && pageUrl == imageFile.pageUrl && fileUri == imageFile.fileUri && displayUri == imageFile.displayUri && order == imageFile.order && isCover == imageFile.isCover && favourite == imageFile.favourite && chapter.targetId == imageFile.chapter.targetId
     }
 
     override fun hashCode(): Int {
@@ -313,6 +323,7 @@ data class ImageFile(
             pageUrl,
             url,
             fileUri,
+            displayUri,
             order,
             isCover,
             favourite,

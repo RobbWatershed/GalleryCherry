@@ -59,7 +59,8 @@ data class KemonoPost(
         val chapter = Chapter(
             chapterOrder.andIncrement,
             "https://$COOMER_DOMAIN_FILTER/${service}/user/${userId}/post/${id}",
-            title
+            title,
+            id
         )
         val imageUrls = getImageUrls()
         if (imageUrls.isNotEmpty()) {

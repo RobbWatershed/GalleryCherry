@@ -7,6 +7,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
+import androidx.core.view.isVisible
 import coil3.dispose
 import com.mikepenz.fastadapter.FastAdapter
 import com.mikepenz.fastadapter.IExpandable
@@ -26,7 +27,7 @@ class ImageFileItem(private val image: ImageFile, private val showChapter: Boole
     IExpandable<ImageFileItem.ViewHolder>,
     INestedItem<ImageFileItem.ViewHolder> {
     private val chapter: Chapter =
-        image.linkedChapter ?: Chapter(1, "", "") // Default display when nothing is set
+        image.linkedChapter ?: Chapter(1, "", "", "") // Default display when nothing is set
     private var isCurrent = false
     private val expanded = false
 
@@ -99,17 +100,13 @@ class ImageFileItem(private val image: ImageFile, private val showChapter: Boole
             if (payloads.isNotEmpty()) {
                 val bundle = payloads[0] as Bundle
                 val bundleParser = ImageItemBundle(bundle)
-                val boolValue = bundleParser.isFavourite
-                if (boolValue != null) item.image.favourite = boolValue
-                val intValue = bundleParser.chapterOrder
-                if (intValue != null) item.chapter.order = intValue
+                bundleParser.isFavourite?.let { item.image.favourite = it }
+                bundleParser.chapterOrder?.let { item.chapter.order = it }
             }
             updateText(item)
 
             // Checkmark
-            if (item.isSelected) checkedIndicator.visibility =
-                View.VISIBLE else checkedIndicator.visibility =
-                View.GONE
+            checkedIndicator.isVisible = item.isSelected
 
             // Chapter overlay
             if (item.showChapter) {
@@ -129,7 +126,7 @@ class ImageFileItem(private val image: ImageFile, private val showChapter: Boole
             } else chapterOverlay.visibility = View.GONE
 
             // Image
-            image.loadStill(item.image.fileUri)
+            image.loadStill(item.image.usableUri)
         }
 
         private fun updateText(item: ImageFileItem) {

@@ -10,7 +10,6 @@ import android.content.res.Configuration
 import android.content.res.Resources
 import android.graphics.Point
 import android.graphics.drawable.InsetDrawable
-import android.net.Uri
 import android.os.Build
 import android.os.Debug
 import android.os.Looper
@@ -26,9 +25,6 @@ import androidx.core.view.MenuCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
-import androidx.work.ExistingWorkPolicy
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
 import com.google.android.material.slider.LabelFormatter
 import com.google.android.material.slider.Slider
 import com.google.android.material.snackbar.BaseTransientBottomBar
@@ -46,18 +42,17 @@ import me.devsaki.hentoid.enums.AttributeType
 import me.devsaki.hentoid.enums.StorageLocation
 import me.devsaki.hentoid.json.JsonContentCollection
 import me.devsaki.hentoid.util.file.FILE_IO_BUFFER_SIZE
+import me.devsaki.hentoid.util.file.createNewDownloadFile
 import me.devsaki.hentoid.util.file.getDocumentFromTreeUriString
 import me.devsaki.hentoid.util.file.getDownloadsFolder
 import me.devsaki.hentoid.util.file.getExtension
 import me.devsaki.hentoid.util.file.getFileNameWithoutExtension
 import me.devsaki.hentoid.util.file.getMimeTypeFromFileName
+import me.devsaki.hentoid.util.file.getOutputStream
 import me.devsaki.hentoid.util.file.isSupportedArchive
 import me.devsaki.hentoid.util.file.openFile
-import me.devsaki.hentoid.util.file.openNewDownloadOutputStream
-import me.devsaki.hentoid.workers.BaseDeleteWorker
-import me.devsaki.hentoid.workers.DeleteWorker
-import me.devsaki.hentoid.workers.data.DeleteData
 import timber.log.Timber
+import java.io.BufferedInputStream
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.IOException
@@ -75,6 +70,7 @@ import java.time.format.ResolverStyle
 import java.time.temporal.ChronoField
 import java.util.Locale
 import java.util.Random
+import java.util.zip.Checksum
 import kotlin.math.floor
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -630,10 +626,13 @@ fun exportToDownloadsFolder(
         ) + ".$ext"
 
     try {
-        openNewDownloadOutputStream(
+        getOutputStream(
             context,
-            targetFileName,
-            getMimeTypeFromFileName(fileName)
+            createNewDownloadFile(
+                context,
+                targetFileName,
+                getMimeTypeFromFileName(fileName)
+            )
         )?.use { newFile ->
             ByteArrayInputStream(data)
                 .use { input -> copy(input, newFile) }
@@ -671,22 +670,28 @@ fun exportToDownloadsFolder(
     }
 }
 
-fun removeDocs(context: Context, root: Uri, names: Collection<String>) {
-    // Queue a work request for every 1000 names (10k Data limitation)
-    names.chunked(1000).forEach {
-        val builder = DeleteData.Builder()
-        builder.setOperation(BaseDeleteWorker.Operation.DELETE)
-        builder.setDocsRootAndNames(root, it)
-        builder.setIsCleaning(true)
-        val workManager = WorkManager.getInstance(context)
-        workManager.enqueueUniqueWork(
-            R.id.delete_service_delete.toString(),
-            ExistingWorkPolicy.APPEND_OR_REPLACE,
-            OneTimeWorkRequestBuilder<DeleteWorker>()
-                .setInputData(builder.data)
-                .build()
-        )
+fun getChecksumValue(checksum: Checksum, fis: InputStream): Long {
+    try {
+        BufferedInputStream(fis).use { bis ->
+            val bytes = ByteArray(1024)
+            var len = 0
+
+            while ((bis.read(bytes).also { len = it }) >= 0) {
+                checksum.update(bytes, 0, len)
+            }
+        }
+    } catch (e: kotlinx.io.IOException) {
+        Timber.w(e)
     }
+    return checksum.value
+}
+
+fun byteArrayOfInts(vararg ints: Int) = ByteArray(ints.size) { pos -> ints[pos].toByte() }
+
+fun ByteArray.startsWith(data: ByteArray): Boolean {
+    if (this.size < data.size) return false
+    data.forEachIndexed { index, byte -> if (byte != this[index]) return false }
+    return true
 }
 
 inline fun <E> Iterable<E>.indexesOf(predicate: (E) -> Boolean) =

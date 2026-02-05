@@ -8,9 +8,11 @@ import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import me.devsaki.hentoid.core.READER_CACHE
 import me.devsaki.hentoid.util.assertNonUiThread
-import me.devsaki.hentoid.util.image.startsWith
+import me.devsaki.hentoid.util.byteArrayOfInts
+import me.devsaki.hentoid.util.getChecksumValue
 import me.devsaki.hentoid.util.network.UriParts
 import me.devsaki.hentoid.util.pause
+import me.devsaki.hentoid.util.startsWith
 import net.greypanther.natsort.CaseInsensitiveSimpleNaturalComparator
 import net.sf.sevenzipjbinding.ArchiveFormat
 import net.sf.sevenzipjbinding.ExtractAskMode
@@ -32,13 +34,18 @@ import java.io.FileInputStream
 import java.io.IOException
 import java.io.OutputStream
 import java.util.concurrent.ConcurrentHashMap
+import java.util.zip.CRC32
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
 /**
  * Archive / unarchive helper for formats supported by 7Z
  */
-const val ZIP_MIME_TYPE = "application/zip"
+const val MIME_TYPE_ZIP = "application/zip"
+const val MIME_TYPE_RAR = "application/x-rar-compressed"
+const val MIME_TYPE_7Z = "application/x-7z-compressed"
+const val MIME_TYPE_CBZ = "application/x-cbz"
+const val MIME_TYPE_CBR = "application/x-cbr"
 
 private val SUPPORTED_EXTENSIONS = setOf("zip", "epub", "cbz", "cbr", "cb7", "7z", "rar")
 
@@ -48,27 +55,10 @@ private const val INTERRUPTION_MSG = "Extract archive INTERRUPTED"
 
 // In Java and Kotlin, byte type is signed !
 // => Converting all raw values to byte to be sure they are evaluated as expected
-private val ZIP_SIGNATURE = byteArrayOf(0x50.toByte(), 0x4B.toByte(), 0x03.toByte())
-private val SEVEN_ZIP_SIGNATURE = byteArrayOf(
-    0x37.toByte(),
-    0x7A.toByte(),
-    0xBC.toByte(),
-    0xAF.toByte(),
-    0x27.toByte(),
-    0x1C.toByte()
-)
-private val RAR5_SIGNATURE = byteArrayOf(
-    0x52.toByte(),
-    0x61.toByte(),
-    0x72.toByte(),
-    0x21.toByte(),
-    0x1A.toByte(),
-    0x07.toByte(),
-    0x01.toByte(),
-    0x00.toByte()
-)
-private val RAR_SIGNATURE =
-    byteArrayOf(0x52.toByte(), 0x61.toByte(), 0x72.toByte(), 0x21.toByte())
+private val ZIP_SIGNATURE = byteArrayOfInts(0x50, 0x4B, 0x03)
+private val SEVEN_ZIP_SIGNATURE = byteArrayOfInts(0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C)
+private val RAR5_SIGNATURE = byteArrayOfInts(0x52, 0x61, 0x72, 0x21, 0x1A, 0x07, 0x01, 0x00)
+private val RAR_SIGNATURE = byteArrayOfInts(0x52, 0x61, 0x72, 0x21)
 
 private const val BUFFER = 32 * 1024
 
@@ -99,6 +89,21 @@ fun isSupportedArchive(fileName: String): Boolean {
 }
 
 /**
+ * Determine if the given image MIME type is supported by the app
+ *
+ * @param mimeType MIME type to test
+ * @return True if the app supports the reading of archives with the given MIME type; false if not
+ */
+fun isMimeTypeSupported(mimeType: String): Boolean {
+    return (mimeType.equals(MIME_TYPE_ZIP, ignoreCase = true)
+            || mimeType.equals(MIME_TYPE_RAR, ignoreCase = true)
+            || mimeType.equals(MIME_TYPE_7Z, ignoreCase = true)
+            || mimeType.equals(MIME_TYPE_CBZ, ignoreCase = true)
+            || mimeType.equals(MIME_TYPE_CBR, ignoreCase = true)
+            )
+}
+
+/**
  * Build a [NameFilter] only accepting archive files supported by the app
  *
  * @return [NameFilter] only accepting archive files supported by the app
@@ -125,23 +130,36 @@ private fun getTypeFromArchiveHeader(binary: ByteArray): ArchiveFormat? {
     else null
 }
 
+fun getMimeTypeFromArchiveHeader(binary: ByteArray): String {
+    return when (getTypeFromArchiveHeader(binary)) {
+        ArchiveFormat.ZIP -> MIME_TYPE_ZIP
+        ArchiveFormat.SEVEN_ZIP -> MIME_TYPE_7Z
+        ArchiveFormat.RAR, ArchiveFormat.RAR5 -> MIME_TYPE_RAR
+        else -> ""
+    }
+}
+
 /**
  * Get the entries of the given archive file
  *
- * @param file    Archive file to read
+ * @param uri    Archive file to read
  * @return List of the entries of the given archive file; an empty list if the archive file is not supported
  * @throws IOException If something horrible happens during I/O
  */
 @Throws(IOException::class)
-fun Context.getArchiveEntries(file: DocumentFile): List<ArchiveEntry> {
+fun Context.getArchiveEntries(uri: Uri): List<ArchiveEntry> {
     assertNonUiThread()
     var format: ArchiveFormat?
-    getInputStream(this, file).use { fi ->
+    getInputStream(this, uri).use { fi ->
         val header = ByteArray(8)
         if (fi.read(header) < header.size) return emptyList()
         format = getTypeFromArchiveHeader(header)
     }
-    return if (null == format) emptyList() else getArchiveEntries(format, file.uri)
+    return when (format) {
+        null -> emptyList()
+        ArchiveFormat.ZIP -> ZipReader(this, uri).records.map { it.toArchiveEntry() }
+        else -> getArchiveEntries(format, uri)
+    }
 }
 
 /**
@@ -157,8 +175,10 @@ private fun Context.getArchiveEntries(format: ArchiveFormat, uri: Uri): List<Arc
             SevenZip.openInArchive(format, stream, callback).use { inArchive ->
                 val itemCount = inArchive.numberOfItems
                 for (i in 0 until itemCount) {
+                    val isFolder = inArchive.getStringProperty(i, PropID.IS_FOLDER)
                     result.add(
                         ArchiveEntry(
+                            isFolder.equals("+") || isFolder.toBoolean(),
                             inArchive.getStringProperty(i, PropID.PATH),
                             inArchive.getStringProperty(i, PropID.SIZE).toLong()
                         )
@@ -218,7 +238,7 @@ fun Context.extractArchiveEntries(
  *
  * @param archive           Uri of the archive file to extract from
  * @param targetFolder      Folder to extract files to
- * @param entriesToExtract  List of entries to extract; null to extract everything
+ * @param entriesToExtract  List of entries to extract
  *      first = relative paths to the archive root
  *      second = resource identifier set by the caller (for remapping purposes)
  *      third = target file name (with extension)
@@ -233,6 +253,8 @@ fun Context.extractArchiveEntriesBlocking(
     onProgress: (() -> Unit)? = null,
     interrupt: (() -> Boolean)? = null
 ): List<Uri> {
+    // Key : Image index; Uri : fileUri
+    // NB : Pivot between ID and index is entriesToExtract
     val result = ConcurrentHashMap<Int, Uri>()
     val onExtracted: (Long, Uri) -> Unit = { id, fileUri ->
         onProgress?.invoke()
@@ -255,8 +277,7 @@ fun Context.extractArchiveEntriesBlocking(
     // List once, search the map during extraction
     val targetFolderList = listFiles(this, targetFolder)
         .groupBy { UriParts(it.toString()).fileNameFull }
-    val fileFinder: (String) -> Uri? =
-        { it -> targetFolderList[it]?.firstOrNull() }
+    val fileFinder: (String) -> Uri? = { targetFolderList[it]?.firstOrNull() }
 
     extractArchiveEntries(
         archive,
@@ -274,7 +295,13 @@ fun Context.extractArchiveEntriesBlocking(
         result.apply {
             if (lastSize == size) {
                 // 3 seconds timeout when no progression
-                if (nbPauses++ > 3.0 * 1000.0 / delay) throw IOException("Extraction timed out (${result.size} / ${entriesToExtract.size})")
+                if (nbPauses++ > 3.0 * 1000.0 / delay) {
+                    val missingEntries =
+                        entriesToExtract.filterIndexed { idx, _ -> !result.keys.contains(idx) }
+                    Timber.w("Incomplete extraction for $archive - Missing ${missingEntries.size} entries")
+                    missingEntries.forEach { Timber.w(it.first) }
+                    throw IOException("Extraction timed out (${result.size} / ${entriesToExtract.size})")
+                }
             } else {
                 nbPauses = 0
             }
@@ -320,6 +347,7 @@ private fun Context.extractArchiveEntries(
         format = getTypeFromArchiveHeader(header)
     }
     if (null == format) return
+    val internalFileNames: MutableMap<Int, String> = HashMap() // For logging purposes
     val targetFileNames: MutableMap<Int, String> = HashMap()
     val identifiers: MutableMap<Int, Long> = HashMap()
 
@@ -337,6 +365,7 @@ private fun Context.extractArchiveEntries(
                                 // TL;DR - We don't care about folders
                                 // If we were coding an all-purpose extractor we would have to create folders
                                 // But Hentoid just wants to extract a bunch of files in one single place!
+                                internalFileNames[archiveIndex] = entry.first
                                 targetFileNames[archiveIndex] = entry.third
                                 identifiers[archiveIndex] = entry.second
                                 break
@@ -351,6 +380,7 @@ private fun Context.extractArchiveEntries(
                         fileFinder,
                         fileCreator,
                         outputStreamCreator = { uri -> getOutputStream(this, uri) },
+                        internalFileNames,
                         targetFileNames,
                         identifiers,
                         interrupt,
@@ -382,21 +412,29 @@ private fun Context.addFile(
     stream: ZipOutputStream,
     buffer: ByteArray
 ) {
-    Timber.d("Adding: %s", file)
+    Timber.d("Adding: ${file.uri}")
     getInputStream(this, file).use { fi ->
         BufferedInputStream(fi, BUFFER).use { origin ->
             val zipEntry = ZipEntry(file.name)
+            zipEntry.method = ZipEntry.STORED
+            zipEntry.size = file.length()
+            zipEntry.crc = getInputStream(this, file).use {
+                getChecksumValue(CRC32(), it)
+            }
             stream.putNextEntry(zipEntry)
             var count: Int
             while (origin.read(buffer, 0, BUFFER).also { count = it } != -1) {
                 stream.write(buffer, 0, count)
             }
+            stream.flush()
+            stream.closeEntry()
         }
     }
 }
 
 /**
  * Archive the given files into the given output stream using the ZIP format
+ * NB : This is a blocking call
  *
  * @param files   List of the files to be archived
  * @param out     Output stream to write to
@@ -410,14 +448,17 @@ fun Context.zipFiles(
     progress: ((Float) -> Unit)? = null
 ) {
     assertNonUiThread()
-    ZipOutputStream(BufferedOutputStream(out)).use { zipOutputStream ->
+    val zipStream = ZipOutputStream(BufferedOutputStream(out))
+    zipStream.setMethod(ZipOutputStream.STORED)
+    zipStream.use { stream ->
         val data = ByteArray(BUFFER)
         files.forEachIndexed { index, file ->
             if (isCanceled()) return@forEachIndexed
-            addFile(file, zipOutputStream, data)
+            addFile(file, stream, data)
             // Signal progress every 10 pages
             if (0 == index % 10) progress?.invoke(index * 1f / files.size)
         }
+        stream.finish()
         out.flush()
     }
 }
@@ -428,7 +469,7 @@ fun Context.zipFiles(
  * @property path Asbolute path, extension included
  * @property size Size in bytes
  */
-data class ArchiveEntry(val path: String, val size: Long)
+data class ArchiveEntry(val isFolder: Boolean, val path: String, val size: Long)
 
 private class ArchiveOpenCallback : IArchiveOpenCallback {
     override fun setTotal(files: Long?, bytes: Long?) {
@@ -483,6 +524,7 @@ class DocumentFileRandomInStream(context: Context, val uri: Uri) : IInStream {
             try {
                 if (seekDelta < 0) {
                     // "skip" can only go forward, so we have to start over
+                    // TODO experiment with stream.channel.position
                     openUri()
                     skipNBytes(position + seekDelta)
                 } else {
@@ -544,6 +586,7 @@ class DocumentFileRandomInStream(context: Context, val uri: Uri) : IInStream {
  * @property fileFinder             Delegate method that checks if the target file exists in the target folder
  * @property fileCreator            Delegate method that creates the given file in the target folder
  * @property outputStreamCreator    Delegate method that creates an OutputStream for the given Uri
+ * @property internalFileNames      Internal file names (with extension), indexed on archive absolute file index (for logging purposes)
  * @property targetFileNames        Target file names (with extension), indexed on archive absolute file index
  * @property identifiers            Target file identifiers given by the caller, indexed on archive absolute file index
  * @property interrupt              Kill switch
@@ -556,6 +599,7 @@ private class ArchiveExtractCallback(
     private val fileFinder: (String) -> Uri?,
     private val fileCreator: (String) -> Uri?,
     private val outputStreamCreator: (Uri) -> OutputStream?,
+    private val internalFileNames: Map<Int, String>,
     private val targetFileNames: Map<Int, String>,
     private val identifiers: Map<Int, Long>,
     private val interrupt: (() -> Boolean)? = null,
@@ -580,9 +624,10 @@ private class ArchiveExtractCallback(
 
         if (identifiers.isNotEmpty()) identifier = identifiers[index] ?: return null
         val fileName = targetFileNames[index] ?: return null
+        val internalName = internalFileNames[index] ?: ""
 
         val existing = fileFinder.invoke(fileName)
-        Timber.v("Extract archive, get stream: $index to: $extractAskMode as $fileName")
+        Timber.v("Extract archive, get stream: $index ($internalName) to: $extractAskMode as $fileName")
         return try {
             val target = existing ?: fileCreator.invoke(fileName)
             ?: throw IOException("Can't create file $fileName")

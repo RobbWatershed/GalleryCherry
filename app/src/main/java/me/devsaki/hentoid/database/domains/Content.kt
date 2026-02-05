@@ -43,14 +43,22 @@ import me.devsaki.hentoid.util.file.getExtension
 import me.devsaki.hentoid.util.file.isSupportedArchive
 import me.devsaki.hentoid.util.formatAuthor
 import me.devsaki.hentoid.util.hash64
+import me.devsaki.hentoid.util.image.isSupportedImage
+import me.devsaki.hentoid.util.image.isSupportedImage
+import me.devsaki.hentoid.util.isNumeric
 import me.devsaki.hentoid.util.jsonToObject
+import me.devsaki.hentoid.util.network.UriParts
+import me.devsaki.hentoid.util.network.fixUrl
+import me.devsaki.hentoid.util.network.getHttpProtocol
 import me.devsaki.hentoid.util.serializeToJson
 import timber.log.Timber
 import java.io.IOException
 import java.util.Objects
 
 enum class DownloadMode(val value: Int) {
-    DOWNLOAD(Settings.Value.DL_ACTION_DL_PAGES), // Download images
+    DOWNLOAD(Settings.Value.DL_ACTION_DL_PAGES), // Download images to a folder
+    DOWNLOAD_ARCHIVE(Settings.Value.DL_ACTION_DL_ARCHIVE_PAGES), // Download images to an archive
+    DOWNLOAD_ARCHIVE_FILE(Settings.Value.DL_ACTION_DL_ARCHIVE_FILE), // Download a single archive file
     STREAM(Settings.Value.DL_ACTION_STREAM), // Saves the book for on-demand viewing
     ASK(Settings.Value.DL_ACTION_ASK); // Saves the book for on-demand viewing)
 
@@ -382,11 +390,17 @@ data class Content(
             if (images.isEmpty()) {
                 val makeupCover = fromImageUrl(0, coverImageUrl, StatusContent.ONLINE, 1)
                 makeupCover.imageHash = Long.MIN_VALUE // Makeup cover is unhashable
+                makeupCover.isCover = true
                 return makeupCover
             }
             for (img in images) if (img.isCover) return img
-            // If nothing found, get 1st page as cover
-            return imageList.first()
+
+            // If nothing found, get 1st supported image as cover
+            val makeupCover =
+                imageList.firstOrNull { isSupportedImage(UriParts(it.fileUri).fileNameFull) }
+                    ?: ImageFile()
+            makeupCover.isCover = true
+            return makeupCover
         }
 
     val errorList: List<ErrorRecord>

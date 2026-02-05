@@ -12,8 +12,6 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
-import androidx.lifecycle.findViewTreeLifecycleOwner
-import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -37,6 +35,8 @@ import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.assertNonUiThread
 import me.devsaki.hentoid.util.duplicateInputStream
 import me.devsaki.hentoid.util.file.getAssetAsString
+import me.devsaki.hentoid.util.file.isSupportedArchive
+import me.devsaki.hentoid.util.file.isSupportedPdf
 import me.devsaki.hentoid.util.file.openFile
 import me.devsaki.hentoid.util.file.saveBinary
 import me.devsaki.hentoid.util.getRandomInt
@@ -55,6 +55,7 @@ import me.devsaki.hentoid.util.network.getCookies
 import me.devsaki.hentoid.util.network.getExtensionFromUri
 import me.devsaki.hentoid.util.network.getOnlineResource
 import me.devsaki.hentoid.util.network.getOnlineResourceFast
+import me.devsaki.hentoid.util.network.isPrefetch
 import me.devsaki.hentoid.util.network.okHttpResponseToWebkitResponse
 import me.devsaki.hentoid.util.network.postOnlineResource
 import me.devsaki.hentoid.util.network.setCookies
@@ -157,7 +158,7 @@ open class CustomWebViewClient : WebViewClient {
     // Communication between XHR intercept and POST rewrite
     //   Key : URL
     //   Value : POST Body
-    private val postQueue: MutableMap<String, Queue<String>> = ConcurrentHashMap()
+    private val xhrPostQueue: MutableMap<String, Queue<String>> = ConcurrentHashMap()
 
 
     companion object {
@@ -374,7 +375,7 @@ open class CustomWebViewClient : WebViewClient {
      * false if the webview has to handle the display (OkHttp will be used as a 2nd request for parsing)
      */
     private fun canUseSingleOkHttpRequest(): Boolean {
-        return (!preventAugmentedBrowser && Settings.isBrowserAugmented(site) && (getChromeVersion() < 45 || getChromeVersion() > 71))
+        return (!preventAugmentedBrowser && Settings.isBrowserAugmented(site) && (getChromeVersion() !in 45..71))
     }
 
     override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
@@ -396,20 +397,34 @@ open class CustomWebViewClient : WebViewClient {
         // NB : Opening the URL itself won't work when the tracker is private
         // as the 3rd party torrent app doesn't have access to it
         if (getExtensionFromUri(url) == "torrent") {
-            view.findViewTreeLifecycleOwner()?.lifecycleScope?.launch {
+            scope.launch {
                 try {
-                    val uri = withContext(Dispatchers.IO) {
+                    val file = withContext(Dispatchers.IO) {
                         downloadFile(view.context, url, headers)
                     }
-                    openFile(view.context, uri)
+                    openFile(view.context, file)
                 } catch (t: Throwable) {
                     view.context.toast(R.string.torrent_dl_fail, t.message ?: "")
                     Timber.w(t)
                 }
             }
         }
-        val host = url.toUri().host
+
+        // Queue archives as archive direct downloads
+        val uri = url.toUri()
+        if (isSupportedDirectDownload(uri) && isMainPage) activity?.downloadContentArchivePdf(url)
+
+        val host = uri.host
         return host != null && isHostNotInRestrictedDomains(host)
+    }
+
+    private fun isSupportedDirectDownload(uri: Uri): Boolean {
+        var fileName = uri.lastPathSegment ?: ""
+        if (isSupportedArchive(fileName) || isSupportedPdf(fileName)) return true
+
+        // Specific to Kemono - target file name is inside the f parameter
+        fileName = uri.getQueryParameter("f") ?: ""
+        return isSupportedArchive(fileName) || isSupportedPdf(fileName)
     }
 
     /**
@@ -484,7 +499,7 @@ open class CustomWebViewClient : WebViewClient {
             Timber.v("[$url] ignored by interceptor; method = ${request.method}")
             var postBody = ""
             // Try to retrieve POST body from previously intercepted XHR
-            postQueue[url]?.let { queue ->
+            xhrPostQueue[url]?.let { queue ->
                 queue.poll()?.let { body ->
                     postBody = body
                 }
@@ -513,6 +528,8 @@ open class CustomWebViewClient : WebViewClient {
             // Don't block the main page
             && (!isMainPage && adBlocker.isBlocked(url, headers ?: emptyMap()))
             || !url.startsWith("http")
+            // Don't support prefetch intentionally to keep things simple
+            || isPrefetch(headers)
         ) {
             WebResourceResponse("text/plain", "utf-8", ByteArrayInputStream(NOTHING))
         } else if (isMarkDownloaded() && url.contains("hentoid-checkmark")) {
@@ -586,26 +603,31 @@ open class CustomWebViewClient : WebViewClient {
                 )
                 res.use { response ->
                     // Scram if the response is a redirection or an error
-                    if (response.code >= 300) return null
+                    if (response.code >= 300) {
+                        Timber.v("sendRequest ${request.method} ${request.url} FAILED ${response.code}")
+                        return WebResourceResponse(
+                            "text/plain",
+                            "utf-8",
+                            ByteArrayInputStream(NOTHING)
+                        )
+                    }
                     response.body.byteStream().use {
                         val streams = duplicateInputStream(it, 1)
                         return okHttpResponseToWebkitResponse(response, streams[0])
                     }
                 }
-            } catch (e: IOException) {
-                Timber.i(e)
-            } catch (e: IllegalStateException) {
-                Timber.i(e)
+            } catch (e: Exception) {
+                Timber.i(e, "sendRequest ${request.method} ${request.url} failed ")
             }
-        }
-        return null
+            return WebResourceResponse("text/plain", "utf-8", ByteArrayInputStream(NOTHING))
+        } else return null
     }
 
     fun recordDynamicPostRequests(url: String, body: String) {
-        val queue = if (postQueue.contains(url)) postQueue[url]
+        val queue = if (xhrPostQueue.contains(url)) xhrPostQueue[url]
         else {
             val q = ConcurrentLinkedQueue<String>()
-            postQueue[url] = q
+            xhrPostQueue[url] = q
             q
         }
         queue?.add(body)
@@ -712,10 +734,10 @@ open class CustomWebViewClient : WebViewClient {
 
                 // Scram if the response is empty
                 val body = response.body
-                val parserStream: InputStream?
+                val parserStream: InputStream? // Should be eventually closed
                 val result: WebResourceResponse?
                 if (canUseSingleOkHttpRequest()) {
-                    var browserStream: InputStream
+                    var browserStream: InputStream // Shouldn't be closed here as it it transmitted to the WebView
                     if (analyzeForDownload) {
                         // Response body bytestream needs to be duplicated
                         // because Jsoup closes it, which makes it unavailable for the WebView to use
@@ -767,9 +789,9 @@ open class CustomWebViewClient : WebViewClient {
                 }
                 // If there's a red alert ongoing, don't try parsing the page
                 val alert = activity?.alertStatus ?: AlertStatus.NONE
-                if (analyzeForDownload && alert != AlertStatus.RED) {
+                if (analyzeForDownload && alert != AlertStatus.RED && parserStream != null) {
                     try {
-                        var content = htmlAdapter.fromInputStream(parserStream!!, URL(url))
+                        var content = htmlAdapter.fromInputStream(parserStream, URL(url))
                             .toContent(url)
                         // ProcessContent needs to be called on a new thread as it may wait for browser loading to complete
                         scope.launch {
@@ -780,9 +802,10 @@ open class CustomWebViewClient : WebViewClient {
                         }
                     } catch (t: Throwable) {
                         Timber.e(t, "Error parsing content.")
-                        parserStream?.close()
                         isHtmlLoaded.set(true)
                         resConsumer?.onResultFailed()
+                    } finally {
+                        parserStream.close()
                     }
                 } else {
                     isHtmlLoaded.set(true)
@@ -793,6 +816,8 @@ open class CustomWebViewClient : WebViewClient {
                 Timber.e(e)
             } catch (e: IllegalStateException) {
                 Timber.e(e)
+            } finally {
+                response.close()
             }
         }
         return null
@@ -1093,7 +1118,17 @@ open class CustomWebViewClient : WebViewClient {
 
     interface BrowserActivity : WebResultConsumer {
         // ACTIONS
+
+        /**
+         * Load the given URL on the browser
+         */
         fun loadUrl(url: String)
+
+        /**
+         * Download the given archive / PDF URL as a Content
+         */
+        fun downloadContentArchivePdf(url: String)
+
 
         // CALLBACKS
         fun onPageStarted(

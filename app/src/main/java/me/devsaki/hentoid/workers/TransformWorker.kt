@@ -29,6 +29,7 @@ import me.devsaki.hentoid.util.file.getExtensionFromMimeType
 import me.devsaki.hentoid.util.file.getInputStream
 import me.devsaki.hentoid.util.file.getMimeTypeFromFileName
 import me.devsaki.hentoid.util.file.getParent
+import me.devsaki.hentoid.util.file.removeDocument
 import me.devsaki.hentoid.util.file.saveBinary
 import me.devsaki.hentoid.util.getStorageRoot
 import me.devsaki.hentoid.util.image.TransformParams
@@ -65,7 +66,7 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
     }
 
     override fun onInterrupt() {
-        targetDirectory?.delete()
+        removeDocument(applicationContext, targetDirectory)
     }
 
     override suspend fun onClear(logFile: DocumentFile?) {
@@ -113,7 +114,7 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
         dao.updateContentsProcessedFlagById(contentIds.filter { it > 0 }, true)
 
         contentIds.forEach {
-            totalItems += dao.selectDownloadedImagesFromContent(it).count { i -> i.isReadable }
+            totalItems += dao.selectImagesFromContent(it, true).count { i -> i.isReadable }
             if (isStopped) return
         }
 
@@ -177,8 +178,8 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
                     ctx,
                     img.fileUri.toUri(),
                     targetFolder,
-                    getMimeTypeFromFileName(name),
-                    name
+                    name,
+                    getMimeTypeFromFileName(name)
                 )?.let { newUri ->
                     img.fileUri = newUri.toString()
                     transformedImages.add(img)
@@ -241,12 +242,12 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
             }
 
             // Remove old folder with old images
-            if (targetFolder != null) sourceFolder.delete()
+            if (targetFolder != null) removeDocument(applicationContext, sourceFolder)
         } else {
             nbKO += sourceImages.size
 
             // Remove processed images
-            targetFolder?.delete()
+            removeDocument(applicationContext, targetFolder)
         }
         Timber.d("Transforming Content END ${content.title}")
 
