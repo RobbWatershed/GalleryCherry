@@ -30,6 +30,7 @@ import me.devsaki.hentoid.activities.sources.PornPicsActivity
 import me.devsaki.hentoid.activities.sources.RedditActivity
 import me.devsaki.hentoid.activities.sources.SxyPixActivity
 import me.devsaki.hentoid.activities.sources.XhamsterActivity
+import me.devsaki.hentoid.activities.sources.XiutakuActivity
 import me.devsaki.hentoid.activities.sources.XnxxActivity
 import me.devsaki.hentoid.database.domains.ImageFile.Companion.fromImageUrl
 import me.devsaki.hentoid.database.safeReach
@@ -44,12 +45,8 @@ import me.devsaki.hentoid.util.file.isSupportedArchive
 import me.devsaki.hentoid.util.formatAuthor
 import me.devsaki.hentoid.util.hash64
 import me.devsaki.hentoid.util.image.isSupportedImage
-import me.devsaki.hentoid.util.image.isSupportedImage
-import me.devsaki.hentoid.util.isNumeric
 import me.devsaki.hentoid.util.jsonToObject
 import me.devsaki.hentoid.util.network.UriParts
-import me.devsaki.hentoid.util.network.fixUrl
-import me.devsaki.hentoid.util.network.getHttpProtocol
 import me.devsaki.hentoid.util.serializeToJson
 import timber.log.Timber
 import java.io.IOException
@@ -203,6 +200,7 @@ data class Content(
                 Site.GIRLSTOP -> GirlsTopActivity::class.java
                 Site.BESTGIRLSEXY -> BestGirlSexyActivity::class.java
                 Site.FOAMGIRL -> FoamGirlActivity::class.java
+                Site.XIUTAKU -> XiutakuActivity::class.java
                 else -> BaseBrowserActivity::class.java
             }
         }
@@ -277,7 +275,9 @@ data class Content(
             Site.XNXX -> return if (parts.isNotEmpty()) parts[0]
             else ""
 
-            Site.PORNPICS, Site.HELLPORNO, Site.PORNPICGALLERIES, Site.LINK2GALLERIES, Site.NEXTPICTUREZ, Site.JJGIRLS2, Site.SXYPIX, Site.PICS_X, Site.BABETODAY, Site.BESTGIRLSEXY -> return parts[parts.size - 1]
+            // Last part (e.g. site/abc/56165)
+            Site.PORNPICS, Site.HELLPORNO, Site.PORNPICGALLERIES, Site.LINK2GALLERIES, Site.NEXTPICTUREZ, Site.JJGIRLS2, Site.SXYPIX, Site.PICS_X, Site.BABETODAY, Site.BESTGIRLSEXY, Site.XIUTAKU -> return parts[parts.size - 1]
+            // Last but one part (e.g. site/4694/gallery)
             Site.FAPALITY, Site.COSPLAYTELE -> return parts[parts.size - 2]
             Site.JPEGWORLD -> return url.substring(url.lastIndexOf("-") + 1, url.lastIndexOf("."))
             Site.REDDIT -> return "reddit" // One single book
@@ -333,7 +333,7 @@ data class Content(
                 // Specific case - user can go on any site (smart parser)
                 Site.PORNPICGALLERIES, Site.LINK2GALLERIES, Site.REDDIT, Site.JJGIRLS, Site.JJGIRLS2, Site.BABETODAY, Site.JAPBEAUTIES, Site.SXYPIX, Site.COSPLAYTELE, Site.GIRLSTOP, Site.COOMER, Site.BESTGIRLSEXY -> return url
                 // Site landpage URL already contains the "/albums/" prefix
-                Site.HELLPORNO, Site.FAPALITY, Site.ASIANSISTER, Site.FOAMGIRL -> ""
+                Site.HELLPORNO, Site.FAPALITY, Site.ASIANSISTER, Site.FOAMGIRL, Site.XIUTAKU -> ""
                 Site.PORNPICS, Site.JPEGWORLD -> "galleries/"
                 Site.LUSCIOUS -> return site.url.replace("/porn/", "") + url
                 else -> "gallery/"

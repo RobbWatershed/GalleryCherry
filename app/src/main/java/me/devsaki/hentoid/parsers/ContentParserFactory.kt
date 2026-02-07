@@ -17,6 +17,7 @@ import me.devsaki.hentoid.parsers.content.PornPicsContent
 import me.devsaki.hentoid.parsers.content.SmartContent
 import me.devsaki.hentoid.parsers.content.SxypixContent
 import me.devsaki.hentoid.parsers.content.XhamsterContent
+import me.devsaki.hentoid.parsers.content.XiutakuContent
 import me.devsaki.hentoid.parsers.content.XnxxContent
 import me.devsaki.hentoid.parsers.images.DummyParser
 import me.devsaki.hentoid.parsers.images.FapalityParser
@@ -27,6 +28,7 @@ import me.devsaki.hentoid.parsers.images.LusciousParser
 import me.devsaki.hentoid.parsers.images.PicsXParser
 import me.devsaki.hentoid.parsers.images.SxypixParser
 import me.devsaki.hentoid.parsers.images.XhamsterParser
+import me.devsaki.hentoid.parsers.images.XiutakuParser
 
 
 object ContentParserFactory {
@@ -48,6 +50,7 @@ object ContentParserFactory {
             Site.GIRLSTOP -> GirlsTopContent::class.java
             Site.BESTGIRLSEXY -> BestGirlSexyContent::class.java
             Site.FOAMGIRL -> FoamGirlContent::class.java
+            Site.XIUTAKU -> XiutakuContent::class.java
             else -> SmartContent::class.java
         }
     }
@@ -65,6 +68,7 @@ object ContentParserFactory {
             Site.PICS_X -> PicsXParser()
             Site.COOMER -> KemonoParser()
             Site.FOAMGIRL -> FoamGirlParser()
+            Site.XIUTAKU -> XiutakuParser()
             else -> DummyParser()
         }
     }
