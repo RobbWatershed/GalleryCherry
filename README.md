@@ -12,7 +12,7 @@ ___
 
 ##### `GalleryCherry` is an ad-free XXX Galleries archiving and viewing app.
 ###### `GalleryCherry` currently supports:
-###### [XHamster Photos](https://m.xhamster.com/photos/), [XNXX Photos](https://multi.xnxx.com/), [Pornpics](https://www.pornpics.com/), [Jpegworld](https://www.jpegworld.com/), [Nextpicturez](http://www.nextpicturez.com/), [PornPicGalleries](http://pornpicgalleries.com/), [Link2galleries](https://www.link2galleries.com/), [Reddit (favourites)](https://www.reddit.com/), [JJGirls](https://jjgirls.com/mobile/), [luscious.net](https://members.luscious.net/porn/), [Fapality](https://fapality.com/photos/), [Babe.today](https://babe.today/), [Japanese beauties](https://japanesebeauties.one/), [SxyPix](https://sxypix.com/)
+###### [XHamster Photos](https://m.xhamster.com/photos/), [XNXX Photos](https://multi.xnxx.com/), [Pornpics](https://www.pornpics.com/), [Link2galleries](https://www.link2galleries.com/), [Reddit (favourites)](https://www.reddit.com/), [JJGirls](https://jjgirls.com/mobile/), [luscious.net](https://members.luscious.net/porn/), [Fapality](https://fapality.com/photos/), [Babe.today](https://babe.today/), [Japanese beauties](https://japanesebeauties.one/), [SxyPix](https://sxypix.com/), [PICS-X](https://pics-x.com/), [CosplayTele](https://cosplaytele.com/), [GirlsTop](https://en.girlstop.info/), [Coomer](https://coomer.st), [BestGirlSexy](https://bestgirlsexy.com/) and [FoamGirl](https://foamgirl.net/)
 
 ##### For the latest release, click [here](https://github.com/RobbWatershed/GalleryCherry/releases/latest).
 
