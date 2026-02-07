@@ -2,13 +2,13 @@ package me.devsaki.hentoid.activities.sources
 
 import me.devsaki.hentoid.enums.Site
 
-private const val DOMAIN_FILTER = "xiutaku.com"
+private const val DOMAIN_FILTER = "kiutaku.com"
 private val GALLERY_FILTER = arrayOf("$DOMAIN_FILTER/[\\d_]+")
 private val REMOVABLE_ELEMENTS = arrayOf(".mod-ads-auto-title", ".mod-ads-auto-container", ".mod-ads-title", ".mod-ads-container")
 
-class XiutakuActivity : BaseBrowserActivity() {
+class KiutakuActivity : BaseBrowserActivity() {
     override fun getStartSite(): Site {
-        return Site.XIUTAKU
+        return Site.KIUTAKU
     }
 
     override fun allowMixedContent(): Boolean {

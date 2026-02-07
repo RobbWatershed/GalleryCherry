@@ -59,6 +59,7 @@ enum class Site(val code: Int, val description: String, val url: String, val ico
     BESTGIRLSEXY(22, "BestGirlSexy", "https://bestgirlsexy.com/", R.drawable.ic_site_bgs),
     FOAMGIRL(23, "FoamGirl", "https://foamgirl.net/", R.drawable.ic_site_foam),
     XIUTAKU(24, "Xiutaku", "https://xiutaku.com/", R.drawable.ic_site_xiutaku),
+    KIUTAKU(25, "Kiutaku", "https://kiutaku.com/", R.drawable.ic_site_kiutaku),
 
     MAL(96, "MyAnimeList", "", R.drawable.ic_app),
 
@@ -88,6 +89,8 @@ enum class Site(val code: Int, val description: String, val url: String, val ico
     var requestsCapPerSecond = -1
         private set
     var parallelDownloadCap = 0
+        private set
+    var noReferer = false
         private set
 
     // Controls for "Mark downloaded/merged" in browser
@@ -134,6 +137,7 @@ enum class Site(val code: Int, val description: String, val url: String, val ico
         if (jsonSite.useCloudflare != null) useCloudflare = jsonSite.useCloudflare
         if (jsonSite.hasUniqueBookId != null) hasUniqueBookId = jsonSite.hasUniqueBookId
         if (jsonSite.parallelDownloadCap != null) parallelDownloadCap = jsonSite.parallelDownloadCap
+        if (jsonSite.noReferer != null) noReferer = jsonSite.noReferer
         if (jsonSite.requestsCapPerSecond != null)
             requestsCapPerSecond = jsonSite.requestsCapPerSecond
         if (jsonSite.bookCardDepth != null) bookCardDepth = jsonSite.bookCardDepth

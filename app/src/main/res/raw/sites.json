@@ -23,6 +23,9 @@
       "useWebviewAgent": false,
       "requestsCapPerSecond": 1,
       "parallelDownloadCap": 1
+    },
+    "KIUTAKU": {
+      "noReferer": true
     }
   }
 }
