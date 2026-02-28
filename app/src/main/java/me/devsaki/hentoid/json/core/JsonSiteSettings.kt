@@ -18,6 +18,8 @@ data class JsonSiteSettings(
         val bookCardDepth: Int?,
         val bookCardExcludedParentClasses: List<String>?,
         val galleryHeight: Int?,
-        val jsoupOutputSyntax: Int?
+        val jsoupOutputSyntax: Int?,
+        val canUpdateOnlineMetadata : Boolean?,
+        val shouldBeStreamed : Boolean?
     )
 }

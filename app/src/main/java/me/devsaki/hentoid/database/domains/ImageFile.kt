@@ -89,7 +89,11 @@ data class ImageFile(
     var isForceRefresh: Boolean = false
 
 
-    constructor(img: ImageFile, populateContent: Boolean = true, populateChapter: Boolean = true) : this(
+    constructor(
+        img: ImageFile,
+        populateContent: Boolean = true,
+        populateChapter: Boolean = true
+    ) : this(
         img.id,
         img.order,
         img.url,

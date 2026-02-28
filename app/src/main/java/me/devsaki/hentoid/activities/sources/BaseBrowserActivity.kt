@@ -19,6 +19,8 @@ import android.webkit.JavascriptInterface
 import android.webkit.WebBackForwardList
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebView.HitTestResult
 import androidx.activity.OnBackPressedCallback
@@ -26,12 +28,16 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.core.view.GravityCompat
 import androidx.core.view.isVisible
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.LifecycleCoroutineScope
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import androidx.webkit.ServiceWorkerClientCompat
+import androidx.webkit.ServiceWorkerControllerCompat
+import androidx.webkit.WebViewFeature
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.skydoves.balloon.ArrowOrientation
 import kotlinx.coroutines.Dispatchers
@@ -48,6 +54,7 @@ import me.devsaki.hentoid.activities.bundles.QueueActivityBundle
 import me.devsaki.hentoid.activities.bundles.SettingsBundle
 import me.devsaki.hentoid.activities.settings.SettingsActivity
 import me.devsaki.hentoid.core.BiConsumer
+import me.devsaki.hentoid.core.Consumer
 import me.devsaki.hentoid.core.URL_GITHUB_WIKI_DOWNLOAD
 import me.devsaki.hentoid.core.initDrawerLayout
 import me.devsaki.hentoid.core.startBrowserActivity
@@ -92,12 +99,10 @@ import me.devsaki.hentoid.util.getCenter
 import me.devsaki.hentoid.util.getCoverBitmapFromStream
 import me.devsaki.hentoid.util.getFixedContext
 import me.devsaki.hentoid.util.getHashEngine
-import me.devsaki.hentoid.util.getThemedColor
 import me.devsaki.hentoid.util.isInLibrary
 import me.devsaki.hentoid.util.isInQueue
 import me.devsaki.hentoid.util.network.HEADER_COOKIE_KEY
 import me.devsaki.hentoid.util.network.HEADER_REFERER_KEY
-import me.devsaki.hentoid.util.network.UriParts
 import me.devsaki.hentoid.util.network.WebkitPackageHelper
 import me.devsaki.hentoid.util.network.fixUrl
 import me.devsaki.hentoid.util.network.getCookies
@@ -107,6 +112,7 @@ import me.devsaki.hentoid.util.openReader
 import me.devsaki.hentoid.util.parseDownloadParams
 import me.devsaki.hentoid.util.setMargins
 import me.devsaki.hentoid.util.showTooltip
+import me.devsaki.hentoid.util.snack
 import me.devsaki.hentoid.util.toast
 import me.devsaki.hentoid.util.tryShowMenuIcons
 import me.devsaki.hentoid.util.useLegacyInsets
@@ -131,6 +137,8 @@ import kotlin.math.round
  */
 private val GALLERY_REGEX by lazy { "\\b|/galleries|/gallery|/g|/entry\\b".toRegex() }
 
+private const val SIMILARITY_MIN_THRESHOLD = 0.85f
+
 abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.BrowserActivity,
     DuplicateDialogFragment.Parent, BookmarksDrawerFragment.Parent {
 
@@ -154,10 +162,6 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         // Seek a specific results page
         PAGE,  // Back to latest gallery page
         GALLERY
-    }
-
-    companion object {
-        const val SIMILARITY_MIN_THRESHOLD = 0.85f
     }
 
 
@@ -235,12 +239,16 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
     private var alert: UpdateInfo.SourceAlert? = null
 
     // Handler for fetch interceptor
+    protected var isManagedFetch = false
     protected var fetchHandler: BiConsumer<String, String>? = null
+    protected var fetchResponseHandler: Consumer<String>? = null
+    private var fetchResponseCallback: Consumer<String>? = null
     protected var xhrHandler: BiConsumer<String, String>? = null
     private var fetchInterceptorScript: String? = null
     private var xhrInterceptorScript: String? = null
     private var internalCustomCss: String? = null
 
+    protected var interceptServiceWorker = false
 
     protected abstract fun createWebClient(): CustomWebViewClient
 
@@ -286,7 +294,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         tryShowMenuIcons(this, toolbar.menu)
         toolbar.setOnMenuItemClickListener { this.onMenuItemSelected(it) }
         toolbar.title = getStartSite().description
-        toolbar.setOnClickListener { loadUrl(getStartUrl(true)) }
+        toolbar.setOnClickListener { getStartUrl(true) { loadUrl(it) } }
         addCustomBackControl()
 
         refreshStopMenu = toolbar.menu.findItem(R.id.web_menu_refresh_stop)
@@ -309,7 +317,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         // Webview
         initWebview()
         initSwipeLayout()
-        webView.loadUrl(getStartUrl())
+        getStartUrl { webView.loadUrl(it) }
         if (!Settings.recentVisibility) {
             window.setFlags(
                 WindowManager.LayoutParams.FLAG_SECURE,
@@ -466,17 +474,13 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         if (!WebkitPackageHelper.getWebViewAvailable()) return
         Timber.i("onPause")
         webView.url?.let {
-            val parts = UriParts(it)
-            val usefulData =
-                parts.pathFull.substring(parts.host.length).replace("/", "") + parts.query
-            if (usefulData.length < 8) return // Don't record useless locations (e.g. /en/, /artists/, /search/...)
-            viewModel.saveCurrentUrl(getStartSite(), it)
+            viewModel.saveToHistory(getStartSite(), it)
         }
     }
 
     /**
      * Determine the URL the browser will load at startup
-     * - Either an URL specifically given to the activity (e.g. "view source" action)
+     * - Either a URL specifically given to the activity (e.g. "view source" action)
      * - Or the last viewed page, if the setting is enabled
      * - If neither of the previous cases, the default URL of the site
      *
@@ -484,31 +488,79 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
      *
      * @return URL to load at startup
      */
-    private fun getStartUrl(forceHomepage: Boolean = false): String {
-        val dao: CollectionDAO = ObjectBoxDAO()
-        try {
-            if (!forceHomepage) {
-                // Priority 1 : URL specifically given to the activity (e.g. "view source" action)
-                if (intent.extras != null) {
-                    val bundle = BaseBrowserActivityBundle(intent.extras!!)
-                    val intentUrl = bundle.url
-                    if (intentUrl.isNotEmpty()) return intentUrl
+    private fun getStartUrl(
+        forceHomepage: Boolean = false,
+        onFound: Consumer<String>
+    ) {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val dao: CollectionDAO = ObjectBoxDAO()
+            val site = getStartSite()
+            var result = ""
+            try {
+                // Special case : app's welcome page
+                if (Site.NONE == getStartSite()) return@launch
+
+                if (!forceHomepage) {
+                    // Priority 1 : URL specifically given to the activity (e.g. "view source" action)
+                    if (intent.extras != null) {
+                        val bundle = BaseBrowserActivityBundle(intent.extras!!)
+                        result = bundle.url
+                    }
+
+                    // Priority 2 : Last viewed position, if setting enabled
+                    if (result.isBlank() && Settings.isBrowserResumeLast) {
+                        val siteHistory = dao.selectLastHistory(getStartSite())
+                        result = siteHistory.url
+                    }
+                    var reason = ""
+                    if (result.isNotBlank()) {
+                        try {
+                            val uri = result.toUri()
+                            if (webClient.isOutsideRestrictedDomains(uri)) {
+                                reason = " (" + resources.getString(
+                                    R.string.web_target_page_outside_restricted_domains,
+                                    uri.host ?: ""
+                                ) + ")"
+                            } else {
+                                val headers: MutableList<Pair<String, String>> = ArrayList()
+                                headers.add(Pair(HEADER_REFERER_KEY, site.url))
+                                val cookieStr = getCookies(result)
+                                if (cookieStr.isNotEmpty())
+                                    headers.add(Pair(HEADER_COOKIE_KEY, cookieStr))
+                                val response = getOnlineResourceFast(
+                                    result,
+                                    headers,
+                                    site.useMobileAgent,
+                                    site.useHentoidAgent,
+                                    site.useWebviewAgent
+                                )
+                                if (response.code < 300) {
+                                    withContext(Dispatchers.Main) { onFound(result) }
+                                    return@launch
+                                } else reason = " (HTTP ${response.code})"
+                            }
+                        } catch (e: Exception) {
+                            Timber.i(e, "Unavailable resource$reason : $result")
+                            reason = " (${e.javaClass.name})"
+                        }
+                    }
+                    if (reason.isNotBlank()) {
+                        Timber.i("Unavailable resource$reason : $result")
+                        snack(
+                            resources.getString(
+                                R.string.web_target_page_unavailable,
+                                reason
+                            )
+                        )
+                    }
                 }
 
-                // Priority 2 : Last viewed position, if setting enabled
-                if (Settings.isBrowserResumeLast) {
-                    val siteHistory = dao.selectHistory(getStartSite())
-                    if (siteHistory.url.isNotEmpty()) return siteHistory.url
-                }
+                // Priority 3 : Homepage (manually set through bookmarks or default)
+                val welcomePage = dao.selectHomepage(getStartSite())
+                withContext(Dispatchers.Main) { onFound(welcomePage?.url ?: getStartSite().url) }
+            } finally {
+                dao.cleanup()
             }
-
-            // Priority 3 : Homepage (manually set through bookmarks or default)
-            val welcomePage = dao.selectHomepage(getStartSite())
-            return welcomePage?.url ?: getStartSite().url
-
-            // Default site URL
-        } finally {
-            dao.cleanup()
         }
     }
 
@@ -592,7 +644,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         webView.webViewClient = webClient
         if (getStartSite().useManagedRequests || Settings.proxy.isNotEmpty() || Settings.dnsOverHttps > -1) {
             xhrHandler = { url, body -> webClient.recordDynamicPostRequests(url, body) }
-            fetchHandler = { url, body -> webClient.recordDynamicPostRequests(url, body) }
+            enableStandardFetchHandler()
         }
 
         // Download immediately on long click on a link / image link
@@ -619,11 +671,32 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         }
 
         fetchHandler?.let { webView.addJavascriptInterface(FetchHandler(it), "fetchHandler") }
+        if (isManagedFetch) {
+            val responseHandler =
+                { responseBody: String -> fetchResponseCallback?.invoke(responseBody) ?: Unit }
+            webView.addJavascriptInterface(
+                FetchResponseHandler(responseHandler),
+                "fetchResponseHandler"
+            )
+        }
         xhrHandler?.let { webView.addJavascriptInterface(XhrHandler(it), "xhrHandler") }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             webSettings.isAlgorithmicDarkeningAllowed =
                 (!Settings.isBrowserForceLightMode && Settings.colorTheme != Settings.Value.COLOR_THEME_LIGHT)
         }
+        if (interceptServiceWorker && WebViewFeature.isFeatureSupported(WebViewFeature.SERVICE_WORKER_BASIC_USAGE)) {
+            ServiceWorkerControllerCompat.getInstance().setServiceWorkerClient(
+                object : ServiceWorkerClientCompat() {
+                    override fun shouldInterceptRequest(request: WebResourceRequest): WebResourceResponse? {
+                        return webClient.shouldInterceptRequest(webView, request)
+                    }
+                })
+        }
+    }
+
+    private fun enableStandardFetchHandler() {
+        if (null == fetchHandler)
+            fetchHandler = { url, body -> webClient.recordDynamicPostRequests(url, body) }
     }
 
     private fun initSwipeLayout() {
@@ -689,27 +762,8 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
                 quickDlFeedback.visibility = View.VISIBLE
             }
 
-            // Run on a new thread to avoid crashes
-            lifecycleScope.launch {
-                try {
-                    val res = withContext(Dispatchers.IO) {
-                        webClient.parseResponse(
-                            url, null,
-                            analyzeForDownload = true,
-                            quickDownload = true
-                        )
-                    }
-                    if (null == res) {
-                        binding?.quickDlFeedback?.visibility = View.INVISIBLE
-                    } else {
-                        binding?.quickDlFeedback?.setIndicatorColor(
-                            baseContext.getThemedColor(R.color.secondary_light)
-                        )
-                    }
-                } catch (t: Throwable) {
-                    Timber.e(t)
-                }
-            }
+            webClient.flagAsQuickDownload(url)
+            browserFetch(url)
         }
     }
 
@@ -727,15 +781,15 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         }
 
         // Activate fetch handler
-        if (fetchHandler != null) {
+        if (fetchHandler != null || fetchResponseHandler != null || isManagedFetch) {
             if (null == fetchInterceptorScript) fetchInterceptorScript =
-                webClient.getJsScript(this, "fetch_override.js", null)
+                webClient.getAssetJsScript(this, "fetch_override.js", null)
             webView.loadUrl(fetchInterceptorScript!!)
         }
         // Activate XHR handler
         if (xhrHandler != null) {
             if (null == xhrInterceptorScript) xhrInterceptorScript =
-                webClient.getJsScript(this, "xhr_override.js", null)
+                webClient.getAssetJsScript(this, "xhr_override.js", null)
             webView.loadUrl(xhrInterceptorScript!!)
         }
 
@@ -782,6 +836,9 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         else onBottomAlertCloseClick()
 
         viewModel.setPageTitle(webView.title ?: "")
+        webView.url?.let {
+            viewModel.saveToHistory(getStartSite(), it)
+        }
     }
 
     /**
@@ -1178,7 +1235,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
                             replacementTitleFinal,
                             archiveUrl
                         )
-                    }, null
+                    }, content.site.shouldBeStreamed, null
                 )
             }
         } else if (Settings.queueNewDownloadPosition == Settings.Value.QUEUE_NEW_DOWNLOADS_POSITION_ASK) {
@@ -1203,7 +1260,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
                         replacementTitleFinal,
                         archiveUrl
                     )
-                }, null
+                }, content.site.shouldBeStreamed, null
             )
         } else {
             addToQueue(
@@ -1315,7 +1372,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         if (onlineContent.url.isEmpty()) return@withContext ContentStatus.UNDOWNLOADABLE
         if (onlineContent.status == StatusContent.IGNORED) return@withContext ContentStatus.UNDOWNLOADABLE
         currentContent = null
-        Timber.i("Processing ${onlineContent.site.name} Content @ ${onlineContent.url} ${onlineContent.coverImageUrl}")
+        Timber.i("Processing ${onlineContent.site.name} Content @ ${onlineContent.url} (cover ${onlineContent.coverImageUrl}) $quickDownload")
         val searchUrl =
             if (getStartSite().hasCoverBasedPageUpdates) onlineContent.coverImageUrl else ""
         // TODO manage DB calls concurrency to avoid getting read transaction conflicts
@@ -1341,10 +1398,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
                             getCookies(onlineContent.coverImageUrl)
                         downloadParams[HEADER_REFERER_KEY] = onlineContent.site.url
                         getOnlineResourceFast(
-                            fixUrl(
-                                onlineContent.coverImageUrl,
-                                getStartUrl() // TODO is that the URL we need?!
-                            ),
+                            fixUrl(onlineContent.coverImageUrl, onlineContent.site.url),
                             requestHeadersList,
                             getStartSite().useMobileAgent,
                             getStartSite().useHentoidAgent,
@@ -1415,10 +1469,16 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         lifecycleScope.launch {
             try {
                 val status = processContent(content, quickDownload)
-                onContentProcessed(content, status, quickDownload)
+                withContext(Dispatchers.Main) { onContentProcessed(content, status, quickDownload) }
             } catch (t: Throwable) {
                 Timber.e(t)
-                onContentProcessed(content, ContentStatus.UNKNOWN, false)
+                withContext(Dispatchers.Main) {
+                    onContentProcessed(
+                        content,
+                        ContentStatus.UNKNOWN,
+                        false
+                    )
+                }
             }
         }
     }
@@ -1803,6 +1863,10 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         return internalCustomCss!!
     }
 
+    fun browserFetch(url: String, callback: Consumer<String>? = null) {
+        fetchResponseCallback = callback
+        webView.evaluateJavascript("fetch(\"$url\")", null)
+    }
 
     /**
      * Listener for preference changes (from the settings dialog)
@@ -1879,6 +1943,15 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         fun onFetchCall(url: String, body: String?) {
             Timber.d("fetch Begin %s : %s", url, body)
             handler.invoke(url, body ?: "")
+        }
+    }
+
+    class FetchResponseHandler(private val handler: Consumer<String>) {
+        @JavascriptInterface
+        @Suppress("unused")
+        fun onFetchCall(url: String, body: String?, responseBody: String) {
+            Timber.d("fetch response $url $body $responseBody")
+            handler.invoke(responseBody)
         }
     }
 

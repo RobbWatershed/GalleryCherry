@@ -87,6 +87,10 @@ class ObjectBoxDAO : CollectionDAO {
             .use { query -> query.forEach { consumer(it) } }
     }
 
+    override fun countStoredContent(includeQueued: Boolean): Long {
+        return ObjectBoxDB.selectStoredContentQ(includeQueued, -1, false).build().count()
+    }
+
     override fun selectRecentBookIds(searchBundle: ContentSearchBundle): List<Long> {
         return contentIdSearch(false, searchBundle, emptySet())
     }
@@ -408,7 +412,7 @@ class ObjectBoxDAO : CollectionDAO {
 
     override fun insertContent(content: Content): Long {
         val result = ObjectBoxDB.insertContentAndAttributes(content)
-        // Attach new attributes to existing groups, if any
+        // Attach new attributes to existing groups, if any TODO obsolete?
         for (a in result.second) {
             val g = selectGroupByName(Grouping.ARTIST.id, a.name)
             if (g != null) insertGroupItem(GroupItem(result.first, g, -1))
@@ -1051,7 +1055,7 @@ class ObjectBoxDAO : CollectionDAO {
         ObjectBoxDB.updateImageFileStatusParamsMimeTypeUriSize(image)
     }
 
-    override fun updateImageLocations(locations : Map<Long, String>) {
+    override fun updateImageLocations(locations: Map<Long, String>) {
         ObjectBoxDB.updateImageFileUri(locations)
     }
 
@@ -1354,16 +1358,16 @@ class ObjectBoxDAO : CollectionDAO {
         ObjectBoxDB.deleteQueueRecords()
     }
 
-    override fun selectHistory(s: Site): SiteHistory {
-        return ObjectBoxDB.selectHistory(s) ?: SiteHistory()
+    override fun selectLastHistory(s: Site): SiteHistory {
+        return ObjectBoxDB.selectHistory(s).maxByOrNull { it.timestamp } ?: SiteHistory()
     }
 
     override fun selectHistory(): List<SiteHistory> {
         return ObjectBoxDB.selectHistory()
     }
 
-    override fun insertSiteHistory(site: Site, url: String, timestamp: Long) {
-        ObjectBoxDB.insertSiteHistory(site, url, timestamp)
+    override fun addSiteHistory(site: Site, url: String, timestamp: Long) {
+        ObjectBoxDB.addSiteHistory(site, url, timestamp)
     }
 
     // BOOKMARKS

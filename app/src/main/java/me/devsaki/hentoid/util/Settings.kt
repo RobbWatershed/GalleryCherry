@@ -396,7 +396,7 @@ object Settings {
         Value.VIEWER_RENDERING_SHARP
     )
     val isReaderDisplayPageNum: Boolean by BoolSetting(Key.VIEWER_DISPLAY_PAGENUM, false)
-    val isReaderTapTransitions: Boolean by BoolSetting("pref_viewer_tap_transitions", true)
+    val isReaderTurnTransitions: Boolean by BoolSetting(Key.VIEWER_TURN_TRANSITIONS, true)
     val isReaderZoomTransitions: Boolean by BoolSetting(Key.VIEWER_ZOOM_TRANSITIONS, true)
     val isReaderSwipeToFling: Boolean by BoolSetting(Key.VIEWER_SWIPE_TO_FLING, false)
     val isReaderInvertVolumeRocker: Boolean by BoolSetting(
@@ -415,6 +415,10 @@ object Settings {
     val readerPageReadThreshold: Int by IntSettingStr(
         "pref_viewer_read_threshold",
         Value.VIEWER_READ_THRESHOLD_1
+    )
+    val readerDeleteLoadDirection: Int by IntSettingStr(
+        "pref_viewer_delete_load_direction",
+        Value.VIEWER_DELETE_DIRECTION_NEXT
     )
     val readerRatioCompletedThreshold: Int by IntSettingStr(
         "pref_viewer_ratio_completed_threshold",
@@ -531,12 +535,12 @@ object Settings {
 
 
     // APP-WIDE
+    // Used to detect if the intro wizard has been completed
     var isFirstRun: Boolean by BoolSetting(Key.FIRST_RUN, true)
 
     // Used to detect when LibraryActivity opens for the first time to force-open navigation drawer
     var isFirstRunProcessComplete: Boolean by BoolSetting(Key.WELCOME_DONE, false)
     var lastKnownAppVersionCode: Int by IntSettingStr(Key.LAST_KNOWN_APP_VERSION_CODE, 0)
-    var isRefreshJson1Complete: Boolean by BoolSetting(Key.REFRESH_JSON_1_DONE, false)
     val isAnalyticsEnabled: Boolean by BoolSetting(Key.ANALYTICS_PREFERENCE, true)
     val isAutomaticUpdateEnabled: Boolean by BoolSetting("pref_check_updates", true)
     var isBrowserMode: Boolean by BoolSetting(Key.BROWSER_MODE, false)
@@ -546,6 +550,11 @@ object Settings {
     val recentVisibility: Boolean by BoolSetting(Key.APP_PREVIEW, BuildConfig.DEBUG)
     val maxDbSizeKb: Long by LongSetting("db_max_size", 4L * 1024 * 1024) // 4GB
     var colorTheme: Int by IntSettingStr(Key.COLOR_THEME, Value.COLOR_THEME_LIGHT)
+
+    // Used to execute heavy maintenance tasks just one time
+    var isRefreshJson1Complete: Boolean by BoolSetting(Key.REFRESH_JSON_1_DONE, false)
+    var lastDBUpdateVersion: Int by IntSetting("last_db_update", 0)
+
 
 
     // Public Helpers
@@ -725,6 +734,7 @@ object Settings {
         const val VIEWER_BROWSE_MODE = "pref_viewer_browse_mode"
         const val VIEWER_RENDERING = "pref_viewer_rendering"
         const val VIEWER_DISPLAY_PAGENUM = "pref_viewer_display_pagenum"
+        const val VIEWER_TURN_TRANSITIONS = "pref_viewer_tap_transitions"
         const val VIEWER_ZOOM_TRANSITIONS = "pref_viewer_zoom_transitions"
         const val VIEWER_SWIPE_TO_FLING = "pref_viewer_swipe_to_fling"
         const val VIEWER_PAGE_TURN_SWIPE = "pref_viewer_page_turn_swipe"
@@ -850,6 +860,9 @@ object Settings {
         const val VIEWER_READ_THRESHOLD_2 = 1
         const val VIEWER_READ_THRESHOLD_5 = 2
         const val VIEWER_READ_THRESHOLD_ALL = 3
+
+        const val VIEWER_DELETE_DIRECTION_NEXT = 0
+        const val VIEWER_DELETE_DIRECTION_PREVIOUS = 1
 
         const val VIEWER_COMPLETED_RATIO_THRESHOLD_NONE = -1
         const val VIEWER_COMPLETED_RATIO_THRESHOLD_10 = 0

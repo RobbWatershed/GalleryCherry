@@ -4,16 +4,18 @@ import android.os.Bundle
 import android.view.View
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.commit
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
+import com.mikepenz.aboutlibraries.Libs
 import com.mikepenz.aboutlibraries.LibsBuilder
 import com.mikepenz.aboutlibraries.LibsConfiguration
+import com.mikepenz.aboutlibraries.util.withContext
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.databinding.ActivityAboutBinding
 import me.devsaki.hentoid.fragments.about.AboutFragment
 import me.devsaki.hentoid.fragments.about.AchievementsFragment
 import me.devsaki.hentoid.fragments.about.ChangelogFragment
 import me.devsaki.hentoid.util.AchievementsManager
-import me.devsaki.hentoid.util.applyTheme
 import me.devsaki.hentoid.util.getThemedColor
 import me.devsaki.hentoid.widget.ScrollPositionListener
 
@@ -54,7 +56,8 @@ class AboutActivity : BaseActivity() {
                     recyclerView.setBackgroundColor(
                         getThemedColor(R.color.window_background_light)
                     )
-                    val scrollListener = ScrollPositionListener { _ -> /* Nothing */ }
+                    val scrollListener =
+                        ScrollPositionListener(lifecycleScope) { _ -> /* Nothing */ }
                     scrollListener.setOnEndOutOfBoundScrollListener {
                         AchievementsManager.trigger(16)
                     }
@@ -64,7 +67,9 @@ class AboutActivity : BaseActivity() {
             }
 
         showFragment(
-            LibsBuilder().withLicenseShown(true).withSearchEnabled(true)
+            LibsBuilder()
+                .withLibs(Libs.Builder().withContext(this).build())
+                .withLicenseShown(true).withSearchEnabled(true)
                 .withUiListener(libsUIListener).supportFragment()
         )
     }

@@ -90,6 +90,8 @@ enum class Site(val code: Int, val description: String, val url: String, val ico
         private set
     var parallelDownloadCap = 0
         private set
+
+    // true = don't use the "referer" HTTP request header when downloading images
     var noReferer = false
         private set
 
@@ -106,6 +108,14 @@ enum class Site(val code: Int, val description: String, val url: String, val ico
     // Determine which Jsoup output to use when rewriting the HTML
     // 0 : html; 1 : xml
     var jsoupOutputSyntax = 0
+        private set
+
+    // Determine if the source supports updating Content metadata by using a ContentParser
+    var canUpdateOnlineMetadata = true
+        private set
+
+    // Determine if the source supports book streaming
+    var shouldBeStreamed = true
         private set
 
 
@@ -146,6 +156,9 @@ enum class Site(val code: Int, val description: String, val url: String, val ico
                 java.util.HashSet(jsonSite.bookCardExcludedParentClasses)
         if (jsonSite.galleryHeight != null) galleryHeight = jsonSite.galleryHeight
         if (jsonSite.jsoupOutputSyntax != null) jsoupOutputSyntax = jsonSite.jsoupOutputSyntax
+        if (jsonSite.canUpdateOnlineMetadata != null) canUpdateOnlineMetadata =
+            jsonSite.canUpdateOnlineMetadata
+        if (jsonSite.shouldBeStreamed != null) shouldBeStreamed = jsonSite.shouldBeStreamed
     }
 
     class SiteConverter : PropertyConverter<Site, Long?> {

@@ -23,6 +23,9 @@ import me.devsaki.hentoid.workers.UpdateJsonWorker
 import me.devsaki.hentoid.workers.data.UpdateJsonData
 import timber.log.Timber
 
+// TODO update when adding tasks to "oneShot" functions
+const val DB_UPDATE_VERSION = 1
+
 @Suppress("UNUSED_PARAMETER")
 object DatabaseMaintenance {
     /**
@@ -39,16 +42,18 @@ object DatabaseMaintenance {
             this::createGroups,
             this::computeReadingProgress,
             this::reattachGroupCovers,
-            this::cleanOrphanGroups
+            this::cleanOrphanGroups,
+            this::setDbUpdateVersion,
         )
     }
 
     fun getPostLaunchCleanupTasks(): List<SuspendBiConsumer<Context, (Float) -> Unit>> {
         return listOf(
             this::clearTempContent,
-            this::cleanBookmarksOneShot,
+            this::cleanBookmarks,
             this::cleanOrphanAttributes,
             this::cleanOrphanChapters,
+            this::cleanOrphanImageFiles,
             this::refreshJsonForSecondDownloadDate
         )
     }
@@ -148,6 +153,7 @@ object DatabaseMaintenance {
 
     private suspend fun cleanPropertiesOneShot(context: Context, emitter: (Float) -> Unit) =
         withContext(Dispatchers.IO) {
+            if (Settings.lastDBUpdateVersion > DB_UPDATE_VERSION - 1) return@withContext
             val db = MaintenanceDAO()
             try {
                 // Nothing so far
@@ -184,7 +190,7 @@ object DatabaseMaintenance {
             }
         }
 
-    private suspend fun cleanBookmarksOneShot(context: Context, emitter: (Float) -> Unit) =
+    private suspend fun cleanBookmarks(context: Context, emitter: (Float) -> Unit) =
         withContext(Dispatchers.IO) {
             try {
                 // Detect duplicate bookmarks (host/someurl and host/someurl/)
@@ -204,6 +210,7 @@ object DatabaseMaintenance {
 
     private suspend fun setDefaultPropertiesOneShot(context: Context, emitter: (Float) -> Unit) =
         withContext(Dispatchers.IO) {
+            if (Settings.lastDBUpdateVersion > DB_UPDATE_VERSION - 1) return@withContext
             val db = MaintenanceDAO()
             try {
                 // Set default values for new ObjectBox properties that are values as null by default (see https://github.com/objectbox/objectbox-java/issues/157)
@@ -220,6 +227,7 @@ object DatabaseMaintenance {
                     db.insertContentCore(c)
                     withContext(Dispatchers.Main) { emitter(pos++ / max) }
                 }
+
                 contents = db.selectContentWithNullDlModeField()
                 Timber.i(
                     "Set default value for Content.downloadMode field : %s items detected",
@@ -232,6 +240,7 @@ object DatabaseMaintenance {
                     db.insertContentCore(c)
                     withContext(Dispatchers.Main) { emitter(pos++ / max) }
                 }
+
                 contents = db.selectContentWithNullMergeField()
                 Timber.i(
                     "Set default value for Content.manuallyMerged field : %s items detected",
@@ -244,6 +253,7 @@ object DatabaseMaintenance {
                     db.insertContentCore(c)
                     withContext(Dispatchers.Main) { emitter(pos++ / max) }
                 }
+
                 contents = db.selectContentWithNullDlCompletionDateField()
                 Timber.i(
                     "Set default value for Content.downloadCompletionDate field : %s items detected",
@@ -258,6 +268,7 @@ object DatabaseMaintenance {
                     db.insertContentCore(c)
                     withContext(Dispatchers.Main) { emitter(pos++ / max) }
                 }
+
                 contents = db.selectContentWithInvalidUploadDate()
                 Timber.i("Fixing invalid upload dates : %s items detected", contents.size)
                 max = contents.size
@@ -267,6 +278,7 @@ object DatabaseMaintenance {
                     db.insertContentCore(c)
                     withContext(Dispatchers.Main) { emitter(pos++ / max) }
                 }
+
                 val chapters = db.selectChapterWithNullUploadDate()
                 Timber.i(
                     "Set default value for Chapter.uploadDate field : %s items detected",
@@ -279,6 +291,7 @@ object DatabaseMaintenance {
                     withContext(Dispatchers.Main) { emitter(pos++ / max) }
                 }
                 db.insertChapters(chapters)
+
                 val searchRecords = db.selectSearchRecordWithNullEntity()
                 Timber.i(
                     "Set default value for SearchRecord.entityType field : %s items detected",
@@ -291,6 +304,20 @@ object DatabaseMaintenance {
                     withContext(Dispatchers.Main) { emitter(pos++ / max) }
                 }
                 db.insertSearchRecords(searchRecords)
+
+                val imageFileIds = db.selectImageFileIdsWithNullPageUrl()
+                Timber.i(
+                    "Set default value for ImageFile.dbPageUrl field : %s items detected",
+                    imageFileIds.size
+                )
+                max = imageFileIds.size
+                pos = 1f
+                imageFileIds.chunked(50).forEach {
+                    db.resetPageUrlForImageId(it)
+                    withContext(Dispatchers.Main) { emitter(pos / max) }
+                    pos += it.size
+                }
+
                 Timber.i("Set default ObjectBox properties : done")
             } finally {
                 db.cleanup()
@@ -467,6 +494,11 @@ object DatabaseMaintenance {
             }
         }
 
+    private suspend fun setDbUpdateVersion(context: Context, emitter: (Float) -> Unit) =
+        withContext(Dispatchers.IO) {
+            Settings.lastDBUpdateVersion = DB_UPDATE_VERSION
+        }
+
     private suspend fun cleanOrphanAttributes(context: Context, emitter: (Float) -> Unit) =
         withContext(Dispatchers.IO) {
             try {
@@ -484,6 +516,17 @@ object DatabaseMaintenance {
                 Timber.i("Cleaning orphan chapters : start")
                 ObjectBoxDB.cleanupOrphanChapters()
                 Timber.i("Cleaning orphan chapters : done")
+            } finally {
+                ObjectBoxDB.cleanup()
+            }
+        }
+
+    private suspend fun cleanOrphanImageFiles(context: Context, emitter: (Float) -> Unit) =
+        withContext(Dispatchers.IO) {
+            try {
+                Timber.i("Cleaning orphan imageFiles : start")
+                ObjectBoxDB.cleanupOrphanImageFiles()
+                Timber.i("Cleaning orphan imageFiles : done")
             } finally {
                 ObjectBoxDB.cleanup()
             }

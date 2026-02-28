@@ -113,7 +113,6 @@
     <string name="menu_redownload">Redownload</string>
     <string name="menu_storage_method">Storage method</string>
     <string name="menu_redownload_scratch">Redownload from scratch</string>
-    <string name="menu_stream">Switch to streaming</string>
     <string name="menu_download_streamed">Download</string>
     <string name="menu_select_all">Select All</string>
     <string name="menu_share">Share</string>
@@ -342,6 +341,7 @@
     <string name="mass_operation_scope_1">Current filter of the library screen</string>
     <string name="mass_operation_scope_2">All books except current filter of the library screen</string>
     <string name="mass_external_tip">Note : External books will be deleted by this operation</string>
+    <string name="mass_external_warning_1">Your current selection contains books from sites that should\'t be streamed. Those books won\'t be processed.</string>
     <string name="keep_fav_groups">Do not process books inside favourite groups</string>
     <plurals name="book_keep">
         <item quantity="one">Keep <x:g example="1" id="number">%1$d</x:g> book</item>
@@ -522,6 +522,7 @@
         <item quantity="one">Archive the selected item\?</item>
         <item quantity="other">Archive <x:g example="2" id="count">%d</x:g> selected items\?</item>
     </plurals>
+    <string name="redownload_nocando">Selected books are not eligible for redownloading nor updating</string>
     <string name="delete_limit">Cannot delete more than 1000 books at once</string>
     <string name="redownload_limit">Cannot redownload more than 1000 books at once</string>
     <string name="stream_limit">Cannot stream more than 1000 books at once</string>
@@ -816,6 +817,8 @@
     <string name="torrent_dl_fail">Downloading torrent failed: <x:g id="torrent">%s</x:g></string>
     <string name="web_storage_permission_denied">Storage permission denied - cannot use the downloader</string>
     <string name="web_all_sites">All sites</string>
+    <string name="web_target_page_unavailable">Webpage not available%s; loading welcome page instead</string>
+    <string name="web_target_page_outside_restricted_domains">Host %s outside restricted domains</string>
 
     <!-- Web browser (site specifics) -->
     <string name="help_web_exh_account">Please use or create an exHentai account</string>

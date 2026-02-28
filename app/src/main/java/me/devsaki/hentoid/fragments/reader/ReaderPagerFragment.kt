@@ -31,6 +31,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.DefaultItemAnimator
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import coil3.load
@@ -110,7 +111,7 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
     override lateinit var layoutMgr: LinearLayoutManager
     private lateinit var pageSnapWidget: PageSnapWidget
     private val prefsListener =
-        OnSharedPreferenceChangeListener { _, key -> onSharedPreferenceChanged(key) }
+        OnSharedPreferenceChangeListener { _, key -> onSettingsChanged(key) }
     private lateinit var viewModel: ReaderViewModel
 
     // Absolute (book scale) 0-based image index
@@ -120,7 +121,8 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
     var reachedPosition = -1
 
     private var hasGalleryBeenShown = false
-    override val scrollListener = ScrollPositionListener { onScrollPositionChange(it) }
+    override val scrollListener =
+        ScrollPositionListener(lifecycleScope) { onScrollPositionChange(it) }
     private var orientation = DeviceOrientation.PORTRAIT
 
     override var displayParams: DisplayParams? = null
@@ -455,6 +457,7 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
             recyclerView.addOnScrollListener(scrollListener)
             recyclerView.setOnGetMaxDimensionsListener { onGetMaxDimensions(it) }
             recyclerView.requestFocus()
+            if (!Settings.isReaderTurnTransitions) recyclerView.itemAnimator = null
             // Scale listener from the ImageView, incl. top to bottom browsing
             recyclerView.setOnScaleListener { onScaleChanged(it.toFloat()) }
             recyclerView.setLongTapListener(object : ZoomableRecyclerView.LongTapListener {
@@ -488,6 +491,8 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
             // Slideshow slider
             slideshowMgr = ReaderSlideshow(this, lifecycleScope)
             slideshowMgr.init(it, this.resources)
+
+            scrollListener.setAbsYListener { slideshowMgr.onManualScrollY() }
 
             // Fix page button
             it.viewerFixBtn.setOnClickListener { fixPage() }
@@ -879,7 +884,7 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
                 } else {
                     adapter.resetScaleAtPosition(scrollPosition)
                 }
-                // Reactivate snap to avoid shuffling through multiple pages while zoom is on
+                // Reactivate snap to avoid shuffling through multiple pages while zooming is on
                 pageSnapWidget.setPageSnapEnabled(true)
             }
 
@@ -932,7 +937,7 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
      *
      * @param key   Key that has been changed
      */
-    private fun onSharedPreferenceChanged(key: String?) {
+    private fun onSettingsChanged(key: String?) {
         if (null == key) return
         Timber.v("Prefs change detected : %s", key)
         if (key.startsWith(VIEWER_BROWSE_MODE)) onBrowseModeChange()
@@ -954,11 +959,12 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
             Settings.Key.VIEWER_SWIPE_TO_FLING -> onUpdateSwipeToFling()
             Settings.Key.VIEWER_DISPLAY_PAGENUM -> onUpdatePageNumDisplay()
             Settings.Key.VIEWER_PAGE_TURN_SWIPE -> onUpdateSwipeToTurn()
+            Settings.Key.VIEWER_TURN_TRANSITIONS -> onUpdateTurnTransitions()
             else -> {}
         }
     }
 
-    override fun onBookPreferenceChanged(newPrefs: Map<String, String>) {
+    override fun onContentSettingsChanged(newPrefs: Map<String, String>) {
         viewModel.updateContentPreferences(newPrefs, absImageIndex)
         bookPreferences = newPrefs
     }
@@ -976,6 +982,13 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
 
     private fun onUpdateSwipeToTurn() {
         if (Settings.isReaderSwipeToTurn) scrollListener.enableScroll() else scrollListener.disableScroll()
+    }
+
+    private fun onUpdateTurnTransitions() {
+        binding?.apply {
+            if (Settings.isReaderTurnTransitions) recyclerView.itemAnimator = DefaultItemAnimator()
+            else recyclerView.itemAnimator = null
+        }
     }
 
     /**
@@ -1204,7 +1217,7 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
             return false
         }
         binding?.apply {
-            if (Settings.isReaderTapTransitions) {
+            if (Settings.isReaderTurnTransitions) {
                 if (VIEWER_ORIENTATION_HORIZONTAL == displayParams?.orientation)
                     recyclerView.smoothScrollToPosition(absImageIndex + delta)
                 else {
@@ -1232,7 +1245,7 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
             return false
         }
         binding?.apply {
-            if (Settings.isReaderTapTransitions)
+            if (Settings.isReaderTurnTransitions)
                 recyclerView.smoothScrollToPosition(absImageIndex - delta)
             else recyclerView.scrollToPosition(absImageIndex - delta)
         }

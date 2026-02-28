@@ -83,7 +83,7 @@ private fun removeTrailingNumbers(s: String?): String {
 fun parseAttributes(
     map: AttributeMap,
     type: AttributeType,
-    elements: List<Element>?,
+    elements: Collection<Element>?,
     removeTrailingNumbers: Boolean,
     site: Site
 ) {
@@ -187,7 +187,7 @@ fun urlsToImageFiles(
     imgUrls: List<String>,
     status: StatusContent,
     coverUrl: String?,
-    chapter: Chapter?
+    chapter: Chapter? = null
 ): List<ImageFile> {
     val result: MutableList<ImageFile> = ArrayList()
     if (!coverUrl.isNullOrEmpty()) result.add(ImageFile.newCover(coverUrl, status))

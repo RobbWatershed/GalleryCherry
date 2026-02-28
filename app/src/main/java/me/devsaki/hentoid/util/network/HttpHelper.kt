@@ -135,26 +135,8 @@ fun getOnlineResourceFast(
     headers: List<Pair<String, String>>?,
     useMobileAgent: Boolean,
     useHentoidAgent: Boolean,
-    useWebviewAgent: Boolean
-): Response {
-    return getOnlineResourceFast(
-        url,
-        headers,
-        useMobileAgent,
-        useHentoidAgent,
-        useWebviewAgent,
-        true
-    )
-}
-
-@Throws(IOException::class)
-fun getOnlineResourceFast(
-    url: String,
-    headers: List<Pair<String, String>>?,
-    useMobileAgent: Boolean,
-    useHentoidAgent: Boolean,
     useWebviewAgent: Boolean,
-    followRedirects: Boolean
+    followRedirects: Boolean = true
 ): Response {
     val requestBuilder: Request.Builder =
         buildRequest(url, headers, useMobileAgent, useHentoidAgent, useWebviewAgent)
@@ -229,8 +211,8 @@ fun postOnlineResource(
 fun fetchBodyFast(
     url: String,
     site: Site,
-    requestHeaders: MutableList<Pair<String, String>>?,
-    targetContentType: String?
+    requestHeaders: MutableList<Pair<String, String>>? = null,
+    targetContentType: String? = null
 ): Pair<ResponseBody?, String> {
     val requestHeadersList: MutableList<Pair<String, String>>
     if (null == requestHeaders) {
@@ -271,7 +253,7 @@ fun fetchBodyFast(
                 ignoreCase = true
             )
         ) throw IOException(
-            "Not an HTML resource $url"
+            "Not a $targetContentType resource : $url"
         )
     }
 
@@ -932,9 +914,10 @@ class UriParts(uri: String, lowercase: Boolean = false) {
         uriNoParams = if (uriNoParams.contains("%3A", true) || uriNoParams.contains("%2F", true))
             URLDecoder.decode(uriNoParams, "UTF-8") else uriNoParams
 
-        val pathIndex = uriNoParams.lastIndexOf('/')
+        val protocolEndIndex = uriNoParams.indexOf("://")
+        var pathIndex = uriNoParams.lastIndexOf('/')
+        if (pathIndex == protocolEndIndex + 2) pathIndex = -1
         path = if (pathIndex > -1) uriNoParams.take(pathIndex) else uriNoParams
-        val protocolEndIndex = path.indexOf("://")
         val hostEndIndex = path.indexOf("/", protocolEndIndex + 3)
         host = if (hostEndIndex > -1) path.substring(0, hostEndIndex) else path
 

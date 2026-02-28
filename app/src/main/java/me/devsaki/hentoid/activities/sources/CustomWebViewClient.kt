@@ -12,6 +12,10 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
+import androidx.webkit.CustomHeader
+import androidx.webkit.Profile
+import androidx.webkit.ProfileStore
+import androidx.webkit.WebViewFeature
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -38,6 +42,7 @@ import me.devsaki.hentoid.util.file.getAssetAsString
 import me.devsaki.hentoid.util.file.isSupportedArchive
 import me.devsaki.hentoid.util.file.isSupportedPdf
 import me.devsaki.hentoid.util.file.openFile
+import me.devsaki.hentoid.util.file.readStreamAsStrings
 import me.devsaki.hentoid.util.file.saveBinary
 import me.devsaki.hentoid.util.getRandomInt
 import me.devsaki.hentoid.util.image.MIME_IMAGE_WEBP
@@ -48,6 +53,7 @@ import me.devsaki.hentoid.util.isPresentAsWord
 import me.devsaki.hentoid.util.network.HEADER_CONTENT_TYPE
 import me.devsaki.hentoid.util.network.HEADER_COOKIE_KEY
 import me.devsaki.hentoid.util.network.HEADER_REFERER_KEY
+import me.devsaki.hentoid.util.network.UriParts
 import me.devsaki.hentoid.util.network.cleanContentType
 import me.devsaki.hentoid.util.network.fixUrl
 import me.devsaki.hentoid.util.network.getChromeVersion
@@ -79,6 +85,7 @@ import java.net.MalformedURLException
 import java.net.SocketTimeoutException
 import java.net.URL
 import java.nio.charset.StandardCharsets
+import java.util.Collections
 import java.util.Locale
 import java.util.Queue
 import java.util.concurrent.ConcurrentHashMap
@@ -155,10 +162,17 @@ open class CustomWebViewClient : WebViewClient {
     private val jsStartupScripts: MutableList<String> by lazy { ArrayList() }
     private val jsReplacements: MutableMap<String, String> by lazy { HashMap() }
 
+    // TODO doc
+    private val ignoredUrls: MutableList<String> by lazy { ArrayList() }
+
     // Communication between XHR intercept and POST rewrite
     //   Key : URL
     //   Value : POST Body
-    private val xhrPostQueue: MutableMap<String, Queue<String>> = ConcurrentHashMap()
+    private val postRequestQueue: MutableMap<String, Queue<String>> = ConcurrentHashMap()
+
+    // TODO doc
+    private val quickDownloadFlags: MutableSet<String> =
+        Collections.synchronizedSet(HashSet<String>())
 
 
     companion object {
@@ -213,9 +227,10 @@ open class CustomWebViewClient : WebViewClient {
         activity = null
         scope = GlobalScope
         this.resConsumer = null
-        for (s in galleryUrl) galleryUrlPattern.add(Pattern.compile(s))
         htmlAdapter = initJspoon(site)
         adBlocker = AdBlocker(site)
+        initLists(galleryUrl)
+        initProfile()
     }
 
     constructor(
@@ -227,15 +242,55 @@ open class CustomWebViewClient : WebViewClient {
         this.activity = activity
         scope = activity.scope
         resConsumer = activity
-        for (s in galleryUrl) galleryUrlPattern.add(Pattern.compile(s))
         htmlAdapter = initJspoon(site)
         adBlocker = AdBlocker(site)
+        initLists(galleryUrl)
+        initProfile()
+    }
+
+    private fun initLists(galleryUrl: Array<String>) {
+        for (s in galleryUrl) galleryUrlPattern.add(Pattern.compile(s))
+        HentoidApp.getInstance().resources.apply {
+            openRawResource(R.raw.ignore_url_whitelist).use { input ->
+                ignoredUrls.addAll(
+                    readStreamAsStrings(input).map { it.lowercase(Locale.getDefault()) }
+                )
+            }
+        }
     }
 
     private fun initJspoon(site: Site): HtmlAdapter<out ContentParser> {
         val c = ContentParserFactory.getContentParserClass(site)
         val jspoon = Jspoon.create()
         return jspoon.adapter(c) // Unchecked but alright
+    }
+
+    private fun initProfile() {
+        if (site.url.isBlank()) return
+        if (WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE)
+            && WebViewFeature.isFeatureSupported(WebViewFeature.CUSTOM_REQUEST_HEADERS)
+        ) {
+            // Generate a random bogus header value
+            val sb = StringBuilder()
+            repeat(8 + getRandomInt(8)) {
+                val randomChar = 48 + getRandomInt(75)
+                sb.append(randomChar.toChar())
+            }
+
+            val profileStore = ProfileStore.getInstance()
+            val profile = profileStore.getOrCreateProfile(Profile.DEFAULT_PROFILE_NAME)
+            profile.addCustomHeader(
+                CustomHeader(
+                    "x-requested-with",
+                    sb.toString(),
+                    setOf(UriParts(site.url).host)
+                )
+            )
+        } else {
+            if (!WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE)) Timber.w("Multiprofile not supported!")
+            if (!WebViewFeature.isFeatureSupported(WebViewFeature.CUSTOM_REQUEST_HEADERS))
+                Timber.w("Custom request headers not supported!")
+        }
     }
 
     open fun destroy() {
@@ -298,6 +353,10 @@ open class CustomWebViewClient : WebViewClient {
         jsReplacements[source] = target
     }
 
+    fun isIgnored(url: String): Boolean {
+        return ignoredUrls.any { url.contains(it, true) }
+    }
+
     /**
      * Restrict link navigation to a given domain name
      *
@@ -311,12 +370,13 @@ open class CustomWebViewClient : WebViewClient {
         restrictedDomainNames.addAll(s)
     }
 
-    private fun isHostNotInRestrictedDomains(host: String): Boolean {
+    fun isOutsideRestrictedDomains(uri: Uri): Boolean {
+        val host = uri.host ?: return true
         if (restrictedDomainNames.isEmpty()) return false
         for (s in restrictedDomainNames) {
             if (host.contains(s)) return false
         }
-        Timber.i("Unrestricted host detected : %s", host)
+        Timber.i("Unrestricted host detected : $host")
         return true
     }
 
@@ -343,7 +403,7 @@ open class CustomWebViewClient : WebViewClient {
      * @param url URL to test
      * @return True if the given URL represents a results page
      */
-    private fun isResultsPage(url: String): Boolean {
+    fun isResultsPage(url: String): Boolean {
         if (resultsUrlPattern.isEmpty()) return false
         for (p in resultsUrlPattern) {
             val matcher = p.matcher(url)
@@ -414,8 +474,7 @@ open class CustomWebViewClient : WebViewClient {
         val uri = url.toUri()
         if (isSupportedDirectDownload(uri) && isMainPage) activity?.downloadContentArchivePdf(url)
 
-        val host = uri.host
-        return host != null && isHostNotInRestrictedDomains(host)
+        return isOutsideRestrictedDomains(uri)
     }
 
     private fun isSupportedDirectDownload(uri: Uri): Boolean {
@@ -473,9 +532,12 @@ open class CustomWebViewClient : WebViewClient {
     override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
         if (BuildConfig.DEBUG) Timber.v("WebView : page started %s", url)
         isPageLoading.set(true)
+        synchronized(quickDownloadFlags) {
+            quickDownloadFlags.clear()
+        }
 
         // Activate startup JS
-        for (s in jsStartupScripts) view.loadUrl(getJsScript(view.context, s, jsReplacements))
+        for (s in jsStartupScripts) view.loadUrl(getAssetJsScript(view.context, s, jsReplacements))
         activity?.onPageStarted(url, isGalleryPage(url), isHtmlLoaded.get(), true)
     }
 
@@ -499,7 +561,7 @@ open class CustomWebViewClient : WebViewClient {
             Timber.v("[$url] ignored by interceptor; method = ${request.method}")
             var postBody = ""
             // Try to retrieve POST body from previously intercepted XHR
-            xhrPostQueue[url]?.let { queue ->
+            postRequestQueue[url]?.let { queue ->
                 queue.poll()?.let { body ->
                     postBody = body
                 }
@@ -553,7 +615,7 @@ open class CustomWebViewClient : WebViewClient {
                 url,
                 headers,
                 analyzeForDownload = true,
-                quickDownload = false
+                quickDownload = quickDownloadFlags.contains(url)
             )
             else if (BuildConfig.DEBUG) Timber.v("WebView : not gallery %s", url)
 
@@ -564,15 +626,15 @@ open class CustomWebViewClient : WebViewClient {
                         || activity != null && activity.customCss.isNotEmpty())
                 && (getExtensionFromUri(url).isEmpty()
                         || getExtensionFromUri(url).equals("html", ignoreCase = true))
+                && !isIgnored(url)
+                && !isOutsideRestrictedDomains(url.toUri())
             ) {
-                val host = url.toUri().host
-                if (host != null && !isHostNotInRestrictedDomains(host))
-                    return parseResponse(
-                        url,
-                        headers,
-                        analyzeForDownload = false,
-                        quickDownload = false
-                    )
+                return parseResponse(
+                    url,
+                    headers,
+                    analyzeForDownload = false,
+                    quickDownload = quickDownloadFlags.contains(url)
+                )
             }
             null
         }
@@ -624,10 +686,10 @@ open class CustomWebViewClient : WebViewClient {
     }
 
     fun recordDynamicPostRequests(url: String, body: String) {
-        val queue = if (xhrPostQueue.contains(url)) xhrPostQueue[url]
+        val queue = if (postRequestQueue.contains(url)) postRequestQueue[url]
         else {
             val q = ConcurrentLinkedQueue<String>()
-            xhrPostQueue[url] = q
+            postRequestQueue[url] = q
             q
         }
         queue?.add(body)
@@ -710,7 +772,10 @@ open class CustomWebViewClient : WebViewClient {
         if (response != null) {
             try {
                 // Scram if the response is an error
-                if (response.code >= 400) return null
+                if (response.code >= 400) {
+                    Timber.i("Request FAILED (HTTP ${response.code}) for $url")
+                    return null
+                }
 
                 // Handle redirection and force the browser to reload to be able to process the page
                 // NB1 : shouldInterceptRequest doesn't trigger on redirects
@@ -929,8 +994,11 @@ open class CustomWebViewClient : WebViewClient {
         }
 
         // Add custom inline CSS to the main page only
-        if (customCss != null && baseUri == mainPageUrl)
-            doc.head().appendElement("style").attr("type", "text/css").appendText(customCss)
+        customCss?.let {
+            // mainPageUrl can be null when its HTML is preloaded by a service worker
+            if (null == mainPageUrl || baseUri == mainPageUrl)
+                doc.head().appendElement("style").attr("type", "text/css").appendText(customCss)
+        }
 
         val isAdBlock = Settings.isAdBlockerOn(site) && Settings.isBrowserAugmented(site)
 
@@ -999,8 +1067,9 @@ open class CustomWebViewClient : WebViewClient {
                         var markedElement = value.second
                         if (markedElement != null) { // Mark <site.bookCardDepth> levels above the image
                             var imgParent = markedElement.parent()
-                            for (i in 0 until site.bookCardDepth - 1)
+                            repeat(site.bookCardDepth - 1) {
                                 if (imgParent != null) imgParent = imgParent.parent()
+                            }
                             if (imgParent != null) markedElement = imgParent
                         } else { // Mark plain link
                             markedElement = value.first
@@ -1015,8 +1084,9 @@ open class CustomWebViewClient : WebViewClient {
                         var markedElement = value.second
                         if (markedElement != null) { // Mark <site.bookCardDepth> levels above the image
                             var imgParent = markedElement.parent()
-                            for (i in 0 until site.bookCardDepth - 1) if (imgParent != null) imgParent =
-                                imgParent.parent()
+                            repeat(site.bookCardDepth - 1) {
+                                if (imgParent != null) imgParent = imgParent.parent()
+                            }
                             if (imgParent != null) markedElement = imgParent
                         } else { // Mark plain link
                             markedElement = value.first
@@ -1031,8 +1101,9 @@ open class CustomWebViewClient : WebViewClient {
                         var markedElement = value.second
                         if (markedElement != null) { // Mark <site.bookCardDepth> levels above the image
                             var imgParent = markedElement.parent()
-                            for (i in 0 until site.bookCardDepth - 1) if (imgParent != null) imgParent =
-                                imgParent.parent()
+                            repeat(site.bookCardDepth - 1) {
+                                if (imgParent != null) imgParent = imgParent.parent()
+                            }
                             if (imgParent != null) markedElement = imgParent
                         } else { // Mark plain link
                             markedElement = value.first
@@ -1074,9 +1145,8 @@ open class CustomWebViewClient : WebViewClient {
                                 ) || isPresentAsWord(blockedTag, tag)
                             ) {
                                 var imgParent = entry.key
-                                for (i in 0..site.galleryHeight) {
-                                    if (imgParent.parent() != null) imgParent =
-                                        imgParent.parent()!!
+                                repeat(site.galleryHeight) {
+                                    imgParent.parent()?.let { imgParent = it }
                                 }
                                 val imgs = imgParent.allElements.select("img")
                                 for (img in imgs) {
@@ -1099,8 +1169,14 @@ open class CustomWebViewClient : WebViewClient {
         return classNames.any { o -> forbiddenElements.contains(o) }
     }
 
+    fun flagAsQuickDownload(url: String) {
+        synchronized(quickDownloadFlags) {
+            quickDownloadFlags.add(url)
+        }
+    }
+
     // TODO cache assets (not replacements)
-    fun getJsScript(
+    fun getAssetJsScript(
         context: Context,
         assetName: String,
         replacements: Map<String, String>?
@@ -1114,7 +1190,6 @@ open class CustomWebViewClient : WebViewClient {
         }
         return result
     }
-
 
     interface BrowserActivity : WebResultConsumer {
         // ACTIONS

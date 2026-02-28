@@ -181,6 +181,8 @@ interface CollectionDAO {
         consumer: Consumer<Content>
     )
 
+    fun countStoredContent(includeQueued: Boolean) : Long
+
 
     fun selectRecentBookIds(searchBundle: ContentSearchBundle): List<Long>
 
@@ -330,11 +332,11 @@ interface CollectionDAO {
 
 
     // SITE HISTORY
-    fun selectHistory(s: Site): SiteHistory
+    fun selectLastHistory(s: Site): SiteHistory
 
     fun selectHistory(): List<SiteHistory>
 
-    fun insertSiteHistory(site: Site, url: String, timestamp: Long)
+    fun addSiteHistory(site: Site, url: String, timestamp: Long)
 
 
     // BOOKMARKS
