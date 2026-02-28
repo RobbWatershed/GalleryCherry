@@ -31,6 +31,7 @@ import me.devsaki.hentoid.activities.sources.PornPicsActivity
 import me.devsaki.hentoid.activities.sources.RedditActivity
 import me.devsaki.hentoid.activities.sources.SxyPixActivity
 import me.devsaki.hentoid.activities.sources.XhamsterActivity
+import me.devsaki.hentoid.activities.sources.XinmeiActivity
 import me.devsaki.hentoid.activities.sources.XiutakuActivity
 import me.devsaki.hentoid.activities.sources.XnxxActivity
 import me.devsaki.hentoid.database.domains.ImageFile.Companion.fromImageUrl
@@ -203,6 +204,7 @@ data class Content(
                 Site.FOAMGIRL -> FoamGirlActivity::class.java
                 Site.XIUTAKU -> XiutakuActivity::class.java
                 Site.KIUTAKU -> KiutakuActivity::class.java
+                Site.XINMEI -> XinmeiActivity::class.java
                 else -> BaseBrowserActivity::class.java
             }
         }
@@ -278,7 +280,7 @@ data class Content(
             else ""
 
             // Last part (e.g. site/abc/56165)
-            Site.PORNPICS, Site.HELLPORNO, Site.PORNPICGALLERIES, Site.LINK2GALLERIES, Site.NEXTPICTUREZ, Site.JJGIRLS2, Site.SXYPIX, Site.PICS_X, Site.BABETODAY, Site.BESTGIRLSEXY, Site.XIUTAKU, Site.KIUTAKU -> return parts[parts.size - 1]
+            Site.PORNPICS, Site.HELLPORNO, Site.PORNPICGALLERIES, Site.LINK2GALLERIES, Site.NEXTPICTUREZ, Site.JJGIRLS2, Site.SXYPIX, Site.PICS_X, Site.BABETODAY, Site.BESTGIRLSEXY, Site.XIUTAKU, Site.KIUTAKU, Site.XINMEI -> return parts[parts.size - 1]
             // Last but one part (e.g. site/4694/gallery)
             Site.FAPALITY, Site.COSPLAYTELE -> return parts[parts.size - 2]
             Site.JPEGWORLD -> return url.substring(url.lastIndexOf("-") + 1, url.lastIndexOf("."))
@@ -335,7 +337,7 @@ data class Content(
                 // Specific case - user can go on any site (smart parser)
                 Site.PORNPICGALLERIES, Site.LINK2GALLERIES, Site.REDDIT, Site.JJGIRLS, Site.JJGIRLS2, Site.BABETODAY, Site.JAPBEAUTIES, Site.SXYPIX, Site.COSPLAYTELE, Site.GIRLSTOP, Site.COOMER, Site.BESTGIRLSEXY -> return url
                 // Site landpage URL already contains the "/albums/" prefix
-                Site.HELLPORNO, Site.FAPALITY, Site.ASIANSISTER, Site.FOAMGIRL, Site.XIUTAKU, Site.KIUTAKU -> ""
+                Site.HELLPORNO, Site.FAPALITY, Site.ASIANSISTER, Site.FOAMGIRL, Site.XIUTAKU, Site.KIUTAKU, Site.XINMEI -> ""
                 Site.PORNPICS, Site.JPEGWORLD -> "galleries/"
                 Site.LUSCIOUS -> return site.url.replace("/porn/", "") + url
                 else -> "gallery/"

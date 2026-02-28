@@ -130,6 +130,9 @@
             android:name=".activities.sources.KiutakuActivity"
             android:configChanges="orientation|screenSize" />
         <activity
+            android:name=".activities.sources.XinmeiActivity"
+            android:configChanges="orientation|screenSize" />
+        <activity
             android:name=".activities.LibraryActivity"
             android:configChanges="orientation|screenSize"
             android:label="@string/title_activity_downloads"
@@ -449,6 +452,39 @@
                 <data
                     android:host="foamgirl.net"
                     android:pathPattern="/..*"
+                    android:scheme="https" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="xiutaku.com"
+                    android:pathPattern="/..*"
+                    android:scheme="https" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="kiutaku.com"
+                    android:pathPattern="/..*"
+                    android:scheme="https" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="xinmeitulu.com"
+                    android:pathPattern="/photo/..*"
                     android:scheme="https" />
             </intent-filter>
         </activity>

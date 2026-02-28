@@ -11,26 +11,28 @@ import me.devsaki.hentoid.parsers.content.FoamGirlContent
 import me.devsaki.hentoid.parsers.content.GirlsTopContent
 import me.devsaki.hentoid.parsers.content.JjgirlsContent
 import me.devsaki.hentoid.parsers.content.KemonoContent
+import me.devsaki.hentoid.parsers.content.KiutakuContent
 import me.devsaki.hentoid.parsers.content.LusciousContent
 import me.devsaki.hentoid.parsers.content.PicsXContent
 import me.devsaki.hentoid.parsers.content.PornPicsContent
 import me.devsaki.hentoid.parsers.content.SmartContent
 import me.devsaki.hentoid.parsers.content.SxypixContent
 import me.devsaki.hentoid.parsers.content.XhamsterContent
+import me.devsaki.hentoid.parsers.content.XinmeiContent
 import me.devsaki.hentoid.parsers.content.XiutakuContent
-import me.devsaki.hentoid.parsers.content.KiutakuContent
 import me.devsaki.hentoid.parsers.content.XnxxContent
 import me.devsaki.hentoid.parsers.images.DummyParser
 import me.devsaki.hentoid.parsers.images.FapalityParser
 import me.devsaki.hentoid.parsers.images.FoamGirlParser
 import me.devsaki.hentoid.parsers.images.ImageListParser
 import me.devsaki.hentoid.parsers.images.KemonoParser
+import me.devsaki.hentoid.parsers.images.KiutakuParser
 import me.devsaki.hentoid.parsers.images.LusciousParser
 import me.devsaki.hentoid.parsers.images.PicsXParser
 import me.devsaki.hentoid.parsers.images.SxypixParser
 import me.devsaki.hentoid.parsers.images.XhamsterParser
+import me.devsaki.hentoid.parsers.images.XinmeiParser
 import me.devsaki.hentoid.parsers.images.XiutakuParser
-import me.devsaki.hentoid.parsers.images.KiutakuParser
 
 
 object ContentParserFactory {
@@ -54,6 +56,7 @@ object ContentParserFactory {
             Site.FOAMGIRL -> FoamGirlContent::class.java
             Site.XIUTAKU -> XiutakuContent::class.java
             Site.KIUTAKU -> KiutakuContent::class.java
+            Site.XINMEI -> XinmeiContent::class.java
             else -> SmartContent::class.java
         }
     }
@@ -73,6 +76,7 @@ object ContentParserFactory {
             Site.FOAMGIRL -> FoamGirlParser()
             Site.XIUTAKU -> XiutakuParser()
             Site.KIUTAKU -> KiutakuParser()
+            Site.XINMEI -> XinmeiParser()
             else -> DummyParser()
         }
     }
