@@ -17,6 +17,7 @@ import me.devsaki.hentoid.parsers.content.PicsXContent
 import me.devsaki.hentoid.parsers.content.PornPicsContent
 import me.devsaki.hentoid.parsers.content.SmartContent
 import me.devsaki.hentoid.parsers.content.SxypixContent
+import me.devsaki.hentoid.parsers.content.V2PhContent
 import me.devsaki.hentoid.parsers.content.XhamsterContent
 import me.devsaki.hentoid.parsers.content.XinmeiContent
 import me.devsaki.hentoid.parsers.content.XiutakuContent
@@ -30,6 +31,7 @@ import me.devsaki.hentoid.parsers.images.KiutakuParser
 import me.devsaki.hentoid.parsers.images.LusciousParser
 import me.devsaki.hentoid.parsers.images.PicsXParser
 import me.devsaki.hentoid.parsers.images.SxypixParser
+import me.devsaki.hentoid.parsers.images.V2PhParser
 import me.devsaki.hentoid.parsers.images.XhamsterParser
 import me.devsaki.hentoid.parsers.images.XinmeiParser
 import me.devsaki.hentoid.parsers.images.XiutakuParser
@@ -57,6 +59,7 @@ object ContentParserFactory {
             Site.XIUTAKU -> XiutakuContent::class.java
             Site.KIUTAKU -> KiutakuContent::class.java
             Site.XINMEI -> XinmeiContent::class.java
+            Site.V2PH -> V2PhContent::class.java
             else -> SmartContent::class.java
         }
     }
@@ -77,6 +80,7 @@ object ContentParserFactory {
             Site.XIUTAKU -> XiutakuParser()
             Site.KIUTAKU -> KiutakuParser()
             Site.XINMEI -> XinmeiParser()
+            Site.V2PH -> V2PhParser()
             else -> DummyParser()
         }
     }
