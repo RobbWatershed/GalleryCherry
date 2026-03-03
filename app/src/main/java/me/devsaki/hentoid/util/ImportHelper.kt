@@ -47,9 +47,11 @@ import me.devsaki.hentoid.util.file.InnerNameNumberFileComparator
 import me.devsaki.hentoid.util.file.NameFilter
 import me.devsaki.hentoid.util.file.PdfManager
 import me.devsaki.hentoid.util.file.createNoMedia
+import me.devsaki.hentoid.util.file.extractArchiveEntriesBlocking
 import me.devsaki.hentoid.util.file.formatDisplayUri
 import me.devsaki.hentoid.util.file.getArchiveEntries
 import me.devsaki.hentoid.util.file.getArchiveNamesFilter
+import me.devsaki.hentoid.util.file.getDocumentFromTreeUri
 import me.devsaki.hentoid.util.file.getDocumentFromTreeUriString
 import me.devsaki.hentoid.util.file.getExtension
 import me.devsaki.hentoid.util.file.getFileFromSingleUriString
@@ -719,7 +721,7 @@ fun scanFolderRecursive(
         for (archive in archivesPdf) {
             val content = jsonToContent(context, dao, jsons, archive.name ?: "")
             val c = scanArchivePdf(
-                context, toScan.uri, archive, parentNames, StatusContent.EXTERNAL, content
+                context, dao, toScan.uri, archive, parentNames, StatusContent.EXTERNAL, content
             )
             // Valid archive
             if (0 == c.first) onContentFound(c.second!!)
@@ -1155,6 +1157,7 @@ fun scanForArchivesPdf(
 
                     val c = scanArchivePdf(
                         context,
+                        dao,
                         subfolder.uri,
                         archive,
                         parentNames,
@@ -1292,6 +1295,7 @@ private fun loadAsChapters(
  */
 fun scanArchivePdf(
     context: Context,
+    dao: CollectionDAO,
     parent: Uri,
     doc: DocumentFile,
     parentNames: List<String>,
@@ -1311,6 +1315,7 @@ fun scanArchivePdf(
         Timber.w(e)
     }
 
+    val appJsonEntries = entries.filter { it.path.endsWith(JSON_FILE_NAME_V2) }
     val archiveEntries = entries.filter { isSupportedArchive(it.path) }
     val imageEntries = entries.filter { isSupportedImage(it.path) }.filter { it.size > 0 }
 
@@ -1333,7 +1338,17 @@ fun scanArchivePdf(
     // Create content envelope
     var result = content
 
-    // JSON can't be used
+    // Regular JSON can't be used -> try getting it from the archive
+    if (null == result && appJsonEntries.isNotEmpty())
+        result = createContentFromArchivedJson(
+            context,
+            dao,
+            doc,
+            appJsonEntries.first(),
+            parent
+        )
+
+    // Forge a Content from what we have
     if (null == result) result = createContentFromDocumentFile(doc, parentNames, now)
 
     result.apply {
@@ -1411,6 +1426,34 @@ fun getFileWithName(files: List<DocumentFile>, name: String): DocumentFile? {
             .equals(targetBareName, ignoreCase = true)
     }
     return file
+}
+
+private fun createContentFromArchivedJson(
+    ctx: Context,
+    dao: CollectionDAO,
+    doc: DocumentFile,
+    archivedJson: ArchiveEntry,
+    targetFolder: Uri
+): Content? {
+    // Unzip JSON next to archive with correct naming
+    val archiveName = doc.name ?: ""
+    val targetFileName = getFileNameWithoutExtension(archiveName) + JSON_ARCHIVE_SUFFIX + ".json"
+
+    val entriesToExtract = ArrayList<Triple<String, Long, String>>()
+    entriesToExtract.add(Triple(archivedJson.path, 0L, targetFileName))
+    ctx.extractArchiveEntriesBlocking(
+        doc.uri,
+        targetFolder,
+        entriesToExtract
+    ).firstOrNull()?.let { extractedJsonUri ->
+        // Use extracted file as metadata source
+        return getDocumentFromTreeUri(ctx, extractedJsonUri)?.let { jsonDoc ->
+            jsonToContent(ctx, dao, listOf(jsonDoc), archiveName)
+        }
+    } ?: run {
+        Timber.w("App JSON extraction failed from ${doc.uri}")
+    }
+    return null
 }
 
 private fun createContentFromDocumentFile(
@@ -1596,8 +1639,7 @@ fun jsonToContent(
     val jsonFile = getFileWithName(jsons, "$nameNoExt$JSON_ARCHIVE_SUFFIX.json")
         ?: getFileWithName(jsons, nameNoExt) ?: return null
     try {
-        val content = jsonToObject(context, jsonFile, JsonContent::class.java)
-        if (content != null) {
+        jsonToObject(context, jsonFile, JsonContent::class.java)?.let { content ->
             val result = content.toEntity(dao)
             result.jsonUri = jsonFile.uri.toString()
             return result

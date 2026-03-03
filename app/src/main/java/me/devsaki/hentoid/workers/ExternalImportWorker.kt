@@ -556,6 +556,7 @@ class ExternalImportWorker(context: Context, parameters: WorkerParameters) :
         val content = jsonToContent(context, dao, jsons, archivePdf.name ?: "")
         val c = scanArchivePdf(
             context,
+            dao,
             parent,
             archivePdf,
             emptyList(),

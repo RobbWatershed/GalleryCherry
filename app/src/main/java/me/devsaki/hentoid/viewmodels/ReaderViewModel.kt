@@ -324,6 +324,7 @@ class ReaderViewModel(
         if (isSupportedArchive(docName) || "pdf" == getExtension(docName)) {
             val res = scanArchivePdf(
                 ctx,
+                dao,
                 parent.uri,
                 doc,
                 emptyList(),
