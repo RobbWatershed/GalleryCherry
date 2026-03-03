@@ -12,6 +12,7 @@ import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import com.awxkee.jxlcoder.JxlCoder
 import com.awxkee.jxlcoder.JxlCompressionOption
+import com.radzivon.bartoshyk.avif.coder.HeifCoder
 import com.squareup.moshi.JsonClass
 import io.github.awxkee.jpegli.coder.IccStrategy
 import io.github.awxkee.jpegli.coder.JpegliCoder
@@ -229,6 +230,8 @@ fun transcodeTo(bitmap: Bitmap, encoder: PictureEncoder, quality: Int): ByteArra
             progressive = false,
             outputStream = output
         )
+
+        PictureEncoder.AVIF -> return HeifCoder().encodeAvif(bitmap)
     }
     return output.toByteArray()
 }
