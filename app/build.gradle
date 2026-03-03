@@ -167,6 +167,9 @@ dependencies {
     // Coil support for AVIF
     implementation 'com.github.awxkee:avif-coder-coil:2.1.4'
 
+    // JPEGLI encoder
+    implementation 'com.github.awxkee:jpegli-coder:1.0.2'
+
     // Animated pics that Coil doesn't support (APNG, animated AVIF) -> https://github.com/penfeizhou/APNG4Android
     def APNG4Android_version = '3.0.5'
     implementation "com.github.penfeizhou.android.animation:apng:$APNG4Android_version"

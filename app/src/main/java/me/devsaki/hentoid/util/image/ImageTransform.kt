@@ -13,6 +13,8 @@ import androidx.documentfile.provider.DocumentFile
 import com.awxkee.jxlcoder.JxlCoder
 import com.awxkee.jxlcoder.JxlCompressionOption
 import com.squareup.moshi.JsonClass
+import io.github.awxkee.jpegli.coder.IccStrategy
+import io.github.awxkee.jpegli.coder.JpegliCoder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import me.devsaki.hentoid.core.HentoidApp
@@ -218,6 +220,14 @@ fun transcodeTo(bitmap: Bitmap, encoder: PictureEncoder, quality: Int): ByteArra
         PictureEncoder.JXL_LOSSLESS -> return JxlCoder.encode(
             bitmap,
             compressionOption = JxlCompressionOption.LOSSLESS
+        )
+
+        PictureEncoder.JPEGLI -> JpegliCoder.compress(
+            bitmap,
+            quality,
+            strategy = IccStrategy.XYB,
+            progressive = false,
+            outputStream = output
         )
     }
     return output.toByteArray()
