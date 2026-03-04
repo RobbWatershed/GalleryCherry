@@ -698,6 +698,7 @@ fun getPathRoot(locationUriStr: String): String {
  */
 fun addContent(context: Context, dao: CollectionDAO, content: Content): Long {
     assertNonUiThread()
+    content.optimizeImageFileUris()
     val newContentId = dao.insertContent(content)
     content.id = newContentId
 

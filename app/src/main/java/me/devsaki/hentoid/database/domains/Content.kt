@@ -532,6 +532,20 @@ data class Content(
         return this
     }
 
+    fun optimizeImageFileUris() {
+        val imgs = imageList
+        var found = false
+        imgs.forEach {
+            if (it.dbFileUri.startsWith(storageUri, true)) {
+                it.dbFileUri = it.dbFileUri.substringAfter(storageUri)
+                found = true
+            }
+        }
+        if (found) {
+            setImageFiles(imgs.toMutableList())
+        }
+    }
+
     val cover: ImageFile
         get() {
             val images = imageList

@@ -18,7 +18,7 @@ import me.devsaki.hentoid.parsers.getImgSrc
 import me.devsaki.hentoid.parsers.urlToImageFile
 import me.devsaki.hentoid.util.download.PrimaryDownloadManager
 import me.devsaki.hentoid.util.exception.EmptyResultException
-import me.devsaki.hentoid.util.file.getFileFromSingleUri
+import me.devsaki.hentoid.util.file.fileSizeFromUri
 import me.devsaki.hentoid.util.network.UriParts
 import me.devsaki.hentoid.util.network.fixUrl
 import me.devsaki.hentoid.util.pause
@@ -188,16 +188,13 @@ class MangagoParser : BaseChapteredImageListParser() {
         val img = ImageFile(
             dbOrder = order,
             dbPageUrl = pageUrl,
-            status = StatusContent.DOWNLOADED,
-            fileUri = fileUri.toString()
-        )
+            status = StatusContent.DOWNLOADED
+        ).withFileUri(fileUri)
         Timber.v("%d IMG result : %s", order, pageUrl)
         img.computeName(11111)
         img.setChapter(chp)
         // Enrich physical properties
-        getFileFromSingleUri(context, fileUri)?.let {
-            img.size = it.length()
-        }
+        img.size = fileSizeFromUri(context, fileUri)
         result.add(img)
         dlManager.processDownloadedFile(context, false, fileUri)
     }

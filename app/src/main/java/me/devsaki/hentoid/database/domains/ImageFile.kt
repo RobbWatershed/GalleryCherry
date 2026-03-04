@@ -1,5 +1,6 @@
 package me.devsaki.hentoid.database.domains
 
+import android.net.Uri
 import io.objectbox.annotation.Convert
 import io.objectbox.annotation.Entity
 import io.objectbox.annotation.Id
@@ -34,7 +35,8 @@ data class ImageFile(
     @Uid(4756936261641767706L)
     var dbPageUrl: String = "",
     var name: String = "",
-    var fileUri: String = "",
+    @Uid(2035492345579360157L)
+    var dbFileUri: String = "",
     var read: Boolean = false,
     @Index // Added to speed up the "favourite pages" book
     var favourite: Boolean = false,
@@ -98,7 +100,7 @@ data class ImageFile(
         img.url,
         img.pageUrl,
         img.name,
-        img.fileUri,
+        img.dbFileUri,
         img.read,
         img.favourite,
         img.isCover,
@@ -224,6 +226,28 @@ data class ImageFile(
             uniqueHash = 0
         }
 
+    var fileUri: String
+        get() = buildFileUri()
+        set(value) {
+            // Only store meaningful value to reduce DB size
+            val prefix = linkedContent?.storageUri ?: ""
+            dbFileUri = if (value.startsWith(prefix)) value.substringAfter(prefix)
+            else value
+        }
+
+    fun withFileUri(uri: Uri): ImageFile {
+        fileUri = uri.toString()
+        return this
+    }
+
+    private fun buildFileUri(): String {
+        // %2F = hex for '/' (Uri path separator); means the uri has already been shortened
+        val prefix =
+            if (dbFileUri.startsWith("%2F") || dbFileUri.startsWith('/'))
+                linkedContent?.storageUri ?: "" else ""
+        return prefix + dbFileUri
+    }
+
 
     var order: Int
         get() = dbOrder
@@ -273,7 +297,7 @@ data class ImageFile(
     val usableUri: String
         get() {
             if (displayUri.isNotBlank()) return displayUri
-            if (!isArchived && !isPdf && isInLibrary(status) && fileUri.isNotBlank()) return fileUri
+            if (!isArchived && !isPdf && isInLibrary(status) && dbFileUri.isNotBlank()) return fileUri
             if (url.isNotBlank() && url.startsWith("http")) return url
             return if (isCover) linkedContent?.coverImageUrl ?: "" else ""
         }
@@ -314,7 +338,7 @@ data class ImageFile(
         val imageFile = other as ImageFile
         if (imageFile.isForceRefresh || isForceRefresh) return false
 
-        return id == imageFile.id && url == imageFile.url && pageUrl == imageFile.pageUrl && fileUri == imageFile.fileUri && displayUri == imageFile.displayUri && order == imageFile.order && isCover == imageFile.isCover && favourite == imageFile.favourite && chapter.targetId == imageFile.chapter.targetId
+        return id == imageFile.id && url == imageFile.url && pageUrl == imageFile.pageUrl && dbFileUri == imageFile.dbFileUri && displayUri == imageFile.displayUri && order == imageFile.order && isCover == imageFile.isCover && favourite == imageFile.favourite && chapter.targetId == imageFile.chapter.targetId
     }
 
     override fun hashCode(): Int {

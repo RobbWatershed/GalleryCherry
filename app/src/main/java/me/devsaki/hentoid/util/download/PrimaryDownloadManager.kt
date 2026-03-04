@@ -230,7 +230,7 @@ class PrimaryDownloadManager {
                     .mapIndexed { i, e ->
                         ImageFile(
                             dbOrder = i,
-                            fileUri = uri.toString() + File.separator + e.path,
+                            dbFileUri = e.path,
                             dbUrl = uri.toString() + File.separator + e.path,
                             size = e.size,
                             status = StatusContent.DOWNLOADED
