@@ -224,6 +224,7 @@
     <string name="storage_archive_description">Store books as images inside CBZ archives</string>
     <string name="storage_streamed">Streamed</string>
     <string name="storage_streamed_description">Don\'t store images on storage, stream them as you read</string>
+    <string name="storage_stream_warning">At least one website from your selection does NOT support streaming. Switching to streaming is highly discouraged.</string>
 
     <!-- Import downloads -->
     <string name="import_downloads_title">Import downloads</string>

@@ -63,6 +63,36 @@
         android:text="@string/storage_folder_description"
         app:layout_constraintTop_toBottomOf="@id/selector" />
 
+    <TextView
+        android:id="@+id/stream_warning"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:background="@color/white_opacity_25"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:paddingEnd="8dp"
+        android:paddingStart="48dp"
+        android:visibility="gone"
+        android:text="@string/storage_stream_warning"
+        tools:visibility="visible"
+        app:layout_constraintTop_toBottomOf="@id/description" />
+
+    <ImageView
+        android:id="@+id/alert_icon"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:padding="8dp"
+        android:src="@drawable/ic_warning"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="@id/stream_warning"
+        app:layout_constraintBottom_toBottomOf="@id/stream_warning"
+        app:layout_constraintStart_toStartOf="parent"
+        app:tint="@color/white_opacity_66"
+        android:background="@null"
+        tools:ignore="ContentDescription"
+        tools:visibility="visible" />
+
     <com.google.android.material.button.MaterialButton
         android:id="@+id/action_button"
         style="@style/Widget.Material3.Button.TonalButton"
@@ -71,7 +101,7 @@
         android:layout_marginTop="8dp"
         android:text="@string/menu_change_storage"
         android:visibility="gone"
-        app:layout_constraintTop_toBottomOf="@id/description"
+        app:layout_constraintTop_toBottomOf="@id/stream_warning"
         tools:visibility="visible" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
