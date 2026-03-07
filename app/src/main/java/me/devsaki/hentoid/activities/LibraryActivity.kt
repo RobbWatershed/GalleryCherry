@@ -51,9 +51,9 @@ import me.devsaki.hentoid.enums.Grouping
 import me.devsaki.hentoid.events.AppUpdatedEvent
 import me.devsaki.hentoid.events.CommunicationEvent
 import me.devsaki.hentoid.events.ProcessEvent
-import me.devsaki.hentoid.fragments.library.LibraryExportDialogFragment
 import me.devsaki.hentoid.fragments.library.LibraryBottomSortFilterFragment
 import me.devsaki.hentoid.fragments.library.LibraryContentFragment
+import me.devsaki.hentoid.fragments.library.LibraryExportDialogFragment
 import me.devsaki.hentoid.fragments.library.LibraryFoldersFragment
 import me.devsaki.hentoid.fragments.library.LibraryGroupsFragment
 import me.devsaki.hentoid.fragments.library.UpdateSuccessDialogFragment.Companion.invoke
@@ -868,7 +868,7 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
      * Callback for any change in Preferences
      */
     private fun onSharedPreferenceChanged(key: String?) {
-        Timber.v("Prefs change detected : %s", key)
+        Timber.v("Prefs change detected : $key")
         AchievementsManager.checkPrefs()
         when (key) {
             Settings.Key.COLOR_THEME,
@@ -1151,7 +1151,8 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
             exportMenu?.isVisible = !hasProcessed
             changeGroupMenu?.isVisible = !hasProcessed
             folderMenu?.isVisible = !isMultipleSelection
-            redownloadMenu?.isVisible = !hasProcessed && (selectedDownloadedCount > 0 || selectedStreamedCount > 0 || selectedExternalCount > 0)
+            redownloadMenu?.isVisible =
+                !hasProcessed && (selectedDownloadedCount > 0 || selectedStreamedCount > 0 || selectedExternalCount > 0)
             storageMethodMenu?.isVisible = !hasProcessed
             groupCoverMenu?.isVisible =
                 !isMultipleSelection && Settings.getGroupingDisplayG() != Grouping.FLAT
@@ -1241,7 +1242,24 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
     @Subscribe(threadMode = ThreadMode.MAIN)
     override fun onCommunicationEvent(event: CommunicationEvent) {
         super.onCommunicationEvent(event)
+        processCommunicationEvent(event)
+    }
+
+    @Suppress("unused")
+    @Subscribe(sticky = true, threadMode = ThreadMode.MAIN)
+    fun onStickyCommunicationEvent(event: CommunicationEvent) {
+        processCommunicationEvent(event)
+        EventBus.getDefault().removeStickyEvent(event)
+    }
+
+    private fun processCommunicationEvent(event: CommunicationEvent) {
+        if (event.recipient != CommunicationEvent.Recipient.ALL && event.recipient != CommunicationEvent.Recipient.LIBRARY) return
         if (CommunicationEvent.Type.CLOSE_DRAWER == event.type) closeNavigationDrawer()
+        if (CommunicationEvent.Type.RELOAD == event.type) {
+            viewModel.searchContent()
+            viewModel.searchGroup()
+            viewModel.searchFolder()
+        }
     }
 
     /**

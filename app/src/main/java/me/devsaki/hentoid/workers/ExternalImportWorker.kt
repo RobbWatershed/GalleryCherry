@@ -23,6 +23,8 @@ import me.devsaki.hentoid.database.domains.ImageFile
 import me.devsaki.hentoid.database.domains.ImageFile.UriImageFileComparator
 import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.enums.StatusContent
+import me.devsaki.hentoid.events.CommunicationEvent
+import me.devsaki.hentoid.events.CommunicationEvent.Type
 import me.devsaki.hentoid.events.ProcessEvent
 import me.devsaki.hentoid.notification.import_.ImportCompleteNotification
 import me.devsaki.hentoid.notification.import_.ImportProgressNotification
@@ -201,6 +203,8 @@ class ExternalImportWorker(context: Context, parameters: WorkerParameters) :
         // Clear disk cache as import may reuse previous image IDs
         StorageCache.clear(applicationContext, READER_CACHE)
         clearCoilCache(applicationContext)
+        EventBus.getDefault()
+            .postSticky(CommunicationEvent(Type.RELOAD, CommunicationEvent.Recipient.LIBRARY))
     }
 
     // Write JSON file for every found book and persist it in the DB
