@@ -40,6 +40,8 @@ import me.devsaki.hentoid.enums.Grouping
 import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.enums.StorageLocation
+import me.devsaki.hentoid.events.CommunicationEvent
+import me.devsaki.hentoid.events.CommunicationEvent.Type
 import me.devsaki.hentoid.events.DownloadCommandEvent
 import me.devsaki.hentoid.events.ProcessEvent
 import me.devsaki.hentoid.json.ContentV1
@@ -496,6 +498,7 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
                 logFile
             )
             notificationManager.notify(ImportCompleteNotification(booksOK, booksKO))
+            EventBus.getDefault().postSticky(CommunicationEvent(Type.RELOAD, CommunicationEvent.Recipient.LIBRARY))
         }
     }
 

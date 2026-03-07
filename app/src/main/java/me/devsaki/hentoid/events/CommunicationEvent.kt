@@ -16,11 +16,13 @@ class CommunicationEvent(val type: Type, val recipient: Recipient = Recipient.AL
         SCROLL_TOP,
         SIGNAL_SITE,
         CANCEL,
-        APK_AVAILABLE
+        APK_AVAILABLE,
+        RELOAD
     }
 
     enum class Recipient {
         ALL,
+        LIBRARY,
         GROUPS,
         CONTENTS,
         FOLDERS,
