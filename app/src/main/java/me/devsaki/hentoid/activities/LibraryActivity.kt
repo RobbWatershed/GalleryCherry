@@ -1258,7 +1258,6 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
         if (CommunicationEvent.Type.RELOAD == event.type) {
             viewModel.searchContent()
             viewModel.searchGroup()
-            viewModel.searchFolder()
         }
     }
 
