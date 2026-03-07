@@ -34,6 +34,8 @@ data class ImageFile(
     var dbUrl: String = "",
     @Uid(4756936261641767706L)
     var dbPageUrl: String = "",
+    // Name is useless for regular downloads where file name = image order
+    // but is essential when importing external books where file names do not follow that logic
     var name: String = "",
     @Uid(2035492345579360157L)
     var dbFileUri: String = "",
