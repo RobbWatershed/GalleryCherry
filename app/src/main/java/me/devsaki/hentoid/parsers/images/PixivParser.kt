@@ -68,17 +68,17 @@ class PixivParser : BaseImageListParser() {
 
             // API calls seem to be protected against request spam; 2 is arbitrary
             setRateLimit(2)
-            if (onlineContent.url.contains("/series/")) return parseSeries(
+            if (onlineContent.url.contains("series/")) return parseSeries(
                 onlineContent,
                 storedContent,
                 cookieStr,
                 userAgent
-            ) else if (onlineContent.url.contains("/bookmarks/")) return parseBookmarks(
+            ) else if (onlineContent.url.contains("bookmarks/")) return parseBookmarks(
                 onlineContent,
                 storedContent,
                 cookieStr,
                 userAgent
-            ) else if (onlineContent.url.contains("/artworks/")) return parseIllust(
+            ) else if (onlineContent.url.contains("artworks/")) return parseIllust(
                 onlineContent,
                 cookieStr,
                 userAgent
