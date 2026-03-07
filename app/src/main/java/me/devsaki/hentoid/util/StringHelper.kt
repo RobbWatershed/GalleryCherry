@@ -280,3 +280,26 @@ fun isTransposition(referenceCleanup: String, comparisonCleanup: String): Boolea
     for (s in refParts) if (!compParts.contains(s)) return false
     return true
 }
+
+/**
+ * Convert the given number range to the corresponding list of numbers
+ * Syntax : "1-5", "1;3;8", "1-2;3-4" (also works with a comma as a separator)
+ */
+fun rangeToNumbers(range: String): List<Int> {
+    val parts = range
+        .replace(",", ";")
+        .split(';')
+        .map { it.trim() }
+    val result: MutableList<Int> = ArrayList()
+    parts.forEach { part ->
+        part.split('-').map { it.trim() }.let { parts2 ->
+            val firstPart = parts2.firstOrNull { isNumeric(it) }?.toInt() ?: return@forEach
+            val lastPart = parts2.lastOrNull { isNumeric(it) }?.toInt() ?: return@forEach
+            if (firstPart == lastPart) result.add(firstPart)
+            else {
+                for (i in firstPart..lastPart) result.add(i)
+            }
+        }
+    }
+    return result
+}

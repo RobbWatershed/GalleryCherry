@@ -66,6 +66,7 @@ data class KemonoPost(
         if (imageUrls.isNotEmpty()) {
             val imageFiles = urlsToImageFiles(
                 imageUrls,
+                "",
                 pageOrder.get(),
                 StatusContent.SAVED,
                 imageUrls.count(),

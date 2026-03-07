@@ -113,8 +113,9 @@ class PixivParser : BaseImageListParser() {
         }
         return urlsToImageFiles(
             galleryMetadata.getPageUrls(),
-            content.coverImageUrl,
-            StatusContent.SAVED
+            content.downloadRange,
+            StatusContent.SAVED,
+            content.coverImageUrl
         )
     }
 

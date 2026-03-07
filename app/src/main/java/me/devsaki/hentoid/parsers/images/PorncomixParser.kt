@@ -66,7 +66,14 @@ class PorncomixParser : BaseChapteredImageListParser() {
         if (result.isEmpty()) result = parseGedeComixImages(doc)
         if (result.isEmpty()) result = parseAllPornComixImages(doc)
 
-        return urlsToImageFiles(result, targetOrder, StatusContent.SAVED, 1000, chp)
+        return urlsToImageFiles(
+            result,
+            content.downloadRange,
+            targetOrder,
+            StatusContent.SAVED,
+            1000,
+            chp
+        )
     }
 
     private fun parseBestPornComixImages(doc: Document): List<String> {

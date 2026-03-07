@@ -331,6 +331,19 @@ object Settings {
     var downloadScheduleSummary: String by StringSetting("download_schedule", disabledStr)
     var downloadScheduleStart: Int by IntSetting("download_schedule_start", 0)
     var downloadScheduleEnd: Int by IntSetting("download_schedule_end", 0)
+    fun isRangeDownloadOn(site: Site): Boolean {
+        return sharedPreferences.getBoolean(
+            makeSiteKey(Key.BROWSER_RANGE_DOWNLOAD, site),
+            isAppRangeDownloadOn
+        )
+    }
+
+    fun setRangeDownloadOn(site: Site, value: Boolean) {
+        sharedPreferences.edit { putBoolean(makeSiteKey(Key.BROWSER_RANGE_DOWNLOAD, site), value) }
+    }
+
+    var isAppRangeDownloadOn: Boolean by BoolSetting(Key.BROWSER_RANGE_DOWNLOAD, false)
+
 
     // READER
     var isReaderResumeLastLeft: Boolean by BoolSetting("pref_viewer_resume_last_left", true)
@@ -722,6 +735,7 @@ object Settings {
         const val BROWSER_CLEAR_COOKIES = "pref_browser_clear_cookies"
         const val BROWSER_NHENTAI_INVISIBLE_BLACKLIST = "pref_nhentai_invisible_blacklist"
         const val DL_HTTP_429_DEFAULT_DELAY = "pref_dl_http_429_default_delay"
+        const val BROWSER_RANGE_DOWNLOAD = "browser_range_download"
 
         const val TEXT_SELECT_MENU = "TEXT_SELECT_MENU"
         const val APP_LOCK = "pref_app_lock"

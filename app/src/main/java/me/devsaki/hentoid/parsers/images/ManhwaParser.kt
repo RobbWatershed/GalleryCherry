@@ -68,6 +68,7 @@ class ManhwaParser : BaseChapteredImageListParser() {
                 progressPlus(1f)
                 return urlsToImageFiles(
                     urls,
+                    content.downloadRange,
                     targetOrder,
                     StatusContent.SAVED,
                     1000,

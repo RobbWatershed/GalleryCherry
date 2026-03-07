@@ -68,8 +68,9 @@ class DoujinsContent : BaseContentParser() {
                         content.setImageFiles(
                             urlsToImageFiles(
                                 imageUrls,
-                                content.coverImageUrl,
-                                StatusContent.SAVED
+                                content.downloadRange,
+                                StatusContent.SAVED,
+                                content.coverImageUrl
                             )
                         )
                     }

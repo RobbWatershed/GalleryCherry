@@ -127,6 +127,7 @@ class UpdateDialogFragment : BaseDialogFragment<Nothing>() {
         startActivity(intent)
     }
 
+    @Suppress("unused")
     @Subscribe(threadMode = ThreadMode.MAIN)
     fun onProcessEvent(event: ProcessEvent) {
         if (event.processId != R.id.update_download_service) return

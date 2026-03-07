@@ -67,6 +67,7 @@ class Hentai2ReadParser : BaseChapteredImageListParser() {
                 val imageUrls = info.images.map { s -> IMAGE_PATH + s }
                 if (imageUrls.isNotEmpty()) return urlsToImageFiles(
                     imageUrls,
+                    content.downloadRange,
                     targetOrder,
                     StatusContent.SAVED,
                     1000,

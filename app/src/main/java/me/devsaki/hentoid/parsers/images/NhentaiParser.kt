@@ -172,6 +172,7 @@ class NhentaiParser : BaseChapteredImageListParser() {
         val imgs = parseImages(coverUrl, thumbs)
         val result = urlsToImageFiles(
             imgs,
+            content.downloadRange,
             targetOrder,
             StatusContent.SAVED,
             1000,

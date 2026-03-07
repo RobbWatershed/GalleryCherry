@@ -63,7 +63,14 @@ data class YifferData(
 
         if (updateImages) {
             val pageUrls = getPageUrls()
-            c.setImageFiles(urlsToImageFiles(pageUrls, pageUrls[0], StatusContent.SAVED))
+            c.setImageFiles(
+                urlsToImageFiles(
+                    pageUrls,
+                    c.downloadRange,
+                    StatusContent.SAVED,
+                    pageUrls[0]
+                )
+            )
             c.qtyPages = pageUrls.size
         }
     }

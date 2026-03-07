@@ -93,8 +93,9 @@ class AllPornComicContent : BaseContentParser() {
                 content.setImageFiles(
                     urlsToImageFiles(
                         imgUrls,
-                        coverUrl,
-                        StatusContent.SAVED
+                        content.downloadRange,
+                        StatusContent.SAVED,
+                        coverUrl
                     )
                 )
                 content.qtyPages = imgUrls.size // Don't count the cover

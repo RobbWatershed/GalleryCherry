@@ -1315,13 +1315,13 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
         invokeInputDialog(
             this,
             R.string.group_new_name_dynamic,
+            criteria.toString(this),
             { s: String ->
                 viewModel.newGroup(
                     Grouping.DYNAMIC,
                     s, SearchActivityBundle.buildSearchUri(criteria, null).toString()
                 ) { onNewSearchGroupNameExists() }
-            },
-            criteria.toString(this)
+            }
         )
     }
 

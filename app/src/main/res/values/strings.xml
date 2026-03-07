@@ -819,6 +819,7 @@
     <string name="web_all_sites">All sites</string>
     <string name="web_target_page_unavailable">Webpage not available%s; loading welcome page instead</string>
     <string name="web_target_page_outside_restricted_domains">Host %s outside restricted domains</string>
+    <string name="web_range_download_prompt" tools:ignore="TypographyDashes">Range of gallery pages to download (e.g. 1-5 / 1;3;8 / 1-2;5-7)</string>
 
     <!-- Web browser (site specifics) -->
     <string name="help_web_exh_account">Please use or create an exHentai account</string>

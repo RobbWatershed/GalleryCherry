@@ -41,7 +41,7 @@ data class EHentaiGalleriesMetadata(
             content.title = cleanup(title)
             content.status = StatusContent.SAVED
 
-            if (category != null && !category.isBlank()) attributes.add(
+            if (!category.isNullOrBlank()) attributes.add(
                 Attribute(
                     AttributeType.CATEGORY,
                     category.trim(),
@@ -50,7 +50,7 @@ data class EHentaiGalleriesMetadata(
                 )
             )
 
-            if (posted != null && !posted.isEmpty()) content.uploadDate = posted.toLong() * 1000
+            if (!posted.isNullOrEmpty()) content.uploadDate = posted.toLong() * 1000
 
             if (updatePages) {
                 if (filecount != null) content.qtyPages = filecount.toInt()

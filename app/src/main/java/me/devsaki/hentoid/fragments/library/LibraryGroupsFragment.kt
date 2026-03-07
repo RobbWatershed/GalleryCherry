@@ -336,7 +336,7 @@ class LibraryGroupsFragment : Fragment(),
     private fun newGroupPrompt() {
         invokeInputDialog(
             requireActivity(), R.string.new_group_name,
-            { groupName: String ->
+            onResult = { groupName: String ->
                 viewModel.newGroup(
                     Settings.getGroupingDisplayG(),
                     groupName, null
@@ -620,8 +620,8 @@ class LibraryGroupsFragment : Fragment(),
             invokeInputDialog(
                 requireActivity(),
                 R.string.group_edit_name,
-                { onEditName(it) },
-                g.name
+                g.name,
+                { onEditName(it) }
             ) { leaveSelectionMode() }
         }
     }
