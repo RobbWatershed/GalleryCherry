@@ -358,6 +358,7 @@ abstract class BaseSplitMergeWorker(
         splitContent.downloadDate = Instant.now().toEpochMilli()
         splitContent.status = content.status
         splitContent.bookPreferences = content.bookPreferences
+        splitContent.downloadRange = chapter.downloadRange
         var images: List<ImageFile>? = chapter.imageFiles
         if (images != null) {
             images = chapter.imageList.sortedBy { it.order }
