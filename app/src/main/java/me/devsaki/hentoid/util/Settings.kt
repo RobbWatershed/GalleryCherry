@@ -65,7 +65,7 @@ object Settings {
         result.remove(Key.ACHIEVEMENTS_NB_AI_RESCALE)
         result.remove(Key.BEHOLDER_TIMESTAMP)
 
-        return result.filterValues { it != null }.mapValues { it -> it.value as Any }
+        return result.filterValues { it != null }.mapValues { it.value as Any }
     }
 
     fun importInformation(settings: Map<String, Any?>) {
@@ -254,7 +254,7 @@ object Settings {
 
     private val browserDlActionInt by IntSettingStr(Key.BROWSER_DL_ACTION, Value.DL_ACTION_DL_PAGES)
     fun getBrowserDlAction(): DownloadMode {
-        return DownloadMode.Companion.fromValue(browserDlActionInt)
+        return DownloadMode.fromValue(browserDlActionInt)
     }
 
     val isBrowserQuickDl: Boolean by BoolSetting(Key.BROWSER_QUICK_DL, true)
@@ -275,6 +275,22 @@ object Settings {
         Key.BROWSER_PROXY,
         "" // No proxy
     )
+
+    fun isTopAlertClosed(site: Site): Boolean {
+        return topAlertClosed.contains(site)
+    }
+
+    fun setTopAlertClosed(site: Site) {
+        val closedSites = topAlertClosed.toMutableSet()
+        closedSites.add(site)
+        topAlertClosed = closedSites.toList()
+    }
+
+    fun clearTopAlertClosed() {
+        topAlertClosed = emptyList()
+    }
+
+    private var topAlertClosed: List<Site> by ListSiteSetting("browser_topalert_closed", "")
 
     // QUEUE / DOWNLOADER
     val isDownloadEhHires: Boolean by BoolSetting("pref_dl_eh_hires", false)
@@ -556,7 +572,6 @@ object Settings {
     var lastDBUpdateVersion: Int by IntSetting("last_db_update", 0)
 
 
-
     // Public Helpers
 
     fun registerPrefsChangedListener(listener: OnSharedPreferenceChangeListener) {
@@ -762,6 +777,7 @@ object Settings {
     }
 
     // IMPORTANT : Any value change must be mirrored in res/values/array_preferences.xml
+    @Suppress("unused")
     object Value {
         private val DEFAULT_SITES = arrayOf(
             Site.NHENTAI,
@@ -904,7 +920,7 @@ object Settings {
         const val READER_AUTO_ROTATE_LEFT = 1
         const val READER_AUTO_ROTATE_RIGHT = 2
 
-        val ORDER_CONTENT_FAVOURITE = -2 // Artificial order created for clarity purposes
+        const val ORDER_CONTENT_FAVOURITE = -2 // Artificial order created for clarity purposes
 
         const val LOCK_TIMER_OFF = 0
         const val LOCK_TIMER_10S = 1

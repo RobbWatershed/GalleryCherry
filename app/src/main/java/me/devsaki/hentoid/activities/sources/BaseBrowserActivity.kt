@@ -323,11 +323,12 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         }
 
         // Banner close buttons
-        val topAlertCloseButton = findViewById<View>(R.id.top_alert_close_btn)
-        topAlertCloseButton.setOnClickListener { binding?.topAlert?.visibility = View.GONE }
+        binding?.topAlertCloseBtn?.setOnClickListener {
+            Settings.setTopAlertClosed(getStartSite())
+            binding?.topAlert?.visibility = View.GONE
+        }
 
-        val bottomAlertCloseButton = findViewById<View>(R.id.bottom_alert_close_btn)
-        bottomAlertCloseButton.setOnClickListener { onBottomAlertCloseClick() }
+        binding?.bottomAlertCloseBtn?.setOnClickListener { onBottomAlertCloseClick() }
         downloadIcon =
             if (Settings.getBrowserDlAction() == DownloadMode.STREAM) R.drawable.selector_download_stream_action else R.drawable.selector_download_action
         if (Settings.isBrowserMode) downloadIcon = R.drawable.ic_forbidden_disabled
@@ -852,6 +853,8 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
      * (the one that contains the alerts when downloads are broken or sites are unavailable)
      */
     private fun displayTopAlertBanner() {
+        // Don't show if already closed manually during a previous session
+        if (Settings.isTopAlertClosed(getStartSite())) return
         alert?.let {
             binding?.apply {
                 topAlertIcon.setImageResource(it.getStatus().icon)
