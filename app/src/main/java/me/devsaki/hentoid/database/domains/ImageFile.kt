@@ -293,6 +293,7 @@ data class ImageFile(
 
     val isReadable: Boolean
         get() {
+            if (null == name) return true
             return !name.startsWith(THUMB_FILE_NAME) && !name.startsWith(EXT_THUMB_FILE_PREFIX)
         }
 

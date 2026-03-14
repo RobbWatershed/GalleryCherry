@@ -66,6 +66,7 @@ class ToonilyParser : BaseChapteredImageListParser() {
                 progressPlus(1f)
                 return urlsToImageFiles(
                     imageUrls,
+                    content.downloadRange,
                     targetOrder,
                     StatusContent.SAVED,
                     1000,

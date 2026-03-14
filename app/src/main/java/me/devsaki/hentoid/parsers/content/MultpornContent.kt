@@ -108,7 +108,7 @@ class MultpornContent : BaseContentParser() {
                 content.coverImageUrl = imagesUrls[0]
                 if (updateImages) {
                     content.setImageFiles(
-                        urlsToImageFiles(imagesUrls, imagesUrls[0], StatusContent.SAVED)
+                        urlsToImageFiles(imagesUrls, content.downloadRange,StatusContent.SAVED, imagesUrls[0])
                     )
                     content.qtyPages = imagesUrls.size
                 }

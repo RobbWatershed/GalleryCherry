@@ -282,7 +282,7 @@
             tools:visibility="visible" />
 
         <com.google.android.material.floatingactionbutton.FloatingActionButton
-            android:id="@+id/language_filter_button"
+            android:id="@+id/range_download_button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="right"
@@ -290,6 +290,19 @@
             android:backgroundTint="?colorPrimaryDark"
             android:visibility="gone"
             app:layout_anchor="@id/action_button"
+            app:srcCompat="@drawable/ic_action_download_range"
+            tools:ignore="ContentDescription"
+            tools:visibility="visible" />
+
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/language_filter_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="right"
+            android:layout_marginBottom="160dp"
+            android:backgroundTint="?colorPrimaryDark"
+            android:visibility="gone"
+            app:layout_anchor="@id/range_download_button"
             app:srcCompat="@drawable/ic_attribute_language"
             tools:ignore="ContentDescription"
             tools:visibility="visible" />

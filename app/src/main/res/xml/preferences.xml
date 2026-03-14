@@ -268,6 +268,13 @@
                 android:title="@string/pref_browser_quick_dl_threshold_title"
                 app:iconSpaceReserved="false" />
             <CheckBoxPreference
+                android:defaultValue="@string/pref_browser_range_download_default"
+                android:key="browser_range_download"
+                android:summary="@string/pref_browser_range_download_summary"
+                android:title="@string/pref_range_download_title"
+                app:iconSpaceReserved="false"
+                app:sites="ANY" />
+            <CheckBoxPreference
                 android:defaultValue="@string/pref_browser_resume_last_default"
                 android:key="pref_browser_resume_last"
                 android:summaryOff="@string/pref_browser_resume_last_off"

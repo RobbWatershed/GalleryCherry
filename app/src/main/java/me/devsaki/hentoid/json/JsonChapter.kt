@@ -9,9 +9,17 @@ data class JsonChapter(
     val url: String,
     val name: String,
     val uniqueId: String,
-    val uploadDate: Long?
+    val uploadDate: Long?,
+    val downloadRange: String?
 ) {
-    constructor(c: Chapter) : this(c.order, c.url, c.name, c.uniqueId, c.uploadDate)
+    constructor(c: Chapter) : this(
+        c.order,
+        c.url,
+        c.name,
+        c.uniqueId,
+        c.uploadDate,
+        c.downloadRange
+    )
 
     fun toEntity(): Chapter {
         return Chapter(
@@ -19,7 +27,8 @@ data class JsonChapter(
             url = url,
             name = name,
             uniqueId = uniqueId,
-            uploadDate = uploadDate ?: 0
+            uploadDate = uploadDate ?: 0,
+            downloadRange = downloadRange ?: ""
         )
     }
 }

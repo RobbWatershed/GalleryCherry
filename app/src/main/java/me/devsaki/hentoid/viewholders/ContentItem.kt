@@ -477,7 +477,8 @@ class ContentItem : AbstractItem<ContentItem.ViewHolder>,
             val context = baseLayout.context
             val template: String
             if (viewType == ViewType.QUEUE || viewType == ViewType.ERRORS || viewType == ViewType.LIBRARY_EDIT || viewType == ViewType.MERGE || viewType == ViewType.SPLIT) {
-                val nbPages = "$qtyPages"
+                val nbPages =
+                    qtyPages.toString() + if (content != null && content.downloadRange.isBlank()) "" else "⎵"
                 template = if (viewType == ViewType.ERRORS) {
                     val nbMissingPages = qtyPages - content!!.getNbDownloadedPages()
                     if (nbMissingPages > 0) {
@@ -493,6 +494,10 @@ class ContentItem : AbstractItem<ContentItem.ViewHolder>,
                 val isPlaceholder = content.status == StatusContent.PLACEHOLDER
                 val phVisibility = if (isPlaceholder) View.GONE else View.VISIBLE
                 tvPages.let { tv ->
+                    ivPages?.setImageResource(
+                        if (content.downloadRange.isBlank()) R.drawable.ic_images
+                        else R.drawable.ic_images_range
+                    )
                     ivPages?.visibility = phVisibility
                     tv.visibility = phVisibility
                     tv.text = String.format(Locale.ENGLISH, "%d", content.getNbDownloadedPages())

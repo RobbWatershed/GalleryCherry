@@ -570,8 +570,8 @@ class ReaderGalleryFragment : Fragment(R.layout.fragment_reader_gallery), ItemTo
                     invokeInputDialog(
                         requireActivity(),
                         R.string.group_edit_name,
-                        { newName -> viewModel.renameChapter(chap.id, newName) },
-                        chap.name
+                        chap.name,
+                        { newName -> viewModel.renameChapter(chap.id, newName) }
                     )
                 }
             }

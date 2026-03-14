@@ -22,8 +22,9 @@ class MrmParser : BaseChapteredImageListParser() {
     override fun parseImageFiles(onlineContent: Content, storedContent: Content?): List<ImageFile> {
         return urlsToImageFiles(
             parseContentImages(onlineContent),
-            onlineContent.coverImageUrl,
-            StatusContent.SAVED
+            onlineContent.downloadRange,
+            StatusContent.SAVED,
+            onlineContent.coverImageUrl
         )
     }
 
@@ -79,6 +80,7 @@ class MrmParser : BaseChapteredImageListParser() {
     ): List<ImageFile> {
         return urlsToImageFiles(
             parseChapterImages(chp.url, headers),
+            content.downloadRange,
             targetOrder, StatusContent.SAVED, 1000, chp
         )
     }

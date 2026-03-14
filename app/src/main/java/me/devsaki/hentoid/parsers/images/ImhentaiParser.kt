@@ -27,39 +27,39 @@ class ImhentaiParser : BaseImageListParser() {
             headers,
             Site.IMHENTAI.useHentoidAgent,
             Site.IMHENTAI.useWebviewAgent
-        )
-        if (doc != null) {
-            val thumbs: List<Element> = doc.select(".gthumb img")
-            val scripts: List<Element> = doc.select("body script")
+        ) ?: return emptyList()
 
-            // Parse the image format list to get the whole list and the correct extensions
-            var imageFormats: Map<String, String>? = null
-            for (s in scripts) {
-                try {
-                    val jsonBeginIndex = s.data().indexOf("'{\"1\"")
-                    if (jsonBeginIndex > -1) {
-                        imageFormats = jsonToObject(
-                            s.data().substring(jsonBeginIndex + 1).replace("\"}');", "\"}")
-                                .replace("\n", ""), MAP_STRINGS
-                        )
-                        break
-                    }
-                } catch (e: IOException) {
-                    Timber.w(e)
+        val thumbs: List<Element> = doc.select(".gthumb img")
+        val scripts: List<Element> = doc.select("body script")
+
+        // Parse the image format list to get the whole list and the correct extensions
+        // Key : Image index; Value : Image format
+        var imageFormats: Map<String, String>? = null
+        for (s in scripts) {
+            try {
+                val jsonBeginIndex = s.data().indexOf("'{\"1\"")
+                if (jsonBeginIndex > -1) {
+                    imageFormats = jsonToObject(
+                        s.data().substring(jsonBeginIndex + 1).replace("\"}');", "\"}")
+                            .replace("\n", ""), MAP_STRINGS
+                    )
+                    break
                 }
+            } catch (e: IOException) {
+                Timber.w(e)
             }
+        }
 
-            // 2- Generate image URL from imagePath constant, gallery ID, page number and extension
-            if (thumbs.isNotEmpty() && imageFormats != null) {
-                val thumbUrl = getImgSrc(thumbs[0])
-                val thumbPath = thumbUrl.substring(0, thumbUrl.lastIndexOf("/") + 1)
+        // 2- Generate image URL from imagePath constant, gallery ID, page number and extension
+        if (thumbs.isNotEmpty() && imageFormats != null) {
+            val thumbUrl = getImgSrc(thumbs[0])
+            val thumbPath = thumbUrl.substring(0, thumbUrl.lastIndexOf("/") + 1)
 
-                // Forge all page URLs
-                for (i in 0 until imageFormats.size) {
-                    val imgUrl = thumbPath + (i + 1) + "." +
-                            getExtensionFromFormat(imageFormats, i)
-                    result.add(imgUrl)
-                }
+            // Forge all page URLs
+            for (i in 0 until imageFormats.size) {
+                val imgUrl = thumbPath + (i + 1) + "." +
+                        getExtensionFromFormat(imageFormats, i)
+                result.add(imgUrl)
             }
         }
 

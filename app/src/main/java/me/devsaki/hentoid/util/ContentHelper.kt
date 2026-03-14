@@ -1929,7 +1929,8 @@ suspend fun mergeContents(
         favourite = firstContent.favourite,
         rating = firstContent.rating,
         bookPreferences = firstContent.bookPreferences,
-        manuallyMerged = true
+        manuallyMerged = true,
+        downloadRange = firstContent.downloadRange
     )
 
     // Merge attributes
@@ -2002,7 +2003,8 @@ suspend fun mergeContents(
                     chapterOrder,
                     c.galleryUrl,
                     c.title,
-                    c.uniqueSiteId + "-" + chapterOrder
+                    c.uniqueSiteId + "-" + chapterOrder,
+                    c.downloadRange
                 )
 
                 val imgs = c.imageList.sortedBy { it.order }

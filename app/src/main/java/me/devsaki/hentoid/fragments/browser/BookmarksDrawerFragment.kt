@@ -283,9 +283,9 @@ class BookmarksDrawerFragment : Fragment(R.layout.fragment_web_bookmarks),
     }
 
     private fun onBookmarkBtnClickedAdd() {
-        invokeInputDialog(requireContext(), R.string.bookmark_edit_title, {
+        invokeInputDialog(requireContext(), R.string.bookmark_edit_title, title, {
             viewModel.addBookmark(it)
-        }, title)
+        })
     }
 
     private fun onBookmarkBtnClickedRemove() {
@@ -411,8 +411,8 @@ class BookmarksDrawerFragment : Fragment(R.layout.fragment_web_bookmarks),
             if (b != null) invokeInputDialog(
                 requireActivity(),
                 R.string.bookmark_edit_title,
-                { s -> onEditTitle(s) },
-                b.title
+                b.title,
+                { s -> onEditTitle(s) }
             ) { selectExtension.deselect(selectExtension.selections.toMutableSet()) }
         }
     }
