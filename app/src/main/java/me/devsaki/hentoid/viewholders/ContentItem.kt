@@ -43,6 +43,7 @@ import me.devsaki.hentoid.ui.BlinkAnimation
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.download.ContentQueueManager.isQueueActive
 import me.devsaki.hentoid.util.download.ContentQueueManager.isQueuePaused
+import me.devsaki.hentoid.util.file.formatHumanReadableSize
 import me.devsaki.hentoid.util.formatArtistForDisplay
 import me.devsaki.hentoid.util.formatSeriesForDisplay
 import me.devsaki.hentoid.util.formatTagsForDisplay
@@ -521,14 +522,8 @@ class ContentItem : AbstractItem<ContentItem.ViewHolder>,
                         if (isPlaceholder || content.downloadMode == DownloadMode.STREAM) View.GONE else View.VISIBLE
                     ivStorage?.visibility = storageVisibility
                     tv.visibility = storageVisibility
-                    if (storageVisibility == View.VISIBLE) {
-                        val sizeMb = content.size / (1024.0 * 1024.0)
-                        val sizeGb = sizeMb / 1024.0
-                        if (sizeGb > 1) tv.text =
-                            context.getString(R.string.library_metrics_storage_gb, sizeGb)
-                        else tv.text =
-                            context.getString(R.string.library_metrics_storage_mb, sizeMb)
-                    }
+                    if (storageVisibility == View.VISIBLE)
+                        tv.text = formatHumanReadableSize(content.size, context.resources)
                 }
             }
         }
