@@ -1945,40 +1945,6 @@ suspend fun mergeContents(
 
         // TODO destination is a PDF when all source contents are PDFs (requires working on a better layout - see #1322)
 
-        /*
-        // External library root for external content
-        if (mergedContent.status == StatusContent.EXTERNAL) {
-            val externalRootFolder =
-                getDocumentFromTreeUriString(context, Settings.externalLibraryUri)
-            if (null == externalRootFolder || !externalRootFolder.exists()) throw ContentNotProcessedException(
-                mergedContent,
-                "Could not create target directory : external root unreachable"
-            )
-
-            val bookFolderName = formatFolderName(mergedContent)
-            // First try finding the folder with new naming...
-            targetFolder = findFolder(context, externalRootFolder, bookFolderName.first)
-            if (null == targetFolder) { // ...then with old (sanitized) naming...
-                targetFolder = findFolder(context, externalRootFolder, bookFolderName.second)
-                if (null == targetFolder) { // ...if not, create a new folder with the new naming...
-                    targetFolder = externalRootFolder.createDirectory(bookFolderName.first)
-                    if (null == targetFolder) { // ...if it fails, create a new folder with the old naming
-                        targetFolder = externalRootFolder.createDirectory(bookFolderName.second)
-                    }
-                }
-            }
-            parentFolder = externalRootFolder
-        } else { // Primary folder for non-external content; using download strategy
-            val location = selectDownloadLocation(context)
-            targetFolder = getOrCreateContentDownloadDir(context, mergedContent, location, true)
-            parentFolder = getDocumentFromTreeUriString(context, Settings.getStorageUri(location))
-        }
-
-        if (null == targetFolder || !targetFolder.exists())
-            throw ContentNotProcessedException(mergedContent, "Could not create target directory")
-
-        mergedContent.setStorageDoc(targetFolder)
-         */
         val containingFolder =
             firstContent.getContainingFolder(context) ?: throw ContentNotProcessedException(
                 mergedContent,
@@ -2145,20 +2111,6 @@ suspend fun mergeContents(
                             img.fileUri.toUri(),
                             newImg.name + "." + referenceExt
                         )
-                        /*
-                        val newUri = copyFile(
-                            context,
-                            img.fileUri.toUri(),
-                            targetFolder,
-                            newImg.name + "." + referenceExt,
-                            getMimeTypeFromExtension(referenceExt),
-                            true
-                        )
-                        if (newUri != null) {
-                            newImg.fileUri = newUri.toString()
-                            newImg.size = fileSizeFromUri(context, newUri)
-                        } else Timber.w("Could not move file ${img.fileUri}")
-                        */
                         onProgress.invoke(nbProcessedPics++, nbImages, c.title)
                     }
                     mergedImages.add(newImg)
@@ -2188,10 +2140,6 @@ suspend fun mergeContents(
             mergedContent.setChapters(mergedChapters) // Chapters have to be attached to Content too
 
             dlManager.completeDownload(context, mergedContent)
-            /*
-            val jsonFile = createJson(context, mergedContent)
-            if (jsonFile != null) mergedContent.jsonUri = jsonFile.uri.toString()
-             */
 
             mergedContent.computeSize()
 

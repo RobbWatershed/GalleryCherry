@@ -132,29 +132,32 @@ class StorageDownloadManager {
         moveAppendedFiles = false // Copy mode
 
         downloadMode = targetContent.downloadMode
+        val parentFolder = getDocumentFromTreeUri(context, containingFolder)
+            ?: throw IOException("Couldn't find parent folder")
 
-        val dlFolder = if (targetContent.status == StatusContent.EXTERNAL) {
-            val parentFolder = getDocumentFromTreeUri(context, containingFolder)
-                ?: throw IOException("Couldn't find parent folder")
-            val bookFolderName = formatFolderName(targetContent)
-            // First try finding the folder with new naming...
-            var targetFolder = findFolder(context, parentFolder, bookFolderName.first)
-            if (null == targetFolder) { // ...then with old (sanitized) naming...
-                targetFolder = findFolder(context, parentFolder, bookFolderName.second)
-                if (null == targetFolder) { // ...if not, create a new folder with the new naming...
-                    targetFolder = parentFolder.createDirectory(bookFolderName.first)
-                    if (null == targetFolder) { // ...if it fails, create a new folder with the old naming
-                        targetFolder = parentFolder.createDirectory(bookFolderName.second)
+        val dlFolder = if (downloadMode == DownloadMode.DOWNLOAD_ARCHIVE) parentFolder
+        else {
+            if (targetContent.status == StatusContent.EXTERNAL) {
+                val bookFolderName = formatFolderName(targetContent)
+                // First try finding the folder with new naming...
+                var targetFolder = findFolder(context, parentFolder, bookFolderName.first)
+                if (null == targetFolder) { // ...then with old (sanitized) naming...
+                    targetFolder = findFolder(context, parentFolder, bookFolderName.second)
+                    if (null == targetFolder) { // ...if not, create a new folder with the new naming...
+                        targetFolder = parentFolder.createDirectory(bookFolderName.first)
+                        if (null == targetFolder) { // ...if it fails, create a new folder with the old naming
+                            targetFolder = parentFolder.createDirectory(bookFolderName.second)
+                        }
                     }
                 }
+                targetFolder
+            } else {
+                // Primary folder for non-external content; using download strategy
+                val location = selectDownloadLocation(context)
+                getOrCreateContentDownloadDir(context, targetContent, location, true)
             }
-            targetFolder
-        } else {
-            // Primary folder for non-external content; using download strategy
-            val location = selectDownloadLocation(context)
-            getOrCreateContentDownloadDir(context, targetContent, location, true)
-                ?: throw IOException("Couldn't create download folder")
         }
+
         if (null == dlFolder || !dlFolder.exists())
             throw ContentNotProcessedException(targetContent, "Could not create target directory")
 
@@ -254,75 +257,76 @@ class StorageDownloadManager {
      * Process post-download actions
      */
     @Throws(ArchiveException::class)
-    suspend fun completeDownload(context: Context, content: Content) = withContext(Dispatchers.IO) {
-        if (downloadMode == DownloadMode.DOWNLOAD_ARCHIVE) {
-            // Wait until archive streaming has completed (poll every 500ms)
-            while (archiveStreamer?.queueActive ?: false) pause(500)
+    suspend fun completeDownload(context: Context, content: Content) =
+        withContext(Dispatchers.IO) {
+            if (downloadMode == DownloadMode.DOWNLOAD_ARCHIVE) {
+                // Wait until archive streaming has completed (poll every 500ms)
+                while (archiveStreamer?.queueActive ?: false) pause(500)
 
-            archiveStreamer?.let { streamer ->
-                // Throws exception if archiving has failed
-                if (streamer.queueFailed)
-                    throw ArchiveException(streamer.queueFailMessage)
+                archiveStreamer?.let { streamer ->
+                    // Throws exception if archiving has failed
+                    if (streamer.queueFailed)
+                        throw ArchiveException(streamer.queueFailMessage)
 
-                var imgList = content.imageList
-                val newLocations = refreshLocation(imgList, streamer)
-                if (newLocations.isNotEmpty()) {
-                    imgList = imgList.map { img ->
-                        newLocations[img.id]?.let { img.fileUri = it }
-                        img
-                    }
-                    content.setImageFiles(imgList)
-                }
-            }
-        }
-
-        if (downloadMode == DownloadMode.DOWNLOAD_ARCHIVE_FILE) {
-            content.imageList.firstOrNull()?.let { archive ->
-                var uri = archive.fileUri.toUri()
-                val uriParts = UriParts(uri)
-                getDocumentFromTreeUri(context, uri)?.let { doc ->
-                    if (doc.renameTo(formatFolderName(content).first + "." + uriParts.extension)) {
-                        uri = doc.uri
-                        content.setStorageDoc(doc)
-                    } else {
-                        throw IOException("Couldn't rename archive")
+                    var imgList = content.imageList
+                    val newLocations = refreshLocation(imgList, streamer)
+                    if (newLocations.isNotEmpty()) {
+                        imgList = imgList.map { img ->
+                            newLocations[img.id]?.let { img.fileUri = it }
+                            img
+                        }
+                        content.setImageFiles(imgList)
                     }
                 }
-
-                val entries = if (uriParts.extension.equals("pdf", true)) {
-                    PdfManager().getEntries(context, uri)
-                } else // Archive
-                    context.getArchiveEntries(uri)
-
-                val imgs = entries
-                    .filter { !it.isFolder && isSupportedImage(it.path) }
-                    .sortedWith(InnerNameNumberArchiveComparator())
-                    .mapIndexed { i, e ->
-                        ImageFile(
-                            dbOrder = i,
-                            dbFileUri = e.path,
-                            dbUrl = uri.toString() + File.separator + e.path,
-                            size = e.size,
-                            status = StatusContent.DOWNLOADED
-                        )
-                    }
-                imgs.forEach { it.computeName(imgs.size) }
-                content.setImageFiles(imgs)
-                content.qtyPages = imgs.size
             }
+
+            if (downloadMode == DownloadMode.DOWNLOAD_ARCHIVE_FILE) {
+                content.imageList.firstOrNull()?.let { archive ->
+                    var uri = archive.fileUri.toUri()
+                    val uriParts = UriParts(uri)
+                    getDocumentFromTreeUri(context, uri)?.let { doc ->
+                        if (doc.renameTo(formatFolderName(content).first + "." + uriParts.extension)) {
+                            uri = doc.uri
+                            content.setStorageDoc(doc)
+                        } else {
+                            throw IOException("Couldn't rename archive")
+                        }
+                    }
+
+                    val entries = if (uriParts.extension.equals("pdf", true)) {
+                        PdfManager().getEntries(context, uri)
+                    } else // Archive
+                        context.getArchiveEntries(uri)
+
+                    val imgs = entries
+                        .filter { !it.isFolder && isSupportedImage(it.path) }
+                        .sortedWith(InnerNameNumberArchiveComparator())
+                        .mapIndexed { i, e ->
+                            ImageFile(
+                                dbOrder = i,
+                                dbFileUri = e.path,
+                                dbUrl = uri.toString() + File.separator + e.path,
+                                size = e.size,
+                                status = StatusContent.DOWNLOADED
+                            )
+                        }
+                    imgs.forEach { it.computeName(imgs.size) }
+                    content.setImageFiles(imgs)
+                    content.qtyPages = imgs.size
+                }
+            }
+            content.qtyPages = content.imageList.count { it.isReadable }
+
+            // Create JSON
+            persistJson(context, content)
+
+            // Empty cache
+            getOrCreateCacheFolder(context, DOWNLOAD_CACHE_FOLDER)?.let {
+                if (!tryCleanDirectory(it)) Timber.d("Failed to clean download cache")
+            }
+
+            clear()
         }
-        content.qtyPages = content.imageList.count { it.isReadable }
-
-        // Create JSON
-        persistJson(context, content)
-
-        // Empty cache
-        getOrCreateCacheFolder(context, DOWNLOAD_CACHE_FOLDER)?.let {
-            if (!tryCleanDirectory(it)) Timber.d("Failed to clean download cache")
-        }
-
-        clear()
-    }
 
     suspend fun removeDownload(context: Context) = withContext(Dispatchers.IO) {
         archiveStreamer?.close()
