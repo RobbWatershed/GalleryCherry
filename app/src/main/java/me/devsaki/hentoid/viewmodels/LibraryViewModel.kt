@@ -774,19 +774,32 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
                                 if (!isDownloadable) msg += " (pages unreachable)"
                                 Timber.d(msg)
                                 // Reparse content itself
-                                res = reparseFromScratch(c, keepUris = !reparseImages, updateImages = reparseImages)
+                                res = reparseFromScratch(
+                                    c,
+                                    keepUris = !reparseImages,
+                                    updateImages = reparseImages
+                                )
                             }
                         }
 
                         res?.let {
+                            val previousDlMode = it.downloadMode
                             it.downloadMode =
-                                if (forceArchive) DownloadMode.DOWNLOAD_ARCHIVE else DownloadMode.DOWNLOAD
+                                if (forceArchive) DownloadMode.DOWNLOAD_ARCHIVE
+                                else when (it.downloadMode) {
+                                    DownloadMode.DOWNLOAD_ARCHIVE_FILE, DownloadMode.DOWNLOAD_ARCHIVE -> it.downloadMode
+                                    else -> DownloadMode.DOWNLOAD
+                                }
                             if (areModifiedImages) {
                                 dao.insertChapters(it.chaptersList)
                                 dao.insertImageFiles(it.imageList)
                             }
 
-                            if (forceArchive) {
+                            if (
+                                (previousDlMode == DownloadMode.DOWNLOAD || previousDlMode == DownloadMode.STREAM)
+                                &&
+                                (it.downloadMode == DownloadMode.DOWNLOAD_ARCHIVE || it.downloadMode == DownloadMode.DOWNLOAD_ARCHIVE)
+                            ) {
                                 // Delete download folder
                                 removeDocument(application, it.storageUri.toUri())
                                 // Delete previous references
@@ -795,11 +808,11 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
                             }
 
                             dao.addContentToQueue(
-                                it, sourceImageStatus, targetImageStatus, position, -1, null,null,
+                                it, sourceImageStatus, targetImageStatus, position, -1, null, null,
                                 isQueueActive(getApplication())
                             )
 
-                            if (!forceArchive && reparseImages) purgeContent(
+                            if (reparseImages) purgeContent(
                                 // Non-blocking performance bottleneck; run in a dedicated worker
                                 getApplication(),
                                 it,
