@@ -1116,7 +1116,6 @@ fun formatAuthor(content: Content): String {
 /**
  * Return the given site's download directory. Create it if it doesn't exist.
  *
- *
  * Avoid overloading the Android folder structure (not designed for that :/)
  * by preventing any site folder from storing more than 250 books/subfolders
  * => create a new "siteN" folder when needed (e.g. nhentai1, nhentai2, nhentai3...)
@@ -1942,7 +1941,8 @@ suspend fun mergeContents(
         // Create destination folder for new content
         val parentFolder: DocumentFile?
         var targetFolder: DocumentFile?
-        // TODO destination is an archive when all source contents are archives; same with PDFs
+        // TODO destination is an archive when all source contents are archives
+        // TODO destination is a PDF when all source contents are PDFs (requires working on a better layout - see #1322)
 
         // External library root for external content
         if (mergedContent.status == StatusContent.EXTERNAL) {

@@ -61,7 +61,7 @@ class PrimaryDownloadManager {
 
 
     /**
-     * Create download folder or archive
+     * Create download folder or archive in the primary library
      */
     suspend fun createTargetLocation(context: Context, content: Content): Boolean =
         withContext(Dispatchers.IO) {
