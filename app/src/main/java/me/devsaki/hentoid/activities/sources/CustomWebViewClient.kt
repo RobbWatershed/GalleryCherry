@@ -549,7 +549,7 @@ open class CustomWebViewClient : WebViewClient {
         isReload: Boolean
     ) {
         url ?: return
-        activity?.onPageFinished(url, isResultsPage(url), isGalleryPage(url))
+        if (!isReload) activity?.onPageFinished(url, isResultsPage(url), isGalleryPage(url))
     }
 
     /**
