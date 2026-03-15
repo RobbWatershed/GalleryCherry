@@ -224,6 +224,8 @@ abstract class BaseSplitMergeWorker(
                         }
                         Timber.d("Mapping done for ${splitContent.title}")
                     } else {
+                        // TODO split target should be an archive if split origin is an archive
+                        // TODO split target should be a PDF if split origin is a PDF (requires working on a better layout - see #1322)
                         copyFiles(
                             applicationContext,
                             splitContentImages.map { Pair(it.fileUri.toUri(), it.name) },

@@ -48,10 +48,10 @@ import me.devsaki.hentoid.util.download.ContentQueueManager.pauseQueue
 import me.devsaki.hentoid.util.download.DownloadRateLimiter
 import me.devsaki.hentoid.util.download.DownloadSpeedLimiter.prefsSpeedCapToKbps
 import me.devsaki.hentoid.util.download.DownloadSpeedLimiter.setSpeedLimitKbps
-import me.devsaki.hentoid.util.download.PrimaryDownloadManager
 import me.devsaki.hentoid.util.download.RequestOrder
 import me.devsaki.hentoid.util.download.RequestOrder.NetworkError
 import me.devsaki.hentoid.util.download.RequestQueueManager
+import me.devsaki.hentoid.util.download.StorageDownloadManager
 import me.devsaki.hentoid.util.download.downloadToFile
 import me.devsaki.hentoid.util.exception.AccountException
 import me.devsaki.hentoid.util.exception.ArchiveException
@@ -160,7 +160,7 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
     // Progress notifications
     private lateinit var progressNotification: DownloadProgressNotification
 
-    private val dlManager = PrimaryDownloadManager()
+    private val dlManager = StorageDownloadManager()
 
 
     init {
@@ -464,7 +464,7 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
             .post(DownloadEvent.fromPreparationStep(DownloadEvent.Step.PREPARE_FOLDER, content))
 
         // Create destination folder for images to be downloaded
-        if (!dlManager.createTargetLocation(context, content)) {
+        if (!dlManager.createDownloadLocation(context, content)) {
             val title = content.title
             val message = String.format("Failed to create destination folder for $title.")
 
@@ -1016,7 +1016,7 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
                             img.url
                         )
                         img.status = StatusContent.SAVED
-                        dao.insertImageFile(img)
+                        dao.updateImageFile(img)
                         requestQueueManager.queueRequest(
                             buildImageDownloadRequest(
                                 img,
@@ -1250,7 +1250,7 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
     private fun onRequestSuccess(request: RequestOrder, fileUri: Uri) {
         val img = request.img
         updateImageProperties(img, true, fileUri)
-        dlManager.processDownloadedFile(
+        dlManager.appendFile(
             applicationContext,
             request.img.isCover && !request.img.isReadable,
             fileUri
@@ -1338,11 +1338,11 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
     ) {
         if (backupImage != null) {
             Timber.i("Backup URL contains image @ %s; queuing", backupImage.url)
-            originalImage.url =
-                backupImage.url // Replace original image URL by backup image URL
-            originalImage.isBackup =
-                true // Indicates the image is from a backup (for display in error logs)
-            dao.insertImageFile(originalImage)
+            // Replace original image URL by backup image URL
+            originalImage.url = backupImage.url
+            // Indicates the image is from a backup (for display in error logs)
+            originalImage.isBackup = true
+            dao.updateImageFile(originalImage)
             requestQueueManager.queueRequest(
                 buildImageDownloadRequest(
                     originalImage,
@@ -1465,7 +1465,7 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
 
             updateImageProperties(img, true, ugoiraGifFile)
 
-            dlManager.processDownloadedFile(applicationContext, false, ugoiraGifFile)
+            dlManager.appendFile(applicationContext, false, ugoiraGifFile)
         } catch (e: Exception) {
             Timber.w(e)
             isError = true
