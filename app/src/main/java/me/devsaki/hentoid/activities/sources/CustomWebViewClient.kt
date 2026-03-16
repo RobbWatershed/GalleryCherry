@@ -543,6 +543,15 @@ open class CustomWebViewClient : WebViewClient {
         activity?.onPageFinished(url, isResultsPage(url), isGalleryPage(url))
     }
 
+    override fun doUpdateVisitedHistory(
+        view: WebView?,
+        url: String?,
+        isReload: Boolean
+    ) {
+        url ?: return
+        if (!isReload) activity?.onPageFinished(url, isResultsPage(url), isGalleryPage(url))
+    }
+
     /**
      * Note : this method is called by a non-UI thread
      */

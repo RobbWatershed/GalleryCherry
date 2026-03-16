@@ -1727,8 +1727,12 @@ object ObjectBoxDB {
         store.boxFor(ErrorRecord::class.java).remove(records)
     }
 
-    fun insertImageFile(img: ImageFile) {
+    fun updateImageFile(img: ImageFile) {
         if (img.id > 0) store.boxFor(ImageFile::class.java).put(img)
+    }
+
+    fun insertImageFile(img: ImageFile): Long {
+        return store.boxFor(ImageFile::class.java).put(img)
     }
 
     private fun deleteImageFiles(contentId: Long) {

@@ -80,7 +80,7 @@ class HiperdexContent : BaseContentParser() {
                 var coverUrl = ""
                 if (imgUrls.isNotEmpty()) coverUrl = imgUrls[0]
                 content.setImageFiles(
-                    urlsToImageFiles(imgUrls, coverUrl, StatusContent.SAVED)
+                    urlsToImageFiles(imgUrls, content.downloadRange, StatusContent.SAVED, coverUrl)
                 )
                 content.qtyPages = imgUrls.size
             }

@@ -34,8 +34,16 @@ class AllPornComicParser : BaseChapteredImageListParser() {
         )?.let { doc ->
             progressPlus(1f)
             val images = doc.select("[class^=page-break] img")
-                .map { getImgSrc(it) }.filterNot { it.isEmpty() }
-            return urlsToImageFiles(images, targetOrder, StatusContent.SAVED, 1000, chp)
+                .map { getImgSrc(it) }
+                .filterNot { it.isEmpty() }
+            return urlsToImageFiles(
+                images,
+                content.downloadRange,
+                targetOrder,
+                StatusContent.SAVED,
+                1000,
+                chp
+            )
         }
         return emptyList()
     }

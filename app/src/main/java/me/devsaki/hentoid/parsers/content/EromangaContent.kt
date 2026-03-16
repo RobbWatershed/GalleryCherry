@@ -86,8 +86,10 @@ class EromangaContent : BaseContentParser() {
                 val imgUrls = imgs.map { getImgSrc(it) }
                 content.setImageFiles(
                     urlsToImageFiles(
-                        imgUrls, content.coverImageUrl,
-                        StatusContent.SAVED
+                        imgUrls,
+                        content.downloadRange,
+                        StatusContent.SAVED,
+                        content.coverImageUrl
                     )
                 )
             } ?: run {

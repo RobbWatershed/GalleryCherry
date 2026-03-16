@@ -73,8 +73,9 @@ class EdoujinContent : BaseContentParser() {
                     content.setImageFiles(
                         urlsToImageFiles(
                             chapterImgs,
-                            coverUrl,
-                            StatusContent.SAVED
+                            content.downloadRange,
+                            StatusContent.SAVED,
+                            coverUrl
                         )
                     )
                     content.qtyPages = chapterImgs.size

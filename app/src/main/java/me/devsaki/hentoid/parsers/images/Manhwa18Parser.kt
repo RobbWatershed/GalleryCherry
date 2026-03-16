@@ -29,7 +29,7 @@ class Manhwa18Parser : BaseChapteredImageListParser() {
             }
         }
 
-        fun parseChapters(doc: Document, contentId : Long): List<Chapter> {
+        fun parseChapters(doc: Document, contentId: Long): List<Chapter> {
             val data = getDocData(doc)
             jsonToObject(
                 data,
@@ -80,6 +80,7 @@ class Manhwa18Parser : BaseChapteredImageListParser() {
                 val html = Jsoup.parse(stream, null, Site.MANHWA18.url)
                 urlsToImageFiles(
                     html.select("img").map { getImgSrc(it) },
+                    content.downloadRange,
                     targetOrder,
                     StatusContent.SAVED,
                     1000,

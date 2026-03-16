@@ -81,6 +81,7 @@ import me.devsaki.hentoid.fragments.browser.DuplicateDialogFragment
 import me.devsaki.hentoid.fragments.browser.UrlDialogFragment
 import me.devsaki.hentoid.json.core.UpdateInfo
 import me.devsaki.hentoid.parsers.ContentParserFactory
+import me.devsaki.hentoid.ui.invokeInputDialog
 import me.devsaki.hentoid.ui.invokeNumberInputDialog
 import me.devsaki.hentoid.util.QueuePosition
 import me.devsaki.hentoid.util.Settings
@@ -307,6 +308,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
             menuSeek.setOnClickListener { onSeekClick() }
             menuForward.setOnClickListener { onForwardClick() }
             actionButton.setOnClickListener { onActionClick() }
+            rangeDownloadButton.setOnClickListener { onRangeDownload() }
 
             if (getStartSite() == Site.NONE) initWelcome()
         }
@@ -323,11 +325,12 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         }
 
         // Banner close buttons
-        val topAlertCloseButton = findViewById<View>(R.id.top_alert_close_btn)
-        topAlertCloseButton.setOnClickListener { binding?.topAlert?.visibility = View.GONE }
+        binding?.topAlertCloseBtn?.setOnClickListener {
+            Settings.setTopAlertClosed(getStartSite())
+            binding?.topAlert?.visibility = View.GONE
+        }
 
-        val bottomAlertCloseButton = findViewById<View>(R.id.bottom_alert_close_btn)
-        bottomAlertCloseButton.setOnClickListener { onBottomAlertCloseClick() }
+        binding?.bottomAlertCloseBtn?.setOnClickListener { onBottomAlertCloseClick() }
         downloadIcon =
             if (Settings.getBrowserDlAction() == DownloadMode.STREAM) R.drawable.selector_download_stream_action else R.drawable.selector_download_action
         if (Settings.isBrowserMode) downloadIcon = R.drawable.ic_forbidden_disabled
@@ -852,6 +855,8 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
      * (the one that contains the alerts when downloads are broken or sites are unavailable)
      */
     private fun displayTopAlertBanner() {
+        // Don't show if already closed manually during a previous session
+        if (Settings.isTopAlertClosed(getStartSite())) return
         alert?.let {
             binding?.apply {
                 topAlertIcon.setImageResource(it.getStatus().icon)
@@ -1054,6 +1059,22 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         }
     }
 
+    private fun onRangeDownload() {
+        invokeInputDialog(
+            this,
+            R.string.web_range_download_prompt,
+            currentContent?.downloadRange ?: "",
+            {
+                currentContent?.apply {
+                    downloadRange = it
+                    setImageFiles(emptyList())
+                    qtyPages = 0
+                }
+                onActionClick()
+            }
+        )
+    }
+
     /**
      * Switch the action button to either of the available modes
      *
@@ -1080,12 +1101,12 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
             }
             actionButtonMode = mode
             actionButton.setImageDrawable(
-                ContextCompat.getDrawable(
-                    this@BaseBrowserActivity,
-                    resId
-                )
+                ContextCompat.getDrawable(this@BaseBrowserActivity, resId)
             )
             actionButton.visibility = View.VISIBLE
+            rangeDownloadButton.isVisible =
+                (mode == ActionMode.DOWNLOAD && Settings.isRangeDownloadOn(getStartSite()))
+
             // It will become visible whenever the count of extra pages is known
             if (ActionMode.DOWNLOAD_PLUS != mode) actionBtnBadge.visibility = View.INVISIBLE
         }
@@ -1126,6 +1147,8 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         val dao: CollectionDAO = ObjectBoxDAO()
         var theContent = if (content.id > 0) dao.selectContent(content.id) else currentContent
         if (null == theContent) return
+
+        theContent.downloadRange = currentContent?.downloadRange ?: ""
         if (!isDownloadPlus && StatusContent.DOWNLOADED == theContent.status) {
             toast(R.string.already_downloaded)
             if (!quickDownload) lifecycleScope.launch { setActionMode(ActionMode.READ) }
@@ -1942,6 +1965,9 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
                 if (Settings.isBrowserLockFavPanel) DrawerLayout.LOCK_MODE_LOCKED_CLOSED else DrawerLayout.LOCK_MODE_UNLOCKED,
                 GravityCompat.END
             )
+        } else if (key.startsWith(Settings.Key.BROWSER_RANGE_DOWNLOAD)) {
+            binding?.rangeDownloadButton?.isVisible =
+                Settings.isRangeDownloadOn(getStartSite()) && ActionMode.DOWNLOAD == actionButtonMode
         }
         if (reload && !webClient.isLoading()) webView.reload()
     }

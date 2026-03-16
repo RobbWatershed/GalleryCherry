@@ -434,6 +434,8 @@
         <item>@string/transcode_encoder_jpeg</item>
         <item>@string/transcode_encoder_jxl_lossy</item>
         <item>@string/transcode_encoder_jxl_lossless</item>
+        <item>@string/transcode_encoder_jpegli</item>
+        <item>@string/transcode_encoder_avif</item>
     </string-array>
     <string-array name="transcode_encoders_lossless" translatable="false">
         <item>@string/transcode_encoder_webp_lossless</item>
@@ -444,6 +446,8 @@
         <item>@string/transcode_encoder_webp_lossy</item>
         <item>@string/transcode_encoder_jpeg</item>
         <item>@string/transcode_encoder_jxl_lossy</item>
+        <item>@string/transcode_encoder_jpegli</item>
+        <item>@string/transcode_encoder_avif</item>
     </string-array>
     <!-- Values from PictureEncoder -->
     <string-array name="transcode_encoders_all_vals" translatable="false">
@@ -453,6 +457,8 @@
         <item>3</item>
         <item>4</item>
         <item>5</item>
+        <item>6</item>
+        <item>7</item>
     </string-array>
     <string-array name="transcode_encoders_lossless_vals" translatable="false">
         <item>0</item>
@@ -463,6 +469,8 @@
         <item>1</item>
         <item>3</item>
         <item>4</item>
+        <item>6</item>
+        <item>7</item>
     </string-array>
 
     <!-- Archive dialog -->
@@ -580,6 +588,7 @@
     <string name="pref_browser_dns_default" translatable="false">-1</string>
     <string name="pref_browser_language_button_default" translatable="false">false</string>
     <string name="pref_browser_lock_favs_panel_default" translatable="false">false</string>
+    <string name="pref_browser_range_download_default" translatable="false">false</string>
     <!-- Strings: Settings: Downloader -->
     <string name="pref_queue_autostart_default" translatable="false">true</string>
     <string name="pref_queue_wifi_only_default" translatable="false">false</string>

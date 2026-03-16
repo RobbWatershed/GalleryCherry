@@ -69,7 +69,12 @@ class LusciousParser : BaseImageListParser() {
                     Timber.e("No metadata found @ ID %s", bookId)
                     return
                 }
-                imageFiles.addAll(metadata.toImageFileList(imageFiles.size - 1)) // Don't count cover in the offset
+                imageFiles.addAll(
+                    metadata.toImageFileList(
+                        content.downloadRange,
+                        imageFiles.size - 1
+                    )
+                ) // Don't count cover in the offset
                 if (metadata.getNbPages() > pageNumber) {
                     progressPlus(pageNumber * 1f / metadata.getNbPages())
                     getPages(content, bookId, pageNumber + 1, isManga, imageFiles)

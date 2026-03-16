@@ -211,6 +211,7 @@
     <string name="pref_viewer_continuous_summary_on">Premere “pagina successiva” nell’ultima pagina carica il libro successivo</string>
     <string name="pref_viewer_continuous_title">Lettura continua</string>
     <string name="pref_viewer_controls">Controlli</string>
+    <string name="pref_viewer_delete_load_direction">Segui la direzione di lettura dopo aver eliminato un libro</string>
     <string name="pref_viewer_display_mode">Modalità di visualizzazione orizzontale</string>
     <string name="pref_viewer_display_notch">Mostra intorno al notch</string>
     <string name="pref_viewer_display_pagenum">Mostra sempre il numero di pagina</string>
@@ -236,9 +237,9 @@
     <string name="pref_viewer_resume_last_left_summary_on">La riapertura di un libro riprende dall’ultima pagina letta, tranne se è stata raggiunta la fine del libro</string>
     <string name="pref_viewer_resume_last_left_title">Riprendi a leggere quando riapri i libri</string>
     <string name="pref_viewer_separating_bars">Barre di separazione in modalità verticale</string>
-    <string name="pref_viewer_slideshow_delay">Attesa tra ogni pagina (orizzontalmente)</string>
-    <string name="pref_viewer_slideshow_delay_vertical">Velocità di scorrimento (verticalmente)</string>
-    <string name="pref_viewer_slideshow_loop">Ciclo</string>
+    <string name="pref_viewer_slideshow_delay">Attesa tra ogni pagina (orizzontale)</string>
+    <string name="pref_viewer_slideshow_delay_vertical">Velocità di scorrimento (verticale)</string>
+    <string name="pref_viewer_slideshow_loop">Ripeti</string>
     <string name="pref_viewer_smart_crop">Ritaglio intelligente</string>
     <string name="pref_viewer_smart_crop_summary_off">Le immagini sono mostrate così come sono</string>
     <string name="pref_viewer_smart_crop_summary_on">I bordi neri sono rimossi automaticamente</string>
@@ -250,11 +251,11 @@
     <string name="pref_viewer_zoom_double_tap">Doppio tocco per zoommare</string>
     <string name="pref_viewer_zoom_holding">Zoom temporaneo mentre si tiene premuto</string>
     <string name="pref_viewer_zoom_transitions">Abilita animazione zoom</string>
-    <string name="prefs_ask_detach_external_library">Staccare la libreria esterna\?</string>
-    <string name="prefs_external_library_detached">Libreria esterna staccata</string>
+    <string name="prefs_ask_detach_external_library">Scollegare la libreria esterna?</string>
+    <string name="prefs_external_library_detached">Libreria esterna scollegata</string>
     <string name="proxy_warning">Alcui siti non funzionano bene con un proxy. Usa un’app DNS se incontri problemi durante la navigazione (ad es. pagine bianche, campi login bloccati)</string>
     <string name="searchpreference_clear">Cancella</string>
-    <string name="searchpreference_clear_history">Camcella cronologia</string>
+    <string name="searchpreference_clear_history">Cancella la cronologia</string>
     <string name="searchpreference_more">Altro</string>
     <string name="searchpreference_no_results">Nessun risultato</string>
     <string name="searchpreference_search">Cerca…</string>

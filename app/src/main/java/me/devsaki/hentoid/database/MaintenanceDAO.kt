@@ -119,6 +119,36 @@ class MaintenanceDAO {
         store.put(imgFiles)
     }
 
+    fun selectContentIdsWithNullDownloadRanges(): Set<Long> {
+        return ObjectBoxDB.store.boxFor(Content::class.java).query()
+            .isNull(Content_.downloadRange)
+            .or()
+            .equal(Content_.downloadRange, "", QueryBuilder.StringOrder.CASE_INSENSITIVE)
+            .safeFindIds().toSet()
+    }
+
+    fun resetDownloadRangeForContentId(ids: Collection<Long>) {
+        val store = ObjectBoxDB.store.boxFor(Content::class.java)
+        val contents = store.get(ids)
+        contents.forEach { it.downloadRange = "" }
+        store.put(contents)
+    }
+
+    fun selectChapterIdsWithNullDownloadRanges(): Set<Long> {
+        return ObjectBoxDB.store.boxFor(Chapter::class.java).query()
+            .isNull(Chapter_.downloadRange)
+            .or()
+            .equal(Chapter_.downloadRange, "", QueryBuilder.StringOrder.CASE_INSENSITIVE)
+            .safeFindIds().toSet()
+    }
+
+    fun resetDownloadRangeForChapterId(ids: Collection<Long>) {
+        val store = ObjectBoxDB.store.boxFor(Chapter::class.java)
+        val chapters = store.get(ids)
+        chapters.forEach { it.downloadRange = "" }
+        store.put(chapters)
+    }
+
     fun selectOrphanQueueRecordIds(): LongArray {
         val qrCondition = QueueRecord_.contentId.lessOrEqual(0).or(QueueRecord_.contentId.isNull)
         return ObjectBoxDB.store.boxFor(QueueRecord::class.java).query(qrCondition).safeFindIds()

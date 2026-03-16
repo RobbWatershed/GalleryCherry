@@ -283,9 +283,9 @@ class BookmarksDrawerFragment : Fragment(R.layout.fragment_web_bookmarks),
     }
 
     private fun onBookmarkBtnClickedAdd() {
-        invokeInputDialog(requireContext(), R.string.bookmark_edit_title, {
+        invokeInputDialog(requireContext(), R.string.bookmark_edit_title, title, {
             viewModel.addBookmark(it)
-        }, title)
+        })
     }
 
     private fun onBookmarkBtnClickedRemove() {
@@ -366,7 +366,7 @@ class BookmarksDrawerFragment : Fragment(R.layout.fragment_web_bookmarks),
         when (menuItem.itemId) {
             R.id.action_copy -> copySelectedItem()
             R.id.action_edit -> editSelectedItem()
-            R.id.action_delete -> purgeSelectedItems()
+            R.id.action_delete -> deleteSelectedItems()
             R.id.action_home -> toggleHomeSelectedItem()
             else -> {
                 binding?.selectionToolbar?.visibility = View.GONE
@@ -395,6 +395,7 @@ class BookmarksDrawerFragment : Fragment(R.layout.fragment_web_bookmarks),
         if (1 == selectedItems.size && context != null) {
             val b = selectedItems.first().getObject()
             if (b != null && copyPlainTextToClipboard(context, b.url)) {
+                selectExtension.selectOnLongClick = true
                 toastShort(R.string.web_url_clipboard)
                 binding?.selectionToolbar?.visibility = View.INVISIBLE
             }
@@ -411,9 +412,12 @@ class BookmarksDrawerFragment : Fragment(R.layout.fragment_web_bookmarks),
             if (b != null) invokeInputDialog(
                 requireActivity(),
                 R.string.bookmark_edit_title,
-                { s -> onEditTitle(s) },
-                b.title
-            ) { selectExtension.deselect(selectExtension.selections.toMutableSet()) }
+                b.title,
+                { s -> onEditTitle(s) }
+            ) {
+                selectExtension.selectOnLongClick = true
+                selectExtension.deselect(selectExtension.selections.toMutableSet())
+            }
         }
     }
 
@@ -422,6 +426,7 @@ class BookmarksDrawerFragment : Fragment(R.layout.fragment_web_bookmarks),
         val context: Context? = activity
         if (1 == selectedItems.size && context != null) {
             selectedItems.first().getObject()?.let { b ->
+                selectExtension.selectOnLongClick = true
                 b.title = newTitle
                 viewModel.updateBookmark(b)
                 binding?.selectionToolbar?.visibility = View.INVISIBLE
@@ -432,12 +437,13 @@ class BookmarksDrawerFragment : Fragment(R.layout.fragment_web_bookmarks),
     /**
      * Callback for the "delete item" action button
      */
-    private fun purgeSelectedItems() {
+    private fun deleteSelectedItems() {
         val selectedItems: Set<TextItem<SiteBookmark>> = selectExtension.selectedItems
         val context: Context? = activity
         if (selectedItems.isNotEmpty() && context != null) {
             val selectedContent = selectedItems.mapNotNull { it.getObject() }
             if (selectedContent.isNotEmpty()) {
+                selectExtension.selectOnLongClick = true
                 viewModel.deleteBookmarks(selectedContent.map { it.id })
                 binding?.selectionToolbar?.visibility = View.INVISIBLE
             }

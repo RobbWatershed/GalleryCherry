@@ -25,6 +25,7 @@ import me.devsaki.hentoid.util.jsonToObject
 import me.devsaki.hentoid.util.network.HEADER_REFERER_KEY
 import me.devsaki.hentoid.util.network.getOnlineResourceFast
 import me.devsaki.hentoid.util.pause
+import me.devsaki.hentoid.util.rangeToNumbers
 import me.devsaki.hentoid.util.serializeToJson
 import me.devsaki.hentoid.views.HitomiBackgroundWebView
 import org.greenrobot.eventbus.EventBus
@@ -139,9 +140,16 @@ class HitomiParser : BaseImageListParser() {
         if (!imageUrls.isNullOrEmpty()) {
             onlineContent.coverImageUrl = imageUrls[0]
             result.add(ImageFile.newCover(imageUrls[0], StatusContent.SAVED))
+
+            val rangeIndexes =
+                if (onlineContent.downloadRange.isBlank()) imageUrls.indices
+                else rangeToNumbers(onlineContent.downloadRange)
+                    .filter { it >= 0 && it < imageUrls.count() }
+
             var order = 1
-            for (s in imageUrls) {
-                val img = urlToImageFile(s, order++, imageUrls.size, StatusContent.SAVED)
+            rangeIndexes.forEach {
+                val img =
+                    urlToImageFile(imageUrls[it], order++, imageUrls.size, StatusContent.SAVED)
                 img.downloadParams = downloadParamsStr
                 result.add(img)
             }

@@ -33,7 +33,7 @@ android {
         minSdkVersion 26
         targetSdkVersion 36
         versionCode 130 // is updated automatically by BitRise; only used when building locally
-        versionName '1.21.9'
+        versionName '1.21.10'
 
         def includeObjectBoxBrowser = System.getenv("INCLUDE_OBJECTBOX_BROWSER") ?: "false"
         def includeLeakCanary = System.getenv("INCLUDE_LEAK_CANARY") ?: "false"
@@ -111,7 +111,7 @@ dependencies {
      * TESTING
      */
     testImplementation 'junit:junit:4.13.2'
-    testImplementation 'org.mockito:mockito-core:5.21.0'
+    testImplementation 'org.mockito:mockito-core:5.22.0'
     testImplementation 'androidx.test:core:1.7.0'
     testImplementation 'io.kotlintest:kotlintest-assertions:3.4.2'
     testImplementation 'androidx.arch.core:core-testing:2.2.0'
@@ -156,16 +156,19 @@ dependencies {
      * MEDIA
      */
     // Image loader and animated pics support -> https://github.com/coil-kt/coil
-    def Coil_version = '3.3.0'
+    def Coil_version = '3.4.0'
     implementation("io.coil-kt.coil3:coil:$Coil_version")
     implementation("io.coil-kt.coil3:coil-network-okhttp:$Coil_version")
     implementation("io.coil-kt.coil3:coil-gif:$Coil_version")
 
     // Coil support for JXL
-    implementation 'io.github.awxkee:jxl-coder-coil:2.5.2'
+    implementation 'io.github.awxkee:jxl-coder-coil:2.6.0'
 
     // Coil support for AVIF
     implementation 'com.github.awxkee:avif-coder-coil:2.1.4'
+
+    // JPEGLI encoder
+    implementation 'com.github.awxkee:jpegli-coder:1.0.2'
 
     // Animated pics that Coil doesn't support (APNG, animated AVIF) -> https://github.com/penfeizhou/APNG4Android
     def APNG4Android_version = '3.0.5'
@@ -173,7 +176,7 @@ dependencies {
     implementation "com.github.penfeizhou.android.animation:avif:$APNG4Android_version"
 
     // Animated GIF creator -> https://github.com/shaksternano/gif.kt
-    implementation("com.shakster:gifkt:0.3.1")
+    implementation('com.shakster:gifkt:0.3.2')
 
     // PDF creator/extractor
     implementation 'com.itextpdf:itext7-core:8.0.5'
@@ -259,7 +262,7 @@ dependencies {
 
     // ObjectBox browser dependencies must be set before applying ObjectBox plugin so it does not add objectbox-android
     // (would result in two conflicting versions, e.g. "Duplicate files copied in APK lib/armeabi-v7a/libobjectbox.so").
-    def objectbox_version = "5.1.0"
+    def objectbox_version = "5.2.0"
     if (includeObjectBoxBrowser.toBoolean()) {
         debugImplementation "io.objectbox:objectbox-android-objectbrowser:$objectbox_version"
         releaseImplementation "io.objectbox:objectbox-android:$objectbox_version"
@@ -307,7 +310,7 @@ dependencies {
      * ANALYTICS
      */
     // Import the BoM for the Firebase platform
-    implementation platform('com.google.firebase:firebase-bom:34.9.0')
+    implementation platform('com.google.firebase:firebase-bom:34.10.0')
 
     // Crashlytics
     implementation 'com.google.firebase:firebase-crashlytics'

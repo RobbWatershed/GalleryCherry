@@ -324,6 +324,7 @@ class ReaderViewModel(
         if (isSupportedArchive(docName) || "pdf" == getExtension(docName)) {
             val res = scanArchivePdf(
                 ctx,
+                dao,
                 parent.uri,
                 doc,
                 emptyList(),
@@ -1609,7 +1610,7 @@ class ReaderViewModel(
     private fun onExtractionComplete(
         nbProcessed: AtomicInteger, maxElements: Int
     ) {
-        Timber.d("Extracted %d files successfuly", maxElements)
+        Timber.d("Extracted $maxElements files successfuly")
         EventBus.getDefault().post(
             ProcessEvent(
                 ProcessEvent.Type.COMPLETE,
@@ -2130,7 +2131,7 @@ private fun readImageType(context: Context, uri: Uri): ImageType {
             }
         }
     } catch (e: Exception) {
-        Timber.w(e, "Unable to open image file")
+        Timber.w(e, "Unable to open image file $uri")
     }
     return ImageType.IMG_TYPE_ERROR
 }

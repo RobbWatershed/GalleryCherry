@@ -127,7 +127,8 @@ class HentaifoxContent : BaseContentParser() {
                         content.setImageFiles(
                             urlsToImageFiles(
                                 HentaifoxParser.parseImages(content, th, scr),
-                                content.coverImageUrl, StatusContent.SAVED
+                                content.downloadRange,
+                                StatusContent.SAVED, content.coverImageUrl
                             )
                         )
                     }

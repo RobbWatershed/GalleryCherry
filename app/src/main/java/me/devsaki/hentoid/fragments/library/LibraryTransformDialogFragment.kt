@@ -329,7 +329,7 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
             val sourceName = sourceBmp.name + "." + getExtensionFromMimeType(sourceMime)
             val params = buildParams()
             val targetData = withContext(Dispatchers.IO) {
-                return@withContext if (4 == params.resizeMethod) {
+                return@withContext if (params.resizeEnabled && 4 == params.resizeMethod) {
                     val res = transformManhwa(params, pageIndex)
                     if (res.isEmpty()) sourceBmp.rawData else res
                 } else transform(sourceBmp.rawData, params, true)

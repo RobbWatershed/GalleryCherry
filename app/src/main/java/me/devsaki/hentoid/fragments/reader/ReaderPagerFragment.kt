@@ -1034,8 +1034,10 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
                 Settings.isContentSmoothRendering(bookPreferences),
                 if (absImageIndex > -1) adapter.getSSivAtPosition(absImageIndex) else true
             )
-            if (null == displayParams || newDisplayParams != displayParams)
+            if (null == displayParams || newDisplayParams != displayParams) {
+                Timber.d(">> adjustDisplay $absImageIndex")
                 onDisplayParamsChange(newDisplayParams)
+            }
         }
     }
 
@@ -1102,6 +1104,8 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
                 pageSnapWidget.setPageSnapEnabled(VIEWER_ORIENTATION_HORIZONTAL == newDisplayParams.orientation)
             }
 
+            Timber.d(">> frameEnabled $isZoomFrameEnabled (${newDisplayParams.useSsiv})")
+            if (!isZoomFrameEnabled) recyclerView.resetScale() // RecyclerView scale and SSIV scale can't combine
             zoomFrame.frameEnabled = isZoomFrameEnabled
             recyclerView.setLongTapZoomEnabled(!(Settings.isReaderHoldToZoom xor isZoomFrameEnabled))
             recyclerView.setDoubleTapZoomEnabled(!(Settings.isReaderDoubleTapToZoom xor isZoomFrameEnabled))

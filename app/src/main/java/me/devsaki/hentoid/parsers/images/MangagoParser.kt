@@ -16,9 +16,9 @@ import me.devsaki.hentoid.database.domains.ImageFile
 import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.parsers.getImgSrc
 import me.devsaki.hentoid.parsers.urlToImageFile
-import me.devsaki.hentoid.util.download.PrimaryDownloadManager
+import me.devsaki.hentoid.util.download.StorageDownloadManager
 import me.devsaki.hentoid.util.exception.EmptyResultException
-import me.devsaki.hentoid.util.file.getFileFromSingleUri
+import me.devsaki.hentoid.util.file.fileSizeFromUri
 import me.devsaki.hentoid.util.network.UriParts
 import me.devsaki.hentoid.util.network.fixUrl
 import me.devsaki.hentoid.util.pause
@@ -30,7 +30,7 @@ const val PIC_SELECTOR = "#pic_container img"
 
 class MangagoParser : BaseChapteredImageListParser() {
     private var webview: WysiwygBackgroundWebView? = null
-    private val dlManager = PrimaryDownloadManager()
+    private val dlManager = StorageDownloadManager()
 
     @OptIn(DelicateCoroutinesApi::class)
     override fun clear() {
@@ -82,7 +82,7 @@ class MangagoParser : BaseChapteredImageListParser() {
 
         GlobalScope.launch(Dispatchers.Default) {
             // Create the book's folder to receive screencapped images
-            if (!dlManager.createTargetLocation(context, content))
+            if (!dlManager.createDownloadLocation(context, content))
                 throw EmptyResultException("Unable to create target folder for ${content.title}")
 
             withContext(Dispatchers.Main) {
@@ -188,17 +188,14 @@ class MangagoParser : BaseChapteredImageListParser() {
         val img = ImageFile(
             dbOrder = order,
             dbPageUrl = pageUrl,
-            status = StatusContent.DOWNLOADED,
-            fileUri = fileUri.toString()
-        )
+            status = StatusContent.DOWNLOADED
+        ).withFileUri(fileUri)
         Timber.v("%d IMG result : %s", order, pageUrl)
         img.computeName(11111)
         img.setChapter(chp)
         // Enrich physical properties
-        getFileFromSingleUri(context, fileUri)?.let {
-            img.size = it.length()
-        }
+        img.size = fileSizeFromUri(context, fileUri)
         result.add(img)
-        dlManager.processDownloadedFile(context, false, fileUri)
+        dlManager.appendFile(context, false, fileUri)
     }
 }

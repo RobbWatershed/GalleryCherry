@@ -43,7 +43,14 @@ class PururinParser : BaseChapteredImageListParser() {
             result.addAll(imgSrc)
         }
 
-        return urlsToImageFiles(result, targetOrder, StatusContent.SAVED, 1000, chp)
+        return urlsToImageFiles(
+            result,
+            content.downloadRange,
+            targetOrder,
+            StatusContent.SAVED,
+            1000,
+            chp
+        )
     }
 
     private fun thumbToPage(thumbUrl: String): String {

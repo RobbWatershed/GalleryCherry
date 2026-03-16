@@ -43,6 +43,7 @@ import me.devsaki.hentoid.ui.BlinkAnimation
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.download.ContentQueueManager.isQueueActive
 import me.devsaki.hentoid.util.download.ContentQueueManager.isQueuePaused
+import me.devsaki.hentoid.util.file.formatHumanReadableSize
 import me.devsaki.hentoid.util.formatArtistForDisplay
 import me.devsaki.hentoid.util.formatSeriesForDisplay
 import me.devsaki.hentoid.util.formatTagsForDisplay
@@ -477,7 +478,8 @@ class ContentItem : AbstractItem<ContentItem.ViewHolder>,
             val context = baseLayout.context
             val template: String
             if (viewType == ViewType.QUEUE || viewType == ViewType.ERRORS || viewType == ViewType.LIBRARY_EDIT || viewType == ViewType.MERGE || viewType == ViewType.SPLIT) {
-                val nbPages = "$qtyPages"
+                val nbPages =
+                    qtyPages.toString() + if (content != null && content.downloadRange.isBlank()) "" else "⎵"
                 template = if (viewType == ViewType.ERRORS) {
                     val nbMissingPages = qtyPages - content!!.getNbDownloadedPages()
                     if (nbMissingPages > 0) {
@@ -493,6 +495,10 @@ class ContentItem : AbstractItem<ContentItem.ViewHolder>,
                 val isPlaceholder = content.status == StatusContent.PLACEHOLDER
                 val phVisibility = if (isPlaceholder) View.GONE else View.VISIBLE
                 tvPages.let { tv ->
+                    ivPages?.setImageResource(
+                        if (content.downloadRange.isBlank()) R.drawable.ic_images
+                        else R.drawable.ic_images_range
+                    )
                     ivPages?.visibility = phVisibility
                     tv.visibility = phVisibility
                     tv.text = String.format(Locale.ENGLISH, "%d", content.getNbDownloadedPages())
@@ -516,14 +522,8 @@ class ContentItem : AbstractItem<ContentItem.ViewHolder>,
                         if (isPlaceholder || content.downloadMode == DownloadMode.STREAM) View.GONE else View.VISIBLE
                     ivStorage?.visibility = storageVisibility
                     tv.visibility = storageVisibility
-                    if (storageVisibility == View.VISIBLE) {
-                        val sizeMb = content.size / (1024.0 * 1024.0)
-                        val sizeGb = sizeMb / 1024.0
-                        if (sizeGb > 1) tv.text =
-                            context.getString(R.string.library_metrics_storage_gb, sizeGb)
-                        else tv.text =
-                            context.getString(R.string.library_metrics_storage_mb, sizeMb)
-                    }
+                    if (storageVisibility == View.VISIBLE)
+                        tv.text = formatHumanReadableSize(content.size, context.resources)
                 }
             }
         }

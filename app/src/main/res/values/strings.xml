@@ -224,6 +224,7 @@
     <string name="storage_archive_description">Store books as images inside CBZ archives</string>
     <string name="storage_streamed">Streamed</string>
     <string name="storage_streamed_description">Don\'t store images on storage, stream them as you read</string>
+    <string name="storage_stream_warning">At least one website from your selection does NOT support streaming. Switching to streaming is highly discouraged.</string>
 
     <!-- Import downloads -->
     <string name="import_downloads_title">Import downloads</string>
@@ -455,8 +456,6 @@
     <string name="content_not_found">Error - content not found</string>
     <string name="contents_detected">Hentoid has recognized an existing library in this location.\nDo you want to import this library\?</string>
     <string name="library_imports_title">Library imports</string>
-    <string name="library_metrics_storage_mb">%.0f MB</string>
-    <string name="library_metrics_storage_gb">%.2f GB</string>
     <string name="starting_import">Starting import…</string>
     <string name="importing_library">Importing Library</string>
     <string name="import_complete">Import complete</string>
@@ -818,6 +817,7 @@
     <string name="web_all_sites">All sites</string>
     <string name="web_target_page_unavailable">Webpage not available%s; loading welcome page instead</string>
     <string name="web_target_page_outside_restricted_domains">Host %s outside restricted domains</string>
+    <string name="web_range_download_prompt" tools:ignore="TypographyDashes">Range of gallery pages to download (e.g. 1-5 / 1;3;8 / 1-2;5-7)</string>
 
     <!-- Web browser (site specifics) -->
     <string name="help_web_exh_account">Please use or create an exHentai account</string>
@@ -1074,6 +1074,8 @@
     <string name="transcode_encoder_jpeg">JPEG</string>
     <string name="transcode_encoder_jxl_lossy">JXL (lossy)</string>
     <string name="transcode_encoder_jxl_lossless">JXL (lossless)</string>
+    <string name="transcode_encoder_jpegli">JPEGLI</string>
+    <string name="transcode_encoder_avif">AVIF</string>
     <string name="encoder_quality">Quality</string>
     <string name="encoder_warning">WEBP format is limited to 16383 pixels in width and height. Larger pictures will automatically be encoded to PNG or JPG.</string>
     <string name="retransform_warning">%d pages have already been transformed. Transforming them multiple times may result in noticeable quality loss.\nWe advise redownloading original images and transforming them one single time.</string>

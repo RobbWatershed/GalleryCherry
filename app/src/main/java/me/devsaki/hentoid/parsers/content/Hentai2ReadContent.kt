@@ -68,8 +68,9 @@ class Hentai2ReadContent : BaseContentParser() {
                     content.setImageFiles(
                         urlsToImageFiles(
                             chapterImgs,
-                            coverUrl,
-                            StatusContent.SAVED
+                            content.downloadRange,
+                            StatusContent.SAVED,
+                            coverUrl
                         )
                     )
                     content.qtyPages = chapterImgs.size

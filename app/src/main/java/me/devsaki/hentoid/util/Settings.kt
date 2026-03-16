@@ -65,7 +65,7 @@ object Settings {
         result.remove(Key.ACHIEVEMENTS_NB_AI_RESCALE)
         result.remove(Key.BEHOLDER_TIMESTAMP)
 
-        return result.filterValues { it != null }.mapValues { it -> it.value as Any }
+        return result.filterValues { it != null }.mapValues { it.value as Any }
     }
 
     fun importInformation(settings: Map<String, Any?>) {
@@ -254,7 +254,7 @@ object Settings {
 
     private val browserDlActionInt by IntSettingStr(Key.BROWSER_DL_ACTION, Value.DL_ACTION_DL_PAGES)
     fun getBrowserDlAction(): DownloadMode {
-        return DownloadMode.Companion.fromValue(browserDlActionInt)
+        return DownloadMode.fromValue(browserDlActionInt)
     }
 
     val isBrowserQuickDl: Boolean by BoolSetting(Key.BROWSER_QUICK_DL, true)
@@ -275,6 +275,22 @@ object Settings {
         Key.BROWSER_PROXY,
         "" // No proxy
     )
+
+    fun isTopAlertClosed(site: Site): Boolean {
+        return topAlertClosed.contains(site)
+    }
+
+    fun setTopAlertClosed(site: Site) {
+        val closedSites = topAlertClosed.toMutableSet()
+        closedSites.add(site)
+        topAlertClosed = closedSites.toList()
+    }
+
+    fun clearTopAlertClosed() {
+        topAlertClosed = emptyList()
+    }
+
+    private var topAlertClosed: List<Site> by ListSiteSetting("browser_topalert_closed", "")
 
     // QUEUE / DOWNLOADER
     val isDownloadEhHires: Boolean by BoolSetting("pref_dl_eh_hires", false)
@@ -315,6 +331,19 @@ object Settings {
     var downloadScheduleSummary: String by StringSetting("download_schedule", disabledStr)
     var downloadScheduleStart: Int by IntSetting("download_schedule_start", 0)
     var downloadScheduleEnd: Int by IntSetting("download_schedule_end", 0)
+    fun isRangeDownloadOn(site: Site): Boolean {
+        return sharedPreferences.getBoolean(
+            makeSiteKey(Key.BROWSER_RANGE_DOWNLOAD, site),
+            isAppRangeDownloadOn
+        )
+    }
+
+    fun setRangeDownloadOn(site: Site, value: Boolean) {
+        sharedPreferences.edit { putBoolean(makeSiteKey(Key.BROWSER_RANGE_DOWNLOAD, site), value) }
+    }
+
+    var isAppRangeDownloadOn: Boolean by BoolSetting(Key.BROWSER_RANGE_DOWNLOAD, false)
+
 
     // READER
     var isReaderResumeLastLeft: Boolean by BoolSetting("pref_viewer_resume_last_left", true)
@@ -556,7 +585,6 @@ object Settings {
     var lastDBUpdateVersion: Int by IntSetting("last_db_update", 0)
 
 
-
     // Public Helpers
 
     fun registerPrefsChangedListener(listener: OnSharedPreferenceChangeListener) {
@@ -707,6 +735,7 @@ object Settings {
         const val BROWSER_CLEAR_COOKIES = "pref_browser_clear_cookies"
         const val BROWSER_NHENTAI_INVISIBLE_BLACKLIST = "pref_nhentai_invisible_blacklist"
         const val DL_HTTP_429_DEFAULT_DELAY = "pref_dl_http_429_default_delay"
+        const val BROWSER_RANGE_DOWNLOAD = "browser_range_download"
 
         const val TEXT_SELECT_MENU = "TEXT_SELECT_MENU"
         const val APP_LOCK = "pref_app_lock"
@@ -762,6 +791,7 @@ object Settings {
     }
 
     // IMPORTANT : Any value change must be mirrored in res/values/array_preferences.xml
+    @Suppress("unused")
     object Value {
         private val DEFAULT_SITES = arrayOf(
             Site.NHENTAI,
@@ -904,7 +934,7 @@ object Settings {
         const val READER_AUTO_ROTATE_LEFT = 1
         const val READER_AUTO_ROTATE_RIGHT = 2
 
-        val ORDER_CONTENT_FAVOURITE = -2 // Artificial order created for clarity purposes
+        const val ORDER_CONTENT_FAVOURITE = -2 // Artificial order created for clarity purposes
 
         const val LOCK_TIMER_OFF = 0
         const val LOCK_TIMER_10S = 1
