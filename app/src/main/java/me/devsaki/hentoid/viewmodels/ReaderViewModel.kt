@@ -2071,6 +2071,7 @@ class ReaderViewModel(
                 stopPreload?.set(true)
                 Timber.d("Aborting a preload")
             }
+            if (it < 0 || it >= viewerImagesInternal.size) return@forEach
 
             val img = viewerImagesInternal[it]
             val uri =
