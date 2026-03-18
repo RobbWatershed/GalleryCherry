@@ -210,9 +210,9 @@ fun urlsToImageFiles(
     // Remove duplicates and MACOSX indexes (yes, it does happen!) before creating the ImageFiles
     val imgUrlsUnique = imgUrls.distinct().filterNot { it.contains("__MACOSX") || it.isEmpty() }
     val rangeIndexes =
-        if (range.isBlank()) imgUrls.indices
+        if (range.isBlank()) imgUrlsUnique.indices
         else rangeToNumbers(range)
-            .filter { it >= initialOrder && it < initialOrder + imgUrls.count() }
+            .filter { it >= initialOrder && it < initialOrder + imgUrlsUnique.count() }
             .map { it - initialOrder }
     rangeIndexes.forEach {
         result.add(
