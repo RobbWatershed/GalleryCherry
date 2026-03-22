@@ -33,6 +33,7 @@ import me.devsaki.hentoid.util.network.getOnlineDocument
 import me.devsaki.hentoid.util.network.parseCookies
 import me.devsaki.hentoid.util.network.postOnlineResource
 import me.devsaki.hentoid.util.network.webkitRequestHeadersToOkHttpHeaders
+import me.devsaki.hentoid.util.rangeToNumbers
 import me.devsaki.hentoid.util.serializeToJson
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
@@ -259,6 +260,7 @@ class EHentaiParser : ImageListParser {
             headers: List<Pair<String, String>>,
             useHentoidAgent: Boolean,
             useWebviewAgent: Boolean,
+            range: String,
             progress: ParseProgress
         ): List<ImageFile> {
             val result: MutableList<ImageFile> = ArrayList()
@@ -267,11 +269,15 @@ class EHentaiParser : ImageListParser {
             val mpvInfo = parseMpvPage(mpvUrl, headers, useHentoidAgent, useWebviewAgent)
                 ?: throw EmptyResultException("No exploitable data has been found on the multiple page viewer")
             val pageCount = mpvInfo.pagecount.coerceAtMost(mpvInfo.images.size)
-            var pageNum = 1
-            while (pageNum <= pageCount && !progress.isProcessHalted()) {
 
-                // Get the URL of he 1st page as the cover
-                if (1 == pageNum) {
+            val rangeIndexes = if (range.isBlank()) IntRange(1, pageCount)
+            else rangeToNumbers(range).filter { it in 0..<pageCount }.map { it + 1 }
+
+            rangeIndexes.forEach {
+                if (progress.isProcessHalted()) return@forEach
+
+                // Get the URL of the 1st page as the cover
+                if (1 == it) {
                     val imageMetadata = getMpvImage(
                         mpvInfo.getImageInfo(0),
                         headers,
@@ -283,15 +289,14 @@ class EHentaiParser : ImageListParser {
                 // Add page URLs to be read later by the downloader
                 result.add(
                     ImageFile.fromPageUrl(
-                        pageNum,
+                        it,
                         serializeToJson(
-                            mpvInfo.getImageInfo(pageNum - 1),
+                            mpvInfo.getImageInfo(it - 1),
                             MpvImageInfo::class.java
                         ),
                         StatusContent.SAVED, pageCount
                     )
                 )
-                pageNum++
             }
             return result
         }
@@ -336,12 +341,15 @@ class EHentaiParser : ImageListParser {
             //    - grab the alternate URL of the "Click here if the image fails loading" link
             val result: MutableList<ImageFile> = ArrayList()
             result.add(ImageFile.newCover(content.coverImageUrl, StatusContent.SAVED))
-            var order = 1
-            for (pageUrl in pageUrls) {
+
+            val rangeIndexes = if (content.downloadRange.isBlank()) IntRange(1, pageUrls.size)
+            else rangeToNumbers(content.downloadRange).filter { it in 0..<pageUrls.size }
+
+            rangeIndexes.forEach {
                 result.add(
                     ImageFile.fromPageUrl(
-                        order++,
-                        pageUrl,
+                        it + 1,
+                        pageUrls[it],
                         StatusContent.SAVED,
                         pageUrls.size
                     )
@@ -490,6 +498,7 @@ class EHentaiParser : ImageListParser {
                         headers,
                         useHentoidAgent,
                         useWebviewAgent,
+                        content.downloadRange,
                         progress
                     )
                 } catch (_: EmptyResultException) {

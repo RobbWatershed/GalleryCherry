@@ -104,9 +104,10 @@ class ExHentaiParser : ImageListParser {
                         headers,
                         useHentoidAgent,
                         useWebviewAgent,
+                        content.downloadRange,
                         progress
                     )
-                } catch (e: EmptyResultException) {
+                } catch (_: EmptyResultException) {
                     EHentaiParser.loadClassic(
                         content,
                         galleryDoc,
