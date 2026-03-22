@@ -157,10 +157,12 @@ class ZipReader(context: Context, archiveUri: Uri, failOnUnsupported: Boolean = 
                                 val size = it.readUShortLe().toLong()
                                 //Timber.v("extra data $id ($size)")
                                 when (id) {
-                                    0x0001 -> {
+                                    0x0001 -> { // ZIP64 extended information
+                                        //Timber.v("zip64 extra data $id ($size)")
                                         uncompressedSize = it.readLongLe()
-                                        it.skip(8) // Compressed size
-                                        lfhOffset = it.readLongLe()
+                                        if (size > 8) it.skip(8) // Compressed size
+                                        if (size > 16) lfhOffset = it.readLongLe()
+                                        if (size > 24) it.skip(4) // Number of the disk on which this file starts
                                     }
                                     /*
                                     0x0008 -> {
