@@ -1092,6 +1092,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
                 )
                 actionButton.visibility = View.INVISIBLE
                 actionBtnBadge.visibility = View.INVISIBLE
+                rangeDownloadButton.visibility = View.INVISIBLE
                 return@withContext
             }
             @DrawableRes val resId: Int = when (mode) {
