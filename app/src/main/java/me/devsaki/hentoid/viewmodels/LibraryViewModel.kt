@@ -1412,7 +1412,7 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
                     .mapIndexed { i, e ->
                         var path = if (isLocationInUri) e.fileUri else e.url
                         path = path.replace(content.storageUri, "")
-                        path = path.substring(path.lastIndexOf('/') + 1)
+                        path = path.substring(path.indexOf('/') + 1)
                         Triple(path, i.toLong(), path)
                     }
                 val imgUris = context.extractArchiveEntriesBlocking(

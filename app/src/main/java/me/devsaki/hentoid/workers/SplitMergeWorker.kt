@@ -54,7 +54,6 @@ import me.devsaki.hentoid.util.renumberChapters
 import me.devsaki.hentoid.workers.data.SplitMergeData
 import org.greenrobot.eventbus.EventBus
 import timber.log.Timber
-import java.io.File
 import java.io.IOException
 import java.time.Instant
 import java.util.Locale
@@ -182,10 +181,12 @@ abstract class BaseSplitMergeWorker(
                         val nbMaxDigits =
                             (floor(log10(splitContentImages.size.toDouble())) + 1).toInt()
                         val extractInstructions = splitContentImages.map {
-                            val uri =
+                            var path =
                                 if (it.url.startsWith(content.storageUri)) it.url else it.fileUri
+                            path = path.replace(content.storageUri, "")
+                            path = path.substring(path.indexOf('/') + 1)
                             Triple(
-                                uri.replace(content.storageUri + File.separator, ""),
+                                path,
                                 it.order.toLong(),
                                 String.format(
                                     Locale.ENGLISH,
@@ -367,7 +368,9 @@ abstract class BaseSplitMergeWorker(
             for ((position, img) in images.withIndex()) {
                 img.id = 0 // Force working on a new picture
                 img.setChapter(null)
+                val fileUri = img.fileUri // Extract full Uri
                 img.content.target = null // Clear content
+                img.fileUri = fileUri // Inject back full Uri
                 img.isCover = (0 == position)
                 img.order = position
                 img.computeName(images.size)

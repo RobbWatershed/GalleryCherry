@@ -23,7 +23,6 @@ import me.devsaki.hentoid.util.file.extractArchiveEntriesCached
 import me.devsaki.hentoid.util.file.getFileFromSingleUriString
 import me.devsaki.hentoid.util.formatCacheKey
 import me.devsaki.hentoid.viewholders.ImageFileItem
-import java.io.File
 
 /**
  * Dialog to pick a picture in a content gallery
@@ -123,13 +122,10 @@ class GalleryPickerDialogFragment : BaseDialogFragment<GalleryPickerDialogFragme
             // Load first 10 pics (roughly the same behaviour as the reader for now - see #1227)
             for (i in 0..minOf(imgs.size - 1, 9)) {
                 val img = imgs[i]
-                extractInstructions.add(
-                    Triple(
-                        img.url.replace(content.storageUri + File.separator, ""),
-                        img.id,
-                        formatCacheKey(img)
-                    )
-                )
+                var path = img.url
+                path = path.replace(content.storageUri, "")
+                path = path.substring(path.indexOf('/') + 1)
+                extractInstructions.add(Triple(path, img.id, formatCacheKey(img)))
             }
 
             if (content.isPdf) {
