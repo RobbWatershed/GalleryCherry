@@ -493,7 +493,7 @@ fun openReader(
     if (content.storageUri.isEmpty()) return false
     if (content.status == StatusContent.PLACEHOLDER) return false
 
-    Timber.d("Opening: %s from: %s", content.title, content.storageUri)
+    Timber.d("Opening: ${content.title} from: ${content.storageUri}")
 
     val builder = ReaderActivityBundle()
     builder.contentId = content.id

@@ -403,14 +403,7 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
                     val dao: CollectionDAO = ObjectBoxDAO()
                     try {
                         val c = dao.selectContent(previouslyViewedContent)
-                        if (c != null) openReader(
-                            this,
-                            c,
-                            -1,
-                            contentSearchBundle,
-                            forceShowGallery = false,
-                            newTask = false
-                        )
+                        if (c != null) openReader(this, c, searchParams = contentSearchBundle)
                     } finally {
                         dao.cleanup()
                     }

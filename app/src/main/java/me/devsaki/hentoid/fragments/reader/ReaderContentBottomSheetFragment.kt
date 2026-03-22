@@ -117,14 +117,7 @@ class ReaderContentBottomSheetFragment : BottomSheetDialogFragment() {
                 ivCover.load(thumbLocation)
             }
             if (openOnTap) ivCover.setOnClickListener {
-                openReader(
-                    requireActivity(),
-                    content,
-                    -1,
-                    null,
-                    forceShowGallery = false,
-                    newTask = true
-                )
+                openReader(requireActivity(), content, newTask = true)
             }
 
             contentTitle.text = content.title

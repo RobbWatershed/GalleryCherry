@@ -107,11 +107,7 @@ class DuplicateDialogFragment : BaseDialogFragment<DuplicateDialogFragment.Paren
             } else {
                 ivCover.visibility = View.VISIBLE
                 ivCover.setOnClickListener {
-                    openReader(
-                        context, libraryContent, -1, null,
-                        forceShowGallery = false,
-                        newTask = true
-                    )
+                    openReader(context, libraryContent, newTask = true)
                 }
                 ivCover.load(thumbLocation)
             }

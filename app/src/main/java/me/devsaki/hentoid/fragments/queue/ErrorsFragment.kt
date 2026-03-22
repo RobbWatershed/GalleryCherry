@@ -483,15 +483,7 @@ class ErrorsFragment : Fragment(R.layout.fragment_queue_errors), ItemTouchCallba
     private fun onItemClick(item: ContentItem): Boolean {
         if (selectExtension.selections.isEmpty()) {
             val c = item.content
-            if (c != null && !openReader(
-                    requireContext(),
-                    c,
-                    -1,
-                    null,
-                    forceShowGallery = false,
-                    newTask = false
-                )
-            ) toast(R.string.err_no_content)
+            if (c != null && !openReader(requireContext(), c)) toast(R.string.err_no_content)
             return true
         }
         return false

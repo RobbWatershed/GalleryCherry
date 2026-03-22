@@ -48,6 +48,7 @@ import me.devsaki.hentoid.BuildConfig
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.activities.ReaderActivity
 import me.devsaki.hentoid.adapters.ImagePagerAdapter
+import me.devsaki.hentoid.database.ObjectBoxDAO
 import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.database.domains.ImageFile
 import me.devsaki.hentoid.databinding.FragmentReaderPagerBinding
@@ -78,8 +79,10 @@ import me.devsaki.hentoid.util.Settings.Value.VIEWER_DIRECTION_RTL
 import me.devsaki.hentoid.util.Settings.Value.VIEWER_ORIENTATION_HORIZONTAL
 import me.devsaki.hentoid.util.Settings.Value.VIEWER_ORIENTATION_VERTICAL
 import me.devsaki.hentoid.util.dimensAsDp
+import me.devsaki.hentoid.util.dpToPx
 import me.devsaki.hentoid.util.exception.ContentNotProcessedException
 import me.devsaki.hentoid.util.getThemedColor
+import me.devsaki.hentoid.util.openReader
 import me.devsaki.hentoid.util.toast
 import me.devsaki.hentoid.util.tryShowMenuIcons
 import me.devsaki.hentoid.viewmodels.ReaderViewModel
@@ -516,22 +519,7 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
                 informationMicroMenu.setSubmarineItemClickListener { p, _ ->
                     onInfoMicroMenuClick(p)
                 }
-                informationMicroMenu.addSubmarineItem(
-                    SubmarineItem(
-                        ContextCompat.getDrawable(
-                            requireContext(),
-                            R.drawable.ic_book
-                        )
-                    )
-                )
-                informationMicroMenu.addSubmarineItem(
-                    SubmarineItem(
-                        ContextCompat.getDrawable(
-                            requireContext(),
-                            R.drawable.ic_page
-                        )
-                    )
-                )
+                updateInformationMicroMenu()
                 infoBtn.setOnClickListener {
                     favouriteMicroMenu.dips()
                     informationMicroMenu.floats()
@@ -557,6 +545,31 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
                     insets
                 }
             }
+        }
+    }
+
+    private fun updateInformationMicroMenu() {
+        val ctx = requireContext()
+        binding?.controlsOverlay?.informationMicroMenu?.apply {
+            clearAllSubmarineItems()
+            addSubmarineItem(
+                SubmarineItem(
+                    ContextCompat.getDrawable(ctx, R.drawable.ic_book)
+                )
+            )
+            addSubmarineItem(
+                SubmarineItem(
+                    ContextCompat.getDrawable(ctx, R.drawable.ic_page)
+                )
+            )
+            if (isContentDynamic) {
+                addSubmarineItem(
+                    SubmarineItem(
+                        ContextCompat.getDrawable(ctx, R.drawable.ic_book_open)
+                    )
+                )
+            }
+            expandSize = dpToPx(ctx, if (isContentDynamic) 210 else 170)
         }
     }
 
@@ -628,17 +641,32 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
      * Handle click on "Information" micro menu
      */
     private fun onInfoMicroMenuClick(menuPosition: Int) {
-        if (0 == menuPosition) { // Content
-            adapter.getImageAt(absImageIndex)?.let {
-                invoke(
-                    requireContext(),
-                    requireActivity().supportFragmentManager,
-                    it.contentId,
-                    absImageIndex,
-                    isContentDynamic
-                )
+        when (menuPosition) {
+            0 -> { // Content
+                adapter.getImageAt(absImageIndex)?.let {
+                    invoke(
+                        requireContext(),
+                        requireActivity().supportFragmentManager,
+                        it.contentId,
+                        absImageIndex,
+                        isContentDynamic
+                    )
+                }
             }
-        } else invokeImageDetails(absImageIndex)
+
+            1 -> invokeImageDetails(absImageIndex) // Page
+            else -> { // Go to content (dynamic mode only)
+                val dao = ObjectBoxDAO()
+                try {
+                    val cId = adapter.getImageAt(absImageIndex)?.contentId ?: -1
+                    dao.selectContent(cId)?.let {
+                        openReader(requireActivity(), it, newTask = true)
+                    }
+                } finally {
+                    dao.cleanup()
+                }
+            }
+        }
 
         binding?.controlsOverlay?.informationMicroMenu?.dips()
     }
@@ -810,6 +838,7 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
         reachedPosition = -1
         navigator.onContentChanged(content)
         updateFavouriteButtonIcon()
+        updateInformationMicroMenu()
 
         showFavoritePagesMenu.isVisible = !isContentDynamic && !isFoldersMode
         deleteMenu.isVisible = !isContentDynamic

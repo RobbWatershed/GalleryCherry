@@ -930,13 +930,7 @@ class QueueFragment : Fragment(R.layout.fragment_queue), ItemTouchCallback,
             // (may happen when the item is fetched before it is processed by the downloader)
             if (c.storageUri.isEmpty()) c = ObjectBoxDAO().selectContent(c.id)
             return if (c != null) {
-                if (!openReader(
-                        requireContext(), c, -1, null,
-                        forceShowGallery = false,
-                        newTask = false
-                    )
-                )
-                    toast(R.string.err_no_content)
+                if (!openReader(requireContext(), c)) toast(R.string.err_no_content)
                 true
             } else false
         }

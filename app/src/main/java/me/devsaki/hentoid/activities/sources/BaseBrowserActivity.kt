@@ -1040,11 +1040,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
                         searchUrl
                     )
                     if (currentContent != null && (StatusContent.DOWNLOADED == currentContent!!.status || StatusContent.ERROR == currentContent!!.status || StatusContent.MIGRATED == currentContent!!.status))
-                        openReader(
-                            this, currentContent!!, -1, null,
-                            forceShowGallery = false,
-                            newTask = false
-                        )
+                        openReader(this, currentContent!!)
                     else {
                         lifecycleScope.launch { setActionMode(null) }
                     }
