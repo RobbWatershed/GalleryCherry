@@ -10,23 +10,23 @@ ___
 
 [![](https://discordapp.com/api/guilds/173995475098271746/embed.png?style=banner2)](https://discord.gg/TNCwwUw)
 
-![](https://github.com/avluis/Hentoid/blob/master/wiki-img/welcome_2023.png)
+![](https://codeberg.org/VioletKnight/Hentoid/blob/master/wiki-img/welcome_2023.png)
 
-###### [![](https://github.com/avluis/Hentoid/blob/master/wiki-img/en-flag.svg) English](https://github.com/avluis/Hentoid/tree/master/README.md) | [![](https://github.com/avluis/Hentoid/blob/master/wiki-img/ru-flag.svg) Русский](https://github.com/avluis/Hentoid/tree/master/README-ru.md) | [![](https://github.com/avluis/Hentoid/blob/master/wiki-img/uk-flag.svg) Українська](https://github.com/avluis/Hentoid/tree/master/README-uk.md)
+###### [![](https://github.com/avluis/Hentoid/blob/master/wiki-img/en-flag.svg) English](https://codeberg.org/VioletKnight/Hentoid/tree/master/README.md) | [![](https://github.com/avluis/Hentoid/blob/master/wiki-img/ru-flag.svg) Русский](https://codeberg.org/VioletKnight/Hentoid/tree/master/README-ru.md) | [![](https://github.com/avluis/Hentoid/blob/master/wiki-img/uk-flag.svg) Українська](https://codeberg.org/VioletKnight/Hentoid/tree/master/README-uk.md)
 
 
 ##### `Hentoid` is an ad-free Manga archiving and viewing app.
 
-##### For the latest release, click [here](https://github.com/AVnetWS/Hentoid/releases/latest).
+##### For the latest release, click [here](https://codeberg.org/VioletKnight/Hentoid/releases).
 
 > [!TIP]
-> Check out the [Hentoid wiki](https://github.com/AVnetWS/Hentoid/wiki) if you need assistance installing or using `Hentoid` on your device.
+> Check out the [Hentoid wiki](https://codeberg.org/VioletKnight/Hentoid/wiki) if you need assistance installing or using `Hentoid` on your device.
 > 
-> Don't forget to check the [FAQ](https://github.com/avluis/Hentoid/wiki/FAQ) if you have any issue
+> Don't forget to check the [FAQ](https://codeberg.org/VioletKnight/Hentoid/wiki/FAQ) if you have any issue
 
 ##### Visit our [Discord Server](https://discord.gg/QEZ3qk9) to chat with other users, read the latest announcements, get dev updates, app support or hang out with the development team.
 ___
-###### [Help us](https://github.com/AVnetWS/Hentoid/wiki/Contributing) shape `Hentoid` into the best Manga App for you.
+###### [Help us](https://codeberg.org/VioletKnight/Hentoid/wiki/Contributing) shape `Hentoid` into the best Manga App for you.
 
 [![](https://github.com/avluis/Hentoid/blob/master/wiki-img/CherryBanner.png)](https://github.com/RobbWatershed/GalleryCherry)
 ___
