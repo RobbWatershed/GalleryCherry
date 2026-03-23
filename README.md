@@ -1,6 +1,6 @@
 <!--
   Title: Hentoid
-  Description: Doujinshi Android App
+  Description: Manga Android App
 -->
 ___
 
@@ -15,11 +15,7 @@ ___
 ###### [![](https://github.com/avluis/Hentoid/blob/master/wiki-img/en-flag.svg) English](https://github.com/avluis/Hentoid/tree/master/README.md) | [![](https://github.com/avluis/Hentoid/blob/master/wiki-img/ru-flag.svg) Русский](https://github.com/avluis/Hentoid/tree/master/README-ru.md) | [![](https://github.com/avluis/Hentoid/blob/master/wiki-img/uk-flag.svg) Українська](https://github.com/avluis/Hentoid/tree/master/README-uk.md)
 
 
-##### `Hentoid` is an ad-free Doujinshi & H-Manga archiving and viewing app.
-###### `Hentoid` currently supports:
-###### [nhentai](https://nhentai.net/), [hitomi](https://hitomi.la/), [asmhentai](http://asmhentai.com/), [pururin](https://pururin.io/), [e-hentai](https://e-hentai.org/), [exHentai/sadpanda](https://exhentai.org), [8muses](https://www.8muses.com), [Doujins.com](https://doujins.com), [Luscious.net](https://www.luscious.net), [Porncomixonline](https://www.porncomixonline.net/), [Hentai2Read](https://hentai2read.com/), [HentaiFox](https://hentaifox.com), [MyReadingManga](https://myreadingmanga.info/), [Manwha Hentai](https://manhwahentai.me/), [Imhentai](https://imhentai.com), [Toonily](https://toonily.com/), [Allporncomic](https://allporncomic.com/), [Pixiv](https://www.pixiv.net/), [MultPorn](https://multporn.net/), [Simply Hentai](https://www.simply-hentai.com/), [HD Porn Comics](https://hdporncomics.com/), [DeviantArt](https://www.deviantart.com/), [Mangago](https://www.mangago.me/), [Hiperdex](https://hiperdex.com/), [Novelcrow](https://novelcrow.com/), [TMOHentai](https://tmohentai.com/), [Kemono](https://kemono.cr/), [Eromanga-Sora](https://eromanga-sora.com/) and [Yiffer](https://yiffer.xyz/)).
-
-###### Note: `Hentoid` can still import downloads from [FAKKU](https://www.fakku.net/) and [Pururin](https://raw.githubusercontent.com/AVnetWS/Hentoid-Resources/master/repo/assets/img/pururin.jpg).
+##### `Hentoid` is an ad-free Manga archiving and viewing app.
 
 ##### For the latest release, click [here](https://github.com/AVnetWS/Hentoid/releases/latest).
 
@@ -30,7 +26,7 @@ ___
 
 ##### Visit our [Discord Server](https://discord.gg/QEZ3qk9) to chat with other users, read the latest announcements, get dev updates, app support or hang out with the development team.
 ___
-###### [Help us](https://github.com/AVnetWS/Hentoid/wiki/Contributing) shape `Hentoid` into the best H-Manga App for you.
+###### [Help us](https://github.com/AVnetWS/Hentoid/wiki/Contributing) shape `Hentoid` into the best Manga App for you.
 
 [![](https://github.com/avluis/Hentoid/blob/master/wiki-img/CherryBanner.png)](https://github.com/RobbWatershed/GalleryCherry)
 ___
