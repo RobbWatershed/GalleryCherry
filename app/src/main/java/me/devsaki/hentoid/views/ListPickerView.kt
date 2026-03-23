@@ -6,13 +6,16 @@ import android.util.AttributeSet
 import android.view.LayoutInflater
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.isVisible
+import androidx.fragment.app.FragmentActivity
+import androidx.fragment.app.findFragment
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import dev.skomlach.common.blur.BlurUtil.getActivity
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.databinding.WidgetListPickerBinding
 import me.devsaki.hentoid.util.getIdForCurrentTheme
 
 
-class ListPickerView : ConstraintLayout {
+class ListPickerView : ConstraintLayout, ListPickerDialogFragment.Parent {
     private val binding = WidgetListPickerBinding.inflate(LayoutInflater.from(context), this, true)
 
     private var onIndexChangeListener: ((Int) -> Unit)? = null
@@ -99,19 +102,25 @@ class ListPickerView : ConstraintLayout {
     }
 
     private fun onClick() {
-        val materialDialog = MaterialAlertDialogBuilder(
-            context,
-            context.getIdForCurrentTheme(R.style.Theme_Light_Dialog)
-        )
-            .setSingleChoiceItems(
-                entries.toTypedArray(),
-                index,
-                this::onSelect
+        if (entries.size < 6) { // Basic choice dialog
+            val materialDialog = MaterialAlertDialogBuilder(
+                context,
+                context.getIdForCurrentTheme(R.style.Theme_Light_Dialog)
             )
-            .setCancelable(true)
-            .create()
+                .setSingleChoiceItems(
+                    entries.toTypedArray(),
+                    index,
+                    this::onSelect
+                )
+                .setCancelable(true)
+                .create()
 
-        materialDialog.show()
+            materialDialog.show()
+        } else { // Custom filterable dialog
+            this.getActivity().let {
+                if (it is FragmentActivity) ListPickerDialogFragment.invoke(it, entries)
+            }
+        }
     }
 
     private fun onSelect(dialog: DialogInterface, selectedIndex: Int) {
@@ -124,5 +133,10 @@ class ListPickerView : ConstraintLayout {
     private fun selectIndex(selectedIndex: Int) {
         if (selectedIndex > -1 && selectedIndex < entries.size)
             binding.description.text = entries[selectedIndex]
+    }
+
+    //TODO call this instead of the activity's'
+    override fun onItemSelected(index: Int) {
+        selectIndex(index)
     }
 }
