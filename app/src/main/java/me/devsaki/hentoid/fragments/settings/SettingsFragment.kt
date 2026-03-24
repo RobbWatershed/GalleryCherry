@@ -45,6 +45,7 @@ import me.devsaki.hentoid.retrofit.DeviantArtServer
 import me.devsaki.hentoid.retrofit.GithubServer
 import me.devsaki.hentoid.retrofit.JikanServer
 import me.devsaki.hentoid.retrofit.UpdateServer
+import me.devsaki.hentoid.retrofit.UpdateServer2
 import me.devsaki.hentoid.retrofit.sources.EHentaiServer
 import me.devsaki.hentoid.retrofit.sources.KemonoServer
 import me.devsaki.hentoid.retrofit.sources.LusciousServer
@@ -315,6 +316,7 @@ class SettingsFragment : PreferenceFragmentCompat(),
                 KemonoServer.init()
                 JikanServer.init()
                 UpdateServer.init()
+                UpdateServer2.init()
             }
         }
     }
@@ -338,6 +340,7 @@ class SettingsFragment : PreferenceFragmentCompat(),
                 KemonoServer.init()
                 JikanServer.init()
                 UpdateServer.init()
+                UpdateServer2.init()
             }
         }
     }
