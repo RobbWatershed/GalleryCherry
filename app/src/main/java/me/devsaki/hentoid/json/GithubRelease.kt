@@ -24,8 +24,9 @@ data class GithubRelease(
     fun getApkAssetUrl(): String {
         val apkMimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension("apk")
         for (asset in assets) {
-            if (asset.contentType.equals(apkMimeType, ignoreCase = true))
-                return asset.browserDownloadUrl
+            if (asset.contentType?.equals(apkMimeType, ignoreCase = true) ?: false
+                || asset.browserDownloadUrl.endsWith(".apk")
+            ) return asset.browserDownloadUrl
         }
         return ""
     }
@@ -36,6 +37,6 @@ data class GithubRelease(
         @param:Json(name = "browser_download_url")
         val browserDownloadUrl: String,
         @param:Json(name = "content_type")
-        val contentType: String
+        val contentType: String?
     )
 }

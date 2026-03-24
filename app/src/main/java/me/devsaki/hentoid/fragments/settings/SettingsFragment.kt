@@ -41,6 +41,7 @@ import me.devsaki.hentoid.core.withArguments
 import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.enums.Theme
 import me.devsaki.hentoid.events.DownloadCommandEvent
+import me.devsaki.hentoid.retrofit.BergServer
 import me.devsaki.hentoid.retrofit.DeviantArtServer
 import me.devsaki.hentoid.retrofit.GithubServer
 import me.devsaki.hentoid.retrofit.JikanServer
@@ -309,6 +310,7 @@ class SettingsFragment : PreferenceFragmentCompat(),
                 )
                 // Reset all retrofit clients
                 GithubServer.init()
+                BergServer.init()
                 EHentaiServer.init()
                 LusciousServer.init()
                 PixivServer.init()
@@ -333,6 +335,7 @@ class SettingsFragment : PreferenceFragmentCompat(),
                 )
                 // Reset all retrofit clients
                 GithubServer.init()
+                BergServer.init()
                 EHentaiServer.init()
                 LusciousServer.init()
                 PixivServer.init()
