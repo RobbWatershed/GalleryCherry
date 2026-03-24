@@ -7,7 +7,6 @@ import android.view.LayoutInflater
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.isVisible
 import androidx.fragment.app.FragmentActivity
-import androidx.fragment.app.findFragment
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import dev.skomlach.common.blur.BlurUtil.getActivity
 import me.devsaki.hentoid.R
@@ -15,7 +14,7 @@ import me.devsaki.hentoid.databinding.WidgetListPickerBinding
 import me.devsaki.hentoid.util.getIdForCurrentTheme
 
 
-class ListPickerView : ConstraintLayout, ListPickerDialogFragment.Parent {
+class ListPickerView : ConstraintLayout {
     private val binding = WidgetListPickerBinding.inflate(LayoutInflater.from(context), this, true)
 
     private var onIndexChangeListener: ((Int) -> Unit)? = null
@@ -118,25 +117,28 @@ class ListPickerView : ConstraintLayout, ListPickerDialogFragment.Parent {
             materialDialog.show()
         } else { // Custom filterable dialog
             this.getActivity().let {
-                if (it is FragmentActivity) ListPickerDialogFragment.invoke(it, entries)
+                if (it is FragmentActivity) ListPickerDialogFragment.invoke(
+                    it,
+                    this::onSelect,
+                    entries
+                )
             }
         }
     }
 
     private fun onSelect(dialog: DialogInterface, selectedIndex: Int) {
+        onSelect(selectedIndex)
+        dialog.dismiss()
+    }
+
+    private fun onSelect(selectedIndex: Int) {
         index = selectedIndex
         onIndexChangeListener?.invoke(selectedIndex)
         if (value.isNotEmpty()) onValueChangeListener?.invoke(value)
-        dialog.dismiss()
     }
 
     private fun selectIndex(selectedIndex: Int) {
         if (selectedIndex > -1 && selectedIndex < entries.size)
             binding.description.text = entries[selectedIndex]
-    }
-
-    //TODO call this instead of the activity's'
-    override fun onItemSelected(index: Int) {
-        selectIndex(index)
     }
 }

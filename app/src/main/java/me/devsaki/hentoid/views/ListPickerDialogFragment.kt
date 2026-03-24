@@ -6,11 +6,11 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.DialogFragment
-import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
 import com.mikepenz.fastadapter.FastAdapter
 import com.mikepenz.fastadapter.adapters.ItemAdapter
+import me.devsaki.hentoid.core.Consumer
 import me.devsaki.hentoid.core.setOnTextChangedListener
 import me.devsaki.hentoid.databinding.DialogListpickerFilterableBinding
 import me.devsaki.hentoid.fragments.BaseDialogFragment
@@ -18,23 +18,16 @@ import me.devsaki.hentoid.viewholders.TextItem
 
 const val ENTRIES = "entries"
 
-class ListPickerDialogFragment : BaseDialogFragment<ListPickerDialogFragment.Parent>() {
+class ListPickerDialogFragment(val handler: Consumer<Int>) : BaseDialogFragment<Nothing>() {
 
     companion object {
         fun invoke(
             activity: FragmentActivity,
+            handler: Consumer<Int>,
             entries: List<String>
         ): DialogFragment {
             val args = getArgs(entries)
-            return invoke(activity, ListPickerDialogFragment(), args)
-        }
-
-        fun invoke(
-            fragment: Fragment,
-            entries: List<String>
-        ): DialogFragment {
-            val args = getArgs(entries)
-            return invoke(fragment, ListPickerDialogFragment(), args)
+            return invoke(activity, ListPickerDialogFragment(handler), args)
         }
 
         private fun getArgs(entries: List<String>): Bundle {
@@ -98,12 +91,8 @@ class ListPickerDialogFragment : BaseDialogFragment<ListPickerDialogFragment.Par
     }
 
     private fun onItemSelected(s: String): Boolean {
-        parent?.onItemSelected(entries.indexOf(s))
+        handler.invoke(entries.indexOf(s))
         dismissAllowingStateLoss()
         return true
-    }
-
-    interface Parent {
-        fun onItemSelected(index: Int)
     }
 }
