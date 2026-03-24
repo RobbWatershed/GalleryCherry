@@ -10,6 +10,7 @@ import androidx.fragment.app.Fragment
 import me.devsaki.hentoid.BuildConfig
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.activities.AboutActivity
+import me.devsaki.hentoid.core.URL_BERG
 import me.devsaki.hentoid.core.URL_DISCORD
 import me.devsaki.hentoid.core.URL_GITHUB
 import me.devsaki.hentoid.core.URL_GITHUB_WIKI
@@ -62,6 +63,7 @@ class AboutFragment : Fragment(R.layout.fragment_about) {
         binding?.apply {
             appLogo.setOnClickListener { requireContext().startBrowserActivity(URL_GITHUB_WIKI) }
             githubText.setOnClickListener { requireContext().startBrowserActivity(URL_GITHUB) }
+            bergText.setOnClickListener { requireContext().startBrowserActivity(URL_BERG) }
             discordText.setOnClickListener { requireContext().startBrowserActivity(URL_DISCORD) }
 
             tvVersionName.text = getString(

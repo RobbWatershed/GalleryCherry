@@ -102,13 +102,36 @@
             tools:layout_editor_absoluteY="5dp" />
 
         <ImageView
+            android:id="@+id/bergIcon"
+            android:layout_width="@dimen/about_ic_icons_width"
+            android:layout_height="@dimen/about_ic_icons_height"
+            android:padding="4dp"
+            android:cropToPadding="true"
+            android:layout_marginStart="16dp"
+            android:src="@drawable/ic_codeberg"
+            app:layout_constraintStart_toEndOf="@id/githubText"
+            app:layout_constraintTop_toTopOf="@id/githubIcon"
+            tools:ignore="ContentDescription" />
+
+        <TextView
+            android:id="@+id/bergText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="5dp"
+            android:text="@string/about_berg"
+            android:textSize="16sp"
+            app:layout_constraintBottom_toBottomOf="@id/bergIcon"
+            app:layout_constraintStart_toEndOf="@id/bergIcon"
+            app:layout_constraintTop_toTopOf="@id/bergIcon" />
+
+        <ImageView
             android:id="@+id/discordIcon"
             android:layout_width="@dimen/about_ic_icons_width"
             android:layout_height="@dimen/about_ic_icons_height"
             android:cropToPadding="true"
             android:layout_marginStart="16dp"
             android:src="@drawable/ic_social_discord"
-            app:layout_constraintStart_toEndOf="@id/githubText"
+            app:layout_constraintStart_toEndOf="@id/bergText"
             app:layout_constraintTop_toTopOf="@id/githubIcon"
             tools:ignore="ContentDescription" />
 
