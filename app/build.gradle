@@ -183,6 +183,7 @@ dependencies {
 
     // PDF creator/extractor
     implementation 'com.itextpdf:itext7-core:8.0.5'
+    //implementation 'com.itextpdf:bouncy-castle-adapter:8.0.5'
 
     /**
      * UI
