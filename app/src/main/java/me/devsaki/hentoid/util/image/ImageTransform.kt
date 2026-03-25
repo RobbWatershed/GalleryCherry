@@ -113,7 +113,7 @@ fun transform(
             else -> resizePlainRatio(rawData, dims, 1f)
         }
     } else {
-        BitmapFactory.decodeByteArray(rawData, 0, rawData.size)
+        decodeBitmap(rawData)
     }
 
     val isLossless = isImageLossless(rawData)
