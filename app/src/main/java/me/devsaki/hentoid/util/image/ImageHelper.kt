@@ -17,6 +17,8 @@ import androidx.core.graphics.createBitmap
 import androidx.core.graphics.scale
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
+import com.awxkee.jxlcoder.JxlCoder
+import com.radzivon.bartoshyk.avif.coder.HeifCoder
 import com.shakster.gifkt.GifEncoder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -616,5 +618,16 @@ fun loadBitmap(context: Context, file: DocumentFile): Bitmap? {
     } catch (e: Exception) {
         Timber.w(e)
         null
+    }
+}
+
+fun decodeBitmap(rawData: ByteArray): Bitmap {
+    val mime = getMimeTypeFromPictureBinary(rawData)
+    return if (MIME_IMAGE_JXL == mime) {
+        JxlCoder.decode(rawData)
+    } else if (MIME_IMAGE_AVIF == mime) {
+        HeifCoder().decode(rawData)
+    } else {
+        BitmapFactory.decodeByteArray(rawData, 0, rawData.size)
     }
 }

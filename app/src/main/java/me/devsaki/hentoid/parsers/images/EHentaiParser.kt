@@ -343,13 +343,13 @@ class EHentaiParser : ImageListParser {
             result.add(ImageFile.newCover(content.coverImageUrl, StatusContent.SAVED))
 
             val rangeIndexes = if (content.downloadRange.isBlank()) IntRange(1, pageUrls.size)
-            else rangeToNumbers(content.downloadRange).filter { it in 0..<pageUrls.size }
+            else rangeToNumbers(content.downloadRange).filter { it in 1..<pageUrls.size + 1 }
 
             rangeIndexes.forEach {
                 result.add(
                     ImageFile.fromPageUrl(
-                        it + 1,
-                        pageUrls[it],
+                        it,
+                        pageUrls[it - 1],
                         StatusContent.SAVED,
                         pageUrls.size
                     )
