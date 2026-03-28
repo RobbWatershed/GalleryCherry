@@ -239,8 +239,7 @@ class BookmarksDrawerFragment : Fragment(R.layout.fragment_web_bookmarks),
         val selectedCount = selectExtension.selectedItems.size
         binding?.apply {
             if (0 == selectedCount) {
-                selectionToolbar.isVisible = false
-                bookmarkCurrentBtn.isVisible = true
+                toggleBottomBar(true)
                 selectExtension.selectOnLongClick = true
                 invalidateNextBookClick = true
                 Handler(Looper.getMainLooper()).postDelayed({
@@ -250,8 +249,7 @@ class BookmarksDrawerFragment : Fragment(R.layout.fragment_web_bookmarks),
                 editMenu?.isVisible = 1 == selectedCount
                 copyMenu?.isVisible = 1 == selectedCount
                 homeMenu?.isVisible = 1 == selectedCount
-                bookmarkCurrentBtn.isVisible = false
-                selectionToolbar.isVisible = true
+                toggleBottomBar(false)
             }
         }
     }
@@ -369,11 +367,18 @@ class BookmarksDrawerFragment : Fragment(R.layout.fragment_web_bookmarks),
             R.id.action_delete -> deleteSelectedItems()
             R.id.action_home -> toggleHomeSelectedItem()
             else -> {
-                binding?.selectionToolbar?.visibility = View.GONE
+                toggleBottomBar(true)
                 return false
             }
         }
         return true
+    }
+
+    private fun toggleBottomBar(isAction : Boolean = false) {
+        binding?.apply {
+            bookmarkCurrentBtn.isVisible = isAction
+            selectionToolbar.isVisible = !isAction
+        }
     }
 
     private fun askReloadBookmarks(sortAsc: Boolean) {
@@ -397,7 +402,7 @@ class BookmarksDrawerFragment : Fragment(R.layout.fragment_web_bookmarks),
             if (b != null && copyPlainTextToClipboard(context, b.url)) {
                 selectExtension.selectOnLongClick = true
                 toastShort(R.string.web_url_clipboard)
-                binding?.selectionToolbar?.visibility = View.INVISIBLE
+                toggleBottomBar(true)
             }
         }
     }
@@ -429,7 +434,7 @@ class BookmarksDrawerFragment : Fragment(R.layout.fragment_web_bookmarks),
                 selectExtension.selectOnLongClick = true
                 b.title = newTitle
                 viewModel.updateBookmark(b)
-                binding?.selectionToolbar?.visibility = View.INVISIBLE
+                toggleBottomBar(true)
             }
         }
     }
@@ -445,7 +450,7 @@ class BookmarksDrawerFragment : Fragment(R.layout.fragment_web_bookmarks),
             if (selectedContent.isNotEmpty()) {
                 selectExtension.selectOnLongClick = true
                 viewModel.deleteBookmarks(selectedContent.map { it.id })
-                binding?.selectionToolbar?.visibility = View.INVISIBLE
+                toggleBottomBar(true)
             }
         }
     }
@@ -462,7 +467,7 @@ class BookmarksDrawerFragment : Fragment(R.layout.fragment_web_bookmarks),
                 viewModel.setBookmarkAsHome(selectedContent[0].id)
                 selectExtension.selectOnLongClick = true
                 selectExtension.deselect(selectExtension.selections.toMutableSet())
-                binding?.selectionToolbar?.visibility = View.INVISIBLE
+                toggleBottomBar(true)
             }
         }
     }
