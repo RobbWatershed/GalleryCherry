@@ -268,7 +268,6 @@
     <string name="errortype_site_limit">Downloads/bandwidth limit reached</string>
     <string name="errortype_account">No account or insufficient credentials</string>
     <string name="errortype_import">No local file found while importing</string>
-    <string name="errortype_wifi">Book skipped because of Wi-Fi download size limitations</string>
     <string name="errortype_size">Book skipped because of download size limitations</string>
     <string name="errortype_blocked">Book contains a blocked tag</string>
     <string name="errortype_undefined">Undefined</string>

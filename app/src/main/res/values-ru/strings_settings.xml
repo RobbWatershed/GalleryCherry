@@ -115,11 +115,6 @@
     <string name="pref_queue_wifi_only_on">Очередь загрузки начнётся только если есть подключение к Wi-Fi</string>
     <string name="pref_queue_wifi_only_off">Очередь загрузки начнётся вне зависимости от типа сети</string>
     <string name="pref_queue_new_position_title">Расположение новых загрузок</string>
-    <string name="download_size_wifi_title">Пропускать большие загрузки на мобильной сети</string>
-    <string name="pref_dl_size_wifi_on">Большие загрузки будут пропущены, если отсутствует подключение к Wi-Fi</string>
-    <string name="pref_dl_size_wifi_off">Все загрузки будут обработаны</string>
-    <string name="pref_dl_size_wifi_threshold_title">Ограничение на размер загрузок</string>
-    <string name="pref_dl_pages_wifi_threshold_title">Ограничение на количество страниц в загрузках</string>
     <string name="download_retries_screen_title">Автоматически пытаться повторно загружать</string>
     <string name="download_retries_active_title">При неудачных попытках загрузки она будет совершена снова</string>
     <string name="pref_dl_retries_on">Неудачные загрузки будут совершаться повторно</string>

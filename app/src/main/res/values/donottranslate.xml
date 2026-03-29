@@ -129,20 +129,6 @@
         <item>@string/pref_queue_new_position_entries_2</item>
         <item>@string/pref_queue_new_position_entries_3</item>
     </string-array>
-    <string-array name="pref_dl_size_wifi_threshold_entries" translatable="false">
-        <item>@string/pref_dl_size_wifi_threshold_entries_1</item>
-        <item>@string/pref_dl_size_wifi_threshold_entries_2</item>
-        <item>@string/pref_dl_size_wifi_threshold_entries_3</item>
-        <item>@string/pref_dl_size_wifi_threshold_entries_4</item>
-        <item>@string/pref_dl_size_wifi_threshold_entries_5</item>
-    </string-array>
-    <string-array name="pref_dl_size_wifi_threshold_values" translatable="false">
-        <item>999999</item>
-        <item>20</item>
-        <item>40</item>
-        <item>100</item>
-        <item>200</item>
-    </string-array>
     <string-array name="pref_dl_skip_large_size_threshold_entries" translatable="false">
         <item>@string/pref_dl_skip_large_size_threshold_entries_1</item>
         <item>@string/pref_dl_skip_large_size_threshold_entries_2</item>
@@ -156,20 +142,6 @@
         <item>40</item>
         <item>100</item>
         <item>200</item>
-    </string-array>
-    <string-array name="pref_dl_pages_wifi_threshold_entries" translatable="false">
-        <item>@string/pref_dl_pages_wifi_threshold_entries_1</item>
-        <item>@string/pref_dl_pages_wifi_threshold_entries_2</item>
-        <item>@string/pref_dl_pages_wifi_threshold_entries_3</item>
-        <item>@string/pref_dl_pages_wifi_threshold_entries_4</item>
-        <item>@string/pref_dl_pages_wifi_threshold_entries_5</item>
-    </string-array>
-    <string-array name="pref_dl_pages_wifi_threshold_values" translatable="false">
-        <item>999999</item>
-        <item>60</item>
-        <item>120</item>
-        <item>200</item>
-        <item>500</item>
     </string-array>
     <string-array name="pref_dl_skip_large_pages_threshold_entries" translatable="false">
         <item>@string/pref_dl_skip_large_pages_threshold_entries_1</item>
@@ -622,9 +594,6 @@
     <string name="pref_queue_autostart_default" translatable="false">true</string>
     <string name="pref_queue_wifi_only_default" translatable="false">false</string>
     <string name="pref_queue_new_position_default" translatable="false">1</string>
-    <string name="pref_dl_size_wifi_default" translatable="false">false</string>
-    <string name="pref_dl_size_wifi_threshold_default" translatable="false">40</string>
-    <string name="pref_dl_pages_wifi_threshold_default" translatable="false">999999</string>
     <string name="pref_dl_skip_large_default" translatable="false">false</string>
     <string name="pref_dl_skip_large_allow_wifi_default" translatable="false">false</string>
     <string name="pref_dl_skip_large_size_threshold_default" translatable="false">40</string>

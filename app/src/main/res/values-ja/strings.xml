@@ -178,7 +178,6 @@
     <string name="errortype_site_limit">ダウンロード/帯域幅の制限に達しました</string>
     <string name="errortype_account">アカウントがないか、資格情報が不十分です</string>
     <string name="errortype_import">インポート中にローカルファイルが見つかりません</string>
-    <string name="errortype_wifi">Wi-Fiのダウンロードサイズの制限により、書籍がスキップされました</string>
     <string name="errortype_blocked">書籍にブロックされたタグが含まれています</string>
     <string name="errortype_undefined">未定義</string>
     <string name="browse_mode_warning">ブラウズ専用モードが有効です\ストレージへのアクセス許可なしでアプリを使用しています.</string>

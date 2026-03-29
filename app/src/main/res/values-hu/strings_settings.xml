@@ -111,11 +111,6 @@
     <string name="pref_queue_wifi_only_on">A letöltési sor csak akkor indul el, ha Wi-Fi-hez csatlakozik.</string>
     <string name="pref_queue_wifi_only_off">A letöltési sor akkor indul el, ha a készülék bármilyen hálózathoz csatlakozik.</string>
     <string name="pref_queue_new_position_title">Új letöltési pozíció</string>
-    <string name="download_size_wifi_title">Nagy letöltések kihagyása a mobil adatforgalmon</string>
-    <string name="pref_dl_size_wifi_on">A nagy letöltések kihagyásra kerülnek, ha nem csatlakozik Wi-Fi-hez</string>
-    <string name="pref_dl_size_wifi_off">Minden letöltés feldolgozásra kerül</string>
-    <string name="pref_dl_size_wifi_threshold_title">Méretkorlát a nagy letöltésekhez</string>
-    <string name="pref_dl_pages_wifi_threshold_title">Nagy letöltési oldalak küszöbértéke</string>
     <string name="download_retries_screen_title">Automatizált letöltési újrapróbálkozások</string>
     <string name="download_retries_active_title">Újrapróbálkozások aktiválva</string>
     <string name="pref_dl_retries_on">A sikertelen letöltések automatikusan újra próbálkoznak</string>
