@@ -7,7 +7,6 @@
     <string name="download_hitomi_avif_title">Descargar en formato AVIF</string>
     <string name="download_retries_active_title">Reintentos activados</string>
     <string name="download_retries_screen_title">Reintentos de descarga automáticos</string>
-    <string name="download_size_wifi_title">Omitir descargas de gran tamaño si se están usando los datos móviles</string>
     <string name="library_display_group_figure_title">Figura de grupo</string>
     <string name="mass_operations_summary">Operaciones masivas para la biblioteca</string>
     <string name="mass_operations_title">Operaciones masivas</string>
@@ -116,14 +115,10 @@
     <string name="pref_dl_eh_hires_off">Descargar imágenes que se muestran en la página web</string>
     <string name="pref_dl_eh_hires_on">Descargar imágenes en alta resolución cuando esté disponible\nPRECAUCIÓN: Activar esta opción consumirá tu límite de visualización de imágenes de E-hentai/Exhentai</string>
     <string name="pref_dl_http_429_default_delay_title">Retraso por defecto para HTTPS 429 (segundos)</string>
-    <string name="pref_dl_pages_wifi_threshold_title">Límite de páginas para descargas de gran tamaño</string>
     <string name="pref_dl_retries_mem_limit_title">Límite de uso de memoria antes de abortar</string>
     <string name="pref_dl_retries_number_title">Número de reintentos antes de abortar</string>
     <string name="pref_dl_retries_off">Las descargas fallidas se mantendrán en estado de error</string>
     <string name="pref_dl_retries_on">Las descargas fallidas se reintentarán automáticamente</string>
-    <string name="pref_dl_size_wifi_off">Se procesarán todas las descargas</string>
-    <string name="pref_dl_size_wifi_on">Las descargas de gran tamaño se omitirán si no se está conectado al Wi-Fi</string>
-    <string name="pref_dl_size_wifi_threshold_title">Límite para descargas de gran tamaño</string>
     <string name="pref_dl_speed_cap_title">Límite de velocidad de descarga</string>
     <string name="pref_dl_threads_quantity_summary">Número de páginas descargadas de forma simultánea\nActual: %s</string>
     <string name="pref_dl_threads_quantity_title">Descargas paralelas</string>

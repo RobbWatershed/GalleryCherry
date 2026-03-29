@@ -24,17 +24,17 @@
     <string name="pref_queue_new_position_entries_2">Bottom</string>
     <string name="pref_queue_new_position_entries_3">Ask every time</string>
     <!-- Choice for "Large downloads size threshold" setting -->
-    <string name="pref_dl_size_wifi_threshold_entries_1">No size limit</string>
-    <string name="pref_dl_size_wifi_threshold_entries_2" tools:ignore="MissingTranslation">20 MB</string>
-    <string name="pref_dl_size_wifi_threshold_entries_3" tools:ignore="MissingTranslation">40 MB</string>
-    <string name="pref_dl_size_wifi_threshold_entries_4" tools:ignore="MissingTranslation">100 MB</string>
-    <string name="pref_dl_size_wifi_threshold_entries_5" tools:ignore="MissingTranslation">200 MB</string>
+    <string name="pref_dl_skip_large_size_threshold_entries_1">No size limit</string>
+    <string name="pref_dl_skip_large_size_threshold_entries_2" tools:ignore="MissingTranslation">20 MB</string>
+    <string name="pref_dl_skip_large_size_threshold_entries_3" tools:ignore="MissingTranslation">40 MB</string>
+    <string name="pref_dl_skip_large_size_threshold_entries_4" tools:ignore="MissingTranslation">100 MB</string>
+    <string name="pref_dl_skip_large_size_threshold_entries_5" tools:ignore="MissingTranslation">200 MB</string>
     <!-- Choice for "Large downloads pages threshold" setting -->
-    <string name="pref_dl_pages_wifi_threshold_entries_1">No page limit</string>
-    <string name="pref_dl_pages_wifi_threshold_entries_2">60 pages</string>
-    <string name="pref_dl_pages_wifi_threshold_entries_3">120 pages</string>
-    <string name="pref_dl_pages_wifi_threshold_entries_4">200 pages</string>
-    <string name="pref_dl_pages_wifi_threshold_entries_5">500 pages</string>
+    <string name="pref_dl_skip_large_pages_threshold_entries_1">No page limit</string>
+    <string name="pref_dl_skip_large_pages_threshold_entries_2">60 pages</string>
+    <string name="pref_dl_skip_large_pages_threshold_entries_3">120 pages</string>
+    <string name="pref_dl_skip_large_pages_threshold_entries_4">200 pages</string>
+    <string name="pref_dl_skip_large_pages_threshold_entries_5">500 pages</string>
     <!-- Choice for "Number of parallel downloads" setting -->
     <string name="pref_dl_threads_quantity_entries_1">Auto (default)</string>
     <string name="pref_dl_threads_quantity_entries_2">2 (slow Internet)</string>

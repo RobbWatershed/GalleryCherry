@@ -165,7 +165,6 @@
     <string name="errortype_site_limit">다운로드/대역폭 제한 도달</string>
     <string name="errortype_account">계정이 없음 또는 자격 증명 불가</string>
     <string name="errortype_import">불러오는 중 로컬 파일 </string>
-    <string name="errortype_wifi">Wi-Fi 다운로드 크기 제한에 의해 건너뜀</string>
     <string name="errortype_blocked">차단된 태그 포함</string>
     <string name="errortype_undefined">알 수 없음</string>
     <string name="browse_mode_warning">탐색 전용 모드 활성화\n저장공간 권한 없이 사용 중입니다.</string>

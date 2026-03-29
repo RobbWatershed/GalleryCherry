@@ -124,11 +124,6 @@
     <string name="pref_queue_wifi_only_on">ダウンロードキューは、Wi-Fiに接続されている場合にのみ起動します</string>
     <string name="pref_queue_wifi_only_off">デバイスが任意のネットワークに接続されている場合、ダウンロードキューは開始されます</string>
     <string name="pref_queue_new_position_title">新しいダウンロードポジション</string>
-    <string name="download_size_wifi_title">モバイルデータの大規模なダウンロードをスキップします</string>
-    <string name="pref_dl_size_wifi_on">Wi-Fiに接続されていないと、大規模なダウンロードがスキップされます</string>
-    <string name="pref_dl_size_wifi_off">すべてのダウンロードが処理されます</string>
-    <string name="pref_dl_size_wifi_threshold_title">大規模なダウンロードのサイズのしきい値</string>
-    <string name="pref_dl_pages_wifi_threshold_title">大量のダウンロードページのしきい値</string>
     <string name="download_retries_screen_title">自動ダウンロードを再試行</string>
     <string name="download_retries_active_title">再試行がアクティブ化されました</string>
     <string name="pref_dl_retries_on">ダウンロードに失敗すると、自動的に再試行されます</string>

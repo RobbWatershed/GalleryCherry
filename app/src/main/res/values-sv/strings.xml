@@ -284,7 +284,6 @@
     <string name="errortype_parsing">Analys</string>
     <string name="errortype_site_limit">Nerladdnings/bandbreddsgräns nådd</string>
     <string name="errortype_undefined">Odefinierad</string>
-    <string name="errortype_wifi">Bok ratad i och med Wi-Fi nerladdnings-storleksbegränsningar</string>
     <string name="exclude">Exkludera</string>
     <string name="export_answer_yes">Den här funktionen gjordes inte för att låta dig överföra din samling till en annan telefon. Det fungerar i vissa fall men några av dina böcker kanske blir omöjliga att åternerladda!</string>
     <string name="export_failed">Exporten misslyckades</string>

@@ -30,7 +30,11 @@ data class LusciousGalleryMetadata(
     @JsonClass(generateAdapter = true)
     data class PictureContainerMetadata(
         @Json(name = "total_pages")
-        var totalPages: Int = 0
+        var totalPages: Int = 0,
+        @Json(name = "items_per_page")
+        var perPage: Int = 0,
+        @Json(name = "total_items")
+        var total: Int = 0
     )
 
     @JsonClass(generateAdapter = true)

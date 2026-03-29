@@ -7,7 +7,6 @@
     <string name="download_hitomi_avif_title">Scarica in formato AVIF</string>
     <string name="download_retries_active_title">Tentativi attivati</string>
     <string name="download_retries_screen_title">Tentativi di download automatici</string>
-    <string name="download_size_wifi_title">Salta i download di grandi dimensioni su rete mobile</string>
     <string name="library_display_group_figure_title">Contatore dei gruppi</string>
     <string name="mass_operations_summary">Operazioni di massa della libreria</string>
     <string name="mass_operations_title">Operazioni di massa</string>
@@ -116,14 +115,10 @@
     <string name="pref_dl_eh_hires_off">Scarica immagini che sono mostrare sul sito</string>
     <string name="pref_dl_eh_hires_on">Scarica immagini ad alta risoluzione quando disponibili\nATTENZIONE: Abilitare questa funzione consumerà il tuo limite di immagini di E-hentai/Exhentai molto più velocemente</string>
     <string name="pref_dl_http_429_default_delay_title">HTTP 429 ritardo predefinito (secondi)</string>
-    <string name="pref_dl_pages_wifi_threshold_title">Limite di pagine di download di grandi dimensioni</string>
     <string name="pref_dl_retries_mem_limit_title">Limite di utilizzo della memoria prima d’interrompere</string>
     <string name="pref_dl_retries_number_title">Numero di tentativi prima d’interrompere</string>
     <string name="pref_dl_retries_off">I download falliti rimarranno in stato di errore</string>
     <string name="pref_dl_retries_on">I download falliti verranno riprovati automaticamente</string>
-    <string name="pref_dl_size_wifi_off">Tutti i download saranno processati</string>
-    <string name="pref_dl_size_wifi_on">I download di grandi dimensioni verranno saltati se non connessi al Wi-Fi</string>
-    <string name="pref_dl_size_wifi_threshold_title">Limite di dimensione per download di grandi dimensioni</string>
     <string name="pref_dl_speed_cap_title">Limite velocità download</string>
     <string name="pref_dl_threads_quantity_summary">Numero d’immagini scaricate contemporaneamente\nAttualmente: %s</string>
     <string name="pref_dl_threads_quantity_title">Download paralleli</string>

@@ -218,7 +218,6 @@
     <string name="errortype_site_limit">Досягнуто ліміт завантажень або пропускної спроможності</string>
     <string name="errortype_account">Немає акаунта або недостатньо дозволів</string>
     <string name="errortype_import">Не виявлено локального файлу після імпорту</string>
-    <string name="errortype_wifi">Книга пропущена через обмеження на розмір завантажень по Wi-Fi</string>
     <string name="errortype_blocked">Книга позначена заблокованим теґом</string>
     <string name="errortype_undefined">Невідомо</string>
 
