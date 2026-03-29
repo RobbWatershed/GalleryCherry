@@ -493,6 +493,42 @@
             android:title="@string/pref_dl_pages_wifi_threshold_title"
             app:iconSpaceReserved="false" />
         <PreferenceCategory
+            android:title="@string/pref_cat_dl_skip_large"
+            app:iconSpaceReserved="false" />
+            <CheckBoxPreference
+                android:defaultValue="@string/pref_dl_skip_large_default"
+                android:key="pref_dl_skip_large"
+                android:summaryOff="@string/pref_dl_skip_large_off"
+                android:summaryOn="@string/pref_dl_skip_large_on"
+                android:title="@string/pref_dl_skip_large_title"
+                app:iconSpaceReserved="false" />
+            <CheckBoxPreference
+                android:defaultValue="@string/pref_dl_skip_large_allow_wifi_default"
+                android:key="pref_dl_skip_large_allow_wifi"
+                android:dependency="pref_dl_skip_large"
+                android:summaryOff="@string/pref_dl_skip_large_allow_wifi_off"
+                android:summaryOn="@string/pref_dl_skip_large_allow_wifi_on"
+                android:title="@string/pref_dl_skip_large_allow_wifi_title"
+                app:iconSpaceReserved="false" />
+            <ListPreference
+                android:defaultValue="@string/pref_dl_skip_large_size_threshold_default"
+                android:dependency="pref_dl_skip_large"
+                android:entries="@array/pref_dl_skip_large_size_threshold_entries"
+                android:entryValues="@array/pref_dl_skip_large_size_threshold_values"
+                android:key="pref_dl_skip_large_size_threshold"
+                android:summary="@string/pref_attributes_list_order_summary"
+                android:title="@string/pref_dl_skip_large_size_threshold_title"
+                app:iconSpaceReserved="false" />
+            <ListPreference
+                android:defaultValue="@string/pref_dl_skip_large_pages_threshold_default"
+                android:dependency="pref_dl_skip_large"
+                android:entries="@array/pref_dl_skip_large_pages_threshold_entries"
+                android:entryValues="@array/pref_dl_skip_large_pages_threshold_values"
+                android:key="pref_dl_skip_large_pages_threshold"
+                android:summary="@string/pref_attributes_list_order_summary"
+                android:title="@string/pref_dl_skip_large_pages_threshold_title"
+                app:iconSpaceReserved="false" />
+        <PreferenceCategory
             android:title="@string/tag_blocking_screen_title"
             app:iconSpaceReserved="false">
             <EditTextPreference

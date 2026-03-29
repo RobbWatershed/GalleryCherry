@@ -311,7 +311,11 @@ object Settings {
     val isQueueAutostart: Boolean by BoolSetting("pref_queue_autostart", true)
     val isQueueWifiOnly: Boolean by BoolSetting("pref_queue_wifi_only", false)
     val isDownloadLargeOnlyWifi: Boolean by BoolSetting("pref_dl_size_wifi", false)
+    val isSkipDownloadLarge: Boolean by BoolSetting("pref_dl_skip_large",false)
+    val isSkipDownloadLargeAllowWIFI : Boolean by BoolSetting("pref_dl_skip_large_allow_wifi",false)
     val downloadLargeOnlyWifiThresholdMB: Int by IntSettingStr("pref_dl_size_wifi_threshold", 40)
+    val skipDownloadLargeThresholdMB: Int by IntSettingStr("pref_dl_skip_large_size_threshold", 40)
+    val skipDownloadLargeThresholdPages: Int by IntSettingStr("pref_dl_skip_large_pages_threshold", 999999)
     val downloadLargeOnlyWifiThresholdPages: Int by IntSettingStr(
         "pref_dl_pages_wifi_threshold",
         999999

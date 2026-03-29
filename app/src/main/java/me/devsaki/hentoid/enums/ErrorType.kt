@@ -13,7 +13,8 @@ enum class ErrorType(val code: Int, @param:StringRes val displayName: Int, val e
     SITE_LIMIT(5, R.string.errortype_site_limit, "Downloads/bandwidth limit reached"),
     ACCOUNT(6, R.string.errortype_account, "No account or insufficient credentials"),
     IMPORT(7, R.string.errortype_import, "No local file found after import"),
-    WIFI(8, R.string.errortype_wifi, "Book skipped because of Wi-Fi download size limitations"),
+    //WIFI(8, R.string.errortype_wifi, "Book skipped because of Wi-Fi download size limitations"),
+    SIZE(8, R.string.errortype_size, "Book skipped because of download size limitations"),
     BLOCKED(9, R.string.errortype_blocked, "Book contains a blocked tag"),
     UNDEFINED(99, R.string.errortype_undefined, "Undefined");
 
