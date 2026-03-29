@@ -115,11 +115,6 @@
     <string name="pref_queue_wifi_only_on">다운로드 대기열이 와이파이에 연결되었을 때만 시작됩니다</string>
     <string name="pref_queue_wifi_only_off">다운로드 대기열이 아무 네트워크에나 연결되면 시작합니다</string>
     <string name="pref_queue_new_position_title">새 다운로드 추가 대기열 위치</string>
-    <string name="download_size_wifi_title">모바일 데이터에서 다운로드 넘기기</string>
-    <string name="pref_dl_size_wifi_on">와이파이에 연결되지 않았을 경우 다운로드를 넘어갑니다</string>
-    <string name="pref_dl_size_wifi_off">모든 다운로드가 실행됩니다</string>
-    <string name="pref_dl_size_wifi_threshold_title">다운로드 크기 제한</string>
-    <string name="pref_dl_pages_wifi_threshold_title">다운로드 페이지 제한</string>
     <string name="download_retries_screen_title">자동 다운로드 재시도</string>
     <string name="download_retries_active_title">다운로드 재시도 활성화</string>
     <string name="pref_dl_retries_on">다운로드 실패 시 자동으로 재시도합니다</string>

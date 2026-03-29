@@ -304,7 +304,6 @@
     <string name="errortype_parsing">Analizar</string>
     <string name="errortype_site_limit">Límite de descargas/ancho de banda alcanzado</string>
     <string name="errortype_undefined">Indefinido</string>
-    <string name="errortype_wifi">Libro omitido debido a limitaciones de tamaño de descargas vía Wi-Fi</string>
     <string name="exclude">Excluir</string>
     <string name="export_answer_yes">Esta opción No es para transferir tu colección a otro dispositivo. Funciona en ciertos casos, pero algunos de los libros podrían no poderse descargar.</string>
     <string name="export_failed">Exportación fallida</string>

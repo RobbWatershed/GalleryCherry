@@ -7,6 +7,7 @@ import retrofit2.Call
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import retrofit2.http.GET
+import retrofit2.http.Header
 import retrofit2.http.QueryMap
 
 object LusciousServer {
@@ -30,9 +31,14 @@ object LusciousServer {
 
     interface Api {
         @GET("graphql/nobatch/")
-        fun getBookMetadata(@QueryMap options: Map<String, String>): Call<LusciousBookMetadata>
+        fun getBookMetadata(
+            @QueryMap options: Map<String, String>
+        ): Call<LusciousBookMetadata>
 
         @GET("graphql/nobatch/")
-        fun getGalleryMetadata(@QueryMap options: Map<String, String>): Call<LusciousGalleryMetadata>
+        fun getGalleryMetadata(
+            @QueryMap options: Map<String, String>,
+            @Header("cookie") cookies: String
+        ): Call<LusciousGalleryMetadata>
     }
 }

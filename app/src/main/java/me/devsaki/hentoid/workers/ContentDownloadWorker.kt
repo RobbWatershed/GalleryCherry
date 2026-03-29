@@ -845,15 +845,22 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
                 )
             )
 
-            // If the "skip large downloads on mobile data" is on, skip if needed
-            if (Settings.isDownloadLargeOnlyWifi &&
-                (estimateBookSizeMB > Settings.downloadLargeOnlyWifiThresholdMB
-                        || totalPages > Settings.downloadLargeOnlyWifiThresholdPages)
+            // If the "Skip large downloads" is on, skip if needed
+            if (Settings.isSkipDownloadLarge &&
+                (estimateBookSizeMB > Settings.skipDownloadLargeThresholdMB
+                        || totalPages > Settings.skipDownloadLargeThresholdPages)
             ) {
-                val connectivity = applicationContext.getConnectivity()
-                if (Connectivity.WIFI != connectivity) {
-                    // Move the book to the errors queue and signal it as skipped
-                    logErrorRecord(content.id, ErrorType.WIFI, content.url, "Book", "")
+                if ((Settings.isSkipDownloadLargeAllowWIFI)) {
+                    val connectivity = applicationContext.getConnectivity()
+                    if (Connectivity.WIFI != connectivity) {
+                        // Move the book to the errors queue and signal it as skipped
+                        logErrorRecord(content.id, ErrorType.SIZE, content.url, "Book", "")
+                        moveToErrors(content.id)
+                        EventBus.getDefault()
+                            .post(DownloadCommandEvent(DownloadCommandEvent.Type.EV_SKIP))
+                    }
+                } else {
+                    logErrorRecord(content.id, ErrorType.SIZE, content.url, "Book", "")
                     moveToErrors(content.id)
                     EventBus.getDefault()
                         .post(DownloadCommandEvent(DownloadCommandEvent.Type.EV_SKIP))

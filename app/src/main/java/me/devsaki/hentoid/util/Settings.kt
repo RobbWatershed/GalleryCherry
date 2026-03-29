@@ -48,6 +48,23 @@ object Settings {
             if (downloadScheduleStart == 23 * 60) downloadScheduleStart = 0
             if (downloadScheduleEnd == 6 * 60) downloadScheduleEnd = 0
         }
+        // Skip large downloads on mobile data -> Skip large downloads (v1.21.12)
+        if (sharedPreferences.contains(Key.DL_SIZE_WIFI_OLD)) {
+            val allowLargeDownloadsOnWifi = sharedPreferences.getBoolean(Key.DL_SIZE_WIFI_OLD, false)
+            sharedPreferences.edit { remove(Key.DL_SIZE_WIFI_OLD) }
+            isSkipDownloadLarge = allowLargeDownloadsOnWifi
+            isSkipDownloadLargeAllowWIFI = allowLargeDownloadsOnWifi
+        }
+        if (sharedPreferences.contains(Key.DL_SIZE_WIFI_THRESHOLD_OLD)) {
+            var largeDownloadSizeThreshold: Int by IntSettingStr(Key.DL_SIZE_WIFI_THRESHOLD_OLD, 40)
+            skipDownloadLargeThresholdMB = largeDownloadSizeThreshold
+            sharedPreferences.edit { remove(Key.DL_SIZE_WIFI_THRESHOLD_OLD) }
+        }
+        if (sharedPreferences.contains(Key.DL_PAGES_WIFI_THRESHOLD_OLD)) {
+            var largeDownloadPagesThreshold: Int by IntSettingStr(Key.DL_PAGES_WIFI_THRESHOLD_OLD, 999999)
+            skipDownloadLargeThresholdPages = largeDownloadPagesThreshold
+            sharedPreferences.edit { remove(Key.DL_PAGES_WIFI_THRESHOLD_OLD) }
+        }
     }
 
     fun extractPortableInformation(): Map<String, Any> {
@@ -310,12 +327,10 @@ object Settings {
     var downloadPlusDuplicateTry: Boolean by BoolSetting("download_plus_duplicate_try", true)
     val isQueueAutostart: Boolean by BoolSetting("pref_queue_autostart", true)
     val isQueueWifiOnly: Boolean by BoolSetting("pref_queue_wifi_only", false)
-    val isDownloadLargeOnlyWifi: Boolean by BoolSetting("pref_dl_size_wifi", false)
-    val downloadLargeOnlyWifiThresholdMB: Int by IntSettingStr("pref_dl_size_wifi_threshold", 40)
-    val downloadLargeOnlyWifiThresholdPages: Int by IntSettingStr(
-        "pref_dl_pages_wifi_threshold",
-        999999
-    )
+    var isSkipDownloadLarge: Boolean by BoolSetting("pref_dl_skip_large", false)
+    var isSkipDownloadLargeAllowWIFI: Boolean by BoolSetting("pref_dl_skip_large_allow_wifi", false)
+    var skipDownloadLargeThresholdMB: Int by IntSettingStr("pref_dl_skip_large_size_threshold", 40)
+    var skipDownloadLargeThresholdPages: Int by IntSettingStr("pref_dl_skip_large_pages_threshold", 999999)
     val isDlRetriesActive: Boolean by BoolSetting("pref_dl_retries_active", false)
     val dlRetriesNumber: Int by IntSettingStr("pref_dl_retries_number", 5)
     val dlRetriesMemLimit: Int by IntSettingStr("pref_dl_retries_mem_limit", 100)
@@ -778,6 +793,9 @@ object Settings {
 
         // Deprecated values kept for housekeeping/migration
         const val VIEWER_AUTO_ROTATE_OLD = "pref_viewer_auto_rotate"
+        const val DL_SIZE_WIFI_OLD = "pref_dl_size_wifi"
+        const val DL_PAGES_WIFI_THRESHOLD_OLD = "pref_dl_pages_wifi_threshold"
+        const val DL_SIZE_WIFI_THRESHOLD_OLD = "pref_dl_size_wifi_threshold"
     }
 
     // IMPORTANT : Any default value change must be mirrored in res/values/strings_settings.xml

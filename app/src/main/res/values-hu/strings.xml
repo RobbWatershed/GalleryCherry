@@ -198,7 +198,6 @@
     <string name="errortype_site_limit">Letöltési/sávszélességi korlát elérve</string>
     <string name="errortype_account">Nincsen fiók beállítva vagy nem megfelelő hitelesítési adatokkal rendelkezik</string>
     <string name="errortype_import">Importálás közben nem találtunk lokális fájl(okat)</string>
-    <string name="errortype_wifi">Könyv kihagyva a Wi-Fi letöltési méretkorlátozások miatt</string>
     <string name="errortype_blocked">A könyv tartalmaz egy blokkolt taget</string>
     <string name="errortype_undefined">Definiálatlan</string>
 

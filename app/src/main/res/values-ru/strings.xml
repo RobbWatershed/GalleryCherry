@@ -217,7 +217,6 @@
     <string name="errortype_site_limit">Достигнут лимит загрузок или пропускной способности</string>
     <string name="errortype_account">Нет аккаунта или недостаточно разрешений</string>
     <string name="errortype_import">Не обнаружено локального файла после импорта</string>
-    <string name="errortype_wifi">Книга пропущена из-за ограничений на размер загрузок по Wi-Fi</string>
     <string name="errortype_blocked">Книга помечена заблокированным тэгом</string>
     <string name="errortype_undefined">Неизвестно</string>
     <string name="browse_mode_warning">Режим «только просмотр» активен\nВы используете приложение без разрешения на хранение.</string>

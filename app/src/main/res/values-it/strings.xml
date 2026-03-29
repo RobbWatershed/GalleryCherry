@@ -308,7 +308,6 @@
     <string name="errortype_parsing">Estrazione</string>
     <string name="errortype_site_limit">Limite download/banda raggiunto</string>
     <string name="errortype_undefined">Indefinito</string>
-    <string name="errortype_wifi">Libro saltato per il limite della dimensione di download in Wi-Fi</string>
     <string name="exclude">Escludi</string>
     <string name="export_answer_yes">Questa funzione NON è fatta per trasferire la tua collezione su un altro dispositivo. In certi casi funziona, ma alcuni dei tuoi libri potrebbero risultare impossibili da riscaricare!</string>
     <string name="export_failed">Esportazione fallita</string>

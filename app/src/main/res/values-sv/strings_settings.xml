@@ -7,7 +7,6 @@
     <string name="download_hitomi_avif_title">Ladda ner i AVIF-format</string>
     <string name="download_retries_active_title">Återförsök aktiverade</string>
     <string name="download_retries_screen_title">Automatiska åternerladdningsförsök</string>
-    <string name="download_size_wifi_title">Hoppa över större nedladdningar på mobildata</string>
     <string name="library_display_group_figure_title">Gruppfigur</string>
     <string name="mass_operations_summary">Masshandlingar för biblioteket</string>
     <string name="mass_operations_title">Masshandlingar</string>
@@ -116,14 +115,10 @@
     <string name="pref_dl_eh_hires_off">Ladda ner bilder som visas på webbsidan</string>
     <string name="pref_dl_eh_hires_on">Ladda ner högupplösta bilder när möjligt\nFÖRSIKTIGT:Att slå på den här inställningen kommer konsumera dina E-hentai/Exhentai bildvisningsbegränsning mycket fortare</string>
     <string name="pref_dl_http_429_default_delay_title">HTTP 429 standardfördröjning (sekunder)</string>
-    <string name="pref_dl_pages_wifi_threshold_title">Stora nerladdningars sidgräns</string>
     <string name="pref_dl_retries_mem_limit_title">Minnesanvändningströskel innan avbrott</string>
     <string name="pref_dl_retries_number_title">Antalet återförsök innan avbrott</string>
     <string name="pref_dl_retries_off">Misslyckade nerladdningar kommer stanna i ett fel-läge</string>
     <string name="pref_dl_retries_on">Misslyckade nerladdningar kommer auto-återförsökas</string>
-    <string name="pref_dl_size_wifi_off">Alla nedladdningar kommer behandlas</string>
-    <string name="pref_dl_size_wifi_on">Större nedladdningar kommer ratas om inte ansluten till Wi-Fi</string>
-    <string name="pref_dl_size_wifi_threshold_title">Storlekströskel för större nerladdningar</string>
     <string name="pref_dl_speed_cap_title">Nerladdningshastighetsgräns</string>
     <string name="pref_dl_threads_quantity_summary">Antal bilder som laddas ner samtidigt\nNuvarande: %s</string>
     <string name="pref_dl_threads_quantity_title">Antal parallella nedladdningar</string>

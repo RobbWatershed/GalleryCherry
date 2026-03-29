@@ -3,9 +3,11 @@ package me.devsaki.hentoid.parsers.images
 import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.database.domains.ImageFile
 import me.devsaki.hentoid.enums.AttributeType
+import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.retrofit.sources.LusciousServer
 import me.devsaki.hentoid.util.getRandomInt
+import me.devsaki.hentoid.util.network.getCookies
 import timber.log.Timber
 import java.io.IOException
 
@@ -62,7 +64,14 @@ class LusciousParser : BaseImageListParser() {
                 "{\"input\":{\"filters\":[{\"name\":\"album_id\",\"value\":\"$bookId\"}],\"display\":\"date_newest\",\"page\":$pageNumber}}"
         }
         try {
-            val response = LusciousServer.api.getGalleryMetadata(query).execute()
+            val cookieStr = getCookies(
+                content.galleryUrl,
+                null,
+                Site.LUSCIOUS.useMobileAgent,
+                Site.LUSCIOUS.useHentoidAgent,
+                Site.LUSCIOUS.useWebviewAgent
+            )
+            val response = LusciousServer.api.getGalleryMetadata(query, cookieStr).execute()
             if (response.isSuccessful) {
                 val metadata = response.body()
                 if (null == metadata) {
