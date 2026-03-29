@@ -40,7 +40,7 @@ class NhentaiParser : BaseChapteredImageListParser() {
     }
 
     companion object {
-        const val THUMBS_SELECTOR = "#thumbnail-container img[data-src]"
+        const val THUMBS_SELECTOR = "#thumbnail-container img[src]"
         const val COVER_SELECTOR = "#cover img"
         private const val FAV_URL = "https://nhentai.net/favorites/"
 
