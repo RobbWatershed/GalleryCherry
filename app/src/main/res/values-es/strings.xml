@@ -376,6 +376,7 @@
     <string name="group_30">Últimos 30 días</string>
     <string name="group_60">Últimos 60 días</string>
     <string name="group_7">Últimos 7 días</string>
+    <string name="group_3">Últimos 3 días</string>
     <string name="group_change">Mover a grupo personalizado</string>
     <string name="group_delete_nothing">Los grupos seleccionados no se pueden eliminar manualmente</string>
     <plurals name="group_delete_selected_book">

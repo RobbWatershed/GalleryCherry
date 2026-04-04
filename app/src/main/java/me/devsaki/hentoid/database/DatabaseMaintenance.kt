@@ -423,8 +423,15 @@ object DatabaseMaintenance {
                 // Compute missing downloaded Content size according to underlying ImageFile sizes
                 Timber.i("Create non-existing groupings : start")
                 val groupingsToProcess: MutableList<Grouping> = ArrayList()
-                for (grouping in arrayOf(Grouping.DL_DATE))
-                    if (0L == ObjectBoxDB.countGroupsFor(grouping)) groupingsToProcess.add(grouping)
+
+                Grouping.DL_DATE.let { grouping ->
+                    val nbGroups = ObjectBoxDB.countGroupsFor(grouping)
+                    // v1.21.13 - Add "3 days" category
+                    if (6L == nbGroups) {
+                        ObjectBoxDB.deleteGroupsByGrouping(grouping.id)
+                        groupingsToProcess.add(grouping)
+                    } else if (0L == nbGroups) groupingsToProcess.add(grouping)
+                }
 
                 // Test the existence of the "Ungrouped" custom group
                 val ungroupedCustomGroup =
@@ -451,23 +458,27 @@ object DatabaseMaintenance {
                             group.propertyMin = 0
                             group.propertyMax = 1
                             toInsert.add(Triple(group, null, emptyList()))
-                            group = Group(Grouping.DL_DATE, res.getString(R.string.group_7), 2)
+                            group = Group(Grouping.DL_DATE, res.getString(R.string.group_3), 2)
                             group.propertyMin = 1
+                            group.propertyMax = 4
+                            toInsert.add(Triple(group, null, emptyList()))
+                            group = Group(Grouping.DL_DATE, res.getString(R.string.group_7), 3)
+                            group.propertyMin = 4
                             group.propertyMax = 8
                             toInsert.add(Triple(group, null, emptyList()))
-                            group = Group(Grouping.DL_DATE, res.getString(R.string.group_30), 3)
+                            group = Group(Grouping.DL_DATE, res.getString(R.string.group_30), 4)
                             group.propertyMin = 8
                             group.propertyMax = 31
                             toInsert.add(Triple(group, null, emptyList()))
-                            group = Group(Grouping.DL_DATE, res.getString(R.string.group_60), 4)
+                            group = Group(Grouping.DL_DATE, res.getString(R.string.group_60), 5)
                             group.propertyMin = 31
                             group.propertyMax = 61
                             toInsert.add(Triple(group, null, emptyList()))
-                            group = Group(Grouping.DL_DATE, res.getString(R.string.group_year), 5)
+                            group = Group(Grouping.DL_DATE, res.getString(R.string.group_year), 6)
                             group.propertyMin = 61
                             group.propertyMax = 366
                             toInsert.add(Triple(group, null, emptyList()))
-                            group = Group(Grouping.DL_DATE, res.getString(R.string.group_long), 6)
+                            group = Group(Grouping.DL_DATE, res.getString(R.string.group_long), 7)
                             group.propertyMin = 366
                             group.propertyMax = 9999999
                             Timber.d("Create non-existing groupings : DATE added")

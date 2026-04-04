@@ -746,6 +746,7 @@
     <string name="missing_web_view">Hentoidは、Androidに組み込まれているアプリ用のWebビューアを見つけることができませんでした。\ nこれがないと、ソースを閲覧したり、書籍を再ダウンロードしたりできません。 インターネットを必要とすることは実際にはできません。\n\nインターネットは実際にシステムにインストールされている可能性がありますが、無効になっています。設定に移動してください＆gt; アプリ＆gt; アプリを無効にし Android System WebViewを有効にします。\n\nアプリが見つからない場合は、デバイスのアプリストアからをインストールしてください。\".</string>
     <string name="missing_web_view_library">ライブラリに戻る</string>
     <string name="group_today">今日</string>
+    <string name="group_3">過去3日間</string>
     <string name="group_7">過去7日間</string>
     <string name="group_30">過去30日間</string>
     <string name="group_60">過去60日間</string>

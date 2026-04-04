@@ -22,6 +22,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.activities.bundles.MetaEditActivityBundle
 import me.devsaki.hentoid.adapters.AvailableAttributeAdapter
+import me.devsaki.hentoid.core.fixBottomSheetLanscape
 import me.devsaki.hentoid.database.domains.Attribute
 import me.devsaki.hentoid.databinding.IncludeSearchBottomPanelBinding
 import me.devsaki.hentoid.enums.AttributeType
@@ -142,6 +143,7 @@ class MetaEditBottomSheetFragment : BottomSheetDialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        view.fixBottomSheetLanscape(this)
 
         val layoutManager = FlexboxLayoutManager(this.context)
         layoutManager.alignItems = AlignItems.STRETCH

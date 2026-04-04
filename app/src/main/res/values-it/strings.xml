@@ -380,6 +380,7 @@
     <string name="group_30">Ultimi 30 giorni</string>
     <string name="group_60">Ultimi 60 giorni</string>
     <string name="group_7">Ultimi 7 giorni</string>
+    <string name="group_3">Ultimi 3 giorni</string>
     <string name="group_change">Sposta al gruppo personalizzato</string>
     <string name="group_delete_nothing">I gruppi selezionati non si possono cancellare manualmente</string>
     <plurals name="group_delete_selected_book">

@@ -2139,6 +2139,12 @@ object ObjectBoxDB {
         store.boxFor(Group::class.java).put(groupList)
     }
 
+    fun deleteGroupsByGrouping(groupingId: Int) {
+        val qb = store.boxFor(Group::class.java).query()
+        qb.equal(Group_.grouping, groupingId.toLong())
+        qb.safeRemove()
+    }
+
     fun deleteGroupItemsByGrouping(groupingId: Int) {
         val qb = store.boxFor(GroupItem::class.java).query()
         qb.link(GroupItem_.group).equal(Group_.grouping, groupingId.toLong())

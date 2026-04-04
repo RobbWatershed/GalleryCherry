@@ -351,6 +351,7 @@
     <string name="group_30">Senaste 30 dagarna</string>
     <string name="group_60">Senaste 60 dagarna</string>
     <string name="group_7">Senaste 7 dagarna</string>
+    <string name="group_3">Senaste 3 dagarna</string>
     <string name="group_change">Flytta till anpassad grupp</string>
     <string name="group_delete_nothing">Valda grupper kan inte raderas manuellt</string>
     <plurals name="group_delete_selected_book">
