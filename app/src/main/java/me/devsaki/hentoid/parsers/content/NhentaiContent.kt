@@ -93,9 +93,10 @@ class NhentaiContent : BaseContentParser() {
         var titleDef = title.trim()
         if (titleDef.isEmpty()) titleDef = titleAlt.trim()
         content.title = cleanup(titleDef)
-        // e.g. 2022-03-20T00:09:43.309901+00:00, 2022-03-20T00:09:43+00:00
+        // e.g. 2022-03-20T00:09:43.309901+00:00, 2022-03-20T00:09:43+00:00, 2019-09-06T19:12:35.000Z
         content.uploadDate = parseDatetimeToEpoch(uploadDate, "yyyy-MM-dd'T'HH:mm:ss'.'nnnnnnXXX")
         if (0L == content.uploadDate) content.uploadDate = parseDatetimeToEpoch(uploadDate, "yyyy-MM-dd'T'HH:mm:ss'.'XXX")
+        if (0L == content.uploadDate) content.uploadDate = parseDatetimeToEpoch(uploadDate, "yyyy-MM-dd'T'HH:mm:ss.SSSX")
 
         val attributes = AttributeMap()
         parseAttributes(
