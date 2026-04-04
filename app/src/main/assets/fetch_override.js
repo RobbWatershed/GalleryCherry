@@ -16,10 +16,9 @@ if (typeof origFetch === 'undefined') {
       if (typeof (fetchResponseHandler) != 'undefined') {
          var body = "";
          if (args.length > 1) body = args[1].body;
-         response
-            .clone()
-            .then(r => fetchResponseHandler.onCall(args[0], body, r.text()))
-            .catch(err => console.error(err));
+         const resClone = response.clone();
+         const resBody = await resClone.text();
+         fetchResponseHandler.onCall(args[0], body, resBody);
       }
 
       /* the original response is resolved unmodified */

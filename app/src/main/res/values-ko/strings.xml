@@ -685,6 +685,7 @@
     <string name="missing_web_view">Hentoid가 안드로이드에 내장된 앱 용 웹 뷰어를 찾지 못했습니다.\n현재 브라우저 탐색이나 작품을 다운로드 하는 등 인터넷을 사용한 작업이 불가능합니다.\n\n설정 &gt; 애플리케이션 &gt; 사용 안 함 에서 Android 시스템 WebView를 활성화하세요.\n\n앱이 존재하지 않는다면 기기의 앱 스토어에서 설치하세요.</string>
     <string name="missing_web_view_library">라이브러리로 돌아가기</string>
     <string name="group_today">오늘</string>
+    <string name="group_3">지난 3일</string>
     <string name="group_7">지난 7일</string>
     <string name="group_30">지난 30일</string>
     <string name="group_60">지난 60일</string>

@@ -1154,6 +1154,7 @@
 
     <!-- Group names -->
     <string name="group_today">Today</string>
+    <string name="group_3">Last 3 days</string>
     <string name="group_7">Last 7 days</string>
     <string name="group_30">Last 30 days</string>
     <string name="group_60">Last 60 days</string>

@@ -20,6 +20,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.activities.bundles.SearchActivityBundle
 import me.devsaki.hentoid.adapters.AvailableAttributeAdapter
+import me.devsaki.hentoid.core.fixBottomSheetLanscape
 import me.devsaki.hentoid.database.domains.Attribute
 import me.devsaki.hentoid.databinding.IncludeSearchBottomPanelBinding
 import me.devsaki.hentoid.enums.AttributeType
@@ -156,6 +157,7 @@ class SearchBottomSheetFragment : BottomSheetDialogFragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        view.fixBottomSheetLanscape(this)
         viewModel.availableAttributes.observe(viewLifecycleOwner) { results: AttributeQueryResult ->
             onAttributesReady(results)
         }

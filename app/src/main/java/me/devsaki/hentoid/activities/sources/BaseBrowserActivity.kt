@@ -241,8 +241,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
     // Handler for fetch interceptor
     protected var isManagedFetch = false
     protected var fetchHandler: BiConsumer<String, String>? = null
-    protected var fetchResponseHandler: Consumer<String>? = null
-    private var fetchResponseCallback: Consumer<String>? = null
+    protected var fetchResponseHandler: BiConsumer<String, String>? = null
     protected var xhrHandler: BiConsumer<String, String>? = null
     private var fetchInterceptorScript: String? = null
     private var xhrInterceptorScript: String? = null
@@ -666,13 +665,19 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         webSettings.javaScriptEnabled = true
         webSettings.loadWithOverviewMode = true
         fetchHandler?.let { webView.addJavascriptInterface(FetchHandler(it), "fetchHandler") }
+        fetchResponseHandler?.let {
+            webView.addJavascriptInterface(FetchResponseHandler(it), "fetchResponseHandler")
+        }
+        // TODO remove is still unused on v1.23.x
         if (isManagedFetch) {
+            /*
             val responseHandler =
                 { responseBody: String -> fetchResponseCallback?.invoke(responseBody) ?: Unit }
             webView.addJavascriptInterface(
                 FetchResponseHandler(responseHandler),
                 "fetchResponseHandler"
             )
+             */
         }
         xhrHandler?.let { webView.addJavascriptInterface(XhrHandler(it), "xhrHandler") }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -1895,8 +1900,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         return internalCustomCss!!
     }
 
-    fun browserFetch(url: String, callback: Consumer<String>? = null) {
-        fetchResponseCallback = callback
+    private fun browserFetch(url: String) {
         webView.evaluateJavascript("fetch(\"$url\")", null)
     }
 
@@ -1976,17 +1980,17 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         @JavascriptInterface
         @Suppress("unused")
         fun onFetchCall(url: String, body: String?) {
-            Timber.d("fetch Begin %s : %s", url, body)
+            Timber.d("fetch Begin $url : $body")
             handler.invoke(url, body ?: "")
         }
     }
 
-    class FetchResponseHandler(private val handler: Consumer<String>) {
+    class FetchResponseHandler(private val handler: BiConsumer<String, String>) {
         @JavascriptInterface
         @Suppress("unused")
-        fun onFetchCall(url: String, body: String?, responseBody: String) {
-            Timber.d("fetch response $url $body $responseBody")
-            handler.invoke(responseBody)
+        fun onCall(url: String, body: String, responseBody: String) {
+            Timber.d("fetch response $url $body")
+            handler.invoke(url, responseBody)
         }
     }
 

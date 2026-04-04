@@ -42,6 +42,7 @@ class NhentaiParser : BaseChapteredImageListParser() {
     companion object {
         const val THUMBS_SELECTOR = "#thumbnail-container img[src]"
         const val COVER_SELECTOR = "#cover img"
+        const val COVER_SELECTOR_ALT = "head meta[itemprop=image]"
         private const val FAV_URL = "https://nhentai.net/favorites/"
 
         fun parseImages(coverImageUrl: String, thumbs: List<Element>): List<String> {
@@ -168,7 +169,7 @@ class NhentaiParser : BaseChapteredImageListParser() {
         val thumbs = doc.select(THUMBS_SELECTOR).filterNotNull()
         val coverUrl = doc.select(COVER_SELECTOR).first()?.let {
             fixUrl(getImgSrc(it), Site.NHENTAI.url)
-        } ?: ""
+        } ?: doc.select(COVER_SELECTOR_ALT).first()?.attr("content") ?: ""
         val imgs = parseImages(coverUrl, thumbs)
         val result = urlsToImageFiles(
             imgs,

@@ -7,7 +7,10 @@ import android.graphics.BitmapFactory
 import android.graphics.ColorSpace
 import android.net.Uri
 import me.devsaki.hentoid.customssiv.exception.UnsupportedContentException
+import me.devsaki.hentoid.customssiv.util.MIME_IMAGE_GENERIC
 import me.devsaki.hentoid.customssiv.util.copy
+import me.devsaki.hentoid.customssiv.util.decodeBitmap
+import me.devsaki.hentoid.customssiv.util.getMimeTypeFromPictureBinary
 import me.devsaki.hentoid.customssiv.util.isImageAnimated
 import timber.log.Timber
 import java.io.IOException
@@ -69,9 +72,10 @@ internal class SkiaImageDecoder(private val bitmapConfig: Bitmap.Config) : Image
         } else if (uriString.startsWith(ASSET_PREFIX)) {
             val assetName = uriString.substring(ASSET_PREFIX.length)
             bitmap = BitmapFactory.decodeStream(context.assets.open(assetName), null, options)
-        } else {
+        } else { // Filesystem
             var fileStream: InputStream? = null
             var size = 0
+            var mime = MIME_IMAGE_GENERIC
             context.contentResolver.openFileDescriptor(uri, "r")?.use {
                 size = it.statSize.toInt()
             }
@@ -80,6 +84,7 @@ internal class SkiaImageDecoder(private val bitmapConfig: Bitmap.Config) : Image
                     // First examine header
                     val header = ByteArray(400)
                     if (input.read(header) > 0) {
+                        mime = getMimeTypeFromPictureBinary(header)
                         if (isImageAnimated(header))
                             throw UnsupportedContentException("SSIV doesn't handle animated pictures")
                         val bb = MappedByteBuffer.allocate(size)
@@ -94,7 +99,7 @@ internal class SkiaImageDecoder(private val bitmapConfig: Bitmap.Config) : Image
             }
                 ?: throw RuntimeException("Content resolver returned null stream. Unable to initialise with uri.")
             fileStream?.use {
-                bitmap = BitmapFactory.decodeStream(it, null, options)
+                bitmap = decodeBitmap(it, mime, bitmapConfig)
             }
         }
         bitmap?.let { return it }

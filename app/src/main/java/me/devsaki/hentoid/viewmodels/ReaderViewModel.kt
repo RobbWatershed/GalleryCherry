@@ -386,7 +386,9 @@ class ReaderViewModel(
      * @param imageId ID of the page to set
      */
     fun setViewerStartingIndexById(imageId: Long) {
-        val index = viewerImagesInternal.indexOfFirst { it.id == imageId }
+        val index = synchronized(viewerImagesInternal) {
+            viewerImagesInternal.indexOfFirst { it.id == imageId }
+        }
         if (index > -1) startingIndex.postValue(index)
     }
 
@@ -628,44 +630,44 @@ class ReaderViewModel(
             imgs = imgs.filter { it.favourite }
         }
 
-        // Populate / restore transient attributes
-        for (i in imgs.indices) {
-            imgs[i].displayOrder = i
-            if (canReuse) {
-                val id = imgs[i].id
-                viewerImagesInternal.firstOrNull { it.id == id }?.let {
-                    imgs[i].displayUri = it.displayUri
+        synchronized(viewerImagesInternal) { // Encompasses the entire method to maintain consistency
+            // Populate / restore transient attributes
+            for (i in imgs.indices) {
+                imgs[i].displayOrder = i
+                if (canReuse) {
+                    val id = imgs[i].id
+                    viewerImagesInternal.firstOrNull { it.id == id }?.let {
+                        imgs[i].displayUri = it.displayUri
+                    }
                 }
             }
-        }
 
-        // Only update if there's any noticeable difference on images...
-        var hasDiff = imgs.size != viewerImagesInternal.size
-        if (!hasDiff) {
-            for (i in imgs.indices) {
-                hasDiff = imgs[i] != viewerImagesInternal[i]
-                if (hasDiff) break
-            }
-        }
-        // ...or chapters
-        if (!hasDiff) {
-            val oldChapters = viewerImagesInternal.map { it.linkedChapter }
-            val newChapters = imgs.map { it.linkedChapter }.toList()
-            hasDiff = oldChapters.size != newChapters.size
+            // Only update if there's any noticeable difference on images...
+            var hasDiff = imgs.size != viewerImagesInternal.size
             if (!hasDiff) {
-                for (i in oldChapters.indices) {
-                    hasDiff = oldChapters[i] != newChapters[i]
+                for (i in imgs.indices) {
+                    hasDiff = imgs[i] != viewerImagesInternal[i]
                     if (hasDiff) break
                 }
             }
-        }
-        if (hasDiff) {
-            synchronized(viewerImagesInternal) {
+            // ...or chapters
+            if (!hasDiff) {
+                val oldChapters = viewerImagesInternal.map { it.linkedChapter }
+                val newChapters = imgs.map { it.linkedChapter }.toList()
+                hasDiff = oldChapters.size != newChapters.size
+                if (!hasDiff) {
+                    for (i in oldChapters.indices) {
+                        hasDiff = oldChapters[i] != newChapters[i]
+                        if (hasDiff) break
+                    }
+                }
+            }
+            if (hasDiff) {
                 viewerImagesInternal.clear()
                 viewerImagesInternal.addAll(imgs)
+                if (startIndex > -1) onPageChange(startIndex - 1, 1, true)
+                else viewerImages.postValue(viewerImagesInternal.toList())
             }
-            if (startIndex > -1) onPageChange(startIndex - 1, 1, true)
-            else viewerImages.postValue(viewerImagesInternal.toList())
         }
     }
 
@@ -794,7 +796,9 @@ class ReaderViewModel(
      * @param successCallback Callback to be called on success
      */
     fun toggleImageFavourite(viewerIndex: Int, successCallback: (Boolean) -> Unit) {
-        val file = viewerImagesInternal[viewerIndex]
+        val file = synchronized(viewerImagesInternal) {
+            viewerImagesInternal[viewerIndex]
+        }
         val newState = !file.favourite
         toggleImageFavourite(listOf(file)) {
             successCallback.invoke(newState)
@@ -982,9 +986,11 @@ class ReaderViewModel(
      * @param onError         Callback to run in case of error
      */
     fun deletePage(pageViewerIndex: Int, onError: (Throwable) -> Unit) {
-        val imageFiles = viewerImagesInternal
-        if (imageFiles.size > pageViewerIndex && pageViewerIndex > -1)
-            deletePages(listOf(imageFiles[pageViewerIndex]), onError)
+        synchronized(viewerImagesInternal) {
+            val imageFiles = viewerImagesInternal
+            if (imageFiles.size > pageViewerIndex && pageViewerIndex > -1)
+                deletePages(listOf(imageFiles[pageViewerIndex]), onError)
+        }
     }
 
     /**
@@ -1236,8 +1242,10 @@ class ReaderViewModel(
             val isPdf = theContent.isPdf
             val isStreamed = DownloadMode.STREAM == theContent.downloadMode
             val isStored = !isArchive && !isPdf && !isStreamed && !theContent.isDynamic
-            val picturesLeftToProcess = IntRange(0, viewerImagesInternal.size - 1)
-                .filter { isPictureNeedsProcessing(it, viewerImagesInternal) }.toSet()
+            val picturesLeftToProcess = synchronized(viewerImagesInternal) {
+                IntRange(0, viewerImagesInternal.size - 1)
+                    .filter { isPictureNeedsProcessing(it, viewerImagesInternal) }.toSet()
+            }
             if (picturesLeftToProcess.isEmpty()) return@launch
 
             // Identify pages to be loaded
@@ -1317,27 +1325,29 @@ class ReaderViewModel(
 
             // Unarchive
             // Group by archive for efficiency
-            val indexesByArchive = indexesToLoad.filter { viewerImagesInternal[it].isArchived }
-                .groupBy { viewerImagesInternal[it].content.target.storageUri }.toMap()
-            indexesByArchive.keys.forEach {
-                getFileFromSingleUriString(getApplication(), it)?.let { archiveFile ->
-                    extractPics(indexesByArchive[it]!!, archiveFile, false)
+            synchronized(viewerImagesInternal) {
+                val indexesByArchive = indexesToLoad.filter { viewerImagesInternal[it].isArchived }
+                    .groupBy { viewerImagesInternal[it].content.target.storageUri }.toMap()
+                indexesByArchive.keys.forEach {
+                    getFileFromSingleUriString(getApplication(), it)?.let { archiveFile ->
+                        extractPics(indexesByArchive[it]!!, archiveFile, false)
+                    }
                 }
-            }
 
-            // Un-PDF
-            val indexesByPdf = indexesToLoad.filter { viewerImagesInternal[it].isPdf }
-                .groupBy { viewerImagesInternal[it].content.target.storageUri }.toMap()
-            indexesByPdf.keys.forEach {
-                getFileFromSingleUriString(getApplication(), it)?.let { pdfFile ->
-                    extractPics(indexesByPdf[it]!!, pdfFile, true)
+                // Un-PDF
+                val indexesByPdf = indexesToLoad.filter { viewerImagesInternal[it].isPdf }
+                    .groupBy { viewerImagesInternal[it].content.target.storageUri }.toMap()
+                indexesByPdf.keys.forEach {
+                    getFileFromSingleUriString(getApplication(), it)?.let { pdfFile ->
+                        extractPics(indexesByPdf[it]!!, pdfFile, true)
+                    }
                 }
-            }
 
-            // Download
-            val onlineIndexes =
-                indexesToLoad.filter { viewerImagesInternal[it].status == StatusContent.ONLINE }
-            downloadPics(onlineIndexes)
+                // Download
+                val onlineIndexes =
+                    indexesToLoad.filter { viewerImagesInternal[it].status == StatusContent.ONLINE }
+                downloadPics(onlineIndexes)
+            }
 
             dao.cleanup()
         }
@@ -1460,24 +1470,26 @@ class ReaderViewModel(
         // Build extraction instructions, ignoring already extracted items
         val extractInstructions: MutableList<Triple<String, Long, String>> = ArrayList()
         var hasExistingUris = false
-        for (index in indexesToLoad) {
-            if (index < 0 || index >= viewerImagesInternal.size) continue
-            val img = viewerImagesInternal[index]
-            val c = img.linkedContent ?: continue
+        synchronized(viewerImagesInternal) {
+            for (index in indexesToLoad) {
+                if (index < 0 || index >= viewerImagesInternal.size) continue
+                val img = viewerImagesInternal[index]
+                val c = img.linkedContent ?: continue
 
-            val existingUri = StorageCache.getFile(READER_CACHE, formatCacheKey(img))
-            if (existingUri != null) {
-                updateImgWithExtractedUri(img, index, existingUri, false)
-                hasExistingUris = true
-            } else {
-                extractInstructions.add(
-                    Triple(
-                        img.fileUri.replace(c.storageUri + File.separator, ""),
-                        img.id,
-                        formatCacheKey(img)
+                val existingUri = StorageCache.getFile(READER_CACHE, formatCacheKey(img))
+                if (existingUri != null) {
+                    updateImgWithExtractedUri(img, index, existingUri, false)
+                    hasExistingUris = true
+                } else {
+                    extractInstructions.add(
+                        Triple(
+                            img.fileUri.replace(c.storageUri + File.separator, ""),
+                            img.id,
+                            formatCacheKey(img)
+                        )
                     )
-                )
-                indexExtractInProgress.add(index)
+                    indexExtractInProgress.add(index)
+                }
             }
         }
         dao.cleanup()
@@ -1568,11 +1580,13 @@ class ReaderViewModel(
         )
         var idx: Int? = null
         var img: ImageFile? = null
-        for ((index, image) in viewerImagesInternal.withIndex()) {
-            if (image.id == identifier) {
-                idx = index
-                img = image
-                break
+        synchronized(viewerImagesInternal) {
+            for ((index, image) in viewerImagesInternal.withIndex()) {
+                if (image.id == identifier) {
+                    idx = index
+                    img = image
+                    break
+                }
             }
         }
 
@@ -1641,7 +1655,9 @@ class ReaderViewModel(
         stopDownload: AtomicBoolean
     ): Pair<Int, String>? = withContext(Dispatchers.IO) {
         if (viewerImagesInternal.size <= pageIndex) return@withContext null
-        val img = viewerImagesInternal[pageIndex]!!
+        val img = synchronized(viewerImagesInternal) {
+            viewerImagesInternal[pageIndex]!!
+        }
         val content = img.content.target
 
         // Already downloaded
@@ -2073,7 +2089,7 @@ class ReaderViewModel(
             }
             if (it < 0 || it >= viewerImagesInternal.size) return@forEach
 
-            val img = viewerImagesInternal[it]
+            val img = synchronized(viewerImagesInternal) { viewerImagesInternal[it] }
             val uri =
                 img.displayUri.ifBlank { if (img.isArchived || img.isPdf) "" else img.fileUri }
             if (img.imageType == ImageType.IMG_TYPE_UNSET && uri.isNotBlank()) {
@@ -2092,7 +2108,9 @@ class ReaderViewModel(
                         val updatedImg = ImageFile(img)
                         if (img.displayUri.isBlank()) updatedImg.displayUri = img.fileUri
                         updatedImg.imageType = imageType
-                        viewerImagesInternal[it] = updatedImg
+                        synchronized(viewerImagesInternal) {
+                            viewerImagesInternal[it] = updatedImg
+                        }
                         onDone?.invoke()
                     }
                     preloadKillSwitches.remove(stopPreload)

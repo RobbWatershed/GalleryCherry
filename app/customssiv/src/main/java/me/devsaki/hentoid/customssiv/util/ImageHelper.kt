@@ -1,13 +1,21 @@
 package me.devsaki.hentoid.customssiv.util
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.ColorSpace
 import android.graphics.Point
+import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.os.Build
+import com.awxkee.jxlcoder.JxlCoder
+import com.radzivon.bartoshyk.avif.coder.HeifCoder
+import com.radzivon.bartoshyk.avif.coder.PreferredColorConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.io.IOException
+import java.io.InputStream
 import java.nio.charset.StandardCharsets
 import kotlin.math.min
 
@@ -148,20 +156,37 @@ internal fun isImageAnimated(data: ByteArray): Boolean {
  * @param uri     Uri of the image to be read
  * @return Dimensions (x,y) of the given image
  */
-internal suspend fun getImageDimensions(context: Context, uri: Uri): Point =
+suspend fun getImageDimensions(context: Context, uri: Uri, data: ByteArray? = null): Point =
     withContext(Dispatchers.IO) {
-        if (!fileExists(context, uri)) return@withContext Point(0, 0)
+        if (null == data && !fileExists(context, uri)) return@withContext Point(0, 0)
 
         val ext = getExtensionFromUri(uri.toString())
-        if (ext == "jxl" || ext == "avif" || ext == "mp4") {
-            // Not supported by SSIV
-            return@withContext Point(0, 0)
+        if (ext == "jxl" || ext == "avif") {
+            return@withContext getDimsFromThirdParty(context, ext, uri)
         } else { // Natively supported by Android
-            val options = BitmapFactory.Options()
-            options.inJustDecodeBounds = true
             return@withContext try {
-                BitmapFactory.decodeStream(getInputStream(context, uri), null, options)
-                Point(options.outWidth, options.outHeight)
+                if (null == data) {
+                    var dims = Point(0, 0)
+                    try {
+                        dims = getDimsFromBitmapFactory(context, uri)
+                    } catch (e: Exception) {
+                        Timber.d(e)
+                    }
+                    if (dims.x < 1 || dims.y < 1) {
+                        // Fallback for formats unsupported by BitmapFactory but supported by Android Media (e.g. MP4)
+                        try {
+                            dims = getDimsFromMediaRetriever(context, uri)
+                        } catch (e: Exception) {
+                            Timber.w(e)
+                        }
+                    }
+                    dims
+                } else {
+                    val options = BitmapFactory.Options()
+                    options.inJustDecodeBounds = true
+                    BitmapFactory.decodeByteArray(data, 0, data.size, options)
+                    Point(options.outWidth, options.outHeight)
+                }
             } catch (e: IOException) {
                 Timber.w(e)
                 Point(0, 0)
@@ -171,3 +196,111 @@ internal suspend fun getImageDimensions(context: Context, uri: Uri): Point =
             }
         }
     }
+
+@Throws(Exception::class)
+fun getDimsFromBitmapFactory(context: Context, uri: Uri): Point {
+    val options = BitmapFactory.Options()
+    options.inJustDecodeBounds = true
+    getInputStream(context, uri).use {
+        BitmapFactory.decodeStream(it, null, options)
+        return Point(options.outWidth, options.outHeight)
+    }
+}
+
+@Throws(Exception::class)
+fun getDimsFromMediaRetriever(context: Context, uri: Uri): Point {
+    val retriever = MediaMetadataRetriever()
+    try {
+        retriever.setDataSource(context, uri)
+        val width =
+            retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)
+                ?.toInt() ?: 0
+        val height =
+            retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT)
+                ?.toInt() ?: 0
+        return Point(width, height)
+    } finally {
+        retriever.release()
+    }
+}
+
+fun getDimsFromThirdParty(context: Context, ext: String, uri: Uri): Point {
+    getInputStream(context, uri).use { ins ->
+        val rawData = ins.readBytes()
+        return when (ext) {
+            "jxl" -> {
+                JxlCoder.getSize(rawData)?.let {
+                    Point(it.width, it.height)
+                } ?: Point(0, 0)
+            }
+
+            "avif" -> {
+                HeifCoder().getSize(rawData)?.let {
+                    Point(it.width, it.height)
+                } ?: Point(0, 0)
+            }
+
+            else -> Point(0, 0)
+        }
+    }
+}
+
+fun decodeBitmap(inputStream: InputStream, mime: String, config: Bitmap.Config): Bitmap? {
+    return when (mime) {
+        MIME_IMAGE_JXL, MIME_IMAGE_AVIF -> inputStream.use { decodeBitmap(it.readBytes(), config) }
+        else -> {
+            val options = BitmapFactory.Options()
+            options.inPreferredConfig = config
+            // If that is not set, some PNGs are read with a ColorSpace of code "Unknown" (-1),
+            // which makes resizing buggy (generates a black picture)
+            options.inPreferredColorSpace = ColorSpace.get(ColorSpace.Named.SRGB)
+            BitmapFactory.decodeStream(inputStream, null, options)
+        }
+    }
+}
+
+fun decodeBitmap(rawData: ByteArray, config: Bitmap.Config?): Bitmap {
+    val mime = getMimeTypeFromPictureBinary(rawData)
+    return if (MIME_IMAGE_JXL == mime) {
+        JxlCoder.decode(rawData, toJxlCfg(config))
+    } else if (MIME_IMAGE_AVIF == mime) {
+        HeifCoder().decode(rawData, toAvifCfg(config))
+    } else {
+        val options = BitmapFactory.Options()
+        options.inPreferredConfig = config
+        // If that is not set, some PNGs are read with a ColorSpace of code "Unknown" (-1),
+        // which makes resizing buggy (generates a black picture)
+        options.inPreferredColorSpace = ColorSpace.get(ColorSpace.Named.SRGB)
+        BitmapFactory.decodeByteArray(rawData, 0, rawData.size, options)
+    }
+}
+
+private fun toAvifCfg(config: Bitmap.Config?): PreferredColorConfig {
+    return when (config) {
+        Bitmap.Config.ARGB_8888 -> PreferredColorConfig.RGBA_8888
+        Bitmap.Config.RGB_565 -> PreferredColorConfig.RGB_565
+        Bitmap.Config.RGBA_F16 -> PreferredColorConfig.RGBA_F16
+        Bitmap.Config.HARDWARE -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            PreferredColorConfig.HARDWARE
+        } else {
+            PreferredColorConfig.DEFAULT
+        }
+
+        else -> PreferredColorConfig.DEFAULT
+    }
+}
+
+private fun toJxlCfg(config: Bitmap.Config?): com.awxkee.jxlcoder.PreferredColorConfig {
+    return when (config) {
+        Bitmap.Config.ARGB_8888 -> com.awxkee.jxlcoder.PreferredColorConfig.RGBA_8888
+        Bitmap.Config.RGB_565 -> com.awxkee.jxlcoder.PreferredColorConfig.RGB_565
+        Bitmap.Config.RGBA_F16 -> com.awxkee.jxlcoder.PreferredColorConfig.RGBA_F16
+        Bitmap.Config.HARDWARE -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            com.awxkee.jxlcoder.PreferredColorConfig.HARDWARE
+        } else {
+            com.awxkee.jxlcoder.PreferredColorConfig.DEFAULT
+        }
+
+        else -> com.awxkee.jxlcoder.PreferredColorConfig.DEFAULT
+    }
+}

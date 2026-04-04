@@ -55,11 +55,9 @@ class DeviantArtContent : BaseContentParser() {
 
         title = cleanup(title)
 
+        // e.g. 2022-03-20T00:09:43.000Z
         if (uploadDate.isNotEmpty())
-            content.uploadDate = parseDatetimeToEpoch(
-                uploadDate,
-                "yyyy-MM-dd'T'HH:mm:ss.SSSX"
-            ) // e.g. 2022-03-20T00:09:43.000Z
+            content.uploadDate = parseDatetimeToEpoch(uploadDate, "yyyy-MM-dd'T'HH:mm:ss.SSSX")
 
         val attributes = AttributeMap()
         // On DeviantArt, most titles are formatted "Title by Artist on DeviantArt"
