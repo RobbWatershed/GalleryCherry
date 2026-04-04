@@ -10,6 +10,7 @@ import me.devsaki.hentoid.parsers.cleanup
 import me.devsaki.hentoid.parsers.getImgSrc
 import me.devsaki.hentoid.parsers.images.NhentaiParser
 import me.devsaki.hentoid.parsers.images.NhentaiParser.Companion.COVER_SELECTOR
+import me.devsaki.hentoid.parsers.images.NhentaiParser.Companion.COVER_SELECTOR_ALT
 import me.devsaki.hentoid.parsers.images.NhentaiParser.Companion.THUMBS_SELECTOR
 import me.devsaki.hentoid.parsers.parseAttributes
 import me.devsaki.hentoid.parsers.urlsToImageFiles
@@ -24,6 +25,9 @@ class NhentaiContent : BaseContentParser() {
 
     @Selector(value = COVER_SELECTOR)
     private var cover: Element? = null
+
+    @Selector(value = COVER_SELECTOR_ALT, attr = "content", defValue = "")
+    private lateinit var coverAlt: String
 
     @Selector(value = "head [property=og:title]", attr = "content", defValue = "")
     private lateinit var title: String
@@ -89,14 +93,19 @@ class NhentaiContent : BaseContentParser() {
 
         cover?.let {
             content.coverImageUrl = fixUrl(getImgSrc(it), Site.NHENTAI.url)
+        } ?: run {
+            content.coverImageUrl = coverAlt
         }
         var titleDef = title.trim()
         if (titleDef.isEmpty()) titleDef = titleAlt.trim()
         content.title = cleanup(titleDef)
         // e.g. 2019-09-06T19:12:35.000Z, 2022-03-20T00:09:43.309901+00:00, 2022-03-20T00:09:43+00:00
-        if (uploadDate.endsWith('Z')) content.uploadDate = parseDatetimeToEpoch(uploadDate, "yyyy-MM-dd'T'HH:mm:ss.SSSX")
-        else content.uploadDate = parseDatetimeToEpoch(uploadDate, "yyyy-MM-dd'T'HH:mm:ss'.'nnnnnnXXX")
-        if (0L == content.uploadDate) content.uploadDate = parseDatetimeToEpoch(uploadDate, "yyyy-MM-dd'T'HH:mm:ss'.'XXX")
+        if (uploadDate.endsWith('Z')) content.uploadDate =
+            parseDatetimeToEpoch(uploadDate, "yyyy-MM-dd'T'HH:mm:ss.SSSX")
+        else content.uploadDate =
+            parseDatetimeToEpoch(uploadDate, "yyyy-MM-dd'T'HH:mm:ss'.'nnnnnnXXX")
+        if (0L == content.uploadDate) content.uploadDate =
+            parseDatetimeToEpoch(uploadDate, "yyyy-MM-dd'T'HH:mm:ss'.'XXX")
 
         val attributes = AttributeMap()
         parseAttributes(
