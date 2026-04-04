@@ -107,6 +107,7 @@ enum class Site(val code: Int, val description: String, val url: String, val ico
         private set
     var useWebviewAgent = true
         private set
+    // TODO remove is still unused on v1.23.x
     var useManagedRequests = false
         private set
 
