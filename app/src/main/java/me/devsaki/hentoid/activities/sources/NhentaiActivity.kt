@@ -24,7 +24,7 @@ class NhentaiActivity : BaseBrowserActivity() {
             arrayOf(
                 "$DOMAIN_FILTER/g/[%0-9]+[/]{0,1}$",
                 "$DOMAIN_FILTER/search/\\?q=[%0-9]+$",
-                "$DOMAIN_FILTER/api/v2/galleries/[%0-9]+(\\?include=comments){0,1}$",
+                "$DOMAIN_FILTER/api/v2/galleries/[%0-9]+(\\?[%=\\w\\-]+){0,1}$",
                 FAVS_FILTER
             )
         private val RESULTS_FILTER = arrayOf(
