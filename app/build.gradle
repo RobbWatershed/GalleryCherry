@@ -179,7 +179,7 @@ dependencies {
     implementation "com.github.penfeizhou.android.animation:avif:$APNG4Android_version"
 
     // Animated GIF creator -> https://github.com/shaksternano/gif.kt
-    implementation('com.shakster:gifkt:0.3.2')
+    implementation('com.shakster:gifkt:0.3.3')
 
     // PDF creator/extractor
     implementation 'com.itextpdf:itext7-core:8.0.5'
