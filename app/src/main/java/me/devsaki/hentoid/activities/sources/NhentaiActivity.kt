@@ -34,7 +34,7 @@ class NhentaiActivity : BaseBrowserActivity() {
             "//$DOMAIN_FILTER/(character|artist|parody|tag|group)/"
         )
         private val BLOCKED_CONTENT = arrayOf("popunder")
-        private val REMOVABLE_ELEMENTS = arrayOf("section.advertisement")
+        private val REMOVABLE_ELEMENTS = arrayOf("section.advertisement", ".ad-wrapper")
     }
 
     override fun getStartSite(): Site {
