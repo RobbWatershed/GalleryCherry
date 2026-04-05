@@ -13,6 +13,7 @@ import me.devsaki.hentoid.parsers.urlToImageFile
 import me.devsaki.hentoid.util.KEY_DL_PARAMS_UGOIRA_FRAMES
 import me.devsaki.hentoid.util.MAP_STRINGS
 import me.devsaki.hentoid.util.isNumeric
+import me.devsaki.hentoid.util.rangeToNumbers
 import me.devsaki.hentoid.util.serializeToJson
 import java.lang.reflect.Type
 
@@ -264,8 +265,8 @@ data class PixivIllustMetadata(
         content.uploadDate = illustData.uploadTimestamp!! * 1000
         content.putAttributes(getAttributes())
         if (updateImages) {
-            content.setImageFiles(illustData.imageFiles)
-            content.qtyPages = illustData.pageCount
+            content.setImageFiles(emptyList())
+            content.qtyPages = 0
         }
         return content
     }
