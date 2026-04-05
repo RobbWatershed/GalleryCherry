@@ -109,6 +109,7 @@ class NhentaiParser : BaseChapteredImageListParser() {
                 getOnlineDocument(
                     "$FAV_URL?page=$i",
                     headers,
+                    Site.NHENTAI.useMobileAgent,
                     Site.NHENTAI.useHentoidAgent,
                     Site.NHENTAI.useWebviewAgent
                 )?.let { favDoc ->
@@ -162,6 +163,7 @@ class NhentaiParser : BaseChapteredImageListParser() {
         val doc = getOnlineDocument(
             url,
             headers ?: fetchHeaders(content),
+            Site.NHENTAI.useMobileAgent,
             Site.NHENTAI.useHentoidAgent,
             Site.NHENTAI.useWebviewAgent
         ) ?: throw ParseException("Document unreachable :$url")

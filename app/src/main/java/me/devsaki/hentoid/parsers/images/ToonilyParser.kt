@@ -57,6 +57,7 @@ class ToonilyParser : BaseChapteredImageListParser() {
         getOnlineDocument(
             chp.url,
             headers ?: fetchHeaders(content),
+            content.site.useMobileAgent,
             content.site.useHentoidAgent,
             content.site.useWebviewAgent
         )?.let { doc ->
