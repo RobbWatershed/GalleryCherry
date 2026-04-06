@@ -592,7 +592,7 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
                 if (isInQueue(existingDuplicate.status)) "queue" else "collection"
             trace(
                 Log.INFO, STEP_3_BOOKS, log,
-                "Import book KO! (already in $location) : %s", bookLocation
+                "Import book KO! (already in $location) : $bookLocation"
             )
             onProgress("", false)
             return
@@ -692,7 +692,7 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
                         if (isInQueue(existingDuplicate.status)) "queue" else "collection"
                     trace(
                         Log.INFO, STEP_2_BOOK_FOLDERS, log,
-                        "Import book KO! (already in $location) : %s", bookLocation
+                        "Import book KO! (already in $location) : $bookLocation"
                     )
                     return result
                 }

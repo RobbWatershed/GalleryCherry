@@ -2053,16 +2053,12 @@ suspend fun mergeContents(
 
                         if (unarchivedFiles.size < picsToUnarchive.size) throw ContentNotProcessedException(
                             mergedContent,
-                            "Issue when unarchiving " + unarchivedFiles.size + " " + picsToUnarchive.size
+                            "Issue when extracting. Expected : ${picsToUnarchive.size} / extracted : ${unarchivedFiles.size}"
                         )
 
                         // Replace intial file URIs with unarchived files URIs
                         picsToUnarchive.forEachIndexed { index, imageFile ->
-                            Timber.d(
-                                "Replacing %s with %s",
-                                imageFile.fileUri,
-                                unarchivedFiles[index].toString()
-                            )
+                            Timber.d("Replacing ${imageFile.fileUri} with ${unarchivedFiles[index]}")
                             imageFile.fileUri = unarchivedFiles[index].toString()
                         }
                     } // Archives and PDFs
