@@ -26,7 +26,6 @@ import me.devsaki.hentoid.activities.bundles.BaseBrowserActivityBundle
 import me.devsaki.hentoid.activities.bundles.ContentItemBundle
 import me.devsaki.hentoid.activities.bundles.ReaderActivityBundle
 import me.devsaki.hentoid.core.BiConsumer
-import me.devsaki.hentoid.core.Consumer
 import me.devsaki.hentoid.core.EXT_THUMB_FILE_PREFIX
 import me.devsaki.hentoid.core.JSON_ARCHIVE_SUFFIX
 import me.devsaki.hentoid.core.JSON_FILE_NAME_V2
@@ -2124,7 +2123,7 @@ suspend fun mergeContents(
         }
 
         // Remove target folder and merged images if manually canceled
-        if (isCanceled.invoke()) dlManager.removeDownload(context)
+        if (isCanceled.invoke() || isError) dlManager.removeDownload(context)
 
         if (!isError && !isCanceled.invoke()) {
             val newLocations = dlManager.refreshLocation(mergedImages)
