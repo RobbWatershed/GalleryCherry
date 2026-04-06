@@ -416,11 +416,7 @@ object Beholder {
             Timber.v("beholder dump start")
             snapshot.forEach { se ->
                 Timber.v("${se.key} : ${se.value.nbFiles} files, ${se.value.documents.size} useful docs")
-                /*
-                se.value.forEach { sev ->
-                    Timber.d("${sev.key} => ${sev.value}")
-                }
-                 */
+                //se.value.documents.forEach { Timber.v("     ${it.key} => ${it.value}") }
             }
             Timber.v("beholder dump end")
         }

@@ -16,6 +16,7 @@ class TsuminoParser : BaseImageListParser() {
         val doc = getOnlineDocument(
             content.readerUrl,
             headers,
+            Site.TSUMINO.useMobileAgent,
             Site.TSUMINO.useHentoidAgent,
             Site.TSUMINO.useWebviewAgent
         )

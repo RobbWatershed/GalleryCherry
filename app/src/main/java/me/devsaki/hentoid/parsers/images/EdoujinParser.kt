@@ -3,6 +3,7 @@ package me.devsaki.hentoid.parsers.images
 import me.devsaki.hentoid.database.domains.Chapter
 import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.database.domains.ImageFile
+import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.parsers.urlsToImageFiles
 import me.devsaki.hentoid.util.isNumeric
@@ -70,6 +71,7 @@ class EdoujinParser : BaseChapteredImageListParser() {
         getOnlineDocument(
             chp.url,
             headers ?: fetchHeaders(content),
+            content.site.useMobileAgent,
             content.site.useHentoidAgent,
             content.site.useWebviewAgent
         )?.let { doc ->

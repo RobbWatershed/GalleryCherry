@@ -54,35 +54,25 @@ private const val AGENT_INIT_ISSUE = "Call initUserAgents first to initialize th
 
 
 /**
- * Read an HTML resource from the given URL and retrieve it as a Document
- *
- * @param url URL to read the resource from
- * @return HTML resource read from the given URL represented as a Document
- * @throws IOException in case something bad happens when trying to access the online resource
- */
-@Throws(IOException::class)
-fun getOnlineDocument(url: String): Document? {
-    return getOnlineDocument(url, null, useHentoidAgent = true, useWebviewAgent = true)
-}
-
-/**
  * Read an HTML resource from the given URL, using the given headers and agent and retrieve it as a Document
  *
  * @param url             URL to read the resource from
  * @param headers         Headers to use when building the request
  * @param useHentoidAgent True if the Hentoid User-Agent has to be used; false if a neutral User-Agent has to be used
+ *
  * @return HTML resource read from the given URL represented as a Document
  * @throws IOException in case something bad happens when trying to access the online resource
  */
 @Throws(IOException::class)
 fun getOnlineDocument(
     url: String,
-    headers: List<Pair<String, String>>?,
-    useHentoidAgent: Boolean,
-    useWebviewAgent: Boolean
+    headers: List<Pair<String, String>>? = null,
+    useMobileAgent: Boolean = true,
+    useHentoidAgent: Boolean = true,
+    useWebviewAgent: Boolean = true
 ): Document? {
-    getOnlineResource(url, headers, true, useHentoidAgent, useWebviewAgent).body
-        .use { return Jsoup.parse(it.string()) }
+    getOnlineResource(url, headers, useMobileAgent, useHentoidAgent, useWebviewAgent)
+        .body.use { return Jsoup.parse(it.string()) }
 }
 
 @Throws(IOException::class)

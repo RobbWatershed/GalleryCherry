@@ -25,6 +25,7 @@ class ImhentaiParser : BaseImageListParser() {
         val doc = getOnlineDocument(
             content.readerUrl,
             headers,
+            Site.IMHENTAI.useMobileAgent,
             Site.IMHENTAI.useHentoidAgent,
             Site.IMHENTAI.useWebviewAgent
         ) ?: return emptyList()

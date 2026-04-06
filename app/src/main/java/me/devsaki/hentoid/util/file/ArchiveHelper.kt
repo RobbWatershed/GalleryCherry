@@ -4,6 +4,7 @@ import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
 import android.os.ParcelFileDescriptor
+import android.util.Log
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import me.devsaki.hentoid.core.READER_CACHE
@@ -393,7 +394,7 @@ private fun Context.extractArchiveEntries(
         }
     } catch (e: SevenZipException) {
         Timber.w(e)
-        throw IOException(e)
+        throw IOException(e.cause?.message ?: "", e)
     }
 }
 
@@ -627,7 +628,7 @@ private class ArchiveExtractCallback(
         val internalName = internalFileNames[index] ?: ""
 
         val existing = fileFinder.invoke(fileName)
-        Timber.v("Extract archive, get stream: $index ($internalName) to: $extractAskMode as $fileName")
+        Timber.d("Extract archive, get stream: $index ($internalName) to: $extractAskMode as $fileName")
         return try {
             val target = existing ?: fileCreator.invoke(fileName)
             ?: throw IOException("Can't create file $fileName")
@@ -643,7 +644,7 @@ private class ArchiveExtractCallback(
 
     @Throws(SevenZipException::class)
     override fun prepareOperation(extractAskMode: ExtractAskMode) {
-        Timber.v("Extract archive, prepare to: %s", extractAskMode)
+        Timber.v("Extract archive, prepare to: extractAskMode : $uri")
         if (true == interrupt?.invoke()) {
             Timber.v(INTERRUPTION_MSG)
             throw SevenZipException(INTERRUPTION_MSG)
@@ -652,18 +653,17 @@ private class ArchiveExtractCallback(
 
     @Throws(SevenZipException::class)
     override fun setOperationResult(extractOperationResult: ExtractOperationResult) {
-        Timber.v(
-            "Extract archive, %s completed with: %s",
-            extractAskMode,
-            extractOperationResult
+        val priority =
+            if (ExtractOperationResult.OK == extractOperationResult) Log.DEBUG else Log.WARN
+        Timber.log(
+            priority,
+            "Extract archive, $extractAskMode completed with $extractOperationResult : $uri"
         )
         stream?.close()
         if (extractOperationResult != ExtractOperationResult.OK) {
             throw SevenZipException(extractOperationResult.toString())
         } else {
-            uri?.let {
-                onExtract?.invoke(identifier, it)
-            }
+            uri?.let { onExtract?.invoke(identifier, it) }
         }
         if (extractAskMode != null && extractAskMode == ExtractAskMode.EXTRACT) {
             nbProcessed++
@@ -672,11 +672,11 @@ private class ArchiveExtractCallback(
     }
 
     override fun setTotal(total: Long) {
-        Timber.v("Extract archive, bytes planned: %s", total)
+        Timber.v("Extract archive, bytes planned: $total")
     }
 
     override fun setCompleted(complete: Long) {
-        Timber.v("Extract archive, bytes processed: %s", complete)
+        Timber.v("Extract archive, bytes processed: $complete")
     }
 }
 

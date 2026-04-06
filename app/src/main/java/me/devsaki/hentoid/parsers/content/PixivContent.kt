@@ -50,31 +50,23 @@ class PixivContent : BaseContentParser() {
             val userAgent = getUserAgent(Site.PIXIV)
             when (entity) {
                 "artworks", "illust" -> {
-                    val metadata =
-                        PixivServer.api.getIllustMetadata(id, cookieStr, ACCEPT_ALL, userAgent)
-                            .execute().body()
-                    if (metadata != null) return metadata.update(content, url, updateImages)
+                    PixivServer.api.getIllustMetadata(id, cookieStr, ACCEPT_ALL, userAgent)
+                        .execute().body()?.let { return it.update(content, url, updateImages) }
                 }
 
                 "series_content", "series" -> {
-                    val seriesData =
-                        PixivServer.api.getSeriesMetadata(id, cookieStr, ACCEPT_ALL, userAgent)
-                            .execute().body()
-                    if (seriesData != null) return seriesData.update(content, updateImages)
+                    PixivServer.api.getSeriesMetadata(id, cookieStr, ACCEPT_ALL, userAgent)
+                        .execute().body()?.let { return it.update(content, updateImages) }
                 }
 
                 "user", "users" -> {
-                    val userData =
-                        PixivServer.api.getUserMetadata(id, cookieStr, ACCEPT_ALL, userAgent)
-                            .execute().body()
-                    if (userData != null) return userData.update(content, updateImages)
+                    PixivServer.api.getUserMetadata(id, cookieStr, ACCEPT_ALL, userAgent)
+                        .execute().body()?.let { return it.update(content, updateImages) }
                 }
 
                 "bookmarks" -> {
-                    val bookmarksData =
-                        PixivServer.api.getUserBookmarks(id, cookieStr, ACCEPT_ALL, userAgent)
-                            .execute().body()
-                    if (bookmarksData != null) return bookmarksData.update(content, id, updateImages)
+                    PixivServer.api.getUserBookmarks(id, cookieStr, ACCEPT_ALL, userAgent)
+                        .execute().body()?.let { return it.update(content, id, updateImages) }
                 }
 
                 else -> {}

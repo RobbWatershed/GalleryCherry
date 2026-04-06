@@ -9,7 +9,8 @@ import me.devsaki.hentoid.workers.SplitMergeType
 class SplitMergeCompleteNotification(
     private val books: Int,
     private val nbError: Int,
-    private val type: SplitMergeType
+    private val type: SplitMergeType,
+    private val errorMsg : String = ""
 ) :
     BaseNotification() {
     override fun onCreateNotification(context: Context): android.app.Notification {
@@ -20,7 +21,7 @@ class SplitMergeCompleteNotification(
             if (SplitMergeType.SPLIT == type) R.string.split_success
             else R.string.merge_success
         }
-        val content = if (nbError > 0) context.resources.getQuantityString(
+        var content = if (nbError > 0) context.resources.getQuantityString(
             R.plurals.notif_delete_fail_details,
             nbError,
             nbError
@@ -30,6 +31,7 @@ class SplitMergeCompleteNotification(
             books,
             books
         )
+        if (nbError > 0 && errorMsg.isNotBlank()) content += " ($errorMsg)"
 
         return NotificationCompat.Builder(context, ID)
             .setSmallIcon(R.drawable.ic_app)

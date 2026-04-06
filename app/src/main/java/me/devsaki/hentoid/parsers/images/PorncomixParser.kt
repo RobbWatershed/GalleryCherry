@@ -56,6 +56,7 @@ class PorncomixParser : BaseChapteredImageListParser() {
         val doc = getOnlineDocument(
             chp.url,
             headers ?: fetchHeaders(content),
+            Site.PORNCOMIX.useMobileAgent,
             Site.PORNCOMIX.useHentoidAgent,
             Site.PORNCOMIX.useWebviewAgent
         ) ?: throw ParseException("Document unreachable : " + content.galleryUrl)
@@ -99,6 +100,7 @@ class PorncomixParser : BaseChapteredImageListParser() {
             getOnlineDocument(
                 pageUrl,
                 null,
+                Site.PORNCOMIX.useMobileAgent,
                 Site.PORNCOMIX.useHentoidAgent,
                 Site.PORNCOMIX.useWebviewAgent
             )?.let {

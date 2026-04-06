@@ -25,7 +25,7 @@ import me.devsaki.hentoid.activities.UnlockActivity.Companion.wrapIntent
 import me.devsaki.hentoid.activities.bundles.BaseBrowserActivityBundle
 import me.devsaki.hentoid.activities.bundles.ContentItemBundle
 import me.devsaki.hentoid.activities.bundles.ReaderActivityBundle
-import me.devsaki.hentoid.core.Consumer
+import me.devsaki.hentoid.core.BiConsumer
 import me.devsaki.hentoid.core.EXT_THUMB_FILE_PREFIX
 import me.devsaki.hentoid.core.JSON_ARCHIVE_SUFFIX
 import me.devsaki.hentoid.core.JSON_FILE_NAME_V2
@@ -1905,7 +1905,7 @@ suspend fun mergeContents(
     dao: CollectionDAO,
     isCanceled: () -> Boolean,
     onProgress: (Int, Int, String) -> Unit,
-    onComplete: Consumer<Boolean>
+    onComplete: BiConsumer<Boolean, String>
 ) {
     // New book inherits properties of the first content of the list
     // which takes "precedence" as the 1st chapter
@@ -1935,6 +1935,7 @@ suspend fun mergeContents(
     mergedContent.addAttributes(mergedAttributes)
 
     var isError = false
+    var errorMsg = ""
     withContext(Dispatchers.IO) {
         // Create destination folder for new content
         val dlManager = StorageDownloadManager()
@@ -2053,16 +2054,12 @@ suspend fun mergeContents(
 
                         if (unarchivedFiles.size < picsToUnarchive.size) throw ContentNotProcessedException(
                             mergedContent,
-                            "Issue when unarchiving " + unarchivedFiles.size + " " + picsToUnarchive.size
+                            "Issue when extracting. Expected : ${picsToUnarchive.size} / extracted : ${unarchivedFiles.size}"
                         )
 
                         // Replace intial file URIs with unarchived files URIs
                         picsToUnarchive.forEachIndexed { index, imageFile ->
-                            Timber.d(
-                                "Replacing %s with %s",
-                                imageFile.fileUri,
-                                unarchivedFiles[index].toString()
-                            )
+                            Timber.d("Replacing ${imageFile.fileUri} with ${unarchivedFiles[index]}")
                             imageFile.fileUri = unarchivedFiles[index].toString()
                         }
                     } // Archives and PDFs
@@ -2118,6 +2115,7 @@ suspend fun mergeContents(
             } // Content
         } catch (e: IOException) {
             Timber.w(e)
+            errorMsg = e.message ?: ""
             isError = true
         } finally {
             // Delete temp files
@@ -2125,7 +2123,7 @@ suspend fun mergeContents(
         }
 
         // Remove target folder and merged images if manually canceled
-        if (isCanceled.invoke()) dlManager.removeDownload(context)
+        if (isCanceled.invoke() || isError) dlManager.removeDownload(context)
 
         if (!isError && !isCanceled.invoke()) {
             val newLocations = dlManager.refreshLocation(mergedImages)
@@ -2169,7 +2167,7 @@ suspend fun mergeContents(
         }
         dao.cleanup()
 
-        if (!isCanceled.invoke()) onComplete.invoke(isError)
+        if (!isCanceled.invoke()) onComplete.invoke(isError, errorMsg)
     } // Dispatchers.IO
 }
 

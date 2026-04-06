@@ -12,7 +12,6 @@ import me.devsaki.hentoid.parsers.getExtraChaptersbyUrl
 import me.devsaki.hentoid.parsers.getMaxChapterOrder
 import me.devsaki.hentoid.parsers.getMaxImageOrder
 import me.devsaki.hentoid.parsers.getUserAgent
-import me.devsaki.hentoid.parsers.urlsToImageFiles
 import me.devsaki.hentoid.retrofit.sources.PixivServer
 import me.devsaki.hentoid.util.KEY_DL_PARAMS_NB_CHAPTERS
 import me.devsaki.hentoid.util.Settings
@@ -25,12 +24,14 @@ import me.devsaki.hentoid.util.network.ACCEPT_ALL
 import me.devsaki.hentoid.util.network.getCookies
 import me.devsaki.hentoid.util.network.waitBlocking429
 import me.devsaki.hentoid.util.parseDownloadParams
+import me.devsaki.hentoid.util.rangeToNumbers
 import org.greenrobot.eventbus.EventBus
 import retrofit2.Call
 import retrofit2.Response
 import timber.log.Timber
 
 private const val MAX_QUERY_WINDOW = 30
+private const val MAX_PAGE_RANGE = 50000
 
 class PixivParser : BaseImageListParser() {
 
@@ -104,19 +105,26 @@ class PixivParser : BaseImageListParser() {
     ): List<ImageFile> {
         take()
         val galleryMetadata =
-            PixivServer.api.getIllustPages(content.uniqueSiteId, cookieStr, ACCEPT_ALL, userAgent)
+            PixivServer.api.getIllustMetadata(
+                content.uniqueSiteId,
+                cookieStr,
+                ACCEPT_ALL,
+                userAgent
+            )
                 .execute().body()
-        if (null == galleryMetadata || galleryMetadata.error == true) {
+        if (null == galleryMetadata || galleryMetadata.error) {
             var message = ""
             if (galleryMetadata != null) message = galleryMetadata.message ?: ""
             throw EmptyResultException(message)
         }
-        return urlsToImageFiles(
-            galleryMetadata.getPageUrls(),
-            content.downloadRange,
-            StatusContent.SAVED,
-            content.coverImageUrl
-        )
+
+        val pages = galleryMetadata.getImageFiles()
+
+        val range = content.downloadRange
+        val rangeIndexes = if (range.isBlank()) IntRange(1, pages.size)
+        else rangeToNumbers(range).filter { it in 1..<pages.size + 1 }
+
+        return pages.filter { it.order in rangeIndexes }
     }
 
     @Throws(Exception::class)
@@ -139,6 +147,10 @@ class PixivParser : BaseImageListParser() {
         require(nbChaptersStr != null) { "Chapter count not saved" }
         require(isNumeric(nbChaptersStr)) { "Chapter count not saved" }
         val nbChapters = nbChaptersStr.toInt()
+
+        val range = onlineContent.downloadRange
+        val rangeIndexes = if (range.isBlank()) IntRange(1, MAX_PAGE_RANGE)
+        else rangeToNumbers(range).filter { it > 0 }.map { it + 1 }
 
         // List all Illust IDs (API is paged, hence the loop)
         val chapters: MutableList<Chapter> = ArrayList()
@@ -199,10 +211,13 @@ class PixivParser : BaseImageListParser() {
             attrs.addAll(chapterAttrs)
             val chapterImages = illustMetadata.getImageFiles()
             for (img in chapterImages) {
-                img.order = imgOffset++
-                img.setChapter(ch)
+                if (imgOffset in rangeIndexes) {
+                    img.order = imgOffset
+                    img.setChapter(ch)
+                    result.add(img)
+                }
+                imgOffset++
             }
-            result.addAll(chapterImages)
             progressPlus((index + 1f) / extraChapters.size)
         } // extraChapters
 
@@ -233,6 +248,10 @@ class PixivParser : BaseImageListParser() {
         val userIllustResp = call429(
             call = { PixivServer.api.getUserIllusts(userId, cookieStr, ACCEPT_ALL, userAgent) }
         )
+
+        val range = onlineContent.downloadRange
+        val rangeIndexes = if (range.isBlank()) IntRange(1, MAX_PAGE_RANGE)
+        else rangeToNumbers(range).filter { it > 0 }.map { it + 1 }
 
         val userIllustsMetadata = userIllustResp.body()
         if (null == userIllustsMetadata || userIllustsMetadata.isError()) {
@@ -282,10 +301,13 @@ class PixivParser : BaseImageListParser() {
             chp.setContentId(onlineContent.id)
             val chapterImages = illustMetadata.getImageFiles()
             for (img in chapterImages) {
-                img.order = imgOffset++
-                img.setChapter(chp)
+                if (imgOffset in rangeIndexes) {
+                    img.order = imgOffset
+                    img.setChapter(chp)
+                    result.add(img)
+                }
+                imgOffset++
             }
-            result.addAll(chapterImages)
             progressPlus((index + 1f) / illustIds.size)
         } // IllustIds
 
@@ -324,6 +346,10 @@ class PixivParser : BaseImageListParser() {
             if (bookmarksMetadata != null) message = bookmarksMetadata.getMessage()
             throw IllegalArgumentException(message)
         }
+
+        val range = onlineContent.downloadRange
+        val rangeIndexes = if (range.isBlank()) IntRange(1, MAX_PAGE_RANGE)
+        else rangeToNumbers(range).filter { it > 0 }.map { it + 1 }
 
         // Ignore downloaded or queued Content
         // TODO refactor not to instanciate a DAO inside an ImageListParser
@@ -375,10 +401,13 @@ class PixivParser : BaseImageListParser() {
             chp.setContentId(onlineContent.id)
             val chapterImages = illustMetadata.getImageFiles()
             for (img in chapterImages) {
-                img.order = imgOffset++
-                img.setChapter(chp)
+                if (imgOffset in rangeIndexes) {
+                    img.order = imgOffset
+                    img.setChapter(chp)
+                    result.add(img)
+                }
+                imgOffset++
             }
-            result.addAll(chapterImages)
             progressPlus((index + 1f) / illustIds.size)
         } // IllustIds
 

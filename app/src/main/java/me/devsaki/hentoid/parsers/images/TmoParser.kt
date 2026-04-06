@@ -14,6 +14,7 @@ class TmoParser : BaseImageListParser() {
         getOnlineDocument(
             url,
             requestHeaders,
+            Site.TMO.useMobileAgent,
             Site.TMO.useHentoidAgent,
             Site.TMO.useWebviewAgent
         )?.let { doc ->

@@ -24,6 +24,7 @@ class Manhwa18Content : BaseContentParser() {
                 getOnlineDocument(
                     url,
                     headers,
+                    Site.MANHWA18.useMobileAgent,
                     Site.MANHWA18.useHentoidAgent,
                     Site.MANHWA18.useWebviewAgent
                 )?.let { doc ->
