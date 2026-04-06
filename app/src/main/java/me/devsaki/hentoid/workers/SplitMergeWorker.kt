@@ -91,6 +91,7 @@ abstract class BaseSplitMergeWorker(
     private var nbMax = 0
     private var nbProgress = 0
     private var nbError = 0
+    private var errorMsg = ""
     private var bookTitle = ""
     private lateinit var progressNotification: SplitMergeProgressNotification
 
@@ -302,8 +303,11 @@ abstract class BaseSplitMergeWorker(
                     bookTitle = s
                     launchProgressNotification()
                 }
-            ) { isError ->
-                if (isError) nbError = contentList.size
+            ) { isError, errorMsg ->
+                if (isError)  {
+                    nbError = contentList.size
+                    this.errorMsg = errorMsg
+                }
                 progressDone(contentList.size)
             }
             // If we're here, no exception has been triggered -> cleanup if asked
@@ -670,7 +674,8 @@ abstract class BaseSplitMergeWorker(
             SplitMergeCompleteNotification(
                 nbBooksDone,
                 nbError,
-                operationType
+                operationType,
+                errorMsg
             )
         )
         EventBus.getDefault().postSticky(

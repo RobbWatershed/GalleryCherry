@@ -226,7 +226,7 @@ class DuplicateViewModel(
         )
     }
 
-    private fun onMergeComplete(isError: Boolean) {
+    private fun onMergeComplete(isError: Boolean, errorMsg : String) {
         EventBus.getDefault().postSticky(
             ProcessEvent(
                 if (isError) ProcessEvent.Type.COMPLETE else ProcessEvent.Type.FAILURE,

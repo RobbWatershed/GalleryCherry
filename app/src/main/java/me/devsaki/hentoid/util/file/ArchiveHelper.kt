@@ -394,7 +394,7 @@ private fun Context.extractArchiveEntries(
         }
     } catch (e: SevenZipException) {
         Timber.w(e)
-        throw IOException(e)
+        throw IOException(e.cause?.message ?: "", e)
     }
 }
 

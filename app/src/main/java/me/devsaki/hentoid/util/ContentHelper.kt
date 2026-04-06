@@ -25,6 +25,7 @@ import me.devsaki.hentoid.activities.UnlockActivity.Companion.wrapIntent
 import me.devsaki.hentoid.activities.bundles.BaseBrowserActivityBundle
 import me.devsaki.hentoid.activities.bundles.ContentItemBundle
 import me.devsaki.hentoid.activities.bundles.ReaderActivityBundle
+import me.devsaki.hentoid.core.BiConsumer
 import me.devsaki.hentoid.core.Consumer
 import me.devsaki.hentoid.core.EXT_THUMB_FILE_PREFIX
 import me.devsaki.hentoid.core.JSON_ARCHIVE_SUFFIX
@@ -1905,7 +1906,7 @@ suspend fun mergeContents(
     dao: CollectionDAO,
     isCanceled: () -> Boolean,
     onProgress: (Int, Int, String) -> Unit,
-    onComplete: Consumer<Boolean>
+    onComplete: BiConsumer<Boolean, String>
 ) {
     // New book inherits properties of the first content of the list
     // which takes "precedence" as the 1st chapter
@@ -1935,6 +1936,7 @@ suspend fun mergeContents(
     mergedContent.addAttributes(mergedAttributes)
 
     var isError = false
+    var errorMsg = ""
     withContext(Dispatchers.IO) {
         // Create destination folder for new content
         val dlManager = StorageDownloadManager()
@@ -2114,6 +2116,7 @@ suspend fun mergeContents(
             } // Content
         } catch (e: IOException) {
             Timber.w(e)
+            errorMsg = e.message ?: ""
             isError = true
         } finally {
             // Delete temp files
@@ -2165,7 +2168,7 @@ suspend fun mergeContents(
         }
         dao.cleanup()
 
-        if (!isCanceled.invoke()) onComplete.invoke(isError)
+        if (!isCanceled.invoke()) onComplete.invoke(isError, errorMsg)
     } // Dispatchers.IO
 }
 
