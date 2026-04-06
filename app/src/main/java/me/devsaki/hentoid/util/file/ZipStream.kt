@@ -1,7 +1,9 @@
 package me.devsaki.hentoid.util.file
 
 import android.content.Context
+import android.content.res.AssetFileDescriptor
 import android.net.Uri
+import android.os.ParcelFileDescriptor
 import kotlinx.io.Sink
 import kotlinx.io.asSink
 import kotlinx.io.asSource
@@ -22,6 +24,7 @@ import java.io.ByteArrayInputStream
 import java.io.Closeable
 import java.io.EOFException
 import java.io.FileInputStream
+import java.io.FileNotFoundException
 import java.io.IOException
 import java.io.InputStream
 import java.util.Date
@@ -139,6 +142,7 @@ class ZipReader(context: Context, archiveUri: Uri, failOnUnsupported: Boolean = 
                                     name,
                                     uncompressedSize,
                                     offset,
+                                    compressionMode,
                                     time = datetime,
                                     crc = crc
                                 )
@@ -304,7 +308,14 @@ class ZipReader(context: Context, archiveUri: Uri, failOnUnsupported: Boolean = 
                 it.skip(commentLength)
 
                 records.add(
-                    ZipRecord(name, uncompressedSize, lfhOffset, time = datetime, crc = crc)
+                    ZipRecord(
+                        name,
+                        uncompressedSize,
+                        lfhOffset,
+                        compressionMode,
+                        time = datetime,
+                        crc = crc
+                    )
                 )
             } // cdrCount
         } // asSource.buffered
@@ -378,7 +389,7 @@ class ZipStream(context: Context, archiveUri: Uri, append: Boolean) : Closeable 
         sink.writeULongLe(size.toULong())
         sink.writeULongLe(size.toULong()) // Compressed size is identical to uncompressed size as we use STORED mode
 
-        currentRecord = ZipRecord(path, size, currentOffset, time = time, crc = crc)
+        currentRecord = ZipRecord(path, size, currentOffset, 0u, time = time, crc = crc)
         currentOffset += (30 + nameData.size + 20)
     }
 
@@ -388,7 +399,7 @@ class ZipStream(context: Context, archiveUri: Uri, append: Boolean) : Closeable 
     fun transferData(s: InputStream) {
         currentRecord?.let {
             val size = sink.transferFrom(s.asSource())
-            if (size != it.size) throw Exception("Transferred size ($size) is different than declared size (${it.size})")
+            if (size != it.uncompressedSize) throw Exception("Transferred size ($size) is different than declared size (${it.uncompressedSize})")
             currentOffset += size
         }
     }
@@ -399,7 +410,7 @@ class ZipStream(context: Context, archiveUri: Uri, append: Boolean) : Closeable 
     fun closeRecord() {
         currentRecord?.let { e ->
             records.add(e)
-            Timber.d("NEW RECORD ${e.path} (${e.isFolder}) ${e.size} @${e.offset}")
+            Timber.d("NEW RECORD ${e.path} (${e.isFolder}) ${e.uncompressedSize} @${e.offset}")
         }
         currentRecord = null
     }
@@ -437,8 +448,8 @@ class ZipStream(context: Context, archiveUri: Uri, append: Boolean) : Closeable 
             // ZIP64 extra data
             sink.write(FILE_EXTRA64)
             sink.writeUShortLe(24u) // Size of ZIP64 extra data (without headers)
-            sink.writeULongLe(it.size.toULong())
-            sink.writeULongLe(it.size.toULong()) // Compressed size is identical to uncompressed size as we use STORED mode
+            sink.writeULongLe(it.uncompressedSize.toULong())
+            sink.writeULongLe(it.uncompressedSize.toULong()) // Compressed size is identical to uncompressed size as we use STORED mode
             sink.writeULongLe(it.offset.toULong())
             tocSize += (46 + nameData.size + 28)
         }
@@ -524,8 +535,9 @@ class ZipStream(context: Context, archiveUri: Uri, append: Boolean) : Closeable 
 
     data class ZipRecord(
         val path: String,
-        val size: Long,
+        val uncompressedSize: Long,
         val offset: Long,
+        val compressionMode: UShort,
         val time: Long = 0L,
         val crc: Long = 0L
     ) {
@@ -533,7 +545,20 @@ class ZipStream(context: Context, archiveUri: Uri, append: Boolean) : Closeable 
             get() = path.endsWith("/")
 
         fun toArchiveEntry(): ArchiveEntry {
-            return ArchiveEntry(isFolder, path, size)
+            return ArchiveEntry(isFolder, path, uncompressedSize)
+        }
+
+        fun getAssetFileDescriptor(context: Context, zipUri: Uri): AssetFileDescriptor? {
+            if (compressionMode < 1u) {
+                val pfd: ParcelFileDescriptor?
+                try {
+                    pfd = context.contentResolver.openFileDescriptor(zipUri, "r")
+                    return AssetFileDescriptor(pfd, offset, uncompressedSize)
+                } catch (e: FileNotFoundException) {
+                    Timber.w(e)
+                }
+            }
+            return null
         }
     }
 }

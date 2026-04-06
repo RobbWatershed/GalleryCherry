@@ -877,7 +877,7 @@ class UriParts(uri: String, lowercase: Boolean = false) {
     var path: String // Entire path, host included and file not included (e.g. http://subdomain.host.ext:80/this/is/the)
     var fileNameNoExt: String // Filename without extension (e.g. police)
     var extension: String // File extension alone (e.g. jpg)
-    var query: String // Query alone (e.g. query=here)
+    var query: String // Raw query alone (e.g. query=here)
     private var fragment: String // Fragment alone (e.g. anchor)
 
     val fileNameFull: String
@@ -885,6 +885,9 @@ class UriParts(uri: String, lowercase: Boolean = false) {
 
     val pathFull: String
         get() = "$path/$fileNameFull"
+
+    val queryArgs: Map<String, String>
+        get() = getQueryArgs()
 
     constructor(uri: Uri, lowercase: Boolean = false) : this(uri.toString(), lowercase)
 
@@ -928,5 +931,14 @@ class UriParts(uri: String, lowercase: Boolean = false) {
         if (query.isNotEmpty()) result.append("?").append(query)
         if (fragment.isNotEmpty()) result.append("#").append(fragment)
         return result.toString()
+    }
+
+    private fun getQueryArgs(): Map<String, String> {
+        val result: MutableMap<String, String> = HashMap()
+        query.split('&').forEach {
+            val args = it.split('=')
+            result[args[0]] = if (args.size > 1) args[1] else ""
+        }
+        return result
     }
 }
