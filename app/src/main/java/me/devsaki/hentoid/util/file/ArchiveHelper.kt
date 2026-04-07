@@ -177,11 +177,16 @@ private fun Context.getArchiveEntries(format: ArchiveFormat, uri: Uri): List<Arc
                 val itemCount = inArchive.numberOfItems
                 for (i in 0 until itemCount) {
                     val isFolder = inArchive.getStringProperty(i, PropID.IS_FOLDER)
+                    val size = inArchive.getStringProperty(i, PropID.SIZE)?.toLong() ?: 0L
+                    val compressedSize =
+                        inArchive.getStringProperty(i, PropID.PACKED_SIZE)?.toLong() ?: 0L
                     result.add(
                         ArchiveEntry(
                             isFolder.equals("+") || isFolder.toBoolean(),
                             inArchive.getStringProperty(i, PropID.PATH),
-                            inArchive.getStringProperty(i, PropID.SIZE).toLong()
+                            size,
+                            if (compressedSize > 0) compressedSize else size,
+                            time = inArchive.getStringProperty(i, PropID.CREATION_TIME).toLong()
                         )
                     )
                 }
