@@ -16,9 +16,6 @@ import timber.log.Timber
 import java.io.FileNotFoundException
 
 
-// main content provider URI
-private const val CONTENT_PREFIX = "content://"
-
 // must match what is declared in the Zip content provider in
 // the AndroidManifest.xml file
 private const val CFP_AUTHORITY = "me.violet.chunk"
@@ -26,12 +23,6 @@ private const val CFP_AUTHORITY = "me.violet.chunk"
 // Inspired by https://github.com/googlearchive/play-apk-expansion/tree/master
 // and https://github.com/Babay88/AndroidCodeSamplesB/blob/master/ShareZipped/src/main/java/ru/babay/codesamples/sharezip/ZipFilesProvider.java
 class ChunkFileProvider : ContentProvider() {
-
-    val ASSET_URI: Uri = (CONTENT_PREFIX + CFP_AUTHORITY).toUri()
-
-    fun getAuthority(): String {
-        return CFP_AUTHORITY
-    }
 
     override fun delete(
         p0: Uri,
@@ -118,12 +109,15 @@ class ChunkFileProvider : ContentProvider() {
         companion object {
             fun fromUri(uri: Uri): ChunkFileInfo {
                 val parts = UriParts(uri)
+                val archiveUri = parts.pathFull
+                    .substring(parts.host.length + 1)
+                    .replace("content:/com", "content://com")
                 val queryArgs = parts.queryArgs
                 val offset = queryArgs["o"]?.toLong() ?: 0
                 val size = queryArgs["s"]?.toLong() ?: 0
 
                 return ChunkFileInfo(
-                    parts.pathFull.toUri(),
+                    archiveUri.toUri(),
                     "${parts.fileNameFull}@$offset",
                     offset,
                     size
@@ -144,6 +138,7 @@ class ChunkFileProvider : ContentProvider() {
         fun getAssetFileDescriptor(context: Context): AssetFileDescriptor? {
             try {
                 val pfd = context.contentResolver.openFileDescriptor(mainFileUri, "r")
+                // Thanks God AssetFileDescriptor has that kind of constructor
                 return AssetFileDescriptor(pfd, chunkOffset, chunkSize)
             } catch (e: FileNotFoundException) {
                 Timber.w(e)

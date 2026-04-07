@@ -887,7 +887,7 @@ class UriParts(uri: String, lowercase: Boolean = false) {
         get() = "$path/$fileNameFull"
 
     val queryArgs: Map<String, String>
-        get() = getQueryArgs()
+        get() = parseQueryArgs()
 
     constructor(uri: Uri, lowercase: Boolean = false) : this(uri.toString(), lowercase)
 
@@ -933,7 +933,7 @@ class UriParts(uri: String, lowercase: Boolean = false) {
         return result.toString()
     }
 
-    private fun getQueryArgs(): Map<String, String> {
+    private fun parseQueryArgs(): Map<String, String> {
         val result: MutableMap<String, String> = HashMap()
         query.split('&').forEach {
             val args = it.split('=')

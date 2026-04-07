@@ -9,15 +9,12 @@ import kotlinx.coroutines.launch
 import kotlinx.io.IOException
 import me.devsaki.hentoid.util.getChecksumValue
 import timber.log.Timber
-import java.io.BufferedInputStream
 import java.io.File
-import java.io.InputStream
 import java.util.Queue
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.zip.CRC32
-import java.util.zip.Checksum
 import java.util.zip.ZipException
 
 

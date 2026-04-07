@@ -76,8 +76,9 @@ internal class SkiaImageDecoder(private val bitmapConfig: Bitmap.Config) : Image
             var fileStream: InputStream? = null
             var size = 0
             var mime = MIME_IMAGE_GENERIC
-            context.contentResolver.openFileDescriptor(uri, "r")?.use {
-                size = it.statSize.toInt()
+            //context.contentResolver.openFileDescriptor(uri, "r")?.use {
+            context.contentResolver.openAssetFileDescriptor(uri, "r")?.use {
+                size = it.length.toInt()
             }
             context.contentResolver.openInputStream(uri)?.use { input ->
                 if (size > 0) {

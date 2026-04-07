@@ -133,7 +133,7 @@ class ZipFileProvider : ContentProvider() {
                     PATH_IDX -> rb.add(entry.path)
                     MOD_IDX -> rb.add(entry.time)
                     CRC_IDX -> rb.add(entry.crc)
-                    UNCOMPLEN_IDX -> rb.add(entry.uncompressedSize)
+                    UNCOMPLEN_IDX -> rb.add(entry.size)
                 }
             }
         }

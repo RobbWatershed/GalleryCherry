@@ -158,7 +158,7 @@ fun Context.getArchiveEntries(uri: Uri): List<ArchiveEntry> {
     }
     return when (format) {
         null -> emptyList()
-        ArchiveFormat.ZIP -> ZipReader(this, uri).records.map { it.toArchiveEntry() }
+        ArchiveFormat.ZIP -> ZipReader(this, uri).records
         else -> getArchiveEntries(format, uri)
     }
 }
@@ -470,7 +470,29 @@ fun Context.zipFiles(
  * @property path Asbolute path, extension included
  * @property size Size in bytes
  */
-data class ArchiveEntry(val isFolder: Boolean, val path: String, val size: Long)
+data class ArchiveEntry(
+    val isFolder: Boolean,
+    val path: String,
+    val size: Long,
+    val compressedSize: Long = 0L,
+    val offset: Long = 0L,
+    val isCompressed: Boolean = true,
+    val time: Long = 0L,
+    val crc: Long = 0L
+) {
+    val isChunkable: Boolean
+        get() = !isFolder && !isCompressed && offset > 0 && (size > 0 || compressedSize > 0)
+
+    fun toChunk(archiveUri: Uri): ChunkFileProvider.ChunkFileInfo {
+        return ChunkFileProvider.ChunkFileInfo(
+            archiveUri,
+            path,
+            offset,
+            if (size > 0) size else compressedSize
+        )
+    }
+}
+
 
 private class ArchiveOpenCallback : IArchiveOpenCallback {
     override fun setTotal(files: Long?, bytes: Long?) {
