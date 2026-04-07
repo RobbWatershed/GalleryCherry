@@ -18,7 +18,7 @@ import java.io.FileNotFoundException
 
 // must match what is declared in the Zip content provider in
 // the AndroidManifest.xml file
-private const val CFP_AUTHORITY = "me.violet.chunk"
+const val CFP_AUTHORITY = "me.violet.chunk"
 
 // Inspired by https://github.com/googlearchive/play-apk-expansion/tree/master
 // and https://github.com/Babay88/AndroidCodeSamplesB/blob/master/ShareZipped/src/main/java/ru/babay/codesamples/sharezip/ZipFilesProvider.java

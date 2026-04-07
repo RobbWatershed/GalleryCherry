@@ -162,11 +162,16 @@ fun getDocumentProperties(context: Context, uri: Uri): FileExplorer.DocumentProp
 private fun getFullPathFromTreeUri(context: Context, uri: Uri): String {
     if (uri == Uri.EMPTY) return ""
 
-    var volumePath = getVolumePath(context, getVolumeIdFromUri(uri)) ?: "UnknownVolume"
+    // Chunk file Uri
+    val usedUri = if (uri.authority.equals(CFP_AUTHORITY)) {
+        ChunkFileProvider.ChunkFileInfo.fromUri(uri).mainFileUri
+    } else uri
+
+    var volumePath = getVolumePath(context, getVolumeIdFromUri(usedUri)) ?: "UnknownVolume"
     if (volumePath.endsWith(File.separator))
         volumePath = volumePath.dropLast(1)
 
-    var documentPath = getDocumentPathFromUri(uri) ?: ""
+    var documentPath = getDocumentPathFromUri(usedUri) ?: ""
     if (documentPath.endsWith(File.separator))
         documentPath = documentPath.dropLast(1)
 
