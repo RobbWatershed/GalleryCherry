@@ -138,7 +138,7 @@ class ChunkFileProvider : ContentProvider() {
         fun getAssetFileDescriptor(context: Context): AssetFileDescriptor? {
             try {
                 val pfd = context.contentResolver.openFileDescriptor(mainFileUri, "r")
-                // Thanks God AssetFileDescriptor has that kind of constructor
+                // Thank God AssetFileDescriptor has that kind of constructor, the entire hack relies on it ^^"
                 return AssetFileDescriptor(pfd, chunkOffset, chunkSize)
             } catch (e: FileNotFoundException) {
                 Timber.w(e)
