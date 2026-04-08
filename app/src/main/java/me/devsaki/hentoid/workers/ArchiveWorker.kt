@@ -182,7 +182,8 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
                     val imgHash = imgs.groupBy { UriParts(it.fileUri).fileNameFull }
                     files.forEach { f ->
                         imgHash[f.name]?.firstOrNull()?.let { img ->
-                            img.fileUri =
+                            // Write directly to dbFileUri as the Content's storageUri is not updated yet
+                            img.dbFileUri =
                                 destFileUri.toString() + File.separator + f.name
                             if (!img.url.startsWith("http")) img.url = img.fileUri
                         }
