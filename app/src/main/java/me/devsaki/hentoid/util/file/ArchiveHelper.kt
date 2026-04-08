@@ -488,8 +488,8 @@ data class ArchiveEntry(
     val isChunkable: Boolean
         get() = !isFolder && !isCompressed && offset > 0 && (size > 0 || compressedSize > 0)
 
-    fun toChunk(archiveUri: Uri): ChunkFileProvider.ChunkFileInfo {
-        return ChunkFileProvider.ChunkFileInfo(
+    fun toChunk(archiveUri: Uri): ChunkFileInfo {
+        return ChunkFileInfo(
             archiveUri,
             path,
             offset,

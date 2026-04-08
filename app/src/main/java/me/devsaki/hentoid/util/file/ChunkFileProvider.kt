@@ -99,51 +99,53 @@ class ChunkFileProvider : ContentProvider() {
     ): ParcelFileDescriptor? {
         return openAssetFile(uri, mode)?.parcelFileDescriptor
     }
+}
 
-    class ChunkFileInfo(
-        val mainFileUri: Uri,
-        val displayName: String,
-        val chunkOffset: Long,
-        val chunkSize: Long
-    ) {
-        companion object {
-            fun fromUri(uri: Uri): ChunkFileInfo {
-                val parts = UriParts(uri)
-                val archiveUri = parts.pathFull
-                    .substring(parts.host.length + 1)
-                    .replace("content:/com", "content://com")
-                val queryArgs = parts.queryArgs
-                val offset = queryArgs["o"]?.toLong() ?: 0
-                val size = queryArgs["s"]?.toLong() ?: 0
+class ChunkFileInfo(
+    val mainFileUri: Uri,
+    val displayName: String,
+    val chunkOffset: Long,
+    val chunkSize: Long
+) {
+    companion object {
+        fun fromUri(uri: Uri): ChunkFileInfo {
+            val parts = UriParts(uri)
+            val archiveUri = parts.pathFull
+                .substring(parts.host.length + 1)
+                .replace("content:/com", "content://com")
+            val queryArgs = parts.queryArgs
+            val fileName = queryArgs["n"] ?: ""
+            val offset = queryArgs["o"]?.toLong() ?: 0
+            val size = queryArgs["s"]?.toLong() ?: 0
 
-                return ChunkFileInfo(
-                    archiveUri.toUri(),
-                    "${parts.fileNameFull}@$offset",
-                    offset,
-                    size
-                )
-            }
+            return ChunkFileInfo(
+                archiveUri.toUri(),
+                fileName,
+                offset,
+                size
+            )
         }
+    }
 
-        fun toUri(): Uri {
-            return Uri.Builder()
-                .scheme(ContentResolver.SCHEME_CONTENT)
-                .authority(CFP_AUTHORITY)
-                .path(mainFileUri.toString())
-                .appendQueryParameter("o", chunkOffset.toString())
-                .appendQueryParameter("s", chunkSize.toString())
-                .build()
-        }
+    fun toUri(): Uri {
+        return Uri.Builder()
+            .scheme(ContentResolver.SCHEME_CONTENT)
+            .authority(CFP_AUTHORITY)
+            .path(mainFileUri.toString().replace("content://com", "content:/com"))
+            .appendQueryParameter("n", displayName)
+            .appendQueryParameter("o", chunkOffset.toString())
+            .appendQueryParameter("s", chunkSize.toString())
+            .build()
+    }
 
-        fun getAssetFileDescriptor(context: Context): AssetFileDescriptor? {
-            try {
-                val pfd = context.contentResolver.openFileDescriptor(mainFileUri, "r")
-                // Thank God AssetFileDescriptor has that kind of constructor, the entire hack relies on it ^^"
-                return AssetFileDescriptor(pfd, chunkOffset, chunkSize)
-            } catch (e: FileNotFoundException) {
-                Timber.w(e)
-            }
-            return null
+    fun getAssetFileDescriptor(context: Context): AssetFileDescriptor? {
+        try {
+            val pfd = context.contentResolver.openFileDescriptor(mainFileUri, "r")
+            // Thank God AssetFileDescriptor has that kind of constructor, the entire hack relies on it ^^"
+            return AssetFileDescriptor(pfd, chunkOffset, chunkSize)
+        } catch (e: FileNotFoundException) {
+            Timber.w(e)
         }
+        return null
     }
 }
