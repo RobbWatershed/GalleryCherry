@@ -1,5 +1,6 @@
 package me.devsaki.hentoid.util
 
+import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
 import android.content.res.Resources
@@ -74,6 +75,7 @@ import me.devsaki.hentoid.util.file.fileExists
 import me.devsaki.hentoid.util.file.findFile
 import me.devsaki.hentoid.util.file.findFolder
 import me.devsaki.hentoid.util.file.getArchiveEntries
+import me.devsaki.hentoid.util.file.getArchivedFileName
 import me.devsaki.hentoid.util.file.getDocumentFromTreeUri
 import me.devsaki.hentoid.util.file.getDocumentFromTreeUriString
 import me.devsaki.hentoid.util.file.getExtension
@@ -2017,17 +2019,17 @@ suspend fun mergeContents(
                             if (idx + imgIndex >= imgs.size) break
                             val picToUnarchive = imgs[imgIndex + idx]
                             if (picToUnarchive.fileUri.isNotEmpty()
-                                && !picToUnarchive.fileUri.startsWith(c.storageUri)
-                            ) continue // thumb
+                                && picToUnarchive.fileUri.startsWith(ContentResolver.SCHEME_FILE)
+                            ) continue // extracted / cached thumb
                             picsToUnarchive.add(picToUnarchive)
                             unarchivedBytes += picToUnarchive.size
                         }
                         val toExtract = picsToUnarchive.map {
-                            val uri = if (it.url.startsWith(c.storageUri)) it.url else it.fileUri
+                            val filePath = getArchivedFileName(c.storageUri, it.fileUri)
                             Triple(
-                                uri.replace(c.storageUri + File.separator, ""),
+                                filePath,
                                 it.id,
-                                "${it.id}.${getExtension(uri)}" // Using ID to avoid name collisions when unarchiving multiple Contents
+                                "${it.id}.${getExtension(filePath)}" // Using ID to avoid name collisions when unarchiving multiple Contents
                             )
                         }
                             .distinctBy { it.first } // Prevent failures when processing corrupted archives with duplicate entries

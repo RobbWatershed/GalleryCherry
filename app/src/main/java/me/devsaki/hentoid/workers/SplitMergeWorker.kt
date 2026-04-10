@@ -34,6 +34,7 @@ import me.devsaki.hentoid.util.file.Beholder
 import me.devsaki.hentoid.util.file.PdfManager
 import me.devsaki.hentoid.util.file.copyFiles
 import me.devsaki.hentoid.util.file.extractArchiveEntriesBlocking
+import me.devsaki.hentoid.util.file.getArchivedFileName
 import me.devsaki.hentoid.util.file.getDocumentFromTreeUriString
 import me.devsaki.hentoid.util.file.getExtension
 import me.devsaki.hentoid.util.file.getFileFromSingleUriString
@@ -171,7 +172,7 @@ abstract class BaseSplitMergeWorker(
             // Copy the corresponding images to that folder
             val splitContentImages =
                 splitContent.imageList.filter { it.status == StatusContent.DOWNLOADED || it.status == StatusContent.EXTERNAL }
-                    .distinctBy { if (content.isArchive || content.isPdf) it.url else it.fileUri }
+                    .distinctBy { it.fileUri }
             withContext(Dispatchers.IO) {
                 try {
                     if (content.isArchive || content.isPdf) {
@@ -182,18 +183,12 @@ abstract class BaseSplitMergeWorker(
                         val nbMaxDigits =
                             (floor(log10(splitContentImages.size.toDouble())) + 1).toInt()
                         val extractInstructions = splitContentImages.map {
-                            var path =
-                                if (it.url.startsWith(content.storageUri)) it.url else it.fileUri
-                            path = path.replace(content.storageUri, "")
-                            path = path.substring(path.indexOf('/') + 1)
+                            val filePath = getArchivedFileName(content.storageUri, it.fileUri)
                             Triple(
-                                path,
+                                filePath,
                                 it.order.toLong(),
-                                String.format(
-                                    Locale.ENGLISH,
-                                    "%0${nbMaxDigits}d",
-                                    it.order
-                                ) + "." + getExtension(it.url)
+                                String.format(Locale.ENGLISH, "%0${nbMaxDigits}d", it.order)
+                                        + "." + getExtension(filePath)
                             )
                         }
 
@@ -304,7 +299,7 @@ abstract class BaseSplitMergeWorker(
                     launchProgressNotification()
                 }
             ) { isError, errorMsg ->
-                if (isError)  {
+                if (isError) {
                     nbError = contentList.size
                     this.errorMsg = errorMsg
                 }

@@ -19,8 +19,8 @@ import me.devsaki.hentoid.util.PickFolderContract
 import me.devsaki.hentoid.util.PickerResult
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.copy
-import me.devsaki.hentoid.util.file.CFP_AUTHORITY
-import me.devsaki.hentoid.util.file.ChunkFileInfo
+import me.devsaki.hentoid.util.file.FILECHUNK_AUTHORITY
+import me.devsaki.hentoid.util.file.FileChunkInfo
 import me.devsaki.hentoid.util.file.DEFAULT_MIME_TYPE
 import me.devsaki.hentoid.util.file.RQST_STORAGE_PERMISSION
 import me.devsaki.hentoid.util.file.createNewDownloadFile
@@ -174,8 +174,8 @@ class ReaderCopyImgDialogFragment : BaseDialogFragment<ReaderCopyImgDialogFragme
         img?.let {
             val prefix = it.linkedContent?.uniqueSiteId ?: it.contentId.toString()
             val fileUri = it.fileUri.toUri()
-            val extension = if (fileUri.authority == CFP_AUTHORITY)
-                getExtension(ChunkFileInfo.fromUri(fileUri).displayName)
+            val extension = if (fileUri.authority == FILECHUNK_AUTHORITY)
+                getExtension(FileChunkInfo.fromUri(fileUri).displayName)
             else getExtension(it.fileUri)
 
             val targetFileName = prefix + "-" + it.name + "." + extension

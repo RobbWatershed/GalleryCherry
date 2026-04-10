@@ -809,7 +809,7 @@
             android:authorities="me.violet.chunk"
             android:exported="false"
             android:multiprocess="true"
-            android:name=".util.file.ChunkFileProvider">
+            android:name=".util.file.FileChunkProvider">
             <meta-data android:name="mainVersion" android:value="1"/>
         </provider>
 

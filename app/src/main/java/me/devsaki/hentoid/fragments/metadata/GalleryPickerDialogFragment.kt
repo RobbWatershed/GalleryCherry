@@ -20,6 +20,7 @@ import me.devsaki.hentoid.databinding.DialogMetaGalleryBinding
 import me.devsaki.hentoid.fragments.BaseDialogFragment
 import me.devsaki.hentoid.util.file.PdfManager
 import me.devsaki.hentoid.util.file.extractArchiveEntriesCached
+import me.devsaki.hentoid.util.file.getArchivedFileName
 import me.devsaki.hentoid.util.file.getFileFromSingleUriString
 import me.devsaki.hentoid.util.formatCacheKey
 import me.devsaki.hentoid.viewholders.ImageFileItem
@@ -122,9 +123,7 @@ class GalleryPickerDialogFragment : BaseDialogFragment<GalleryPickerDialogFragme
             // Load first 10 pics (roughly the same behaviour as the reader for now - see #1227)
             for (i in 0..minOf(imgs.size - 1, 9)) {
                 val img = imgs[i]
-                var path = img.url
-                path = path.replace(content.storageUri, "")
-                path = path.substring(path.indexOf('/') + 1)
+                val path = getArchivedFileName(content.storageUri, img.fileUri)
                 extractInstructions.add(Triple(path, img.id, formatCacheKey(img)))
             }
 

@@ -28,7 +28,6 @@ import net.sf.sevenzipjbinding.SevenZip
 import net.sf.sevenzipjbinding.SevenZipException
 import timber.log.Timber
 import java.io.BufferedInputStream
-import java.io.BufferedOutputStream
 import java.io.EOFException
 import java.io.File
 import java.io.FileInputStream
@@ -439,37 +438,6 @@ private fun Context.addFile(
 }
 
 /**
- * Archive the given files into the given output stream using the ZIP format
- * NB : This is a blocking call
- *
- * @param files   List of the files to be archived
- * @param out     Output stream to write to
- * @throws IOException If something horrible happens during I/O
- */
-@Throws(IOException::class)
-fun Context.zipFiles(
-    files: List<DocumentFile>,
-    out: OutputStream,
-    isCanceled: () -> Boolean,
-    progress: ((Float) -> Unit)? = null
-) {
-    assertNonUiThread()
-    val zipStream = ZipOutputStream(BufferedOutputStream(out))
-    zipStream.setMethod(ZipOutputStream.STORED)
-    zipStream.use { stream ->
-        val data = ByteArray(BUFFER)
-        files.forEachIndexed { index, file ->
-            if (isCanceled()) return@forEachIndexed
-            addFile(file, stream, data)
-            // Signal progress every 10 pages
-            if (0 == index % 10) progress?.invoke(index * 1f / files.size)
-        }
-        stream.finish()
-        out.flush()
-    }
-}
-
-/**
  * Describes an entry inside an archive
  *
  * @property path Asbolute path, extension included
@@ -480,7 +448,8 @@ data class ArchiveEntry(
     val path: String,
     val size: Long,
     val compressedSize: Long = 0L,
-    val offset: Long = 0L,
+    val headerSize: Long = 0L,
+    val offset: Long = 0L, // Offset of the entry, PK header included
     val isCompressed: Boolean = true,
     val time: Long = 0L,
     val crc: Long = 0L
@@ -488,11 +457,11 @@ data class ArchiveEntry(
     val isChunkable: Boolean
         get() = !isFolder && !isCompressed && offset > 0 && (size > 0 || compressedSize > 0)
 
-    fun toChunk(archiveUri: Uri): ChunkFileInfo {
-        return ChunkFileInfo(
+    fun toChunk(archiveUri: Uri): FileChunkInfo {
+        return FileChunkInfo(
             archiveUri,
             path,
-            offset,
+            offset + headerSize,
             if (size > 0) size else compressedSize
         )
     }
@@ -724,6 +693,15 @@ private class SequentialOutStream(private val out: OutputStream) : ISequentialOu
     @Throws(IOException::class)
     fun close() {
         out.close()
+    }
+}
+
+fun getArchivedFileName(archiveUri: String, fileUri: String): String {
+    val uri = fileUri.toUri()
+    return if (uri.authority == FILECHUNK_AUTHORITY) {
+        FileChunkInfo.fromUri(uri).displayName
+    } else {
+        fileUri.replace(archiveUri + File.separator, "")
     }
 }
 

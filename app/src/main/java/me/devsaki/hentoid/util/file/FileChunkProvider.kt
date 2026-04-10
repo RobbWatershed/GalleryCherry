@@ -16,13 +16,12 @@ import timber.log.Timber
 import java.io.FileNotFoundException
 
 
-// must match what is declared in the Zip content provider in
-// the AndroidManifest.xml file
-const val CFP_AUTHORITY = "me.violet.chunk"
+// Must match what is declared in the Zip content provider in the AndroidManifest.xml file
+const val FILECHUNK_AUTHORITY = "me.violet.chunk"
 
 // Inspired by https://github.com/googlearchive/play-apk-expansion/tree/master
 // and https://github.com/Babay88/AndroidCodeSamplesB/blob/master/ShareZipped/src/main/java/ru/babay/codesamples/sharezip/ZipFilesProvider.java
-class ChunkFileProvider : ContentProvider() {
+class FileChunkProvider : ContentProvider() {
 
     override fun delete(
         p0: Uri,
@@ -63,7 +62,7 @@ class ChunkFileProvider : ContentProvider() {
         selectionArgs: Array<out String>?,
         sortOrder: String?
     ): Cursor {
-        val info = ChunkFileInfo.fromUri(uri)
+        val info = FileChunkInfo.fromUri(uri)
         val usedProjection =
             projection ?: arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE)
 
@@ -90,7 +89,7 @@ class ChunkFileProvider : ContentProvider() {
         uri: Uri,
         mode: String
     ): AssetFileDescriptor? {
-        return context?.let { return ChunkFileInfo.fromUri(uri).getAssetFileDescriptor(it) }
+        return context?.let { return FileChunkInfo.fromUri(uri).getAssetFileDescriptor(it) }
     }
 
     override fun openFile(
@@ -101,14 +100,14 @@ class ChunkFileProvider : ContentProvider() {
     }
 }
 
-class ChunkFileInfo(
+class FileChunkInfo(
     val mainFileUri: Uri,
     val displayName: String,
     val chunkOffset: Long,
     val chunkSize: Long
 ) {
     companion object {
-        fun fromUri(uri: Uri): ChunkFileInfo {
+        fun fromUri(uri: Uri): FileChunkInfo {
             val parts = UriParts(uri)
             val archiveUri = parts.pathFull
                 .substring(parts.host.length + 1)
@@ -118,7 +117,7 @@ class ChunkFileInfo(
             val offset = queryArgs["o"]?.toLong() ?: 0
             val size = queryArgs["s"]?.toLong() ?: 0
 
-            return ChunkFileInfo(
+            return FileChunkInfo(
                 archiveUri.toUri(),
                 fileName,
                 offset,
@@ -130,7 +129,7 @@ class ChunkFileInfo(
     fun toUri(): Uri {
         return Uri.Builder()
             .scheme(ContentResolver.SCHEME_CONTENT)
-            .authority(CFP_AUTHORITY)
+            .authority(FILECHUNK_AUTHORITY)
             .path(mainFileUri.toString().replace("content://com", "content:/com"))
             .appendQueryParameter("n", displayName)
             .appendQueryParameter("o", chunkOffset.toString())

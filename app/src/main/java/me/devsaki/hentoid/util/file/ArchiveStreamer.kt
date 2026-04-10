@@ -9,7 +9,6 @@ import kotlinx.coroutines.launch
 import kotlinx.io.IOException
 import me.devsaki.hentoid.util.getChecksumValue
 import timber.log.Timber
-import java.io.File
 import java.util.Queue
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -18,7 +17,12 @@ import java.util.zip.CRC32
 import java.util.zip.ZipException
 
 
-class ArchiveStreamer(context: Context, val archiveUri: Uri, append: Boolean) {
+class ArchiveStreamer(
+    context: Context,
+    val archiveUri: Uri,
+    append: Boolean,
+    val onProgressChange: ((Float) -> Unit)? = null
+) {
 
     private val stream = ZipStream(context, archiveUri, append)
     private val filesQueue: Queue<Uri> = ConcurrentLinkedQueue()
@@ -85,14 +89,21 @@ class ArchiveStreamer(context: Context, val archiveUri: Uri, append: Boolean) {
                             }
                             stream.putStoredRecord(name, doc.size, crc)
                             getInputStream(context, uri).use { stream.transferData(it) }
-                            stream.closeRecord()
-                            filesMatch[uri.toString()] =
-                                archiveUri.toString() + File.separator + name
+                            stream.closeRecord()?.let { entry ->
+                                filesMatch[uri.toString()] =
+                                    entry.toChunk(archiveUri).toUri().toString()
+                            }
                         } ?: throw IOException("Document not found : $uri")
                         Timber.d("Processing archive queue END : $uri")
                         removeFile(context, uri)
                         // Only remove from queue if all above has succeeded
                         filesQueue.remove(uri)
+
+                        onProgressChange?.apply {
+                            val denominator = filesMatch.size + filesQueue.size
+                            if (denominator > 0) invoke(filesMatch.size * 1f / denominator)
+                        }
+
                         uri = filesQueue.peek()
                     } catch (z: ZipException) {
                         Timber.d(z)
