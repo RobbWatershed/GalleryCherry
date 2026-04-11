@@ -3,7 +3,7 @@ package me.devsaki.hentoid.retrofit
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.adapters.Rfc3339DateJsonAdapter
 import me.devsaki.hentoid.BuildConfig
-import me.devsaki.hentoid.json.GithubRelease
+import me.devsaki.hentoid.json.core.UpdateInfo
 import me.devsaki.hentoid.util.network.OkHttpClientManager
 import retrofit2.Call
 import retrofit2.Retrofit
@@ -11,7 +11,7 @@ import retrofit2.converter.moshi.MoshiConverterFactory
 import retrofit2.http.GET
 import java.util.Date
 
-object GithubServer {
+object BergUpdateServer {
 
     private val moshi: Moshi by lazy {
         Moshi.Builder()
@@ -28,7 +28,7 @@ object GithubServer {
     // Must have a public init method to reset the connexion pool when updating DoH settings
     fun init() {
         api = Retrofit.Builder()
-            .baseUrl(BuildConfig.GITHUB_API_URL)
+            .baseUrl(BuildConfig.UPDATE_URL_2)
             .client(OkHttpClientManager.getInstance())
             .addConverterFactory(MoshiConverterFactory.create(moshi).asLenient())
             .build()
@@ -36,10 +36,7 @@ object GithubServer {
     }
 
     interface Api {
-        @get:GET("releases")
-        val releases: Call<List<GithubRelease>>
-
-        @get:GET("releases/latest")
-        val latestRelease: Call<GithubRelease>
+        @get:GET("update.json")
+        val updateInfo: Call<UpdateInfo>
     }
 }

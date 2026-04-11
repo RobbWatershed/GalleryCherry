@@ -16,7 +16,6 @@ import me.devsaki.hentoid.databinding.DialogLibraryUpdateSuccessBinding
 import me.devsaki.hentoid.fragments.BaseDialogFragment
 import me.devsaki.hentoid.json.GithubRelease
 import me.devsaki.hentoid.retrofit.BergServer
-import me.devsaki.hentoid.retrofit.GithubServer
 import me.devsaki.hentoid.viewholders.GitHubReleaseItem
 import timber.log.Timber
 
@@ -68,8 +67,7 @@ class UpdateSuccessDialogFragment : BaseDialogFragment<Nothing>() {
             var response: GithubRelease? = null
             withContext(Dispatchers.IO) {
                 try {
-                    response = GithubServer.api.latestRelease.execute().body()
-                    if (null == response) response = BergServer.api.latestRelease.execute().body()
+                    response = BergServer.api.latestRelease.execute().body()
                 } catch (e: Exception) {
                     onCheckError(e)
                 }

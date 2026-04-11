@@ -39,7 +39,7 @@ import me.devsaki.hentoid.activities.QueueActivity
 import me.devsaki.hentoid.activities.bundles.SearchActivityBundle
 import me.devsaki.hentoid.activities.bundles.SettingsBundle
 import me.devsaki.hentoid.activities.settings.SettingsActivity
-import me.devsaki.hentoid.core.URL_GITHUB_WIKI_DOWNLOAD
+import me.devsaki.hentoid.core.URL_WIKI_DOWNLOAD
 import me.devsaki.hentoid.core.startBrowserActivity
 import me.devsaki.hentoid.database.ObjectBoxDAO
 import me.devsaki.hentoid.database.domains.Content
@@ -371,7 +371,7 @@ class QueueFragment : Fragment(R.layout.fragment_queue), ItemTouchCallback,
                 true
             }
             it.menu.findItem(R.id.help).setOnMenuItemClickListener {
-                context?.startBrowserActivity(URL_GITHUB_WIKI_DOWNLOAD)
+                context?.startBrowserActivity(URL_WIKI_DOWNLOAD)
                 true
             }
         }

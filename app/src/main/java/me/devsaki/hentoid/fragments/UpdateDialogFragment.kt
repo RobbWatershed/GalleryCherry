@@ -24,7 +24,6 @@ import me.devsaki.hentoid.events.CommunicationEvent
 import me.devsaki.hentoid.events.ProcessEvent
 import me.devsaki.hentoid.json.GithubRelease
 import me.devsaki.hentoid.retrofit.BergServer
-import me.devsaki.hentoid.retrofit.GithubServer
 import me.devsaki.hentoid.viewholders.GitHubReleaseItem
 import me.devsaki.hentoid.workers.APK_MIMETYPE
 import me.devsaki.hentoid.workers.UpdateDownloadWorker
@@ -154,8 +153,7 @@ class UpdateDialogFragment : BaseDialogFragment<Nothing>() {
             var response: GithubRelease? = null
             withContext(Dispatchers.IO) {
                 try {
-                    response = GithubServer.api.latestRelease.execute().body()
-                    if (null == response) response = BergServer.api.latestRelease.execute().body()
+                    response = BergServer.api.latestRelease.execute().body()
                 } catch (e: Exception) {
                     onCheckError(e)
                 }

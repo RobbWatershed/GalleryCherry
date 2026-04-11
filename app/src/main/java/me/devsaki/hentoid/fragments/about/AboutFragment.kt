@@ -11,9 +11,8 @@ import me.devsaki.hentoid.BuildConfig
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.activities.AboutActivity
 import me.devsaki.hentoid.core.URL_BERG
+import me.devsaki.hentoid.core.URL_BERG_WIKI
 import me.devsaki.hentoid.core.URL_DISCORD
-import me.devsaki.hentoid.core.URL_GITHUB
-import me.devsaki.hentoid.core.URL_GITHUB_WIKI
 import me.devsaki.hentoid.core.startBrowserActivity
 import me.devsaki.hentoid.databinding.FragmentAboutBinding
 import me.devsaki.hentoid.events.AppRepoInfoEvent
@@ -61,8 +60,7 @@ class AboutFragment : Fragment(R.layout.fragment_about) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         binding?.apply {
-            appLogo.setOnClickListener { requireContext().startBrowserActivity(URL_GITHUB_WIKI) }
-            githubText.setOnClickListener { requireContext().startBrowserActivity(URL_GITHUB) }
+            appLogo.setOnClickListener { requireContext().startBrowserActivity(URL_BERG_WIKI) }
             bergText.setOnClickListener { requireContext().startBrowserActivity(URL_BERG) }
             discordText.setOnClickListener { requireContext().startBrowserActivity(URL_DISCORD) }
 
