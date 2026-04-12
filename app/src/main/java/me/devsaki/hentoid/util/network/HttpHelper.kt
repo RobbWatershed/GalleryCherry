@@ -69,10 +69,19 @@ fun getOnlineDocument(
     headers: List<Pair<String, String>>? = null,
     useMobileAgent: Boolean = true,
     useHentoidAgent: Boolean = true,
-    useWebviewAgent: Boolean = true
+    useWebviewAgent: Boolean = true,
+    retries: Int = 1
 ): Document? {
-    getOnlineResource(url, headers, useMobileAgent, useHentoidAgent, useWebviewAgent)
-        .body.use { return Jsoup.parse(it.string()) }
+    var attempts = 1
+    var response = getOnlineResource(url, headers, useMobileAgent, useHentoidAgent, useWebviewAgent)
+    // Pause and retry if we have an error
+    while (response.code >= 400 && attempts < retries) {
+        pause(1500)
+        attempts++
+        Timber.d("Retrying $url")
+        response = getOnlineResource(url, headers, useMobileAgent, useHentoidAgent, useWebviewAgent)
+    }
+    return response.body.use { return Jsoup.parse(it.string()) }
 }
 
 @Throws(IOException::class)
