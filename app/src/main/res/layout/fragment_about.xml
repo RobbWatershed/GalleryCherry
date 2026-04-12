@@ -79,38 +79,15 @@
             app:layout_constraintTop_toBottomOf="@id/appLogo" />
 
         <ImageView
-            android:id="@+id/githubIcon"
-            android:layout_width="@dimen/about_ic_icons_width"
-            android:layout_height="@dimen/about_ic_icons_height"
-            android:layout_marginTop="8dp"
-            android:cropToPadding="true"
-            android:src="@drawable/ic_social_github"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/aboutText1"
-            tools:ignore="ContentDescription" />
-
-        <TextView
-            android:id="@+id/githubText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="5dp"
-            android:text="@string/about_github"
-            android:textSize="16sp"
-            app:layout_constraintBottom_toBottomOf="@id/githubIcon"
-            app:layout_constraintStart_toEndOf="@id/githubIcon"
-            app:layout_constraintTop_toTopOf="@id/githubIcon"
-            tools:layout_editor_absoluteY="5dp" />
-
-        <ImageView
             android:id="@+id/bergIcon"
             android:layout_width="@dimen/about_ic_icons_width"
             android:layout_height="@dimen/about_ic_icons_height"
             android:padding="4dp"
             android:cropToPadding="true"
-            android:layout_marginStart="16dp"
+            android:layout_marginTop="8dp"
             android:src="@drawable/ic_codeberg"
-            app:layout_constraintStart_toEndOf="@id/githubText"
-            app:layout_constraintTop_toTopOf="@id/githubIcon"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/aboutText1"
             tools:ignore="ContentDescription" />
 
         <TextView
@@ -132,7 +109,7 @@
             android:layout_marginStart="16dp"
             android:src="@drawable/ic_social_discord"
             app:layout_constraintStart_toEndOf="@id/bergText"
-            app:layout_constraintTop_toTopOf="@id/githubIcon"
+            app:layout_constraintTop_toTopOf="@id/bergIcon"
             tools:ignore="ContentDescription" />
 
         <TextView
