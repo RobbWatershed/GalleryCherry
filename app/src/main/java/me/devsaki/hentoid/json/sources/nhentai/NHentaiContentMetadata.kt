@@ -76,9 +76,9 @@ data class NHentaiContentMetadata(
 
 
         content.coverImageUrl = cover?.let { covr ->
-            fixUrl(covr.path, Site.NHENTAI.url)
+            fixUrl(covr.path, "https://t1.nhentai.net")
         } ?: thumbnail?.let { covr ->
-            fixUrl(covr.path, Site.NHENTAI.url)
+            fixUrl(covr.path, "https://t1.nhentai.net")
         } ?: ""
 
         if (updateImages) {

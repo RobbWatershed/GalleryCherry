@@ -92,7 +92,7 @@ class NhentaiContent : BaseContentParser() {
         if (isError) return Content(status = StatusContent.IGNORED)
 
         cover?.let {
-            content.coverImageUrl = fixUrl(getImgSrc(it), Site.NHENTAI.url)
+            content.coverImageUrl = fixUrl(getImgSrc(it), "https://t1.nhentai.net")
         } ?: run {
             content.coverImageUrl = coverAlt
         }
