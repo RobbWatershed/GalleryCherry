@@ -566,9 +566,7 @@ open class CustomWebViewClient : WebViewClient {
             var postBody = ""
             // Try to retrieve POST body from previously intercepted XHR
             postRequestQueue[url]?.let { queue ->
-                queue.poll()?.let { body ->
-                    postBody = body
-                }
+                queue.poll()?.let { body -> postBody = body }
             }
             return sendRequest(request, postBody)
         }
