@@ -55,7 +55,7 @@ android {
             applicationIdSuffix ".debug"
             versionNameSuffix "-DEBUG"
 
-            buildConfigField 'String', 'UPDATE_URL_2', '"https://codeberg.org/VioletKnight/Hentoid/raw/branch/dev/app/"'
+            buildConfigField 'String', 'UPDATE_URL', '"https://codeberg.org/VioletKnight/Hentoid/raw/branch/dev/app/"'
 
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro', 'proguard-rules-debug.pro'
 
@@ -66,7 +66,7 @@ android {
             debuggable false
             minifyEnabled true
 
-            buildConfigField 'String', 'UPDATE_URL_2', '"https://codeberg.org/VioletKnight/Hentoid/raw/branch/master/app/"'
+            buildConfigField 'String', 'UPDATE_URL', '"https://codeberg.org/VioletKnight/Hentoid/raw/branch/master/app/"'
 
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro', 'proguard-rules-release.pro'
             testProguardFile 'proguard-rules-test.pro'

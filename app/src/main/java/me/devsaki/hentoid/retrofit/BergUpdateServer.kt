@@ -28,7 +28,7 @@ object BergUpdateServer {
     // Must have a public init method to reset the connexion pool when updating DoH settings
     fun init() {
         api = Retrofit.Builder()
-            .baseUrl(BuildConfig.UPDATE_URL_2)
+            .baseUrl(BuildConfig.UPDATE_URL)
             .client(OkHttpClientManager.getInstance())
             .addConverterFactory(MoshiConverterFactory.create(moshi).asLenient())
             .build()
