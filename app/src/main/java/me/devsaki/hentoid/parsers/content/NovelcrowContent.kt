@@ -43,7 +43,7 @@ class NovelcrowContent : BaseContentParser() {
     @Selector(value = ".summary-content")
     private var properties: List<Element>? = null
 
-    @Selector(value = "head [property=og:title]", attr = "content", defValue = "")
+    @Selector(value = "head [name='twitter:title']", attr = "content", defValue = "")
     private var chapterTitle: String? = null
 
     @Selector(value = ".reading-content img")
