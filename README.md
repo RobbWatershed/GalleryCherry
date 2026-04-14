@@ -4,7 +4,7 @@
 -->
 ___
 
-[![Download](https://img.shields.io/badge/GET-the%20APK-brightgreen.svg)](https://github.com/avluis/Hentoid/releases/latest)
+[![Download](https://img.shields.io/badge/GET-the%20APK-brightgreen.svg)](https://codeberg.org/VioletKnight/Hentoid/releases/latest)
 
 [![Build status](https://app.bitrise.io/app/70539fbfc39cb9d8/status.svg?token=_kOMCvtscTfWpw7mdsqvJA&branch=dev)](https://app.bitrise.io/app/70539fbfc39cb9d8) 
 
