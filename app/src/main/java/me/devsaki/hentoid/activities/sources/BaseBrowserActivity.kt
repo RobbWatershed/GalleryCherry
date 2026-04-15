@@ -1396,11 +1396,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         val dao: CollectionDAO = ObjectBoxDAO()
         try {
             val contentDB =
-                dao.selectContentByUrlOrCover(
-                    onlineContent.site,
-                    onlineContent.url,
-                    searchUrl
-                )
+                dao.selectContentByUrlOrCover(onlineContent.site, onlineContent.url, searchUrl)
             val isInCollection = contentDB != null && isInLibrary(contentDB.status)
             val isInQueue = contentDB != null && isInQueue(contentDB.status)
             if (!isInCollection && !isInQueue) {

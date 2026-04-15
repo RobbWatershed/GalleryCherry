@@ -1,6 +1,7 @@
 package me.devsaki.hentoid.database
 
 import io.objectbox.query.QueryBuilder
+import me.devsaki.hentoid.database.ObjectBoxDB.store
 import me.devsaki.hentoid.database.domains.Chapter
 import me.devsaki.hentoid.database.domains.Chapter_
 import me.devsaki.hentoid.database.domains.Content
@@ -45,7 +46,18 @@ class MaintenanceDAO {
             .safeFind()
     }
 
-    fun selecChaptersEmptyName(): List<Chapter> {
+    fun selectDownloadedNHBooksIncompleteUrls(): Set<Long> {
+        val okayIds = ObjectBoxDB.store.boxFor(Content::class.java).query()
+            .equal(Content_.site, Site.NHENTAI.code.toLong())
+            .endsWith(Content_.dbUrl, "/", QueryBuilder.StringOrder.CASE_INSENSITIVE)
+            .safeFindIds().toSet()
+
+        return ObjectBoxDB.store.boxFor(Content::class.java).query()
+            .equal(Content_.site, Site.NHENTAI.code.toLong())
+            .safeFindIds().toSet().minus(okayIds)
+    }
+
+    fun selectChaptersEmptyName(): List<Chapter> {
         return ObjectBoxDB.store.boxFor(Chapter::class.java).query()
             .equal(Chapter_.name, "", QueryBuilder.StringOrder.CASE_INSENSITIVE).safeFind()
     }
@@ -162,6 +174,10 @@ class MaintenanceDAO {
     }
 
     // Proxies to the update functions of the regular DB
+
+    fun selectContent(id: Long): Content? {
+        return store.boxFor(Content::class.java)[id]
+    }
 
     fun insertContentCore(c: Content) {
         ObjectBoxDB.insertContentCore(c)

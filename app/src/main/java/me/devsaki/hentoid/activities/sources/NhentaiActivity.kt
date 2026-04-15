@@ -83,6 +83,7 @@ class NhentaiActivity : BaseBrowserActivity() {
             val isApiGallery = url.contains("/api/v2/galleries/") && isNumeric(launchCode)
             if (!isApiGallery) return
 
+            activity?.onGalleryPageStarted()
             Timber.d("onData $url")
             try {
                 lifecycleScope.launch {
