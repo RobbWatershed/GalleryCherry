@@ -838,6 +838,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         viewModel.setPageTitle(webView.title ?: "")
         webView.url?.let {
             viewModel.saveToHistory(getStartSite(), it)
+            viewModel.setPageUrl(it)
         }
     }
 
