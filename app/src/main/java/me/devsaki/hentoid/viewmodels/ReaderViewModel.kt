@@ -134,6 +134,7 @@ class ReaderViewModel(
 
     // Pictures data
     private var currentImageSource: LiveData<List<ImageFile>>? = null
+    private var currentImageViewerIndex = -1
 
     // Set of image of current content
     private val databaseImages = MediatorLiveData<List<ImageFile>>()
@@ -666,7 +667,8 @@ class ReaderViewModel(
                 viewerImagesInternal.clear()
                 viewerImagesInternal.addAll(imgs)
                 if (startIndex > -1) onPageChange(startIndex - 1, 1, true)
-                else viewerImages.postValue(viewerImagesInternal.toList())
+                else onPageChange(currentImageViewerIndex, 1, false)
+                // else viewerImages.postValue(viewerImagesInternal.toList())
             }
         }
     }
@@ -1239,6 +1241,7 @@ class ReaderViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             if (viewerImagesInternal.size <= viewerIndex) return@launch
             val theContent = getContent().value ?: return@launch
+            currentImageViewerIndex = viewerIndex
             val isArchive = theContent.isArchive
             val isPdf = theContent.isPdf
             val isStreamed = DownloadMode.STREAM == theContent.downloadMode
