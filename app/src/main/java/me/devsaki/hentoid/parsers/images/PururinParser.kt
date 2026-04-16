@@ -31,6 +31,7 @@ class PururinParser : BaseChapteredImageListParser() {
         val doc = getOnlineDocument(
             chp.url,
             headers ?: fetchHeaders(content),
+            Site.PURURIN.useMobileAgent,
             Site.PURURIN.useHentoidAgent,
             Site.PURURIN.useWebviewAgent
         )

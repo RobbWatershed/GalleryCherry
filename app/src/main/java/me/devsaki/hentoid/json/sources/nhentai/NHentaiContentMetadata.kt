@@ -55,7 +55,7 @@ data class NHentaiContentMetadata(
     )
 
     fun update(content: Content, updateImages: Boolean) {
-        content.url = "https://$DOMAIN_FILTER/g/$id"
+        content.url = "https://$DOMAIN_FILTER/g/$id/"
         content.title = cleanup(title.pretty ?: title.english ?: "")
         content.status = StatusContent.SAVED
         content.uploadDate = uploadDate
@@ -76,9 +76,9 @@ data class NHentaiContentMetadata(
 
 
         content.coverImageUrl = cover?.let { covr ->
-            fixUrl(covr.path, Site.NHENTAI.url)
+            fixUrl(covr.path, "https://t1.nhentai.net")
         } ?: thumbnail?.let { covr ->
-            fixUrl(covr.path, Site.NHENTAI.url)
+            fixUrl(covr.path, "https://t1.nhentai.net")
         } ?: ""
 
         if (updateImages) {

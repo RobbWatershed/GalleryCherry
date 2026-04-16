@@ -1,6 +1,7 @@
 package me.devsaki.hentoid.activities.sources
 
 import android.net.Uri
+import android.webkit.JavascriptInterface
 import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
@@ -54,6 +55,9 @@ class NhentaiActivity : BaseBrowserActivity() {
         // Init fetch handler here for convenience
         fetchResponseHandler = { url, body -> client.onData(url, body) }
 
+        client.setJsStartupScripts("nhentai.js")
+        webView.addJavascriptInterface(NhJsInterface(), "nhJsInterface")
+
         return client
     }
 
@@ -79,6 +83,7 @@ class NhentaiActivity : BaseBrowserActivity() {
             val isApiGallery = url.contains("/api/v2/galleries/") && isNumeric(launchCode)
             if (!isApiGallery) return
 
+            activity?.onGalleryPageStarted()
             Timber.d("onData $url")
             try {
                 lifecycleScope.launch {
@@ -100,6 +105,16 @@ class NhentaiActivity : BaseBrowserActivity() {
             } catch (e: IOException) {
                 Timber.e(e)
             }
+        }
+    }
+
+    inner class NhJsInterface {
+        @JavascriptInterface
+        @Suppress("unused")
+        fun isMarkable(bookId: String): Int {
+            val downloadedBooks: List<String> = allSiteUrls
+            val mergedBooks: List<String> = allMergedBooksUrls
+            return if (downloadedBooks.contains(bookId)) 1 else if (mergedBooks.contains(bookId)) 2 else 0
         }
     }
 }

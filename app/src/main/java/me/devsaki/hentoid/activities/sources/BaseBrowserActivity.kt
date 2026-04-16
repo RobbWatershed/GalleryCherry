@@ -54,7 +54,7 @@ import me.devsaki.hentoid.activities.bundles.SettingsBundle
 import me.devsaki.hentoid.activities.settings.SettingsActivity
 import me.devsaki.hentoid.core.BiConsumer
 import me.devsaki.hentoid.core.Consumer
-import me.devsaki.hentoid.core.URL_GITHUB_WIKI_DOWNLOAD
+import me.devsaki.hentoid.core.URL_WIKI_DOWNLOAD
 import me.devsaki.hentoid.core.initDrawerLayout
 import me.devsaki.hentoid.core.startBrowserActivity
 import me.devsaki.hentoid.database.CollectionDAO
@@ -571,7 +571,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
             R.id.web_menu_settings -> onSettingsClick()
             R.id.web_menu_adblocker -> onAdblockClick()
             R.id.web_menu_url -> onManageLinkClick()
-            R.id.help -> startBrowserActivity(URL_GITHUB_WIKI_DOWNLOAD)
+            R.id.help -> startBrowserActivity(URL_WIKI_DOWNLOAD)
             else -> {
                 return false
             }
@@ -838,6 +838,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         viewModel.setPageTitle(webView.title ?: "")
         webView.url?.let {
             viewModel.saveToHistory(getStartSite(), it)
+            viewModel.setPageUrl(it)
         }
     }
 
@@ -1396,11 +1397,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         val dao: CollectionDAO = ObjectBoxDAO()
         try {
             val contentDB =
-                dao.selectContentByUrlOrCover(
-                    onlineContent.site,
-                    onlineContent.url,
-                    searchUrl
-                )
+                dao.selectContentByUrlOrCover(onlineContent.site, onlineContent.url, searchUrl)
             val isInCollection = contentDB != null && isInLibrary(contentDB.status)
             val isInQueue = contentDB != null && isInQueue(contentDB.status)
             if (!isInCollection && !isInQueue) {

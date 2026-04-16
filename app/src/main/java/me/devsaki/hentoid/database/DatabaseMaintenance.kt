@@ -24,7 +24,7 @@ import me.devsaki.hentoid.workers.data.UpdateJsonData
 import timber.log.Timber
 
 // TODO update when adding tasks to "oneShot" functions
-const val DB_UPDATE_VERSION = 2
+const val DB_UPDATE_VERSION = 3
 
 @Suppress("UNUSED_PARAMETER")
 object DatabaseMaintenance {
@@ -203,6 +203,21 @@ object DatabaseMaintenance {
                     withContext(Dispatchers.Main) { emitter(pos++ / max) }
                 }
                 Timber.i("Fixing NH covers : done")
+
+                // Fix NH URLs from v1.21.13
+                Timber.i("Fixing NH URLs : start")
+                val ids = db.selectDownloadedNHBooksIncompleteUrls()
+                Timber.i("Fixing NH URLs : %s books detected", ids.size)
+                max = ids.size
+                pos = 1f
+                for (id in ids) {
+                    db.selectContent(id)?.let { c ->
+                        c.dbUrl += "/"
+                        db.insertContentCore(c)
+                        withContext(Dispatchers.Main) { emitter(pos++ / max) }
+                    }
+                }
+                Timber.i("Fixing NH URLs : done")
             } finally {
                 db.cleanup()
             }
@@ -221,7 +236,7 @@ object DatabaseMaintenance {
             try {
                 // Update URLs from deprecated Hitomi image covers
                 Timber.i("Empying empty chapters : start")
-                val chapters = db.selecChaptersEmptyName()
+                val chapters = db.selectChaptersEmptyName()
                 Timber.i("Empying empty chapters : %s chapters detected", chapters.size)
                 val max = chapters.size
                 var pos = 1f

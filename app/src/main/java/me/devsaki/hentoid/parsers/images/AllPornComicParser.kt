@@ -29,6 +29,7 @@ class AllPornComicParser : BaseChapteredImageListParser() {
         getOnlineDocument(
             chp.url,
             headers ?: fetchHeaders(chp.url),
+            content.site.useMobileAgent,
             content.site.useHentoidAgent,
             content.site.useWebviewAgent
         )?.let { doc ->

@@ -143,6 +143,7 @@ class DeviantArtParser : BaseImageListParser() {
             val urls = getOnlineDocument(
                 processedUrl,
                 fetchHeaders(onlineContent),
+                Site.DEVIANTART.useMobileAgent,
                 Site.DEVIANTART.useHentoidAgent,
                 Site.DEVIANTART.useWebviewAgent
             )?.let {
@@ -163,6 +164,7 @@ class DeviantArtParser : BaseImageListParser() {
             getOnlineDocument(
                 processedUrl,
                 fetchHeaders(onlineContent),
+                Site.DEVIANTART.useMobileAgent,
                 Site.DEVIANTART.useHentoidAgent,
                 Site.DEVIANTART.useWebviewAgent
             )?.let {
@@ -179,6 +181,7 @@ class DeviantArtParser : BaseImageListParser() {
         getOnlineDocument(
             url,
             requestHeaders,
+            Site.DEVIANTART.useMobileAgent,
             Site.DEVIANTART.useHentoidAgent,
             Site.DEVIANTART.useWebviewAgent
         )?.let {

@@ -134,6 +134,7 @@ class ReaderViewModel(
 
     // Pictures data
     private var currentImageSource: LiveData<List<ImageFile>>? = null
+    private var currentImageViewerIndex = -1
 
     // Set of image of current content
     private val databaseImages = MediatorLiveData<List<ImageFile>>()
@@ -666,7 +667,8 @@ class ReaderViewModel(
                 viewerImagesInternal.clear()
                 viewerImagesInternal.addAll(imgs)
                 if (startIndex > -1) onPageChange(startIndex - 1, 1, true)
-                else viewerImages.postValue(viewerImagesInternal.toList())
+                else onPageChange(currentImageViewerIndex, 1, false)
+                // else viewerImages.postValue(viewerImagesInternal.toList())
             }
         }
     }
@@ -835,19 +837,20 @@ class ReaderViewModel(
                 val theContent = dao.selectContent(images[0].content.targetId) ?: return@withContext
 
                 // We can't work on the given objects as they are tied to the UI (part of ImageFileItem)
-                val dbImages = theContent.imageFiles
-                for (img in images)
-                    for (dbImg in dbImages)
-                        if (img.id == dbImg.id) {
-                            dbImg.favourite = !dbImg.favourite
-                            break
-                        }
+                val dbImages = theContent.imageFiles.groupBy { it.id }
+                val toUpdate : MutableList<ImageFile> = ArrayList()
+                images.forEach { img ->
+                    dbImages[img.id]?.first()?.let {
+                        it.favourite = !it.favourite
+                        toUpdate.add(it)
+                    }
+                }
 
                 // Persist in DB
-                dao.insertImageFiles(dbImages)
+                dao.insertImageFiles(toUpdate)
 
                 // Persist new values in JSON
-                theContent.setImageFiles(dbImages)
+                theContent.setImageFiles(dbImages.flatMap { it.value })
                 persistJson(getApplication<Application>().applicationContext, theContent)
             } finally {
                 dao.cleanup()
@@ -884,7 +887,7 @@ class ReaderViewModel(
 
         // Persist in DB
         try {
-            dao.insertContent(content)
+            dao.insertContentCore(content)
         } finally {
             dao.cleanup()
         }
@@ -903,7 +906,7 @@ class ReaderViewModel(
                     val targetContent = try {
                         val targetContent = dao.selectContent(loadedContentId) ?: return@withContext
                         targetContent.rating = rating
-                        dao.insertContent(targetContent)
+                        dao.insertContentCore(targetContent)
                         targetContent
                     } finally {
                         dao.cleanup()
@@ -1222,12 +1225,12 @@ class ReaderViewModel(
      * @param viewerIndex Viewer index of the page that has just been displayed
      * @param direction   Direction the viewer is going to (1 : forward; -1 : backward; 0 : no movement)
      */
-    fun onPageChange(viewerIndex: Int, direction: Int, setIndex: Boolean = false) {
+    fun onPageChange(viewerIndex: Int, direction: Int, setAsStartingIndex: Boolean = false) {
         var indexSet = false
         onPageChange(viewerIndex, direction) {
             // Instanciate a new list to trigger an actual Adapter UI refresh
             viewerImages.postValue(ArrayList(viewerImagesInternal))
-            if (setIndex && !indexSet) {
+            if (setAsStartingIndex && !indexSet) {
                 setViewerStartingIndex(viewerIndex + 1)
                 indexSet = true
             }
@@ -1238,6 +1241,7 @@ class ReaderViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             if (viewerImagesInternal.size <= viewerIndex) return@launch
             val theContent = getContent().value ?: return@launch
+            currentImageViewerIndex = viewerIndex
             val isArchive = theContent.isArchive
             val isPdf = theContent.isPdf
             val isStreamed = DownloadMode.STREAM == theContent.downloadMode
@@ -1368,7 +1372,7 @@ class ReaderViewModel(
         if (pageIndex < 0 || images.size <= pageIndex) return false
         images[pageIndex].let {
             return (it.isOnline || // Image has to be downloaded
-                    it.isArchived || // Image has to be extracted from an archive
+                    it.isCompressed || // Image has to be extracted from an archive
                     it.isPdf // Image has to be extracted from a PDF
                     )
                     || it.imageType == ImageType.IMG_TYPE_UNSET // Neither downloadable not extractable, but needs a preload

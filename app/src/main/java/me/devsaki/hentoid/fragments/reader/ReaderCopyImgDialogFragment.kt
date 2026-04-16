@@ -19,8 +19,11 @@ import me.devsaki.hentoid.util.PickFolderContract
 import me.devsaki.hentoid.util.PickerResult
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.copy
+import me.devsaki.hentoid.util.file.FILECHUNK_AUTHORITY
+import me.devsaki.hentoid.util.file.FileChunkInfo
 import me.devsaki.hentoid.util.file.DEFAULT_MIME_TYPE
 import me.devsaki.hentoid.util.file.RQST_STORAGE_PERMISSION
+import me.devsaki.hentoid.util.file.createNewDownloadFile
 import me.devsaki.hentoid.util.file.fileExists
 import me.devsaki.hentoid.util.file.findOrCreateDocumentFile
 import me.devsaki.hentoid.util.file.getDocumentFromTreeUriString
@@ -28,9 +31,8 @@ import me.devsaki.hentoid.util.file.getDownloadsFolder
 import me.devsaki.hentoid.util.file.getExtension
 import me.devsaki.hentoid.util.file.getFullPathFromUri
 import me.devsaki.hentoid.util.file.getInputStream
-import me.devsaki.hentoid.util.file.getMimeTypeFromFileUri
+import me.devsaki.hentoid.util.file.getMimeTypeFromExtension
 import me.devsaki.hentoid.util.file.getOutputStream
-import me.devsaki.hentoid.util.file.createNewDownloadFile
 import me.devsaki.hentoid.util.file.requestExternalStorageReadWritePermission
 import me.devsaki.hentoid.util.persistLocationCredentials
 import java.io.File
@@ -171,10 +173,14 @@ class ReaderCopyImgDialogFragment : BaseDialogFragment<ReaderCopyImgDialogFragme
 
         img?.let {
             val prefix = it.linkedContent?.uniqueSiteId ?: it.contentId.toString()
-            val targetFileName = prefix + "-" + it.name + "." + getExtension(it.fileUri)
+            val fileUri = it.fileUri.toUri()
+            val extension = if (fileUri.authority == FILECHUNK_AUTHORITY)
+                getExtension(FileChunkInfo.fromUri(fileUri).displayName)
+            else getExtension(it.fileUri)
+
+            val targetFileName = prefix + "-" + it.name + "." + extension
             try {
-                val fileUri = it.fileUri.toUri()
-                val mimeType = getMimeTypeFromFileUri(it.fileUri)
+                val mimeType = getMimeTypeFromExtension(extension)
                 if (!fileExists(requireContext(), fileUri)) return
 
                 val targets = getTargets(targetFileName, mimeType)
@@ -224,12 +230,14 @@ class ReaderCopyImgDialogFragment : BaseDialogFragment<ReaderCopyImgDialogFragme
         }
 
         if (null == outputStream) {
-            outputStream = getOutputStream(requireContext(),
-                createNewDownloadFile(
+            outputStream = getOutputStream(
                 requireContext(),
-                targetFileName,
-                mimeType
-            ))
+                createNewDownloadFile(
+                    requireContext(),
+                    targetFileName,
+                    mimeType
+                )
+            )
             docFile = null
             file = getDownloadsFolder()
         }

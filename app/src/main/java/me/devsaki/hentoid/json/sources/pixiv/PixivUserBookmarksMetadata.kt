@@ -36,7 +36,7 @@ data class PixivUserBookmarksMetadata(
         val thumbUrl: String
             get() {
                 var result = url
-                if (null == result || result.isEmpty()) result = urlSmall
+                if (result.isNullOrEmpty()) result = urlSmall
                 return result ?: ""
             }
     }

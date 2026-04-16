@@ -27,6 +27,7 @@ import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.canBeArchived
 import me.devsaki.hentoid.util.createArchivePdfCover
 import me.devsaki.hentoid.util.download.selectDownloadLocation
+import me.devsaki.hentoid.util.file.ArchiveStreamer
 import me.devsaki.hentoid.util.file.Beholder
 import me.devsaki.hentoid.util.file.DEFAULT_MIME_TYPE
 import me.devsaki.hentoid.util.file.PdfManager
@@ -39,17 +40,15 @@ import me.devsaki.hentoid.util.file.getOutputStream
 import me.devsaki.hentoid.util.file.getParent
 import me.devsaki.hentoid.util.file.listFiles
 import me.devsaki.hentoid.util.file.removeDocument
-import me.devsaki.hentoid.util.file.zipFiles
 import me.devsaki.hentoid.util.formatFolderName
 import me.devsaki.hentoid.util.getOrCreateSiteDownloadDir
 import me.devsaki.hentoid.util.getStorageRoot
 import me.devsaki.hentoid.util.image.imageNamesFilter
-import me.devsaki.hentoid.util.network.UriParts
 import me.devsaki.hentoid.util.notification.BaseNotification
+import me.devsaki.hentoid.util.pause
 import me.devsaki.hentoid.util.persistJson
 import me.devsaki.hentoid.util.removeContent
 import timber.log.Timber
-import java.io.File
 import java.io.IOException
 import java.time.Instant
 
@@ -135,7 +134,7 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
         }
 
     private suspend fun archiveContent(content: Content, params: Params, dao: CollectionDAO) {
-        Timber.i("Archiving %s", content.title)
+        Timber.i("Archiving ${content.title}")
         val context = applicationContext
         val bookFolder = getDocumentFromTreeUriString(context, content.storageUri) ?: return
 
@@ -149,9 +148,8 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
 
         val destFileUri = getTargetFile(context, content, params)
         Timber.d("DestUri : ${destFileUri.formatDisplay()}")
-        val outputStream = getOutputStream(context, destFileUri)
         var success = false
-        outputStream?.use { os ->
+        getOutputStream(context, destFileUri)?.use { os ->
             if (2 == params.targetFormat) { // PDF
                 val mgr = PdfManager()
                 val color = when (params.pdfBackgroundColor) {
@@ -172,26 +170,44 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
                 }
                 // PDF is not a storage method => no mapping to perform
             } else { // Archive
-                context.zipFiles(files, os, this::isStopped) {
+                // TODO optimize by working on a single OutputStream instead of juggling with the Uri
+                val archiveStreamer = ArchiveStreamer(context, destFileUri, false) {
                     globalProgress.setProgress(content.id.toString(), it)
                     launchProgressNotification()
                 }
-                // Map new image locations
-                if (params.archivePrimaryContent) {
-                    val imgs = content.imageList
-                    val imgHash = imgs.groupBy { UriParts(it.fileUri).fileNameFull }
-                    files.forEach { f ->
-                        imgHash[f.name]?.firstOrNull()?.let { img ->
-                            img.fileUri =
-                                destFileUri.toString() + File.separator + f.name
-                            if (!img.url.startsWith("http")) img.url = img.fileUri
-                        }
+                try {
+                    files.forEach {
+                        if (isStopped) return@forEach
+                        archiveStreamer.addFile(context, it.uri)
                     }
-                    dao.insertImageFiles(imgs)
-                    content.setImageFiles(imgs)
+
+                    // Make sure all files have been processed before continuing
+                    do {
+                        pause(500)
+                    } while (archiveStreamer.queueActive)
+
+                    // Map new image locations
+                    if (params.archivePrimaryContent) {
+                        val imgs = content.imageList
+                        imgs.forEach { img ->
+                            val fileUri = img.fileUri
+                            archiveStreamer.mappedUris[fileUri]?.let {
+                                // Write directly to dbFileUri as the Content's storageUri is not updated yet
+                                img.dbFileUri = it
+                                if (!img.url.startsWith("http")) img.url = img.fileUri
+                            }
+                        }
+                        dao.insertImageFiles(imgs)
+                        content.setImageFiles(imgs)
+                        success = true
+                    } // params.archivePrimaryContent
+                } catch (e: Exception) {
+                    Timber.w(e)
+                    success = false
+                } finally {
+                    archiveStreamer.close()
                 }
-            }
-            success = true
+            } // Target = Archive
         }
         if (success && !isStopped) {
             if (params.archivePrimaryContent) {

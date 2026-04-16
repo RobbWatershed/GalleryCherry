@@ -805,6 +805,14 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
+        <provider
+            android:authorities="me.violet.chunk"
+            android:exported="false"
+            android:multiprocess="true"
+            android:name=".util.file.FileChunkProvider">
+            <meta-data android:name="mainVersion" android:value="1"/>
+        </provider>
+
     </application>
 
 </manifest>

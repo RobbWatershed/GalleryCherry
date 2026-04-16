@@ -134,16 +134,18 @@ fun createImageListFromArchiveEntries(
     // Sort files by anything that resembles a number inside their names (default entry order from ZipInputStream is chaotic)
     val fileList = files.sortedWith(InnerNameNumberArchiveComparator())
     fileList.forEach {
-        val path = archiveFileUri.toString() + File.separator + it.path
         val img = ImageFile()
         if (it.path.startsWith(THUMB_FILE_NAME)) img.isCover = true
         else order++
+
+        val fileUri = if (it.isChunkable) it.toChunk(archiveFileUri).toUri()
+        else (archiveFileUri.toString() + File.separator + it.path).toUri()
+
         img.name = getFileNameWithoutExtension(it.path)
         img.order = order
-        img.url = path
         img.status = targetStatus
-        img.fileUri = path
-        img.size = it.size
+        img.fileUri = fileUri.toString()
+        img.size = it.compressedSize
         result.add(img)
     }
     return result

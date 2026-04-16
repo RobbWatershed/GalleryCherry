@@ -33,7 +33,7 @@ android {
         minSdkVersion 26
         targetSdkVersion 36
         versionCode 130 // is updated automatically by BitRise; only used when building locally
-        versionName '1.21.13'
+        versionName '1.21.14'
 
         def includeObjectBoxBrowser = System.getenv("INCLUDE_OBJECTBOX_BROWSER") ?: "false"
         def includeLeakCanary = System.getenv("INCLUDE_LEAK_CANARY") ?: "false"
@@ -41,7 +41,6 @@ android {
         buildConfigField "boolean", "INCLUDE_OBJECTBOX_BROWSER", includeObjectBoxBrowser
         buildConfigField "boolean", "INCLUDE_LEAK_CANARY", includeLeakCanary
 
-        buildConfigField 'String', 'GITHUB_API_URL', '"https://api.github.com/repos/avluis/Hentoid/"'
         buildConfigField 'String', 'BERG_API_URL', '"https://codeberg.org/api/v1/repos/VioletKnight/Hentoid/"'
 
         // Only include complete translations
@@ -56,8 +55,7 @@ android {
             applicationIdSuffix ".debug"
             versionNameSuffix "-DEBUG"
 
-            buildConfigField 'String', 'UPDATE_URL', '"https://raw.githubusercontent.com/avluis/Hentoid/dev/app/"'
-            buildConfigField 'String', 'UPDATE_URL_2', '"https://codeberg.org/VioletKnight/Hentoid/raw/branch/dev/app/"'
+            buildConfigField 'String', 'UPDATE_URL', '"https://codeberg.org/VioletKnight/Hentoid/raw/branch/dev/app/"'
 
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro', 'proguard-rules-debug.pro'
 
@@ -68,8 +66,7 @@ android {
             debuggable false
             minifyEnabled true
 
-            buildConfigField 'String', 'UPDATE_URL', '"https://raw.githubusercontent.com/avluis/Hentoid/master/app/"'
-            buildConfigField 'String', 'UPDATE_URL_2', '"https://codeberg.org/VioletKnight/Hentoid/raw/branch/master/app/"'
+            buildConfigField 'String', 'UPDATE_URL', '"https://codeberg.org/VioletKnight/Hentoid/raw/branch/master/app/"'
 
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro', 'proguard-rules-release.pro'
             testProguardFile 'proguard-rules-test.pro'
@@ -114,7 +111,7 @@ dependencies {
      * TESTING
      */
     testImplementation 'junit:junit:4.13.2'
-    testImplementation 'org.mockito:mockito-core:5.22.0'
+    testImplementation 'org.mockito:mockito-core:5.23.0'
     testImplementation 'androidx.test:core:1.7.0'
     testImplementation 'io.kotlintest:kotlintest-assertions:3.4.2'
     testImplementation 'androidx.arch.core:core-testing:2.2.0'
@@ -183,7 +180,7 @@ dependencies {
 
     // PDF creator/extractor
     implementation 'com.itextpdf:itext7-core:8.0.5'
-    //implementation 'com.itextpdf:bouncy-castle-adapter:8.0.5'
+    implementation 'com.itextpdf:bouncy-castle-adapter:8.0.5'
 
     /**
      * UI
@@ -314,7 +311,7 @@ dependencies {
      * ANALYTICS
      */
     // Import the BoM for the Firebase platform
-    implementation platform('com.google.firebase:firebase-bom:34.10.0')
+    implementation platform('com.google.firebase:firebase-bom:34.12.0')
 
     // Crashlytics
     implementation 'com.google.firebase:firebase-crashlytics'

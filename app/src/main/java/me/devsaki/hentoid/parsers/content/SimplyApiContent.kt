@@ -22,6 +22,7 @@ class SimplyApiContent : BaseContentParser() {
                 val doc = getOnlineDocument(
                     url,
                     headers,
+                    Site.SIMPLY.useMobileAgent,
                     Site.SIMPLY.useHentoidAgent,
                     Site.SIMPLY.useWebviewAgent
                 )

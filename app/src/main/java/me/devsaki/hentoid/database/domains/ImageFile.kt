@@ -324,6 +324,9 @@ data class ImageFile(
             return usableUri.startsWith("http")
         }
 
+    val isCompressed: Boolean
+        get() = isArchived && !fileUri.contains("o=")
+
     // Defensive programming, as certain crashes report null values there
     @Suppress("SENSELESS_COMPARISON")
     val needsPageParsing: Boolean

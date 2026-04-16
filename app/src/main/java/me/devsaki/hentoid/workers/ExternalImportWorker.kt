@@ -61,6 +61,7 @@ import org.greenrobot.eventbus.EventBus
 import timber.log.Timber
 import java.io.IOException
 import java.time.Instant
+import kotlin.math.max
 import kotlin.math.roundToInt
 
 class ExternalImportWorker(context: Context, parameters: WorkerParameters) :
@@ -403,7 +404,7 @@ class ExternalImportWorker(context: Context, parameters: WorkerParameters) :
 
         // Forge parent names using folder root path minus ext library root path
         val rootParts = (parent.path ?: "").split('/')
-        val parentNames = rootParts.subList(nbLibraryPathParts, rootParts.size)
+        val parentNames = rootParts.subList(max(0, nbLibraryPathParts - 1), rootParts.size)
         Timber.d("  parents : $parentNames")
 
         deltaPlusPairs.values.forEach { docs ->
@@ -416,7 +417,7 @@ class ExternalImportWorker(context: Context, parameters: WorkerParameters) :
             // Import new archive
             if (archivePdf != null) {
                 Timber.d("Importing new archive / PDF")
-                importArchivePdf(context, docs, parent, archivePdf, dao)
+                importArchivePdf(context, docs, parent, archivePdf, parentNames, dao)
                     ?.let { onContentFoundBH(context, explorer, dao, parent, it) }
             } else if (folder != null) { // Import new folder
                 Timber.d("Importing new folder")
@@ -553,6 +554,7 @@ class ExternalImportWorker(context: Context, parameters: WorkerParameters) :
         docs: List<DocumentFile>,
         parent: Uri,
         archivePdf: DocumentFile,
+        parentNames : List<String>,
         dao: CollectionDAO
     ): Content? {
         val jsons =
@@ -563,7 +565,7 @@ class ExternalImportWorker(context: Context, parameters: WorkerParameters) :
             dao,
             parent,
             archivePdf,
-            emptyList(),
+            parentNames,
             StatusContent.EXTERNAL,
             content
         )

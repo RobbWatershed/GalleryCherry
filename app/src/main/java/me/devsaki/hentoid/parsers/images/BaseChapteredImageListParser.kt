@@ -76,6 +76,7 @@ abstract class BaseChapteredImageListParser : BaseImageListParser() {
         val doc = getOnlineDocument(
             onlineContent.galleryUrl,
             headers,
+            onlineContent.site.useMobileAgent,
             onlineContent.site.useHentoidAgent,
             onlineContent.site.useWebviewAgent
         ) ?: return result

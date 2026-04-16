@@ -126,6 +126,7 @@ class EHentaiParser : ImageListParser {
             getOnlineDocument(
                 url,
                 requestHeaders,
+                site.useMobileAgent,
                 site.useHentoidAgent,
                 site.useWebviewAgent
             )?.let { doc ->
@@ -203,6 +204,7 @@ class EHentaiParser : ImageListParser {
             val doc = getOnlineDocument(
                 url,
                 reqHeaders,
+                site.useMobileAgent,
                 site.useHentoidAgent,
                 site.useWebviewAgent
             )
@@ -258,6 +260,7 @@ class EHentaiParser : ImageListParser {
         fun loadMpv(
             mpvUrl: String,
             headers: List<Pair<String, String>>,
+            useMobileAgent: Boolean,
             useHentoidAgent: Boolean,
             useWebviewAgent: Boolean,
             range: String,
@@ -266,7 +269,7 @@ class EHentaiParser : ImageListParser {
             val result: MutableList<ImageFile> = ArrayList()
 
             // B.1- Open the MPV and parse gallery metadata
-            val mpvInfo = parseMpvPage(mpvUrl, headers, useHentoidAgent, useWebviewAgent)
+            val mpvInfo = parseMpvPage(mpvUrl, headers, useMobileAgent, useHentoidAgent, useWebviewAgent)
                 ?: throw EmptyResultException("No exploitable data has been found on the multiple page viewer")
             val pageCount = mpvInfo.pagecount.coerceAtMost(mpvInfo.images.size)
 
@@ -306,6 +309,7 @@ class EHentaiParser : ImageListParser {
             content: Content,
             galleryDoc: Document,
             headers: List<Pair<String, String>>,
+            useMobileAgent : Boolean,
             useHentoidAgent: Boolean,
             useWebviewAgent: Boolean,
             progress: ParseProgress
@@ -327,6 +331,7 @@ class EHentaiParser : ImageListParser {
                     getOnlineDocument(
                         content.galleryUrl + "/?p=" + i,
                         headers,
+                        useMobileAgent,
                         useHentoidAgent,
                         useWebviewAgent
                     )?.let { fetchPageUrls(it, pageUrls) }
@@ -405,11 +410,12 @@ class EHentaiParser : ImageListParser {
         fun parseMpvPage(
             url: String,
             headers: List<Pair<String, String>>,
+            useMobileAgent: Boolean,
             useHentoidAgent: Boolean,
             useWebviewAgent: Boolean
         ): MpvInfo? {
             var result: MpvInfo? = null
-            val doc = getOnlineDocument(url, headers, useHentoidAgent, useWebviewAgent)
+            val doc = getOnlineDocument(url, headers, useMobileAgent, useHentoidAgent, useWebviewAgent)
                 ?: throw ParseException("Unreachable MPV")
 
             val scripts: List<Element> = doc.select("script")
@@ -476,12 +482,14 @@ class EHentaiParser : ImageListParser {
              *
              *    B.2- Call the API to get the pictures URL
              */
+            val useMobileAgent = Site.EHENTAI.useMobileAgent
             val useHentoidAgent = Site.EHENTAI.useHentoidAgent
             val useWebviewAgent = Site.EHENTAI.useWebviewAgent
 
             val galleryDoc = getOnlineDocument(
                 content.galleryUrl,
                 headers,
+                useMobileAgent,
                 useHentoidAgent,
                 useWebviewAgent
             ) ?: throw ParseException("Unreachable gallery page")
@@ -496,6 +504,7 @@ class EHentaiParser : ImageListParser {
                     loadMpv(
                         mpvUrl,
                         headers,
+                        useMobileAgent,
                         useHentoidAgent,
                         useWebviewAgent,
                         content.downloadRange,
@@ -506,6 +515,7 @@ class EHentaiParser : ImageListParser {
                         content,
                         galleryDoc,
                         headers,
+                        useMobileAgent,
                         useHentoidAgent,
                         useWebviewAgent,
                         progress
@@ -516,6 +526,7 @@ class EHentaiParser : ImageListParser {
                     content,
                     galleryDoc,
                     headers,
+                    useMobileAgent,
                     useHentoidAgent,
                     useWebviewAgent,
                     progress

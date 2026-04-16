@@ -41,7 +41,7 @@ class MrmParser : BaseChapteredImageListParser() {
         val doc = getOnlineDocument(
             content.galleryUrl,
             headers,
-            Site.MRM.useHentoidAgent, Site.MRM.useWebviewAgent
+            Site.MRM.useMobileAgent, Site.MRM.useHentoidAgent, Site.MRM.useWebviewAgent
         )
         if (doc != null) {
             val chapterContainer = doc.select("div.entry-pagination").first()
@@ -94,7 +94,7 @@ class MrmParser : BaseChapteredImageListParser() {
         getOnlineDocument(
             chapterUrl,
             headers ?: fetchHeaders(chapterUrl),
-            Site.MRM.useHentoidAgent, Site.MRM.useWebviewAgent
+            Site.MRM.useMobileAgent, Site.MRM.useHentoidAgent, Site.MRM.useWebviewAgent
         )?.let { doc ->
             val images =
                 doc.select(".entry-content img[decoding=async][src*='https://i']").filterNotNull()

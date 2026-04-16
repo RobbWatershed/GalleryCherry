@@ -19,7 +19,7 @@ import com.skydoves.powermenu.PowerMenuItem
 import kotlinx.coroutines.launch
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.activities.BaseActivity
-import me.devsaki.hentoid.core.URL_GITHUB_WIKI_STORAGE
+import me.devsaki.hentoid.core.URL_WIKI_STORAGE
 import me.devsaki.hentoid.core.startBrowserActivity
 import me.devsaki.hentoid.database.CollectionDAO
 import me.devsaki.hentoid.database.ObjectBoxDAO
@@ -32,7 +32,6 @@ import me.devsaki.hentoid.fragments.settings.DownloadStrategyDialogFragment
 import me.devsaki.hentoid.fragments.settings.LibRefreshDialogFragment
 import me.devsaki.hentoid.fragments.settings.StorageUsageDialogFragment
 import me.devsaki.hentoid.util.Settings
-import me.devsaki.hentoid.util.applyTheme
 import me.devsaki.hentoid.util.dimensAsDp
 import me.devsaki.hentoid.util.file.MemoryUsageFigures
 import me.devsaki.hentoid.util.file.formatHumanReadableSize
@@ -477,7 +476,7 @@ class SettingsStorageActivity : BaseActivity(), DownloadStrategyDialogFragment.P
 
     private fun onMenuItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
-            R.id.action_help -> startBrowserActivity(URL_GITHUB_WIKI_STORAGE)
+            R.id.action_help -> startBrowserActivity(URL_WIKI_STORAGE)
             else -> return false
         }
         return true

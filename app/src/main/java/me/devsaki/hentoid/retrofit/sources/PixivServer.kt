@@ -52,14 +52,6 @@ object PixivServer {
             @Header("user-agent") userAgent: String
         ): Call<PixivIllustMetadata>
 
-        @GET("ajax/illust/{id}/pages")
-        fun getIllustPages(
-            @Query("id") id: String,
-            @Header("cookie") cookies: String,
-            @Header("accept") accept: String,
-            @Header("user-agent") userAgent: String
-        ): Call<PixivIllustPagesMetadata>
-
         @GET("touch/ajax/illust/series/{id}")
         fun getSeriesMetadata(
             @Path("id") id: String,

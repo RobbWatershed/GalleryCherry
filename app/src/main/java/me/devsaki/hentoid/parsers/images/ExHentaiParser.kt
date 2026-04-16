@@ -85,11 +85,13 @@ class ExHentaiParser : ImageListParser {
              *
              *    B.2- Call the API to get the pictures URL
              */
+            val useMobileAgent = Site.EXHENTAI.useMobileAgent
             val useHentoidAgent = Site.EXHENTAI.useHentoidAgent
             val useWebviewAgent = Site.EXHENTAI.useWebviewAgent
             val galleryDoc = getOnlineDocument(
                 content.galleryUrl,
                 headers,
+                useMobileAgent,
                 useHentoidAgent,
                 useWebviewAgent
             ) ?: throw ParseException("Unreachable gallery page")
@@ -102,6 +104,7 @@ class ExHentaiParser : ImageListParser {
                     EHentaiParser.loadMpv(
                         mpvUrl,
                         headers,
+                        useMobileAgent,
                         useHentoidAgent,
                         useWebviewAgent,
                         content.downloadRange,
@@ -112,6 +115,7 @@ class ExHentaiParser : ImageListParser {
                         content,
                         galleryDoc,
                         headers,
+                        useMobileAgent,
                         useHentoidAgent,
                         useWebviewAgent,
                         progress
@@ -122,6 +126,7 @@ class ExHentaiParser : ImageListParser {
                     content,
                     galleryDoc,
                     headers,
+                    useMobileAgent,
                     useHentoidAgent,
                     useWebviewAgent,
                     progress

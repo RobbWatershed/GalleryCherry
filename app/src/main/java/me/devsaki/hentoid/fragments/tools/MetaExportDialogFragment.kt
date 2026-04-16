@@ -17,7 +17,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.devsaki.hentoid.R
-import me.devsaki.hentoid.core.URL_GITHUB_WIKI_TRANSFER
+import me.devsaki.hentoid.core.URL_WIKI_TRANSFER
 import me.devsaki.hentoid.core.startBrowserActivity
 import me.devsaki.hentoid.database.CollectionDAO
 import me.devsaki.hentoid.database.ObjectBoxDAO
@@ -136,7 +136,7 @@ class MetaExportDialogFragment : BaseDialogFragment<Nothing>() {
 
             // Open library transfer FAQ
             exportWikiLink.setOnClickListener {
-                requireActivity().startBrowserActivity(URL_GITHUB_WIKI_TRANSFER)
+                requireActivity().startBrowserActivity(URL_WIKI_TRANSFER)
             }
             exportRunBtn.isEnabled = false
             if (0L == nbLibraryBooks + nbQueueBooks + nbBookmarks)

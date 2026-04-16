@@ -17,14 +17,13 @@ import com.mikepenz.fastadapter.diff.FastAdapterDiffUtil
 import com.mikepenz.fastadapter.select.SelectExtension
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.activities.bundles.RenamingRuleBundle
-import me.devsaki.hentoid.core.URL_GITHUB_WIKI_EDIT_METADATA
+import me.devsaki.hentoid.core.URL_WIKI_EDIT_METADATA
 import me.devsaki.hentoid.core.startBrowserActivity
 import me.devsaki.hentoid.database.domains.RenamingRule
 import me.devsaki.hentoid.databinding.ActivityRulesBinding
 import me.devsaki.hentoid.enums.AttributeType
 import me.devsaki.hentoid.fragments.metadata.MetaEditRuleDialogFragment
 import me.devsaki.hentoid.fragments.metadata.RuleBottomPanelFragment
-import me.devsaki.hentoid.util.applyTheme
 import me.devsaki.hentoid.viewholders.RuleItem
 import me.devsaki.hentoid.viewmodels.RulesEditViewModel
 import me.devsaki.hentoid.viewmodels.ViewModelFactory
@@ -211,7 +210,7 @@ class RenamingRulesActivity : BaseActivity(), MetaEditRuleDialogFragment.Parent 
     private fun onToolbarItemClicked(menuItem: MenuItem): Boolean {
         when (menuItem.itemId) {
             R.id.action_sort_filter -> showSortFilterPanel()
-            R.id.help -> startBrowserActivity(URL_GITHUB_WIKI_EDIT_METADATA)
+            R.id.help -> startBrowserActivity(URL_WIKI_EDIT_METADATA)
             else -> return true
         }
         return true

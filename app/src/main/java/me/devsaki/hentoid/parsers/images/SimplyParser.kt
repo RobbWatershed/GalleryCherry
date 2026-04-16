@@ -20,6 +20,7 @@ class SimplyParser : BaseImageListParser() {
         var doc = getOnlineDocument(
             content.galleryUrl,
             headers,
+            Site.SIMPLY.useMobileAgent,
             Site.SIMPLY.useHentoidAgent,
             Site.SIMPLY.useWebviewAgent
         )
@@ -39,6 +40,7 @@ class SimplyParser : BaseImageListParser() {
         doc = getOnlineDocument(
             viewerUrl,
             headers,
+            Site.SIMPLY.useMobileAgent,
             Site.SIMPLY.useHentoidAgent,
             Site.SIMPLY.useWebviewAgent
         )

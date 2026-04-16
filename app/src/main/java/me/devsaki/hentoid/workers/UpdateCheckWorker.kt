@@ -14,8 +14,7 @@ import me.devsaki.hentoid.events.CommunicationEvent
 import me.devsaki.hentoid.json.core.UpdateInfo
 import me.devsaki.hentoid.notification.appUpdate.UpdateAvailableNotification
 import me.devsaki.hentoid.notification.appUpdate.UpdateCheckNotification
-import me.devsaki.hentoid.retrofit.UpdateServer
-import me.devsaki.hentoid.retrofit.UpdateServer2
+import me.devsaki.hentoid.retrofit.BergUpdateServer
 import me.devsaki.hentoid.util.notification.BaseNotification
 import org.greenrobot.eventbus.EventBus
 import timber.log.Timber
@@ -50,23 +49,18 @@ class UpdateCheckWorker(context: Context, parameters: WorkerParameters) :
                 )
             )
             withContext(Dispatchers.IO) {
-                UpdateServer.api.updateInfo.execute().body()?.let {
+                BergUpdateServer.api.updateInfo.execute().body()?.let {
                     onSuccess(it)
                 } ?: run {
-                    Timber.i("Failed with update server 1; falling back to server 2")
-                    UpdateServer2.api.updateInfo.execute().body()?.let {
-                        onSuccess(it)
-                    } ?: run {
-                        EventBus.getDefault().post(
-                            CommunicationEvent(
-                                CommunicationEvent.Type.BROADCAST,
-                                CommunicationEvent.Recipient.SETTINGS,
-                                applicationContext.resources.getString(R.string.pref_check_updates_manual_no_connection)
-                            )
+                    EventBus.getDefault().post(
+                        CommunicationEvent(
+                            CommunicationEvent.Type.BROADCAST,
+                            CommunicationEvent.Recipient.SETTINGS,
+                            applicationContext.resources.getString(R.string.pref_check_updates_manual_no_connection)
                         )
-                        notificationManager.cancel()
-                        Timber.w("Failed to get update info (null result)")
-                    }
+                    )
+                    notificationManager.cancel()
+                    Timber.w("Failed to get update info (null result)")
                 }
             }
         } catch (e: Exception) {

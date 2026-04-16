@@ -36,7 +36,7 @@ class MultpornParser : BaseImageListParser() {
             getOnlineDocument(
                 juiceboxUrl,
                 headers,
-                Site.MULTPORN.useHentoidAgent, Site.MULTPORN.useWebviewAgent
+                Site.MULTPORN.useMobileAgent, Site.MULTPORN.useHentoidAgent, Site.MULTPORN.useWebviewAgent
             )?.let { doc ->
                 var images: List<Element> = doc.select("juicebox image")
                 if (images.isEmpty()) images = doc.select("juicebox img")
@@ -56,7 +56,7 @@ class MultpornParser : BaseImageListParser() {
         getOnlineDocument(
             content.galleryUrl,
             fetchHeaders(content),
-            Site.ALLPORNCOMIC.useHentoidAgent, Site.ALLPORNCOMIC.useWebviewAgent
+            Site.MULTPORN.useMobileAgent, Site.MULTPORN.useHentoidAgent, Site.MULTPORN.useWebviewAgent
         )?.let { doc ->
             val juiceboxUrl = getJuiceboxRequestUrl(doc.select("head script"))
             result.addAll(getImagesUrls(juiceboxUrl, processedUrl))

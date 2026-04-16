@@ -42,11 +42,9 @@ import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.enums.Theme
 import me.devsaki.hentoid.events.DownloadCommandEvent
 import me.devsaki.hentoid.retrofit.BergServer
+import me.devsaki.hentoid.retrofit.BergUpdateServer
 import me.devsaki.hentoid.retrofit.DeviantArtServer
-import me.devsaki.hentoid.retrofit.GithubServer
 import me.devsaki.hentoid.retrofit.JikanServer
-import me.devsaki.hentoid.retrofit.UpdateServer
-import me.devsaki.hentoid.retrofit.UpdateServer2
 import me.devsaki.hentoid.retrofit.sources.EHentaiServer
 import me.devsaki.hentoid.retrofit.sources.KemonoServer
 import me.devsaki.hentoid.retrofit.sources.LusciousServer
@@ -309,7 +307,6 @@ class SettingsFragment : PreferenceFragmentCompat(),
                     DownloadCommandEvent(DownloadCommandEvent.Type.EV_RESET_REQUEST_QUEUE)
                 )
                 // Reset all retrofit clients
-                GithubServer.init()
                 BergServer.init()
                 EHentaiServer.init()
                 LusciousServer.init()
@@ -317,8 +314,7 @@ class SettingsFragment : PreferenceFragmentCompat(),
                 DeviantArtServer.init()
                 KemonoServer.init()
                 JikanServer.init()
-                UpdateServer.init()
-                UpdateServer2.init()
+                BergUpdateServer.init()
             }
         }
     }
@@ -334,7 +330,6 @@ class SettingsFragment : PreferenceFragmentCompat(),
                     DownloadCommandEvent(DownloadCommandEvent.Type.EV_RESET_REQUEST_QUEUE)
                 )
                 // Reset all retrofit clients
-                GithubServer.init()
                 BergServer.init()
                 EHentaiServer.init()
                 LusciousServer.init()
@@ -342,8 +337,7 @@ class SettingsFragment : PreferenceFragmentCompat(),
                 DeviantArtServer.init()
                 KemonoServer.init()
                 JikanServer.init()
-                UpdateServer.init()
-                UpdateServer2.init()
+                BergUpdateServer.init()
             }
         }
     }

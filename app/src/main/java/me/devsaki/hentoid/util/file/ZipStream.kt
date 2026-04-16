@@ -16,7 +16,6 @@ import kotlinx.io.writeULongLe
 import kotlinx.io.writeUShortLe
 import me.devsaki.hentoid.BuildConfig
 import me.devsaki.hentoid.util.byteArrayOfInts
-import me.devsaki.hentoid.util.file.ZipStream.ZipRecord
 import timber.log.Timber
 import java.io.ByteArrayInputStream
 import java.io.Closeable
@@ -42,7 +41,7 @@ private const val FLAG_UTF8_ENCODE: UShort = 0x800u
 private const val DOSTIME_BEFORE_1980 = (1 shl 21) or (1 shl 16)
 
 class ZipReader(context: Context, archiveUri: Uri, failOnUnsupported: Boolean = false) {
-    val records = ArrayList<ZipRecord>()
+    val records = ArrayList<ArchiveEntry>()
     val allNotCompressed: Boolean
 
     // Aligned with sevenzipjbinding when charset is exotic (e.g. Shift_JIS)
@@ -109,12 +108,14 @@ class ZipReader(context: Context, archiveUri: Uri, failOnUnsupported: Boolean = 
                             if (extraDataLength > 0) {
                                 var read = 0L
                                 do {
-                                    val extraIid = it.readUShortLe().toInt()
+                                    val extraId = it.readUShortLe().toInt()
                                     val size = it.readUShortLe().toLong()
-                                    when (extraIid) {
-                                        0x0001 -> {
+                                    when (extraId) {
+                                        0x0001 -> { // ZIP64 extended information
                                             uncompressedSize = it.readLongLe()
-                                            compressedSize = it.readLongLe()
+                                            if (size > 8) compressedSize = it.readLongLe()
+                                            if (size > 16) it.skip(8)
+                                            if (size > 24) it.skip(4)
                                         }
                                         /*
                                     0x0008 -> {
@@ -134,17 +135,22 @@ class ZipReader(context: Context, archiveUri: Uri, failOnUnsupported: Boolean = 
                                     read += (4 + size)
                                 } while (read < extraDataLength)
                             }
+                            val headerSize = 30 + nameLength + extraDataLength
                             records.add(
-                                ZipRecord(
+                                ArchiveEntry(
+                                    name.endsWith("/"),
                                     name,
                                     uncompressedSize,
+                                    compressedSize,
+                                    headerSize,
                                     offset,
+                                    compressionMode > 0u,
                                     time = datetime,
                                     crc = crc
                                 )
                             )
                             it.skip(compressedSize)
-                            offset += (30 + nameLength + extraDataLength + compressedSize)
+                            offset += headerSize + compressedSize
 
                             id = it.readByteArray(4)
                         } while (id.contentEquals(FILE))
@@ -162,11 +168,9 @@ class ZipReader(context: Context, archiveUri: Uri, failOnUnsupported: Boolean = 
 
         if (BuildConfig.DEBUG) {
             Timber.d("Read completed; ${records.size} records found")
-            /*
             records.forEachIndexed { i, e ->
                 Timber.d("RECORD $i ${e.path} (${e.isFolder}) ${e.size} @${e.offset}")
             }
-             */
         }
     } // init
 
@@ -242,7 +246,7 @@ class ZipReader(context: Context, archiveUri: Uri, failOnUnsupported: Boolean = 
         fis.asSource().buffered().use {
             // Read central directory
             for (i in 1..cdrCount) {
-                var id = it.readByteArray(4)
+                val id = it.readByteArray(4)
                 if (!id.contentEquals(TOCFILE)) {
                     Timber.d("Corrupted ToC @ $i (${records.size} records in)")
                     result.isCorrupted = true
@@ -260,7 +264,7 @@ class ZipReader(context: Context, archiveUri: Uri, failOnUnsupported: Boolean = 
                 val datetime = dosToJavaTime(it.readUIntLe().toLong())
                 val crc = it.readUIntLe().toLong() // CRC32
                 var uncompressedSize = it.readUIntLe().toLong()
-                it.skip(4) // Compressed size
+                var compressedSize = it.readUIntLe().toLong()
                 val nameLength = it.readUShortLe().toLong()
                 val extraDataLength = it.readUShortLe().toInt()
                 val commentLength = it.readUShortLe().toLong()
@@ -268,6 +272,7 @@ class ZipReader(context: Context, archiveUri: Uri, failOnUnsupported: Boolean = 
                 it.skip(6) // Internal and external attributes
                 var lfhOffset = it.readUIntLe().toLong()
                 var name = it.readString(nameLength, charset)
+                var zip64hack = 0
                 // Extra data
                 if (extraDataLength > 0) {
                     var read = 0L
@@ -278,8 +283,9 @@ class ZipReader(context: Context, archiveUri: Uri, failOnUnsupported: Boolean = 
                         when (id) {
                             0x0001 -> { // ZIP64 extended information
                                 //Timber.v("zip64 extra data $id ($size)")
+                                zip64hack = -8 // extra data is usually shorter on the local header
                                 uncompressedSize = it.readLongLe()
-                                if (size > 8) it.skip(8) // Compressed size
+                                if (size > 8) compressedSize = it.readLongLe()
                                 if (size > 16) lfhOffset = it.readLongLe()
                                 if (size > 24) it.skip(4) // Number of the disk on which this file starts
                             }
@@ -303,8 +309,21 @@ class ZipReader(context: Context, archiveUri: Uri, failOnUnsupported: Boolean = 
                 }
                 it.skip(commentLength)
 
+                // Assuming the local header stores the very same extra data as the central header ^^"
+                // (minus the zip64hack)
+                val headerSize = 30 + nameLength + extraDataLength + zip64hack
                 records.add(
-                    ZipRecord(name, uncompressedSize, lfhOffset, time = datetime, crc = crc)
+                    ArchiveEntry(
+                        name.endsWith("/"),
+                        name,
+                        uncompressedSize,
+                        compressedSize,
+                        headerSize,
+                        lfhOffset,
+                        compressionMode > 0u,
+                        time = datetime,
+                        crc = crc
+                    )
                 )
             } // cdrCount
         } // asSource.buffered
@@ -334,9 +353,9 @@ class ZipReader(context: Context, archiveUri: Uri, failOnUnsupported: Boolean = 
  * Assume not multiple files ("disks")
  */
 class ZipStream(context: Context, archiveUri: Uri, append: Boolean) : Closeable {
-    val records = ArrayList<ZipRecord>()
+    val records = ArrayList<ArchiveEntry>()
 
-    var currentRecord: ZipRecord? = null
+    var currentRecord: ArchiveEntry? = null
     var currentOffset = 0L
 
     val sink: Sink
@@ -370,6 +389,7 @@ class ZipStream(context: Context, archiveUri: Uri, append: Boolean) : Closeable 
         val nameData = ByteArray(nameBuffer.limit())
         nameBuffer.get(nameData)
         sink.writeUShortLe(nameData.size.toUShort())
+
         sink.writeUShortLe(20u) // Size of ZIP64 extra data
         sink.write(nameData)
         // ZIP64 extra data
@@ -378,8 +398,21 @@ class ZipStream(context: Context, archiveUri: Uri, append: Boolean) : Closeable 
         sink.writeULongLe(size.toULong())
         sink.writeULongLe(size.toULong()) // Compressed size is identical to uncompressed size as we use STORED mode
 
-        currentRecord = ZipRecord(path, size, currentOffset, time = time, crc = crc)
-        currentOffset += (30 + nameData.size + 20)
+        val headerSize = 30L + nameData.size + 20
+
+        currentRecord = ArchiveEntry(
+            path.endsWith("/"),
+            path,
+            size,
+            size,
+            headerSize,
+            currentOffset,
+            false,
+            time = time,
+            crc = crc
+        )
+
+        currentOffset += headerSize
     }
 
     /**
@@ -396,12 +429,15 @@ class ZipStream(context: Context, archiveUri: Uri, append: Boolean) : Closeable 
     /**
      * Close file record
      */
-    fun closeRecord() {
-        currentRecord?.let { e ->
-            records.add(e)
-            Timber.d("NEW RECORD ${e.path} (${e.isFolder}) ${e.size} @${e.offset}")
+    fun closeRecord(): ArchiveEntry? {
+        var result: ArchiveEntry? = null
+        currentRecord?.let { rec ->
+            records.add(rec)
+            result = rec
+            Timber.d("NEW RECORD ${rec.path} (${rec.isFolder}) ${rec.size} @${rec.offset}")
         }
         currentRecord = null
+        return result
     }
 
     /**
@@ -521,19 +557,4 @@ class ZipStream(context: Context, archiveUri: Uri, append: Boolean) : Closeable 
         var hasOneCompressed: Boolean = false,
         var isCorrupted: Boolean = false
     )
-
-    data class ZipRecord(
-        val path: String,
-        val size: Long,
-        val offset: Long,
-        val time: Long = 0L,
-        val crc: Long = 0L
-    ) {
-        val isFolder: Boolean
-            get() = path.endsWith("/")
-
-        fun toArchiveEntry(): ArchiveEntry {
-            return ArchiveEntry(isFolder, path, size)
-        }
-    }
 }
