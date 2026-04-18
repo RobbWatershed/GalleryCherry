@@ -6,7 +6,7 @@ plugins {
     id("com.google.firebase.crashlytics") version "3.0.7" apply false
     // Kept for ObjectBox while they still use kapt (see https://github.com/objectbox/objectbox-java/issues/1075)
     id("com.android.legacy-kapt") version ("9.1.1") apply false
-    id("com.mikepenz.aboutlibraries.plugin") version "13.2.1" apply false
+    id("com.mikepenz.aboutlibraries.plugin") version "14.0.1" apply false
 }
 
 allprojects {
