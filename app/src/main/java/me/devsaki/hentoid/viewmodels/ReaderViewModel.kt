@@ -666,9 +666,13 @@ class ReaderViewModel(
             if (hasDiff) {
                 viewerImagesInternal.clear()
                 viewerImagesInternal.addAll(imgs)
+
                 if (startIndex > -1) onPageChange(startIndex - 1, 1, true)
-                else onPageChange(currentImageViewerIndex, 1, false)
-                // else viewerImages.postValue(viewerImagesInternal.toList())
+                else {
+                    currentImageViewerIndex =
+                        currentImageViewerIndex.coerceIn(0, viewerImagesInternal.size - 1)
+                    onPageChange(currentImageViewerIndex, 1, false)
+                }
             }
         }
     }
@@ -838,7 +842,7 @@ class ReaderViewModel(
 
                 // We can't work on the given objects as they are tied to the UI (part of ImageFileItem)
                 val dbImages = theContent.imageFiles.groupBy { it.id }
-                val toUpdate : MutableList<ImageFile> = ArrayList()
+                val toUpdate: MutableList<ImageFile> = ArrayList()
                 images.forEach { img ->
                     dbImages[img.id]?.first()?.let {
                         it.favourite = !it.favourite
@@ -1250,7 +1254,10 @@ class ReaderViewModel(
                 IntRange(0, viewerImagesInternal.size - 1)
                     .filter { isPictureNeedsProcessing(it, viewerImagesInternal) }.toSet()
             }
-            if (picturesLeftToProcess.isEmpty()) return@launch
+            if (picturesLeftToProcess.isEmpty()) {
+                onDoneAfterPreload?.invoke()
+                return@launch
+            }
 
             // Identify pages to be loaded
             val setToLoad: MutableSet<Int> = HashSet()
@@ -1955,7 +1962,7 @@ class ReaderViewModel(
         chapterImages.asSequence().forEach {
             if (it.order in firstPageOrder..lastPageOrder) {
                 val oldChapId = it.chapterId
-                val oldChapter = chapCache.get(oldChapId) ?: it.linkedChapter
+                val oldChapter = chapCache[oldChapId] ?: it.linkedChapter
                 oldChapter?.let { ch ->
                     chapCache[oldChapId] = ch
                     ch.removeImageFile(it)
