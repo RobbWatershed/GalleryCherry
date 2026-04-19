@@ -121,7 +121,7 @@ fun getFullPathFromUri(context: Context, uri: Uri): String {
     }
 }
 
-fun isUriStored(uri : Uri) : Boolean {
+fun isUriStored(uri: Uri): Boolean {
     return (ContentResolver.SCHEME_FILE == uri.scheme) || (ContentResolver.SCHEME_ANDROID_RESOURCE == uri.scheme) || (ContentResolver.SCHEME_CONTENT == uri.scheme)
 }
 
@@ -162,18 +162,23 @@ fun getDocumentProperties(context: Context, uri: Uri): FileExplorer.DocumentProp
 private fun getFullPathFromTreeUri(context: Context, uri: Uri): String {
     if (uri == Uri.EMPTY) return ""
 
-    var volumePath = getVolumePath(context, getVolumeIdFromUri(uri)) ?: "UnknownVolume"
-    if (volumePath.endsWith(File.separator))
-        volumePath = volumePath.dropLast(1)
+    // Chunk file Uri
+    val usedUri = if (uri.authority.equals(FILECHUNK_AUTHORITY)) FileChunkInfo.fromUri(uri).mainFileUri
+    else uri
 
-    var documentPath = getDocumentPathFromUri(uri) ?: ""
-    if (documentPath.endsWith(File.separator))
-        documentPath = documentPath.dropLast(1)
+    var volumePath = getVolumePath(context, getVolumeIdFromUri(usedUri)) ?: "UnknownVolume"
+    if (volumePath.endsWith(File.separator)) volumePath = volumePath.dropLast(1)
 
-    return if (documentPath.isNotEmpty()) {
-        if (documentPath.startsWith(File.separator)) volumePath + documentPath
-        else volumePath + File.separator + documentPath
-    } else volumePath
+    var documentPath = getDocumentPathFromUri(usedUri) ?: ""
+    if (documentPath.endsWith(File.separator)) documentPath = documentPath.dropLast(1)
+    if (!documentPath.startsWith(File.separator)) documentPath = File.separator + documentPath
+
+    val chunkName = if (uri.authority.equals(FILECHUNK_AUTHORITY))
+        File.separator + FileChunkInfo.fromUri(uri).displayName
+    else ""
+
+    return if (documentPath.isNotEmpty()) volumePath + File.separator + documentPath + chunkName
+    else volumePath
 }
 
 /**
@@ -430,7 +435,7 @@ fun removeFile(file: File): Boolean {
  */
 fun removeDocument(context: Context, docUri: Uri): Boolean {
     // Check the document is not a site root
-    val docPath = docUri.lastPathSegment?:""
+    val docPath = docUri.lastPathSegment ?: ""
     val docName = docPath.substringAfterLast('/')
     if (docName.isBlank() || Site.entries.any { it.folder.equals(docName, true) }) {
         Timber.w("Trying to delete a site folder : $docUri")

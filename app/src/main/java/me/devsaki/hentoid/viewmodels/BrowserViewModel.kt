@@ -15,6 +15,7 @@ import me.devsaki.hentoid.database.domains.SiteHistory
 import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.util.InnerNameNumberBookmarkComparator
 import me.devsaki.hentoid.util.updateBookmarksJson
+import timber.log.Timber
 import java.time.Instant
 
 class BrowserViewModel(
@@ -56,6 +57,7 @@ class BrowserViewModel(
     }
 
     fun setPageTitle(data: String) {
+        Timber.d("Page title set to $data")
         pageTitle.postValue(data)
     }
 
@@ -64,6 +66,7 @@ class BrowserViewModel(
     }
 
     fun setPageUrl(data: String) {
+        Timber.d("Page URL set to $data")
         pageUrl.value = data
     }
 

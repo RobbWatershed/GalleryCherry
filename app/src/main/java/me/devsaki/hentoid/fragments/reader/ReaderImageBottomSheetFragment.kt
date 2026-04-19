@@ -114,7 +114,7 @@ class ReaderImageBottomSheetFragment : BottomSheetDialogFragment(),
             image = it
             var filePath: String
             if (it.isArchived) {
-                filePath = it.url
+                filePath = it.fileUri
                 val lastSeparator = filePath.lastIndexOf('/')
                 val archiveUri = filePath.take(lastSeparator)
                 val fileName = filePath.substring(lastSeparator)

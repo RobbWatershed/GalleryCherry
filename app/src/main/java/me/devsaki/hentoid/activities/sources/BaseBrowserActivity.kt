@@ -55,7 +55,7 @@ import me.devsaki.hentoid.activities.bundles.SettingsBundle
 import me.devsaki.hentoid.activities.settings.SettingsActivity
 import me.devsaki.hentoid.core.BiConsumer
 import me.devsaki.hentoid.core.Consumer
-import me.devsaki.hentoid.core.URL_GITHUB_WIKI_DOWNLOAD
+import me.devsaki.hentoid.core.URL_WIKI_DOWNLOAD
 import me.devsaki.hentoid.core.initDrawerLayout
 import me.devsaki.hentoid.core.startBrowserActivity
 import me.devsaki.hentoid.database.CollectionDAO
@@ -82,6 +82,7 @@ import me.devsaki.hentoid.fragments.browser.DuplicateDialogFragment
 import me.devsaki.hentoid.fragments.browser.UrlDialogFragment
 import me.devsaki.hentoid.json.core.UpdateInfo
 import me.devsaki.hentoid.parsers.ContentParserFactory
+import me.devsaki.hentoid.ui.invokeInputDialog
 import me.devsaki.hentoid.ui.invokeNumberInputDialog
 import me.devsaki.hentoid.util.QueuePosition
 import me.devsaki.hentoid.util.Settings
@@ -241,8 +242,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
     // Handler for fetch interceptor
     protected var isManagedFetch = false
     protected var fetchHandler: BiConsumer<String, String>? = null
-    protected var fetchResponseHandler: Consumer<String>? = null
-    private var fetchResponseCallback: Consumer<String>? = null
+    protected var fetchResponseHandler: BiConsumer<String, String>? = null
     protected var xhrHandler: BiConsumer<String, String>? = null
     private var fetchInterceptorScript: String? = null
     private var xhrInterceptorScript: String? = null
@@ -310,6 +310,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
             menuSeek.setOnClickListener { onSeekClick() }
             menuForward.setOnClickListener { onForwardClick() }
             actionButton.setOnClickListener { onActionClick() }
+            rangeDownloadButton.setOnClickListener { onRangeDownload() }
 
             if (getStartSite() == Site.NONE) initWelcome()
         }
@@ -326,11 +327,12 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         }
 
         // Banner close buttons
-        val topAlertCloseButton = findViewById<View>(R.id.top_alert_close_btn)
-        topAlertCloseButton.setOnClickListener { binding?.topAlert?.visibility = View.GONE }
+        binding?.topAlertCloseBtn?.setOnClickListener {
+            Settings.setTopAlertClosed(getStartSite())
+            binding?.topAlert?.visibility = View.GONE
+        }
 
-        val bottomAlertCloseButton = findViewById<View>(R.id.bottom_alert_close_btn)
-        bottomAlertCloseButton.setOnClickListener { onBottomAlertCloseClick() }
+        binding?.bottomAlertCloseBtn?.setOnClickListener { onBottomAlertCloseClick() }
         downloadIcon =
             if (Settings.getBrowserDlAction() == DownloadMode.STREAM) R.drawable.selector_download_stream_action else R.drawable.selector_download_action
         if (Settings.isBrowserMode) downloadIcon = R.drawable.ic_forbidden_disabled
@@ -572,7 +574,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
             R.id.web_menu_settings -> onSettingsClick()
             R.id.web_menu_adblocker -> onAdblockClick()
             R.id.web_menu_url -> onManageLinkClick()
-            R.id.help -> startBrowserActivity(URL_GITHUB_WIKI_DOWNLOAD)
+            R.id.help -> startBrowserActivity(URL_WIKI_DOWNLOAD)
             else -> {
                 return false
             }
@@ -671,13 +673,19 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         }
 
         fetchHandler?.let { webView.addJavascriptInterface(FetchHandler(it), "fetchHandler") }
+        fetchResponseHandler?.let {
+            webView.addJavascriptInterface(FetchResponseHandler(it), "fetchResponseHandler")
+        }
+        // TODO remove is still unused on v1.23.x
         if (isManagedFetch) {
+            /*
             val responseHandler =
                 { responseBody: String -> fetchResponseCallback?.invoke(responseBody) ?: Unit }
             webView.addJavascriptInterface(
                 FetchResponseHandler(responseHandler),
                 "fetchResponseHandler"
             )
+             */
         }
         xhrHandler?.let { webView.addJavascriptInterface(XhrHandler(it), "xhrHandler") }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -838,6 +846,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         viewModel.setPageTitle(webView.title ?: "")
         webView.url?.let {
             viewModel.saveToHistory(getStartSite(), it)
+            viewModel.setPageUrl(it)
         }
     }
 
@@ -860,6 +869,8 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
      * (the one that contains the alerts when downloads are broken or sites are unavailable)
      */
     private fun displayTopAlertBanner() {
+        // Don't show if already closed manually during a previous session
+        if (Settings.isTopAlertClosed(getStartSite())) return
         alert?.let {
             binding?.apply {
                 topAlertIcon.setImageResource(it.getStatus().icon)
@@ -1043,11 +1054,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
                         searchUrl
                     )
                     if (currentContent != null && (StatusContent.DOWNLOADED == currentContent!!.status || StatusContent.ERROR == currentContent!!.status || StatusContent.MIGRATED == currentContent!!.status))
-                        openReader(
-                            this, currentContent!!, -1, null,
-                            forceShowGallery = false,
-                            newTask = false
-                        )
+                        openReader(this, currentContent!!)
                     else {
                         lifecycleScope.launch { setActionMode(null) }
                     }
@@ -1060,6 +1067,22 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
                 // Nothing
             }
         }
+    }
+
+    private fun onRangeDownload() {
+        invokeInputDialog(
+            this,
+            R.string.web_range_download_prompt,
+            currentContent?.downloadRange ?: "",
+            {
+                currentContent?.apply {
+                    downloadRange = it
+                    setImageFiles(emptyList())
+                    qtyPages = 0
+                }
+                onActionClick()
+            }
+        )
     }
 
     /**
@@ -1079,6 +1102,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
                 )
                 actionButton.visibility = View.INVISIBLE
                 actionBtnBadge.visibility = View.INVISIBLE
+                rangeDownloadButton.visibility = View.INVISIBLE
                 return@withContext
             }
             @DrawableRes val resId: Int = when (mode) {
@@ -1088,12 +1112,12 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
             }
             actionButtonMode = mode
             actionButton.setImageDrawable(
-                ContextCompat.getDrawable(
-                    this@BaseBrowserActivity,
-                    resId
-                )
+                ContextCompat.getDrawable(this@BaseBrowserActivity, resId)
             )
             actionButton.visibility = View.VISIBLE
+            rangeDownloadButton.isVisible =
+                (mode == ActionMode.DOWNLOAD && Settings.isRangeDownloadOn(getStartSite()))
+
             // It will become visible whenever the count of extra pages is known
             if (ActionMode.DOWNLOAD_PLUS != mode) actionBtnBadge.visibility = View.INVISIBLE
         }
@@ -1134,6 +1158,8 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         val dao: CollectionDAO = ObjectBoxDAO()
         var theContent = if (content.id > 0) dao.selectContent(content.id) else currentContent
         if (null == theContent) return
+
+        theContent.downloadRange = currentContent?.downloadRange ?: ""
         if (!isDownloadPlus && StatusContent.DOWNLOADED == theContent.status) {
             toast(R.string.already_downloaded)
             if (!quickDownload) lifecycleScope.launch { setActionMode(ActionMode.READ) }
@@ -1379,11 +1405,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         val dao: CollectionDAO = ObjectBoxDAO()
         try {
             val contentDB =
-                dao.selectContentByUrlOrCover(
-                    onlineContent.site,
-                    onlineContent.url,
-                    searchUrl
-                )
+                dao.selectContentByUrlOrCover(onlineContent.site, onlineContent.url, searchUrl)
             val isInCollection = contentDB != null && isInLibrary(contentDB.status)
             val isInQueue = contentDB != null && isInQueue(contentDB.status)
             if (!isInCollection && !isInQueue) {
@@ -1863,8 +1885,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         return internalCustomCss!!
     }
 
-    fun browserFetch(url: String, callback: Consumer<String>? = null) {
-        fetchResponseCallback = callback
+    private fun browserFetch(url: String) {
         webView.evaluateJavascript("fetch(\"$url\")", null)
     }
 
@@ -1930,6 +1951,9 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
                 if (Settings.isBrowserLockFavPanel) DrawerLayout.LOCK_MODE_LOCKED_CLOSED else DrawerLayout.LOCK_MODE_UNLOCKED,
                 GravityCompat.END
             )
+        } else if (key.startsWith(Settings.Key.BROWSER_RANGE_DOWNLOAD)) {
+            binding?.rangeDownloadButton?.isVisible =
+                Settings.isRangeDownloadOn(getStartSite()) && ActionMode.DOWNLOAD == actionButtonMode
         }
         if (reload && !webClient.isLoading()) webView.reload()
     }
@@ -1941,17 +1965,17 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         @JavascriptInterface
         @Suppress("unused")
         fun onFetchCall(url: String, body: String?) {
-            Timber.d("fetch Begin %s : %s", url, body)
+            Timber.d("fetch Begin $url : $body")
             handler.invoke(url, body ?: "")
         }
     }
 
-    class FetchResponseHandler(private val handler: Consumer<String>) {
+    class FetchResponseHandler(private val handler: BiConsumer<String, String>) {
         @JavascriptInterface
         @Suppress("unused")
-        fun onFetchCall(url: String, body: String?, responseBody: String) {
-            Timber.d("fetch response $url $body $responseBody")
-            handler.invoke(responseBody)
+        fun onCall(url: String, body: String, responseBody: String) {
+            Timber.d("fetch response $url $body")
+            handler.invoke(url, responseBody)
         }
     }
 

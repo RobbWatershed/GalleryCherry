@@ -47,8 +47,8 @@ fun invokeNumberInputDialog(
 fun invokeInputDialog(
     context: Context,
     @StringRes message: Int,
-    onResult: Consumer<String>,
     text: String = "",
+    onResult: Consumer<String>,
     onCancelled: Runnable? = null
 ) {
     val layout = TextInputLayout(context)

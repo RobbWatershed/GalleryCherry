@@ -34,7 +34,7 @@ data class KemonoPost(
             .map {
                 val server = serverMapping?.get(it.path)
                     ?: "https://n${(getRandomInt(4) + 1)}.$COOMER_DOMAIN_FILTER"
-                val origin = URLEncoder.encode(it.name, "UTF-8")
+                val origin = URLEncoder.encode(it.name ?: "Attachment", "UTF-8")
                 "$server/data/${it.path}?f=$origin"
             }
         // Add file as the sole attached image
@@ -66,6 +66,7 @@ data class KemonoPost(
         if (imageUrls.isNotEmpty()) {
             val imageFiles = urlsToImageFiles(
                 imageUrls,
+                "",
                 pageOrder.get(),
                 StatusContent.SAVED,
                 imageUrls.count(),

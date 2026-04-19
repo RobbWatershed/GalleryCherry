@@ -88,8 +88,8 @@ class ImagePagerAdapter(context: Context) :
         IMG_TYPE_GIF(1), // Static and animated GIFs -> use Coil
         IMG_TYPE_APNG(2), // Animated PNGs -> use Coil
         IMG_TYPE_AWEBP(3), // Animated WEBPs -> use Coil
-        IMG_TYPE_JXL(4), // JXL -> use Coil
-        IMG_TYPE_AVIF(5), // AVIF -> use Coil (native support on API34+ is unstable)
+        IMG_TYPE_JXL(4), // JXL -> use SSIV
+        IMG_TYPE_AVIF(5), // AVIF -> use SSIV (NB : native support on API34+ is unstable)
         IMG_TYPE_AAVIF(6), // Animated AVIF -> use APNG4Android
         IMG_TYPE_VIDEO(7) // Video -> use VideoView
     }
@@ -372,7 +372,7 @@ class ImagePagerAdapter(context: Context) :
             Timber.d("Picture ${img?.id ?: -1} @ $position : bind $imgType")
             if (ImageType.IMG_TYPE_VIDEO == imgType) {
                 setActiveView(ActiveView.VIDEOVIEW, isClickThrough = true)
-            } else if (ImageType.IMG_TYPE_GIF == imgType || ImageType.IMG_TYPE_APNG == imgType || ImageType.IMG_TYPE_AWEBP == imgType || ImageType.IMG_TYPE_JXL == imgType || (ImageType.IMG_TYPE_AVIF == imgType) || ImageType.IMG_TYPE_AAVIF == imgType) {
+            } else if (ImageType.IMG_TYPE_GIF == imgType || ImageType.IMG_TYPE_APNG == imgType || ImageType.IMG_TYPE_AWEBP == imgType || ImageType.IMG_TYPE_AAVIF == imgType) {
                 // Formats that aren't supported by SSIV
                 setActiveView(ActiveView.IMAGEVIEW, isClickThrough = true)
             } else setActiveView(ActiveView.SSIV, isVertical || isHalfWidth) // Use SSIV by default

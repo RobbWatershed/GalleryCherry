@@ -17,7 +17,6 @@ import coil3.SingletonImageLoader
 import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
 import com.awxkee.jxlcoder.coil.AnimatedJxlDecoder
-import com.awxkee.jxlcoder.coil.JxlDecoder
 import com.github.awxkee.avifcoil.decoder.HeifDecoder
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.crashlytics.FirebaseCrashlytics
@@ -215,6 +214,7 @@ object AppStartup {
                 StorageCache.clearAll(context)
                 Timber.d("Process app update : Updating settings")
                 Settings.performHousekeeping(Settings.lastKnownAppVersionCode)
+                Settings.clearTopAlertClosed()
                 Timber.d("Process app update : Complete")
                 EventBus.getDefault().postSticky(AppUpdatedEvent())
                 Settings.lastKnownAppVersionCode = BuildConfig.VERSION_CODE

@@ -37,7 +37,7 @@ import com.mikepenz.fastadapter.utils.DragDropUtil.onMove
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.activities.ReaderActivity
 import me.devsaki.hentoid.activities.bundles.ImageItemBundle
-import me.devsaki.hentoid.core.URL_GITHUB_WIKI_EDIT_CHAPTER
+import me.devsaki.hentoid.core.URL_WIKI_EDIT_CHAPTER
 import me.devsaki.hentoid.core.startBrowserActivity
 import me.devsaki.hentoid.database.domains.Chapter
 import me.devsaki.hentoid.database.domains.Content
@@ -544,7 +544,7 @@ class ReaderGalleryFragment : Fragment(R.layout.fragment_reader_gallery), ItemTo
                     .create().show()
             }
 
-            R.id.help -> context?.startBrowserActivity(URL_GITHUB_WIKI_EDIT_CHAPTER)
+            R.id.help -> context?.startBrowserActivity(URL_WIKI_EDIT_CHAPTER)
         }
     }
 
@@ -570,8 +570,8 @@ class ReaderGalleryFragment : Fragment(R.layout.fragment_reader_gallery), ItemTo
                     invokeInputDialog(
                         requireActivity(),
                         R.string.group_edit_name,
-                        { newName -> viewModel.renameChapter(chap.id, newName) },
-                        chap.name
+                        chap.name,
+                        { newName -> viewModel.renameChapter(chap.id, newName) }
                     )
                 }
             }

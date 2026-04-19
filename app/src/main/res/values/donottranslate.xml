@@ -129,28 +129,28 @@
         <item>@string/pref_queue_new_position_entries_2</item>
         <item>@string/pref_queue_new_position_entries_3</item>
     </string-array>
-    <string-array name="pref_dl_size_wifi_threshold_entries" translatable="false">
-        <item>@string/pref_dl_size_wifi_threshold_entries_1</item>
-        <item>@string/pref_dl_size_wifi_threshold_entries_2</item>
-        <item>@string/pref_dl_size_wifi_threshold_entries_3</item>
-        <item>@string/pref_dl_size_wifi_threshold_entries_4</item>
-        <item>@string/pref_dl_size_wifi_threshold_entries_5</item>
+    <string-array name="pref_dl_skip_large_size_threshold_entries" translatable="false">
+        <item>@string/pref_dl_skip_large_size_threshold_entries_1</item>
+        <item>@string/pref_dl_skip_large_size_threshold_entries_2</item>
+        <item>@string/pref_dl_skip_large_size_threshold_entries_3</item>
+        <item>@string/pref_dl_skip_large_size_threshold_entries_4</item>
+        <item>@string/pref_dl_skip_large_size_threshold_entries_5</item>
     </string-array>
-    <string-array name="pref_dl_size_wifi_threshold_values" translatable="false">
+    <string-array name="pref_dl_skip_large_size_threshold_values" translatable="false">
         <item>999999</item>
         <item>20</item>
         <item>40</item>
         <item>100</item>
         <item>200</item>
     </string-array>
-    <string-array name="pref_dl_pages_wifi_threshold_entries" translatable="false">
-        <item>@string/pref_dl_pages_wifi_threshold_entries_1</item>
-        <item>@string/pref_dl_pages_wifi_threshold_entries_2</item>
-        <item>@string/pref_dl_pages_wifi_threshold_entries_3</item>
-        <item>@string/pref_dl_pages_wifi_threshold_entries_4</item>
-        <item>@string/pref_dl_pages_wifi_threshold_entries_5</item>
+    <string-array name="pref_dl_skip_large_pages_threshold_entries" translatable="false">
+        <item>@string/pref_dl_skip_large_pages_threshold_entries_1</item>
+        <item>@string/pref_dl_skip_large_pages_threshold_entries_2</item>
+        <item>@string/pref_dl_skip_large_pages_threshold_entries_3</item>
+        <item>@string/pref_dl_skip_large_pages_threshold_entries_4</item>
+        <item>@string/pref_dl_skip_large_pages_threshold_entries_5</item>
     </string-array>
-    <string-array name="pref_dl_pages_wifi_threshold_values" translatable="false">
+    <string-array name="pref_dl_skip_large_pages_threshold_values" translatable="false">
         <item>999999</item>
         <item>60</item>
         <item>120</item>
@@ -432,6 +432,8 @@
         <item>@string/transcode_encoder_jpeg</item>
         <item>@string/transcode_encoder_jxl_lossy</item>
         <item>@string/transcode_encoder_jxl_lossless</item>
+        <item>@string/transcode_encoder_jpegli</item>
+        <item>@string/transcode_encoder_avif</item>
     </string-array>
     <string-array name="transcode_encoders_lossless" translatable="false">
         <item>@string/transcode_encoder_webp_lossless</item>
@@ -442,6 +444,8 @@
         <item>@string/transcode_encoder_webp_lossy</item>
         <item>@string/transcode_encoder_jpeg</item>
         <item>@string/transcode_encoder_jxl_lossy</item>
+        <item>@string/transcode_encoder_jpegli</item>
+        <item>@string/transcode_encoder_avif</item>
     </string-array>
     <!-- Values from PictureEncoder -->
     <string-array name="transcode_encoders_all_vals" translatable="false">
@@ -451,6 +455,8 @@
         <item>3</item>
         <item>4</item>
         <item>5</item>
+        <item>6</item>
+        <item>7</item>
     </string-array>
     <string-array name="transcode_encoders_lossless_vals" translatable="false">
         <item>0</item>
@@ -461,6 +467,8 @@
         <item>1</item>
         <item>3</item>
         <item>4</item>
+        <item>6</item>
+        <item>7</item>
     </string-array>
 
     <!-- Archive dialog -->
@@ -523,6 +531,7 @@
     <!-- Strings: Main: About Activity -->
     <string name="about_github" translatable="false"><u>GitHub</u></string>
     <string name="about_discord" translatable="false"><u>Discord</u></string>
+    <string name="about_berg" translatable="false"><u>Codeberg</u></string>
     <string name="about_api" translatable="false"> / API %d</string>
 
     <!-- Strings: Settings -->
@@ -579,13 +588,15 @@
     <string name="pref_browser_dns_default" translatable="false">-1</string>
     <string name="pref_browser_language_button_default" translatable="false">false</string>
     <string name="pref_browser_lock_favs_panel_default" translatable="false">false</string>
+    <string name="pref_browser_range_download_default" translatable="false">false</string>
     <!-- Strings: Settings: Downloader -->
     <string name="pref_queue_autostart_default" translatable="false">true</string>
     <string name="pref_queue_wifi_only_default" translatable="false">false</string>
     <string name="pref_queue_new_position_default" translatable="false">1</string>
-    <string name="pref_dl_size_wifi_default" translatable="false">false</string>
-    <string name="pref_dl_size_wifi_threshold_default" translatable="false">40</string>
-    <string name="pref_dl_pages_wifi_threshold_default" translatable="false">999999</string>
+    <string name="pref_dl_skip_large_default" translatable="false">false</string>
+    <string name="pref_dl_skip_large_allow_wifi_default" translatable="false">false</string>
+    <string name="pref_dl_skip_large_size_threshold_default" translatable="false">40</string>
+    <string name="pref_dl_skip_large_pages_threshold_default" translatable="false">999999</string>
     <string name="pref_dl_retries_active_default" translatable="false">false</string>
     <string name="pref_dl_retries_number_summary" translatable="false">%s</string>
     <string name="pref_dl_retries_number_default" translatable="false">5</string>

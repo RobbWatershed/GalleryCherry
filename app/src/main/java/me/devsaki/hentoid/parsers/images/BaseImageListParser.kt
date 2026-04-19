@@ -75,6 +75,7 @@ abstract class BaseImageListParser : ImageListParser, Progressor {
             val imgUrls = parseImages(onlineContent)
             result = urlsToImageFiles(
                 imgUrls,
+                onlineContent.downloadRange,
                 StatusContent.SAVED,
                 onlineContent.coverImageUrl,
                 null

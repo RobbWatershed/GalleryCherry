@@ -202,8 +202,7 @@ class DuplicateDetailsFragment : Fragment(R.layout.fragment_duplicate_details),
             return
         }
 
-        if (!openReader(requireContext(), c, -1, null, forceShowGallery = false, newTask = true))
-            toast(R.string.err_no_content)
+        if (!openReader(requireContext(), c, newTask = true)) toast(R.string.err_no_content)
     }
 
     private fun onBookChoice(item: Content?, isKeep: Boolean) {

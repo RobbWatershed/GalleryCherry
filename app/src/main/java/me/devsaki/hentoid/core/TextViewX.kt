@@ -14,7 +14,7 @@ fun TextView.setOnTextChangedListener(
 ) {
     addTextChangedListener(
         object : TextWatcher {
-            private val debouncer: Debouncer<String> = Debouncer(scope, 750) { s: String ->
+            private val debouncer: Debouncer<String> = Debouncer(scope, 500) { s: String ->
                 listener.invoke(s)
             }
 

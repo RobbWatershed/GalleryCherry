@@ -11,7 +11,7 @@ import retrofit2.converter.moshi.MoshiConverterFactory
 import retrofit2.http.GET
 import java.util.Date
 
-object GithubServer {
+object BergServer {
 
     private val moshi: Moshi by lazy {
         Moshi.Builder()
@@ -28,7 +28,7 @@ object GithubServer {
     // Must have a public init method to reset the connexion pool when updating DoH settings
     fun init() {
         api = Retrofit.Builder()
-            .baseUrl(BuildConfig.GITHUB_API_URL)
+            .baseUrl(BuildConfig.BERG_API_URL)
             .client(OkHttpClientManager.getInstance())
             .addConverterFactory(MoshiConverterFactory.create(moshi).asLenient())
             .build()

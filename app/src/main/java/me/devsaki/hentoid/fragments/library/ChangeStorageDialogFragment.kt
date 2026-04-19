@@ -69,8 +69,6 @@ class ChangeStorageDialogFragment : BaseDialogFragment<ChangeStorageDialogFragme
             val onlyStreamed = nbStreamed == (contents.size - nbPdf)
 
             binding?.apply {
-                choiceStreamed.isEnabled = canStream
-
                 selector.addOnButtonCheckedListener { _, checkedId, isChecked ->
                     if (!isChecked) return@addOnButtonCheckedListener
 
@@ -84,6 +82,10 @@ class ChangeStorageDialogFragment : BaseDialogFragment<ChangeStorageDialogFragme
                             else -> R.string.empty_string
                         }
                     )
+
+                    val streamAlert = (choiceStreamed.id == checkedId && !canStream)
+                    streamWarning.isVisible = streamAlert
+                    alertIcon.isVisible = streamAlert
                 }
 
                 if (onlyStreamed || onlyFolders || onlyArchive) {

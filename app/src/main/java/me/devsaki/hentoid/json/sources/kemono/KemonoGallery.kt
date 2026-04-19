@@ -25,11 +25,9 @@ data class KemonoGallery(
         content.status = StatusContent.SAVED
         content.uploadDate = 0L
         post.published?.let {
+            // e.g. 2024-11-24T17:51:20
             if (it.isNotEmpty())
-                content.uploadDate = parseDatetimeToEpoch(
-                    it,
-                    "yyyy-MM-dd'T'HH:mm:ss"
-                ) // e.g. 2024-11-24T17:51:20
+                content.uploadDate = parseDatetimeToEpoch(it, "yyyy-MM-dd'T'HH:mm:ss")
         }
 
         val attributes = AttributeMap()
@@ -60,8 +58,9 @@ data class KemonoGallery(
             content.setImageFiles(
                 urlsToImageFiles(
                     imageUrls,
-                    content.coverImageUrl,
-                    StatusContent.SAVED
+                    content.downloadRange,
+                    StatusContent.SAVED,
+                    content.coverImageUrl
                 )
             )
         }

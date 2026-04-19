@@ -68,6 +68,7 @@ import me.devsaki.hentoid.util.network.setCookies
 import me.devsaki.hentoid.util.network.simplifyUrl
 import me.devsaki.hentoid.util.network.webkitRequestHeadersToOkHttpHeaders
 import me.devsaki.hentoid.util.parseDownloadParams
+import me.devsaki.hentoid.util.pause
 import me.devsaki.hentoid.util.serializeToJson
 import me.devsaki.hentoid.util.toast
 import okhttp3.Response
@@ -548,6 +549,23 @@ open class CustomWebViewClient : WebViewClient {
         activity?.onPageFinished(url, isResultsPage(url), isGalleryPage(url))
     }
 
+    override fun doUpdateVisitedHistory(
+        view: WebView?,
+        url: String?,
+        isReload: Boolean
+    ) {
+        url ?: return
+        if (!isReload) {
+            scope.launch(Dispatchers.Default) {
+                pause(150)
+                withContext(Dispatchers.Main) {
+                    activity?.onPageFinished(url, isResultsPage(url), isGalleryPage(url))
+                }
+            }
+
+        }
+    }
+
     /**
      * Note : this method is called by a non-UI thread
      */
@@ -562,9 +580,7 @@ open class CustomWebViewClient : WebViewClient {
             var postBody = ""
             // Try to retrieve POST body from previously intercepted XHR
             postRequestQueue[url]?.let { queue ->
-                queue.poll()?.let { body ->
-                    postBody = body
-                }
+                queue.poll()?.let { body -> postBody = body }
             }
             return sendRequest(request, postBody)
         }

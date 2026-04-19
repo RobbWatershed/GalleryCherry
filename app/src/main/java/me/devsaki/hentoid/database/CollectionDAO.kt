@@ -219,9 +219,11 @@ interface CollectionDAO {
 
 
     // IMAGEFILES
-    fun insertImageFile(img: ImageFile)
+    fun insertImageFile(img: ImageFile): Long
 
     fun insertImageFiles(imgs: List<ImageFile>)
+
+    fun updateImageFile(img: ImageFile)
 
     fun replaceImageList(contentId: Long, newList: List<ImageFile>)
 

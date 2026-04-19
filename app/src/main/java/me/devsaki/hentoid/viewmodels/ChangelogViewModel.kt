@@ -6,7 +6,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import me.devsaki.hentoid.json.GithubRelease
-import me.devsaki.hentoid.retrofit.GithubServer
+import me.devsaki.hentoid.retrofit.BergServer
 
 class ChangelogViewModel : ViewModel() {
 
@@ -17,7 +17,9 @@ class ChangelogViewModel : ViewModel() {
     init {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                successValueLive.postValue(GithubServer.api.releases.execute().body())
+                BergServer.api.releases.execute().body()?.let {
+                    successValueLive.postValue(it)
+                }
             } catch (e: Exception) {
                 errorValueLive.postValue(e)
             }

@@ -34,6 +34,7 @@ import me.devsaki.hentoid.util.file.Beholder
 import me.devsaki.hentoid.util.file.PdfManager
 import me.devsaki.hentoid.util.file.copyFiles
 import me.devsaki.hentoid.util.file.extractArchiveEntriesBlocking
+import me.devsaki.hentoid.util.file.getArchivedFileName
 import me.devsaki.hentoid.util.file.getDocumentFromTreeUriString
 import me.devsaki.hentoid.util.file.getExtension
 import me.devsaki.hentoid.util.file.getFileFromSingleUriString
@@ -54,7 +55,6 @@ import me.devsaki.hentoid.util.renumberChapters
 import me.devsaki.hentoid.workers.data.SplitMergeData
 import org.greenrobot.eventbus.EventBus
 import timber.log.Timber
-import java.io.File
 import java.io.IOException
 import java.time.Instant
 import java.util.Locale
@@ -92,6 +92,7 @@ abstract class BaseSplitMergeWorker(
     private var nbMax = 0
     private var nbProgress = 0
     private var nbError = 0
+    private var errorMsg = ""
     private var bookTitle = ""
     private lateinit var progressNotification: SplitMergeProgressNotification
 
@@ -171,7 +172,7 @@ abstract class BaseSplitMergeWorker(
             // Copy the corresponding images to that folder
             val splitContentImages =
                 splitContent.imageList.filter { it.status == StatusContent.DOWNLOADED || it.status == StatusContent.EXTERNAL }
-                    .distinctBy { if (content.isArchive || content.isPdf) it.url else it.fileUri }
+                    .distinctBy { it.fileUri }
             withContext(Dispatchers.IO) {
                 try {
                     if (content.isArchive || content.isPdf) {
@@ -182,16 +183,12 @@ abstract class BaseSplitMergeWorker(
                         val nbMaxDigits =
                             (floor(log10(splitContentImages.size.toDouble())) + 1).toInt()
                         val extractInstructions = splitContentImages.map {
-                            val uri =
-                                if (it.url.startsWith(content.storageUri)) it.url else it.fileUri
+                            val filePath = getArchivedFileName(content.storageUri, it.fileUri)
                             Triple(
-                                uri.replace(content.storageUri + File.separator, ""),
+                                filePath,
                                 it.order.toLong(),
-                                String.format(
-                                    Locale.ENGLISH,
-                                    "%0${nbMaxDigits}d",
-                                    it.order
-                                ) + "." + getExtension(it.url)
+                                String.format(Locale.ENGLISH, "%0${nbMaxDigits}d", it.order)
+                                        + "." + getExtension(filePath)
                             )
                         }
 
@@ -224,6 +221,8 @@ abstract class BaseSplitMergeWorker(
                         }
                         Timber.d("Mapping done for ${splitContent.title}")
                     } else {
+                        // TODO split target should be an archive if split origin is an archive
+                        // TODO split target should be a PDF if split origin is a PDF (requires working on a better layout - see #1322)
                         copyFiles(
                             applicationContext,
                             splitContentImages.map { Pair(it.fileUri.toUri(), it.name) },
@@ -299,8 +298,11 @@ abstract class BaseSplitMergeWorker(
                     bookTitle = s
                     launchProgressNotification()
                 }
-            ) { isError ->
-                if (isError) nbError = contentList.size
+            ) { isError, errorMsg ->
+                if (isError) {
+                    nbError = contentList.size
+                    this.errorMsg = errorMsg
+                }
                 progressDone(contentList.size)
             }
             // If we're here, no exception has been triggered -> cleanup if asked
@@ -358,13 +360,16 @@ abstract class BaseSplitMergeWorker(
         splitContent.downloadDate = Instant.now().toEpochMilli()
         splitContent.status = content.status
         splitContent.bookPreferences = content.bookPreferences
+        splitContent.downloadRange = chapter.downloadRange
         var images: List<ImageFile>? = chapter.imageFiles
         if (images != null) {
             images = chapter.imageList.sortedBy { it.order }
             for ((position, img) in images.withIndex()) {
                 img.id = 0 // Force working on a new picture
                 img.setChapter(null)
+                val fileUri = img.fileUri // Extract full Uri
                 img.content.target = null // Clear content
+                img.fileUri = fileUri // Inject back full Uri
                 img.isCover = (0 == position)
                 img.order = position
                 img.computeName(images.size)
@@ -664,7 +669,8 @@ abstract class BaseSplitMergeWorker(
             SplitMergeCompleteNotification(
                 nbBooksDone,
                 nbError,
-                operationType
+                operationType,
+                errorMsg
             )
         )
         EventBus.getDefault().postSticky(

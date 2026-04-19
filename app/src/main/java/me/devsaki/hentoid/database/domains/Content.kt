@@ -105,7 +105,7 @@ data class Content(
     var downloadMode: DownloadMode = DownloadMode.DOWNLOAD,
     var replacementTitle: String = "",
     // Aggregated data redundant with the sum of individual data contained in ImageFile
-    // ObjectBox can't do the sum in a single Query, so here it is !
+    // ObjectBox can't do the sum in a single Query, so here it is!
     var size: Long = 0,
     var readProgress: Float = 0f,
     // HTTP request header values to use during download; temporary during SAVED state only
@@ -119,7 +119,9 @@ data class Content(
     // Useful only during cleanup operations; no need to get it into the JSON
     @Index
     var isFlaggedForDeletion: Boolean = false,
-    var lastEditDate: Long = 0
+    var lastEditDate: Long = 0,
+    // Range of gallery pages/chapters to download (e.g. "1-5", "1;3;8", "1-2;3-4")
+    var downloadRange: String = ""
 ) {
     lateinit var attributes: ToMany<Attribute>
 
@@ -388,6 +390,20 @@ data class Content(
             this.imageFiles.addAll(imageFiles)
         }
         return this
+    }
+
+    fun optimizeImageFileUris() {
+        val imgs = imageList
+        var found = false
+        imgs.forEach {
+            if (it.dbFileUri.startsWith(storageUri, true)) {
+                it.dbFileUri = it.dbFileUri.substringAfter(storageUri)
+                found = true
+            }
+        }
+        if (found) {
+            setImageFiles(imgs.toMutableList())
+        }
     }
 
     val cover: ImageFile

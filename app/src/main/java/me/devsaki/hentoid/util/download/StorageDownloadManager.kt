@@ -13,15 +13,18 @@ import me.devsaki.hentoid.database.domains.DownloadMode
 import me.devsaki.hentoid.database.domains.ImageFile
 import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.util.exception.ArchiveException
+import me.devsaki.hentoid.util.exception.ContentNotProcessedException
 import me.devsaki.hentoid.util.file.ArchiveStreamer
 import me.devsaki.hentoid.util.file.InnerNameNumberArchiveComparator
 import me.devsaki.hentoid.util.file.MIME_TYPE_CBZ
 import me.devsaki.hentoid.util.file.PdfManager
 import me.devsaki.hentoid.util.file.copyFile
 import me.devsaki.hentoid.util.file.createFile
+import me.devsaki.hentoid.util.file.findFolder
 import me.devsaki.hentoid.util.file.getArchiveEntries
 import me.devsaki.hentoid.util.file.getDocumentFromTreeUri
 import me.devsaki.hentoid.util.file.getOrCreateCacheFolder
+import me.devsaki.hentoid.util.file.removeDocument
 import me.devsaki.hentoid.util.file.removeFile
 import me.devsaki.hentoid.util.file.tryCleanDirectory
 import me.devsaki.hentoid.util.formatFolderName
@@ -38,7 +41,7 @@ import java.io.File
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 
-class PrimaryDownloadManager {
+class StorageDownloadManager {
     private var downloadMode: DownloadMode? = null
 
     /**
@@ -57,15 +60,18 @@ class PrimaryDownloadManager {
 
     private var archiveStreamer: ArchiveStreamer? = null
 
+    private var moveAppendedFiles: Boolean = true
+
     private val localMatch: MutableMap<String, String> = ConcurrentHashMap()
 
 
     /**
-     * Create download folder or archive
+     * Create download folder or archive in the primary library
      */
-    suspend fun createTargetLocation(context: Context, content: Content): Boolean =
+    suspend fun createDownloadLocation(context: Context, content: Content): Boolean =
         withContext(Dispatchers.IO) {
-            Timber.d("Primary download manager : Init ${content.downloadMode}")
+            Timber.d("Storage download manager : Init ${content.downloadMode} (download)")
+            moveAppendedFiles = true // Download mode
 
             downloadMode = content.downloadMode
             val locationResult =
@@ -115,6 +121,62 @@ class PrimaryDownloadManager {
         }
 
     /**
+     * Create folder or archive for a merge / split operation
+     */
+    suspend fun createNewLocation(
+        context: Context,
+        containingFolder: Uri,
+        targetContent: Content
+    ): Boolean = withContext(Dispatchers.IO) {
+        Timber.d("Storage download manager : Init ${targetContent.downloadMode} (new)")
+        moveAppendedFiles = false // Copy mode
+
+        downloadMode = targetContent.downloadMode
+        val parentFolder = getDocumentFromTreeUri(context, containingFolder)
+            ?: throw IOException("Couldn't find parent folder")
+
+        val dlFolder = if (downloadMode == DownloadMode.DOWNLOAD_ARCHIVE) parentFolder
+        else {
+            if (targetContent.status == StatusContent.EXTERNAL) {
+                val bookFolderName = formatFolderName(targetContent)
+                // First try finding the folder with new naming...
+                var targetFolder = findFolder(context, parentFolder, bookFolderName.first)
+                if (null == targetFolder) { // ...then with old (sanitized) naming...
+                    targetFolder = findFolder(context, parentFolder, bookFolderName.second)
+                    if (null == targetFolder) { // ...if not, create a new folder with the new naming...
+                        targetFolder = parentFolder.createDirectory(bookFolderName.first)
+                        if (null == targetFolder) { // ...if it fails, create a new folder with the old naming
+                            targetFolder = parentFolder.createDirectory(bookFolderName.second)
+                        }
+                    }
+                }
+                targetFolder
+            } else {
+                // Primary folder for non-external content; using download strategy
+                val location = selectDownloadLocation(context)
+                getOrCreateContentDownloadDir(context, targetContent, location, true)
+            }
+        }
+
+        if (null == dlFolder || !dlFolder.exists())
+            throw ContentNotProcessedException(targetContent, "Could not create target directory")
+
+        downloadFolder = dlFolder
+        if (downloadMode == DownloadMode.DOWNLOAD_ARCHIVE) {
+            val archiveName = formatFolderName(targetContent).first + ".cbz"
+            createFile(context, containingFolder, archiveName, MIME_TYPE_CBZ).let { uri ->
+                getDocumentFromTreeUri(context, uri)?.let { targetContent.setStorageDoc(it) }
+                downloadArchive = uri
+                archiveStreamer = ArchiveStreamer(context, uri, false)
+            }
+        } else {
+            targetContent.setStorageDoc(dlFolder)
+        }
+
+        return@withContext true
+    }
+
+    /**
      * Identify download folder
      */
     suspend fun getDownloadFolder(context: Context): Uri = withContext(Dispatchers.IO) {
@@ -128,10 +190,22 @@ class PrimaryDownloadManager {
         }
     }
 
+    fun getTargetLocation(): Uri? {
+        return when (downloadMode) {
+            DownloadMode.DOWNLOAD_ARCHIVE, DownloadMode.DOWNLOAD_ARCHIVE_FILE -> downloadArchive
+            else -> downloadFolder?.uri
+        }
+    }
+
     /**
      * Process downloaded file
      */
-    fun processDownloadedFile(context: Context, isCoverThumb: Boolean, uri: Uri) {
+    fun appendFile(
+        context: Context,
+        isCoverThumb: Boolean,
+        uri: Uri,
+        targetName: String = ""
+    ) {
         if (downloadMode == DownloadMode.DOWNLOAD_ARCHIVE) {
             if (isCoverThumb) {
                 // Copy thumb to thumb location
@@ -151,18 +225,20 @@ class PrimaryDownloadManager {
 
                 if (filePath.startsWith(dlFolderPath, true)) return
 
-                Timber.i("Moving downloaded file to the target download folder")
+                var targetNameFinal = targetName
+                if (targetNameFinal.isBlank()) targetNameFinal = uri.lastPathSegment ?: ""
+                Timber.i("Moving file to the target download folder as $targetNameFinal")
                 // ...if it's not (e.g. Ugoira assembled inside temp folder), move it
                 val finalUri = copyFile(
                     context,
                     uri,
                     dlFolder,
-                    uri.lastPathSegment ?: "",
+                    targetNameFinal,
                     forceCreate = true
-                ) ?: throw IOException("Couldn't copy result ugoira file")
+                ) ?: throw IOException("Couldn't copy result file")
                 localMatch[uri.toString()] = finalUri.toString()
 
-                removeFile(context, uri)
+                if (moveAppendedFiles) removeFile(context, uri)
             }
         }
     }
@@ -174,83 +250,87 @@ class PrimaryDownloadManager {
      * @return true if at least one value has been updated; false if nothing changed
      */
     fun refreshLocation(imageList: Collection<ImageFile>): Map<Long, String> {
-        if (downloadMode == DownloadMode.DOWNLOAD_ARCHIVE) {
-            archiveStreamer?.let { return refreshLocation(imageList, it) }
-        }
-        return emptyMap()
+        return refreshLocation(imageList, archiveStreamer)
     }
 
     /**
      * Process post-download actions
      */
     @Throws(ArchiveException::class)
-    suspend fun completeDownload(context: Context, content: Content) = withContext(Dispatchers.IO) {
-        if (downloadMode == DownloadMode.DOWNLOAD_ARCHIVE) {
-            // Wait until archive streaming has completed (poll every 500ms)
-            while (archiveStreamer?.queueActive ?: false) pause(500)
+    suspend fun completeDownload(context: Context, content: Content) =
+        withContext(Dispatchers.IO) {
+            if (downloadMode == DownloadMode.DOWNLOAD_ARCHIVE) {
+                // Wait until archive streaming has completed (poll every 500ms)
+                while (archiveStreamer?.queueActive ?: false) pause(500)
 
-            archiveStreamer?.let { streamer ->
-                // Throws exception if archiving has failed
-                if (streamer.queueFailed)
-                    throw ArchiveException(streamer.queueFailMessage)
+                archiveStreamer?.let { streamer ->
+                    // Throws exception if archiving has failed
+                    if (streamer.queueFailed)
+                        throw ArchiveException(streamer.queueFailMessage)
 
-                var imgList = content.imageList
-                val newLocations = refreshLocation(imgList, streamer)
-                if (newLocations.isNotEmpty()) {
-                    imgList = imgList.map { img ->
-                        newLocations[img.id]?.let { img.fileUri = it }
-                        img
-                    }
-                    content.setImageFiles(imgList)
-                }
-            }
-        }
-
-        if (downloadMode == DownloadMode.DOWNLOAD_ARCHIVE_FILE) {
-            content.imageList.firstOrNull()?.let { archive ->
-                var uri = archive.fileUri.toUri()
-                val uriParts = UriParts(uri)
-                getDocumentFromTreeUri(context, uri)?.let { doc ->
-                    if (doc.renameTo(formatFolderName(content).first + "." + uriParts.extension)) {
-                        uri = doc.uri
-                        content.setStorageDoc(doc)
-                    } else {
-                        throw IOException("Couldn't rename archive")
+                    var imgList = content.imageList
+                    val newLocations = refreshLocation(imgList, streamer)
+                    if (newLocations.isNotEmpty()) {
+                        imgList = imgList.map { img ->
+                            newLocations[img.id]?.let { img.fileUri = it }
+                            img
+                        }
+                        content.setImageFiles(imgList)
                     }
                 }
-
-                val entries = if (uriParts.extension.equals("pdf", true)) {
-                    PdfManager().getEntries(context, uri)
-                } else // Archive
-                    context.getArchiveEntries(uri)
-
-                val imgs = entries
-                    .filter { !it.isFolder && isSupportedImage(it.path) }
-                    .sortedWith(InnerNameNumberArchiveComparator())
-                    .mapIndexed { i, e ->
-                        ImageFile(
-                            dbOrder = i,
-                            fileUri = uri.toString() + File.separator + e.path,
-                            dbUrl = uri.toString() + File.separator + e.path,
-                            size = e.size,
-                            status = StatusContent.DOWNLOADED
-                        )
-                    }
-                imgs.forEach { it.computeName(imgs.size) }
-                content.setImageFiles(imgs)
-                content.qtyPages = imgs.size
             }
+
+            if (downloadMode == DownloadMode.DOWNLOAD_ARCHIVE_FILE) {
+                content.imageList.firstOrNull()?.let { archive ->
+                    var uri = archive.fileUri.toUri()
+                    val uriParts = UriParts(uri)
+                    getDocumentFromTreeUri(context, uri)?.let { doc ->
+                        if (doc.renameTo(formatFolderName(content).first + "." + uriParts.extension)) {
+                            uri = doc.uri
+                            content.setStorageDoc(doc)
+                        } else {
+                            throw IOException("Couldn't rename archive")
+                        }
+                    }
+
+                    val entries = if (uriParts.extension.equals("pdf", true)) {
+                        PdfManager().getEntries(context, uri)
+                    } else // Archive
+                        context.getArchiveEntries(uri)
+
+                    val imgs = entries
+                        .filter { !it.isFolder && isSupportedImage(it.path) }
+                        .sortedWith(InnerNameNumberArchiveComparator())
+                        .mapIndexed { i, e ->
+                            ImageFile(
+                                dbOrder = i,
+                                dbFileUri = e.path,
+                                dbUrl = uri.toString() + File.separator + e.path,
+                                size = e.size,
+                                status = StatusContent.DOWNLOADED
+                            )
+                        }
+                    imgs.forEach { it.computeName(imgs.size) }
+                    content.setImageFiles(imgs)
+                    content.qtyPages = imgs.size
+                }
+            }
+            content.qtyPages = content.imageList.count { it.isReadable }
+
+            // Create JSON
+            persistJson(context, content)
+
+            // Empty cache
+            getOrCreateCacheFolder(context, DOWNLOAD_CACHE_FOLDER)?.let {
+                if (!tryCleanDirectory(it)) Timber.d("Failed to clean download cache")
+            }
+
+            clear()
         }
 
-        // Create JSON
-        persistJson(context, content)
-
-        // Empty cache
-        getOrCreateCacheFolder(context, DOWNLOAD_CACHE_FOLDER)?.let {
-            if (!tryCleanDirectory(it)) Timber.d("Failed to clean download cache")
-        }
-
-        clear()
+    suspend fun removeDownload(context: Context) = withContext(Dispatchers.IO) {
+        archiveStreamer?.close()
+        getTargetLocation()?.let { removeDocument(context, it) }
     }
 
 
@@ -261,22 +341,23 @@ class PrimaryDownloadManager {
      */
     private fun refreshLocation(
         imageList: Collection<ImageFile>,
-        streamer: ArchiveStreamer
+        streamer: ArchiveStreamer?
     ): Map<Long, String> {
         val result = HashMap<Long, String>()
         imageList.forEach { img ->
-            localMatch[img.fileUri]?.let {
-                if (img.fileUri != it) result[img.id] = it
+            val fileUri = img.fileUri
+            localMatch[fileUri]?.let {
+                if (fileUri != it) result[img.id] = it
             }
-            streamer.mappedUris[img.fileUri]?.let {
-                if (img.fileUri != it) result[img.id] = it
+            streamer?.mappedUris[fileUri]?.let {
+                if (fileUri != it) result[img.id] = it
             }
         }
         return result
     }
 
     fun clear() {
-        Timber.d("Primary download manager : Clearing")
+        Timber.d("Storage download manager : Clearing")
         downloadMode = null
         archiveStreamer?.close()
         archiveStreamer = null

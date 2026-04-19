@@ -77,6 +77,8 @@ class HitomiBackgroundWebView(context: Context, site: Site) : WebView(context) {
             request: WebResourceRequest
         ): WebResourceResponse? {
             val url = request.url.toString()
+            if (!url.startsWith("http")) return null
+
             if (url.contains("gg.js")) {
                 val requestHeadersList =
                     webkitRequestHeadersToOkHttpHeaders(request.requestHeaders, url)

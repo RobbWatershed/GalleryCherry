@@ -1,5 +1,6 @@
 package me.devsaki.hentoid.util
 
+import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
 import android.content.res.Resources
@@ -25,7 +26,7 @@ import me.devsaki.hentoid.activities.UnlockActivity.Companion.wrapIntent
 import me.devsaki.hentoid.activities.bundles.BaseBrowserActivityBundle
 import me.devsaki.hentoid.activities.bundles.ContentItemBundle
 import me.devsaki.hentoid.activities.bundles.ReaderActivityBundle
-import me.devsaki.hentoid.core.Consumer
+import me.devsaki.hentoid.core.BiConsumer
 import me.devsaki.hentoid.core.EXT_THUMB_FILE_PREFIX
 import me.devsaki.hentoid.core.JSON_ARCHIVE_SUFFIX
 import me.devsaki.hentoid.core.JSON_FILE_NAME_V2
@@ -52,8 +53,8 @@ import me.devsaki.hentoid.parsers.ContentParserFactory.getContentParserClass
 import me.devsaki.hentoid.util.AchievementsManager.trigger
 import me.devsaki.hentoid.util.LanguageHelper.getFlagFromLanguage
 import me.devsaki.hentoid.util.Settings.libraryGridCardWidthDP
+import me.devsaki.hentoid.util.download.StorageDownloadManager
 import me.devsaki.hentoid.util.download.downloadPic
-import me.devsaki.hentoid.util.download.selectDownloadLocation
 import me.devsaki.hentoid.util.exception.ContentNotProcessedException
 import me.devsaki.hentoid.util.exception.EmptyResultException
 import me.devsaki.hentoid.util.exception.FileNotProcessedException
@@ -71,10 +72,10 @@ import me.devsaki.hentoid.util.file.cleanFileName
 import me.devsaki.hentoid.util.file.copyFile
 import me.devsaki.hentoid.util.file.extractArchiveEntriesBlocking
 import me.devsaki.hentoid.util.file.fileExists
-import me.devsaki.hentoid.util.file.fileSizeFromUri
 import me.devsaki.hentoid.util.file.findFile
 import me.devsaki.hentoid.util.file.findFolder
 import me.devsaki.hentoid.util.file.getArchiveEntries
+import me.devsaki.hentoid.util.file.getArchivedFileName
 import me.devsaki.hentoid.util.file.getDocumentFromTreeUri
 import me.devsaki.hentoid.util.file.getDocumentFromTreeUriString
 import me.devsaki.hentoid.util.file.getExtension
@@ -82,7 +83,6 @@ import me.devsaki.hentoid.util.file.getFileFromSingleUri
 import me.devsaki.hentoid.util.file.getFileFromSingleUriString
 import me.devsaki.hentoid.util.file.getFileNameWithoutExtension
 import me.devsaki.hentoid.util.file.getInputStream
-import me.devsaki.hentoid.util.file.getMimeTypeFromExtension
 import me.devsaki.hentoid.util.file.getMimeTypeFromFileName
 import me.devsaki.hentoid.util.file.getOrCreateCacheFolder
 import me.devsaki.hentoid.util.file.getOutputStream
@@ -495,7 +495,7 @@ fun openReader(
     if (content.storageUri.isEmpty()) return false
     if (content.status == StatusContent.PLACEHOLDER) return false
 
-    Timber.d("Opening: %s from: %s", content.title, content.storageUri)
+    Timber.d("Opening: ${content.title} from: ${content.storageUri}")
 
     val builder = ReaderActivityBundle()
     builder.contentId = content.id
@@ -698,6 +698,7 @@ fun getPathRoot(locationUriStr: String): String {
  */
 fun addContent(context: Context, dao: CollectionDAO, content: Content): Long {
     assertNonUiThread()
+    content.optimizeImageFileUris()
     val newContentId = dao.insertContent(content)
     content.id = newContentId
 
@@ -734,7 +735,7 @@ fun createArchivePdfCover(
             // Only replace image properties if it is a thumb already
             it.fileUri = cachedThumbUri.toString()
             it.name = cachedThumbUri.lastPathSegment ?: ""
-            dao.insertImageFile(it)
+            dao.updateImageFile(it)
         } ?: run {
             // If no dedicated thumb, replace content cover Uri
             content.coverImageUrl = cachedThumbUri.toString()
@@ -1114,7 +1115,6 @@ fun formatAuthor(content: Content): String {
 
 /**
  * Return the given site's download directory. Create it if it doesn't exist.
- *
  *
  * Avoid overloading the Android folder structure (not designed for that :/)
  * by preventing any site folder from storing more than 250 books/subfolders
@@ -1782,7 +1782,7 @@ suspend fun computeAndSaveCoverHash(
     try {
         val pHash = calcPhash(getHashEngine(), coverBitmap)
         content.cover.imageHash = pHash
-        dao.insertImageFile(content.cover)
+        dao.updateImageFile(content.cover)
     } finally {
         coverBitmap?.recycle()
     }
@@ -1906,7 +1906,7 @@ suspend fun mergeContents(
     dao: CollectionDAO,
     isCanceled: () -> Boolean,
     onProgress: (Int, Int, String) -> Unit,
-    onComplete: Consumer<Boolean>
+    onComplete: BiConsumer<Boolean, String>
 ) {
     // New book inherits properties of the first content of the list
     // which takes "precedence" as the 1st chapter
@@ -1927,7 +1927,8 @@ suspend fun mergeContents(
         favourite = firstContent.favourite,
         rating = firstContent.rating,
         bookPreferences = firstContent.bookPreferences,
-        manuallyMerged = true
+        manuallyMerged = true,
+        downloadRange = firstContent.downloadRange
     )
 
     // Merge attributes
@@ -1935,44 +1936,32 @@ suspend fun mergeContents(
     mergedContent.addAttributes(mergedAttributes)
 
     var isError = false
+    var errorMsg = ""
     withContext(Dispatchers.IO) {
         // Create destination folder for new content
-        val parentFolder: DocumentFile?
-        var targetFolder: DocumentFile?
-        // TODO destination is an archive when all source contents are archives; same with PDFs
+        val dlManager = StorageDownloadManager()
 
-        // External library root for external content
-        if (mergedContent.status == StatusContent.EXTERNAL) {
-            val externalRootFolder =
-                getDocumentFromTreeUriString(context, Settings.externalLibraryUri)
-            if (null == externalRootFolder || !externalRootFolder.exists()) throw ContentNotProcessedException(
+        // Destination is an archive when all source contents are archives
+        if (contentList.all { it.isArchive })
+            mergedContent.downloadMode = DownloadMode.DOWNLOAD_ARCHIVE
+
+        // TODO destination is a PDF when all source contents are PDFs (requires working on a better layout - see #1322)
+
+        val containingFolder =
+            firstContent.getContainingFolder(context) ?: throw ContentNotProcessedException(
                 mergedContent,
-                "Could not create target directory : external root unreachable"
+                "Could not detect containing folder"
+            )
+        if (!dlManager.createNewLocation(context, containingFolder, mergedContent))
+            throw ContentNotProcessedException(
+                mergedContent,
+                "Could not create target directory"
             )
 
-            val bookFolderName = formatFolderName(mergedContent)
-            // First try finding the folder with new naming...
-            targetFolder = findFolder(context, externalRootFolder, bookFolderName.first)
-            if (null == targetFolder) { // ...then with old (sanitized) naming...
-                targetFolder = findFolder(context, externalRootFolder, bookFolderName.second)
-                if (null == targetFolder) { // ...if not, create a new folder with the new naming...
-                    targetFolder = externalRootFolder.createDirectory(bookFolderName.first)
-                    if (null == targetFolder) { // ...if it fails, create a new folder with the old naming
-                        targetFolder = externalRootFolder.createDirectory(bookFolderName.second)
-                    }
-                }
-            }
-            parentFolder = externalRootFolder
-        } else { // Primary folder for non-external content; using download strategy
-            val location = selectDownloadLocation(context)
-            targetFolder = getOrCreateContentDownloadDir(context, mergedContent, location, true)
-            parentFolder = getDocumentFromTreeUriString(context, Settings.getStorageUri(location))
-        }
-        if (null == targetFolder || !targetFolder.exists())
-            throw ContentNotProcessedException(mergedContent, "Could not create target directory")
-        mergedContent.setStorageDoc(targetFolder)
         // Ignore the new folder as it is being merged
-        Beholder.ignoreFolder(targetFolder)
+        if (StatusContent.EXTERNAL == mergedContent.status) {
+            dlManager.getTargetLocation()?.let { Beholder.ignoreFolder(it) }
+        }
 
         // Renumber all picture files and dispatch chapters
         val nbImages = contentList.flatMap { it.imageList }.count { it.isReadable }
@@ -2000,12 +1989,14 @@ suspend fun mergeContents(
                     chapterOrder,
                     c.galleryUrl,
                     c.title,
-                    c.uniqueSiteId + "-" + chapterOrder
+                    c.uniqueSiteId + "-" + chapterOrder,
+                    c.downloadRange
                 )
 
                 val imgs = c.imageList.sortedBy { it.order }
                 val firstImageIsCover = !imgs.any { it.isCover }
                 var imgIndex = -1
+                // Loop all images from current content
                 for (img in imgs) {
                     if (isCanceled.invoke()) break
                     imgIndex++
@@ -2027,17 +2018,17 @@ suspend fun mergeContents(
                             if (idx + imgIndex >= imgs.size) break
                             val picToUnarchive = imgs[imgIndex + idx]
                             if (picToUnarchive.fileUri.isNotEmpty()
-                                && !picToUnarchive.fileUri.startsWith(c.storageUri)
-                            ) continue // thumb
+                                && picToUnarchive.fileUri.startsWith(ContentResolver.SCHEME_FILE)
+                            ) continue // extracted / cached thumb
                             picsToUnarchive.add(picToUnarchive)
                             unarchivedBytes += picToUnarchive.size
                         }
                         val toExtract = picsToUnarchive.map {
-                            val uri = if (it.url.startsWith(c.storageUri)) it.url else it.fileUri
+                            val filePath = getArchivedFileName(c.storageUri, it.fileUri)
                             Triple(
-                                uri.replace(c.storageUri + File.separator, ""),
+                                filePath,
                                 it.id,
-                                "${it.id}.${getExtension(uri)}" // Using ID to avoid name collisions when unarchiving multiple Contents
+                                "${it.id}.${getExtension(filePath)}" // Using ID to avoid name collisions when unarchiving multiple Contents
                             )
                         }
                             .distinctBy { it.first } // Prevent failures when processing corrupted archives with duplicate entries
@@ -2064,16 +2055,12 @@ suspend fun mergeContents(
 
                         if (unarchivedFiles.size < picsToUnarchive.size) throw ContentNotProcessedException(
                             mergedContent,
-                            "Issue when unarchiving " + unarchivedFiles.size + " " + picsToUnarchive.size
+                            "Issue when extracting. Expected : ${picsToUnarchive.size} / extracted : ${unarchivedFiles.size}"
                         )
 
                         // Replace intial file URIs with unarchived files URIs
                         picsToUnarchive.forEachIndexed { index, imageFile ->
-                            Timber.d(
-                                "Replacing %s with %s",
-                                imageFile.fileUri,
-                                unarchivedFiles[index].toString()
-                            )
+                            Timber.d("Replacing ${imageFile.fileUri} with ${unarchivedFiles[index]}")
                             imageFile.fileUri = unarchivedFiles[index].toString()
                         }
                     } // Archives and PDFs
@@ -2081,7 +2068,7 @@ suspend fun mergeContents(
                     if (!img.isReadable && coverFound) continue // Skip thumbs from 2+ rank merged books
                     val newImg = ImageFile(img, populateContent = false, populateChapter = false)
                     newImg.id = 0 // Force creating a new DB object
-                    newImg.fileUri = "" // Clear initial URI
+                    newImg.fileUri = img.fileUri // Retrieve initial, full (unoptimized) Uri
                     if (newImg.isReadable) {
                         newImg.order = pictureOrder++
                         newImg.computeName(nbImages)
@@ -2110,23 +2097,18 @@ suspend fun mergeContents(
                         if (!mergedChapters.contains(newChapter)) mergedChapters.add(newChapter)
                         newImg.setChapter(newChapter)
                     }
+                    newImg.id = dao.insertImageFile(newImg)
 
                     // If exists, move the picture file to the merged books' folder
                     if (isInLibrary(newImg.status)) {
                         val referenceExt =
                             getExtensionFromUri(img.fileUri).ifBlank { getExtensionFromUri(img.url) }
-                        val newUri = copyFile(
+                        dlManager.appendFile(
                             context,
+                            newImg.isCover && !newImg.isReadable,
                             img.fileUri.toUri(),
-                            targetFolder,
-                            newImg.name + "." + referenceExt,
-                            getMimeTypeFromExtension(referenceExt),
-                            true
+                            newImg.name + "." + referenceExt
                         )
-                        if (newUri != null) {
-                            newImg.fileUri = newUri.toString()
-                            newImg.size = fileSizeFromUri(context, newUri)
-                        } else Timber.w("Could not move file %s", img.fileUri)
                         onProgress.invoke(nbProcessedPics++, nbImages, c.title)
                     }
                     mergedImages.add(newImg)
@@ -2134,6 +2116,7 @@ suspend fun mergeContents(
             } // Content
         } catch (e: IOException) {
             Timber.w(e)
+            errorMsg = e.message ?: ""
             isError = true
         } finally {
             // Delete temp files
@@ -2141,16 +2124,23 @@ suspend fun mergeContents(
         }
 
         // Remove target folder and merged images if manually canceled
-        if (isCanceled.invoke()) removeDocument(context, targetFolder)
+        if (isCanceled.invoke() || isError) dlManager.removeDownload(context)
 
         if (!isError && !isCanceled.invoke()) {
+            val newLocations = dlManager.refreshLocation(mergedImages)
+            if (newLocations.isNotEmpty()) {
+                mergedImages.forEach { img ->
+                    newLocations[img.id]?.let { img.fileUri = it }
+                }
+                dao.updateImageLocations(newLocations)
+            }
+
             mergedContent.setImageFiles(mergedImages)
             mergedContent.setChapters(mergedChapters) // Chapters have to be attached to Content too
-            mergedContent.qtyPages = mergedImages.size - 1
-            mergedContent.computeSize()
 
-            val jsonFile = createJson(context, mergedContent)
-            if (jsonFile != null) mergedContent.jsonUri = jsonFile.uri.toString()
+            dlManager.completeDownload(context, mergedContent)
+
+            mergedContent.computeSize()
 
             // Save new content (incl. non-custom group operations)
             addContent(context, dao, mergedContent)
@@ -2163,18 +2153,23 @@ suspend fun mergeContents(
             if (customGroup != null) moveContentToCustomGroup(mergedContent, customGroup, dao)
 
             // If merged book is external, register it to the Beholder
-            if (StatusContent.EXTERNAL == mergedContent.status && parentFolder != null)
-                registerContent(
-                    context,
-                    parentFolder.uri.toString(),
-                    targetFolder,
-                    mergedContent.id
-                )
+            if (StatusContent.EXTERNAL == mergedContent.status) {
+                val parentFolder = mergedContent.getContainingFolder(context)
+                val targetDoc = getDocumentFromTreeUriString(context, mergedContent.storageUri)
+                if (parentFolder != null && targetDoc != null)
+                    registerContent(
+                        context,
+                        parentFolder.toString(),
+                        targetDoc,
+                        mergedContent.id
+                    )
+            }
+            dlManager.clear()
         }
-    }
-    dao.cleanup()
+        dao.cleanup()
 
-    if (!isCanceled.invoke()) onComplete.invoke(isError)
+        if (!isCanceled.invoke()) onComplete.invoke(isError, errorMsg)
+    } // Dispatchers.IO
 }
 
 fun getLocation(content: Content): StorageLocation {
@@ -2266,7 +2261,8 @@ fun Content.getContainingFolder(context: Context): Uri? {
 /**
  * Comparator to be used to sort file entries according to their names
  */
-class InnerNameNumberDisplayFileComparator(val desc: Boolean = false) : Comparator<DisplayFile> {
+class InnerNameNumberDisplayFileComparator(val desc: Boolean = false) :
+    Comparator<DisplayFile> {
     override fun compare(o1: DisplayFile, o2: DisplayFile): Int {
         return CaseInsensitiveSimpleNaturalComparator.getInstance<CharSequence>()
             .compare(o1.name, o2.name) * if (desc) -1 else 1

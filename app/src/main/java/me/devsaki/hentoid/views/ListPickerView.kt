@@ -6,7 +6,9 @@ import android.util.AttributeSet
 import android.view.LayoutInflater
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.isVisible
+import androidx.fragment.app.FragmentActivity
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import dev.skomlach.common.blur.BlurUtil.getActivity
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.databinding.WidgetListPickerBinding
 import me.devsaki.hentoid.util.getIdForCurrentTheme
@@ -99,26 +101,40 @@ class ListPickerView : ConstraintLayout {
     }
 
     private fun onClick() {
-        val materialDialog = MaterialAlertDialogBuilder(
-            context,
-            context.getIdForCurrentTheme(R.style.Theme_Light_Dialog)
-        )
-            .setSingleChoiceItems(
-                entries.toTypedArray(),
-                index,
-                this::onSelect
+        if (entries.size < 6) { // Basic choice dialog
+            val materialDialog = MaterialAlertDialogBuilder(
+                context,
+                context.getIdForCurrentTheme(R.style.Theme_Light_Dialog)
             )
-            .setCancelable(true)
-            .create()
+                .setSingleChoiceItems(
+                    entries.toTypedArray(),
+                    index,
+                    this::onSelect
+                )
+                .setCancelable(true)
+                .create()
 
-        materialDialog.show()
+            materialDialog.show()
+        } else { // Custom filterable dialog
+            this.getActivity().let {
+                if (it is FragmentActivity) ListPickerDialogFragment.invoke(
+                    it,
+                    this::onSelect,
+                    entries
+                )
+            }
+        }
     }
 
     private fun onSelect(dialog: DialogInterface, selectedIndex: Int) {
+        onSelect(selectedIndex)
+        dialog.dismiss()
+    }
+
+    private fun onSelect(selectedIndex: Int) {
         index = selectedIndex
         onIndexChangeListener?.invoke(selectedIndex)
         if (value.isNotEmpty()) onValueChangeListener?.invoke(value)
-        dialog.dismiss()
     }
 
     private fun selectIndex(selectedIndex: Int) {

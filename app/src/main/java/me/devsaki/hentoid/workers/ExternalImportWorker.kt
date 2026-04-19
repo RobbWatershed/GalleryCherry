@@ -23,6 +23,8 @@ import me.devsaki.hentoid.database.domains.ImageFile
 import me.devsaki.hentoid.database.domains.ImageFile.UriImageFileComparator
 import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.enums.StatusContent
+import me.devsaki.hentoid.events.CommunicationEvent
+import me.devsaki.hentoid.events.CommunicationEvent.Type
 import me.devsaki.hentoid.events.ProcessEvent
 import me.devsaki.hentoid.notification.import_.ImportCompleteNotification
 import me.devsaki.hentoid.notification.import_.ImportProgressNotification
@@ -59,6 +61,7 @@ import org.greenrobot.eventbus.EventBus
 import timber.log.Timber
 import java.io.IOException
 import java.time.Instant
+import kotlin.math.max
 import kotlin.math.roundToInt
 
 class ExternalImportWorker(context: Context, parameters: WorkerParameters) :
@@ -201,6 +204,8 @@ class ExternalImportWorker(context: Context, parameters: WorkerParameters) :
         // Clear disk cache as import may reuse previous image IDs
         StorageCache.clear(applicationContext, READER_CACHE)
         clearCoilCache(applicationContext)
+        EventBus.getDefault()
+            .postSticky(CommunicationEvent(Type.RELOAD, CommunicationEvent.Recipient.LIBRARY))
     }
 
     // Write JSON file for every found book and persist it in the DB
@@ -399,7 +404,7 @@ class ExternalImportWorker(context: Context, parameters: WorkerParameters) :
 
         // Forge parent names using folder root path minus ext library root path
         val rootParts = (parent.path ?: "").split('/')
-        val parentNames = rootParts.subList(nbLibraryPathParts, rootParts.size)
+        val parentNames = rootParts.subList(max(0, nbLibraryPathParts - 1), rootParts.size)
         Timber.d("  parents : $parentNames")
 
         deltaPlusPairs.values.forEach { docs ->
@@ -412,7 +417,7 @@ class ExternalImportWorker(context: Context, parameters: WorkerParameters) :
             // Import new archive
             if (archivePdf != null) {
                 Timber.d("Importing new archive / PDF")
-                importArchivePdf(context, docs, parent, archivePdf, dao)
+                importArchivePdf(context, docs, parent, archivePdf, parentNames, dao)
                     ?.let { onContentFoundBH(context, explorer, dao, parent, it) }
             } else if (folder != null) { // Import new folder
                 Timber.d("Importing new folder")
@@ -549,6 +554,7 @@ class ExternalImportWorker(context: Context, parameters: WorkerParameters) :
         docs: List<DocumentFile>,
         parent: Uri,
         archivePdf: DocumentFile,
+        parentNames : List<String>,
         dao: CollectionDAO
     ): Content? {
         val jsons =
@@ -556,9 +562,10 @@ class ExternalImportWorker(context: Context, parameters: WorkerParameters) :
         val content = jsonToContent(context, dao, jsons, archivePdf.name ?: "")
         val c = scanArchivePdf(
             context,
+            dao,
             parent,
             archivePdf,
-            emptyList(),
+            parentNames,
             StatusContent.EXTERNAL,
             content
         )

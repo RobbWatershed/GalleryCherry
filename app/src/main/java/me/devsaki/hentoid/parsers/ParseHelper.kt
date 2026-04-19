@@ -20,6 +20,7 @@ import me.devsaki.hentoid.util.network.getUserAgent
 import me.devsaki.hentoid.util.ongoingStr
 import me.devsaki.hentoid.util.parseDateToEpoch
 import me.devsaki.hentoid.util.parseDownloadParams
+import me.devsaki.hentoid.util.rangeToNumbers
 import me.devsaki.hentoid.util.removeNonPrintableChars
 import me.devsaki.hentoid.util.serializeToJson
 import org.apache.commons.text.StringEscapeUtils
@@ -174,24 +175,14 @@ private fun parseAttribute(
  */
 fun urlsToImageFiles(
     imgUrls: List<String>,
-    coverUrl: String,
-    status: StatusContent
-): List<ImageFile> {
-    return urlsToImageFiles(imgUrls, status, coverUrl, null)
-}
-
-/**
- * See definition of the main method below
- */
-fun urlsToImageFiles(
-    imgUrls: List<String>,
+    range: String,
     status: StatusContent,
-    coverUrl: String?,
+    coverUrl: String? = null,
     chapter: Chapter? = null
 ): List<ImageFile> {
     val result: MutableList<ImageFile> = ArrayList()
     if (!coverUrl.isNullOrEmpty()) result.add(ImageFile.newCover(coverUrl, status))
-    result.addAll(urlsToImageFiles(imgUrls, 1, status, imgUrls.size, chapter))
+    result.addAll(urlsToImageFiles(imgUrls, range, 1, status, imgUrls.size, chapter))
     return result
 }
 
@@ -199,6 +190,7 @@ fun urlsToImageFiles(
  * Build a list of ImageFiles using the given properties
  *
  * @param imgUrls        URLs of the images
+ * @param range          Range of the images to download; empty string to download all of them
  * @param initialOrder   Order of the 1st image to be generated
  * @param status         Status of the resulting ImageFiles
  * @param totalBookPages Total number of pages of the corresponding book
@@ -207,6 +199,7 @@ fun urlsToImageFiles(
  */
 fun urlsToImageFiles(
     imgUrls: List<String>,
+    range: String,
     initialOrder: Int,
     status: StatusContent,
     totalBookPages: Int,
@@ -216,15 +209,22 @@ fun urlsToImageFiles(
     var order = initialOrder
     // Remove duplicates and MACOSX indexes (yes, it does happen!) before creating the ImageFiles
     val imgUrlsUnique = imgUrls.distinct().filterNot { it.contains("__MACOSX") || it.isEmpty() }
-    for (s in imgUrlsUnique) result.add(
-        urlToImageFile(
-            s.trim(),
-            order++,
-            totalBookPages,
-            status,
-            chapter
+    val rangeIndexes =
+        if (range.isBlank()) imgUrlsUnique.indices
+        else rangeToNumbers(range)
+            .filter { it >= initialOrder && it < initialOrder + imgUrlsUnique.count() }
+            .map { it - initialOrder }
+    rangeIndexes.forEach {
+        result.add(
+            urlToImageFile(
+                imgUrlsUnique[it].trim(),
+                order++,
+                totalBookPages,
+                status,
+                chapter
+            )
         )
-    )
+    }
     return result
 }
 

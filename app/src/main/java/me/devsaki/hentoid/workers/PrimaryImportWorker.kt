@@ -37,6 +37,8 @@ import me.devsaki.hentoid.enums.Grouping
 import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.enums.StorageLocation
+import me.devsaki.hentoid.events.CommunicationEvent
+import me.devsaki.hentoid.events.CommunicationEvent.Type
 import me.devsaki.hentoid.events.DownloadCommandEvent
 import me.devsaki.hentoid.events.ProcessEvent
 import me.devsaki.hentoid.json.JsonContent
@@ -490,6 +492,7 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
                 logFile
             )
             notificationManager.notify(ImportCompleteNotification(booksOK, booksKO))
+            EventBus.getDefault().postSticky(CommunicationEvent(Type.RELOAD, CommunicationEvent.Recipient.LIBRARY))
         }
     }
 
@@ -583,7 +586,7 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
                 if (isInQueue(existingDuplicate.status)) "queue" else "collection"
             trace(
                 Log.INFO, STEP_3_BOOKS, log,
-                "Import book KO! (already in $location) : %s", bookLocation
+                "Import book KO! (already in $location) : $bookLocation"
             )
             onProgress("", false)
             return
@@ -683,7 +686,7 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
                         if (isInQueue(existingDuplicate.status)) "queue" else "collection"
                     trace(
                         Log.INFO, STEP_2_BOOK_FOLDERS, log,
-                        "Import book KO! (already in $location) : %s", bookLocation
+                        "Import book KO! (already in $location) : $bookLocation"
                     )
                     return result
                 }

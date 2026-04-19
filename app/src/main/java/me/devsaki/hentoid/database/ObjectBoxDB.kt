@@ -1758,8 +1758,12 @@ object ObjectBoxDB {
         store.boxFor(ErrorRecord::class.java).remove(records)
     }
 
-    fun insertImageFile(img: ImageFile) {
+    fun updateImageFile(img: ImageFile) {
         if (img.id > 0) store.boxFor(ImageFile::class.java).put(img)
+    }
+
+    fun insertImageFile(img: ImageFile): Long {
+        return store.boxFor(ImageFile::class.java).put(img)
     }
 
     private fun deleteImageFiles(contentId: Long) {
@@ -2188,6 +2192,12 @@ object ObjectBoxDB {
     fun flagGroupsForDeletion(groupList: List<Group>) {
         for (g in groupList) g.isFlaggedForDeletion = true
         store.boxFor(Group::class.java).put(groupList)
+    }
+
+    fun deleteGroupsByGrouping(groupingId: Int) {
+        val qb = store.boxFor(Group::class.java).query()
+        qb.equal(Group_.grouping, groupingId.toLong())
+        qb.safeRemove()
     }
 
     fun deleteGroupItemsByGrouping(groupingId: Int) {

@@ -87,11 +87,6 @@
     <string name="pref_browser_augmented_title">Поліпшення якості життя</string>
     <string name="pref_browser_augmented_off">Використовується стандартна поведінка</string>
     <string name="pref_browser_augmented_on">Реклама видаляється, а обробка відбувається швидше</string>
-    <string name="pref_browser_override_overview_title">Вимкнути огляд сторінки</string>
-    <string name="pref_browser_override_overview_summary_off">Внизу ви можете виставити бажаний рівень масштабу за замовчуванням</string>
-    <string name="pref_browser_override_overview_summary_on">Скористайтеся налаштуванням внизу для визначення бажаного рівня масштабу за замовчуванням\nПримітка: Працює лише на hitomi та e-hentai</string>
-    <string name="pref_browser_initial_zoom_title">Масштаб за замовчуванням</string>
-    <string name="pref_browser_initial_zoom_summary">Рівень масштабу під час завантаження сторінки\nЗараз: <x:g example="20%" id="percentage">%s%%</x:g></string>
     <string name="pref_browser_dns_title">DNS через HTTPS</string>
     <string name="pref_browser_clear_cookies">Очистити cookies браузера</string>
     <string name="pref_browser_clear_cookies_ok">Cookies видалені успішно</string>
@@ -108,11 +103,6 @@
     <string name="pref_queue_wifi_only_on">Черга завантаження розпочнеться лише якщо є підключення до Wi-Fi</string>
     <string name="pref_queue_wifi_only_off">Черга завантаження розпочнеться незалежно від типу мережі</string>
     <string name="pref_queue_new_position_title">Розташування нових завантажень</string>
-    <string name="download_size_wifi_title">Пропускати великі завантаження на мобільній мережі</string>
-    <string name="pref_dl_size_wifi_on">Великі завантаження будуть пропущені, якщо відсутнє підключення до Wi-Fi</string>
-    <string name="pref_dl_size_wifi_off">Усі завантаження будуть оброблені</string>
-    <string name="pref_dl_size_wifi_threshold_title">Обмеження на розмір завантажень</string>
-    <string name="pref_dl_pages_wifi_threshold_title">Обмеження на кількість сторінок у завантаженнях</string>
     <string name="download_retries_screen_title">Автоматично намагатись повторно завантажувати</string>
     <string name="download_retries_active_title">При невдалих спробах завантаження воно буде здійснено знову</string>
     <string name="pref_dl_retries_on">Невдалі завантаження відбуватимуться повторно</string>

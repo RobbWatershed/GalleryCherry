@@ -31,7 +31,7 @@ import com.skydoves.powermenu.PowerMenuItem
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.activities.bundles.AttributeItemBundle
 import me.devsaki.hentoid.activities.bundles.MetaEditActivityBundle
-import me.devsaki.hentoid.core.URL_GITHUB_WIKI_EDIT_METADATA
+import me.devsaki.hentoid.core.URL_WIKI_EDIT_METADATA
 import me.devsaki.hentoid.core.setOnTextChangedListener
 import me.devsaki.hentoid.core.startBrowserActivity
 import me.devsaki.hentoid.database.domains.Attribute
@@ -341,7 +341,7 @@ class MetadataEditActivity : BaseActivity(), GalleryPickerDialogFragment.Parent,
             R.id.action_edit_confirm -> confirmEdit()
             R.id.action_edit_cancel -> cancelEdit()
             R.id.remove_all -> removeAllTags()
-            R.id.help -> startBrowserActivity(URL_GITHUB_WIKI_EDIT_METADATA)
+            R.id.help -> startBrowserActivity(URL_WIKI_EDIT_METADATA)
             else -> return true
         }
         return true

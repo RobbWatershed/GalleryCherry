@@ -39,7 +39,7 @@ import me.devsaki.hentoid.activities.QueueActivity
 import me.devsaki.hentoid.activities.bundles.SearchActivityBundle
 import me.devsaki.hentoid.activities.bundles.SettingsBundle
 import me.devsaki.hentoid.activities.settings.SettingsActivity
-import me.devsaki.hentoid.core.URL_GITHUB_WIKI_DOWNLOAD
+import me.devsaki.hentoid.core.URL_WIKI_DOWNLOAD
 import me.devsaki.hentoid.core.startBrowserActivity
 import me.devsaki.hentoid.database.ObjectBoxDAO
 import me.devsaki.hentoid.database.domains.Content
@@ -371,7 +371,7 @@ class QueueFragment : Fragment(R.layout.fragment_queue), ItemTouchCallback,
                 true
             }
             it.menu.findItem(R.id.help).setOnMenuItemClickListener {
-                context?.startBrowserActivity(URL_GITHUB_WIKI_DOWNLOAD)
+                context?.startBrowserActivity(URL_WIKI_DOWNLOAD)
                 true
             }
         }
@@ -930,13 +930,7 @@ class QueueFragment : Fragment(R.layout.fragment_queue), ItemTouchCallback,
             // (may happen when the item is fetched before it is processed by the downloader)
             if (c.storageUri.isEmpty()) c = ObjectBoxDAO().selectContent(c.id)
             return if (c != null) {
-                if (!openReader(
-                        requireContext(), c, -1, null,
-                        forceShowGallery = false,
-                        newTask = false
-                    )
-                )
-                    toast(R.string.err_no_content)
+                if (!openReader(requireContext(), c)) toast(R.string.err_no_content)
                 true
             } else false
         }

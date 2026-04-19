@@ -183,7 +183,7 @@ private suspend fun savePhash(context: Context, dao: CollectionDAO, content: Con
     withContext(Dispatchers.IO) {
         content.cover.imageHash = pHash
         // Update the picture in DB
-        dao.insertImageFile(content.cover)
+        dao.updateImageFile(content.cover)
         // The following block has to be abandoned if the cost of retaining all Content in memory is too high
         try {
             // Update the book JSON if the book folder still exists

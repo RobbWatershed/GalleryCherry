@@ -46,7 +46,6 @@ import me.devsaki.hentoid.util.download.ContentQueueManager.pauseQueue
 import me.devsaki.hentoid.util.download.DownloadRateLimiter
 import me.devsaki.hentoid.util.download.DownloadSpeedLimiter.prefsSpeedCapToKbps
 import me.devsaki.hentoid.util.download.DownloadSpeedLimiter.setSpeedLimitKbps
-import me.devsaki.hentoid.util.download.PrimaryDownloadManager
 import me.devsaki.hentoid.util.download.RequestOrder
 import me.devsaki.hentoid.util.download.RequestOrder.NetworkError
 import me.devsaki.hentoid.util.download.RequestQueueManager
@@ -151,7 +150,7 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
     // Progress notifications
     private lateinit var progressNotification: DownloadProgressNotification
 
-    private val dlManager = PrimaryDownloadManager()
+    private val dlManager = StorageDownloadManager()
 
 
     init {
@@ -455,7 +454,7 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
             .post(DownloadEvent.fromPreparationStep(DownloadEvent.Step.PREPARE_FOLDER, content))
 
         // Create destination folder for images to be downloaded
-        if (!dlManager.createTargetLocation(context, content)) {
+        if (!dlManager.createDownloadLocation(context, content)) {
             val title = content.title
             val message = String.format("Failed to create destination folder for $title.")
 
@@ -826,15 +825,22 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
                 )
             )
 
-            // If the "skip large downloads on mobile data" is on, skip if needed
-            if (Settings.isDownloadLargeOnlyWifi &&
-                (estimateBookSizeMB > Settings.downloadLargeOnlyWifiThresholdMB
-                        || totalPages > Settings.downloadLargeOnlyWifiThresholdPages)
+            // If the "Skip large downloads" is on, skip if needed
+            if (Settings.isSkipDownloadLarge &&
+                (estimateBookSizeMB > Settings.skipDownloadLargeThresholdMB
+                        || totalPages > Settings.skipDownloadLargeThresholdPages)
             ) {
-                val connectivity = applicationContext.getConnectivity()
-                if (Connectivity.WIFI != connectivity) {
-                    // Move the book to the errors queue and signal it as skipped
-                    logErrorRecord(content.id, ErrorType.WIFI, content.url, "Book", "")
+                if ((Settings.isSkipDownloadLargeAllowWIFI)) {
+                    val connectivity = applicationContext.getConnectivity()
+                    if (Connectivity.WIFI != connectivity) {
+                        // Move the book to the errors queue and signal it as skipped
+                        logErrorRecord(content.id, ErrorType.SIZE, content.url, "Book", "")
+                        moveToErrors(content.id)
+                        EventBus.getDefault()
+                            .post(DownloadCommandEvent(DownloadCommandEvent.Type.EV_SKIP))
+                    }
+                } else {
+                    logErrorRecord(content.id, ErrorType.SIZE, content.url, "Book", "")
                     moveToErrors(content.id)
                     EventBus.getDefault()
                         .post(DownloadCommandEvent(DownloadCommandEvent.Type.EV_SKIP))
@@ -997,7 +1003,7 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
                             img.url
                         )
                         img.status = StatusContent.SAVED
-                        dao.insertImageFile(img)
+                        dao.updateImageFile(img)
                         requestQueueManager.queueRequest(
                             buildImageDownloadRequest(
                                 img,
@@ -1231,7 +1237,7 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
     private fun onRequestSuccess(request: RequestOrder, fileUri: Uri) {
         val img = request.img
         updateImageProperties(img, true, fileUri)
-        dlManager.processDownloadedFile(
+        dlManager.appendFile(
             applicationContext,
             request.img.isCover && !request.img.isReadable,
             fileUri
@@ -1319,11 +1325,11 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
     ) {
         if (backupImage != null) {
             Timber.i("Backup URL contains image @ %s; queuing", backupImage.url)
-            originalImage.url =
-                backupImage.url // Replace original image URL by backup image URL
-            originalImage.isBackup =
-                true // Indicates the image is from a backup (for display in error logs)
-            dao.insertImageFile(originalImage)
+            // Replace original image URL by backup image URL
+            originalImage.url = backupImage.url
+            // Indicates the image is from a backup (for display in error logs)
+            originalImage.isBackup = true
+            dao.updateImageFile(originalImage)
             requestQueueManager.queueRequest(
                 buildImageDownloadRequest(
                     originalImage,

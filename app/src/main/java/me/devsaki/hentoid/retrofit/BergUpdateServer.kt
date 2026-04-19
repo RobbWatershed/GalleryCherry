@@ -11,7 +11,7 @@ import retrofit2.converter.moshi.MoshiConverterFactory
 import retrofit2.http.GET
 import java.util.Date
 
-object UpdateServer {
+object BergUpdateServer {
 
     private val moshi: Moshi by lazy {
         Moshi.Builder()

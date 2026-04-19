@@ -1031,12 +1031,16 @@ class ObjectBoxDAO : CollectionDAO {
         ObjectBoxDB.deleteQueueRecords()
     }
 
-    override fun insertImageFile(img: ImageFile) {
-        ObjectBoxDB.insertImageFile(img)
+    override fun insertImageFile(img: ImageFile): Long {
+        return ObjectBoxDB.insertImageFile(img)
     }
 
     override fun insertImageFiles(imgs: List<ImageFile>) {
         ObjectBoxDB.insertImageFiles(imgs)
+    }
+
+    override fun updateImageFile(img: ImageFile) {
+        ObjectBoxDB.updateImageFile(img)
     }
 
     override fun replaceImageList(contentId: Long, newList: List<ImageFile>) {

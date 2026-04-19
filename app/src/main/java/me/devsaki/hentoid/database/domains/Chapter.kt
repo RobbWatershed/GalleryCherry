@@ -17,15 +17,28 @@ data class Chapter(
     var url: String = "",
     var name: String = "",
     var uniqueId: String = "",
-    var uploadDate: Long = 0
+    var uploadDate: Long = 0,
+    // Same feature as Content.downloadRange
+    var downloadRange: String = ""
 ) {
     lateinit var content: ToOne<Content>
 
     @Backlink(to = "chapter")
     lateinit var imageFiles: ToMany<ImageFile>
 
-    constructor(order: Int, url: String, name: String, uniqueId : String) : this(
-        id = 0, order = order, url = url, name = name, uniqueId = uniqueId
+    constructor(
+        order: Int,
+        url: String,
+        name: String,
+        uniqueId: String,
+        downloadRange: String = ""
+    ) : this(
+        id = 0,
+        order = order,
+        url = url,
+        name = name,
+        uniqueId = uniqueId,
+        downloadRange = downloadRange
     )
 
     constructor(chapter: Chapter) : this(
@@ -34,7 +47,8 @@ data class Chapter(
         url = chapter.url,
         name = chapter.name,
         uniqueId = chapter.uniqueId,
-        uploadDate = chapter.uploadDate
+        uploadDate = chapter.uploadDate,
+        downloadRange = chapter.downloadRange
     )
 
     // NB : Doesn't work when Content is not linked

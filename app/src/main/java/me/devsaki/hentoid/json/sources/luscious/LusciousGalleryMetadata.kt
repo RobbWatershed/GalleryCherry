@@ -4,6 +4,7 @@ import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import me.devsaki.hentoid.database.domains.ImageFile
 import me.devsaki.hentoid.enums.StatusContent
+import me.devsaki.hentoid.util.rangeToNumbers
 
 
 @JsonClass(generateAdapter = true)
@@ -29,7 +30,11 @@ data class LusciousGalleryMetadata(
     @JsonClass(generateAdapter = true)
     data class PictureContainerMetadata(
         @Json(name = "total_pages")
-        var totalPages: Int = 0
+        var totalPages: Int = 0,
+        @Json(name = "items_per_page")
+        var perPage: Int = 0,
+        @Json(name = "total_items")
+        var total: Int = 0
     )
 
     @JsonClass(generateAdapter = true)
@@ -72,18 +77,25 @@ data class LusciousGalleryMetadata(
         return data.picture.list.info.totalPages
     }
 
-    fun toImageFileList(offset: Int = 0): List<ImageFile> {
+    fun toImageFileList(range: String, offset: Int = 1): List<ImageFile> {
         val result: MutableList<ImageFile> = ArrayList()
         var order = offset
         val imageList: List<PictureMetadata> = data.picture.list.items
-        imageList.forEach {
+
+        val rangeIndexes =
+            if (range.isBlank()) imageList.indices
+            else rangeToNumbers(range)
+                .filter { it >= offset && it < offset + imageList.count() }
+                .map { it - offset }
+
+        rangeIndexes.forEach {
             val img = ImageFile.fromImageUrl(
-                ++order,
-                it.bestUrl,
+                order++,
+                imageList[it].bestUrl,
                 StatusContent.SAVED,
                 imageList.size
             )
-            img.backupUrl = it.bestBackupUrl
+            img.backupUrl = imageList[it].bestBackupUrl
             result.add(img)
         }
         return result

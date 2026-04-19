@@ -9,12 +9,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import me.devsaki.hentoid.BuildConfig
 import me.devsaki.hentoid.R
-import me.devsaki.hentoid.events.CommunicationEvent
 import me.devsaki.hentoid.events.AppRepoInfoEvent
+import me.devsaki.hentoid.events.CommunicationEvent
 import me.devsaki.hentoid.json.core.UpdateInfo
 import me.devsaki.hentoid.notification.appUpdate.UpdateAvailableNotification
 import me.devsaki.hentoid.notification.appUpdate.UpdateCheckNotification
-import me.devsaki.hentoid.retrofit.UpdateServer
+import me.devsaki.hentoid.retrofit.BergUpdateServer
 import me.devsaki.hentoid.util.notification.BaseNotification
 import org.greenrobot.eventbus.EventBus
 import timber.log.Timber
@@ -49,19 +49,19 @@ class UpdateCheckWorker(context: Context, parameters: WorkerParameters) :
                 )
             )
             withContext(Dispatchers.IO) {
-                UpdateServer.api.updateInfo.execute().body()
-            }?.let {
-                onSuccess(it)
-            } ?: run {
-                EventBus.getDefault().post(
-                    CommunicationEvent(
-                        CommunicationEvent.Type.BROADCAST,
-                        CommunicationEvent.Recipient.SETTINGS,
-                        applicationContext.resources.getString(R.string.pref_check_updates_manual_no_connection)
+                BergUpdateServer.api.updateInfo.execute().body()?.let {
+                    onSuccess(it)
+                } ?: run {
+                    EventBus.getDefault().post(
+                        CommunicationEvent(
+                            CommunicationEvent.Type.BROADCAST,
+                            CommunicationEvent.Recipient.SETTINGS,
+                            applicationContext.resources.getString(R.string.pref_check_updates_manual_no_connection)
+                        )
                     )
-                )
-                notificationManager.cancel()
-                Timber.w("Failed to get update info (null result)")
+                    notificationManager.cancel()
+                    Timber.w("Failed to get update info (null result)")
+                }
             }
         } catch (e: Exception) {
             EventBus.getDefault().post(

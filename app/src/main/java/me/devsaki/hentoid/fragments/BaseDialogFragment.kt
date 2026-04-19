@@ -44,7 +44,7 @@ abstract class BaseDialogFragment<T> : DialogFragment() {
             dialog: DialogFragment,
             args: Bundle?,
             isCancelable: Boolean,
-            parentIsActivity: Boolean,
+            parentIsActivity: Boolean
         ): DialogFragment {
             val argz = args ?: Bundle()
             argz.putBoolean(PARENT_IS_ACTIVITY, parentIsActivity)

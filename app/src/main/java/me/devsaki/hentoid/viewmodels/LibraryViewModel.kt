@@ -60,6 +60,7 @@ import me.devsaki.hentoid.util.exception.EmptyResultException
 import me.devsaki.hentoid.util.file.DisplayFile
 import me.devsaki.hentoid.util.file.copyFile
 import me.devsaki.hentoid.util.file.extractArchiveEntriesBlocking
+import me.devsaki.hentoid.util.file.getArchivedFileName
 import me.devsaki.hentoid.util.file.getDocumentFromTreeUriString
 import me.devsaki.hentoid.util.file.getParent
 import me.devsaki.hentoid.util.file.removeDocument
@@ -774,19 +775,32 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
                                 if (!isDownloadable) msg += " (pages unreachable)"
                                 Timber.d(msg)
                                 // Reparse content itself
-                                res = reparseFromScratch(c, keepUris = !reparseImages, updateImages = reparseImages)
+                                res = reparseFromScratch(
+                                    c,
+                                    keepUris = !reparseImages,
+                                    updateImages = reparseImages
+                                )
                             }
                         }
 
                         res?.let {
+                            val previousDlMode = it.downloadMode
                             it.downloadMode =
-                                if (forceArchive) DownloadMode.DOWNLOAD_ARCHIVE else DownloadMode.DOWNLOAD
+                                if (forceArchive) DownloadMode.DOWNLOAD_ARCHIVE
+                                else when (it.downloadMode) {
+                                    DownloadMode.DOWNLOAD_ARCHIVE_FILE, DownloadMode.DOWNLOAD_ARCHIVE -> it.downloadMode
+                                    else -> DownloadMode.DOWNLOAD
+                                }
                             if (areModifiedImages) {
                                 dao.insertChapters(it.chaptersList)
                                 dao.insertImageFiles(it.imageList)
                             }
 
-                            if (forceArchive) {
+                            if (
+                                (previousDlMode == DownloadMode.DOWNLOAD || previousDlMode == DownloadMode.STREAM)
+                                &&
+                                (it.downloadMode == DownloadMode.DOWNLOAD_ARCHIVE || it.downloadMode == DownloadMode.DOWNLOAD_ARCHIVE)
+                            ) {
                                 // Delete download folder
                                 removeDocument(application, it.storageUri.toUri())
                                 // Delete previous references
@@ -795,11 +809,11 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
                             }
 
                             dao.addContentToQueue(
-                                it, sourceImageStatus, targetImageStatus, position, -1, null,null,
+                                it, sourceImageStatus, targetImageStatus, position, -1, null, null,
                                 isQueueActive(getApplication())
                             )
 
-                            if (!forceArchive && reparseImages) purgeContent(
+                            if (reparseImages) purgeContent(
                                 // Non-blocking performance bottleneck; run in a dedicated worker
                                 getApplication(),
                                 it,
@@ -1392,15 +1406,11 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
 
                 // Unarchive the whole book inside target folder
                 val imgs = content.imageList
-                val isLocationInUri =
-                    imgs.filter { it.isReadable }.all { it.fileUri.startsWith(content.storageUri) }
                 val toExtract: List<Triple<String, Long, String>> = imgs
                     .filter { it.isReadable }
                     .mapIndexed { i, e ->
-                        var path = if (isLocationInUri) e.fileUri else e.url
-                        path = path.replace(content.storageUri, "")
-                        path = path.substring(path.lastIndexOf('/') + 1)
-                        Triple(path, i.toLong(), path)
+                        val filePath = getArchivedFileName(content.storageUri, e.fileUri)
+                        Triple(filePath, i.toLong(), filePath)
                     }
                 val imgUris = context.extractArchiveEntriesBlocking(
                     content.storageUri.toUri(),
@@ -1417,9 +1427,7 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
                 imgs.filter { it.isReadable }
                     .forEachIndexed { i, e ->
                         if (imgUris.size <= i) return@forEachIndexed
-                        imgUris[i].toString().let {
-                            if (isLocationInUri) e.fileUri = it else e.url = it
-                        }
+                        imgUris[i].toString().let { e.fileUri = it }
                     }
 
                 // Don't move thumb as it can keep being read from the archive cache folder

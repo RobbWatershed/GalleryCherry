@@ -90,6 +90,7 @@ abstract class BaseActivity : AppCompatActivity {
         toast(event.message)
     }
 
+    @Suppress("unused")
     @Subscribe(sticky = true, threadMode = ThreadMode.MAIN_ORDERED)
     open fun onAchievementEvent(event: AchievementEvent) {
         // Make sure current activity is active (=eligible to display that event)

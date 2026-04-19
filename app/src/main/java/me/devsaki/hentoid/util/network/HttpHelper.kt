@@ -54,35 +54,34 @@ private const val AGENT_INIT_ISSUE = "Call initUserAgents first to initialize th
 
 
 /**
- * Read an HTML resource from the given URL and retrieve it as a Document
- *
- * @param url URL to read the resource from
- * @return HTML resource read from the given URL represented as a Document
- * @throws IOException in case something bad happens when trying to access the online resource
- */
-@Throws(IOException::class)
-fun getOnlineDocument(url: String): Document? {
-    return getOnlineDocument(url, null, useHentoidAgent = true, useWebviewAgent = true)
-}
-
-/**
  * Read an HTML resource from the given URL, using the given headers and agent and retrieve it as a Document
  *
  * @param url             URL to read the resource from
  * @param headers         Headers to use when building the request
  * @param useHentoidAgent True if the Hentoid User-Agent has to be used; false if a neutral User-Agent has to be used
+ *
  * @return HTML resource read from the given URL represented as a Document
  * @throws IOException in case something bad happens when trying to access the online resource
  */
 @Throws(IOException::class)
 fun getOnlineDocument(
     url: String,
-    headers: List<Pair<String, String>>?,
-    useHentoidAgent: Boolean,
-    useWebviewAgent: Boolean
+    headers: List<Pair<String, String>>? = null,
+    useMobileAgent: Boolean = true,
+    useHentoidAgent: Boolean = true,
+    useWebviewAgent: Boolean = true,
+    retries: Int = 1
 ): Document? {
-    getOnlineResource(url, headers, true, useHentoidAgent, useWebviewAgent).body
-        .use { return Jsoup.parse(it.string()) }
+    var attempts = 1
+    var response = getOnlineResource(url, headers, useMobileAgent, useHentoidAgent, useWebviewAgent)
+    // Pause and retry if we have an error
+    while (response.code >= 400 && attempts < retries) {
+        pause(1500)
+        attempts++
+        Timber.d("Retrying $url")
+        response = getOnlineResource(url, headers, useMobileAgent, useHentoidAgent, useWebviewAgent)
+    }
+    return response.body.use { return Jsoup.parse(it.string()) }
 }
 
 @Throws(IOException::class)
@@ -887,7 +886,7 @@ class UriParts(uri: String, lowercase: Boolean = false) {
     var path: String // Entire path, host included and file not included (e.g. http://subdomain.host.ext:80/this/is/the)
     var fileNameNoExt: String // Filename without extension (e.g. police)
     var extension: String // File extension alone (e.g. jpg)
-    var query: String // Query alone (e.g. query=here)
+    var query: String // Raw query alone (e.g. query=here)
     private var fragment: String // Fragment alone (e.g. anchor)
 
     val fileNameFull: String
@@ -895,6 +894,9 @@ class UriParts(uri: String, lowercase: Boolean = false) {
 
     val pathFull: String
         get() = "$path/$fileNameFull"
+
+    val queryArgs: Map<String, String>
+        get() = parseQueryArgs()
 
     constructor(uri: Uri, lowercase: Boolean = false) : this(uri.toString(), lowercase)
 
@@ -938,5 +940,14 @@ class UriParts(uri: String, lowercase: Boolean = false) {
         if (query.isNotEmpty()) result.append("?").append(query)
         if (fragment.isNotEmpty()) result.append("#").append(fragment)
         return result.toString()
+    }
+
+    private fun parseQueryArgs(): Map<String, String> {
+        val result: MutableMap<String, String> = HashMap()
+        query.split('&').forEach {
+            val args = it.split('=')
+            result[args[0]] = if (args.size > 1) args[1] else ""
+        }
+        return result
     }
 }

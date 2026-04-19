@@ -31,7 +31,7 @@ import com.mikepenz.fastadapter.swipe.SimpleSwipeDrawerCallback
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.activities.QueueActivity
 import me.devsaki.hentoid.activities.bundles.SearchActivityBundle
-import me.devsaki.hentoid.core.URL_GITHUB_WIKI_DOWNLOAD
+import me.devsaki.hentoid.core.URL_WIKI_DOWNLOAD
 import me.devsaki.hentoid.core.startBrowserActivity
 import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.databinding.FragmentQueueErrorsBinding
@@ -292,7 +292,7 @@ class ErrorsFragment : Fragment(R.layout.fragment_queue_errors), ItemTouchCallba
                 true
             }
             it.menu.findItem(R.id.help).setOnMenuItemClickListener {
-                context?.startBrowserActivity(URL_GITHUB_WIKI_DOWNLOAD)
+                context?.startBrowserActivity(URL_WIKI_DOWNLOAD)
                 true
             }
         }
@@ -483,15 +483,7 @@ class ErrorsFragment : Fragment(R.layout.fragment_queue_errors), ItemTouchCallba
     private fun onItemClick(item: ContentItem): Boolean {
         if (selectExtension.selections.isEmpty()) {
             val c = item.content
-            if (c != null && !openReader(
-                    requireContext(),
-                    c,
-                    -1,
-                    null,
-                    forceShowGallery = false,
-                    newTask = false
-                )
-            ) toast(R.string.err_no_content)
+            if (c != null && !openReader(requireContext(), c)) toast(R.string.err_no_content)
             return true
         }
         return false
