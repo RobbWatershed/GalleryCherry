@@ -29,21 +29,21 @@ import kotlin.math.log10
 data class ImageFile(
     @Id
     var id: Long = 0,
-    @Uid(4786164809804019689)
+    @Uid(4786164809804019689L)
     var dbOrder: Int = -1,
-    @Uid(8847017078500757224)
+    @Uid(8847017078500757224L)
     var dbUrl: String = "",
-    @Uid(4756936261641767706)
+    @Uid(8840907152959868045L)
     var dbPageUrl: String = "",
     // Name is useless for regular downloads where file name = image order
     // but is essential when importing external books where file names do not follow that logic
     var name: String = "",
-    @Uid(2035492345579360157L)
+    @Uid(4084561164117155976L)
     var dbFileUri: String = "",
     var read: Boolean = false,
     @Index // Added to speed up the "favourite pages" book
     var favourite: Boolean = false,
-    @Uid(946562145146984364L)
+    @Uid(7916378603458666917L)
     var dbIsCover: Boolean = false,
     @Convert(converter = StatusContent.Converter::class, dbType = Integer::class)
     var status: StatusContent = StatusContent.UNHANDLED_ERROR,
