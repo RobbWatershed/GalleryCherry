@@ -820,10 +820,41 @@
         }
       ],
       "relations": []
+    },
+    {
+      "id": "18:5958985825945620406",
+      "lastPropertyId": "4:2563405813291513661",
+      "name": "LandingRecord",
+      "properties": [
+        {
+          "id": "1:9146782306004869116",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:4833180725512004556",
+          "name": "site",
+          "type": 6
+        },
+        {
+          "id": "3:6204006315434715368",
+          "name": "url",
+          "indexId": "30:7343588117458477483",
+          "type": 9,
+          "flags": 2048
+        },
+        {
+          "id": "4:2563405813291513661",
+          "name": "lastAccessDate",
+          "type": 6
+        }
+      ],
+      "relations": []
     }
   ],
-  "lastEntityId": "17:6641557876936961674",
-  "lastIndexId": "29:4569320214470216852",
+  "lastEntityId": "18:5958985825945620406",
+  "lastIndexId": "30:7343588117458477483",
   "lastRelationId": "3:1412032361666532056",
   "lastSequenceId": "0:0",
   "modelVersion": 5,
