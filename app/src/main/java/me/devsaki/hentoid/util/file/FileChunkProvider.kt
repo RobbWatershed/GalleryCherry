@@ -17,7 +17,7 @@ import java.io.FileNotFoundException
 
 
 // Must match what is declared in the Zip content provider in the AndroidManifest.xml file
-const val FILECHUNK_AUTHORITY = "me.violet.chunk"
+const val FILECHUNK_AUTHORITY = "me.violet.cherry.chunk"
 
 // Inspired by https://github.com/googlearchive/play-apk-expansion/tree/master
 // and https://github.com/Babay88/AndroidCodeSamplesB/blob/master/ShareZipped/src/main/java/ru/babay/codesamples/sharezip/ZipFilesProvider.java
