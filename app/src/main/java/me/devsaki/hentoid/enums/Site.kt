@@ -62,6 +62,7 @@ enum class Site(val code: Int, val description: String, val url: String, val ico
     KIUTAKU(25, "Kiutaku", "https://kiutaku.com/", R.drawable.ic_site_kiutaku),
     XINMEI(26, "Xinmeitulu", "https://www.xinmeitulu.com/", R.drawable.ic_site_xinmei),
     V2PH(27, "V2PH", "https://www.v2ph.com/", R.drawable.ic_site_v2ph),
+    EVERIA(28, "Everia.club", "https://everia.club/", R.drawable.ic_site_everia),
 
     MAL(96, "MyAnimeList", "", R.drawable.ic_app),
 

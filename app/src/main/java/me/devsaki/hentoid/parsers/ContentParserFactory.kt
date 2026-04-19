@@ -6,6 +6,7 @@ import me.devsaki.hentoid.parsers.content.BabeTodayContent
 import me.devsaki.hentoid.parsers.content.BestGirlSexyContent
 import me.devsaki.hentoid.parsers.content.ContentParser
 import me.devsaki.hentoid.parsers.content.CosplayTeleContent
+import me.devsaki.hentoid.parsers.content.EveriaContent
 import me.devsaki.hentoid.parsers.content.FapalityContent
 import me.devsaki.hentoid.parsers.content.FoamGirlContent
 import me.devsaki.hentoid.parsers.content.GirlsTopContent
@@ -23,6 +24,7 @@ import me.devsaki.hentoid.parsers.content.XinmeiContent
 import me.devsaki.hentoid.parsers.content.XiutakuContent
 import me.devsaki.hentoid.parsers.content.XnxxContent
 import me.devsaki.hentoid.parsers.images.DummyParser
+import me.devsaki.hentoid.parsers.images.EveriaParser
 import me.devsaki.hentoid.parsers.images.FapalityParser
 import me.devsaki.hentoid.parsers.images.FoamGirlParser
 import me.devsaki.hentoid.parsers.images.ImageListParser
@@ -60,6 +62,7 @@ object ContentParserFactory {
             Site.KIUTAKU -> KiutakuContent::class.java
             Site.XINMEI -> XinmeiContent::class.java
             Site.V2PH -> V2PhContent::class.java
+            Site.EVERIA -> EveriaContent::class.java
             else -> SmartContent::class.java
         }
     }
@@ -81,6 +84,7 @@ object ContentParserFactory {
             Site.KIUTAKU -> KiutakuParser()
             Site.XINMEI -> XinmeiParser()
             Site.V2PH -> V2PhParser()
+            Site.EVERIA -> EveriaParser()
             else -> DummyParser()
         }
     }
