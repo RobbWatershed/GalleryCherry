@@ -49,6 +49,7 @@ import me.devsaki.hentoid.util.download.DownloadSpeedLimiter.setSpeedLimitKbps
 import me.devsaki.hentoid.util.download.RequestOrder
 import me.devsaki.hentoid.util.download.RequestOrder.NetworkError
 import me.devsaki.hentoid.util.download.RequestQueueManager
+import me.devsaki.hentoid.util.download.StorageDownloadManager
 import me.devsaki.hentoid.util.exception.AccountException
 import me.devsaki.hentoid.util.exception.ArchiveException
 import me.devsaki.hentoid.util.exception.CaptchaException

@@ -24,17 +24,6 @@ class MaintenanceDAO {
         ObjectBoxDB.cleanup()
     }
 
-    fun selectDownloadedNHBooksIncompleteUrls(): Set<Long> {
-        val okayIds = ObjectBoxDB.store.boxFor(Content::class.java).query()
-            .equal(Content_.site, Site.NHENTAI.code.toLong())
-            .endsWith(Content_.dbUrl, "/", QueryBuilder.StringOrder.CASE_INSENSITIVE)
-            .safeFindIds().toSet()
-
-        return ObjectBoxDB.store.boxFor(Content::class.java).query()
-            .equal(Content_.site, Site.NHENTAI.code.toLong())
-            .safeFindIds().toSet().minus(okayIds)
-    }
-
     fun selectChaptersEmptyName(): List<Chapter> {
         return ObjectBoxDB.store.boxFor(Chapter::class.java).query()
             .equal(Chapter_.name, "", QueryBuilder.StringOrder.CASE_INSENSITIVE).safeFind()

@@ -33,7 +33,7 @@ data class ImageFile(
     var dbOrder: Int = -1,
     @Uid(8847017078500757224)
     var dbUrl: String = "",
-    @Uid(8840907152959868045)
+    @Uid(4756936261641767706)
     var dbPageUrl: String = "",
     // Name is useless for regular downloads where file name = image order
     // but is essential when importing external books where file names do not follow that logic
@@ -43,7 +43,7 @@ data class ImageFile(
     var read: Boolean = false,
     @Index // Added to speed up the "favourite pages" book
     var favourite: Boolean = false,
-    @Uid(7916378603458666917)
+    @Uid(946562145146984364L)
     var dbIsCover: Boolean = false,
     @Convert(converter = StatusContent.Converter::class, dbType = Integer::class)
     var status: StatusContent = StatusContent.UNHANDLED_ERROR,
