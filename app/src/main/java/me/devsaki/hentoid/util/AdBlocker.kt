@@ -133,14 +133,15 @@ class AdBlocker(val site: Site) {
      * @return True if the given content is blacklisted according to current filters; false if not
      */
     private fun isJsContentBlacklisted(jsContent: String, url: String): Boolean {
+        // Ignore HTML content (usually files without JS extensions that got caught in the filter)
+        if (jsContent.startsWith("<html") || jsContent.startsWith("<!doctype html>")) return false
+
         // First search into the local list...
         synchronized(localJsContentBlacklist) {
             for (s in localJsContentBlacklist) {
                 if (jsContent.contains(s)) {
-                    if (BuildConfig.DEBUG) Timber.v(
-                        "Blacklisted JS content blocked (local) : %s",
-                        jsContent
-                    )
+                    if (BuildConfig.DEBUG)
+                        Timber.v("Blacklisted JS content blocked (local) [$s] : $jsContent")
                     jsBlacklistCache.add(url)
                     return true
                 }
@@ -149,10 +150,8 @@ class AdBlocker(val site: Site) {
         // ...then into the universal list
         for (s in universalJsContentBlacklist) {
             if (jsContent.contains(s)) {
-                if (BuildConfig.DEBUG) Timber.v(
-                    "Blacklisted JS content blocked (global) : %s",
-                    jsContent
-                )
+                if (BuildConfig.DEBUG)
+                    Timber.v("Blacklisted JS content blocked (global) [$s] : $jsContent")
                 jsBlacklistCache.add(url)
                 return true
             }
@@ -238,7 +237,7 @@ class AdBlocker(val site: Site) {
 
         // 4- If a grey list has been defined, block them if they _contain_ keywords
         if (Looper.getMainLooper().thread !== Thread.currentThread()) { // No network call on UI thread
-            Timber.d(">> examining grey file : %s", url)
+            Timber.d(">> examining grey file : $url")
             try {
                 val requestHeadersList = webkitRequestHeadersToOkHttpHeaders(headers, url)
                 getOnlineResourceFast(
@@ -253,13 +252,13 @@ class AdBlocker(val site: Site) {
                         return false // Better safe than sorry
                     }
                     val body = response.body
-                    Timber.d(">> grey file downloaded : %s", url)
+                    Timber.d(">> grey file downloaded : $url")
                     // Handle "grey files" by analyzing its contents
                     val jsBody = body.string().lowercase(Locale.getDefault())
                     if (isJsContentBlacklisted(jsBody, cleanUrl)) return true
                 }
             } catch (e: IOException) {
-                Timber.d(e, ">> I/O issue while retrieving %s", url)
+                Timber.d(e, ">> I/O issue while retrieving $url")
             } catch (iae: IllegalArgumentException) {
                 Timber.e(iae)
                 return true // Avoid feeding malformed URLs to Chromium on older Androids
