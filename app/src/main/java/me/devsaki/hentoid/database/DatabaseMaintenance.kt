@@ -24,7 +24,7 @@ import me.devsaki.hentoid.workers.data.UpdateJsonData
 import timber.log.Timber
 
 // TODO update when adding tasks to "oneShot" functions
-const val DB_UPDATE_VERSION = 3
+const val DB_UPDATE_VERSION = 4
 
 @Suppress("UNUSED_PARAMETER")
 object DatabaseMaintenance {
