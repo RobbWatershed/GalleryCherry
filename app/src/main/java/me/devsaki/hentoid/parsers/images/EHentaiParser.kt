@@ -111,7 +111,7 @@ class EHentaiParser : ImageListParser {
                 if (getAuthState(site.url) != EhAuthState.LOGGED)
                     throw EmptyResultException("You need to be logged in to download full-size images.")
                 // Use full image URL, if available
-                val fullImgUrl = imageMetadata.fullUrlRelative ?: ""
+                val fullImgUrl = imageMetadata.getFullUrlRel()
                 if (fullImgUrl.isNotEmpty()) imageUrl = fixUrl(fullImgUrl, site.url)
             }
             return Pair(imageUrl, null)
@@ -269,8 +269,9 @@ class EHentaiParser : ImageListParser {
             val result: MutableList<ImageFile> = ArrayList()
 
             // B.1- Open the MPV and parse gallery metadata
-            val mpvInfo = parseMpvPage(mpvUrl, headers, useMobileAgent, useHentoidAgent, useWebviewAgent)
-                ?: throw EmptyResultException("No exploitable data has been found on the multiple page viewer")
+            val mpvInfo =
+                parseMpvPage(mpvUrl, headers, useMobileAgent, useHentoidAgent, useWebviewAgent)
+                    ?: throw EmptyResultException("No exploitable data has been found on the multiple page viewer")
             val pageCount = mpvInfo.pagecount.coerceAtMost(mpvInfo.images.size)
 
             val rangeIndexes = if (range.isBlank()) IntRange(1, pageCount)
@@ -309,7 +310,7 @@ class EHentaiParser : ImageListParser {
             content: Content,
             galleryDoc: Document,
             headers: List<Pair<String, String>>,
-            useMobileAgent : Boolean,
+            useMobileAgent: Boolean,
             useHentoidAgent: Boolean,
             useWebviewAgent: Boolean,
             progress: ParseProgress
@@ -379,8 +380,7 @@ class EHentaiParser : ImageListParser {
         }
 
         private fun getFullImageUrl(doc: Document): String {
-            val element = doc.selectFirst("a[href*=fullimg]")
-            return element?.attr("href") ?: ""
+            return doc.selectFirst("a[href*=fullimg]")?.attr("href") ?: ""
         }
 
         private fun getBackupPageUrl(doc: Document, queryUrl: String): String? {
@@ -415,8 +415,9 @@ class EHentaiParser : ImageListParser {
             useWebviewAgent: Boolean
         ): MpvInfo? {
             var result: MpvInfo? = null
-            val doc = getOnlineDocument(url, headers, useMobileAgent, useHentoidAgent, useWebviewAgent)
-                ?: throw ParseException("Unreachable MPV")
+            val doc =
+                getOnlineDocument(url, headers, useMobileAgent, useHentoidAgent, useWebviewAgent)
+                    ?: throw ParseException("Unreachable MPV")
 
             val scripts: List<Element> = doc.select("script")
             for (script in scripts) {
