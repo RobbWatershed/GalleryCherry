@@ -8,6 +8,7 @@ class MultpornActivity : BaseBrowserActivity() {
         private const val DOMAIN_FILTER = "multporn.net"
         private val GALLERY_FILTER = arrayOf(
             "multporn.net/node/[0-9]+$",
+            "multporn.net/mp[0-9]+$",
             "multporn.net/(hentai_manga|authors|hentai|comics|pictures|rule_6|gay_porn_comics|GIF)/[\\w%_\\-]+$",
             "multporn.net/node/[0-9]+$",
             "multporn.net/(hentai_manga|authors|hentai|comics|pictures|rule_6|gay_porn_comics|GIF)/[\\w%_\\-]+/[\\w%_\\-]+$"
