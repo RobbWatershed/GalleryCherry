@@ -1948,16 +1948,13 @@ suspend fun mergeContents(
 
         // TODO destination is a PDF when all source contents are PDFs (requires working on a better layout - see #1322)
 
-        val containingFolder =
-            firstContent.getContainingFolder(context) ?: throw ContentNotProcessedException(
+        val parentFolder =
+            firstContent.getParentFolder(context) ?: throw ContentNotProcessedException(
                 mergedContent,
                 "Could not detect containing folder"
             )
-        if (!dlManager.createNewLocation(context, containingFolder, mergedContent))
-            throw ContentNotProcessedException(
-                mergedContent,
-                "Could not create target directory"
-            )
+        if (!dlManager.createNewLocation(context, parentFolder, mergedContent))
+            throw ContentNotProcessedException(mergedContent, "Could not create target directory")
 
         // Ignore the new folder as it is being merged
         if (StatusContent.EXTERNAL == mergedContent.status) {
@@ -2253,8 +2250,16 @@ fun Content.getStorageRoot(): Uri? {
 
 fun Content.getContainingFolder(context: Context): Uri? {
     if (storageUri.isEmpty()) return null
+
+    // Regular books (files in a folder)
     if (!isArchive && !isPdf) return storageUri.toUri()
 
+    // Archives and PDFs
+    return this.getParentFolder(context)
+}
+
+fun Content.getParentFolder(context: Context): Uri? {
+    if (storageUri.isEmpty()) return null
     val storageRoot = getStorageRoot() ?: return null
     return getParent(context, storageRoot, storageUri.toUri())
 }
