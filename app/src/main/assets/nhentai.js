@@ -59,3 +59,13 @@ function markBook(markTarget) {
         }
     }
 }
+
+
+window.origAppendChild = Element.prototype.appendChild;
+Element.prototype.appendChild = function() {
+    if (typeof (arguments[0].src) != 'undefined' && arguments[0].src.includes("cdn.tsyndicate.com")) {
+        console.info(arguments[0].src + " : nope!");
+    } else {
+        return window.origAppendChild.apply(this, arguments);
+    }
+};

@@ -32,7 +32,7 @@ class NhentaiActivity : BaseBrowserActivity() {
             "//$DOMAIN_FILTER/search/\\?",
             "//$DOMAIN_FILTER/(character|artist|parody|tag|group)/"
         )
-        private val BLOCKED_CONTENT = arrayOf("popunder")
+        private val BLOCKED_CONTENT = arrayOf("_useNativeAd")
         private val REMOVABLE_ELEMENTS = arrayOf("section.advertisement", ".ad-wrapper")
         private val IGNORED = arrayOf("https://nhentai.net/api/")
     }
@@ -51,7 +51,7 @@ class NhentaiActivity : BaseBrowserActivity() {
         }
         client.addRemovableElements(*REMOVABLE_ELEMENTS)
         client.addIgnored(*IGNORED)
-        client.adBlocker.addToUrlBlacklist(*BLOCKED_CONTENT)
+        client.adBlocker.addJsContentBlacklist(*BLOCKED_CONTENT)
         client.adBlocker.addToJsUrlWhitelist(DOMAIN_FILTER)
 
         // Init fetch handler here for convenience
