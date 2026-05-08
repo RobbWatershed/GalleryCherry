@@ -160,7 +160,7 @@ open class CustomWebViewClient : WebViewClient {
     private val jsStartupScripts: MutableList<String> by lazy { ArrayList() }
     private val jsReplacements: MutableMap<String, String> by lazy { HashMap() }
 
-    // TODO doc
+    // URLs _not_ to be analyzed / parsed by the augmented browser
     private val ignoredUrls: MutableList<String> by lazy { ArrayList() }
 
     // Communication between XHR intercept and POST rewrite
@@ -351,6 +351,10 @@ open class CustomWebViewClient : WebViewClient {
         jsReplacements[source] = target
     }
 
+    fun addIgnored(vararg urls: String) {
+        ignoredUrls.addAll(urls)
+    }
+
     fun isIgnored(url: String): Boolean {
         return ignoredUrls.any { url.contains(it, true) }
     }
@@ -526,7 +530,7 @@ open class CustomWebViewClient : WebViewClient {
      * - After [shouldInterceptRequest] when the page is cached (Nth call; N>1)
      */
     override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
-        if (BuildConfig.DEBUG) Timber.v("WebView : page started %s", url)
+        if (BuildConfig.DEBUG) Timber.v("WebView : page started $url")
         isPageLoading.set(true)
         synchronized(quickDownloadFlags) {
             quickDownloadFlags.clear()
@@ -538,7 +542,7 @@ open class CustomWebViewClient : WebViewClient {
     }
 
     override fun onPageFinished(view: WebView?, url: String) {
-        if (BuildConfig.DEBUG) Timber.v("WebView : page finished %s", url)
+        if (BuildConfig.DEBUG) Timber.v("WebView : page finished $url")
         isPageLoading.set(false)
         isHtmlLoaded.set(false) // Reset for the next page
         activity?.onPageFinished(url, isResultsPage(url), isGalleryPage(url))
@@ -628,13 +632,13 @@ open class CustomWebViewClient : WebViewClient {
                 analyzeForDownload = true,
                 quickDownload = quickDownloadFlags.contains(url)
             )
-            else if (BuildConfig.DEBUG) Timber.v("WebView : not gallery %s", url)
+            else if (BuildConfig.DEBUG) Timber.v("WebView : not gallery $url")
 
             // If we're here to remove removable elements or mark downloaded books, we only do it
             // on HTML resources (URLs without extension) from the source's main domain
             if ((removableElements.isNotEmpty() || jsContentBlacklist.isNotEmpty()
                         || isMarkDownloaded() || isMarkMerged() || isMarkQueued() || isMarkBlockedTags()
-                        || activity != null && activity.customCss.isNotEmpty())
+                        || (activity != null && activity.customCss.isNotEmpty()))
                 && (getExtensionFromUri(url).isEmpty()
                         || getExtensionFromUri(url).equals("html", ignoreCase = true))
                 && !isIgnored(url)

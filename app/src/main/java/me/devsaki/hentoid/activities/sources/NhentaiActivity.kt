@@ -34,6 +34,7 @@ class NhentaiActivity : BaseBrowserActivity() {
         )
         private val BLOCKED_CONTENT = arrayOf("popunder")
         private val REMOVABLE_ELEMENTS = arrayOf("section.advertisement", ".ad-wrapper")
+        private val IGNORED = arrayOf("https://nhentai.net/api/")
     }
 
     override fun getStartSite(): Site {
@@ -49,6 +50,7 @@ class NhentaiActivity : BaseBrowserActivity() {
             rewriteResultsUrl(resultsUri, page)
         }
         client.addRemovableElements(*REMOVABLE_ELEMENTS)
+        client.addIgnored(*IGNORED)
         client.adBlocker.addToUrlBlacklist(*BLOCKED_CONTENT)
         client.adBlocker.addToJsUrlWhitelist(DOMAIN_FILTER)
 
@@ -64,7 +66,7 @@ class NhentaiActivity : BaseBrowserActivity() {
     private fun rewriteResultsUrl(resultsUri: Uri, page: Int): String {
         val builder = resultsUri.buildUpon()
         val params = parseParameters(resultsUri).toMutableMap()
-        params["page"] = page.toString() + ""
+        params["page"] = page.toString()
         builder.clearQuery()
         params.forEach { (key, value) ->
             builder.appendQueryParameter(key, value)
