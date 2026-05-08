@@ -68,10 +68,7 @@ class AdBlocker(val site: Site) {
         synchronized(localUrlBlacklist) {
             for (s in localUrlBlacklist) {
                 if (url.contains(s)) {
-                    if (BuildConfig.DEBUG) Timber.v(
-                        "Blacklisted URL blocked (local) : %s",
-                        url
-                    )
+                    if (BuildConfig.DEBUG) Timber.v("Blacklisted URL blocked (local) : $url")
                     return true
                 }
             }
@@ -79,7 +76,7 @@ class AdBlocker(val site: Site) {
         // ...then into the universal list
         for (s in universalUrlBlacklist) {
             if (url.contains(s)) {
-                if (BuildConfig.DEBUG) Timber.v("Blacklisted URL blocked (global) : %s", url)
+                if (BuildConfig.DEBUG) Timber.v("Blacklisted URL blocked (global) : $url")
                 return true
             }
         }
@@ -97,7 +94,7 @@ class AdBlocker(val site: Site) {
         synchronized(localUrlWhitelist) {
             for (s in localUrlWhitelist) {
                 if (url.contains(s)) {
-                    if (BuildConfig.DEBUG) Timber.v("Whitelisted URL (local) : %s", url)
+                    if (BuildConfig.DEBUG) Timber.v("Whitelisted URL (local) : $url")
                     return true
                 }
             }
@@ -105,7 +102,7 @@ class AdBlocker(val site: Site) {
         // ...then into the global simple list...
         for (s in universalUrlWhitelist) {
             if (url.contains(s)) {
-                if (BuildConfig.DEBUG) Timber.v("Whitelisted URL (global) : %s", url)
+                if (BuildConfig.DEBUG) Timber.v("Whitelisted URL (global) : $url")
                 return true
             }
         }
@@ -114,10 +111,7 @@ class AdBlocker(val site: Site) {
             for (p in jsUrlPatternWhitelist) {
                 val matcher = p.matcher(url)
                 if (matcher.find()) {
-                    if (BuildConfig.DEBUG) Timber.v(
-                        "Whitelisted URL (pattern) : %s",
-                        url
-                    )
+                    if (BuildConfig.DEBUG) Timber.v("Whitelisted URL (pattern) : $url")
                     return true
                 }
             }
@@ -141,7 +135,7 @@ class AdBlocker(val site: Site) {
             for (s in localJsContentBlacklist) {
                 if (jsContent.contains(s)) {
                     if (BuildConfig.DEBUG)
-                        Timber.v("Blacklisted JS content blocked (local) [$s] : $jsContent")
+                        Timber.v("Blacklisted JS content blocked (local) [$s] @$url : $jsContent")
                     jsBlacklistCache.add(url)
                     return true
                 }
@@ -151,7 +145,7 @@ class AdBlocker(val site: Site) {
         for (s in universalJsContentBlacklist) {
             if (jsContent.contains(s)) {
                 if (BuildConfig.DEBUG)
-                    Timber.v("Blacklisted JS content blocked (global) [$s] : $jsContent")
+                    Timber.v("Blacklisted JS content blocked (global) [$s] @$url : $jsContent")
                 jsBlacklistCache.add(url)
                 return true
             }
@@ -191,8 +185,8 @@ class AdBlocker(val site: Site) {
      *
      * @param sequence Sequence to add to the Javascript content blacklist
      */
-    fun addJsContentBlacklist(sequence: String) {
-        localJsContentBlacklist.add(sequence.lowercase(Locale.getDefault()))
+    fun addJsContentBlacklist(vararg sequence: String) {
+        localJsContentBlacklist.addAll(sequence.map { it.lowercase(Locale.getDefault()) })
     }
 
     fun setActive(value: Boolean) {
@@ -218,7 +212,7 @@ class AdBlocker(val site: Site) {
         if (isUrlBlacklisted(cleanUrl)) return true
         if (jsBlacklistCache.contains(cleanUrl)) {
             if (BuildConfig.DEBUG)
-                Timber.v("Blacklisted file BLOCKED (jsBlacklistCache) : %s", cleanUrl)
+                Timber.v("Blacklisted file BLOCKED (jsBlacklistCache) : $cleanUrl")
             return true
         }
 
@@ -248,7 +242,7 @@ class AdBlocker(val site: Site) {
                     site.useWebviewAgent
                 ).use { response ->
                     if (response.code >= 400) {
-                        Timber.d(">> grey file KO (%d) : %s", response.code, url)
+                        Timber.d(">> grey file KO (${response.code}) : $url")
                         return false // Better safe than sorry
                     }
                     val body = response.body
@@ -265,7 +259,7 @@ class AdBlocker(val site: Site) {
             }
             // Don't whitelist the site root as it will auto-whitelist every file hosted there
             if (cleanUrl != site.url.lowercase(Locale.getDefault())) addToJsUrlWhitelist(cleanUrl)
-            Timber.d(">> grey file %s ALLOWED", url)
+            Timber.d(">> grey file $url ALLOWED")
         }
 
         // Accept non-blocked (=grey) JS files
