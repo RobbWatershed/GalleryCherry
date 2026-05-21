@@ -21,16 +21,29 @@
 })();
 
 window.addEventListener("locationchange", function () {
-    setTimeout(function () {
-        markBooks();
-    }, 500);
+    scheduleAll();
 });
 
 document.addEventListener("DOMContentLoaded", (event) => {
+    scheduleAll();
+});
+
+function scheduleAll() {
+    scheduleMark(500);
+    scheduleMark(1000);
+    scheduleMark(1500);
+    scheduleMark(2000);
+    scheduleMark(2500);
+    scheduleMark(3000);
+    scheduleMark(3500);
+    scheduleMark(4000);
+}
+
+function scheduleMark(delay) {
     setTimeout(function () {
         markBooks();
-    }, 500);
-});
+    }, delay);
+}
 
 function markBooks() {
     console.info("mark books START");
