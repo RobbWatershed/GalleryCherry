@@ -116,7 +116,11 @@ class NhentaiActivity : BaseBrowserActivity() {
         fun isMarkable(bookId: String): Int {
             val downloadedBooks: List<String> = allSiteUrls
             val mergedBooks: List<String> = allMergedBooksUrls
-            return if (downloadedBooks.contains(bookId)) 1 else if (mergedBooks.contains(bookId)) 2 else 0
+            val queuedBooks: List<String> = allQueuedBooksUrls
+            return if (downloadedBooks.contains(bookId)) 1
+            else if (mergedBooks.contains(bookId)) 2
+            else if (queuedBooks.contains(bookId)) 3
+            else 0
         }
     }
 }

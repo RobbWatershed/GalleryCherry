@@ -63,12 +63,16 @@ function markBook(markTarget) {
         markTarget.classList.add('watermarked');
     } else if (result == 2) {
         markTarget.classList.add("watermarked-merged");
+    } else if (result == 3) {
+        markTarget.classList.add("watermarked-queued");
     } else {
         var classList = markTarget.classList;
         if (classList.contains("watermarked")) {
             markTarget.classList.remove("watermarked");
         } else if (classList.contains("watermarked-merged")) {
             markTarget.classList.remove("watermarked-merged");
+        } else if (classList.contains("watermarked-queued")) {
+            markTarget.classList.remove("watermarked-queued");
         }
     }
 }
