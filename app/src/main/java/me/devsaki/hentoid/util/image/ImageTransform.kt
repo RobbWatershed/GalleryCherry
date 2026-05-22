@@ -166,7 +166,7 @@ private fun resizePlainRatio(
     ratio: Float,
     allowUpscale: Boolean = false
 ): Bitmap {
-    val sourceBmp = BitmapFactory.decodeByteArray(source, 0, source.size)
+    val sourceBmp = decodeBitmap(source)
     return if (ratio > 0.99 && ratio < 1.01) sourceBmp // Don't do anything
     else if (ratio > 1.01 && !allowUpscale) sourceBmp // Prevent upscaling
     else {
