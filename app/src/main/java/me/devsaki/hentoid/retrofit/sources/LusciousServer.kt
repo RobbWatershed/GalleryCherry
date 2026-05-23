@@ -32,7 +32,8 @@ object LusciousServer {
     interface Api {
         @GET("graphql/nobatch/")
         fun getBookMetadata(
-            @QueryMap options: Map<String, String>
+            @QueryMap options: Map<String, String>,
+            @Header("cookie") cookies: String
         ): Call<LusciousBookMetadata>
 
         @GET("graphql/nobatch/")
