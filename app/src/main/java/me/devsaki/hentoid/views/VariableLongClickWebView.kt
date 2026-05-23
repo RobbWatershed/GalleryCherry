@@ -26,11 +26,11 @@ open class VariableLongClickWebView : WebView {
     private lateinit var longTapDebouncer: Debouncer<Point>
 
     constructor(context: Context) : super(context) {
-        init(longClickThreshold.toLong(), context as AppCompatActivity)
+        init(longClickThreshold, context as AppCompatActivity)
     }
 
     constructor(context: Context, attrs: AttributeSet?) : super(context, attrs) {
-        init(longClickThreshold.toLong(), context as AppCompatActivity)
+        init(longClickThreshold, context as AppCompatActivity)
     }
 
     constructor(context: Context, attrs: AttributeSet?, defStyle: Int) : super(
@@ -38,13 +38,13 @@ open class VariableLongClickWebView : WebView {
         attrs,
         defStyle
     ) {
-        init(longClickThreshold.toLong(), context as AppCompatActivity)
+        init(longClickThreshold, context as AppCompatActivity)
     }
 
-    private fun init(longTapDebouncerThreshold: Long, activity: AppCompatActivity) {
+    private fun init(longTapDebouncerThreshold: Int, activity: AppCompatActivity) {
         longTapDebouncer =
-            Debouncer(activity.lifecycleScope, longTapDebouncerThreshold)
-            { point: Point -> onLongClickListener?.invoke(point.x, point.y) }
+            Debouncer(activity.lifecycleScope, longTapDebouncerThreshold.toLong())
+            { onLongClickListener?.invoke(it.x, it.y) }
     }
 
     fun setOnLongTapListener(onLongClickListener: BiConsumer<Int, Int>?) {
@@ -53,7 +53,7 @@ open class VariableLongClickWebView : WebView {
 
     fun setLongClickThreshold(threshold: Int) {
         longClickThreshold = threshold
-        init(threshold.toLong(), context as AppCompatActivity)
+        init(threshold, context as AppCompatActivity)
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
