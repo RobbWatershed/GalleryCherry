@@ -734,20 +734,25 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         val result = webView.hitTestResult
         // Plain link
         val url: String? =
-            if (result.type == HitTestResult.SRC_ANCHOR_TYPE && result.extra != null) {
-                result.extra
-            } else if (result.type == HitTestResult.SRC_IMAGE_ANCHOR_TYPE) {
-                val handler = Handler(mainLooper)
-                val message = handler.obtainMessage()
-                webView.requestFocusNodeHref(message)
-                message.data.getString("url")
-            } else {
-                null
+            when (result.type) {
+                HitTestResult.SRC_ANCHOR_TYPE if result.extra != null -> {
+                    result.extra
+                }
+
+                HitTestResult.SRC_IMAGE_ANCHOR_TYPE -> {
+                    val handler = Handler(mainLooper)
+                    val message = handler.obtainMessage()
+                    webView.requestFocusNodeHref(message)
+                    message.data.getString("url")
+                }
+
+                else -> {
+                    null
+                }
             }
         if (!url.isNullOrEmpty() && webClient.isGalleryPage(url)) {
             binding?.apply {
-                setMargins(
-                    quickDlFeedback,
+                quickDlFeedback.setMargins(
                     x - quickDlFeedback.width / 2,
                     y - quickDlFeedback.height / 2 + topBar.bottom,
                     0,
@@ -1312,18 +1317,16 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
     ) {
         Timber.i("Adding to queue  ${content.url} ${content.galleryUrl}")
         binding?.apply {
-            val coords = getCenter(quickDlFeedback)
+            val coords = quickDlFeedback.getCenter()
             if (coords != null && View.VISIBLE == quickDlFeedback.visibility) {
-                setMargins(
-                    animatedCheck,
+                animatedCheck.setMargins(
                     coords.x - animatedCheck.width / 2,
                     coords.y - animatedCheck.height / 2,
                     0,
                     0
                 )
             } else {
-                setMargins(
-                    animatedCheck,
+                animatedCheck.setMargins(
                     webView.width / 2 - animatedCheck.width / 2,
                     webView.height / 2 - animatedCheck.height / 2, 0, 0
                 )
@@ -1502,7 +1505,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         status: ContentStatus,
         quickDownload: Boolean
     ) {
-        binding?.quickDlFeedback?.visibility = View.INVISIBLE
+        binding?.quickDlFeedback?.visibility = View.GONE
         when (status) {
             ContentStatus.UNDOWNLOADABLE -> onResultFailed()
             ContentStatus.UNKNOWN -> {
@@ -1946,9 +1949,9 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
             webClient.setProxyEnabled(Settings.proxy.isNotEmpty())
             reload = true
         } else if (Settings.Key.BROWSER_QUICK_DL == key) {
-            if (Settings.isBrowserQuickDl) webView.setOnLongTapListener { x: Int, y: Int ->
-                onLongTap(x, y)
-            } else webView.setOnLongTapListener(null)
+            if (Settings.isBrowserQuickDl)
+                webView.setOnLongTapListener { x, y -> onLongTap(x, y) }
+            else webView.setOnLongTapListener(null)
         } else if (Settings.Key.BROWSER_QUICK_DL_THRESHOLD == key) {
             webView.setLongClickThreshold(Settings.browserQuickDlThreshold)
         } else if (key.startsWith(Settings.Key.WEB_ADBLOCKER)) {

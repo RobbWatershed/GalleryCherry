@@ -511,28 +511,25 @@ fun removeLabels(slider: Slider) {
 /**
  * Set the given view's margins, in pixels
  *
- * @param view   View to update the margins for
  * @param left   Left margin (pixels)
  * @param top    Top margin (pixels)
  * @param right  Right margin (pixels)
  * @param bottom Bottom margin (pixels)
  */
-fun setMargins(view: View, left: Int, top: Int, right: Int, bottom: Int) {
-    if (view.layoutParams is MarginLayoutParams) {
-        val p = view.layoutParams as MarginLayoutParams
+fun View.setMargins(left: Int, top: Int, right: Int, bottom: Int) {
+    if (this.layoutParams is MarginLayoutParams) {
+        val p = this.layoutParams as MarginLayoutParams
         p.setMargins(left, top, right, bottom)
     }
 }
 
 /**
  * Get the given view's center, as relative coordinates taking its margin into account
- *
- * @param view  View to get the center from
  */
-fun getCenter(view: View): Point? {
-    if (view.layoutParams is MarginLayoutParams) {
-        val p = view.layoutParams as MarginLayoutParams
-        return Point(p.leftMargin + view.width / 2, p.topMargin + view.height / 2)
+fun View.getCenter(): Point? {
+    if (this.layoutParams is MarginLayoutParams) {
+        val p = this.layoutParams as MarginLayoutParams
+        return Point(p.leftMargin + this.width / 2, p.topMargin + this.height / 2)
     }
     return null
 }
