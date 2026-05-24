@@ -402,41 +402,6 @@ private fun Context.extractArchiveEntries(
     }
 }
 
-// ================= ZIP FILE CREATION
-/**
- * Add the given file to the given ZipOutputStream
- *
- * @param file    File to be added
- * @param stream  ZipOutputStream to write to
- * @param buffer  Buffer to be used
- * @throws IOException If something horrible happens during I/O
- */
-@Throws(IOException::class)
-private fun Context.addFile(
-    file: DocumentFile,
-    stream: ZipOutputStream,
-    buffer: ByteArray
-) {
-    Timber.d("Adding: ${file.uri}")
-    getInputStream(this, file).use { fi ->
-        BufferedInputStream(fi, BUFFER).use { origin ->
-            val zipEntry = ZipEntry(file.name)
-            zipEntry.method = ZipEntry.STORED
-            zipEntry.size = file.length()
-            zipEntry.crc = getInputStream(this, file).use {
-                getChecksumValue(CRC32(), it)
-            }
-            stream.putNextEntry(zipEntry)
-            var count: Int
-            while (origin.read(buffer, 0, BUFFER).also { count = it } != -1) {
-                stream.write(buffer, 0, count)
-            }
-            stream.flush()
-            stream.closeEntry()
-        }
-    }
-}
-
 /**
  * Describes an entry inside an archive
  *
