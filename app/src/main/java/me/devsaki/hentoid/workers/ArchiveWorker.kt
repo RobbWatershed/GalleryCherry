@@ -171,7 +171,10 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
                 // PDF is not a storage method => no mapping to perform
             } else { // Archive
                 // TODO optimize by working on a single OutputStream instead of juggling with the Uri
-                val archiveStreamer = ArchiveStreamer(context, destFileUri, false) {
+                val archiveStreamer = ArchiveStreamer(context, destFileUri,
+                    append = false,
+                    removeArchivedFiles = false
+                ) {
                     globalProgress.setProgress(content.id.toString(), it)
                     launchProgressNotification()
                 }
