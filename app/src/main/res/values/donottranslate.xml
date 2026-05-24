@@ -565,6 +565,7 @@
     <string name="pref_folder_trunc_default" translatable="false">100</string>
     <string name="pref_memory_alert_default" translatable="false">110</string>
     <string name="pref_external_library_delete_default" translatable="false">false</string>
+    <string name="pref_external_library_auot_import_default" translatable="false">true</string>
     <!-- Strings: Settings: Browser -->
     <string name="pref_browser_resume_last_default" translatable="false">false</string>
     <string name="pref_browser_dl_action_default" translatable="false">0</string>

@@ -416,7 +416,7 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
     }
 
     private fun considerRefreshExtLib() {
-        if (Settings.externalLibraryUri.isEmpty()) return
+        if (Settings.externalLibraryUri.isEmpty() || !Settings.isAutoImportExternal) return
 
         // Wait at least X minutes between auto-refreshes to limit resource consumption
         val now = Instant.now().toEpochMilli()

@@ -218,6 +218,14 @@
             android:title="@string/pref_cat_external"
             app:iconSpaceReserved="false">
             <CheckBoxPreference
+                android:defaultValue="@string/pref_external_library_auot_import_default"
+                android:enabled="true"
+                android:key="import_external_library_auto"
+                android:summaryOff="@string/off"
+                android:summaryOn="@string/on"
+                android:title="@string/import_external_library_auto_title"
+                app:iconSpaceReserved="false" />
+            <CheckBoxPreference
                 android:defaultValue="@string/pref_external_library_delete_default"
                 android:enabled="false"
                 android:key="pref_external_library_delete"

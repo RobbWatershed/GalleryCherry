@@ -141,6 +141,7 @@ object Settings {
         "import_external_name_pattern",
         Default.IMPORT_NAME_PATTERN
     )
+    var isAutoImportExternal: Boolean by BoolSetting("import_external_library_auto", true)
 
     // LIBRARY
     var libraryDisplay: Int by IntSettingStr(Key.LIBRARY_DISPLAY, Default.LIBRARY_DISPLAY)
