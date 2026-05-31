@@ -87,6 +87,7 @@ import me.devsaki.hentoid.util.notification.BaseNotification
 import me.devsaki.hentoid.util.notification.NotificationManager
 import me.devsaki.hentoid.util.parseDownloadParams
 import me.devsaki.hentoid.util.pause
+import me.devsaki.hentoid.util.persistJson
 import me.devsaki.hentoid.util.removeContent
 import me.devsaki.hentoid.util.serializeToJson
 import me.devsaki.hentoid.util.updateQueueJson
@@ -1060,6 +1061,8 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
 
             // Compute perceptual hash for the cover picture
             computeAndSaveCoverHash(applicationContext, content, dao)
+
+            persistJson(applicationContext, content)
 
             // Delete the duplicate book that was meant to be replaced, if any
             if (!content.contentToReplace.isNull) {
