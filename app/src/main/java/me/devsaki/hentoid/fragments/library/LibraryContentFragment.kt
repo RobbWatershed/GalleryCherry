@@ -1572,17 +1572,17 @@ class LibraryContentFragment : Fragment(), ChangeGroupDialogFragment.Parent,
                 .count()
             val selectedStreamedCount = contentList.map { it.downloadMode }
                 .count { it == DownloadMode.STREAM }
-            val selectedNonArchivePdfExternalCount =
-                contentList.count { it.status == StatusContent.EXTERNAL && !it.isArchive && !it.isPdf }
-            val selectedArchivePdfExternalCount =
-                contentList.count { it.status == StatusContent.EXTERNAL && (it.isArchive || it.isPdf) }
+            val selectedExternalCount =
+                contentList.count { it.status == StatusContent.EXTERNAL }
+            val selectedArchivePdfCount =
+                contentList.count { it.isArchive || it.isPdf }
             activity.get()?.updateSelectionToolbar(
                 selectedCount,
                 selectedProcessedCount,
                 selectedLocalCount,
                 selectedStreamedCount,
-                selectedNonArchivePdfExternalCount,
-                selectedArchivePdfExternalCount
+                selectedExternalCount,
+                selectedArchivePdfCount
             )
             activity.get()?.getSelectionToolbar()?.visibility = View.VISIBLE
         }

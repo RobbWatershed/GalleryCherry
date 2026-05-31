@@ -1075,16 +1075,14 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
         selectedProcessedCount: Int,
         selectedLocalCount: Int,
         selectedStreamedCount: Int,
-        selectedNonArchivePdfExternalCount: Int,
-        selectedArchivePdfExternalCount: Int,
+        selectedExternalCount: Int,
+        selectedArchivePdfCount: Int,
         selectedRoots: Int = 0,
         insideExtLib: Boolean = false
     ) {
         val isMultipleSelection = selectedTotalCount > 1
         val hasProcessed = selectedProcessedCount > 0
         val selectedDownloadedCount = selectedLocalCount - selectedStreamedCount
-        val selectedExternalCount =
-            selectedNonArchivePdfExternalCount + selectedArchivePdfExternalCount
         binding?.selectionToolbar?.title = resources.getQuantityString(
             R.plurals.items_selected,
             selectedTotalCount,
@@ -1158,7 +1156,7 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
             splitMenu?.isVisible =
                 !hasProcessed && !isMultipleSelection && (1 == selectedLocalCount || 1 == selectedExternalCount)
             transformMenu?.isVisible =
-                !hasProcessed && 0 == selectedStreamedCount && 0 == selectedArchivePdfExternalCount
+                !hasProcessed && 0 == selectedStreamedCount && 0 == selectedArchivePdfCount
             exportMetaMenu?.isVisible = false
         }
     }
