@@ -26,11 +26,11 @@ import com.shakster.gifkt.GifEncoder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import me.devsaki.hentoid.core.CHARSET_LATIN_1
-import me.devsaki.hentoid.customssiv.util.MIME_IMAGE_AVIF
-import me.devsaki.hentoid.customssiv.util.MIME_IMAGE_JXL
 import me.devsaki.hentoid.enums.PictureEncoder
 import me.devsaki.hentoid.util.byteArrayOfInts
 import me.devsaki.hentoid.util.duplicateInputStream
+import me.devsaki.hentoid.util.file.FILECHUNK_AUTHORITY
+import me.devsaki.hentoid.util.file.FileChunkInfo
 import me.devsaki.hentoid.util.file.NameFilter
 import me.devsaki.hentoid.util.file.createFile
 import me.devsaki.hentoid.util.file.fileExists
@@ -547,7 +547,11 @@ suspend fun getImageDimensions(context: Context, uri: String, data: ByteArray? =
         val fileUri = uri.toUri()
         if (null == data && !fileExists(context, fileUri)) return@withContext Point(0, 0)
 
-        val ext = getExtensionFromUri(uri)
+        val fileName = if (uri.startsWith(FILECHUNK_AUTHORITY)) {
+            FileChunkInfo.fromUri(uri.toUri()).displayName
+        } else uri
+
+        val ext = getExtensionFromUri(fileName)
         if (ext == "jxl" || ext == "avif") {
             return@withContext if (null == data) {
                 getDimsFromThirdParty(context, ext, fileUri)
