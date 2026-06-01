@@ -1496,6 +1496,14 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
                 val result = content.toEntity(dao)
                 result.jsonUri = json.uri.toString()
                 result.setStorageDoc(parentFolder)
+                // Fix downloaded books in limbo
+                if (StatusContent.DOWNLOADING == result.status && result.imageList.all { StatusContent.DOWNLOADED == it.status }) {
+                    Timber.i("Book taken out of limbo : ${result.title}")
+                    result.status = StatusContent.DOWNLOADED
+                    val now = Instant.now().toEpochMilli()
+                    result.downloadDate = now
+                    result.downloadCompletionDate = now
+                }
                 return result
             }
             throw ParseException("Error reading JSON (v2) file")
