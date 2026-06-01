@@ -24,6 +24,7 @@ import android.webkit.WebView
 import android.webkit.WebView.HitTestResult
 import androidx.activity.OnBackPressedCallback
 import androidx.annotation.DrawableRes
+import androidx.annotation.OptIn
 import androidx.annotation.StringRes
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.content.ContextCompat
@@ -36,6 +37,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.webkit.ServiceWorkerClientCompat
 import androidx.webkit.ServiceWorkerControllerCompat
+import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.skydoves.balloon.ArrowOrientation
@@ -408,7 +410,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         super.onDestroy()
     }
 
-
+    @OptIn(WebViewCompat.ExperimentalSaveState::class)
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
 
@@ -420,6 +422,13 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
             if (WebkitPackageHelper.getWebViewAvailable()) bundle.url = url
             outState.putAll(bundle.bundle)
         }
+
+        // Save WebView state incl. back/forward history
+        if (Settings.isBrowserResumeLast && WebViewFeature.isFeatureSupported(WebViewFeature.SAVE_STATE)) {
+            val bundle = Bundle()
+            WebViewCompat.saveState(webView, bundle, 128 * 1024, true)
+            webViewStateCache[getStartSite()] = bundle
+        }
     }
 
     override fun onRestoreInstanceState(savedInstanceState: Bundle) {
@@ -429,6 +438,32 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         // doesn't work that well (bugged when using back/forward commands). A valid solution still has to be found
         val url = BaseBrowserActivityBundle(savedInstanceState).url
         if (url.isNotEmpty()) webView.loadUrl(url)
+    }
+
+    @OptIn(WebViewCompat.ExperimentalSaveState::class)
+    override fun onStart() {
+        super.onStart()
+        // Restore WebView state incl. back/forward history (even if creating a new WebView from scratch)
+        if (Settings.isBrowserResumeLast && WebViewFeature.isFeatureSupported(WebViewFeature.SAVE_STATE)) {
+            webViewStateCache[getStartSite()]?.let {
+                Timber.d("Restoring WebView state")
+                webView.restoreState(it)
+                refreshNavigationMenu(webClient.isResultsPage(webView.url ?: ""))
+            }
+        }
+    }
+
+    @OptIn(WebViewCompat.ExperimentalSaveState::class)
+    override fun onStop() {
+        super.onStop()
+        Timber.d("onStop")
+
+        // Save WebView state incl. back/forward history
+        if (Settings.isBrowserResumeLast && WebViewFeature.isFeatureSupported(WebViewFeature.SAVE_STATE)) {
+            val bundle = Bundle()
+            WebViewCompat.saveState(webView, bundle, 128 * 1024, true)
+            webViewStateCache[getStartSite()] = bundle
+        }
     }
 
     override fun onResume() {
@@ -910,13 +945,14 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         val intent = Intent(this, LibraryActivity::class.java)
         // If FLAG_ACTIVITY_CLEAR_TOP is not set,
         // it can interfere with Double-Back (press back twice) to exit
-        intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
+        intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(intent)
         if (Build.VERSION.SDK_INT >= 34) {
             overrideActivityTransition(OVERRIDE_TRANSITION_OPEN, 0, 0)
         } else {
             overridePendingTransition(0, 0)
         }
+        Timber.d("BaseBrowserActivity finishing")
         finish()
     }
 
@@ -2003,5 +2039,10 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
             Timber.d("XHR Begin %s : %s", url, body)
             handler.invoke(url, body ?: "")
         }
+    }
+
+    companion object {
+        // Remember back/forward states for the duration of a session
+        val webViewStateCache = HashMap<Site, Bundle>()
     }
 }
