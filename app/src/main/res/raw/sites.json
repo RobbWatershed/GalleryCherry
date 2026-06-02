@@ -7,7 +7,7 @@
       "hasUniqueBookId": true,
       "requestsCapPerSecond": 2,
       "parallelDownloadCap": 2,
-      "galleryHeight": 7,
+      "galleryHeight": 8,
       "canUpdateOnlineMetadata": false,
       "shouldBeStreamed": false
     },
