@@ -352,6 +352,11 @@
         <item>@string/pref_viewer_display_mode_entries_2</item>
         <item>@string/pref_viewer_display_mode_entries_3</item>
     </string-array>
+    <string-array name="pref_viewer_display_pagenum_entries" translatable="false">
+        <item>@string/pref_viewer_display_pagenum_entries_1</item>
+        <item>@string/pref_viewer_display_pagenum_entries_2</item>
+        <item>@string/pref_viewer_display_pagenum_entries_3</item>
+    </string-array>
     <string-array name="pref_viewer_auto_rotate_entries" translatable="false">
         <item>@string/pref_viewer_auto_rotate_entries_1</item>
         <item>@string/pref_viewer_auto_rotate_entries_2</item>
@@ -630,7 +635,7 @@
     <string name="pref_viewer_cap_tap_zoom_default" translatable="false">0</string>
     <bool name="pref_viewer_keep_screen_on_default" translatable="false">true</bool>
     <bool name="pref_viewer_display_notch_default" translatable="true">true</bool>
-    <bool name="pref_viewer_display_pagenum_default" translatable="false">false</bool>
+    <string name="pref_viewer_display_pagenum_default" translatable="false">0</string>
     <bool name="pref_viewer_tap_transitions_default" translatable="false">true</bool>
     <bool name="pref_viewer_zoom_transitions_default" translatable="false">true</bool>
     <bool name="pref_viewer_maintain_horizontal_zoom_default" translatable="false">false</bool>

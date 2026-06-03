@@ -208,7 +208,6 @@
     <string name="pref_viewer_controls">Controles</string>
     <string name="pref_viewer_display_mode">Modo de visualización para la vista horizontal</string>
     <string name="pref_viewer_display_notch">Mostrar alrededor del notch</string>
-    <string name="pref_viewer_display_pagenum">Siempre mostrar número de página</string>
     <string name="pref_viewer_gallery_columns">Número de columnas en el modo galería</string>
     <string name="pref_viewer_horizontal_reader">Lector horizontal</string>
     <string name="pref_viewer_invert_volume">Invertir botones de volumen</string>

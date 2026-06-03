@@ -209,7 +209,6 @@
     <string name="pref_viewer_delete_load_direction">Inläsningsriktning efter bokborttagning</string>
     <string name="pref_viewer_display_mode">Visningsläge för horisontell visning</string>
     <string name="pref_viewer_display_notch">Visa tryckområdet</string>
-    <string name="pref_viewer_display_pagenum">Visa alltid sidnummer</string>
     <string name="pref_viewer_gallery_columns">Antalet kolumner för galleri</string>
     <string name="pref_viewer_horizontal_reader">Horisontell läsare</string>
     <string name="pref_viewer_invert_volume">Invertera volymknappar</string>

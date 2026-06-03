@@ -50,7 +50,8 @@ object Settings {
         }
         // Skip large downloads on mobile data -> Skip large downloads (v1.21.12)
         if (sharedPreferences.contains(Key.DL_SIZE_WIFI_OLD)) {
-            val allowLargeDownloadsOnWifi = sharedPreferences.getBoolean(Key.DL_SIZE_WIFI_OLD, false)
+            val allowLargeDownloadsOnWifi =
+                sharedPreferences.getBoolean(Key.DL_SIZE_WIFI_OLD, false)
             sharedPreferences.edit { remove(Key.DL_SIZE_WIFI_OLD) }
             isSkipDownloadLarge = allowLargeDownloadsOnWifi
             isSkipDownloadLargeAllowWIFI = allowLargeDownloadsOnWifi
@@ -61,9 +62,19 @@ object Settings {
             sharedPreferences.edit { remove(Key.DL_SIZE_WIFI_THRESHOLD_OLD) }
         }
         if (sharedPreferences.contains(Key.DL_PAGES_WIFI_THRESHOLD_OLD)) {
-            var largeDownloadPagesThreshold: Int by IntSettingStr(Key.DL_PAGES_WIFI_THRESHOLD_OLD, 999999)
+            var largeDownloadPagesThreshold: Int by IntSettingStr(
+                Key.DL_PAGES_WIFI_THRESHOLD_OLD,
+                999999
+            )
             skipDownloadLargeThresholdPages = largeDownloadPagesThreshold
             sharedPreferences.edit { remove(Key.DL_PAGES_WIFI_THRESHOLD_OLD) }
+        }
+        // Page number position toggle -> list (v1.22.2)
+        if (sharedPreferences.contains("pref_viewer_display_pagenum")) {
+            var displayBottomPageNum: Boolean by BoolSetting("pref_viewer_display_pagenum", false)
+            readerDisplayPageNum = if (displayBottomPageNum) Value.VIEWER_PAGENUM_BOTTOM_CENTER
+            else Value.VIEWER_PAGENUM_NONE
+            sharedPreferences.edit { remove("pref_viewer_display_pagenum") }
         }
     }
 
@@ -331,7 +342,10 @@ object Settings {
     var isSkipDownloadLarge: Boolean by BoolSetting("pref_dl_skip_large", false)
     var isSkipDownloadLargeAllowWIFI: Boolean by BoolSetting("pref_dl_skip_large_allow_wifi", false)
     var skipDownloadLargeThresholdMB: Int by IntSettingStr("pref_dl_skip_large_size_threshold", 40)
-    var skipDownloadLargeThresholdPages: Int by IntSettingStr("pref_dl_skip_large_pages_threshold", 999999)
+    var skipDownloadLargeThresholdPages: Int by IntSettingStr(
+        "pref_dl_skip_large_pages_threshold",
+        999999
+    )
     val isDlRetriesActive: Boolean by BoolSetting("pref_dl_retries_active", false)
     val dlRetriesNumber: Int by IntSettingStr("pref_dl_retries_number", 5)
     val dlRetriesMemLimit: Int by IntSettingStr("pref_dl_retries_mem_limit", 100)
@@ -440,7 +454,10 @@ object Settings {
         Key.VIEWER_RENDERING,
         Value.VIEWER_RENDERING_SHARP
     )
-    val isReaderDisplayPageNum: Boolean by BoolSetting(Key.VIEWER_DISPLAY_PAGENUM, false)
+    var readerDisplayPageNum: Int by IntSettingStr(
+        Key.VIEWER_DISPLAY_PAGENUM,
+        Value.VIEWER_PAGENUM_NONE
+    )
     val isReaderTurnTransitions: Boolean by BoolSetting(Key.VIEWER_TURN_TRANSITIONS, true)
     val isReaderZoomTransitions: Boolean by BoolSetting(Key.VIEWER_ZOOM_TRANSITIONS, true)
     val isReaderSwipeToFling: Boolean by BoolSetting(Key.VIEWER_SWIPE_TO_FLING, false)
@@ -778,7 +795,7 @@ object Settings {
         const val VIEWER_IMAGE_DISPLAY = "pref_viewer_image_display"
         const val VIEWER_BROWSE_MODE = "pref_viewer_browse_mode"
         const val VIEWER_RENDERING = "pref_viewer_rendering"
-        const val VIEWER_DISPLAY_PAGENUM = "pref_viewer_display_pagenum"
+        const val VIEWER_DISPLAY_PAGENUM = "pref_viewer_display_pagenum2"
         const val VIEWER_TURN_TRANSITIONS = "pref_viewer_tap_transitions"
         const val VIEWER_ZOOM_TRANSITIONS = "pref_viewer_zoom_transitions"
         const val VIEWER_SWIPE_TO_FLING = "pref_viewer_swipe_to_fling"
@@ -902,6 +919,10 @@ object Settings {
 
         const val VIEWER_RENDERING_SHARP = 0
         const val VIEWER_RENDERING_SMOOTH = 1
+
+        const val VIEWER_PAGENUM_NONE = 0
+        const val VIEWER_PAGENUM_BOTTOM_CENTER = 1
+        const val VIEWER_PAGENUM_TOP_CENTER = 2
 
         const val VIEWER_READ_THRESHOLD_NONE = -1
         const val VIEWER_READ_THRESHOLD_1 = 0
