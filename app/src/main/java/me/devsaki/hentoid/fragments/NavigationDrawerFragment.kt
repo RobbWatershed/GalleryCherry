@@ -255,6 +255,14 @@ class NavigationDrawerFragment : Fragment(R.layout.fragment_navigation_drawer),
                 )
                 addMenu(
                     submenu1,
+                    R.string.groups_by_series,
+                    R.drawable.ic_attribute_serie,
+                    NavItem.LIBRARY,
+                    Grouping.SERIES.id,
+                    Settings.groupingDisplay == Grouping.SERIES.id
+                )
+                addMenu(
+                    submenu1,
                     R.string.groups_by_dl_date,
                     R.drawable.ic_calendar,
                     NavItem.LIBRARY,

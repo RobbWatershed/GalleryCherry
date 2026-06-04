@@ -14,6 +14,7 @@ enum class Grouping(
     ARTIST(1, R.string.groups_by_artist, false, false, true),
     DL_DATE(2, R.string.groups_by_dl_date, false, false, false),
     DYNAMIC(3, R.string.groups_dynamic, true, true, false),
+    SERIES(4, R.string.groups_by_series, false, false, true),
     FOLDERS(97, R.string.groups_folders, false, true, false),
     CUSTOM(98, R.string.groups_custom, true, true, true),
     NONE(99, R.string.none, false, false, false);

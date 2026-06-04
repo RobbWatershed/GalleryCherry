@@ -542,15 +542,29 @@ class ObjectBoxDAO : CollectionDAO {
         countAll: Boolean
     ): LiveData<List<Group>> {
         val livedata: LiveData<List<Group>> =
-            if (grouping == Grouping.ARTIST.id) selectArtistGroupsLive(
-                query,
-                orderDesc,
-                artistGroupVisibility,
-                groupFavouritesOnly,
-                groupNonFavouritesOnly,
-                filterRating,
-                countAll
-            ) else ObjectBoxLiveData(
+            if (grouping == Grouping.ARTIST.id)
+            // Dynamic artist/circle groups
+                selectArtistGroupsLive(
+                    query,
+                    orderDesc,
+                    artistGroupVisibility,
+                    groupFavouritesOnly,
+                    groupNonFavouritesOnly,
+                    filterRating,
+                    countAll
+                )
+            else if (grouping == Grouping.SERIES.id)
+            // Dynamic series groups
+                selectSeriesGroupsLive(
+                    query,
+                    orderDesc,
+                    groupFavouritesOnly,
+                    groupNonFavouritesOnly,
+                    filterRating,
+                    countAll
+                )
+            else ObjectBoxLiveData(
+                // Database-persisted (static) groups
                 ObjectBoxDB.selectGroupsQ(
                     grouping,
                     query, orderField,
@@ -707,6 +721,111 @@ class ObjectBoxDAO : CollectionDAO {
         // Manually select all content as g.getContents won't work (unresolved items)
         val contents = ObjectBoxDB.selectContentById(g.contentIds)
         return contents.maxOfOrNull { it.downloadDate } ?: 0
+    }
+
+    // TODO factorize with selectArtistGroupsLive
+    private fun selectSeriesGroupsLive(
+        query: String?,
+        orderDesc: Boolean,
+        groupFavouritesOnly: Boolean,
+        groupNonFavouritesOnly: Boolean,
+        filterRating: Int,
+        countAll: Boolean
+    ): LiveData<List<Group>> {
+        // Select as many groups as there are non-empty artist/circle master data
+        val attrsLive: LiveData<List<Attribute>> = ObjectBoxLiveData(
+            ObjectBoxDB.selectSeriesQ(query, orderDesc)
+        )
+
+        if (countAll) {
+            val countLive = MediatorLiveData<List<Group>>()
+            countLive.addSource(attrsLive) { attrs ->
+                // We're just counting, we don't need to instanciate multiple groups
+                // NB : +1 is for the "no series" group
+                val bogusGroup = Group()
+                val groups: MutableList<Group> = ArrayList(attrs.size + 1)
+                repeat(attrs.size + 1) { groups.add(bogusGroup) }
+                countLive.value = groups
+            }
+            return countLive
+        }
+
+        val livedata2 = MediatorLiveData<List<Group>>()
+        livedata2.addSource(attrsLive) { attrs ->
+            val groups = attrs
+                // Don't display empty groups
+                .filterNot { it.contents.isEmpty() }
+                .mapIndexed { idx, attr ->
+                    val group = Group(Grouping.DYNAMIC, attr.name, idx + 1)
+                    group.searchUri = buildSearchUri(setOf(attr)).toString()
+                    // WARNING : This is the place where things get slow
+                    val items = attr.contents
+                        .filter { isInLibrary(it.status) }
+                        .mapIndexed { idx2, c ->
+                            if (0 == idx2) group.coverContent.target = c
+                            GroupItem(c.id, group, idx2)
+                        }
+                    group.setItems(items)
+                    group
+                }
+            livedata2.value = groups
+        }
+
+        // Forge the "no series" group
+        val noSeriesLive: MutableLiveData<List<Group>> = MutableLiveData<List<Group>>()
+        val exludedGrpRes = R.string.no_series_group_name
+        val exludedGrpLbl = HentoidApp.getInstance().resources.getString(exludedGrpRes)
+        val noSeriesGroup = Group(Grouping.DYNAMIC, exludedGrpLbl, 0)
+        noSeriesGroup.subtype = 2
+        val excludedTypes: Set<AttributeType> = setOf(AttributeType.SERIE)
+        noSeriesGroup.searchUri = buildSearchUri(null, excludedTypes).toString()
+        // Populate with Content
+        val content = ObjectBoxDB.selectContentWithoutAttributesQ(
+            ContentSearchBundle(),
+            LongArray(0),
+            excludedTypes
+        ).safeFind()
+        val items = content.mapIndexed { idx2, c ->
+            if (0 == idx2) noSeriesGroup.coverContent.target = c
+            GroupItem(c.id, noSeriesGroup, idx2)
+        }
+        noSeriesGroup.setItems(items)
+        noSeriesLive.postValue(listOf(noSeriesGroup))
+
+        // Flagged groups
+        val flaggedLive: LiveData<List<Group>> = ObjectBoxLiveData(
+            ObjectBoxDB.selectGroupsByGroupingQ(Grouping.SERIES.id, false)
+        )
+
+        // Merge actual groups with the "no series" forged group and enrich with flagged groups
+        val combined =
+            MergerLiveData.Three(
+                noSeriesLive,
+                livedata2,
+                flaggedLive,
+                false
+            ) { noSeriesGrp, dynamicGrps, flaggedGrps ->
+                val result = ArrayList<Group>()
+                result.addAll(noSeriesGrp)
+                val flaggedMap =
+                    flaggedGrps.groupBy { it.reducedStr }.mapValues { it.value.first() }
+                // TODO it's pointless to create groupItems and to discard them on the 2nd pass -> should filter on the go instead
+                val enrichedGrps = dynamicGrps.map { enrichGroupWithFlags(it, flaggedMap) }
+                if (groupFavouritesOnly || groupNonFavouritesOnly || filterRating > -1) {
+                    result.addAll(enrichedGrps.filter {
+                        filterGroup(
+                            it,
+                            groupFavouritesOnly,
+                            groupNonFavouritesOnly,
+                            filterRating
+                        )
+                    })
+                } else {
+                    result.addAll(enrichedGrps)
+                }
+                result.toList()
+            }
+        return combined
     }
 
     private fun selectArtistGroupsLive(

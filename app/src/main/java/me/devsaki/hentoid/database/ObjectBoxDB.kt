@@ -1865,6 +1865,24 @@ object ObjectBoxDB {
         return qb.build()
     }
 
+    fun selectSeriesQ(
+        query: String?,
+        orderDesc: Boolean
+    ): Query<Attribute> {
+        val qcSeries = Attribute_.type.equal(AttributeType.SERIE.code)
+        val qcName =
+            Attribute_.name.contains(query ?: "", QueryBuilder.StringOrder.CASE_INSENSITIVE)
+        val qcFinal = qcSeries.and(qcName)
+
+        val qb = store.boxFor(Attribute::class.java).query(qcFinal)
+
+        val property = Attribute_.name
+        // Order by number of children is done by the DAO
+        if (orderDesc) qb.orderDesc(property) else qb.order(property)
+
+        return qb.build()
+    }
+
     fun selectArtistsQ(
         query: String?,
         orderDesc: Boolean,
