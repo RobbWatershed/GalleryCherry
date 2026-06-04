@@ -182,20 +182,9 @@ interface CollectionDAO {
     fun countStoredContent(includeQueued: Boolean) : Long
 
 
-    fun selectRecentBookIds(searchBundle: ContentSearchBundle): List<Long>
+    fun searchStoredContentIds(searchBundle: ContentSearchBundle): List<Long>
 
-    fun selectRecentBooks(searchBundle: ContentSearchBundle): LiveData<PagedList<Content>>
-
-    fun searchBookIds(searchBundle: ContentSearchBundle, metadata: Set<Attribute>): List<Long>
-
-    fun searchBooks(
-        searchBundle: ContentSearchBundle,
-        metadata: Set<Attribute>
-    ): LiveData<PagedList<Content>>
-
-    fun searchBookIdsUniversal(searchBundle: ContentSearchBundle): List<Long>
-
-    fun searchBooksUniversal(searchBundle: ContentSearchBundle): LiveData<PagedList<Content>>
+    fun searchStoredContent(searchBundle: ContentSearchBundle): LiveData<PagedList<Content>>
 
 
     fun selectErrorContentLive(): LiveData<List<Content>>

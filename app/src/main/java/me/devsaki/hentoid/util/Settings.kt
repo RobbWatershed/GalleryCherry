@@ -871,6 +871,7 @@ object Settings {
         const val ORDER_FIELD_DOWNLOAD_COMPLETION_DATE = 10
         const val ORDER_FIELD_SOURCE_NAME = 11 // Rules only
         const val ORDER_FIELD_TARGET_NAME = 12 // Rules only
+        const val ORDER_FIELD_AVG_SIZE = 13
         const val ORDER_FIELD_CUSTOM = 98
         const val ORDER_FIELD_RANDOM = 99
 

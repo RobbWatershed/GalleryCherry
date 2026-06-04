@@ -544,13 +544,23 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
         this.group.postValue(group)
 
         if (Grouping.DYNAMIC == group.grouping) {
+            contentSearchManager.setGroup(null)
+
             val searchUri = SearchActivityBundle.parseSearchUri(group.searchUri)
             contentSearchManager.setTags(searchUri.attributes)
             contentSearchManager.setExcludedAttrs(searchUri.excludedAttributeTypes)
             contentSearchManager.setLocation(searchUri.location.value)
             contentSearchManager.setContentType(searchUri.contentType.value)
             contentSearchManager.setQuery(searchUri.query)
-        } else contentSearchManager.setGroup(group)
+        } else {
+            contentSearchManager.clearTags()
+            contentSearchManager.setExcludedAttrs(emptySet())
+            contentSearchManager.setLocation(0)
+            contentSearchManager.setContentType(0)
+            contentSearchManager.setQuery("")
+
+            contentSearchManager.setGroup(group)
+        }
 
         newContentSearch.value = true
         // Don't search now as the UI will inevitably search as well upon switching to books view

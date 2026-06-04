@@ -121,16 +121,7 @@ class ContentSearchManager() {
     }
 
     fun getLibrary(dao: CollectionDAO): LiveData<PagedList<Content>> {
-        val tags = parseSearchUri(values.attributes.toUri()).attributes
-        return when {
-            // Universal search
-            values.query.isNotEmpty() -> dao.searchBooksUniversal(values)
-            // Advanced search
-            tags.isNotEmpty() || values.excludedAttributeTypes?.isNotEmpty() ?: false || values.location > 0 || values.contentType > 0 ->
-                dao.searchBooks(values, tags)
-            // Default search (display recent)
-            else -> dao.selectRecentBooks(values)
-        }
+        return dao.searchStoredContent(values)
     }
 
     fun searchContentIds(dao: CollectionDAO): List<Long> {
@@ -139,16 +130,7 @@ class ContentSearchManager() {
 
     companion object {
         fun searchContentIds(data: ContentSearchBundle, dao: CollectionDAO): List<Long> {
-            val tags = parseSearchUri(data.attributes.toUri()).attributes
-            return when {
-                // Universal search
-                data.query.isNotEmpty() -> dao.searchBookIdsUniversal(data)
-                // Advanced search
-                tags.isNotEmpty() || data.excludedAttributeTypes?.isNotEmpty() ?: false || data.location > 0 || data.contentType > 0 ->
-                    dao.searchBookIds(data, tags)
-                // Default search (display recent)
-                else -> dao.selectRecentBookIds(data)
-            }
+            return dao.searchStoredContentIds(data)
         }
     }
 

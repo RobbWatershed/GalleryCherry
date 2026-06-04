@@ -419,7 +419,7 @@ abstract class BaseDeleteWorker(
             } else if (theGroup!!.grouping == Grouping.DYNAMIC) { // Delete books from dynamic group
                 val bundle = ContentSearchBundle()
                 bundle.groupId = theGroup.id
-                val containedContentList = dao.searchBookIdsUniversal(bundle).toLongArray()
+                val containedContentList = dao.searchStoredContentIds(bundle).toLongArray()
                 processContentList(containedContentList, Operation.DELETE)
             }
             if (theGroup != null) {

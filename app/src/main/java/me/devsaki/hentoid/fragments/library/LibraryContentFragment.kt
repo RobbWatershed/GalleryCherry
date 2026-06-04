@@ -1858,7 +1858,7 @@ class LibraryContentFragment : Fragment(), ChangeGroupDialogFragment.Parent,
                 formatter
             )
 
-            Settings.Value.ORDER_FIELD_NONE, Settings.Value.ORDER_FIELD_CUSTOM, Settings.Value.ORDER_FIELD_RANDOM -> ""
+            Settings.Value.ORDER_FIELD_NONE, Settings.Value.ORDER_FIELD_CUSTOM, Settings.Value.ORDER_FIELD_RANDOM, Settings.Value.ORDER_FIELD_AVG_SIZE -> ""
             else -> ""
         }
     }
