@@ -14,6 +14,10 @@ import androidx.work.OneTimeWorkRequest
 import androidx.work.WorkManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.squareup.moshi.JsonDataException
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.core.Consumer
 import me.devsaki.hentoid.core.DEFAULT_PRIMARY_FOLDER
@@ -1628,6 +1632,7 @@ fun existsInCollection(
     return false
 }
 
+@OptIn(DelicateCoroutinesApi::class)
 fun jsonToContent(
     context: Context,
     dao: CollectionDAO,
@@ -1649,6 +1654,9 @@ fun jsonToContent(
                 val now = Instant.now().toEpochMilli()
                 result.downloadDate = now
                 result.downloadCompletionDate = now
+                GlobalScope.launch(Dispatchers.Default) {
+                    updateJson(context, result)
+                }
             }
             return result
         }

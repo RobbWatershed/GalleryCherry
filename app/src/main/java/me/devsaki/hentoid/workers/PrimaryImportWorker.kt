@@ -84,6 +84,7 @@ import me.devsaki.hentoid.util.removeExternalAttributes
 import me.devsaki.hentoid.util.scanBookFolder
 import me.devsaki.hentoid.util.scanForArchivesPdf
 import me.devsaki.hentoid.util.trace
+import me.devsaki.hentoid.util.updateJson
 import me.devsaki.hentoid.util.writeLog
 import me.devsaki.hentoid.workers.data.PrimaryImportData
 import org.greenrobot.eventbus.EventBus
@@ -498,7 +499,8 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
                 logFile
             )
             notificationManager.notify(ImportCompleteNotification(booksOK, booksKO))
-            EventBus.getDefault().postSticky(CommunicationEvent(Type.RELOAD, CommunicationEvent.Recipient.LIBRARY))
+            EventBus.getDefault()
+                .postSticky(CommunicationEvent(Type.RELOAD, CommunicationEvent.Recipient.LIBRARY))
         }
     }
 
@@ -1483,6 +1485,7 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
         }
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     @CheckResult
     @Throws(ParseException::class)
     private fun importJsonV2(
@@ -1503,6 +1506,9 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
                     val now = Instant.now().toEpochMilli()
                     result.downloadDate = now
                     result.downloadCompletionDate = now
+                    GlobalScope.launch(Dispatchers.Default) {
+                        updateJson(context, result)
+                    }
                 }
                 return result
             }
