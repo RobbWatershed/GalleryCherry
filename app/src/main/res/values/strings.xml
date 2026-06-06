@@ -526,6 +526,7 @@
     <string name="stream_limit">Cannot stream more than 1000 books at once</string>
     <string name="transform_limit">Cannot transform more than 1000 books at once</string>
     <string name="process_limit">Cannot process more than 1000 books at once</string>
+    <string name="cancel_limit">Cannot cancel more than 1000 books at once</string>
     <string name="new_group_name">Name of the new group\?</string>
     <string name="group_edit_name">Edit group name</string>
     <string name="book_edit_title">Edit book title</string>

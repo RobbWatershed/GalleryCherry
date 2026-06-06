@@ -231,30 +231,31 @@ class QueueViewModel(
      *
      * @param contents Contents whose download has to be canceled
      */
-    fun cancel(contents: List<Content>) {
+    fun remove(contents: List<Content>) {
         if (contents.isEmpty()) return
         removeContent(contents.map { it.id }.filter { it > 0 })
     }
 
-    fun removeAll() {
-        val errorsLocal = dao.selectErrorContent()
-        if (errorsLocal.isEmpty()) return
-        removeContent(errorsLocal.map { it.id }.filter { it > 0 })
+    fun removeAllErrors() {
+        removeContent(allErrorRecords = true)
     }
 
-    fun cancelAll() {
-        val localQueue = dao.selectQueue()
-        if (localQueue.isEmpty()) return
+    fun cancelAllQueued() {
         EventBus.getDefault().post(DownloadCommandEvent(DownloadCommandEvent.Type.EV_PAUSE))
-        removeContent(localQueue.map { it.content.targetId }.filter { it > 0 }, true)
+        removeContent(allQueueRecords = true)
     }
 
-    fun removeContent(ids: List<Long>, allQueueRecords: Boolean = false) {
-        if (ids.isEmpty()) return
+    fun removeContent(
+        ids: List<Long> = emptyList(),
+        allQueueRecords: Boolean = false,
+        allErrorRecords: Boolean = false
+    ) {
+        if (ids.isEmpty() && !allErrorRecords && !allQueueRecords) return
         val builder = DeleteData.Builder()
         builder.setOperation(BaseDeleteWorker.Operation.DELETE)
-        builder.setQueueIds(ids)
+        if (ids.isNotEmpty()) builder.setQueueIds(ids)
         builder.setDeleteAllQueueRecords(allQueueRecords)
+        builder.setDeleteAllErrorRecords(allErrorRecords)
         val workManager = WorkManager.getInstance(getApplication())
         workManager.enqueueUniqueWork(
             R.id.delete_service_delete.toString(),

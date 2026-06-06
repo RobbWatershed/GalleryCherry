@@ -105,6 +105,9 @@ abstract class BaseDeleteWorker(
     // True to delete all queue records
     private val isDeleteAllQueueRecords: Boolean
 
+    // True to delete all content on the error tab of the queue screen
+    private val isDeleteAllErrorRecords: Boolean
+
     // True to delete groups only, without their books
     private val isDeleteGroupsOnly: Boolean
 
@@ -129,6 +132,7 @@ abstract class BaseDeleteWorker(
         docsRoot = inputData.docsRoot
         docsNames = inputData.docsNames
         isDeleteAllQueueRecords = inputData.isDeleteAllQueueRecords
+        isDeleteAllErrorRecords = inputData.isDeleteAllErrorRecords
         isDeleteGroupsOnly = inputData.isDeleteGroupsOnly
         operation = inputData.operation ?: throw IllegalArgumentException("Must set an Operation")
         isCleaning = inputData.isCleaning
@@ -169,6 +173,12 @@ abstract class BaseDeleteWorker(
                 // Remove Contents and associated QueueRecords
                 if (queueIds.isNotEmpty()) removeQueue(queueIds)
 
+                // If asked, make sure all QueueRecords are removed including dead ones
+                if (isDeleteAllQueueRecords || isDeleteAllErrorRecords) removeAllQueueRecords(
+                    isDeleteAllQueueRecords,
+                    isDeleteAllErrorRecords
+                )
+
                 // Remove files linked to the given ImageFile IDs
                 if (imageIds.isNotEmpty()) removeImageFiles(imageIds)
 
@@ -185,9 +195,6 @@ abstract class BaseDeleteWorker(
                         }
                     }
                 }
-
-                // If asked, make sure all QueueRecords are removed including dead ones
-                if (isDeleteAllQueueRecords) dao.deleteQueueRecordsCore()
             } finally {
                 dao.cleanup()
             }
@@ -452,6 +459,17 @@ abstract class BaseDeleteWorker(
                 Log.WARN, "Queue JSON saving failed"
             )
         }
+    }
+
+    private suspend fun removeAllQueueRecords(queueRecords: Boolean, errorRecords: Boolean) {
+        if (queueRecords) {
+            removeQueue(dao.selectQueue().map { it.content.targetId }.toLongArray())
+            dao.deleteQueueRecordsCore()
+        }
+        if (errorRecords) processContentList(
+            dao.selectErrorContent().map { it.id }.toLongArray(),
+            Operation.DELETE
+        )
     }
 
     private suspend fun removeQueuedContent(content: Content) {
