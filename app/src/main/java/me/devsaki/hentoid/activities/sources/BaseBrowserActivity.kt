@@ -410,7 +410,6 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         super.onDestroy()
     }
 
-    @OptIn(WebViewCompat.ExperimentalSaveState::class)
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
 
@@ -440,7 +439,6 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         if (url.isNotEmpty()) webView.loadUrl(url)
     }
 
-    @OptIn(WebViewCompat.ExperimentalSaveState::class)
     override fun onStart() {
         super.onStart()
         // Restore WebView state incl. back/forward history (even if creating a new WebView from scratch)
@@ -453,7 +451,6 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         }
     }
 
-    @OptIn(WebViewCompat.ExperimentalSaveState::class)
     override fun onStop() {
         super.onStop()
         Timber.d("onStop")
