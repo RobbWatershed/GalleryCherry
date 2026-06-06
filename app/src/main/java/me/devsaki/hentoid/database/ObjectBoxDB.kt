@@ -956,7 +956,6 @@ object ObjectBoxDB {
         dynamicGroupContentIds: LongArray,
         status: IntArray
     ): LongArray {
-        var result: LongArray
         // Due to objectBox limitations (see https://github.com/objectbox/objectbox-java/issues/497)
         // querying Content and attributes have to be done separately
 
@@ -995,7 +994,7 @@ object ObjectBoxDB {
             attributeIds,
             exclusionIds = excludedIds.toLongArray()
         ).use { query ->
-            result = if (Settings.Value.ORDER_FIELD_RANDOM == searchBundle.sortField) {
+            return if (Settings.Value.ORDER_FIELD_RANDOM == searchBundle.sortField) {
                 shuffleRandomSortId(query)
             } else if (Settings.Value.ORDER_FIELD_AVG_SIZE == searchBundle.sortField) {
                 val weighedResults = ArrayList<Pair<Float, Long>>()
@@ -1009,7 +1008,6 @@ object ObjectBoxDB {
                 query.findIds()
             }
         }
-        return result
     }
 
     private fun selectFilteredContent(groupId: Long): LongArray {

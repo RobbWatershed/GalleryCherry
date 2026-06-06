@@ -110,8 +110,8 @@ class MassOperationsDialogFragment : BaseDialogFragment<MassOperationsDialogFrag
                     counts.totalCount - counts.scope.size
                 ) + " / " + resources.getQuantityString(
                     if (0 == massOperation.index) R.plurals.book_delete else R.plurals.book_stream,
-                    counts.totalCount,
-                    counts.totalCount
+                    counts.scope.size,
+                    counts.scope.size
                 )
                 if (counts.warnings.isNotEmpty()) {
                     itemAdapter.clear()
