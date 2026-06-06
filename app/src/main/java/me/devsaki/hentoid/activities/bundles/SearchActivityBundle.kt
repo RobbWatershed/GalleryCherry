@@ -9,6 +9,7 @@ import me.devsaki.hentoid.database.domains.AttributeMap
 import me.devsaki.hentoid.enums.AttributeType
 import me.devsaki.hentoid.util.Location
 import me.devsaki.hentoid.util.SearchCriteria
+import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.Type
 import me.devsaki.hentoid.util.boolean
 import me.devsaki.hentoid.util.intArrayList
@@ -18,6 +19,7 @@ import me.devsaki.hentoid.util.string
 private const val ATTR_EXCLUDED_TYPES = "excludedTypes"
 private const val ATTR_LOCATION = "location"
 private const val ATTR_CONTENT_TYPE = "contentType"
+private const val ATTR_COMBINATION = "cb"
 
 /**
  * Helper class to transfer data from any Activity to [me.devsaki.hentoid.activities.SearchActivity]
@@ -48,7 +50,8 @@ class SearchActivityBundle(val bundle: Bundle = Bundle()) {
                 searchCriteria.excludedAttributeTypes,
                 query ?: searchCriteria.query,
                 searchCriteria.location.value,
-                searchCriteria.contentType.value
+                searchCriteria.contentType.value,
+                searchCriteria.combinationMode
             )
         }
 
@@ -57,7 +60,8 @@ class SearchActivityBundle(val bundle: Bundle = Bundle()) {
             excludedTypes: Collection<AttributeType>? = null,
             query: String = "",
             location: Int = 0,
-            contentType: Int = 0
+            contentType: Int = 0,
+            combinationMode: Int = Settings.Value.SEARCH_COMBINATION_AND
         ): Uri {
             val searchUri = Uri.Builder()
                 .scheme("search")
@@ -74,6 +78,7 @@ class SearchActivityBundle(val bundle: Bundle = Bundle()) {
                 ATTR_CONTENT_TYPE,
                 contentType.toString()
             )
+            searchUri.appendQueryParameter(ATTR_COMBINATION, combinationMode.toString())
 
             return searchUri.build()
         }
@@ -111,6 +116,7 @@ class SearchActivityBundle(val bundle: Bundle = Bundle()) {
             val excludedTypes: MutableSet<AttributeType> = HashSet()
             var location = 0
             var contentType = 0
+            var combinationMode = Settings.Value.SEARCH_COMBINATION_AND
             var query = uri.path ?: ""
             // Remove the leading '/'
             if (query.isNotEmpty()) query = query.substring(1)
@@ -130,16 +136,23 @@ class SearchActivityBundle(val bundle: Bundle = Bundle()) {
                         }
                     }
                 } else {
-                    if (ATTR_EXCLUDED_TYPES == typeStr)
-                        excludedTypes.addAll(
-                            uri.getQueryParameters(typeStr)[0].split(";")
-                                .filterNot { it.isEmpty() }
-                                .mapNotNull { AttributeType.searchByCode(it.toInt()) }
-                        )
-                    if (ATTR_LOCATION == typeStr)
-                        location = uri.getQueryParameters(typeStr)[0].toInt()
-                    if (ATTR_CONTENT_TYPE == typeStr)
-                        contentType = uri.getQueryParameters(typeStr)[0].toInt()
+                    when (typeStr) {
+                        ATTR_EXCLUDED_TYPES ->
+                            excludedTypes.addAll(
+                                uri.getQueryParameters(typeStr)[0].split(";")
+                                    .filterNot { it.isEmpty() }
+                                    .mapNotNull { AttributeType.searchByCode(it.toInt()) }
+                            )
+
+                        ATTR_LOCATION ->
+                            location = uri.getQueryParameters(typeStr)[0].toInt()
+
+                        ATTR_CONTENT_TYPE ->
+                            contentType = uri.getQueryParameters(typeStr)[0].toInt()
+
+                        ATTR_COMBINATION ->
+                            combinationMode = uri.getQueryParameters(typeStr)[0].toInt()
+                    }
                 }
             }
             return SearchCriteria(
@@ -147,7 +160,8 @@ class SearchActivityBundle(val bundle: Bundle = Bundle()) {
                 attrs,
                 excludedTypes,
                 Location.fromValue(location),
-                Type.fromValue(contentType)
+                Type.fromValue(contentType),
+                combinationMode
             )
         }
     }

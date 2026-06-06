@@ -15,6 +15,7 @@ import me.devsaki.hentoid.database.domains.Attribute
 import me.devsaki.hentoid.enums.AttributeType
 import me.devsaki.hentoid.util.AttributeQueryResult
 import me.devsaki.hentoid.util.Location
+import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.Type
 import java.util.Objects
 
@@ -46,6 +47,8 @@ class SearchViewModel(
     private var location = Location.ANY
 
     private var contentType = Type.ANY
+
+    private var combinationMode = Settings.searchCombinationMode
 
 
     init {
@@ -90,7 +93,8 @@ class SearchViewModel(
                 false,
                 pageNum,
                 itemsPerPage,
-                attributeSortOrder
+                attributeSortOrder,
+                combinationMode
             )
             availableAttributes.postValue(result)
             dao.cleanup()
@@ -106,7 +110,7 @@ class SearchViewModel(
      */
     fun addSelectedAttribute(attr: Attribute) {
         val selectedAttributesList: MutableList<Attribute> =
-            java.util.ArrayList(Objects.requireNonNull(selectedAttributes.value)) // Create new instance to make ListAdapter.submitList happy
+            ArrayList(Objects.requireNonNull(selectedAttributes.value)) // Create new instance to make ListAdapter.submitList happy
 
         // Direct impact on selectedAttributes
         selectedAttributesList.add(attr)
@@ -134,7 +138,7 @@ class SearchViewModel(
      */
     fun removeSelectedAttribute(attr: Attribute) {
         val selectedAttributesList: MutableList<Attribute> =
-            java.util.ArrayList(Objects.requireNonNull(selectedAttributes.value)) // Create new instance to make ListAdapter.submitList happy
+            ArrayList(Objects.requireNonNull(selectedAttributes.value)) // Create new instance to make ListAdapter.submitList happy
 
         // Direct impact on selectedAttributes
         selectedAttributesList.remove(attr)
@@ -151,6 +155,11 @@ class SearchViewModel(
         update()
     }
 
+    fun setCombinationMode(value: Int) {
+        this.combinationMode = value
+        update()
+    }
+
     /**
      * Update the viewmodel according to current query properties
      */
@@ -164,13 +173,14 @@ class SearchViewModel(
      */
     private fun countAttributesPerType() {
         viewModelScope.launch {
-            val result : SparseIntArray
+            val result: SparseIntArray
             withContext(Dispatchers.IO) {
                 result = dao.countAttributesPerType(
                     selectedGroup,
                     selectedAttributes.value!!.toSet(),
                     location,
-                    contentType
+                    contentType,
+                    combinationMode
                 )
                 dao.cleanup()
             }
@@ -195,7 +205,13 @@ class SearchViewModel(
             selectedContentCount.removeSource(it)
         }
         currentSelectedContentCountInternal =
-            dao.countBooks(selectedGroup, selectedAttributes.value?.toSet(), location, contentType)
+            dao.countBooks(
+                selectedGroup,
+                selectedAttributes.value?.toSet(),
+                location,
+                contentType,
+                combinationMode
+            )
         selectedContentCount.addSource(currentSelectedContentCountInternal!!)
         { value -> selectedContentCount.setValue(value) }
     }

@@ -198,7 +198,8 @@ interface CollectionDAO {
         groupId: Long,
         metadata: Set<Attribute>?,
         location: Location,
-        contentType: Type
+        contentType: Type,
+        combinationMode: Int
     ): LiveData<Int>
 
     fun countAllBooksLive(): LiveData<Int>
@@ -292,14 +293,16 @@ interface CollectionDAO {
         includeFreeAttrs: Boolean,
         page: Int,
         booksPerPage: Int,
-        orderStyle: Int
+        orderStyle: Int,
+        combinationMode: Int
     ): AttributeQueryResult
 
     fun countAttributesPerType(
         groupId: Long,
         filter: Set<Attribute>?,
         location: Location,
-        contentType: Type
+        contentType: Type,
+        combinationMode: Int
     ): SparseIntArray
 
 

@@ -624,7 +624,7 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
                         but originating from another site entirely
                      */
                     val chapterSite = Site.searchByUrl(ch.url)
-                    if (null == chapterSite || !chapterSite.isVisible)
+                    if (null == chapterSite || !chapterSite.isUsable)
                         throw InvalidParameterException("A valid site couldn't be found from " + ch.url)
 
                     // We should parse a Content but all we have is a Chapter (merged book)

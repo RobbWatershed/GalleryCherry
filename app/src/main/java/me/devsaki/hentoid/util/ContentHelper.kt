@@ -324,7 +324,7 @@ fun viewContentGalleryPage(context: Context, content: Content) {
  */
 fun viewContentGalleryPage(context: Context, content: Content, wrapPin: Boolean) {
     if (content.site == Site.NONE) return
-    if (!content.site.isVisible) return  // Support is dropped
+    if (!content.site.isUsable) return  // Support is dropped
 
     if (!getWebViewAvailable()) {
         if (getWebViewUpdating()) context.toast(R.string.error_updating_webview)
@@ -1232,7 +1232,7 @@ fun launchBrowserFor(
         return
     }
     val targetSite = Site.searchByUrl(targetUrl)
-    if (null == targetSite || !targetSite.isVisible) return
+    if (null == targetSite || !targetSite.isUsable) return
 
     val intent = Intent(context, Content.getWebActivityClass(targetSite))
 

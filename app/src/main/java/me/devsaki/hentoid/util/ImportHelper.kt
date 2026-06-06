@@ -1758,7 +1758,7 @@ fun parseBookmarks(input: InputStream): List<SiteBookmark> {
                 else if (l.startsWith("http")) {
                     site = Site.searchByUrl(l) ?: Site.NONE
                 }
-                if (site != Site.NONE && site.isVisible) result.add(
+                if (site != Site.NONE && site.isUsable) result.add(
                     SiteBookmark(url = l, title = "", site = site)
                 )
             }
@@ -1771,5 +1771,5 @@ fun parseBookmarks(input: InputStream): List<SiteBookmark> {
 fun filterBookmark(b: SiteBookmark): Boolean {
     return b.url.startsWith("http")
             && b.site != Site.NONE
-            && b.site.isVisible
+            && b.site.isUsable
 }

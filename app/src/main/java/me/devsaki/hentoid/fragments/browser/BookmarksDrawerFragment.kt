@@ -476,7 +476,7 @@ class BookmarksDrawerFragment : Fragment(R.layout.fragment_web_bookmarks),
         if (selectExtension.selectedItems.isEmpty()) {
             if (!invalidateNextBookClick && item.getObject() != null) {
                 val url = item.getObject()!!.url
-                if (site == browserSite && site.isVisible) parent?.loadUrl(url)
+                if (site == browserSite && site.isUsable) parent?.loadUrl(url)
                 else launchBrowserFor(requireActivity(), url)
                 EventBus.getDefault().post(CommunicationEvent(CommunicationEvent.Type.CLOSE_DRAWER))
             } else invalidateNextBookClick = false

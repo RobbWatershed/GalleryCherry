@@ -121,13 +121,13 @@ class NavigationDrawerFragment : Fragment(R.layout.fragment_navigation_drawer),
                     NavItem.BROWSER.ordinal -> {
                         val code = item.itemId % MENU_FACTOR
                         val site = Site.searchByCode(code)
-                        if (!site.isVisible) {
+                        if (!site.isUsable) {
                             launchActivity(WelcomeActivity::class.java)
                         } else {
-                            Timber.d("${this@NavigationDrawerFragment.site} ${this@NavigationDrawerFragment.site.isVisible}")
+                            Timber.d("${this@NavigationDrawerFragment.site} ${this@NavigationDrawerFragment.site.isUsable}")
                             launchActivity(
                                 Content.getWebActivityClass(site),
-                                reorderToFront = this@NavigationDrawerFragment.site.isVisible
+                                reorderToFront = this@NavigationDrawerFragment.site.isUsable
                             )
                         }
                     }
@@ -335,7 +335,7 @@ class NavigationDrawerFragment : Fragment(R.layout.fragment_navigation_drawer),
             if (origin == NavItem.BROWSER || Settings.navigationNostalgiaMode) {
                 // All sites
                 Settings.activeSites.forEach { site ->
-                    if (!site.isVisible) return@forEach
+                    if (!site.isUsable) return@forEach
                     val sb = SpannableStringBuilder.valueOf(site.name)
                     updateInfo?.sourceAlerts[site]?.let { siteAlert ->
                         sb.append("  ")

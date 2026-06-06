@@ -681,11 +681,11 @@ object ObjectBoxDB {
             ).build().safeFind()
     }
 
-    private fun getIdsFromAttributes(attrs: Set<Attribute>): LongArray {
+    private fun getIdsFromAttributes(attrs: Set<Attribute>, combinationMode: Int): LongArray {
         if (attrs.isEmpty()) return LongArray(0)
         val firstAttr = attrs.firstOrNull()
         return if (firstAttr != null && firstAttr.isExcluded) {
-            val filteredBooks = selectFilteredContent(attrs)
+            val filteredBooks = selectFilteredContent(attrs, combinationMode)
 
             // Find all content positively matching the given attributes
             // TODO... but the attrs are already negative ^^"
@@ -777,28 +777,50 @@ object ObjectBoxDB {
         val metadataMap = AttributeMap()
         metadata?.let { metadataMap.addAll(it) }
         val hasFullTextQuery = searchBundle.query.isNotEmpty()
-        val sources = metadataMap[AttributeType.SOURCE]
-        val hasSiteFilter =
-            metadataMap.containsKey(AttributeType.SOURCE) && !sources.isNullOrEmpty()
+        val hasSiteFilter = !metadataMap[AttributeType.SOURCE].isNullOrEmpty()
         val hasTagFilter = metadataMap.keys.size > if (hasSiteFilter) 1 else 0
-        var qcBase = initContentQC(searchBundle, dynamicGroupContentIds, statuses)
-        if (hasSiteFilter) qcBase = qcBase.and(Content_.site.oneOf(getIdsFromAttributes(sources)))
 
-        // Filter on given attributes
-        if (hasTagFilter) {
-            for ((attrType, attrs) in metadataMap) {
-                // Source is not a "real" attribute in database and has been taken care of above
-                if (attrs.isNotEmpty() && attrType != AttributeType.SOURCE) {
-                    qcBase = qcBase.and(Content_.id.oneOf(selectFilteredContent(attrs)))
+        // Baseline
+        var qcBase = initContentQC(searchBundle, dynamicGroupContentIds, statuses)
+
+        // Attributes
+        if (hasSiteFilter || hasTagFilter) {
+            var qcAttrs: QueryCondition<Content>? = null
+
+            // Filter on given SOURCE attribute
+            if (hasSiteFilter)
+                metadataMap[AttributeType.SOURCE]?.let { sources ->
+                    qcAttrs = Content_.site.oneOf(
+                        getIdsFromAttributes(sources, searchBundle.combinationMode)
+                    )
+                }
+
+            // Filter on given non-SOURCE attributes
+            if (hasTagFilter) {
+                for ((attrType, attrs) in metadataMap) {
+                    // Source is not a "real" attribute in database and has been taken care of above
+                    if (attrs.isNotEmpty() && attrType != AttributeType.SOURCE) {
+                        val qc = Content_.id.oneOf(
+                            selectFilteredContent(attrs, searchBundle.combinationMode)
+                        )
+                        qcAttrs = if (null == qcAttrs) qc
+                        else if (Settings.Value.SEARCH_COMBINATION_AND == searchBundle.combinationMode) {
+                            qcAttrs.and(qc)
+                        } else {
+                            qcAttrs.or(qc)
+                        }
+                    }
                 }
             }
+
+            qcBase = if (qcAttrs != null) qcBase.and(qcAttrs) else qcBase
         }
 
         var qcFinal = qcBase
 
         // Full text search
         if (hasFullTextQuery) {
-            // Inside content title & unique ID
+            // Search inside content title & unique ID
             var qcFullText = Content_.title.contains(
                 searchBundle.query,
                 QueryBuilder.StringOrder.CASE_INSENSITIVE
@@ -809,7 +831,7 @@ object ObjectBoxDB {
                 )
             )
 
-            // Inside attributes
+            // Search inside attributes
             if (additionalIds.isNotEmpty())
                 qcFullText = qcFullText.or(Content_.id.oneOf(additionalIds))
 
@@ -997,11 +1019,12 @@ object ObjectBoxDB {
         return qb.safeFindIds()
     }
 
-    private fun selectFilteredContent(attrs: Set<Attribute>): LongArray {
+    private fun selectFilteredContent(attrs: Set<Attribute>, combinationMode: Int): LongArray {
         return selectFilteredContent(
             -1,
             LongArray(0),
             attrs,
+            combinationMode,
             Location.ANY,
             Type.ANY
         )
@@ -1011,6 +1034,7 @@ object ObjectBoxDB {
         groupId: Long,
         dynamicGroupContentIds: LongArray,
         attributesFilter: Set<Attribute>?,
+        combinationMode: Int,
         location: Location,
         contentType: Type
     ): LongArray {
@@ -1018,13 +1042,19 @@ object ObjectBoxDB {
         if (attrs.isEmpty() && groupId < 1 && Location.ANY == location && Type.ANY == contentType)
             return LongArray(0)
 
-        // Handle simple case where no attributes have been selected
-        if (attrs.isEmpty()) {
+        // 1- Handle simple case where no attributes have been selected
+        // 2- Prepare first iteration for exclusion mode
+        // If first tag is to be excluded, start with the whole database and _remove_ IDs (inverse logic)
+        var idsFullAsSet: MutableSet<Long> = HashSet()
+        if (attrs.isEmpty() || attrs.firstOrNull()?.isExcluded ?: false) {
             var qc: QueryCondition<Content> = Content_.status.oneOf(libraryStatus)
             if (groupId > 0) qc = applyContentGroupFilter(qc, groupId, dynamicGroupContentIds)
             qc = applyContentLocationFilter(qc, location)
             qc = applyContentTypeFilter(qc, contentType)
-            return store.boxFor(Content::class.java).query(qc).safeFindIds()
+            val idsFull = store.boxFor(Content::class.java).query(qc).safeFindIds()
+            // No attribute => one can leave now
+            if (attrs.isEmpty()) return idsFull
+            else idsFullAsSet = idsFull.toMutableSet()
         }
 
         // Pre-build queries to reuse them efficiently within the loops
@@ -1064,19 +1094,9 @@ object ObjectBoxDB {
             contentFromSourceQuery = store.boxFor(Content::class.java).query(qc).build()
         }
 
-        // Prepare first iteration for exclusion mode
-        // If first tag is to be excluded, start with the whole database and _remove_ IDs (inverse logic)
-        var idsFull = emptyList<Long>().toMutableList()
-        val firstAttr = attrs.firstOrNull()
-        if (firstAttr != null && firstAttr.isExcluded) {
-            val contentFromAttributesQueryBuilder1 = store.boxFor(Content::class.java).query()
-            contentFromAttributesQueryBuilder1.`in`(Content_.status, libraryStatus)
-            idsFull = contentFromAttributesQueryBuilder1.safeFindIds().toMutableList()
-        }
-
         // Cumulative query loop
         // Each iteration restricts the results of the next because advanced search uses an AND logic
-        var results = emptyList<Long>().toMutableList()
+        var results: MutableSet<Long> = HashSet()
         var ids: LongArray
         try {
             for (attr in attrs) {
@@ -1089,21 +1109,19 @@ object ObjectBoxDB {
                     ).setParameter(Attribute_.name, attr.name).findIds()
                 }
                 if (results.isEmpty()) { // First iteration
-                    results = ids.toMutableList()
-
                     // If first tag is to be excluded, start trimming results
                     if (attr.isExcluded) {
-                        idsFull.removeAll(results)
-                        results = idsFull
-                    }
+                        idsFullAsSet.removeAll(results)
+                        results = idsFullAsSet
+                    } else results = ids.toMutableSet() // AND and OR logic
                 } else {
                     // Filter results with newly found IDs (only common IDs should stay)
                     val idsAsSet = ids.toSet()
                     // Remove ids that fit the attribute from results
-                    // Careful with retainAll performance when using List instead of Set
-                    if (attr.isExcluded) results.removeAll(idsAsSet) else results.retainAll(
-                        idsAsSet
-                    )
+                    if (attr.isExcluded) results.removeAll(idsAsSet)
+                    else if (Settings.Value.SEARCH_COMBINATION_AND == combinationMode)
+                        results.retainAll(idsAsSet)
+                    else results.addAll(idsAsSet)
                 }
             }
         } finally {
@@ -1124,7 +1142,8 @@ object ObjectBoxDB {
             null,
             Location.ANY,
             Type.ANY,
-            false
+            false,
+            Settings.Value.SEARCH_COMBINATION_AND
         )
     }
 
@@ -1134,33 +1153,36 @@ object ObjectBoxDB {
         filter: Set<Attribute>?,
         location: Location,
         contentType: Type,
-        includeFreeAttrs: Boolean
+        includeFreeAttrs: Boolean,
+        combinationMode: Int
     ): List<Attribute> {
         var qc: QueryCondition<Content> = Content_.status.oneOf(libraryStatus)
-        if (!filter.isNullOrEmpty()) {
-            val metadataMap = AttributeMap()
-            metadataMap.addAll(filter)
-            val params = metadataMap[AttributeType.SOURCE]
-            if (!params.isNullOrEmpty()) qc =
-                qc.and(Content_.site.oneOf(getIdsFromAttributes(params)))
-            for ((attrType, attrs) in metadataMap) {
-                if (attrType != AttributeType.SOURCE) { // Not a "real" attribute in database
-                    if (attrs.isNotEmpty() && !includeFreeAttrs) qc =
-                        qc.and(Content_.id.oneOf(selectFilteredContent(attrs)))
-                }
-            }
-        }
         if (groupId > 0) qc = applyContentGroupFilter(qc, groupId, dynamicGroupContentIds)
         qc = applyContentLocationFilter(qc, location)
         qc = applyContentTypeFilter(qc, contentType)
-        val query = store.boxFor(Content::class.java).query(qc)
-        val content = query.safeFind()
+
+        if (Settings.Value.SEARCH_COMBINATION_AND == combinationMode && !filter.isNullOrEmpty()) {
+            val metadataMap = AttributeMap()
+            metadataMap.addAll(filter)
+            val params = metadataMap[AttributeType.SOURCE]
+            if (!params.isNullOrEmpty())
+                qc = qc.and(Content_.site.oneOf(getIdsFromAttributes(params, combinationMode)))
+            for ((attrType, attrs) in metadataMap) {
+                if (attrType != AttributeType.SOURCE) { // Not a "real" attribute in database
+                    if (attrs.isNotEmpty() && !includeFreeAttrs)
+                        qc = qc.and(
+                            Content_.id.oneOf(selectFilteredContent(attrs, combinationMode))
+                        )
+                }
+            }
+        }
+        val content = store.boxFor(Content::class.java).query(qc).safeFind()
 
         // SELECT field, COUNT(*) GROUP BY (field) is not implemented in ObjectBox v2.3.1
         // (see https://github.com/objectbox/objectbox-java/issues/422)
         // => Group by and count have to be done manually (thanks God Stream exists !)
         // Group and count by source
-        val map = content.groupBy { c -> c.site }
+        val map = content.groupBy { it.site }
         val result: MutableList<Attribute> = ArrayList()
         map.forEach {
             val size = it.value.size
@@ -1170,7 +1192,7 @@ object ObjectBoxDB {
             result.add(attr)
         }
         // Order by count desc
-        return result.sortedBy { a -> -a.count }
+        return result.sortedBy { -it.count }
     }
 
     fun selectErrorContentQ(): Query<Content> {
@@ -1226,23 +1248,22 @@ object ObjectBoxDB {
 
     private fun queryAvailableAttributesQ(
         type: AttributeType,
-        filter: String?,
+        textFilter: String?,
         filteredContent: LongArray,
         includeFreeAttrs: Boolean
     ): Query<Attribute> {
-        val query = store.boxFor(
-            Attribute::class.java
-        ).query()
+        val query = store.boxFor(Attribute::class.java).query()
         query.equal(Attribute_.type, type.code.toLong())
-        if (filter != null && filter.trim().isNotEmpty()) query.contains(
+        if (textFilter != null && textFilter.trim().isNotEmpty()) query.contains(
             Attribute_.name,
-            filter.trim { it <= ' ' },
+            textFilter.trim(),
             QueryBuilder.StringOrder.CASE_INSENSITIVE
         )
         if (!includeFreeAttrs) {
             if (filteredContent.isNotEmpty()) query.link(Attribute_.contents)
                 .`in`(Content_.id, filteredContent)
-                .`in`(Content_.status, libraryStatus) else query.link(Attribute_.contents)
+                .`in`(Content_.status, libraryStatus)
+            else query.link(Attribute_.contents)
                 .`in`(Content_.status, libraryStatus)
         }
         return query.build()
@@ -1256,16 +1277,20 @@ object ObjectBoxDB {
         location: Location,
         contentType: Type,
         includeFreeAttrs: Boolean,
-        filter: String?
+        filter: String?,
+        combinationMode: Int
     ): Long {
-        val filteredContent = if (includeFreeAttrs) LongArray(0)
-        else selectFilteredContent(
-            groupId,
-            dynamicGroupContentIds,
-            attributeFilter,
-            location,
-            contentType
-        )
+        val filteredContent =
+            if (includeFreeAttrs || Settings.Value.SEARCH_COMBINATION_OR == combinationMode)
+                LongArray(0)
+            else selectFilteredContent(
+                groupId,
+                dynamicGroupContentIds,
+                attributeFilter,
+                combinationMode,
+                location,
+                contentType
+            )
         return queryAvailableAttributesQ(
             type,
             filter,
@@ -1287,29 +1312,36 @@ object ObjectBoxDB {
         sortOrder: Int,
         page: Int,
         itemsPerPage: Int,
-        searchAttrCount: Boolean
+        searchAttrCount: Boolean,
+        combinationMode: Int
     ): List<Attribute> {
-        val filteredContent = if (includeFreeAttrs) LongArray(0) else selectFilteredContent(
-            groupId,
-            dynamicGroupContentIds,
-            attributeFilter,
-            location,
-            contentType
-        )
-        if (filteredContent.isEmpty() && !attributeFilter.isNullOrEmpty() && !includeFreeAttrs) return emptyList()
-        val result =
-            queryAvailableAttributesQ(
-                type,
-                filter,
-                filteredContent,
-                includeFreeAttrs
-            ).safeFind()
+        val filteredContent =
+            if (includeFreeAttrs || Settings.Value.SEARCH_COMBINATION_OR == combinationMode)
+                LongArray(0)
+            else selectFilteredContent(
+                groupId,
+                dynamicGroupContentIds,
+                attributeFilter,
+                combinationMode,
+                location,
+                contentType
+            )
+
+        if (filteredContent.isEmpty() && !attributeFilter.isNullOrEmpty() && !includeFreeAttrs && Settings.Value.SEARCH_COMBINATION_OR != combinationMode)
+            return emptyList()
+
+        val result = queryAvailableAttributesQ(
+            type,
+            filter,
+            filteredContent,
+            includeFreeAttrs
+        ).safeFind()
 
         // Compute attribute count for sorting
         if (searchAttrCount) {
-            result.forEach { a ->
-                // Only count the relevant Contents
-                a.count = countAttributeContents(a.id, libraryStatus, filteredContent).toInt()
+            result.forEach {
+                // Only count relevant Contents
+                it.count = countAttributeContents(it.id, libraryStatus, filteredContent).toInt()
             }
         }
 
@@ -1347,7 +1379,8 @@ object ObjectBoxDB {
             LongArray(0),
             null,
             Location.ANY,
-            Type.ANY
+            Type.ANY,
+            Settings.Value.SEARCH_COMBINATION_AND
         )
     }
 
@@ -1356,21 +1389,28 @@ object ObjectBoxDB {
         dynamicGroupContentIds: LongArray,
         attributeFilter: Set<Attribute>?,
         location: Location,
-        contentType: Type
+        contentType: Type,
+        combinationMode: Int
     ): SparseIntArray {
         // Get Content filtered by current selection
-        val filteredContent = selectFilteredContent(
-            groupId,
-            dynamicGroupContentIds,
-            attributeFilter,
-            location,
-            contentType
-        )
+        val filteredContent =
+            if (Settings.Value.SEARCH_COMBINATION_OR == combinationMode) LongArray(0)
+            else
+                selectFilteredContent(
+                    groupId,
+                    dynamicGroupContentIds,
+                    attributeFilter,
+                    combinationMode,
+                    location,
+                    contentType
+                )
+
         // Get available attributes of the resulting content list
         val query = store.boxFor(Attribute::class.java).query()
         if (filteredContent.isNotEmpty()) query.link(Attribute_.contents)
             .`in`(Content_.id, filteredContent)
-            .`in`(Content_.status, libraryStatus) else query.link(Attribute_.contents)
+            .`in`(Content_.status, libraryStatus)
+        else query.link(Attribute_.contents)
             .`in`(Content_.status, libraryStatus)
         val attributes = query.safeFind()
         val result = SparseIntArray()
@@ -1378,13 +1418,16 @@ object ObjectBoxDB {
         // (see https://github.com/objectbox/objectbox-java/issues/422)
         // => Group by and count have to be done manually (thanks God Stream exists !)
         // Group and count by type
-        val map = attributes.groupBy { a -> a.type }
+        val map = attributes.groupBy { it.type }
         map.forEach {
+            result.append(it.key.code, it.value.size)
+            /*
             if (filteredContent.isEmpty() && attributeFilter != null) {
                 result.append(it.key.code, 0)
             } else {
                 result.append(it.key.code, it.value.size)
             }
+             */
         }
         return result
     }

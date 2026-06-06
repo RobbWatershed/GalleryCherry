@@ -86,6 +86,10 @@ class ContentSearchManager() {
         values.contentType = value
     }
 
+    fun setCombinationMode(value: Int) {
+        values.combinationMode = value
+    }
+
     fun setGroup(value: Group?) {
         if (value != null) values.groupId = value.id else values.groupId = -1
     }
@@ -118,6 +122,7 @@ class ContentSearchManager() {
         setFilterRating(-1)
         setLocation(0)
         setContentType(0)
+        setCombinationMode(Settings.Value.SEARCH_COMBINATION_AND)
     }
 
     fun getLibrary(dao: CollectionDAO): LiveData<PagedList<Content>> {
@@ -167,6 +172,8 @@ class ContentSearchManager() {
 
         var contentType by bundle.int(default = 0)
 
+        var combinationMode by bundle.int(default = Settings.Value.SEARCH_COMBINATION_AND)
+
         var groupId by bundle.long(default = -1)
 
 
@@ -197,6 +204,7 @@ class ContentSearchManager() {
                     location = data.location.value
                     contentType = data.contentType.value
                     query = data.query
+                    combinationMode = data.combinationMode
                 }
 
                 return result

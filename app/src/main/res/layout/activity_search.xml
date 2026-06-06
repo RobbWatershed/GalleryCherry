@@ -169,6 +169,34 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/horz_divider" />
 
+    <com.google.android.material.button.MaterialButtonToggleGroup
+        android:id="@+id/and_or_choice"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp"
+        app:checkedButton="@id/and_choice"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/horz_divider"
+        app:selectionRequired="true"
+        app:singleSelection="true">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/and_choice"
+            style="@style/HentoidCheckButtonOutlinedStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/search_and" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/or_choice"
+            style="@style/HentoidCheckButtonOutlinedStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/search_or" />
+
+    </com.google.android.material.button.MaterialButtonToggleGroup>
+
     <me.devsaki.hentoid.views.ListPickerView
         android:id="@+id/location_picker"
         android:layout_width="match_parent"

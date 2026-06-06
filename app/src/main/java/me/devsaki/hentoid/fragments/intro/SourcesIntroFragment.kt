@@ -27,7 +27,7 @@ class SourcesIntroFragment : Fragment(R.layout.intro_slide_06) {
         // Recycler
         val items: MutableList<SiteItem> = ArrayList()
         for (s in Site.entries.sortedBy { s -> s.description })
-            if (s.isVisible) items.add(
+            if (s.isUsable) items.add(
                 SiteItem(s, selected = true, showHandle = false)
             )
         itemAdapter.set(items)

@@ -148,7 +148,8 @@ class MetadataEditViewModel(
                     true,
                     pageNum,
                     itemsPerPage,
-                    Settings.searchAttributesSortOrder
+                    Settings.searchAttributesSortOrder,
+                    Settings.searchCombinationMode
                 )
                 libraryAttributes.postValue(result)
                 dao.cleanup()

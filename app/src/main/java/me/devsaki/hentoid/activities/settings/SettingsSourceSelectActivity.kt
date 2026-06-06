@@ -15,7 +15,6 @@ import me.devsaki.hentoid.activities.BaseActivity
 import me.devsaki.hentoid.databinding.ActivitySettingsSourcesEditBinding
 import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.util.Settings
-import me.devsaki.hentoid.util.applyTheme
 import me.devsaki.hentoid.viewholders.IDraggableViewHolder
 import me.devsaki.hentoid.viewholders.SiteItem
 
@@ -59,10 +58,10 @@ class SettingsSourceSelectActivity : BaseActivity(), ItemTouchCallback {
         val activeSites = Settings.activeSites
 
         // First add active sites
-        for (s in activeSites) if (s.isVisible) items.add(SiteItem(s, true, touchHelper))
+        for (s in activeSites) if (s.isUsable) items.add(SiteItem(s, true, touchHelper))
         // Then add the others
         for (s in Site.entries)  // We don't want to show these
-            if (s.isVisible && !activeSites.contains(s)) items.add(SiteItem(s, false, touchHelper))
+            if (s.isUsable && !activeSites.contains(s)) items.add(SiteItem(s, false, touchHelper))
         itemAdapter.add(items)
         recyclerView = findViewById(R.id.drawer_edit_list)
         recyclerView.adapter = fastAdapter

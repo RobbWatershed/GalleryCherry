@@ -237,6 +237,7 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
         contentSearchManager.setTags(criteria.attributes)
         contentSearchManager.setLocation(criteria.location.value)
         contentSearchManager.setContentType(criteria.contentType.value)
+        contentSearchManager.setCombinationMode(criteria.combinationMode)
         newContentSearch.value = true
         if (!criteria.isEmpty()) {
             dao.insertSearchRecord(
@@ -551,12 +552,14 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
             contentSearchManager.setExcludedAttrs(searchUri.excludedAttributeTypes)
             contentSearchManager.setLocation(searchUri.location.value)
             contentSearchManager.setContentType(searchUri.contentType.value)
+            contentSearchManager.setCombinationMode(searchUri.combinationMode)
             contentSearchManager.setQuery(searchUri.query)
         } else {
             contentSearchManager.clearTags()
             contentSearchManager.setExcludedAttrs(emptySet())
             contentSearchManager.setLocation(0)
             contentSearchManager.setContentType(0)
+            contentSearchManager.setCombinationMode(0)
             contentSearchManager.setQuery("")
 
             contentSearchManager.setGroup(group)

@@ -116,7 +116,8 @@ class ObjectBoxDAO : CollectionDAO {
         includeFreeAttrs: Boolean,
         page: Int,
         booksPerPage: Int,
-        orderStyle: Int
+        orderStyle: Int,
+        combinationMode: Int
     ): AttributeQueryResult {
         return pagedAttributeSearch(
             types,
@@ -129,7 +130,8 @@ class ObjectBoxDAO : CollectionDAO {
             includeFreeAttrs,
             orderStyle,
             page,
-            booksPerPage
+            booksPerPage,
+            combinationMode
         )
     }
 
@@ -137,14 +139,16 @@ class ObjectBoxDAO : CollectionDAO {
         groupId: Long,
         filter: Set<Attribute>?,
         location: Location,
-        contentType: Type
+        contentType: Type,
+        combinationMode: Int
     ): SparseIntArray {
         return countAttributes(
             groupId,
             getDynamicGroupContent(groupId),
             filter,
             location,
-            contentType
+            contentType,
+            combinationMode
         )
     }
 
@@ -198,7 +202,8 @@ class ObjectBoxDAO : CollectionDAO {
         groupId: Long,
         metadata: Set<Attribute>?,
         location: Location,
-        contentType: Type
+        contentType: Type,
+        combinationMode: Int
     ): LiveData<Int> {
         // This is not optimal because it fetches all the content and returns its size only
         // That's because ObjectBox v2.4.0 does not allow watching Query.count or Query.findLazy using LiveData, but only Query.find
@@ -208,6 +213,7 @@ class ObjectBoxDAO : CollectionDAO {
         bundle.location = location.value
         bundle.contentType = contentType.value
         bundle.sortField = Settings.Value.ORDER_FIELD_NONE
+        bundle.combinationMode = combinationMode
         val livedata = ObjectBoxLiveData(
             ObjectBoxDB.selectContentQ(
                 bundle,
@@ -1305,7 +1311,8 @@ class ObjectBoxDAO : CollectionDAO {
         includeFreeAttrs: Boolean,
         sortOrder: Int,
         pageNum: Int,
-        itemPerPage: Int
+        itemPerPage: Int,
+        combinationMode : Int
     ): AttributeQueryResult {
         val result: MutableList<Attribute> = ArrayList()
         var totalSelectedAttributes: Long = 0
@@ -1318,7 +1325,8 @@ class ObjectBoxDAO : CollectionDAO {
                         attrs,
                         location,
                         contentType,
-                        includeFreeAttrs
+                        includeFreeAttrs,
+                        combinationMode
                     )
                 )
                 totalSelectedAttributes = result.size.toLong()
@@ -1338,7 +1346,8 @@ class ObjectBoxDAO : CollectionDAO {
                             sortOrder,
                             pageNum,
                             itemPerPage,
-                            Settings.searchAttributesCount
+                            Settings.searchAttributesCount,
+                            combinationMode
                         )
                     )
                     totalSelectedAttributes += ObjectBoxDB.countAvailableAttributes(
@@ -1349,7 +1358,8 @@ class ObjectBoxDAO : CollectionDAO {
                         location,
                         contentType,
                         includeFreeAttrs,
-                        filter
+                        filter,
+                        combinationMode
                     )
                 }
             }
@@ -1362,7 +1372,8 @@ class ObjectBoxDAO : CollectionDAO {
         dynamicGroupContentIds: LongArray,
         filter: Set<Attribute>?,
         location: Location,
-        contentType: Type
+        contentType: Type,
+        combinationMode: Int
     ): SparseIntArray {
         val result: SparseIntArray
         if (filter.isNullOrEmpty() && Location.ANY == location && Type.ANY == contentType && -1L == groupId) {
@@ -1374,7 +1385,8 @@ class ObjectBoxDAO : CollectionDAO {
                 dynamicGroupContentIds,
                 filter,
                 location,
-                contentType
+                contentType,
+                combinationMode
             )
             result.put(
                 AttributeType.SOURCE.code,
@@ -1384,7 +1396,8 @@ class ObjectBoxDAO : CollectionDAO {
                     filter,
                     location,
                     contentType,
-                    false
+                    false,
+                    combinationMode
                 ).size
             )
         }

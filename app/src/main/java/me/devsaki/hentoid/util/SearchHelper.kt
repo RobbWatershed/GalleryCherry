@@ -21,7 +21,8 @@ data class SearchCriteria(
     var attributes: MutableSet<Attribute> = HashSet(),
     var excludedAttributeTypes: MutableSet<AttributeType> = HashSet(),
     var location: Location = Location.ANY,
-    var contentType: Type = Type.ANY
+    var contentType: Type = Type.ANY,
+    var combinationMode: Int = Settings.Value.SEARCH_COMBINATION_AND
 ) {
     fun clear() {
         query = ""
@@ -29,6 +30,7 @@ data class SearchCriteria(
         excludedAttributeTypes.clear()
         location = Location.ANY
         contentType = Type.ANY
+        combinationMode = Settings.Value.SEARCH_COMBINATION_AND
     }
 
     fun isEmpty(): Boolean {
@@ -67,7 +69,7 @@ data class SearchCriteria(
         )
     }
 
-    // For labelling only
+    // For labeling only
     fun toString(context: Context): String {
         // Universal search
         if (query.isNotEmpty()) return query
@@ -79,6 +81,9 @@ data class SearchCriteria(
         )
         if (contentType != Type.ANY) labelElts.add(
             "type:" + context.resources.getString(formatContentType(contentType)).lowercase()
+        )
+        labelElts.add(
+            "cb:" + if (Settings.Value.SEARCH_COMBINATION_AND == combinationMode) "and" else "or"
         )
         var label = TextUtils.join("|", labelElts)
         if (label.length > 50) label = label.substring(0, 50) + "…"

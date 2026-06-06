@@ -828,7 +828,7 @@
     <string name="help_web_incomplete_exh_credentials">Incomplete credentials, please log in again. If the issue persists, consider accessing the site from another country or creating a new account.</string>
     <string name="help_web_hires_eh_account">To download hi-res pictures, you need to use or create an e-Hentai account</string>
 
-    <!-- SearchActivity -->
+    <!-- Advanced search -->
     <string name="category_any">Any</string>
     <string name="exclude">Exclude</string>
     <string name="search_category"><x:g example="Language" id="search_category">%s</x:g> search</string>
@@ -874,6 +874,8 @@
     <string name="search_type_entries_4">Archive</string>
     <string name="search_type_entries_5">Placeholder</string>
     <string name="search_type_entries_6">PDF</string>
+    <string name="search_and">AND</string>
+    <string name="search_or">OR</string>
 
     <!-- Image reader -->
     <string name="no_images">Could not load the book: No image found</string>

@@ -16,7 +16,6 @@ import me.devsaki.hentoid.fragments.SelectSiteDialogFragment
 import me.devsaki.hentoid.util.PreferenceItem
 import me.devsaki.hentoid.util.PreferencesParser
 import me.devsaki.hentoid.util.Settings
-import me.devsaki.hentoid.util.applyTheme
 import me.devsaki.hentoid.viewholders.ListPickerItem
 
 /**
@@ -38,9 +37,9 @@ class SettingsSourceSpecificsActivity : BaseActivity(), SelectSiteDialogFragment
         if (null == intent || null == intent.extras) throw IllegalArgumentException("Required intent not found")
 
         val parser = SettingsSourceSpecificsBundle(intent.extras!!)
-        val validSites = Site.entries.filter { it.isVisible }.sortedBy { it.name }
+        val validSites = Site.entries.filter { it.isUsable }.sortedBy { it.name }
         site = Site.searchByCode(parser.site)
-        if (!site.isVisible) site = validSites.first()
+        if (!site.isUsable) site = validSites.first()
 
         binding = ActivitySettingsSourceSpecificsBinding.inflate(layoutInflater)
         binding?.apply {

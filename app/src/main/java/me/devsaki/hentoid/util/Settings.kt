@@ -203,6 +203,7 @@ object Settings {
         Value.SEARCH_ORDER_ATTRIBUTES_COUNT
     )
     val searchAttributesCount: Boolean by BoolSetting("pref_order_attribute_count", true)
+    var searchCombinationMode: Int by IntSetting("search_combination_mode", Value.SEARCH_COMBINATION_AND)
 
     // LOCK
     var lockType: Int by IntSettingStr(Key.LOCK_TYPE, 0)
@@ -855,6 +856,9 @@ object Settings {
 
         const val SEARCH_ORDER_ATTRIBUTES_ALPHABETIC = 0
         const val SEARCH_ORDER_ATTRIBUTES_COUNT = 1
+
+        const val SEARCH_COMBINATION_AND = 0
+        const val SEARCH_COMBINATION_OR = 1
 
         // Sorting field codes for content and group
         const val ORDER_FIELD_NONE = -1

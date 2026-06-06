@@ -103,7 +103,7 @@ class WelcomeFragment : Fragment(R.layout.fragment_web_welcome) {
     }
 
     private fun loadActiveSites() {
-        val activeSites = Settings.activeSites.filter { it.isVisible }
+        val activeSites = Settings.activeSites.filter { it.isUsable }
         val items = mutableSetOf<Site>()
         items.addAll(sitePerTimestamp.filter { activeSites.contains(it) })
         items.addAll(activeSites)
@@ -115,7 +115,7 @@ class WelcomeFragment : Fragment(R.layout.fragment_web_welcome) {
         val usefulHistory = history
             .asSequence()
             .sortedByDescending { it.timestamp }
-            .filter { it.site.isVisible }
+            .filter { it.site.isUsable }
             .map {
                 val parts = UriParts(it.url)
                 Pair(it, URLDecoder.decode(parts.pathFull.substring(parts.host.length), "UTF-8"))
@@ -136,7 +136,7 @@ class WelcomeFragment : Fragment(R.layout.fragment_web_welcome) {
         )
         sitePerTimestamp = history.sortedByDescending { it.timestamp }
             .map { it.site }.distinct()
-            .filter { it.isVisible }
+            .filter { it.isUsable }
         loadActiveSites()
     }
 

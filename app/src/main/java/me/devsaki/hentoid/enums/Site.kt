@@ -9,8 +9,7 @@ import me.devsaki.hentoid.util.network.getMobileUserAgent
 import timber.log.Timber
 
 
-// Safe-for-work/wife/gf option; not used anymore and kept here for retrocompatibility
-private val INVISIBLE_SITES = setOf(
+private val RETIRED_SITES = setOf(
     Site.TMO,  // Dead
     Site.EDOUJIN,  // Dead
     Site.NEXUS,  // Dead
@@ -22,6 +21,9 @@ private val INVISIBLE_SITES = setOf(
     Site.FAKKU,  // Old Fakku; kept for retrocompatibility
     Site.FAKKU2,  // Dropped after Fakku decided to flag downloading accounts and IPs
     Site.ASMHENTAI_COMICS,  // Does not work directly
+)
+
+private val INVISIBLE_SITES = setOf(
     Site.PANDA,  // Dropped; kept for retrocompatibility
     Site.MAL,  // Specific to myAnimeList attributes retrieval
     Site.ANY, // Technical fallback
@@ -153,6 +155,11 @@ enum class Site(val code: Int, val description: String, val url: String, val ico
     var shouldBeStreamed = true
         private set
 
+
+    val isUsable: Boolean
+        get() {
+            return !INVISIBLE_SITES.contains(this) && !RETIRED_SITES.contains(this)
+        }
 
     val isVisible: Boolean
         get() {
