@@ -19,6 +19,7 @@ data class SearchCriteria(
     var query: String = "",
     // From advanced search
     var attributes: MutableSet<Attribute> = HashSet(),
+    // Specific to Artist / Circle selection
     var excludedAttributeTypes: MutableSet<AttributeType> = HashSet(),
     var location: Location = Location.ANY,
     var contentType: Type = Type.ANY,

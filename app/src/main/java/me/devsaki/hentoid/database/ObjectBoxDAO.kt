@@ -263,7 +263,7 @@ class ObjectBoxDAO : CollectionDAO {
         val isExclusionSearch = searchBundle.excludedAttributeTypes?.isNotEmpty() ?: false
         val query = if (isExclusionSearch) {
             val excludedAttrs = searchBundle.excludedAttributeTypes!!
-            ObjectBoxDB.selectContentWithoutAttributesQ(
+            ObjectBoxDB.selectContentWithoutAttributeTypesQ(
                 searchBundle,
                 getDynamicGroupContent(searchBundle.groupId),
                 excludedAttrs.map { AttributeType.searchByCode(it) }.filterNotNull()
@@ -284,7 +284,7 @@ class ObjectBoxDAO : CollectionDAO {
         val isExclusionSearch = searchBundle.excludedAttributeTypes?.isNotEmpty() ?: false
         val contentQ = if (isExclusionSearch) {
             val excludedAttrs = searchBundle.excludedAttributeTypes!!
-            ObjectBoxDB.selectContentWithoutAttributesQ(
+            ObjectBoxDB.selectContentWithoutAttributeTypesQ(
                 searchBundle,
                 getDynamicGroupContent(searchBundle.groupId),
                 excludedAttrs.map { AttributeType.searchByCode(it) }.filterNotNull()
@@ -786,7 +786,7 @@ class ObjectBoxDAO : CollectionDAO {
         val excludedTypes: Set<AttributeType> = setOf(AttributeType.SERIE)
         noSeriesGroup.searchUri = buildSearchUri(null, excludedTypes).toString()
         // Populate with Content
-        val content = ObjectBoxDB.selectContentWithoutAttributesQ(
+        val content = ObjectBoxDB.selectContentWithoutAttributeTypesQ(
             ContentSearchBundle(),
             LongArray(0),
             excludedTypes
@@ -902,7 +902,7 @@ class ObjectBoxDAO : CollectionDAO {
         }
         noArtistGroup.searchUri = buildSearchUri(null, excludedTypes).toString()
         // Populate with Content
-        val content = ObjectBoxDB.selectContentWithoutAttributesQ(
+        val content = ObjectBoxDB.selectContentWithoutAttributeTypesQ(
             ContentSearchBundle(),
             LongArray(0),
             excludedTypes

@@ -1950,7 +1950,7 @@ object ObjectBoxDB {
         return qb.build()
     }
 
-    fun selectContentWithoutAttributesQ(
+    fun selectContentWithoutAttributeTypesQ(
         searchBundle: ContentSearchBundle,
         dynamicGroupContentIds: LongArray,
         types: Collection<AttributeType>
