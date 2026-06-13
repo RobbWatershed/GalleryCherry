@@ -1108,10 +1108,10 @@ object ObjectBoxDB {
                 }
                 if (results.isEmpty()) { // First iteration
                     // If first tag is to be excluded, start trimming results
-                    if (attr.isExcluded) {
-                        idsFullAsSet.removeAll(results)
-                        results = idsFullAsSet
-                    } else results = ids.toMutableSet() // AND and OR logic
+                    results = if (attr.isExcluded) {
+                        idsFullAsSet.removeAll(ids.toSet())
+                        idsFullAsSet
+                    } else ids.toMutableSet() // AND and OR logic
                 } else {
                     // Filter results with newly found IDs (only common IDs should stay)
                     val idsAsSet = ids.toSet()
