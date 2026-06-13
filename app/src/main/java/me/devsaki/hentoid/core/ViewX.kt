@@ -1,10 +1,12 @@
 package me.devsaki.hentoid.core
 
 import android.view.View
+import android.view.ViewGroup
 import android.view.ViewTreeObserver.OnGlobalLayoutListener
 import android.widget.FrameLayout
 import androidx.annotation.IdRes
 import androidx.core.view.ViewCompat
+import androidx.core.view.children
 import androidx.fragment.app.DialogFragment
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
@@ -30,3 +32,10 @@ fun View.fixBottomSheetLanscape(dialogFragment: DialogFragment) {
         }
     })
 }
+
+val View.isFocusedRecursive: Boolean
+    get() = when {
+        this.isFocused -> true
+        this is ViewGroup -> children.any { it.isFocusedRecursive }
+        else -> false
+    }

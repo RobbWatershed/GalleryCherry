@@ -845,6 +845,7 @@ class LibraryContentFragment : Fragment(), ChangeGroupDialogFragment.Parent,
             }
 
             CommunicationEvent.Type.SEARCH -> onSubmitSearch(event.message)
+            CommunicationEvent.Type.SEARCH_NO_HISTORY -> onSubmitSearch(event.message, false)
             CommunicationEvent.Type.ADVANCED_SEARCH -> onAdvancedSearchButtonClick()
             CommunicationEvent.Type.UNSELECT -> leaveSelectionMode()
             CommunicationEvent.Type.UPDATE_EDIT_MODE -> setPagingMethod(
@@ -927,7 +928,7 @@ class LibraryContentFragment : Fragment(), ChangeGroupDialogFragment.Parent,
         }
     }
 
-    private fun onSubmitSearch(query: String) {
+    private fun onSubmitSearch(query: String, recordHistory : Boolean = true) {
         if (query.startsWith("http")) { // Quick-open a page
             when (Site.searchByUrl(query)) {
                 null -> snack(R.string.malformed_url)
@@ -935,7 +936,7 @@ class LibraryContentFragment : Fragment(), ChangeGroupDialogFragment.Parent,
                 else -> launchBrowserFor(requireContext(), query)
             }
         } else {
-            viewModel.searchContentUniversal(query)
+            viewModel.searchContentUniversal(query, recordHistory)
         }
     }
 
@@ -1149,10 +1150,13 @@ class LibraryContentFragment : Fragment(), ChangeGroupDialogFragment.Parent,
                     calledFromOnStart: Boolean
                 ) {
                     selectExtension?.let { se ->
-                        if (isSelected) IntRange(start, end).forEach { se.select(it,
-                            fireEvent = false,
-                            considerSelectableFlag = true
-                        ) }
+                        if (isSelected) IntRange(start, end).forEach {
+                            se.select(
+                                it,
+                                fireEvent = false,
+                                considerSelectableFlag = true
+                            )
+                        }
                         else se.deselect(IntRange(start, end).toMutableList())
                     }
                 }
@@ -1266,9 +1270,7 @@ class LibraryContentFragment : Fragment(), ChangeGroupDialogFragment.Parent,
                 else ContentItem.ViewType.LIBRARY_GRID
 
             contentItems = iLibrary.subList(0, iLibrary.size).filterNotNull()
-                .map { c ->
-                    ContentItem(c, touchHelper, viewType) { item -> onDeleteSwipedBook(item) }
-                }
+                .map { ContentItem(it, touchHelper, viewType) { item -> onDeleteSwipedBook(item) } }
                 .distinct()
         }
         itemAdapter?.let {
@@ -1299,9 +1301,8 @@ class LibraryContentFragment : Fragment(), ChangeGroupDialogFragment.Parent,
         // Update background text
         @StringRes var backgroundText = -1
         if (result.isEmpty()) {
-            if (isSearchQueryActive()) backgroundText =
-                R.string.search_entry_not_found else if (0 == totalContentCount) backgroundText =
-                R.string.downloads_empty_library
+            if (isSearchQueryActive()) backgroundText = R.string.search_entry_not_found
+            else if (0 == totalContentCount) backgroundText = R.string.downloads_empty_library
         }
         binding?.emptyTxt?.apply {
             if (backgroundText != -1) {

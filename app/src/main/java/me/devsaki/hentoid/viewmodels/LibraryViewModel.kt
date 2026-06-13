@@ -210,14 +210,14 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
      *
      * @param query Query to use for the universal search
      */
-    fun searchContentUniversal(query: String) {
+    fun searchContentUniversal(query: String, recordHistory: Boolean = true) {
         // If user searches in main toolbar, universal search takes over advanced search
         contentSearchManager.clearTags()
         contentSearchManager.setLocation(Location.ANY.value)
         contentSearchManager.setContentType(Type.ANY.value)
         contentSearchManager.setQuery(query)
         newContentSearch.value = true
-        if (query.isNotEmpty()) {
+        if (recordHistory && query.isNotEmpty()) {
             val searchUri = buildSearchUri(null, query = query)
             dao.insertSearchRecord(SearchRecord.contentSearch(searchUri), 10)
             dao.cleanup()

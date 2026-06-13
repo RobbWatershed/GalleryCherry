@@ -7,6 +7,7 @@ import android.graphics.Typeface
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.text.InputType
 import android.view.MenuItem
 import android.view.View
 import android.view.WindowManager
@@ -40,6 +41,7 @@ import me.devsaki.hentoid.activities.bundles.SearchActivityBundle
 import me.devsaki.hentoid.core.KRunnable
 import me.devsaki.hentoid.core.convertLocaleToEnglish
 import me.devsaki.hentoid.core.initDrawerLayout
+import me.devsaki.hentoid.core.isFocusedRecursive
 import me.devsaki.hentoid.database.CollectionDAO
 import me.devsaki.hentoid.database.ObjectBoxDAO
 import me.devsaki.hentoid.database.domains.Content
@@ -200,6 +202,8 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
     // Current Folder  search query
     private var folderSearchBundle: Bundle? = null
 
+    private lateinit var searchSubmitDebouncer: Debouncer<String>
+
     // Used to avoid closing search panel immediately when user uses backspace to correct what he typed
     private lateinit var searchClearDebouncer: Debouncer<Int>
 
@@ -247,6 +251,10 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
         setContentView(activityBinding?.root)
 
         searchClearDebouncer = Debouncer(this.lifecycleScope, 1500) { clearSearch() }
+        searchSubmitDebouncer = Debouncer(this.lifecycleScope, 250) {
+            setQuery(it)
+            signalCurrentFragment(CommunicationEvent.Type.SEARCH_NO_HISTORY, it)
+        }
 
         initDrawerLayout(activityBinding!!.drawerLayout, binding!!.toolbar)
 
@@ -595,6 +603,8 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
             actionSearchView = searchMenu?.actionView as SearchView?
             actionSearchView?.apply {
                 imeOptions = EditorInfoCompat.IME_FLAG_NO_PERSONALIZED_LEARNING
+                inputType = InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+                suggestionsAdapter = null
                 setIconifiedByDefault(true)
                 queryHint = getString(R.string.library_search_hint)
                 advancedSearch.searchClearBtn.setOnClickListener {
@@ -614,11 +624,14 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
                     }
 
                     override fun onQueryTextChange(s: String): Boolean {
-                        if (invalidateNextQueryTextChange) { // Should not happen when search panel is closing or opening
-                            invalidateNextQueryTextChange = false
-                        } else if (s.isEmpty()) {
+                        if (s == this@LibraryActivity.getQuery()) return true
+                        if (s.isEmpty()) {
+                            searchSubmitDebouncer.clear()
                             searchClearDebouncer.submit(1)
-                        } else searchClearDebouncer.clear()
+                        } else {
+                            searchSubmitDebouncer.submit(s)
+                            searchClearDebouncer.clear()
+                        }
                         return true
                     }
                 })
@@ -654,8 +667,10 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
         actionSearchView?.let {
             if (isSearchQueryActive()) {
                 if (getQuery().isNotEmpty()) {
-                    it.setQuery(getQuery(), false)
-                    expandSearchMenu()
+                    if (!it.isFocusedRecursive) {
+                        it.setQuery(getQuery(), false)
+                        expandSearchMenu()
+                    }
                 } else if (nonEmptyResults) {
                     collapseSearchMenu()
                 }
@@ -666,9 +681,11 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
                     showSearchHistory = false
                 )
             } else {
-                collapseSearchMenu()
-                if (it.query.isNotEmpty()) actionSearchView?.setQuery("", false)
-                hideSearchSubBar()
+                if (it.query.isNotEmpty() && !it.isFocusedRecursive) {
+                    collapseSearchMenu()
+                    it.setQuery("", false)
+                    hideSearchSubBar()
+                }
             }
         }
     }
