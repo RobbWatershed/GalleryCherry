@@ -9,6 +9,7 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.github.appintro.AppIntro2
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import me.devsaki.hentoid.R
@@ -20,6 +21,8 @@ import me.devsaki.hentoid.fragments.intro.SourcesIntroFragment
 import me.devsaki.hentoid.fragments.intro.ThemeIntroFragment
 import me.devsaki.hentoid.fragments.intro.WelcomeIntroFragment
 import me.devsaki.hentoid.util.Settings
+import me.devsaki.hentoid.util.applyTheme
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Welcome (Intro Slide) Activity
@@ -42,9 +45,9 @@ class IntroActivity : AppIntro2() {
         isSystemBackButtonLocked = true
         isIndicatorEnabled = true
         setSwipeLock(true)
+        applyTheme()
 
         // Set default color theme, in case user skips the slide
-        Settings.colorTheme = Settings.Value.COLOR_THEME_LIGHT
         backgroundDrawable = ContextCompat.getDrawable(this, R.drawable.bg_pin_dialog)
     }
 
@@ -59,13 +62,13 @@ class IntroActivity : AppIntro2() {
             if (Settings.isBrowserMode) {
                 if (oldFragment is PermissionIntroFragment) {
                     lifecycleScope.launch {
-                        delay(75)
+                        delay(75.milliseconds)
                         goToNextSlide(false)
                     }
                 } else {
                     if (oldFragment is ThemeIntroFragment) {
                         lifecycleScope.launch {
-                            delay(75)
+                            delay(75.milliseconds)
                             goToPreviousSlide()
                         }
                     }
@@ -92,9 +95,15 @@ class IntroActivity : AppIntro2() {
         goToNextSlide(false)
     }
 
-    fun setThemePrefs(pref: Int) {
-        Settings.colorTheme = pref
-        goToNextSlide(false)
+    fun setThemePrefs(newPref: Int) {
+        val oldPref = Settings.colorTheme
+        if (newPref != oldPref) {
+            Settings.colorTheme = newPref
+            lifecycleScope.launch(Dispatchers.Main) {
+                delay(200.milliseconds)
+                recreate()
+            }
+        }
     }
 
     private fun setSourcePrefs(sources: List<Site>) {

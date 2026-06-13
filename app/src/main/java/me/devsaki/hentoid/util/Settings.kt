@@ -612,7 +612,7 @@ object Settings {
     var arePlugReactionsOn: Boolean by BoolSetting("plug_reactions_on", true)
     val recentVisibility: Boolean by BoolSetting(Key.APP_PREVIEW, BuildConfig.DEBUG)
     val maxDbSizeKb: Long by LongSetting("db_max_size", 4L * 1024 * 1024) // 4GB
-    var colorTheme: Int by IntSettingStr(Key.COLOR_THEME, Value.COLOR_THEME_LIGHT)
+    var colorTheme: Int by IntSettingStr(Key.COLOR_THEME, Value.COLOR_THEME_LIGHT, true)
 
     // Used to execute heavy maintenance tasks just one time
     var isRefreshJson1Complete: Boolean by BoolSetting(Key.REFRESH_JSON_1_DONE, false)
@@ -652,13 +652,13 @@ object Settings {
         }
     }
 
-    private class IntSettingStr(val key: String, val default: Int) {
+    private class IntSettingStr(val key: String, val default: Int, val commit: Boolean = false) {
         operator fun getValue(thisRef: Any?, property: KProperty<*>): Int {
             return (sharedPreferences.getString(key, default.toString()) + "").toInt()
         }
 
         operator fun setValue(thisRef: Any?, property: KProperty<*>, value: Int) {
-            sharedPreferences.edit { putString(key, value.toString()) }
+            sharedPreferences.edit(commit) { putString(key, value.toString()) }
         }
     }
 
