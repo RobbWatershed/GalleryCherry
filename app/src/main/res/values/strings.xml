@@ -144,6 +144,7 @@
         <item quantity="other">Cancel the selected items\?</item>
     </plurals>
     <string name="invert_queue">Invert queue</string>
+    <string name="limit_download">Limit mobile data</string>
     <string name="redownload_all">Redownload all</string>
     <string name="cancel_all_errors">Cancel all errors</string>
     <string name="import_downloads">Import downloads</string>
@@ -171,6 +172,7 @@
     <string name="paused_dl_folder_credentials">Cannot download - Insufficient credentials on download folder. Use app settings to reselect it</string>
     <string name="paused_dl_stale_online_credentials">Cannot download - Stale Cookies or credentials. Use the notification to regenerate them</string>
     <string name="paused_dl_no_available_downloads">No available downloads remaining</string>
+    <string name="paused_dl_mobile_limit_reached">Mobile download data limit reached</string>
     <string name="step_init">Initializing</string>
     <string name="step_prepare_img">Preparing images</string>
     <string name="step_fetch_img">Fetching images</string>
@@ -225,6 +227,11 @@
     <string name="storage_streamed">Streamed</string>
     <string name="storage_streamed_description">Don\'t store images on storage, stream them as you read</string>
     <string name="storage_stream_warning">At least one website from your selection does NOT support streaming. Switching to streaming is highly discouraged.</string>
+    <string name="limit_download_limit_current">Current limit : %s / %s</string>
+    <string name="limit_download_limit_none">No limit set</string>
+    <string name="limit_download_set_new">Change limit</string>
+    <string name="limit_download_set_new_prompt">New limit (MB)</string>
+    <string name="limit_download_limit_caption">NB : This setting will reset when the app restarts</string>
 
     <!-- Import downloads -->
     <string name="import_downloads_title">Import downloads</string>

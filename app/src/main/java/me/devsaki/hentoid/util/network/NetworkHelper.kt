@@ -16,7 +16,7 @@ enum class Connectivity { NO_INTERNET, WIFI, OTHER }
  */
 fun Context.getConnectivity(): Connectivity {
     val connectivityManager =
-        getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager?
+        getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager?
             ?: return Connectivity.NO_INTERNET
     val activeNetwork = connectivityManager.activeNetwork ?: return Connectivity.NO_INTERNET
     connectivityManager.getNetworkCapabilities(activeNetwork) ?: return Connectivity.NO_INTERNET
@@ -38,13 +38,14 @@ fun Context.getConnectivity(): Connectivity {
  * @return Number of bytes received by the app through networking since device boot.
  */
 fun Context.getIncomingNetworkUsage(): Long {
-    val manager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager?
+    val manager = getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager?
         ?: return -1
     var totalReceived: Long = 0
-    val runningApps = manager.runningAppProcesses
-    if (runningApps != null) for (runningApp in runningApps) {
-        val received = TrafficStats.getUidRxBytes(runningApp.uid)
-        totalReceived += received
+    manager.runningAppProcesses?.let { runningApps ->
+        for (runningApp in runningApps) {
+            val received = TrafficStats.getUidRxBytes(runningApp.uid)
+            totalReceived += received
+        }
     }
     return totalReceived
 }

@@ -45,6 +45,7 @@ import me.devsaki.hentoid.util.addContent
 import me.devsaki.hentoid.util.computeAndSaveCoverHash
 import me.devsaki.hentoid.util.download.ContentQueueManager
 import me.devsaki.hentoid.util.download.ContentQueueManager.pauseQueue
+import me.devsaki.hentoid.util.download.DownloadDataLimiter
 import me.devsaki.hentoid.util.download.DownloadRateLimiter
 import me.devsaki.hentoid.util.download.DownloadSpeedLimiter.prefsSpeedCapToKbps
 import me.devsaki.hentoid.util.download.DownloadSpeedLimiter.setSpeedLimitKbps
@@ -274,6 +275,14 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
             Timber.i("No wi-fi connection available. Queue paused.")
             EventBus.getDefault()
                 .post(DownloadEvent.fromPauseMotive(DownloadEvent.Motive.NO_WIFI))
+            return Pair(QueuingResult.QUEUE_END, null)
+        }
+
+        // Check if mobile download limit has been reached
+        if (DownloadDataLimiter.isLimitReached()) {
+            Timber.i("Mobile data limit reached")
+            EventBus.getDefault()
+                .post(DownloadEvent.fromPauseMotive(DownloadEvent.Motive.MOBILE_DOWNLOAD_LIMIT_REACHED))
             return Pair(QueuingResult.QUEUE_END, null)
         }
 
@@ -727,6 +736,7 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
         var deltaNetworkBytes: Long
         var nbDeltaLowNetwork = 0
         var isScheduledTimeOver = false
+        var isMobileLimitReached = false
 
         do {
             // Check if scheduled end has time been reached
@@ -799,9 +809,7 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
                 )
             )
             Timber.d(
-                "nbDeltaZeroPages: %d / nbDeltaLowNetwork: %d",
-                nbDeltaZeroPages,
-                nbDeltaLowNetwork
+                "nbDeltaZeroPages: $nbDeltaZeroPages / nbDeltaLowNetwork: $nbDeltaLowNetwork"
             )
 
             // Restart request queue when the queue has idled for too long
@@ -868,13 +876,23 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
                 }
             }
 
+            if (DownloadDataLimiter.limit > 0) {
+                if (!DownloadDataLimiter.consumeBytes(
+                        deltaNetworkBytes,
+                        applicationContext.getConnectivity() == Connectivity.OTHER
+                    )
+                ) {
+                    isMobileLimitReached = true
+                }
+            }
+
             // Refresh image locations when an archive download is in progress
             // NB : Should be done like that to avoid threading issues while the same images may be updated by onRequestSuccess
             val newLocations = dlManager.refreshLocation(images)
             if (newLocations.isNotEmpty() && content.id > 0) dao.updateImageLocations(newLocations)
 
             pause(refreshDelayMs)
-        } while (!isDone && !downloadProcessStopped && !ContentQueueManager.isQueuePaused && !isScheduledTimeOver)
+        } while (!isDone && !downloadProcessStopped && !ContentQueueManager.isQueuePaused && !isScheduledTimeOver && !isMobileLimitReached)
 
         if (isDone && !downloadProcessStopped) {
             Timber.d("Content download completed : %s [%s]", content.title, content.id)
@@ -887,6 +905,16 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
                 content.id
             )
             pauseQueue()
+            return Pair(QueuingResult.QUEUE_END, null)
+        } else if (isMobileLimitReached) {
+            Timber.d(
+                "Content download paused (mobile download limit reached) : %s [%s]",
+                content.title,
+                content.id
+            )
+            pauseQueue()
+            EventBus.getDefault()
+                .post(DownloadEvent.fromPauseMotive(DownloadEvent.Motive.MOBILE_DOWNLOAD_LIMIT_REACHED))
             return Pair(QueuingResult.QUEUE_END, null)
         } else {
             Timber.d("Content download paused : %s [%s]", content.title, content.id)

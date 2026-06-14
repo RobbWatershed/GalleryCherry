@@ -32,6 +32,12 @@
         android:tooltipText="@string/invert_queue"
         app:showAsAction="never" />
     <item
+        android:id="@+id/action_limit_download"
+        android:icon="@drawable/ic_network_limit"
+        android:title="@string/limit_download"
+        android:tooltipText="@string/limit_download"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/action_import_downloads"
         android:icon="@drawable/ic_action_import"
         android:title="@string/import_downloads"

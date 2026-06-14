@@ -276,6 +276,7 @@ class QueueActivity : BaseActivity(), SelectSiteDialogFragment.Parent {
         // Update permanent toolbar
         binding.toolbar.menu.apply {
             findItem(R.id.action_invert_queue).isVisible = (0 == position)
+            findItem(R.id.action_limit_download).isVisible = (0 == position)
             findItem(R.id.action_import_downloads).isVisible = (0 == position)
             findItem(R.id.action_cancel_all).isVisible = (0 == position)
             findItem(R.id.action_cancel_all_errors).isVisible = (1 == position)

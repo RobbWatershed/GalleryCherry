@@ -363,6 +363,10 @@ class QueueFragment : Fragment(R.layout.fragment_queue), ItemTouchCallback,
                 viewModel.invertQueue()
                 true
             }
+            it.menu.findItem(R.id.action_limit_download).setOnMenuItemClickListener {
+                LimitDownloadDialogFragment.invoke(this)
+                true
+            }
             it.menu.findItem(R.id.action_import_downloads).setOnMenuItemClickListener {
                 invoke(this)
                 true
@@ -558,6 +562,9 @@ class QueueFragment : Fragment(R.layout.fragment_queue), ItemTouchCallback,
 
             DownloadEvent.Motive.NO_AVAILABLE_DOWNLOADS -> motiveMsg =
                 R.string.paused_dl_no_available_downloads
+
+            DownloadEvent.Motive.MOBILE_DOWNLOAD_LIMIT_REACHED -> motiveMsg =
+                R.string.paused_dl_mobile_limit_reached
 
             DownloadEvent.Motive.NONE -> motiveMsg = -1
         }

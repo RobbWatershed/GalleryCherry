@@ -292,6 +292,10 @@ class ErrorsFragment : Fragment(R.layout.fragment_queue_errors), ItemTouchCallba
                 viewModel.invertQueue()
                 true
             }
+            it.menu.findItem(R.id.action_limit_download).setOnMenuItemClickListener {
+                LimitDownloadDialogFragment.invoke(this)
+                true
+            }
             it.menu.findItem(R.id.help).setOnMenuItemClickListener {
                 context?.startBrowserActivity(URL_WIKI_DOWNLOAD)
                 true
