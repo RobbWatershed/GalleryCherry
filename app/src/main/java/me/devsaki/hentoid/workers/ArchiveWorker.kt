@@ -25,17 +25,20 @@ import me.devsaki.hentoid.notification.archive.ArchiveStartNotification
 import me.devsaki.hentoid.util.ProgressManager
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.canBeArchived
+import me.devsaki.hentoid.util.copy
 import me.devsaki.hentoid.util.createArchivePdfCover
 import me.devsaki.hentoid.util.download.selectDownloadLocation
 import me.devsaki.hentoid.util.file.ArchiveStreamer
 import me.devsaki.hentoid.util.file.Beholder
 import me.devsaki.hentoid.util.file.DEFAULT_MIME_TYPE
 import me.devsaki.hentoid.util.file.PdfManager
+import me.devsaki.hentoid.util.file.copyFile
 import me.devsaki.hentoid.util.file.createNewDownloadFile
 import me.devsaki.hentoid.util.file.findFile
 import me.devsaki.hentoid.util.file.findOrCreateDocumentFile
 import me.devsaki.hentoid.util.file.formatDisplay
 import me.devsaki.hentoid.util.file.getDocumentFromTreeUriString
+import me.devsaki.hentoid.util.file.getInputStream
 import me.devsaki.hentoid.util.file.getOutputStream
 import me.devsaki.hentoid.util.file.getParent
 import me.devsaki.hentoid.util.file.listFiles
@@ -112,7 +115,8 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
                     if (isStopped) break
                     try {
                         dao.selectContent(contentId)?.let {
-                            if (canBeArchived(it)) archiveContent(it, params, dao)
+                            if (it.isArchive || it.isPdf) moveContent(it, params, dao)
+                            else if (canBeArchived(it)) archiveContent(it, params, dao)
                             else {
                                 globalProgress.setProgress(contentId.toString(), 1f)
                                 nextKO()
@@ -132,6 +136,24 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
                 dao.cleanup()
             }
         }
+
+    private suspend fun moveContent(content: Content, params: Params, dao : CollectionDAO) {
+        Timber.i("Moving ${content.title}")
+        val context = applicationContext
+        val archiveUri = content.storageUri.toUri()
+        val forceFormat = if (content.isArchive) "cbz" else "pdf"
+        val destFileUri = getTargetFile(context, content, params, forceFormat)
+        Timber.d("DestUri : ${destFileUri.formatDisplay()}")
+
+        getOutputStream(context, destFileUri)?.use { output ->
+            getInputStream(context, archiveUri)
+                .use { input -> copy(input, output) }
+        }
+
+        if (!isStopped) {
+            if (params.deleteOnSuccess) removeContent(context, dao, content)
+        }
+    }
 
     private suspend fun archiveContent(content: Content, params: Params, dao: CollectionDAO) {
         Timber.i("Archiving ${content.title}")
@@ -241,15 +263,17 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
     private fun getTargetFile(
         context: Context,
         content: Content,
-        params: Params
+        params: Params,
+        forceFormat: String = ""
     ): Uri {
         // Build destination file
         val bookFolderName = formatFolderName(content)
-        val ext = when (params.targetFormat) {
+        val targetExt = when (params.targetFormat) {
             1 -> "cbz"
             2 -> "pdf"
             else -> "zip"
         }
+        val ext = forceFormat.ifEmpty { targetExt }
         // First try creating the file with the new naming...
         var destName = bookFolderName.first + "." + ext
         // Identify target folder
