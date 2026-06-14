@@ -5,6 +5,7 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.TrafficStats
 import android.net.wifi.WifiManager
+import me.devsaki.hentoid.BuildConfig
 
 
 enum class Connectivity { NO_INTERNET, WIFI, OTHER }
@@ -40,12 +41,13 @@ fun Context.getConnectivity(): Connectivity {
 fun Context.getIncomingNetworkUsage(): Long {
     val manager = getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager?
         ?: return -1
-    var totalReceived: Long = 0
+    var totalReceived = 0L
     manager.runningAppProcesses?.let { runningApps ->
-        for (runningApp in runningApps) {
-            val received = TrafficStats.getUidRxBytes(runningApp.uid)
-            totalReceived += received
-        }
+        runningApps.filter { it.pkgList.any { pl -> pl.contains(BuildConfig.APPLICATION_ID) } }
+            .forEach {
+                val received = TrafficStats.getUidRxBytes(it.uid)
+                totalReceived += received
+            }
     }
     return totalReceived
 }

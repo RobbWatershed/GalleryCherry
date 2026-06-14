@@ -20,7 +20,7 @@ object DownloadDataLimiter {
 
     fun consumeBytes(bytes: Long, isMobile: Boolean): Boolean {
         if (limit > 0 && isMobile)
-            return (consumedA.addAndGet(bytes) >= limit)
+            return (consumedA.addAndGet(bytes) <= limit)
         return true
     }
 }

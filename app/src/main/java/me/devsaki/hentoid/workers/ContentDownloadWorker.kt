@@ -732,7 +732,8 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
         var firstPageDownloaded = false
         var deltaPages = 0
         var nbDeltaZeroPages = 0
-        var networkBytes: Long = 0
+        // Offset value; represents all network traffic since device boot
+        var networkBytes = applicationContext.getIncomingNetworkUsage()
         var deltaNetworkBytes: Long
         var nbDeltaLowNetwork = 0
         var isScheduledTimeOver = false
@@ -803,10 +804,7 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
             Timber.d(
                 "deltaPages: %d / deltaNetworkBytes: %s",
                 deltaPages,
-                formatHumanReadableSize(
-                    deltaNetworkBytes,
-                    applicationContext.resources
-                )
+                formatHumanReadableSize(deltaNetworkBytes, applicationContext.resources)
             )
             Timber.d(
                 "nbDeltaZeroPages: $nbDeltaZeroPages / nbDeltaLowNetwork: $nbDeltaLowNetwork"
