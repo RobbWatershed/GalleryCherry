@@ -153,17 +153,21 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
             if (2 == params.targetFormat) { // PDF
                 val mgr = PdfManager()
                 val color = when (params.pdfBackgroundColor) {
+                    0 -> R.color.white
                     1 -> R.color.light_gray
                     2 -> R.color.dark_gray
                     3 -> R.color.black
-                    else -> R.color.white
+                    else -> null // None
+                }
+                val convertedColor = color?.let {
+                    Color.valueOf(ContextCompat.getColor(context, it))
                 }
                 mgr.convertImagesToPdf(
                     context,
                     os,
                     files,
                     true,
-                    Color.valueOf(ContextCompat.getColor(context, color))
+                    convertedColor
                 ) {
                     globalProgress.setProgress(content.id.toString(), it)
                     launchProgressNotification()
@@ -171,7 +175,8 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
                 // PDF is not a storage method => no mapping to perform
             } else { // Archive
                 // TODO optimize by working on a single OutputStream instead of juggling with the Uri
-                val archiveStreamer = ArchiveStreamer(context, destFileUri,
+                val archiveStreamer = ArchiveStreamer(
+                    context, destFileUri,
                     append = false,
                     removeArchivedFiles = false
                 ) {

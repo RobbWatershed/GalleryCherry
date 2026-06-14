@@ -2,14 +2,13 @@ package me.devsaki.hentoid.util.file
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.Color
 import android.graphics.PointF
 import android.graphics.RectF
 import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 import com.itextpdf.io.image.ImageDataFactory
 import com.itextpdf.io.source.ByteArrayOutputStream
-import com.itextpdf.kernel.colors.ColorConstants
+import com.itextpdf.kernel.colors.Color
 import com.itextpdf.kernel.events.Event
 import com.itextpdf.kernel.events.IEventHandler
 import com.itextpdf.kernel.events.PdfDocumentEvent
@@ -59,7 +58,7 @@ class PdfManager {
     private val currentPageIndex = AtomicInteger(0)
 
     private fun computeScaleRatio(pageSize: PageSize, margin: RectF, imgDims: PointF): Float {
-        // Firstly get the scale ratio required to fit the image width
+        // First get the scale ratio required to fit the image width
         val pageWidth: Float = pageSize.width - margin.left - margin.right
         var scaleRatio = pageWidth / imgDims.x
 
@@ -123,24 +122,30 @@ class PdfManager {
         out: OutputStream,
         imageFiles: List<DocumentFile>,
         keepImgFormat: Boolean,
-        background: Color,
+        background: android.graphics.Color? = null,
         onProgressChange: ((Float) -> Unit)? = null
     ) {
         PdfDocument(PdfWriter(out)).use { pdfDoc ->
             Document(pdfDoc, PageSize.A4).use { doc ->
                 doc.setMargins(0f, 0f, 0f, 0f)
                 doc.setHorizontalAlignment(HorizontalAlignment.CENTER)
-                val bgColor = com.itextpdf.kernel.colors.Color.createColorWithColorSpace(
-                    arrayOf(background.red(), background.green(), background.blue()).toFloatArray()
-                )
-                doc.setBackgroundColor(bgColor)
+                background?.let {
+                    val bgColor = Color.createColorWithColorSpace(
+                        arrayOf(it.red(), it.green(), it.blue()).toFloatArray()
+                    )
+                    doc.setBackgroundColor(bgColor)
+
+                    val bgEventHandler = PageBackgroundEventHandler()
+                    pdfDoc.addEventHandler(PdfDocumentEvent.START_PAGE, bgEventHandler)
+                    bgEventHandler.setBackground(bgColor)
+                } ?: run {
+                    val bgColor =
+                        Color.createColorWithColorSpace(arrayOf(0f, 0f, 0f).toFloatArray())
+                    doc.setBackgroundColor(bgColor, 0f)
+                }
 
                 val rotationEventHandler = PageRotationEventHandler()
                 pdfDoc.addEventHandler(PdfDocumentEvent.START_PAGE, rotationEventHandler)
-
-                val bgEventHandler = PageBackgroundEventHandler()
-                pdfDoc.addEventHandler(PdfDocumentEvent.START_PAGE, bgEventHandler)
-                bgEventHandler.setBackground(bgColor)
 
                 imageFiles
                     .asSequence()
@@ -376,13 +381,15 @@ class PdfManager {
     }
 
     private class PageBackgroundEventHandler : IEventHandler {
-        private var color = ColorConstants.WHITE
+        private var color: Color? = null
 
-        fun setBackground(color: com.itextpdf.kernel.colors.Color) {
+        fun setBackground(color: Color) {
             this.color = color
         }
 
         override fun handleEvent(currentEvent: Event) {
+            if (null == color) return
+
             val docEvent = currentEvent as PdfDocumentEvent
             val page = docEvent.page
 

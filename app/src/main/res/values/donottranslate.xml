@@ -493,6 +493,7 @@
         <item>@string/light_grey</item>
         <item>@string/dark_grey</item>
         <item>@string/black</item>
+        <item>@string/none</item>
     </string-array>
 
     <!-- Lock dialog -->
