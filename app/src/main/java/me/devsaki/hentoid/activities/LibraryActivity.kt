@@ -771,7 +771,7 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
                             if (getSearchCriteria().isEmpty() || query.isNotEmpty()) { // Universal search
                                 if (query.isNotEmpty()) {
                                     if (SearchRecord.EntityType.CONTENT == it.entityType)
-                                        viewModel.searchContentUniversal(query)
+                                        viewModel.searchContentFullText(query)
                                     else
                                         viewModel.setGroupQuery(query)
                                 }

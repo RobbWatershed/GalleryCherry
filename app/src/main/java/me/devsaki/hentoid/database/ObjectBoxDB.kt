@@ -6,6 +6,7 @@ import io.objectbox.Property
 import io.objectbox.android.Admin
 import io.objectbox.query.Query
 import io.objectbox.query.QueryBuilder
+import io.objectbox.query.QueryBuilder.StringOrder
 import io.objectbox.query.QueryCondition
 import me.devsaki.hentoid.BuildConfig
 import me.devsaki.hentoid.activities.bundles.SearchActivityBundle.Companion.buildSearchUri
@@ -860,16 +861,25 @@ object ObjectBoxDB {
         searchBundle: ContentSearchBundle,
         dynamicGroupContentIds: LongArray,
         statuses: IntArray
-    ): Query<Content> {
-        val qc = initContentQC(searchBundle, dynamicGroupContentIds, statuses)
-        val query = store.boxFor(Content::class.java).query(qc)
-        if (searchBundle.filterPageFavourites) filterWithPageFavs(query)
-        query.link(Content_.attributes).contains(
-            Attribute_.name,
-            searchBundle.query,
-            QueryBuilder.StringOrder.CASE_INSENSITIVE
-        )
-        return query.build()
+    ): LongArray {
+        val result: MutableSet<Long> = HashSet()
+        // Full-text search attributes; combine with AND logic
+
+        searchBundle.query.split(",").map { it.trim() }.forEach { fullTextQuery ->
+            val qc = initContentQC(searchBundle, dynamicGroupContentIds, statuses)
+            val query = store.boxFor(Content::class.java).query(qc)
+            if (searchBundle.filterPageFavourites) filterWithPageFavs(query)
+            query.link(Content_.attributes).contains(
+                Attribute_.name,
+                fullTextQuery,
+                StringOrder.CASE_INSENSITIVE
+            )
+            query.build().safeFindIds().toSet().let {
+                if (result.isEmpty()) result.addAll(it)
+                else result.retainAll(it)
+            }
+        }
+        return result.toLongArray()
     }
 
     private fun initContentQC(
@@ -906,7 +916,7 @@ object ObjectBoxDB {
                 searchBundle,
                 dynamicGroupContentIds,
                 status
-            ).safeFindIds()
+            )
         else LongArray(0)
 
         // Search content taking attributes into account
@@ -965,7 +975,7 @@ object ObjectBoxDB {
                 searchBundle,
                 dynamicGroupContentIds,
                 status
-            ).safeFindIds()
+            )
         else LongArray(0)
 
         // Excluded content if applicable

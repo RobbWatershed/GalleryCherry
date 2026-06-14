@@ -206,12 +206,14 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
     }
 
     /**
-     * Perform a new content universal search using the given query
+     * Perform a new content full text search using the given query
+     * NB1 : Full text search is performed among content title _and_ attributes
+     * NB2 : Multiple fulltext search terms can be specified using a comma
      *
-     * @param query Query to use for the universal search
+     * @param query Query to use for the full text search
      */
-    fun searchContentUniversal(query: String, recordHistory: Boolean = true) {
-        // If user searches in main toolbar, universal search takes over advanced search
+    fun searchContentFullText(query: String, recordHistory: Boolean = true) {
+        // If user searches in main toolbar, full text search takes over advanced search
         contentSearchManager.clearTags()
         contentSearchManager.setLocation(Location.ANY.value)
         contentSearchManager.setContentType(Type.ANY.value)

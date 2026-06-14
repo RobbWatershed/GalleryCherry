@@ -936,7 +936,7 @@ class LibraryContentFragment : Fragment(), ChangeGroupDialogFragment.Parent,
                 else -> launchBrowserFor(requireContext(), query)
             }
         } else {
-            viewModel.searchContentUniversal(query, recordHistory)
+            viewModel.searchContentFullText(query, recordHistory)
         }
     }
 
