@@ -545,7 +545,6 @@
     <string name="logs_share">Dela logg</string>
     <string name="logs_title">Senaste loggar</string>
     <string name="malformed_url">Fel - Missbildad URL</string>
-    <string name="mass_delete_action">Ta bort i massor</string>
     <string name="mass_delete_confirm">Jag vet vad jag gör</string>
     <string name="mass_external_tip">Notera : Externa böcker kommer tas bort av den här handlingen</string>
     <string name="mass_external_warning_1">Ditt nuvarande val innehåller böcker från sidor som inte är tänkta att strömmas. Sådana böcker kommer ej behandlas.</string>

@@ -129,7 +129,7 @@ class MusesContent : BaseContentParser() {
 
             var index = 0
             if (Settings.isThumbSeparateFile(Site.MUSES)) {
-                images.add(ImageFile.newCover(coverUrl, StatusContent.SAVED))
+                images.add(ImageFile.newThumb(coverUrl, StatusContent.SAVED))
                 index++
             }
 

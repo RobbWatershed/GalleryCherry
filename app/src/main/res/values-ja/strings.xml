@@ -228,7 +228,6 @@
     <string name="keep_fav_books">お気に入りの本を保管しておく</string>
     <string name="keep_fav_groups">お気に入りのグループを保存する</string>
     <string name="book_keep">%1$dの本を保管します</string>
-    <string name="mass_delete_action">一括削除</string>
     <string name="generic_progress">%1$d/%2$d%3$s</string>
     <string name="book_progress">%1$d/ %2$d本</string>
     <string name="group_progress">%1$d / %2$dグループ</string>

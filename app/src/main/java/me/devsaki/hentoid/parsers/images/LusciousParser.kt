@@ -29,7 +29,7 @@ class LusciousParser : BaseImageListParser() {
         val isManga = (!cats.isNullOrEmpty() && cats.first().name == "manga")
 
         if (Settings.isThumbSeparateFile(Site.LUSCIOUS))
-            result.add(ImageFile.newCover(onlineContent.coverImageUrl, StatusContent.SAVED))
+            result.add(ImageFile.newThumb(onlineContent.coverImageUrl, StatusContent.SAVED))
 
         progressStart(onlineContent)
         getPages(

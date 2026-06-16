@@ -183,7 +183,7 @@ fun urlsToImageFiles(
     chapter: Chapter? = null
 ): List<ImageFile> {
     val result: MutableList<ImageFile> = ArrayList()
-    if (!coverUrl.isNullOrEmpty() && Settings.isThumbSeparateFile(site)) result.add(ImageFile.newCover(coverUrl, status))
+    if (!coverUrl.isNullOrEmpty() && Settings.isThumbSeparateFile(site)) result.add(ImageFile.newThumb(coverUrl, status))
     result.addAll(urlsToImageFiles(imgUrls, range, 1, status, imgUrls.size, chapter))
     return result
 }

@@ -591,7 +591,6 @@
     <string name="logs_share">Condividi registro</string>
     <string name="logs_title">Ultimi registri</string>
     <string name="malformed_url">Errore - URL non valido</string>
-    <string name="mass_delete_action">Cancellazione di massa</string>
     <string name="mass_delete_confirm">So ciò che sto facendo</string>
     <string name="mass_external_tip">Nota: I libri esterni verranno cancellati da questa operazione</string>
     <string name="mass_external_warning_1">La tua attuale selezione contiene libri da siti che non dovrebbero essere streammati. Questi libri non saranno processati.</string>

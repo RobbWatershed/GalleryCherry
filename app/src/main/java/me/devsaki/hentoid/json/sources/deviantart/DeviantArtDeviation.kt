@@ -95,7 +95,7 @@ data class DeviantArtDeviation(
 
             val result = ArrayList<ImageFile>()
             if (media.getThumbUrl().isNotEmpty() && Settings.isThumbSeparateFile(Site.DEVIANTART))
-                result.add(ImageFile.newCover(media.getThumbUrl(), StatusContent.SAVED))
+                result.add(ImageFile.newThumb(media.getThumbUrl(), StatusContent.SAVED))
             result.add(picture)
             return result
         }

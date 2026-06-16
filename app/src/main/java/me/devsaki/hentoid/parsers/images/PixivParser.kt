@@ -195,7 +195,7 @@ class PixivParser : BaseImageListParser() {
         // Retrieve all Illust detailed info
         val result: MutableList<ImageFile> = ArrayList()
         if (Settings.isThumbSeparateFile(Site.PIXIV))
-            result.add(ImageFile.newCover(onlineContent.coverImageUrl, StatusContent.SAVED))
+            result.add(ImageFile.newThumb(onlineContent.coverImageUrl, StatusContent.SAVED))
         val attrs: MutableSet<Attribute> = HashSet()
         extraChapters.forEachIndexed { index, ch ->
             if (processHalted.get()) return@forEachIndexed
@@ -276,7 +276,7 @@ class PixivParser : BaseImageListParser() {
         // Cycle through all Illusts
         val result: MutableList<ImageFile> = ArrayList()
         if (Settings.isThumbSeparateFile(Site.PIXIV))
-            result.add(ImageFile.newCover(onlineContent.coverImageUrl, StatusContent.SAVED))
+            result.add(ImageFile.newThumb(onlineContent.coverImageUrl, StatusContent.SAVED))
         val attrs: MutableSet<Attribute> = HashSet()
         illustIds.forEachIndexed { index, illustId ->
             if (processHalted.get()) return@forEachIndexed
@@ -377,7 +377,7 @@ class PixivParser : BaseImageListParser() {
         // Cycle through all Illusts
         val result: MutableList<ImageFile> = ArrayList()
         if (Settings.isThumbSeparateFile(Site.PIXIV))
-            result.add(ImageFile.newCover(onlineContent.coverImageUrl, StatusContent.SAVED))
+            result.add(ImageFile.newThumb(onlineContent.coverImageUrl, StatusContent.SAVED))
         val attrs: MutableSet<Attribute> = HashSet()
         illustIds.forEachIndexed { index, illustId ->
             if (processHalted.get()) return@forEachIndexed

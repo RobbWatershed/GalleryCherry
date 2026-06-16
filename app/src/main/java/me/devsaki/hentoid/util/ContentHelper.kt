@@ -911,7 +911,7 @@ suspend fun setContentCover(
     newCover: ImageFile
 ): Boolean = withContext(Dispatchers.IO) {
     // Duplicate given picture and set it as a cover
-    val cover = ImageFile.newCover(newCover.url, newCover.status)
+    val cover = ImageFile.newThumb(newCover.url, newCover.status)
     cover.fileUri = newCover.fileUri
 
     // If selected cover is a transient file, make it permanent

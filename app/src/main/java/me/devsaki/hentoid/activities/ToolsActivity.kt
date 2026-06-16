@@ -19,7 +19,7 @@ import org.greenrobot.eventbus.ThreadMode
 
 class ToolsActivity : BaseActivity(), SearchPreferenceResultListener {
     enum class MassOperation {
-        DELETE, STREAM
+        DELETE, STREAM, REMOVE_THUMB, CREATE_THUMB
     }
 
     private lateinit var fragment: ToolsFragment

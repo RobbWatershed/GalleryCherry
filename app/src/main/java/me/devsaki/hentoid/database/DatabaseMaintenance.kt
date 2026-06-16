@@ -182,7 +182,7 @@ object DatabaseMaintenance {
                 for (c in contents) {
                     val images: MutableList<ImageFile> = c.imageList.toMutableList()
                     val newCover =
-                        ImageFile.newCover(c.coverImageUrl, StatusContent.ONLINE)
+                        ImageFile.newThumb(c.coverImageUrl, StatusContent.ONLINE)
                     newCover.contentId = c.id
                     images.add(0, newCover)
                     images[1].isCover = false

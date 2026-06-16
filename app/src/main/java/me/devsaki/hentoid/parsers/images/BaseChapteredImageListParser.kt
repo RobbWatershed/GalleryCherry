@@ -123,7 +123,7 @@ abstract class BaseChapteredImageListParser : BaseImageListParser() {
             && onlineContent.coverImageUrl.isNotEmpty()
             && Settings.isThumbSeparateFile(onlineContent.site)
         )
-            result.add(ImageFile.newCover(onlineContent.coverImageUrl, StatusContent.SAVED))
+            result.add(ImageFile.newThumb(onlineContent.coverImageUrl, StatusContent.SAVED))
 
         return result
     }

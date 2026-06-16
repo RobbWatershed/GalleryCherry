@@ -507,6 +507,8 @@
     <string-array name="mass_operations_entries" translatable="false">
         <item>@string/mass_operation_1</item>
         <item>@string/mass_operation_2</item>
+        <item>@string/mass_operation_3</item>
+        <item>@string/mass_operation_4</item>
     </string-array>
     <string-array name="mass_operations_scope_entries" translatable="false">
         <item>@string/mass_operation_scope_1</item>

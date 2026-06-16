@@ -587,7 +587,6 @@
     <string name="logs_share">Compartir registro</string>
     <string name="logs_title">Últimos registros</string>
     <string name="malformed_url">Error - URL malformada</string>
-    <string name="mass_delete_action">Eliminación masiva</string>
     <string name="mass_delete_confirm">Sé lo que estoy haciendo.</string>
     <string name="mass_external_tip">Nota: Los libros externos se eliminarán con esta operación.</string>
     <string name="mass_external_warning_1">Su selección actual contiene libros de sitios que no deberían reproducirse en línea. Esos libros no se procesarán.</string>
