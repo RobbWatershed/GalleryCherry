@@ -53,7 +53,7 @@ class HitomiParser : BaseImageListParser() {
         val readerUrl = onlineContent.readerUrl
         processedUrl = onlineContent.galleryUrl
         require(URLUtil.isValidUrl(readerUrl)) { "Invalid gallery URL : $readerUrl" }
-        Timber.d("Gallery URL: %s", readerUrl)
+        Timber.d("Gallery URL: $readerUrl")
         EventBus.getDefault().register(this)
         var result: List<ImageFile>
         try {
@@ -101,7 +101,7 @@ class HitomiParser : BaseImageListParser() {
         if (null == webview) {
             handler.post {
                 this.webview = HitomiBackgroundWebView(getInstance(), Site.HITOMI)
-                Timber.d(">> loading url %s", pageUrl)
+                Timber.d(">> loading url $pageUrl")
 
                 this.webview?.apply {
                     loadUrl(pageUrl) {
@@ -139,7 +139,9 @@ class HitomiParser : BaseImageListParser() {
         val imageUrls = jsonToObject<List<String>>(jsResult, LIST_STRINGS)
         if (!imageUrls.isNullOrEmpty()) {
             onlineContent.coverImageUrl = imageUrls[0]
-            result.add(ImageFile.newCover(imageUrls[0], StatusContent.SAVED))
+
+            if (Settings.isThumbSeparateFile(Site.HITOMI))
+                result.add(ImageFile.newCover(imageUrls[0], StatusContent.SAVED))
 
             val rangeIndexes =
                 if (onlineContent.downloadRange.isBlank()) imageUrls.indices

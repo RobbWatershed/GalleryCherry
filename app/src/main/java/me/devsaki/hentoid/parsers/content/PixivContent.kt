@@ -14,8 +14,8 @@ import java.io.IOException
 
 class PixivContent : BaseContentParser() {
     override fun update(content: Content, url: String, updateImages: Boolean): Content {
-        var id = ""
-        var entity = ""
+        var id: String
+        var entity: String
 
         val uri = url.toUri()
         val urlParts = url.split("/")

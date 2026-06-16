@@ -259,6 +259,7 @@ class EHentaiParser : ImageListParser {
         @Throws(IOException::class, EmptyResultException::class)
         fun loadMpv(
             mpvUrl: String,
+            site: Site,
             headers: List<Pair<String, String>>,
             useMobileAgent: Boolean,
             useHentoidAgent: Boolean,
@@ -281,7 +282,7 @@ class EHentaiParser : ImageListParser {
                 if (progress.isProcessHalted()) return@forEach
 
                 // Get the URL of the 1st page as the cover
-                if (1 == it) {
+                if (Settings.isThumbSeparateFile(site) && 1 == it) {
                     val imageMetadata = getMpvImage(
                         mpvInfo.getImageInfo(0),
                         headers,
@@ -346,7 +347,9 @@ class EHentaiParser : ImageListParser {
             //    - grab the URL of the displayed image
             //    - grab the alternate URL of the "Click here if the image fails loading" link
             val result: MutableList<ImageFile> = ArrayList()
-            result.add(ImageFile.newCover(content.coverImageUrl, StatusContent.SAVED))
+
+            if (Settings.isThumbSeparateFile(content.site))
+                result.add(ImageFile.newCover(content.coverImageUrl, StatusContent.SAVED))
 
             val rangeIndexes = if (content.downloadRange.isBlank()) IntRange(1, pageUrls.size)
             else rangeToNumbers(content.downloadRange).filter { it in 1..<pageUrls.size + 1 }
@@ -504,6 +507,7 @@ class EHentaiParser : ImageListParser {
                 try {
                     loadMpv(
                         mpvUrl,
+                        content.site,
                         headers,
                         useMobileAgent,
                         useHentoidAgent,

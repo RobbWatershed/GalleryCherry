@@ -90,15 +90,15 @@ class AllPornComicContent : BaseContentParser() {
         if (updateImages) {
             chapterImages?.let { chImg ->
                 val imgUrls = chImg.map { getImgSrc(it) }.filterNot { it.isEmpty() }
-                content.setImageFiles(
-                    urlsToImageFiles(
-                        imgUrls,
-                        content.downloadRange,
-                        StatusContent.SAVED,
-                        coverUrl
-                    )
+                val imgs = urlsToImageFiles(
+                    imgUrls,
+                    content.downloadRange,
+                    StatusContent.SAVED,
+                    Site.ALLPORNCOMIC,
+                    coverUrl
                 )
-                content.qtyPages = imgUrls.size // Don't count the cover
+                content.setImageFiles(imgs)
+                content.qtyPages = imgs.count { it.isReadable }
             }
         }
         return content

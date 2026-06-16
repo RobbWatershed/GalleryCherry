@@ -10,6 +10,7 @@ import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.events.DownloadPreparationEvent
 import me.devsaki.hentoid.parsers.content.NO_TITLE
 import me.devsaki.hentoid.util.MAP_STRINGS
+import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.completedStr
 import me.devsaki.hentoid.util.isNumeric
 import me.devsaki.hentoid.util.network.HEADER_COOKIE_KEY
@@ -177,11 +178,12 @@ fun urlsToImageFiles(
     imgUrls: List<String>,
     range: String,
     status: StatusContent,
+    site : Site,
     coverUrl: String? = null,
     chapter: Chapter? = null
 ): List<ImageFile> {
     val result: MutableList<ImageFile> = ArrayList()
-    if (!coverUrl.isNullOrEmpty()) result.add(ImageFile.newCover(coverUrl, status))
+    if (!coverUrl.isNullOrEmpty() && Settings.isThumbSeparateFile(site)) result.add(ImageFile.newCover(coverUrl, status))
     result.addAll(urlsToImageFiles(imgUrls, range, 1, status, imgUrls.size, chapter))
     return result
 }

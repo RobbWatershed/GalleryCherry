@@ -78,7 +78,6 @@ data class LusciousBookMetadata(
         }
         content.title = cleanup(info.title)
 
-//        result.setQtyPages(info.number_of_pictures);  <-- does not reflect the actual number of pictures reachable via the Luscious API / website
         info.cover?.apply { content.coverImageUrl = url }
 
         val attributes = AttributeMap()

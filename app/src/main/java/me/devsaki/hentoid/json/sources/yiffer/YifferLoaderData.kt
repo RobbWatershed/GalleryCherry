@@ -39,39 +39,25 @@ data class YifferData(
 
         val attributes = AttributeMap()
         comic.artist?.let {
-            attributes.add(
-                Attribute(
-                    AttributeType.ARTIST,
-                    it.name,
-                    "",
-                    Site.YIFFER
-                )
-            )
+            attributes.add(Attribute(AttributeType.ARTIST, it.name, "", Site.YIFFER))
         }
         comic.tags?.forEach {
-            attributes.add(
-                Attribute(
-                    AttributeType.TAG,
-                    it.name,
-                    "",
-                    Site.YIFFER
-                )
-            )
+            attributes.add(Attribute(AttributeType.TAG, it.name, "", Site.YIFFER))
         }
 
         c.putAttributes(attributes)
 
         if (updateImages) {
             val pageUrls = getPageUrls()
-            c.setImageFiles(
-                urlsToImageFiles(
-                    pageUrls,
-                    c.downloadRange,
-                    StatusContent.SAVED,
-                    pageUrls[0]
-                )
+            val imgs = urlsToImageFiles(
+                pageUrls,
+                c.downloadRange,
+                StatusContent.SAVED,
+                Site.YIFFER,
+                pageUrls[0]
             )
-            c.qtyPages = pageUrls.size
+            c.setImageFiles(imgs)
+            c.qtyPages = imgs.count { it.isReadable }
         }
     }
 }

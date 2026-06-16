@@ -88,11 +88,16 @@ class HdPornComicsContent : BaseContentParser() {
         content.putAttributes(attributes)
         if (updateImages) {
             pages?.let {
-                val imgs = HdPornComicsParser.parseImages(it)
-                content.setImageFiles(
-                    urlsToImageFiles(imgs, content.downloadRange, StatusContent.SAVED, coverUrl)
+                val imgUrls = HdPornComicsParser.parseImages(it)
+                val imgs = urlsToImageFiles(
+                    imgUrls,
+                    content.downloadRange,
+                    StatusContent.SAVED,
+                    Site.HDPORNCOMICS,
+                    coverUrl
                 )
-                content.qtyPages = imgs.size - 1 // Don't count the cover
+                content.setImageFiles(imgs)
+                content.qtyPages = imgs.count { i -> i.isReadable }
             }
         }
         return content

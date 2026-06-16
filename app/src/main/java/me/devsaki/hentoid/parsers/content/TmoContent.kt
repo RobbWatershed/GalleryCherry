@@ -55,9 +55,7 @@ class TmoContent : BaseContentParser() {
 
 
         content.setRawUrl(theUrl)
-        cover?.let {
-            content.coverImageUrl = getImgSrc(it)
-        }
+        cover?.let { content.coverImageUrl = getImgSrc(it) }
         var titleDef = title.trim()
         if (titleDef.isEmpty()) titleDef = NO_TITLE
         content.title = cleanup(titleDef)
@@ -104,7 +102,7 @@ class TmoContent : BaseContentParser() {
                         )
                     }
                 content.setImageFiles(galleryPages)
-                content.qtyPages = galleryPages.size
+                content.qtyPages = galleryPages.count { it.isReadable }
             } ?: run {
                 content.setImageFiles(emptyList())
                 content.qtyPages = 0

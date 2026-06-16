@@ -9,7 +9,7 @@ class EromangaParser : BaseImageListParser() {
         val result: MutableList<String> = ArrayList()
 
         getOnlineDocument(content.galleryUrl)?.let { doc ->
-            doc.select(".entry-content img")?.let { imgs ->
+            doc.select(".entry-content img").let { imgs ->
                 result.addAll(imgs.map { getImgSrc(it) })
             }
         }

@@ -167,14 +167,15 @@ class NhentaiContent : BaseContentParser() {
         content.putAttributes(attributes)
         if (updateImages) {
             thumbs?.let {
-                val images = urlsToImageFiles(
+                val imgs = urlsToImageFiles(
                     NhentaiParser.parseImages(content.coverImageUrl, it),
                     content.downloadRange,
                     StatusContent.SAVED,
+                    Site.NHENTAI,
                     content.coverImageUrl
                 )
-                content.setImageFiles(images)
-                content.qtyPages = images.size - 1 // Don't count the cover
+                content.setImageFiles(imgs)
+                content.qtyPages = imgs.count { i -> i.isReadable }
             }
         }
         return content

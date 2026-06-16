@@ -49,10 +49,7 @@ class SimplyParser : BaseImageListParser() {
                 doc.select("body script[type='application/json']").first() ?: return result
             val data = jsonData.data()
             if (!data.contains("thumb")) return result
-            jsonToObject(
-                data,
-                SimplyGalleryMetadata::class.java
-            )?.let {
+            jsonToObject(data, SimplyGalleryMetadata::class.java)?.let {
                 result = it.getPageUrls()
             }
         }

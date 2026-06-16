@@ -14,8 +14,9 @@ data class EHentaiGalleriesMetadata(
     val gmetadata: List<EHentaiGalleryMetadata>? = null
 ) {
     fun update(content: Content, site: Site, updatePages: Boolean): Content {
-        return if (gmetadata != null && !gmetadata.isEmpty()) gmetadata[0]
-            .update(content, site, updatePages) else Content()
+        return if (!gmetadata.isNullOrEmpty())
+            gmetadata[0].update(content, site, updatePages)
+        else Content()
     }
 
     @JsonClass(generateAdapter = true)

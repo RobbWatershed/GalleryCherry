@@ -54,15 +54,15 @@ data class KemonoGallery(
             content.coverImageUrl = imageUrls[0]
         }
         if (updateImages) {
-            content.qtyPages = imageUrls.size
-            content.setImageFiles(
-                urlsToImageFiles(
-                    imageUrls,
-                    content.downloadRange,
-                    StatusContent.SAVED,
-                    content.coverImageUrl
-                )
+            val imgs = urlsToImageFiles(
+                imageUrls,
+                content.downloadRange,
+                StatusContent.SAVED,
+                Site.KEMONO,
+                content.coverImageUrl
             )
+            content.setImageFiles(imgs)
+            content.qtyPages = imgs.count { it.isReadable }
         }
 
         return content

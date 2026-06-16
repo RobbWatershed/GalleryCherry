@@ -6,6 +6,7 @@ import me.devsaki.hentoid.enums.AttributeType
 import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.retrofit.sources.LusciousServer
+import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.getRandomInt
 import me.devsaki.hentoid.util.network.getCookies
 import timber.log.Timber
@@ -27,7 +28,9 @@ class LusciousParser : BaseImageListParser() {
         val cats = onlineContent.attributeMap[AttributeType.CATEGORY]
         val isManga = (!cats.isNullOrEmpty() && cats.first().name == "manga")
 
-        result.add(ImageFile.newCover(onlineContent.coverImageUrl, StatusContent.SAVED))
+        if (Settings.isThumbSeparateFile(Site.LUSCIOUS))
+            result.add(ImageFile.newCover(onlineContent.coverImageUrl, StatusContent.SAVED))
+
         progressStart(onlineContent)
         getPages(
             onlineContent,
@@ -75,7 +78,7 @@ class LusciousParser : BaseImageListParser() {
             if (response.isSuccessful) {
                 val metadata = response.body()
                 if (null == metadata) {
-                    Timber.e("No metadata found @ ID %s", bookId)
+                    Timber.e("No metadata found @ ID $bookId")
                     return
                 }
                 imageFiles.addAll(
@@ -94,7 +97,7 @@ class LusciousParser : BaseImageListParser() {
                 val httpCode = response.code()
                 val errorMsg =
                     if (response.errorBody() != null) response.errorBody().toString() else ""
-                Timber.e("Request unsuccessful (HTTP code %s) : %s", httpCode, errorMsg)
+                Timber.e("Request unsuccessful (HTTP code $httpCode) : $errorMsg")
             }
         } catch (e: IOException) {
             Timber.e(e)

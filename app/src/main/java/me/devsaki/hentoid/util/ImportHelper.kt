@@ -883,10 +883,7 @@ fun scanBookFolder(
     } else { // Set all detected images
         result.setImageFiles(images)
     }
-    if (0 == result.qtyPages) {
-        val countUnreadable = images.filterNot { it.isReadable }.count()
-        result.qtyPages = images.size - countUnreadable // Minus unreadable pages (cover thumb)
-    }
+    if (0 == result.qtyPages) result.qtyPages = images.count { it.isReadable }
     result.computeSize()
     return result
 }
@@ -977,10 +974,7 @@ fun scanChapterFolders(
     val coverExists = images.any { it.isCover }
     if (!coverExists) createCover(images)
     result.setImageFiles(images)
-    if (0 == result.qtyPages) {
-        val countUnreadable = images.filterNot { it.isReadable }.count()
-        result.qtyPages = images.size - countUnreadable // Minus unreadable pages (cover thumb)
-    }
+    if (0 == result.qtyPages) result.qtyPages = images.count { it.isReadable }
     result.computeSize()
     return result
 }
@@ -1271,10 +1265,7 @@ private fun loadAsChapters(
     val coverExists = images.any { it.isCover }
     if (!coverExists) createCover(images)
     content.setImageFiles(images)
-    if (0 == content.qtyPages) {
-        val countUnreadable = images.filterNot { it.isReadable }.count()
-        content.qtyPages = images.size - countUnreadable // Minus unreadable pages (cover thumb)
-    }
+    if (0 == content.qtyPages) content.qtyPages = images.count { it.isReadable }
     content.setChapters(chapters)
     content.computeSize()
     return content
@@ -1372,10 +1363,7 @@ fun scanArchivePdf(
         lastEditDate = now
         if (content != null) mapMetadata(images, content.imageList)
         setImageFiles(images)
-        if (0 == qtyPages) {
-            val countUnreadable = images.filterNot { it.isReadable }.count()
-            qtyPages = images.size - countUnreadable // Minus unreadable pages (cover thumb)
-        }
+        if (0 == qtyPages) qtyPages = images.count { it.isReadable }
         computeSize()
         // e.g. when the ZIP table doesn't contain any size entry
         if (size <= 0) size = doc.length()

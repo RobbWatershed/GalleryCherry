@@ -777,8 +777,7 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
                         }
                         if (coverImgs.size < contentImages.size) {
                             contentImages = coverImgs
-                            val nbCovers = contentImages.count { it.isCover }
-                            content.qtyPages = contentImages.size - nbCovers
+                            content.qtyPages = contentImages.count { it.isReadable }
                             cleaned = true
                         }
 

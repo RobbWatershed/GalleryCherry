@@ -89,6 +89,7 @@ class EromangaContent : BaseContentParser() {
                         imgUrls,
                         content.downloadRange,
                         StatusContent.SAVED,
+                        Site.EROMANGA,
                         content.coverImageUrl
                     )
                 )

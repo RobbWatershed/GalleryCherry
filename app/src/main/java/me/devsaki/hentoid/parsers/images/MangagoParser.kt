@@ -137,7 +137,7 @@ class MangagoParser : BaseChapteredImageListParser() {
                     nbTries = 0
                     progressPlus(results.size * 1f / pageUrls.size)
                 }
-                Timber.d("%d pages found / %d", results.size, pageUrls.size)
+                Timber.d("${results.size} pages found / ${pageUrls.size}")
             }
             if (fireProgressEvents) progressComplete()
             done = true
@@ -146,7 +146,7 @@ class MangagoParser : BaseChapteredImageListParser() {
         // Block calling thread until done
         var remainingIterations = 5 * 60 * 2 // Timeout 5 mins
         while (!done && remainingIterations-- > 0 && !processHalted.get()) pause(500)
-        Timber.v("%s with %d iterations remaining", done, remainingIterations)
+        Timber.v("$done with $remainingIterations iterations remaining")
         if (processHalted.get()) throw EmptyResultException("Unable to detect pages (empty result)")
 
         return results
@@ -164,7 +164,7 @@ class MangagoParser : BaseChapteredImageListParser() {
         // Cuz domain names with an _ (see https://github.com/google/conscrypt/issues/821)
         val url = getImgSrc(pic).replace("https:", "http:")
 
-        Timber.v("%d PAGE result %s from %s", order, url, doc.baseUri())
+        Timber.v("$order PAGE result $url from ${doc.baseUri()}")
 
         results.add(
             urlToImageFile(
@@ -190,7 +190,7 @@ class MangagoParser : BaseChapteredImageListParser() {
             dbPageUrl = pageUrl,
             status = StatusContent.DOWNLOADED
         ).withFileUri(fileUri)
-        Timber.v("%d IMG result : %s", order, pageUrl)
+        Timber.v("$order IMG result : $pageUrl")
         img.computeName(11111)
         img.setChapter(chp)
         // Enrich physical properties

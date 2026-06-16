@@ -626,7 +626,7 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
         // NB : exclusive to the other cases
         if (isCase4) {
             content.chaptersList.forEachIndexed { idx, ch ->
-                if (ch.imageList.all { img -> img.status == StatusContent.ERROR }) {
+                if (ch.imageList.all { it.status == StatusContent.ERROR }) {
                     /* There are two very different cases to consider
                      1- parse an actual chapter belonging to the overarching content (or at least originating from the same site)
                      2- parse a content merged inside the overarching content and stored as a chapter,
@@ -639,7 +639,7 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
                     // We should parse a Content but all we have is a Chapter (merged book)
                     // Forge a bogus Content from the given chapter to retrieve images
                     val forgedContent = Content(site = chapterSite)
-                    forgedContent.qtyPages = ch.imageList.size
+                    forgedContent.qtyPages = ch.imageList.count { it.isReadable }
                     forgedContent.setRawUrl(ch.url)
                     val onlineImages = fetchImageURLs(forgedContent, ch.url, targetImageStatus)
 
@@ -647,9 +647,9 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
                     for (img in onlineImages) img.chapterId = ch.id
 
                     // Remplace the image set within the results
-                    val index = result.indexOfFirst { img -> img.chapterId == ch.id }
+                    val index = result.indexOfFirst { it.chapterId == ch.id }
                     if (index > -1) {
-                        result.removeIf { img -> img.chapterId == ch.id }
+                        result.removeIf { it.chapterId == ch.id }
                         result.addAll(index, onlineImages)
                     }
 

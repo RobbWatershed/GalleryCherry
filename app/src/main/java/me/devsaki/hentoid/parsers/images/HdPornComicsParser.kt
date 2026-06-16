@@ -16,7 +16,7 @@ class HdPornComicsParser : BaseImageListParser() {
     override fun parseImages(content: Content): List<String> {
         // Fetch the book gallery page
         val doc = getOnlineDocument(content.galleryUrl)
-            ?: throw ParseException("Document unreachable : " + content.galleryUrl)
+            ?: throw ParseException("Document unreachable : ${content.galleryUrl}")
 
         return parseImages(doc.select("figure a picture img").filterNotNull())
     }

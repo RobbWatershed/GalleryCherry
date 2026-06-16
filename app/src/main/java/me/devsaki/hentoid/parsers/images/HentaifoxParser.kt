@@ -45,8 +45,10 @@ class HentaifoxParser : BaseImageListParser() {
                 // NB : i and i2 seem to host the same files whereas i3 has its own sets
                 val thumbUrl = getImgSrc(thumbs[0])
                 val thumbHost = UriParts(thumbUrl).host
-                val thumbPath = thumbUrl.substring(thumbHost.length + 1,
-                    thumbUrl.lastIndexOf("/") + 1)
+                val thumbPath = thumbUrl.substring(
+                    thumbHost.length + 1,
+                    thumbUrl.lastIndexOf("/") + 1
+                )
 
                 // Forge all page URLs
                 for (i in 0 until imageFormats.size) {
@@ -62,7 +64,7 @@ class HentaifoxParser : BaseImageListParser() {
     override fun parseImages(content: Content): List<String> {
         // Fetch the book gallery page
         val doc = getOnlineDocument(content.galleryUrl)
-            ?: throw ParseException("Document unreachable : " + content.galleryUrl)
+            ?: throw ParseException("Document unreachable : ${content.galleryUrl}")
 
         val thumbs: List<Element> = doc.select(".g_thumb img")
         val scripts: List<Element> = doc.select("body script")

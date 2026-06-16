@@ -12,7 +12,6 @@ import me.devsaki.hentoid.parsers.parseAttributes
 import me.devsaki.hentoid.parsers.urlsToImageFiles
 import org.jsoup.nodes.Element
 import pl.droidsonroids.jspoon.annotation.Selector
-import java.util.Locale
 
 class HentaifoxContent : BaseContentParser() {
     @Selector(value = ".cover img")
@@ -47,17 +46,19 @@ class HentaifoxContent : BaseContentParser() {
         information?.let { info ->
             if (info.children().isEmpty()) return content
 
-            var qtyPages = 0
+//            var qtyPages = 0
             val attributes = AttributeMap()
             for (e in info.children()) {
                 // Flat info (pages, posted date)
                 if (e.children().isEmpty() && e.hasText()) {
+                    /*
                     if (e.text().lowercase(Locale.getDefault()).startsWith("pages")) {
                         qtyPages = e.text().lowercase(Locale.getDefault()).replace(" ", "")
                             .replace("pages:", "").toInt()
                     }
+                     */
                 } else if (e.children().size > 1) { // Tags
-                    val metaType = e.child(0).text().replace(":", "").trim { it <= ' ' }
+                    val metaType = e.child(0).text().replace(":", "").trim()
                     val tagLinks: List<Element> = e.select("a")
                     if (metaType.equals("artists", ignoreCase = true)) parseAttributes(
                         attributes,
@@ -121,18 +122,20 @@ class HentaifoxContent : BaseContentParser() {
             content.putAttributes(attributes)
 
             if (updateImages) {
-                content.qtyPages = qtyPages
                 thumbs?.let { th ->
                     scripts?.let { scr ->
                         content.setImageFiles(
                             urlsToImageFiles(
                                 HentaifoxParser.parseImages(content, th, scr),
                                 content.downloadRange,
-                                StatusContent.SAVED, content.coverImageUrl
+                                StatusContent.SAVED,
+                                Site.HENTAIFOX,
+                                content.coverImageUrl
                             )
                         )
                     }
                 }
+                content.qtyPages = content.imageList.count { it.isReadable }
             }
         }
         return content

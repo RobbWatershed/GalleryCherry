@@ -107,10 +107,15 @@ class MultpornContent : BaseContentParser() {
             if (imagesUrls.isNotEmpty()) {
                 content.coverImageUrl = imagesUrls[0]
                 if (updateImages) {
-                    content.setImageFiles(
-                        urlsToImageFiles(imagesUrls, content.downloadRange,StatusContent.SAVED, imagesUrls[0])
+                    val imgs = urlsToImageFiles(
+                        imagesUrls,
+                        content.downloadRange,
+                        StatusContent.SAVED,
+                        Site.MULTPORN,
+                        imagesUrls[0]
                     )
-                    content.qtyPages = imagesUrls.size
+                    content.setImageFiles(imgs)
+                    content.qtyPages = imgs.count { it.isReadable }
                 }
             }
         } catch (e: IOException) {

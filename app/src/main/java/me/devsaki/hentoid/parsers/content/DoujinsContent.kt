@@ -64,15 +64,15 @@ class DoujinsContent : BaseContentParser() {
                     content.coverImageUrl = coverUrl
                     if (updateImages) {
                         val imageUrls = DoujinsParser.parseImages(it)
-                        content.qtyPages = imageUrls.size - 1 // Don't count the cover
-                        content.setImageFiles(
-                            urlsToImageFiles(
-                                imageUrls,
-                                content.downloadRange,
-                                StatusContent.SAVED,
-                                content.coverImageUrl
-                            )
+                        val imgs = urlsToImageFiles(
+                            imageUrls,
+                            content.downloadRange,
+                            StatusContent.SAVED,
+                            Site.DOUJINS,
+                            content.coverImageUrl
                         )
+                        content.setImageFiles(imgs)
+                        content.qtyPages = imgs.count { i -> i.isReadable }
                     }
                 }
             }

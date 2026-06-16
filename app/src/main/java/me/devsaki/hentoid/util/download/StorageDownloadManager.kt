@@ -321,7 +321,6 @@ class StorageDownloadManager {
                         }
                     imgs.forEach { it.computeName(imgs.size) }
                     content.setImageFiles(imgs)
-                    content.qtyPages = imgs.size
                 }
             }
             content.qtyPages = content.imageList.count { it.isReadable }
