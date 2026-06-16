@@ -40,7 +40,7 @@ class PreferenceItem {
     var defaultValue: String? = null
 
     @JvmField
-    var keyBreadcrumbs: ArrayList<String> = ArrayList<String>()
+    var keyBreadcrumbs: ArrayList<String> = ArrayList()
 
     @JvmField
     var resId: Int = 0

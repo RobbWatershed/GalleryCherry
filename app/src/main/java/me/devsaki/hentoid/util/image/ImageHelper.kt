@@ -422,8 +422,10 @@ fun assembleGif(
 }
 
 /**
+ * Return the scaled down version of the given bitmap. Useful to create thumbnails.
+ *
  * @param bitmap    the Bitmap to be scaled
- * @param maxDim    the maxium dimension (either width or height) of the scaled bitmap
+ * @param maxDim    the maximum dimension (either width or height) of the scaled bitmap
  * @param noRecycle is it necessary to keep the original bitmap? If not recycle the original bitmap to prevent memory leak.
  */
 fun getScaledDownBitmap(

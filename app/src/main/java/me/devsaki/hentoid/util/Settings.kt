@@ -203,7 +203,10 @@ object Settings {
         Value.SEARCH_ORDER_ATTRIBUTES_COUNT
     )
     val searchAttributesCount: Boolean by BoolSetting("pref_order_attribute_count", true)
-    var searchCombinationMode: Int by IntSetting("search_combination_mode", Value.SEARCH_COMBINATION_AND)
+    var searchCombinationMode: Int by IntSetting(
+        "search_combination_mode",
+        Value.SEARCH_COMBINATION_AND
+    )
 
     // LOCK
     var lockType: Int by IntSettingStr(Key.LOCK_TYPE, 0)
@@ -368,12 +371,14 @@ object Settings {
             isAppRangeDownloadOn
         )
     }
-
-    fun setRangeDownloadOn(site: Site, value: Boolean) {
-        sharedPreferences.edit { putBoolean(makeSiteKey(Key.BROWSER_RANGE_DOWNLOAD, site), value) }
-    }
-
     var isAppRangeDownloadOn: Boolean by BoolSetting(Key.BROWSER_RANGE_DOWNLOAD, false)
+    fun isThumbSeparateFile(site: Site): Boolean {
+        return sharedPreferences.getBoolean(
+            makeSiteKey("pref_dl_separate_thumb", site),
+            isAppThumbSeparateFile
+        )
+    }
+    var isAppThumbSeparateFile: Boolean by BoolSetting("pref_dl_separate_thumb", true)
 
 
     // READER
