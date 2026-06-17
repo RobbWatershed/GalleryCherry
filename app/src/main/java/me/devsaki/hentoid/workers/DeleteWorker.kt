@@ -564,6 +564,8 @@ abstract class BaseDeleteWorker(
         val first = imgs.first()
         first.isCover = true
         dao.insertImageFile(first)
+
+        dao.selectContent(content.id)?.let { persistJson(applicationContext, it) }
     }
 
     private suspend fun createThumb(content: Content) = withContext(Dispatchers.IO) {
@@ -623,6 +625,12 @@ abstract class BaseDeleteWorker(
                 }
             }
             dao.insertImageFile(thumb)
+
+            // Reset cover flag of the previous cover
+            cover.isCover = false
+            dao.insertImageFile(cover)
+
+            dao.selectContent(content.id)?.let { persistJson(applicationContext, it) }
         } catch (e: Exception) {
             nbError++
             trace(Log.WARN, "Error when trying to create thumb ${content.title} : ${e.message}")
