@@ -123,17 +123,8 @@ class MusesContent : BaseContentParser() {
             var thumbParts: MutableList<String>
             val images: MutableList<ImageFile> = ArrayList()
 
-            // Cover
-            val coverUrl = Site.MUSES.url + imagesUrls[0]
-            content.coverImageUrl = coverUrl
-
-            var index = 0
-            if (Settings.isThumbSeparateFile(Site.MUSES)) {
-                images.add(ImageFile.newThumb(coverUrl, StatusContent.SAVED))
-                index++
-            }
-
             // Images
+            var index = 1
             for (u in imagesUrls) {
                 thumbParts = u.split("/").toMutableList()
                 if (thumbParts.size > 3) {

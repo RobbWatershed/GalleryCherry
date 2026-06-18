@@ -69,13 +69,11 @@ class EdoujinContent : BaseContentParser() {
             EdoujinParser.getDataFromScripts(scripts)?.let { info ->
                 val chapterImgs = info.getImages()
                 if (updateImages && chapterImgs.isNotEmpty()) {
-                    val coverUrl = chapterImgs[0]
                     val imgs = urlsToImageFiles(
                         chapterImgs,
                         content.downloadRange,
                         StatusContent.SAVED,
-                        Site.EDOUJIN,
-                        coverUrl
+                        Site.EDOUJIN
                     )
                     content.setImageFiles(imgs)
                     content.qtyPages = imgs.count { it.isReadable }

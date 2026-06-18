@@ -1366,7 +1366,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
             animatedCheck.visibility = View.VISIBLE
             (animatedCheck.drawable as Animatable).start()
             Handler(mainLooper).postDelayed({
-                if (binding != null) animatedCheck.visibility = View.GONE
+                binding?.animatedCheck?.visibility = View.GONE
             }, 1000)
         }
         content.downloadMode = downloadMode

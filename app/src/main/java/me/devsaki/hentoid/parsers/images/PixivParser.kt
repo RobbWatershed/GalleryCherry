@@ -121,9 +121,6 @@ class PixivParser : BaseImageListParser() {
         val result = ArrayList<ImageFile>()
         val pages = galleryMetadata.getImageFiles()
 
-        if (Settings.isThumbSeparateFile(Site.PIXIV))
-            result.add(ImageFile.newThumb(pages[0].url, StatusContent.SAVED))
-
         val range = content.downloadRange
         val rangeIndexes = if (range.isBlank()) IntRange(1, pages.size)
         else rangeToNumbers(range).filter { it in 1..<pages.size + 1 }

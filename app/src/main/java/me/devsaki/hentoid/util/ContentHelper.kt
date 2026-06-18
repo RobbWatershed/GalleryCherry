@@ -70,6 +70,7 @@ import me.devsaki.hentoid.util.file.PdfManager
 import me.devsaki.hentoid.util.file.URI_ELEMENTS_SEPARATOR
 import me.devsaki.hentoid.util.file.cleanFileName
 import me.devsaki.hentoid.util.file.copyFile
+import me.devsaki.hentoid.util.file.createFile
 import me.devsaki.hentoid.util.file.extractArchiveEntriesBlocking
 import me.devsaki.hentoid.util.file.fileExists
 import me.devsaki.hentoid.util.file.findFile
@@ -84,6 +85,7 @@ import me.devsaki.hentoid.util.file.getFileFromSingleUriString
 import me.devsaki.hentoid.util.file.getFileNameWithoutExtension
 import me.devsaki.hentoid.util.file.getInputStream
 import me.devsaki.hentoid.util.file.getMimeTypeFromFileName
+import me.devsaki.hentoid.util.file.getMimeTypeFromFileUri
 import me.devsaki.hentoid.util.file.getOrCreateCacheFolder
 import me.devsaki.hentoid.util.file.getOutputStream
 import me.devsaki.hentoid.util.file.getParent
@@ -696,16 +698,84 @@ fun getPathRoot(locationUriStr: String): String {
  * @param content Content to add to the library
  * @return ID of the newly added Content
  */
-fun addContent(context: Context, dao: CollectionDAO, content: Content): Long {
-    assertNonUiThread()
-    content.optimizeImageFileUris()
-    val newContentId = dao.insertContent(content)
-    content.id = newContentId
+suspend fun addContent(context: Context, dao: CollectionDAO, content: Content): Long =
+    withContext(Dispatchers.IO) {
+        val isArchivePdf =
+            (content.isArchive || content.isPdf || content.downloadMode == DownloadMode.DOWNLOAD_ARCHIVE || content.downloadMode == DownloadMode.DOWNLOAD_ARCHIVE_FILE)
 
-    if (content.isArchive || content.isPdf || content.downloadMode == DownloadMode.DOWNLOAD_ARCHIVE || content.downloadMode == DownloadMode.DOWNLOAD_ARCHIVE_FILE)
-        createArchivePdfCover(context, content, dao)
+        // Create thumbnail file if there's none and the settings require it
+        if (!isArchivePdf && StatusContent.DOWNLOADED == content.status
+            && Settings.isThumbSeparateFile(content.site)
+            && content.imageList.none { !it.isReadable }
+        ) {
+            content.setImageFiles(createFolderStreamedCover(context, content))
+        }
 
-    return newContentId
+        content.optimizeImageFileUris()
+        val newContentId = dao.insertContent(content)
+        content.id = newContentId
+
+        if (isArchivePdf) createArchivePdfCover(context, content, dao)
+
+        return@withContext newContentId
+    }
+
+suspend fun createFolderStreamedCover(context: Context, content: Content): List<ImageFile> {
+    val result = content.imageList.toMutableList()
+
+    if (content.isPdf || content.isArchive) return result
+    if (result.isEmpty()) return emptyList()
+    // Using isReadable because isCover can be flagged on a normal page
+    if (result.any { !it.isReadable }) return result
+
+    // Locate current cover
+    val cover = result.firstOrNull { it.isCover } ?: result[0]
+
+    // Download it if it's streamed
+    val tempFolder = context.cacheDir.toUri()
+    val coverUri = if (cover.isOnline) {
+        downloadPic(context, content, cover, 0, tempFolder)?.second
+            ?: throw IOException("Couldn't download cover from stream for ${content.storageUri}")
+    } else cover.fileUri
+
+    // Create new thumb ImageFile
+    val thumb = ImageFile.newThumb(cover.url, StatusContent.DOWNLOADED)
+    result.add(0, thumb)
+
+    // Save the cover as low-res JPG
+    try {
+        val parentFolder = content.getContainingFolder(context)
+            ?: throw IOException("Can't locate containing folder for ${content.title} @ ${content.storageUri}")
+
+        getInputStream(context, coverUri.toUri()).use { `is` ->
+            BitmapFactory.decodeStream(`is`)?.let { b ->
+                val target = createFile(
+                    context,
+                    parentFolder,
+                    THUMB_FILE_NAME,
+                    getMimeTypeFromFileUri(coverUri)
+                )
+                getOutputStream(context, target)?.use { os ->
+                    val resizedBitmap =
+                        getScaledDownBitmap(
+                            b,
+                            dpToPx(context, libraryGridCardWidthDP),
+                            false
+                        )
+                    resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 85, os)
+                    resizedBitmap.recycle()
+                }
+                thumb.fileUri = target.toString()
+            }
+        }
+
+        // Reset flag of the previous cover now that an actual thumb exists
+        cover.isCover = false
+    } finally {
+        // Cleanup downloaded cover
+        if (cover.isOnline) removeFile(context, coverUri.toUri())
+    }
+    return result
 }
 
 /**
@@ -716,6 +786,7 @@ fun createArchivePdfCover(
     content: Content,
     dao: CollectionDAO
 ) {
+    assertNonUiThread()
     val cover = content.imageList.firstOrNull { it.isCover && !it.isReadable }
 
     val targetFolder = context.filesDir
@@ -1383,6 +1454,10 @@ private suspend fun reparseFromScratch(
                 reparseFromScratch(canonicalUrl, content, keepUris, updateImages)
             else null
         }
+
+        // Mark cover if there's none
+        if (newContent.imageFiles.none { it.isCover })
+            newContent.imageFiles.firstOrNull()?.isCover = true
 
         // Clear existing chapters to avoid issues with extra chapter detection
         if (updateImages) newContent.clearChapters()

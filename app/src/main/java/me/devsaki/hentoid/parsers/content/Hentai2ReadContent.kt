@@ -64,13 +64,11 @@ class Hentai2ReadContent : BaseContentParser() {
                 val chapterImgs =
                     info.images.map { s -> IMAGE_PATH + s }
                 if (updateImages && chapterImgs.isNotEmpty()) {
-                    val coverUrl = chapterImgs[0]
                     val imgs = urlsToImageFiles(
                         chapterImgs,
                         content.downloadRange,
                         StatusContent.SAVED,
-                        Site.HENTAI2READ,
-                        coverUrl
+                        Site.HENTAI2READ
                     )
                     content.setImageFiles(imgs)
                     content.qtyPages = imgs.count { it.isReadable }

@@ -1,8 +1,6 @@
 package me.devsaki.hentoid.workers
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Log
 import androidx.annotation.IdRes
@@ -16,7 +14,6 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.devsaki.hentoid.R
-import me.devsaki.hentoid.core.THUMB_FILE_NAME
 import me.devsaki.hentoid.database.CollectionDAO
 import me.devsaki.hentoid.database.ObjectBoxDAO
 import me.devsaki.hentoid.database.ObjectBoxDB
@@ -31,24 +28,16 @@ import me.devsaki.hentoid.events.ProcessEvent
 import me.devsaki.hentoid.notification.delete.DeleteCompleteNotification
 import me.devsaki.hentoid.notification.delete.DeleteProgressNotification
 import me.devsaki.hentoid.notification.delete.DeleteStartNotification
-import me.devsaki.hentoid.util.Settings.libraryGridCardWidthDP
-import me.devsaki.hentoid.util.download.downloadPic
+import me.devsaki.hentoid.util.createFolderStreamedCover
 import me.devsaki.hentoid.util.download.selectDownloadLocation
-import me.devsaki.hentoid.util.dpToPx
 import me.devsaki.hentoid.util.exception.ContentNotProcessedException
 import me.devsaki.hentoid.util.exception.FileNotProcessedException
 import me.devsaki.hentoid.util.fetchImageURLs
 import me.devsaki.hentoid.util.file.FileExplorer
-import me.devsaki.hentoid.util.file.createFile
 import me.devsaki.hentoid.util.file.getDocumentFromTreeUri
-import me.devsaki.hentoid.util.file.getInputStream
-import me.devsaki.hentoid.util.file.getMimeTypeFromFileUri
-import me.devsaki.hentoid.util.file.getOutputStream
 import me.devsaki.hentoid.util.file.removeFile
-import me.devsaki.hentoid.util.getContainingFolder
 import me.devsaki.hentoid.util.getOrCreateContentDownloadDir
 import me.devsaki.hentoid.util.getStackTraceString
-import me.devsaki.hentoid.util.image.getScaledDownBitmap
 import me.devsaki.hentoid.util.isDownloadable
 import me.devsaki.hentoid.util.moveContentToCustomGroup
 import me.devsaki.hentoid.util.network.UriParts
@@ -569,75 +558,14 @@ abstract class BaseDeleteWorker(
     }
 
     private suspend fun createThumb(content: Content) = withContext(Dispatchers.IO) {
-        // Using isReadable because isCover can be flagged on a normal page
-        if (content.isPdf || content.isArchive) return@withContext
-        if (content.imageList.isEmpty()) return@withContext
-        if (content.imageList.any { !it.isReadable }) return@withContext
-
-        // Locate current cover
-        val cover = content.imageList.firstOrNull { it.isCover } ?: content.imageList[0]
-
-        // Download it if it's streamed
-        val tempFolder = applicationContext.cacheDir.toUri()
-        val coverUri = if (cover.isOnline) {
-            downloadPic(applicationContext, content, cover, 0, tempFolder)?.second
-                ?: run {
-                    nbError++
-                    trace(Log.WARN, "Couldn't download cover from stream for ${content.storageUri}")
-                    return@withContext
-                }
-        } else cover.fileUri
-
-        // Create new thumb ImageFile
-        val thumb = ImageFile.newThumb(cover.url, StatusContent.DOWNLOADED)
-
-        // Save the cover as low-res JPG
         try {
-            val parentFolder = content.getContainingFolder(applicationContext)
-            if (null == parentFolder) {
-                nbError++
-                trace(
-                    Log.WARN,
-                    "Can't locate containing folder for ${content.title} @ ${content.storageUri}"
-                )
-                return@withContext
-            }
-
-            getInputStream(applicationContext, coverUri.toUri()).use { `is` ->
-                BitmapFactory.decodeStream(`is`)?.let { b ->
-                    val target = createFile(
-                        applicationContext,
-                        parentFolder,
-                        THUMB_FILE_NAME,
-                        getMimeTypeFromFileUri(coverUri)
-                    )
-                    getOutputStream(applicationContext, target)?.use { os ->
-                        val resizedBitmap =
-                            getScaledDownBitmap(
-                                b,
-                                dpToPx(applicationContext, libraryGridCardWidthDP),
-                                false
-                            )
-                        resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 85, os)
-                        resizedBitmap.recycle()
-                    }
-                    thumb.fileUri = target.toString()
-                }
-            }
-            dao.insertImageFile(thumb)
-
-            // Reset cover flag of the previous cover
-            cover.isCover = false
-            dao.insertImageFile(cover)
-
+            val images = createFolderStreamedCover(applicationContext, content)
+            dao.replaceImageList(content.id, images)
             dao.selectContent(content.id)?.let { persistJson(applicationContext, it) }
         } catch (e: Exception) {
             nbError++
-            trace(Log.WARN, "Error when trying to create thumb ${content.title} : ${e.message}")
+            trace(Log.WARN, e.message)
         }
-
-        // Cleanup downloaded cover
-        if (cover.isOnline) removeFile(applicationContext, coverUri.toUri())
     }
 
     @OptIn(DelicateCoroutinesApi::class)

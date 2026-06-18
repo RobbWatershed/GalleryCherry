@@ -152,10 +152,6 @@ class DeviantArtParser : BaseImageListParser() {
             }
 
             urls?.let {
-                // Thumb
-                if (urls.first.isNotEmpty() && Settings.isThumbSeparateFile(Site.DEVIANTART))
-                    result.add(ImageFile.newThumb(urls.first, StatusContent.SAVED))
-                // Image
                 val img = ImageFile.fromImageUrl(1, urls.first, StatusContent.SAVED, 1)
                 img.backupUrl = urls.second
                 result.add(img)

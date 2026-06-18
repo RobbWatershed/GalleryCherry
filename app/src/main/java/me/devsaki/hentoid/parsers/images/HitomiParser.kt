@@ -140,9 +140,6 @@ class HitomiParser : BaseImageListParser() {
         if (!imageUrls.isNullOrEmpty()) {
             onlineContent.coverImageUrl = imageUrls[0]
 
-            if (Settings.isThumbSeparateFile(Site.HITOMI))
-                result.add(ImageFile.newThumb(imageUrls[0], StatusContent.SAVED))
-
             val rangeIndexes =
                 if (onlineContent.downloadRange.isBlank()) imageUrls.indices
                 else rangeToNumbers(onlineContent.downloadRange)

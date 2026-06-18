@@ -77,13 +77,11 @@ class HiperdexContent : BaseContentParser() {
         if (updateImages) {
             chapterImgs?.let { chpImg ->
                 val imgUrls = chpImg.map { getImgSrc(it) }.filterNot { it.isEmpty() }.distinct()
-                val coverUrl = if (imgUrls.isNotEmpty()) imgUrls[0] else ""
                 val imgs = urlsToImageFiles(
                     imgUrls,
                     content.downloadRange,
                     StatusContent.SAVED,
-                    Site.HIPERDEX,
-                    coverUrl
+                    Site.HIPERDEX
                 )
                 content.setImageFiles(imgs)
                 content.qtyPages = imgs.count { it.isReadable }

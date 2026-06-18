@@ -87,7 +87,8 @@ class StorageDownloadManager {
                         getDocumentFromTreeUri(context, parent)
                     }
                     if (downloadMode == DownloadMode.DOWNLOAD_ARCHIVE)
-                        archiveStreamer = ArchiveStreamer(context, it.uri,
+                        archiveStreamer = ArchiveStreamer(
+                            context, it.uri,
                             append = true,
                             removeArchivedFiles = true
                         )
@@ -113,7 +114,8 @@ class StorageDownloadManager {
                     createFile(context, dlFolder.uri, archiveName, MIME_TYPE_CBZ).let { uri ->
                         getDocumentFromTreeUri(context, uri)?.let { content.setStorageDoc(it) }
                         downloadArchive = uri
-                        archiveStreamer = ArchiveStreamer(context, uri,
+                        archiveStreamer = ArchiveStreamer(
+                            context, uri,
                             append = false,
                             removeArchivedFiles = true
                         )
@@ -173,7 +175,8 @@ class StorageDownloadManager {
             createFile(context, containingFolder, archiveName, MIME_TYPE_CBZ).let { uri ->
                 getDocumentFromTreeUri(context, uri)?.let { targetContent.setStorageDoc(it) }
                 downloadArchive = uri
-                archiveStreamer = ArchiveStreamer(context, uri,
+                archiveStreamer = ArchiveStreamer(
+                    context, uri,
                     append = false,
                     removeArchivedFiles = true
                 )
@@ -323,6 +326,7 @@ class StorageDownloadManager {
                     content.setImageFiles(imgs)
                 }
             }
+
             content.qtyPages = content.imageList.count { it.isReadable }
 
             // Create JSON

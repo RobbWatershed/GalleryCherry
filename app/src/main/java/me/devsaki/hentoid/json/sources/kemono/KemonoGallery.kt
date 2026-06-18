@@ -48,8 +48,7 @@ data class KemonoGallery(
         val imageUrls = post.getImageUrls(serverMapping)
         // Use file as cover
         post.file?.let {
-            content.coverImageUrl =
-                "https://img.$KEMONO_DOMAIN_FILTER/thumbnail/data/${it.path}"
+            content.coverImageUrl = "https://img.$KEMONO_DOMAIN_FILTER/thumbnail/data/${it.path}"
         } ?: run {
             content.coverImageUrl = imageUrls[0]
         }

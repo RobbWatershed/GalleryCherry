@@ -123,7 +123,12 @@ class PorncomixContent : BaseContentParser() {
                 content.qtyPages = 0
             } else {
                 val imgs =
-                    urlsToImageFiles(thumbs, content.downloadRange, StatusContent.SAVED, Site.PORNCOMIX, thumbs[0])
+                    urlsToImageFiles(
+                        thumbs,
+                        content.downloadRange,
+                        StatusContent.SAVED,
+                        Site.PORNCOMIX
+                    )
                 content.setImageFiles(imgs)
                 content.qtyPages = imgs.count { it.isReadable }
             }

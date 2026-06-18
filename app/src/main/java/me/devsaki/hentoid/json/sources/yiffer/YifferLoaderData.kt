@@ -53,8 +53,7 @@ data class YifferData(
                 pageUrls,
                 c.downloadRange,
                 StatusContent.SAVED,
-                Site.YIFFER,
-                pageUrls[0]
+                Site.YIFFER
             )
             c.setImageFiles(imgs)
             c.qtyPages = imgs.count { it.isReadable }

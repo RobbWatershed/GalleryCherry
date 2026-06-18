@@ -111,8 +111,7 @@ class MultpornContent : BaseContentParser() {
                         imagesUrls,
                         content.downloadRange,
                         StatusContent.SAVED,
-                        Site.MULTPORN,
-                        imagesUrls[0]
+                        Site.MULTPORN
                     )
                     content.setImageFiles(imgs)
                     content.qtyPages = imgs.count { it.isReadable }
