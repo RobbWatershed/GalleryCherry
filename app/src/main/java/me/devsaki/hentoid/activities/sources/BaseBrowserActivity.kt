@@ -24,7 +24,6 @@ import android.webkit.WebView
 import android.webkit.WebView.HitTestResult
 import androidx.activity.OnBackPressedCallback
 import androidx.annotation.DrawableRes
-import androidx.annotation.OptIn
 import androidx.annotation.StringRes
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.content.ContextCompat
@@ -1610,8 +1609,8 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
 
         var maxStoredImageOrder = 0
         val opt = storedContent.imageFiles
-            .filter { i: ImageFile -> isInLibrary(i.status) }
-            .maxOfOrNull { img -> img.order }
+            .filter { isInLibrary(it.status) }
+            .maxOfOrNull { it.order }
 
         if (opt != null) maxStoredImageOrder = opt
         val maxStoredImageOrderFinal = maxStoredImageOrder

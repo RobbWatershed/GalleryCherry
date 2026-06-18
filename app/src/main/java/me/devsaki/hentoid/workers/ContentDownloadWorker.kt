@@ -946,7 +946,7 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
         val context = applicationContext
         if (!downloadProcessStopped) {
             val images: List<ImageFile> = content.imageList
-            val nbImages = images.count { !it.isCover } // Don't count the cover
+            val nbImages = images.count { it.isReadable }
             var hasError = false
             // Set error state if no image has been detected at all
             if (0 == content.qtyPages && 0 == nbImages) {
