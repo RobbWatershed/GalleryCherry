@@ -407,7 +407,7 @@ data class ArchiveEntry(
     val path: String,
     val size: Long,
     val compressedSize: Long = 0L,
-    val headerSize: Long = 0L,
+    var headerSize: Long = 0L,
     val offset: Long = -1L, // Offset of the entry, PK header included
     val isCompressed: Boolean = true,
     val time: Long = 0L,
@@ -416,12 +416,18 @@ data class ArchiveEntry(
     val isChunkable: Boolean
         get() = !isFolder && !isCompressed && offset > -1 && (size > 0 || compressedSize > 0)
 
+    val hasValidChunkSize: Boolean
+        get() = (size > 0 && size != UInt.MAX_VALUE.toLong()) || (compressedSize > 0 && compressedSize != UInt.MAX_VALUE.toLong())
+
+    val chunkSize: Long
+        get() = if (size > 0) size else compressedSize
+
     fun toChunk(archiveUri: Uri): FileChunkInfo {
         return FileChunkInfo(
             archiveUri,
             path,
             offset + headerSize,
-            if (size > 0) size else compressedSize
+            chunkSize
         )
     }
 }
