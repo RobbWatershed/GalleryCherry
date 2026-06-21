@@ -6,11 +6,9 @@ import android.net.Uri
 import android.os.ParcelFileDescriptor
 import android.util.Log
 import androidx.core.net.toUri
-import androidx.documentfile.provider.DocumentFile
 import me.devsaki.hentoid.core.READER_CACHE
 import me.devsaki.hentoid.util.assertNonUiThread
 import me.devsaki.hentoid.util.byteArrayOfInts
-import me.devsaki.hentoid.util.getChecksumValue
 import me.devsaki.hentoid.util.network.UriParts
 import me.devsaki.hentoid.util.pause
 import me.devsaki.hentoid.util.startsWith
@@ -27,16 +25,12 @@ import net.sf.sevenzipjbinding.PropID
 import net.sf.sevenzipjbinding.SevenZip
 import net.sf.sevenzipjbinding.SevenZipException
 import timber.log.Timber
-import java.io.BufferedInputStream
 import java.io.EOFException
 import java.io.File
 import java.io.FileInputStream
 import java.io.IOException
 import java.io.OutputStream
 import java.util.concurrent.ConcurrentHashMap
-import java.util.zip.CRC32
-import java.util.zip.ZipEntry
-import java.util.zip.ZipOutputStream
 
 /**
  * Archive / unarchive helper for formats supported by 7Z
@@ -414,13 +408,13 @@ data class ArchiveEntry(
     val size: Long,
     val compressedSize: Long = 0L,
     val headerSize: Long = 0L,
-    val offset: Long = 0L, // Offset of the entry, PK header included
+    val offset: Long = -1L, // Offset of the entry, PK header included
     val isCompressed: Boolean = true,
     val time: Long = 0L,
     val crc: Long = 0L
 ) {
     val isChunkable: Boolean
-        get() = !isFolder && !isCompressed && offset > 0 && (size > 0 || compressedSize > 0)
+        get() = !isFolder && !isCompressed && offset > -1 && (size > 0 || compressedSize > 0)
 
     fun toChunk(archiveUri: Uri): FileChunkInfo {
         return FileChunkInfo(
