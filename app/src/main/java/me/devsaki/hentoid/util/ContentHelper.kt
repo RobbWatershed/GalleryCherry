@@ -705,7 +705,7 @@ suspend fun addContent(context: Context, dao: CollectionDAO, content: Content): 
 
         // Create thumbnail file if there's none and the settings require it
         if (!isArchivePdf && StatusContent.DOWNLOADED == content.status
-            && Settings.isThumbSeparateFile(content.site)
+            && Settings.isThumbSeparateFile(content.site) // Warning : we're calling global settings, not per-download information
             && content.imageList.none { !it.isReadable }
         ) {
             content.setImageFiles(createFolderStreamedCover(context, content))
