@@ -539,12 +539,12 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
 
         val downloadFolder = dlManager.getDownloadFolder(context)
 
-        // Streamed download => just get the cover
+        // Streamed download => just get the thumb
         if (downloadMode == DownloadMode.STREAM) {
-            content.cover.let { cover ->
-                enrichImageDownloadParams(cover, content)
+            content.imageList.firstOrNull { !it.isReadable }?.let { thumb ->
+                enrichImageDownloadParams(thumb, content)
                 requestQueueManager.queueRequest(
-                    buildImageDownloadRequest(cover, downloadFolder, content)
+                    buildImageDownloadRequest(thumb, downloadFolder, content)
                 )
             }
         } else { // Folder or archive download
@@ -591,7 +591,7 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
                     }
                 }
             }
-        }
+        } // Folder or archive download
         EventBus.getDefault()
             .post(DownloadEvent.fromPreparationStep(DownloadEvent.Step.SAVE_QUEUE, content))
         if (updateQueueJson(applicationContext, dao))
