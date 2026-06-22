@@ -28,14 +28,13 @@ class PururinParser : BaseChapteredImageListParser() {
         fireProgressEvents: Boolean
     ): List<ImageFile> {
         val result: MutableList<String> = ArrayList()
-        val doc = getOnlineDocument(
+        getOnlineDocument(
             chp.url,
             headers ?: fetchHeaders(content),
             Site.PURURIN.useMobileAgent,
             Site.PURURIN.useHentoidAgent,
             Site.PURURIN.useWebviewAgent
-        )
-        if (doc != null) {
+        )?.let { doc ->
             // Get all thumb URLs and convert them to page URLs
             val imgSrc = doc.select(".gallery-preview img")
                 .filterNotNull()
