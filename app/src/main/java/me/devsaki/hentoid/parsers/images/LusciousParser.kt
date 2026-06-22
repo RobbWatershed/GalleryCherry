@@ -84,7 +84,7 @@ class LusciousParser : BaseImageListParser() {
                 imageFiles.addAll(
                     metadata.toImageFileList(
                         content.downloadRange,
-                        imageFiles.size - 1
+                        imageFiles.size
                     )
                 ) // Don't count cover in the offset
                 if (metadata.getNbPages() > pageNumber) {
