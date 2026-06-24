@@ -36,6 +36,7 @@ import me.devsaki.hentoid.util.file.createFile
 import me.devsaki.hentoid.util.file.fileExists
 import me.devsaki.hentoid.util.file.findSequencePosition
 import me.devsaki.hentoid.util.file.getExtension
+import me.devsaki.hentoid.util.file.getExtensionFromMimeType
 import me.devsaki.hentoid.util.file.getInputStream
 import me.devsaki.hentoid.util.file.getOutputStream
 import me.devsaki.hentoid.util.file.removeFile
@@ -544,7 +545,11 @@ fun needsRotating(screenWidth: Int, screenHeight: Int, width: Int, height: Int):
  * @param data    Raw data of the image to be read; overrides Uri if set
  * @return Dimensions (x,y) of the given image
  */
-suspend fun getImageDimensions(context: Context, uri: String, data: ByteArray? = null): Point =
+suspend fun getImageDimensions(
+    context: Context,
+    uri: String = Uri.EMPTY.toString(),
+    data: ByteArray? = null
+): Point =
     withContext(Dispatchers.IO) {
         val fileUri = uri.toUri()
         if (null == data && !fileExists(context, fileUri)) return@withContext Point(0, 0)
@@ -553,7 +558,9 @@ suspend fun getImageDimensions(context: Context, uri: String, data: ByteArray? =
             FileChunkInfo.fromUri(uri.toUri()).displayName
         } else uri
 
-        val ext = getExtensionFromUri(fileName)
+        val ext = if (fileUri != Uri.EMPTY || null == data) getExtensionFromUri(fileName)
+        else getExtensionFromMimeType(getMimeTypeFromPictureBinary(data))
+
         if (ext == "jxl" || ext == "avif") {
             return@withContext if (null == data) {
                 getDimsFromThirdParty(context, ext, fileUri)

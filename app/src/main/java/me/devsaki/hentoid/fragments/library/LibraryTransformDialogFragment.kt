@@ -332,14 +332,14 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
                 return@withContext if (params.resizeEnabled && 4 == params.resizeMethod) {
                     val res = transformManhwa(params, pageIndex)
                     if (res.isEmpty()) sourceBmp.rawData else res
-                } else transform(sourceBmp.rawData, params, true)
+                } else transform(requireContext(), sourceBmp.rawData, params, true)
             }
             val unchanged = targetData == sourceBmp.rawData
 
             val targetSize = formatHumanReadableSize(targetData.size.toLong(), resources)
             val targetMime = determineEncoder(isLossless, Point(), params).mimeType
             val targetName = sourceBmp.name + "." + getExtensionFromMimeType(targetMime)
-            val targetDims = getImageDimensions(requireContext(), targetName, targetData)
+            val targetDims = getImageDimensions(requireContext(), data = targetData)
             targetDimsWarning = (targetDims.x > DIMS_LIMIT || targetDims.y > DIMS_LIMIT)
             refreshControls()
 

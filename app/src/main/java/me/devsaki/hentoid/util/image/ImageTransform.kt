@@ -84,17 +84,15 @@ internal data class ManhwaProcessingItem(
 /**
  * Transform the given raw picture data using the given params
  */
-fun transform(
+suspend fun transform(
+    context: Context,
     rawData: ByteArray,
     params: TransformParams,
     allowBogusAiRescale: Boolean = false
 ): ByteArray {
     if (isImageAnimated(rawData)) return rawData
 
-    val options = BitmapFactory.Options()
-    options.inJustDecodeBounds = true
-    BitmapFactory.decodeByteArray(rawData, 0, rawData.size, options)
-    val dims = Point(options.outWidth, options.outHeight)
+    val dims = getImageDimensions(context, data = rawData)
     val bitmapOut: Bitmap = if (params.resizeEnabled) {
         when (params.resizeMethod) {
             0 -> resizeScreenRatio(rawData, dims, params.resize1Ratio / 100f)
