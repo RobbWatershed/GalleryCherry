@@ -327,7 +327,8 @@ private fun calculateInSampleSize(
  * @throws IOException If anything bad happens at load-time
  */
 @Throws(IOException::class)
-fun decodeSampledBitmapFromStream(
+suspend fun decodeSampledBitmapFromStream(
+    context: Context,
     stream: InputStream,
     targetWidth: Int,
     targetHeight: Int
@@ -337,20 +338,29 @@ fun decodeSampledBitmapFromStream(
     val workStream2 = streams[1]
 
     // First decode with inJustDecodeBounds=true to check dimensions
-    val options = BitmapFactory.Options()
-    options.inJustDecodeBounds = true
-    workStream1.use { workStream1 ->
-        BitmapFactory.decodeStream(workStream1, null, options)
+    val dimsAndMime = workStream1.use {
+        val rawData = it.readBytes()
+        val dims = getImageDimensions(context, data = rawData)
+        val mime = getMimeTypeFromPictureBinary(rawData)
+        Pair(dims, mime)
     }
 
-    // Calculate inSampleSize
-    options.inSampleSize =
-        calculateInSampleSize(options.outWidth, options.outHeight, targetWidth, targetHeight)
+    val mime = dimsAndMime.second
+    if (mime == MIME_IMAGE_JXL || mime == MIME_IMAGE_AVIF) {
+        // Can't optimize here; using basic load
+        return decodeBitmap(workStream2, mime)
+    } else {
+        // Calculate inSampleSize
+        val dims = dimsAndMime.first
+        val options = BitmapFactory.Options()
+        options.inSampleSize =
+            calculateInSampleSize(dims.x, dims.y, targetWidth, targetHeight)
 
-    // Decode final bitmap with inSampleSize set
-    options.inJustDecodeBounds = false
-    return workStream2.use { workStream2 ->
-        BitmapFactory.decodeStream(workStream2, null, options)
+        // Decode final bitmap with inSampleSize set
+        options.inJustDecodeBounds = false
+        return workStream2.use { workStream2 ->
+            BitmapFactory.decodeStream(workStream2, null, options)
+        }
     }
 }
 
@@ -662,12 +672,12 @@ fun loadBitmap(context: Context, file: DocumentFile): Bitmap? {
     }
 }
 
-fun decodeBitmap(inputStream: InputStream, mime: String, config: Bitmap.Config): Bitmap? {
+fun decodeBitmap(inputStream: InputStream, mime: String, config: Bitmap.Config? = null): Bitmap? {
     return when (mime) {
         MIME_IMAGE_JXL, MIME_IMAGE_AVIF -> inputStream.use { decodeBitmap(it.readBytes(), config) }
         else -> {
             val options = BitmapFactory.Options()
-            options.inPreferredConfig = config
+            if (config != null) options.inPreferredConfig = config
             // If that is not set, some PNGs are read with a ColorSpace of code "Unknown" (-1),
             // which makes resizing buggy (generates a black picture)
             options.inPreferredColorSpace = ColorSpace.get(ColorSpace.Named.SRGB)

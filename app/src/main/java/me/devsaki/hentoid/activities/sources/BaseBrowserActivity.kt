@@ -1455,7 +1455,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
                         ).use { onlineCover ->
                             val coverBody = onlineCover.body
                             val bodyStream = coverBody.byteStream()
-                            val b = getCoverBitmapFromStream(bodyStream)
+                            val b = getCoverBitmapFromStream(baseContext, bodyStream)
                             pHash = calcPhash(getHashEngine(), b)
                         }
                     } catch (e: IOException) {

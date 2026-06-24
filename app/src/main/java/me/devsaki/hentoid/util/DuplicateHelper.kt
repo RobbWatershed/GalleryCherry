@@ -154,7 +154,7 @@ suspend fun getIdxCoverBitmap(context: Context, coverUri: Uri): Bitmap? =
         if (!isAnimated) {
             try {
                 getInputStream(context, coverUri).use {
-                    return@withContext getCoverBitmapFromStream(it)
+                    return@withContext getCoverBitmapFromStream(context, it)
                 }
             } catch (e: IOException) {
                 Timber.w(e) // Doesn't break the loop
@@ -164,9 +164,10 @@ suspend fun getIdxCoverBitmap(context: Context, coverUri: Uri): Bitmap? =
         return@withContext null
     }
 
-suspend fun getCoverBitmapFromStream(stream: InputStream): Bitmap? =
+suspend fun getCoverBitmapFromStream(context: Context, stream: InputStream): Bitmap? =
     withContext(Dispatchers.IO) {
         return@withContext decodeSampledBitmapFromStream(
+            context,
             stream,
             COVER_WORK_RESOLUTION,
             COVER_WORK_RESOLUTION
