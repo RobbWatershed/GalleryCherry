@@ -522,7 +522,7 @@
             <ListPreference
                 android:defaultValue="@string/pref_dl_blocked_tags_behaviour_default"
                 android:entries="@array/pref_dl_blocked_tags_behaviour_entries"
-                android:entryValues="@array/int_two"
+                android:entryValues="@array/int_three"
                 android:key="pref_dl_blocked_tags_behaviour"
                 android:summary="@string/pref_attributes_list_order_summary"
                 android:title="@string/pref_dl_blocked_tags_behaviour_title"

@@ -263,6 +263,7 @@
     <string-array name="pref_dl_blocked_tags_behaviour_entries" translatable="false">
         <item>@string/pref_dl_blocked_tags_behaviour_entries_1</item>
         <item>@string/pref_dl_blocked_tags_behaviour_entries_2</item>
+        <item>@string/pref_dl_blocked_tags_behaviour_entries_3</item>
     </string-array>
     <string-array name="pref_viewer_browse_mode_entries" translatable="false">
         <item>@string/pref_viewer_browse_mode_entries_1</item>

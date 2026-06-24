@@ -904,6 +904,7 @@ object Settings {
 
         const val DL_TAG_BLOCKING_BEHAVIOUR_DONT_QUEUE = 0
         const val DL_TAG_BLOCKING_BEHAVIOUR_QUEUE_ERROR = 1
+        const val DL_TAG_BLOCKING_BEHAVIOUR_QUEUE_2ND_TAP = 2
 
         const val DL_SPEED_CAP_NONE = -1
         const val DL_SPEED_CAP_100 = 0

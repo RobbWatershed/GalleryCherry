@@ -826,6 +826,7 @@
     <string name="help_web_download">You\'ve reached a book page.\nTime to download with the bottom bar!</string>
     <string name="blocked_tag">Book has a blocked tag (<x:g example="bad" id="tag">%s</x:g>)\nDownload canceled</string>
     <string name="blocked_tag_queued">Book has a blocked tag (<x:g example="bad" id="tag">%s</x:g>)\nQueued as an error</string>
+    <string name="blocked_tag_double">Book has a blocked tag (<x:g example="bad" id="tag">%s</x:g>)\Double tap to queue</string>
     <string name="bookmark_current">Bookmark current page</string>
     <string name="unbookmark_current">Remove bookmark on current page</string>
     <string name="bookmark_copy_url">Copy bookmark URL to clipboard</string>

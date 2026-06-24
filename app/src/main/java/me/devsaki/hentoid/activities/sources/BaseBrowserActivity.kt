@@ -230,6 +230,9 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
     private val bookmarks = ArrayList<SiteBookmark>()
 
     // === OTHER VARIABLES
+    // Indicates the last timestamp of a download button tap
+    private var lastDownloadButtonTap = 0L
+
     // Indicates which mode the download button is in
     protected var actionButtonMode: ActionMode? = null
 
@@ -1251,28 +1254,44 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         // Check if the tag blocker applies here
         val blockedTagsLocal = getBlockedTags(theContent.id, dao)
         if (blockedTagsLocal.isNotEmpty()) {
-            if (Settings.tagBlockingBehaviour == Settings.Value.DL_TAG_BLOCKING_BEHAVIOUR_DONT_QUEUE) { // Stop right here
-                toast(R.string.blocked_tag, blockedTagsLocal[0])
-            } else { // Insert directly as an error
-                val errors: MutableList<ErrorRecord> = ArrayList()
-                errors.add(
-                    ErrorRecord(
-                        type = ErrorType.BLOCKED,
-                        url = theContent.url,
-                        contentPart = "tags",
-                        description = "blocked tags : " + TextUtils.join(", ", blockedTagsLocal),
-                        timestamp = Instant.now()
+            var canQueue = false
+            when (Settings.tagBlockingBehaviour) {
+                Settings.Value.DL_TAG_BLOCKING_BEHAVIOUR_DONT_QUEUE ->
+                    toast(R.string.blocked_tag, blockedTagsLocal[0])
+
+                Settings.Value.DL_TAG_BLOCKING_BEHAVIOUR_QUEUE_2ND_TAP -> {
+                    val now = Instant.now().toEpochMilli()
+                    // Consts 40 and 300 come from android.view.ViewConfiguration
+                    if (now - lastDownloadButtonTap in 41..<300) canQueue = true
+                    else toast(R.string.blocked_tag_double, blockedTagsLocal[0])
+                    lastDownloadButtonTap = now
+                }
+
+                else -> {
+                    // Insert directly as an error
+                    val errors: MutableList<ErrorRecord> = ArrayList()
+                    errors.add(
+                        ErrorRecord(
+                            type = ErrorType.BLOCKED,
+                            url = theContent.url,
+                            contentPart = "tags",
+                            description = "blocked tags : " + TextUtils.join(
+                                ", ",
+                                blockedTagsLocal
+                            ),
+                            timestamp = Instant.now()
+                        )
                     )
-                )
-                theContent.setErrorLog(errors)
-                theContent.downloadMode = Settings.getBrowserDlAction()
-                theContent.status = StatusContent.ERROR
-                if (isReplaceDuplicate) theContent.setContentIdToReplace(duplicateId)
-                dao.insertContent(theContent)
-                toast(R.string.blocked_tag_queued, blockedTagsLocal[0])
-                lifecycleScope.launch { setActionMode(ActionMode.VIEW_QUEUE) }
+                    theContent.setErrorLog(errors)
+                    theContent.downloadMode = Settings.getBrowserDlAction()
+                    theContent.status = StatusContent.ERROR
+                    if (isReplaceDuplicate) theContent.setContentIdToReplace(duplicateId)
+                    dao.insertContent(theContent)
+                    toast(R.string.blocked_tag_queued, blockedTagsLocal[0])
+                    lifecycleScope.launch { setActionMode(ActionMode.VIEW_QUEUE) }
+                }
             }
-            return
+            if (!canQueue) return
         }
         val replacementTitleFinal = replacementTitle
         // No reason to block or ignore -> actually add to the queue
