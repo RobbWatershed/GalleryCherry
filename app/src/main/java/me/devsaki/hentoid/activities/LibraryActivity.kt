@@ -73,6 +73,7 @@ import me.devsaki.hentoid.util.file.isLowDeviceStorage
 import me.devsaki.hentoid.util.file.requestExternalStorageReadWritePermission
 import me.devsaki.hentoid.util.file.requestNotificationPermission
 import me.devsaki.hentoid.util.getThemedColor
+import me.devsaki.hentoid.util.isNumeric
 import me.devsaki.hentoid.util.openReader
 import me.devsaki.hentoid.util.runExternalImport
 import me.devsaki.hentoid.util.showTooltip
@@ -203,6 +204,7 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
     private var folderSearchBundle: Bundle? = null
 
     private lateinit var searchSubmitDebouncer: Debouncer<String>
+    private lateinit var searchLongSubmitDebouncer: Debouncer<String>
 
     // Used to avoid closing search panel immediately when user uses backspace to correct what he typed
     private lateinit var searchClearDebouncer: Debouncer<Int>
@@ -251,6 +253,10 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
         setContentView(activityBinding?.root)
 
         searchClearDebouncer = Debouncer(this.lifecycleScope, 1500) { clearSearch() }
+        searchLongSubmitDebouncer = Debouncer(this.lifecycleScope, 1500) {
+            setQuery(it)
+            signalCurrentFragment(CommunicationEvent.Type.SEARCH_NO_HISTORY, it)
+        }
         searchSubmitDebouncer = Debouncer(this.lifecycleScope, 250) {
             setQuery(it)
             signalCurrentFragment(CommunicationEvent.Type.SEARCH_NO_HISTORY, it)
@@ -629,7 +635,11 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
                             searchSubmitDebouncer.clear()
                             searchClearDebouncer.submit(1)
                         } else {
-                            searchSubmitDebouncer.submit(s)
+                            // User has something very specific in mind
+                            if (isNumeric(s) || s.startsWith("http"))
+                                searchLongSubmitDebouncer.submit(s)
+                            else // classic full text search
+                                searchSubmitDebouncer.submit(s)
                             searchClearDebouncer.clear()
                         }
                         return true
