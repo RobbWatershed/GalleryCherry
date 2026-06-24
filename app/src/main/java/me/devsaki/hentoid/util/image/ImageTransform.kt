@@ -184,7 +184,7 @@ fun determineEncoder(
     params: TransformParams
 ): PictureEncoder {
     // AI rescale always produces PNGs
-    if (3 == params.resizeMethod) return PictureEncoder.PNG
+    if (params.resizeEnabled && 3 == params.resizeMethod) return PictureEncoder.PNG
 
     // Other cases
     val result = when (params.transcodeMethod) {
