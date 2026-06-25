@@ -799,7 +799,7 @@
     </plurals>
     <string name="redownloaded_updating_webview">Webbvyn uppdaterar just nu, kan inte hämta ännu</string>
     <string name="refresh_allow_write">Vänligen tillåt skrivtillstånd</string>
-    <string name="refresh_auto_processing">Fräschar upp externt bibliotek automatiskt (%d/%d)</string>
+    <string name="refresh_auto_processing">Fräschar upp externt bibliotek automatiskt (%1$d/%2$d)</string>
     <string name="refresh_caption">Automatiskt fräscha upp biblioteksdata genom att omskanna filer och mappar.</string>
     <string name="refresh_location_external">Externt bibliotek</string>
     <string name="refresh_location_internal">Primärbibliotek (alla)</string>

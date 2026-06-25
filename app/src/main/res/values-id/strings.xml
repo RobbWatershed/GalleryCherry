@@ -799,7 +799,7 @@
   </plurals>
   <string name="redownloaded_updating_webview">Webview sedang di update saat ini, tidak bisa mengunduh ulang saat ini.</string>
   <string name="refresh_allow_write">Mohon izinkan aplikasi untuk menyimpan data di perangkat</string>
-  <string name="refresh_auto_processing">Menyegarkan otomatis perpustakaan eksternal (%d/%d)</string>
+  <string name="refresh_auto_processing">Menyegarkan otomatis perpustakaan eksternal (%1$d/%2$d)</string>
   <string name="refresh_caption">Segarkan data perpustakaan secara otomatis dengan memindai ulang berkas dan folder.</string>
   <string name="refresh_location_external">Perpustakaan eksternal</string>
   <string name="refresh_location_internal">Perpustakaan utama (semua)</string>

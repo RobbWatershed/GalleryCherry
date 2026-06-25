@@ -852,7 +852,7 @@
     </plurals>
     <string name="redownloaded_updating_webview">La WebView se está actualizando, no se puede volver a descargar aún</string>
     <string name="refresh_allow_write">Por favor autoriza el permiso de escritura</string>
-    <string name="refresh_auto_processing">Biblioteca externa con actualización automática (%d/%d)</string>
+    <string name="refresh_auto_processing">Biblioteca externa con actualización automática (%1$d/%2$d)</string>
     <string name="refresh_caption">Actualizar automáticamente los datos de la biblioteca volviendo a analizar los archivos y las carpetas.</string>
     <string name="refresh_location_external">Biblioteca externa</string>
     <string name="refresh_location_internal">Biblioteca principal (todo)</string>
