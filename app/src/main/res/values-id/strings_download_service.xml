@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+  <plurals name="add_to_queue">
+    <item quantity="one">%1$d/%2$d item ditambahkan ke antrean</item>
+    <item quantity="other">%1$d/%2$d item ditambahkan ke antrean</item>
+  </plurals>
+  <string name="already_downloaded">Sudah diunduh</string>
+  <string name="already_queued">Sudah dalam antrean</string>
+  <string name="download_cancelled">Unduhan dibatalkan</string>
+  <string name="download_complete">Unduhan selesai</string>
+  <plurals name="download_completed">
+    <item quantity="one">Download selesai</item>
+    <item quantity="other">%d download selesai</item>
+  </plurals>
+  <string name="download_error">Unduhan selesai, tetapi terjadi kesalahan</string>
+</resources>
