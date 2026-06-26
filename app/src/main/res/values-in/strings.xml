@@ -72,10 +72,15 @@
   <string name="biometric_dialog_title">Kunci biometrik</string>
   <string name="black">Hitam</string>
   <string name="blocked_tag">Buku memiliki tag yang diblokir (%s)\nUnduhan dibatalkan</string>
+  <string name="blocked_tag_double">Buku ini terdapat tag yang di blokir (%s)\ klik dua kali untuk mengunduh</string>
   <string name="blocked_tag_queued">Buku memiliki tag yang diblokir (%s)\nDimasukkan ke antrean sebagai kesalahan</string>
   <plurals name="book">
     <item quantity="one">Buku</item>
     <item quantity="other">Buku-buku</item>
+  </plurals>
+  <plurals name="book_create_cover_thumbnail">
+    <item quantity="one">Buat thumbnail sampul pada %1$d buku</item>
+    <item quantity="other">Buat sampul thumbnail pada %1$d buku</item>
   </plurals>
   <plurals name="book_delete">
     <item quantity="one">Hapus %1$d buku</item>
@@ -94,6 +99,10 @@
     <item quantity="one">%1$d / %2$d buku</item>
     <item quantity="other">%1$d / %2$d buku</item>
   </plurals>
+  <plurals name="book_remove_cover_thumbnail">
+    <item quantity="one">Hapus thumbnail sampul pada %1$d buku</item>
+    <item quantity="other">Hapus thumbnail sampul pada %1$d buku</item>
+  </plurals>
   <string name="book_settings">Pengaturan buku</string>
   <plurals name="book_stream">
     <item quantity="one">Alihkan %1$d buku ke streaming</item>
@@ -111,6 +120,7 @@
   <string name="cancel">Batal</string>
   <string name="cancel_all">Batalkan semua</string>
   <string name="cancel_all_errors">Batalkan semua unduhan error</string>
+  <string name="cancel_limit">Tidak bisa membatalkan lebih dari 1000 buku sekaligus</string>
   <string name="cancel_queue_progress">Membatalkan item antrean</string>
   <string name="category_any">Semua</string>
   <string name="category_artist">Artis</string>
@@ -122,7 +132,7 @@
   <string name="category_series">Seri</string>
   <string name="category_source">Sumber</string>
   <string name="category_tag">Karakter</string>
-  <string name="category_translator">Translator</string>
+  <string name="category_translator">Penerjemah</string>
   <string name="category_undefined">Tidak ditentukan</string>
   <string name="category_uploader">Pengungah</string>
   <string name="changelog">Catatan Perubahan</string>
@@ -157,6 +167,7 @@
     <item quantity="other">Buat arsip</item>
   </plurals>
   <string name="create_generic">Buat</string>
+  <string name="create_thumb_progress">Membuat thumbnail sampul </string>
   <string name="dark_grey">Abu-abu tua</string>
   <string name="delete_books_progress">Menghapus buku</string>
   <string name="delete_chapters_progress">Menghapus bab</string>
@@ -249,7 +260,7 @@
   <string name="duplicate_use_cover">Sampul</string>
   <string name="duplicate_use_same_language">Hanya bahasa yang sama</string>
   <string-array name="duplicate_use_sensitivities">
-    <item>Mirip secara longgar</item>
+    <item>Mirip sedikit</item>
     <item>Mirip</item>
     <item>Sangat mirip</item>
   </string-array>
@@ -391,6 +402,7 @@
   <string name="groups">Grup</string>
   <string name="groups_by_artist">Berdasarkan Artis</string>
   <string name="groups_by_dl_date">Berdasarkan Tanggal Unduh (diproses)</string>
+  <string name="groups_by_series">Berdasarkan series</string>
   <string name="groups_custom">Grup kustom</string>
   <string name="groups_dynamic">Pencarian tersimpan</string>
   <string name="groups_flat">Semua buku</string>
@@ -529,6 +541,12 @@
   <string name="library_imports_title">Impor perpustakaan</string>
   <string name="library_search_hint">Judul, artis, penanda atau ID buku</string>
   <string name="light_grey">Abu-abu muda</string>
+  <string name="limit_download">Batas kuota unduhan mode data </string>
+  <string name="limit_download_limit_caption">nota: pengaturan ini akan di reset saat app di restart</string>
+  <string name="limit_download_limit_current">Batasan saat ini: %s / %s</string>
+  <string name="limit_download_limit_none">Tidak ada batasan di set</string>
+  <string name="limit_download_set_new">Rubah batasan</string>
+  <string name="limit_download_set_new_prompt">Batas baru (MB)</string>
   <string name="loading_archive">Memuat: %1$d/%2$d</string>
   <string name="loading_image">Memuat gambar: %d%%</string>
   <string name="location_storage">%1$s (%2$d%%) tersedia</string>
@@ -551,9 +569,12 @@
   <string name="mass_operation">Operasi</string>
   <string name="mass_operation_1">Hapus</string>
   <string name="mass_operation_2">Beralih ke streaming</string>
+  <string name="mass_operation_3">Menghapus thumbnail sampul</string>
+  <string name="mass_operation_4">Buat thumbnail sampul</string>
   <string name="mass_operation_scope">Cakupan</string>
   <string name="mass_operation_scope_1">Filter saat ini pada layar perpustakaan</string>
   <string name="mass_operation_scope_2">Semua buku kecuali yang termasuk dalam filter saat ini pada layar perpustakaan</string>
+  <string name="mass_process_action">Proses secara masal</string>
   <string name="mass_stream_action">Alihkan massal ke streaming</string>
   <string name="masterdata_no_result">Tidak ada hasil :(</string>
   <string name="memory_database">Basis data: %1$s (%2$.1f%% terisi)</string>
@@ -635,6 +656,7 @@
   <string name="no_circle_group_name">[tanpa sirkel]</string>
   <string name="no_error_detected">Tidak ada kesalahan terdeteksi.</string>
   <string name="no_images">Tidak dapat memuat buku: Tidak ditemukan gambar</string>
+  <string name="no_series_group_name">[Tidak ada series]</string>
   <string name="none">Tidak ada</string>
   <string name="notif_archive_complete">Pengarsipan selesai</string>
   <plurals name="notif_archive_complete_details">
@@ -647,6 +669,8 @@
     <item quantity="other">%d buku gagal diarsipkan</item>
   </plurals>
   <string name="notif_archive_title">Pengarsipan konten</string>
+  <string name="notif_create_thumb_complete">Membuat thumbnail sampul selesai</string>
+  <string name="notif_create_thumb_failed">Membuat thumbnail sampul gagal</string>
   <string name="notif_delete_complete">Penghapusan selesai</string>
   <string name="notif_delete_fail">Penghapusan gagal</string>
   <plurals name="notif_delete_fail_details">
@@ -667,6 +691,8 @@
     <item quantity="one">%d item berhasil diproses</item>
     <item quantity="other">%d item berhasil diproses</item>
   </plurals>
+  <string name="notif_remove_thumb_complete">Menghapus thumbnail sampul selesai</string>
+  <string name="notif_remove_thumb_failed">Menghapus thumbnail sampul gagal</string>
   <string name="notif_split_merge">Pisah / gabung</string>
   <string name="notif_stream_complete">Streaming selesai</string>
   <string name="notif_stream_fail">Streaming gagal</string>
@@ -718,6 +744,7 @@
   <string name="pause">Jeda</string>
   <string name="paused_dl_folder_credentials">Tidak bisa mengunduh - tidak memiliki izin untuk folder unduhan yang dipilih. Silahkan pilih folder lain.</string>
   <string name="paused_dl_folder_not_found">Tidak bisa mengunduh - Folder unduhan tidak ditemukan. Silahkan set di pengaturan aplikasi.</string>
+  <string name="paused_dl_mobile_limit_reached">Batas kuota unduhan mode data tercapai</string>
   <string name="paused_dl_no_available_downloads">Tidak ada unduhan yang tersisa</string>
   <string name="paused_dl_stale_online_credentials">Tidak bisa mengunduh - kuki / login kadaluarsa. Gunakan notifikasi untuk membuat ulang kuki nya.</string>
   <string name="paused_no_dl_folder">Tidak bisa mengunduh - tidak ada folder unduhan. silahkan set terlebih dahulu di pengaturan aplikasi.</string>
@@ -826,9 +853,10 @@
   <string name="refresh_step3">Memindai perpustakaan buku (%1$d / %2$d)</string>
   <string name="refresh_step3_init">Memindai perpustakaan buku</string>
   <string name="refresh_step3_nomax">Memindai perpustakaan buku (%1$d)</string>
-  <string name="refresh_step4_init">Mengimpor antrian...</string>
+  <string name="refresh_step4_init">Mengimpor antrian…</string>
   <string name="refresh_title">Segarkan lokasi</string>
   <string name="remove_generic">Hapus</string>
+  <string name="remove_thumb_progress">Menghapus thumbnail sampul…</string>
   <string name="renaming_progress">Mengganti nama berkas…</string>
   <string name="reorder_progress">Mengatur ulang halaman…</string>
   <string name="reset">Mulai ulang</string>
@@ -849,6 +877,7 @@
   <string name="revive_missing_webview">WebView tidak tersedia, tidak dapat memulihkan unduhan saat ini</string>
   <string name="revive_updating_webview">WebView sedang diperbarui, belum dapat memulihkan unduhan</string>
   <string name="revive_wait">Harap tetap berada di layar ini selama unduhan Anda sedang dipulihkan</string>
+  <string name="search_and">DAN</string>
   <string name="search_bookid_label">Cari \'%s\' di…</string>
   <plurals name="search_button">
     <item quantity="one">%s Hasil ditemukan</item>
@@ -858,6 +887,7 @@
   <string name="search_entry_not_found">Tidak ada di sini, silakan unduh terlebih dahulu.</string>
   <string name="search_location">Lokasi</string>
   <string name="search_location_entries_1">Semua lokasi</string>
+  <string name="search_or">ATAU</string>
   <string name="search_prompt">Cari %s</string>
   <string name="search_select_a_filter">Pilih filter</string>
   <string name="search_type">tipe</string>
@@ -878,6 +908,7 @@
   <string name="slideshow_stop">Slideshow dihentikan</string>
   <string name="sort_artist">Artis</string>
   <string name="sort_ascending">Menaik</string>
+  <string name="sort_avg_size">Rata-rata ukuran file</string>
   <string name="sort_books">Buku</string>
   <string name="sort_custom">Kustom</string>
   <string name="sort_descending">Menurun</string>

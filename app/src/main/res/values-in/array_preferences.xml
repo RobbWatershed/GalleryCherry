@@ -12,6 +12,7 @@
   <string name="pref_browser_quick_dl_threshold_entries_5">3.0 s</string>
   <string name="pref_dl_blocked_tags_behaviour_entries_1">Jangan diantrikan</string>
   <string name="pref_dl_blocked_tags_behaviour_entries_2">Antrikan sebagai unduhan yang error</string>
+  <string name="pref_dl_blocked_tags_behaviour_entries_3">Antrikan dengan pencetan kedua</string>
   <string name="pref_dl_retries_mem_limit_entries_4">Tidak ada</string>
   <string name="pref_dl_skip_large_pages_threshold_entries_1">Tidak ada batasan laman</string>
   <string name="pref_dl_skip_large_pages_threshold_entries_2">11-30-59</string>
@@ -41,7 +42,7 @@
   <string name="pref_folder_trunc_content_entries_4">100 Karakter</string>
   <string name="pref_folder_trunc_content_entries_5">120 Karakter</string>
   <string name="pref_library_display_entries_1">Daftar(bawaan)</string>
-  <string name="pref_library_display_entries_2">Barus</string>
+  <string name="pref_library_display_entries_2">Baris</string>
   <string name="pref_lock_timer_entries_1">Tidak ada delay</string>
   <string name="pref_lock_timer_entries_2">10.0 s</string>
   <string name="pref_lock_timer_entries_3">30 s (bawaan)</string>
@@ -69,9 +70,12 @@
   <string name="pref_viewer_display_mode_entries_1">Sesuaikan dengan layar (bawaan)</string>
   <string name="pref_viewer_display_mode_entries_2">Penuhi layar (proporsional)</string>
   <string name="pref_viewer_display_mode_entries_3">Penuhi layar (di lebarkan)</string>
+  <string name="pref_viewer_display_pagenum_entries_1">Nonaktif</string>
+  <string name="pref_viewer_display_pagenum_entries_2">Tengah bawah</string>
+  <string name="pref_viewer_display_pagenum_entries_3">Tengah atas</string>
   <string name="pref_viewer_dl_action_entries_1">Unduh semua laman</string>
   <string name="pref_viewer_dl_action_entries_2">Stream halaman sembari membaca</string>
-  <string name="pref_viewer_dl_action_entries_3">Tanjakan setiap saat</string>
+  <string name="pref_viewer_dl_action_entries_3">Tanyakan setiap saat</string>
   <string name="pref_viewer_dl_action_entries_4">Unduh semua halaman dan arsipkan</string>
   <string name="pref_viewer_read_threshold_entries_1">1 Halaman(bawaan)</string>
   <string name="pref_viewer_read_threshold_entries_2">01-31-00</string>

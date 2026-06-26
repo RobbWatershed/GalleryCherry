@@ -7,6 +7,10 @@
   <string name="download_hitomi_avif_title">Unduh dalam format AVIF</string>
   <string name="download_retries_active_title">Percobaan ulang diaktifkan</string>
   <string name="download_retries_screen_title">Percobaan ulang unduhan otomatis</string>
+  <string name="download_separate_thumb_off">Tandai halaman pertama sebagai thumbnail</string>
+  <string name="download_separate_thumb_on">Buat file terpisah untuk thumbnail</string>
+  <string name="download_separate_thumb_title">Thumbnail</string>
+  <string name="import_external_library_auto_title">Otomatis impor file baru</string>
   <string name="library_display_group_figure_title">Gambar grup</string>
   <string name="mass_operations_summary">Operasi massal pada perpustakaan</string>
   <string name="mass_operations_title">Operasi massal</string>
@@ -34,7 +38,7 @@
   <string name="pref_browser_clear_cookies_site">Situs</string>
   <string name="pref_browser_clear_cookies_updating_webview">WebView sedang diperbarui, belum dapat menghapus kuki</string>
   <string name="pref_browser_dl_action_title">Tindakan unduhan</string>
-  <string name="pref_browser_dns_title">Dns Over HTTPS</string>
+  <string name="pref_browser_dns_title">Dns dengan HTTPS</string>
   <string name="pref_browser_duplicate_ask_off">Tidak: selalu unduh</string>
   <string name="pref_browser_duplicate_ask_on">Ya: tanyakan sebelum mengunduh</string>
   <string name="pref_browser_duplicate_ask_title">Pemeriksaan duplikat</string>
@@ -71,11 +75,11 @@
   <string name="pref_browser_mark_queued_title">Tandai buku dalam antrean</string>
   <string name="pref_browser_nhentai_invisible_blacklist_off">Buku yang masuk daftar hitam nhentai diburamkan</string>
   <string name="pref_browser_nhentai_invisible_blacklist_on">Buku yang masuk daftar hitam nhentai tidak ditampilkan</string>
-  <string name="pref_browser_nhentai_invisible_blacklist_title">Sembunyikan buku yang masuk daftar hitam nhentai</string>
+  <string name="pref_browser_nhentai_invisible_blacklist_title">Sembunyikan buku dengan tag daftar hitam</string>
   <string name="pref_browser_proxy_title">Proksi</string>
   <string name="pref_browser_quick_dl_summary">Pada halaman daftar buku, tekan dan tahan untuk mengunduh buku apa pun</string>
   <string name="pref_browser_quick_dl_threshold_summary">Tekan dan tahan selama durasi ini untuk memulai unduhan cepat\nSaat ini: %s</string>
-  <string name="pref_browser_quick_dl_threshold_title">Ambang tekan lama untuk unduhan cepat</string>
+  <string name="pref_browser_quick_dl_threshold_title">Durasi tekan lama untuk mengunduh cepat</string>
   <string name="pref_browser_quick_dl_title">Unduhan cepat</string>
   <string name="pref_browser_range_download_summary">Tombol tambahan untuk menentukan halaman galeri yang akan diunduh</string>
   <string name="pref_browser_resume_last_off">Semua situs selalu dibuka di halaman beranda</string>
@@ -119,7 +123,7 @@
   <string name="pref_dl_http_429_default_delay_title">Penundaan bawaan HTTP 429 (detik)</string>
   <string name="pref_dl_retries_mem_limit_title">Ambang penggunaan memori sebelum dibatalkan</string>
   <string name="pref_dl_retries_number_title">Jumlah percobaan ulang sebelum dibatalkan</string>
-  <string name="pref_dl_retries_off">Unduhan yang gagal akan tetap dalam status kesalahan</string>
+  <string name="pref_dl_retries_off">Unduhan yang gagal akan tetap dalam status error</string>
   <string name="pref_dl_retries_on">Unduhan yang gagal akan dicoba ulang secara otomatis</string>
   <string name="pref_dl_skip_large_allow_wifi_off">Lewati unduhan berukuran besar di semua jaringan</string>
   <string name="pref_dl_skip_large_allow_wifi_on">Izinkan unduhan berukuran besar hanya melalui Wi-Fi</string>
@@ -136,8 +140,8 @@
   <string name="pref_drawer_sources_summary">Aktifkan, nonaktifkan, dan atur ulang situs yang muncul di panel navigasi kiri</string>
   <string name="pref_drawer_sources_title">Kelola sumber</string>
   <string name="pref_endless_scroll_summary_off">Aktifkan gulir tanpa akhir pada daftar unduhan\nMenonaktifkan pagination</string>
-  <string name="pref_endless_scroll_summary_on">Gulir sesuka Anda</string>
-  <string name="pref_endless_scroll_title">Gulir Tanpa Akhir</string>
+  <string name="pref_endless_scroll_summary_on">Scrolling sesuka Anda</string>
+  <string name="pref_endless_scroll_title">Scrolling Tanpa Akhir</string>
   <string name="pref_external_library_delete_off">Hentoid tidak dapat menghapus buku maupun halaman di perpustakaan eksternal</string>
   <string name="pref_external_library_delete_on">Hentoid dapat menghapus buku dan halaman di perpustakaan eksternal</string>
   <string name="pref_external_library_delete_title">Izinkan penghapusan konten eksternal</string>
@@ -225,7 +229,7 @@
   <string name="pref_viewer_horizontal_reader">Pembaca horizontal</string>
   <string name="pref_viewer_invert_volume">Balik fungsi tombol volume</string>
   <string name="pref_viewer_keep_screen_on">Biarkan layar tetap menyala</string>
-  <string name="pref_viewer_maintain_horizontal_zoom">Pertahankan tingkat zoom antarhalaman</string>
+  <string name="pref_viewer_maintain_horizontal_zoom">Pertahankan tingkat zoom antar halaman</string>
   <string name="pref_viewer_navigation">Navigasi &amp; perilaku</string>
   <string name="pref_viewer_open_gallery">Selalu buka dalam mode galeri</string>
   <string name="pref_viewer_page_turn">Kontrol pergantian halaman</string>
@@ -234,7 +238,7 @@
   <string name="pref_viewer_page_turn_tap">Ketuk tepi</string>
   <string name="pref_viewer_page_turn_tap_2x">Area ketuk lebih besar</string>
   <string name="pref_viewer_page_turn_volume">Tombol volume</string>
-  <string name="pref_viewer_ratio_completed_threshold">Tandai buku sebagai selesai setelah N%% halaman</string>
+  <string name="pref_viewer_ratio_completed_threshold">Tandai buku sebagai selesai setelah N% halaman</string>
   <string name="pref_viewer_read_threshold">Tandai buku sebagai telah dibaca setelah N halaman</string>
   <string name="pref_viewer_rendering">Perenderan</string>
   <string name="pref_viewer_rendering_mode">Mode perenderan</string>
@@ -243,9 +247,9 @@
   <string name="pref_viewer_resume_last_left_summary_on">Membuka kembali buku akan melanjutkan dari halaman terakhir yang dibaca, kecuali jika akhir buku telah tercapai</string>
   <string name="pref_viewer_resume_last_left_title">Mode melanjutkan membaca saat membuka kembali buku</string>
   <string name="pref_viewer_separating_bars">Garis pemisah dalam mode vertikal</string>
-  <string name="pref_viewer_slideshow_delay">Jeda antarhalaman (tampilan horizontal)</string>
+  <string name="pref_viewer_slideshow_delay">Jeda antar halaman (tampilan horizontal)</string>
   <string name="pref_viewer_slideshow_delay_vertical">Kecepatan scrolling (tampilan vertikal)</string>
-  <string name="pref_viewer_slideshow_loop">Perulangan</string>
+  <string name="pref_viewer_slideshow_loop">Pengulangan</string>
   <string name="pref_viewer_smart_crop">Pemotongan cerdas</string>
   <string name="pref_viewer_smart_crop_summary_off">Gambar ditampilkan apa adanya</string>
   <string name="pref_viewer_smart_crop_summary_on">Tepi polos akan dihapus secara otomatis</string>
