@@ -44,7 +44,7 @@ android {
         buildConfigField 'String', 'BERG_API_URL', '"https://codeberg.org/api/v1/repos/VioletKnight/Hentoid/"'
 
         // Only include complete translations
-        resourceConfigurations += ['en', 'ru', 'it', 'uk', 'hu', 'ko', 'ja', 'es', 'sv', 'id']
+        resourceConfigurations += ['en', 'ru', 'it', 'uk', 'hu', 'ko', 'ja', 'es', 'sv', 'in']
     }
     buildFeatures {
         viewBinding = true
