@@ -33,12 +33,13 @@ class PicsXContent : BaseContentParser() {
                 urlsToImageFiles(
                     imgUrls,
                     imgUrls[0],
-                    StatusContent.SAVED
+                    StatusContent.SAVED,
+                    Site.PICS_X
                 )
             )
 
             content.setImageFiles(imageFiles)
-            content.qtyPages = imageFiles.size - 1
+            content.qtyPages = imageFiles.count { it.isReadable }
         }
 
         return content

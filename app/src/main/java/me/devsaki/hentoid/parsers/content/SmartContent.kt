@@ -98,7 +98,7 @@ open class SmartContent : BaseContentParser() {
             else if (imageElts.size > 4) addLinksToImages(imageElts, images, url)
             if (images.isNotEmpty()) content.coverImageUrl = images[0].url
 
-            content.qtyPages = images.size
+            content.qtyPages = images.count { it.isReadable }
             content.setImageFiles(images)
         }
 

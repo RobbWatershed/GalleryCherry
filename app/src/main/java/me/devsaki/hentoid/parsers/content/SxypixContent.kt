@@ -39,7 +39,7 @@ class SxypixContent : BaseContentParser() {
         if (updateImages) {
             val images: MutableList<ImageFile> = ArrayList()
             content.setImageFiles(images)
-            content.qtyPages = images.size
+            content.qtyPages = images.count { it.isReadable }
         }
 
         return content

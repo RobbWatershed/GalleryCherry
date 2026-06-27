@@ -71,7 +71,7 @@ class BabeTodayContent : BaseContentParser() {
             addLinksToImages(imageLinks, images, url)
             if (!images.isEmpty()) content.coverImageUrl = images[0].url
 
-            content.qtyPages = images.size
+            content.qtyPages = images.count { it.isReadable }
             content.setImageFiles(images)
         }
 

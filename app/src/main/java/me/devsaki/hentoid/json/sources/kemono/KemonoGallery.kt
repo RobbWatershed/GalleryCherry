@@ -57,7 +57,7 @@ data class KemonoGallery(
                 imageUrls,
                 content.downloadRange,
                 StatusContent.SAVED,
-                Site.KEMONO,
+                Site.COOMER,
                 content.coverImageUrl
             )
             content.setImageFiles(imgs)

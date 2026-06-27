@@ -68,11 +68,12 @@ class CosplayTeleContent : BaseContentParser() {
                     urlsToImageFiles(
                         links,
                         links[0],
-                        StatusContent.SAVED
+                        StatusContent.SAVED,
+                        Site.COSPLAYTELE
                     )
                 if (!images.isEmpty()) content.coverImageUrl = images[0].url
                 content.setImageFiles(images)
-                content.qtyPages = images.size - 1
+                content.qtyPages = images.count { it.isReadable }
             }
         }
 

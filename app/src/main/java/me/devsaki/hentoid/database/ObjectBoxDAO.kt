@@ -1175,7 +1175,7 @@ class ObjectBoxDAO : CollectionDAO {
             if (content != null) {
                 // Compute new size and page count
                 content.computeSize()
-                content.qtyPages = content.imageList.size
+                content.qtyPages = content.imageList.count { it.isReadable }
                 ObjectBoxDB.insertContentCore(content)
 
                 // Prune empty chapters

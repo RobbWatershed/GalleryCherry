@@ -35,13 +35,12 @@ class FapalityParser : BaseImageListParser() {
         // 2. Open each page URL and get the image data until all images are found
         pageUrls.forEachIndexed { idx, url ->
             if (processHalted.get()) return@forEachIndexed
-            doc = getOnlineDocument(
+            getOnlineDocument(
                 url,
                 headers,
                 Site.FAPALITY.useHentoidAgent,
                 Site.FAPALITY.useWebviewAgent
-            )
-            if (doc != null) {
+            )?.let { doc ->
                 val images = doc.select(".simple-content img")
                 result.addAll(
                     images.map { it.attr("src") }.filterNot { it.isEmpty() }.toList()

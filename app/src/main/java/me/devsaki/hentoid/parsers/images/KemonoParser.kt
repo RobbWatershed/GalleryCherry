@@ -208,7 +208,7 @@ class KemonoParser : BaseImageListParser() {
                 }
                 content.setChapters(chapters)
                 val images = chapters.flatMap { it.imageList }.toMutableList()
-                if (Settings.isThumbSeparateFile(Site.KEMONO))
+                if (Settings.isThumbSeparateFile(Site.COOMER))
                     images.add(0, ImageFile.newThumb(artist.iconUrl, StatusContent.SAVED))
                 content.setImageFiles(images)
                 content.qtyPages = images.count { it.isReadable }

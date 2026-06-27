@@ -118,7 +118,7 @@ class RedditAuthDownloadFragment : Fragment() {
 
             val coverUrl = if (savedUrls.isEmpty()) "" else savedUrls[0]
             val newImages =
-                urlsToImageFiles(savedUrls, coverUrl, StatusContent.SAVED).toMutableList()
+                urlsToImageFiles(savedUrls, coverUrl, StatusContent.SAVED, Site.REDDIT).toMutableList()
 
             Timber.d("Reddit : new content created (%s pages)", newImages.size)
             currentContent = Content(site = Site.REDDIT, dbUrl = "", title = "Reddit")
@@ -128,7 +128,7 @@ class RedditAuthDownloadFragment : Fragment() {
             newImageNumber = newImages.size - 1 // Don't count the cover
         } else { // TODO duplicated code with BaseWebActivity
             // Create a new image set based on saved Urls, ignoring the cover that should already be there
-            val newImages = urlsToImageFiles(savedUrls, "", StatusContent.SAVED).toMutableList()
+            val newImages = urlsToImageFiles(savedUrls, "", StatusContent.SAVED, Site.REDDIT).toMutableList()
 
             // Ignore the images that are already contained in the central booru book
             val existingImages: MutableList<ImageFile> = contentDB.imageFiles
@@ -176,7 +176,7 @@ class RedditAuthDownloadFragment : Fragment() {
 
     private fun onDownloadClick() {
         // Save new images to DB
-        currentContent!!.qtyPages = imageSet!!.size - 1 // Don't count the cover
+        currentContent!!.qtyPages = imageSet!!.count { it.isReadable }
         currentContent!!.status = StatusContent.DOWNLOADING
         val contentId = db!!.insertContent(currentContent!!)
 

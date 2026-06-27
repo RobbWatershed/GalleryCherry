@@ -58,7 +58,7 @@ class GirlsTopContent : BaseContentParser() {
             }
             if (images.isNotEmpty()) content.coverImageUrl = images[0].url
             content.setImageFiles(images)
-            content.qtyPages = images.size
+            content.qtyPages = images.count { it.isReadable }
         }
 
         return content

@@ -37,12 +37,17 @@ class BestGirlSexyContent : BaseContentParser() {
             val images = images?.let { elts ->
                 val imageLinks = elts.map { getImgSrc(it) }.distinct()
                 if (imageLinks.isNotEmpty())
-                    urlsToImageFiles(imageLinks, imageLinks[0], StatusContent.SAVED)
+                    urlsToImageFiles(
+                        imageLinks,
+                        imageLinks[0],
+                        StatusContent.SAVED,
+                        Site.BESTGIRLSEXY
+                    )
                 else emptyList()
             } ?: emptyList()
 
             if (!images.isEmpty()) content.coverImageUrl = images[0].url
-            content.qtyPages = images.size - 1
+            content.qtyPages = images.count { it.isReadable }
             content.setImageFiles(images)
         }
 
