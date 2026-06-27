@@ -72,7 +72,7 @@
     <string name="biometric_dialog_title">Biometriskt lås</string>
     <string name="black">Svart</string>
     <string name="blocked_tag">Boken har en blockerad etikett (%s)\nNerladdning avbruten</string>
-    <string name="blocked_tag_double">Boken har en blockerad etikett (%s)\Dubbeltryck för att ändå köa</string>
+    <string name="blocked_tag_double">Boken har en blockerad etikett (%s)\nDubbeltryck för att ändå köa</string>
     <string name="blocked_tag_queued">Boken har en blockerad etikett (%s)\nKöad som ett fel</string>
     <plurals name="book">
         <item quantity="one">bok</item>

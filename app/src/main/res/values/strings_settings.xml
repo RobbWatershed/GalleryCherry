@@ -200,7 +200,7 @@
     <string name="pref_dl_http_429_default_delay_title">HTTP 429 default delay (seconds)</string>
     <string name="download_separate_thumb_title">Thumbnails</string>
     <string name="download_separate_thumb_on">Create a separate thumbnail file</string>
-    <string name="download_separate_thumb_off">Flag page 1 as a sthumbnail</string>
+    <string name="download_separate_thumb_off">Flag page 1 as a thumbnail</string>
 
     <!-- Privacy -->
     <string name="pref_screen_privacy">Privacy</string>

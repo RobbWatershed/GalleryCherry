@@ -78,7 +78,7 @@
     <string name="biometric_dialog_title">Bloqueo biométrico</string>
     <string name="black">Negro</string>
     <string name="blocked_tag">El libro tiene una etiqueta bloqueada (%s)\nDescarga cancelada</string>
-    <string name="blocked_tag_double">El libro tiene etiquetas bloqueadas (%s)\Doble toque para agregar a la cola</string>
+    <string name="blocked_tag_double">El libro tiene etiquetas bloqueadas (%s)\nDoble toque para agregar a la cola</string>
     <string name="blocked_tag_queued">El libro tiene una etiqueta bloqueada (%s)\nPuesto en la cola de descargas como error</string>
     <plurals name="book">
         <item quantity="many">Libros</item>

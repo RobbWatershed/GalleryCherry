@@ -72,7 +72,7 @@
   <string name="biometric_dialog_title">Kunci biometrik</string>
   <string name="black">Hitam</string>
   <string name="blocked_tag">Buku memiliki tag yang diblokir (%s)\nUnduhan dibatalkan</string>
-  <string name="blocked_tag_double">Buku ini terdapat tag yang di blokir (%s)\ klik dua kali untuk mengunduh</string>
+  <string name="blocked_tag_double">Buku ini terdapat tag yang di blokir (%s)\nklik dua kali untuk mengunduh</string>
   <string name="blocked_tag_queued">Buku memiliki tag yang diblokir (%s)\nDimasukkan ke antrean sebagai kesalahan</string>
   <plurals name="book">
     <item quantity="one">Buku</item>
