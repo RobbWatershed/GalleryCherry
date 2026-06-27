@@ -20,6 +20,8 @@ class DeleteStartNotification(
                     when (operation) {
                         BaseDeleteWorker.Operation.PURGE -> R.string.purge_progress
                         BaseDeleteWorker.Operation.STREAM -> R.string.stream_progress
+                        BaseDeleteWorker.Operation.REMOVE_THUMB -> R.string.remove_thumb_progress
+                        BaseDeleteWorker.Operation.CREATE_THUMB-> R.string.create_thumb_progress
                         else -> R.string.delete_progress
                     }
                 )

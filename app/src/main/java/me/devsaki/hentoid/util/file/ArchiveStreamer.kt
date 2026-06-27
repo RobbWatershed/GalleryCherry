@@ -21,6 +21,7 @@ class ArchiveStreamer(
     context: Context,
     val archiveUri: Uri,
     append: Boolean,
+    val removeArchivedFiles : Boolean,
     val onProgressChange: ((Float) -> Unit)? = null
 ) {
 
@@ -95,7 +96,7 @@ class ArchiveStreamer(
                             }
                         } ?: throw IOException("Document not found : $uri")
                         Timber.d("Processing archive queue END : $uri")
-                        removeFile(context, uri)
+                        if (removeArchivedFiles) removeFile(context, uri)
                         // Only remove from queue if all above has succeeded
                         filesQueue.remove(uri)
 

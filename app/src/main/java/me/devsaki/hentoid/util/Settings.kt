@@ -50,7 +50,8 @@ object Settings {
         }
         // Skip large downloads on mobile data -> Skip large downloads (v1.21.12)
         if (sharedPreferences.contains(Key.DL_SIZE_WIFI_OLD)) {
-            val allowLargeDownloadsOnWifi = sharedPreferences.getBoolean(Key.DL_SIZE_WIFI_OLD, false)
+            val allowLargeDownloadsOnWifi =
+                sharedPreferences.getBoolean(Key.DL_SIZE_WIFI_OLD, false)
             sharedPreferences.edit { remove(Key.DL_SIZE_WIFI_OLD) }
             isSkipDownloadLarge = allowLargeDownloadsOnWifi
             isSkipDownloadLargeAllowWIFI = allowLargeDownloadsOnWifi
@@ -61,9 +62,19 @@ object Settings {
             sharedPreferences.edit { remove(Key.DL_SIZE_WIFI_THRESHOLD_OLD) }
         }
         if (sharedPreferences.contains(Key.DL_PAGES_WIFI_THRESHOLD_OLD)) {
-            var largeDownloadPagesThreshold: Int by IntSettingStr(Key.DL_PAGES_WIFI_THRESHOLD_OLD, 999999)
+            var largeDownloadPagesThreshold: Int by IntSettingStr(
+                Key.DL_PAGES_WIFI_THRESHOLD_OLD,
+                999999
+            )
             skipDownloadLargeThresholdPages = largeDownloadPagesThreshold
             sharedPreferences.edit { remove(Key.DL_PAGES_WIFI_THRESHOLD_OLD) }
+        }
+        // Page number position toggle -> list (v1.22.2)
+        if (sharedPreferences.contains("pref_viewer_display_pagenum")) {
+            var displayBottomPageNum: Boolean by BoolSetting("pref_viewer_display_pagenum", false)
+            readerDisplayPageNum = if (displayBottomPageNum) Value.VIEWER_PAGENUM_BOTTOM_CENTER
+            else Value.VIEWER_PAGENUM_NONE
+            sharedPreferences.edit { remove("pref_viewer_display_pagenum") }
         }
     }
 
@@ -141,6 +152,7 @@ object Settings {
         "import_external_name_pattern",
         Default.IMPORT_NAME_PATTERN
     )
+    var isAutoImportExternal: Boolean by BoolSetting("import_external_library_auto", true)
 
     // LIBRARY
     var libraryDisplay: Int by IntSettingStr(Key.LIBRARY_DISPLAY, Default.LIBRARY_DISPLAY)
@@ -191,6 +203,10 @@ object Settings {
         Value.SEARCH_ORDER_ATTRIBUTES_COUNT
     )
     val searchAttributesCount: Boolean by BoolSetting("pref_order_attribute_count", true)
+    var searchCombinationMode: Int by IntSetting(
+        "search_combination_mode",
+        Value.SEARCH_COMBINATION_AND
+    )
 
     // LOCK
     var lockType: Int by IntSettingStr(Key.LOCK_TYPE, 0)
@@ -330,7 +346,10 @@ object Settings {
     var isSkipDownloadLarge: Boolean by BoolSetting("pref_dl_skip_large", false)
     var isSkipDownloadLargeAllowWIFI: Boolean by BoolSetting("pref_dl_skip_large_allow_wifi", false)
     var skipDownloadLargeThresholdMB: Int by IntSettingStr("pref_dl_skip_large_size_threshold", 40)
-    var skipDownloadLargeThresholdPages: Int by IntSettingStr("pref_dl_skip_large_pages_threshold", 999999)
+    var skipDownloadLargeThresholdPages: Int by IntSettingStr(
+        "pref_dl_skip_large_pages_threshold",
+        999999
+    )
     val isDlRetriesActive: Boolean by BoolSetting("pref_dl_retries_active", false)
     val dlRetriesNumber: Int by IntSettingStr("pref_dl_retries_number", 5)
     val dlRetriesMemLimit: Int by IntSettingStr("pref_dl_retries_mem_limit", 100)
@@ -352,12 +371,14 @@ object Settings {
             isAppRangeDownloadOn
         )
     }
-
-    fun setRangeDownloadOn(site: Site, value: Boolean) {
-        sharedPreferences.edit { putBoolean(makeSiteKey(Key.BROWSER_RANGE_DOWNLOAD, site), value) }
-    }
-
     var isAppRangeDownloadOn: Boolean by BoolSetting(Key.BROWSER_RANGE_DOWNLOAD, false)
+    fun isThumbSeparateFile(site: Site): Boolean {
+        return sharedPreferences.getBoolean(
+            makeSiteKey("pref_dl_separate_thumb", site),
+            isAppThumbSeparateFile
+        )
+    }
+    var isAppThumbSeparateFile: Boolean by BoolSetting("pref_dl_separate_thumb", true)
 
 
     // READER
@@ -439,7 +460,10 @@ object Settings {
         Key.VIEWER_RENDERING,
         Value.VIEWER_RENDERING_SHARP
     )
-    val isReaderDisplayPageNum: Boolean by BoolSetting(Key.VIEWER_DISPLAY_PAGENUM, false)
+    var readerDisplayPageNum: Int by IntSettingStr(
+        Key.VIEWER_DISPLAY_PAGENUM,
+        Value.VIEWER_PAGENUM_NONE
+    )
     val isReaderTurnTransitions: Boolean by BoolSetting(Key.VIEWER_TURN_TRANSITIONS, true)
     val isReaderZoomTransitions: Boolean by BoolSetting(Key.VIEWER_ZOOM_TRANSITIONS, true)
     val isReaderSwipeToFling: Boolean by BoolSetting(Key.VIEWER_SWIPE_TO_FLING, false)
@@ -593,7 +617,7 @@ object Settings {
     var arePlugReactionsOn: Boolean by BoolSetting("plug_reactions_on", true)
     val recentVisibility: Boolean by BoolSetting(Key.APP_PREVIEW, BuildConfig.DEBUG)
     val maxDbSizeKb: Long by LongSetting("db_max_size", 4L * 1024 * 1024) // 4GB
-    var colorTheme: Int by IntSettingStr(Key.COLOR_THEME, Value.COLOR_THEME_LIGHT)
+    var colorTheme: Int by IntSettingStr(Key.COLOR_THEME, Value.COLOR_THEME_LIGHT, true)
 
     // Used to execute heavy maintenance tasks just one time
     var isRefreshJson1Complete: Boolean by BoolSetting(Key.REFRESH_JSON_1_DONE, false)
@@ -633,13 +657,13 @@ object Settings {
         }
     }
 
-    private class IntSettingStr(val key: String, val default: Int) {
+    private class IntSettingStr(val key: String, val default: Int, val commit: Boolean = false) {
         operator fun getValue(thisRef: Any?, property: KProperty<*>): Int {
             return (sharedPreferences.getString(key, default.toString()) + "").toInt()
         }
 
         operator fun setValue(thisRef: Any?, property: KProperty<*>, value: Int) {
-            sharedPreferences.edit { putString(key, value.toString()) }
+            sharedPreferences.edit(commit) { putString(key, value.toString()) }
         }
     }
 
@@ -777,7 +801,7 @@ object Settings {
         const val VIEWER_IMAGE_DISPLAY = "pref_viewer_image_display"
         const val VIEWER_BROWSE_MODE = "pref_viewer_browse_mode"
         const val VIEWER_RENDERING = "pref_viewer_rendering"
-        const val VIEWER_DISPLAY_PAGENUM = "pref_viewer_display_pagenum"
+        const val VIEWER_DISPLAY_PAGENUM = "pref_viewer_display_pagenum2"
         const val VIEWER_TURN_TRANSITIONS = "pref_viewer_tap_transitions"
         const val VIEWER_ZOOM_TRANSITIONS = "pref_viewer_zoom_transitions"
         const val VIEWER_SWIPE_TO_FLING = "pref_viewer_swipe_to_fling"
@@ -839,6 +863,9 @@ object Settings {
         const val SEARCH_ORDER_ATTRIBUTES_ALPHABETIC = 0
         const val SEARCH_ORDER_ATTRIBUTES_COUNT = 1
 
+        const val SEARCH_COMBINATION_AND = 0
+        const val SEARCH_COMBINATION_OR = 1
+
         // Sorting field codes for content and group
         const val ORDER_FIELD_NONE = -1
         const val ORDER_FIELD_TITLE = 0
@@ -854,6 +881,7 @@ object Settings {
         const val ORDER_FIELD_DOWNLOAD_COMPLETION_DATE = 10
         const val ORDER_FIELD_SOURCE_NAME = 11 // Rules only
         const val ORDER_FIELD_TARGET_NAME = 12 // Rules only
+        const val ORDER_FIELD_AVG_SIZE = 13
         const val ORDER_FIELD_CUSTOM = 98
         const val ORDER_FIELD_RANDOM = 99
 
@@ -877,6 +905,7 @@ object Settings {
 
         const val DL_TAG_BLOCKING_BEHAVIOUR_DONT_QUEUE = 0
         const val DL_TAG_BLOCKING_BEHAVIOUR_QUEUE_ERROR = 1
+        const val DL_TAG_BLOCKING_BEHAVIOUR_QUEUE_2ND_TAP = 2
 
         const val DL_SPEED_CAP_NONE = -1
         const val DL_SPEED_CAP_100 = 0
@@ -902,6 +931,10 @@ object Settings {
 
         const val VIEWER_RENDERING_SHARP = 0
         const val VIEWER_RENDERING_SMOOTH = 1
+
+        const val VIEWER_PAGENUM_NONE = 0
+        const val VIEWER_PAGENUM_BOTTOM_CENTER = 1
+        const val VIEWER_PAGENUM_TOP_CENTER = 2
 
         const val VIEWER_READ_THRESHOLD_NONE = -1
         const val VIEWER_READ_THRESHOLD_1 = 0

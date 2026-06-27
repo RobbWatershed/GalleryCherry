@@ -264,7 +264,6 @@
     <string name="refresh_options_remove_2">Отсутствуют изображения</string>
     <string name="refresh_options_remove_or">или</string>
     <string name="keep_fav_groups">Сохранить любимые группы</string>
-    <string name="mass_delete_action">Массовое удаление</string>
     <string name="generic_progress">%1$d из %2$d%3$s</string>
     <plurals name="book_progress">
         <item quantity="one"><x:g id="number" example="1">%1$d</x:g> книга из <x:g id="total" example="42">%2$d</x:g></item>

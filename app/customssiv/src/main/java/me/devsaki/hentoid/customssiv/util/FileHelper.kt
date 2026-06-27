@@ -11,6 +11,8 @@ import kotlin.math.min
 
 internal const val FILE_IO_BUFFER_SIZE = 32 * 1024
 
+const val FILECHUNK_AUTHORITY = "me.violet.chunk"
+
 /**
  * Return the position of the given sequence in the given data array
  *

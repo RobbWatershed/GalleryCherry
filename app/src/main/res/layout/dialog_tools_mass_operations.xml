@@ -97,8 +97,8 @@
         android:layout_height="?android:attr/actionBarSize"
         android:layout_marginTop="8dp"
         android:enabled="true"
-        android:text="@string/mass_delete_action"
-        app:icon="@drawable/ic_action_delete"
+        android:text="@string/mass_process_action"
+        app:icon="@drawable/ic_action_process"
         app:layout_constraintTop_toBottomOf="@id/confirm" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

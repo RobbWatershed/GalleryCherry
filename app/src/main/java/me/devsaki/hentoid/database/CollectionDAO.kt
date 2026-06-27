@@ -158,8 +158,6 @@ interface CollectionDAO {
 
     fun deleteAllFlaggedGroups()
 
-    fun deleteEmptyArtistGroups()
-
     fun insertGroupItem(item: GroupItem): Long
 
     fun selectGroupItems(contentId: Long, grouping: Grouping): List<GroupItem>
@@ -184,21 +182,9 @@ interface CollectionDAO {
     fun countStoredContent(includeQueued: Boolean) : Long
 
 
-    fun selectRecentBookIds(searchBundle: ContentSearchBundle): List<Long>
+    fun searchStoredContentIds(searchBundle: ContentSearchBundle): List<Long>
 
-    fun searchBookIds(searchBundle: ContentSearchBundle, metadata: Set<Attribute>): List<Long>
-
-    fun searchBookIdsUniversal(searchBundle: ContentSearchBundle): List<Long>
-
-
-    fun selectRecentBooks(searchBundle: ContentSearchBundle): LiveData<PagedList<Content>>
-
-    fun searchBooks(
-        searchBundle: ContentSearchBundle,
-        metadata: Set<Attribute>
-    ): LiveData<PagedList<Content>>
-
-    fun searchBooksUniversal(searchBundle: ContentSearchBundle): LiveData<PagedList<Content>>
+    fun searchStoredContent(searchBundle: ContentSearchBundle): LiveData<PagedList<Content>>
 
 
     fun selectErrorContentLive(): LiveData<List<Content>>
@@ -212,7 +198,8 @@ interface CollectionDAO {
         groupId: Long,
         metadata: Set<Attribute>?,
         location: Location,
-        contentType: Type
+        contentType: Type,
+        combinationMode: Int
     ): LiveData<Int>
 
     fun countAllBooksLive(): LiveData<Int>
@@ -308,14 +295,16 @@ interface CollectionDAO {
         includeFreeAttrs: Boolean,
         page: Int,
         booksPerPage: Int,
-        orderStyle: Int
+        orderStyle: Int,
+        combinationMode: Int
     ): AttributeQueryResult
 
     fun countAttributesPerType(
         groupId: Long,
         filter: Set<Attribute>?,
         location: Location,
-        contentType: Type
+        contentType: Type,
+        combinationMode: Int
     ): SparseIntArray
 
 

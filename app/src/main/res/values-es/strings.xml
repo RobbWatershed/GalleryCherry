@@ -78,11 +78,16 @@
     <string name="biometric_dialog_title">Bloqueo biométrico</string>
     <string name="black">Negro</string>
     <string name="blocked_tag">El libro tiene una etiqueta bloqueada (%s)\nDescarga cancelada</string>
+    <string name="blocked_tag_double">El libro tiene etiquetas bloqueadas (%s)\Doble toque para agregar a la cola</string>
     <string name="blocked_tag_queued">El libro tiene una etiqueta bloqueada (%s)\nPuesto en la cola de descargas como error</string>
     <plurals name="book">
         <item quantity="many">Libros</item>
         <item quantity="one">libro</item>
         <item quantity="other">Libros</item>
+    </plurals>
+    <plurals name="book_create_cover_thumbnail">
+        <item quantity="one">Crea miniaturas de portada en el libro %1$d</item>
+        <item quantity="other">Crea miniaturas de portadas en libros de %1$d</item>
     </plurals>
     <plurals name="book_delete">
         <item quantity="many">Eliminar %1$d libros</item>
@@ -104,6 +109,10 @@
         <item quantity="one">%1$d / %2$d libro</item>
         <item quantity="other">%1$d / %2$d libros</item>
     </plurals>
+    <plurals name="book_remove_cover_thumbnail">
+        <item quantity="one">Eliminar miniaturas de portada en el libro %1$d</item>
+        <item quantity="other">Eliminar miniaturas de portada en los libros %1$d</item>
+    </plurals>
     <string name="book_settings">Configuración del libro</string>
     <plurals name="book_stream">
         <item quantity="many">Cambiar %1$d libros a streaming</item>
@@ -122,6 +131,7 @@
     <string name="cancel">Cancelar</string>
     <string name="cancel_all">Cancelar todo</string>
     <string name="cancel_all_errors">Cancelar descargas con errores</string>
+    <string name="cancel_limit">No se pueden cancelar más de 1000 libros a la vez.</string>
     <string name="cancel_queue_progress">Cancelando elementos en fila</string>
     <string name="category_any">Todos</string>
     <string name="category_artist">Artista</string>
@@ -169,6 +179,7 @@
         <item quantity="other">Crear archivos</item>
     </plurals>
     <string name="create_generic">Crear</string>
+    <string name="create_thumb_progress">Creación de miniaturas de portada…</string>
     <string name="dark_grey">Gris oscuro</string>
     <string name="delete_books_progress">Borrando libros</string>
     <string name="delete_chapters_progress">Eliminando capítulos</string>
@@ -303,6 +314,7 @@
     <string name="errortype_networking">Conexión</string>
     <string name="errortype_parsing">Analizar</string>
     <string name="errortype_site_limit">Límite de descargas/ancho de banda alcanzado</string>
+    <string name="errortype_size">El libro se omitió debido a las limitaciones de tamaño de descarga que usted mismo impuso.</string>
     <string name="errortype_undefined">Indefinido</string>
     <string name="exclude">Excluir</string>
     <string name="export_answer_yes">Esta opción No es para transferir tu colección a otro dispositivo. Funciona en ciertos casos, pero algunos de los libros podrían no poderse descargar.</string>
@@ -373,10 +385,10 @@
     <string name="get_latest">Obtener la última versión (%1$s)</string>
     <string name="goto_app_prefs">Configuración de la aplicación </string>
     <string name="goto_page">Ir a la página…</string>
+    <string name="group_3">Últimos 3 días</string>
     <string name="group_30">Últimos 30 días</string>
     <string name="group_60">Últimos 60 días</string>
     <string name="group_7">Últimos 7 días</string>
-    <string name="group_3">Últimos 3 días</string>
     <string name="group_change">Mover a grupo personalizado</string>
     <string name="group_delete_nothing">Los grupos seleccionados no se pueden eliminar manualmente</string>
     <plurals name="group_delete_selected_book">
@@ -419,6 +431,7 @@
     <string name="groups">Grupos</string>
     <string name="groups_by_artist">Por Artista</string>
     <string name="groups_by_dl_date">Por fecha de Descarga (procesada)</string>
+    <string name="groups_by_series">Por serie</string>
     <string name="groups_custom">Grupos personalizados</string>
     <string name="groups_dynamic">Búsquedas guardadas</string>
     <string name="groups_flat">Todos los libros</string>
@@ -572,6 +585,12 @@
     <string name="library_metrics_storage_mb">%.0f MB</string>
     <string name="library_search_hint">Título, artista, etiqueta o ID del libro</string>
     <string name="light_grey">Gris claro</string>
+    <string name="limit_download">Limitar los datos móviles</string>
+    <string name="limit_download_limit_caption">Nota: Esta configuración se restablecerá cuando se reinicie la aplicación.</string>
+    <string name="limit_download_limit_current">Límite actual: %s / %s</string>
+    <string name="limit_download_limit_none">No se ha establecido ningún límite.</string>
+    <string name="limit_download_set_new">Límite de cambio</string>
+    <string name="limit_download_set_new_prompt">Nuevo límite (MB)</string>
     <string name="loading_archive">Cargando: %1$d/%2$d</string>
     <string name="loading_image">Cargando imagen: %d%%</string>
     <string name="location_storage">%1$s (%2$d%%) libre</string>
@@ -587,16 +606,18 @@
     <string name="logs_share">Compartir registro</string>
     <string name="logs_title">Últimos registros</string>
     <string name="malformed_url">Error - URL malformada</string>
-    <string name="mass_delete_action">Eliminación masiva</string>
     <string name="mass_delete_confirm">Sé lo que estoy haciendo.</string>
     <string name="mass_external_tip">Nota: Los libros externos se eliminarán con esta operación.</string>
     <string name="mass_external_warning_1">Su selección actual contiene libros de sitios que no deberían reproducirse en línea. Esos libros no se procesarán.</string>
     <string name="mass_operation">Operación</string>
     <string name="mass_operation_1">Borrar</string>
     <string name="mass_operation_2">Cambiar a transmisión de internet</string>
+    <string name="mass_operation_3">Eliminar miniatura de la portada</string>
+    <string name="mass_operation_4">Crear miniatura de portada</string>
     <string name="mass_operation_scope">Alcance</string>
     <string name="mass_operation_scope_1">Filtro actual de la pantalla de la biblioteca</string>
     <string name="mass_operation_scope_2">Todos los libros excepto el filtro actual de la pantalla de la biblioteca</string>
+    <string name="mass_process_action">Proceso en masa</string>
     <string name="mass_stream_action">Cambio masivo a transmisión</string>
     <string name="masterdata_no_result">Sin resultados :(</string>
     <string name="memory_database">Base de datos: %1$s (%2$.1f%% lleno)</string>
@@ -678,6 +699,7 @@
     <string name="no_circle_group_name">[sin círculo]</string>
     <string name="no_error_detected">No se han detectado errores.</string>
     <string name="no_images">No se pudo cargar el libro: No se encontraron imágenes</string>
+    <string name="no_series_group_name">[sin serie]</string>
     <string name="none">Ninguno</string>
     <string name="notif_archive_complete">Archivo completado</string>
     <plurals name="notif_archive_complete_details">
@@ -692,6 +714,8 @@
         <item quantity="other">%d libros no pudieron archivarse</item>
     </plurals>
     <string name="notif_archive_title">Archivo de contenido</string>
+    <string name="notif_create_thumb_complete">Creación de miniaturas de portada completa</string>
+    <string name="notif_create_thumb_failed">Falló la creación de las miniaturas de la portada.</string>
     <string name="notif_delete_complete">Eliminación completada</string>
     <string name="notif_delete_fail">Eliminación fallida</string>
     <plurals name="notif_delete_fail_details">
@@ -714,6 +738,8 @@
         <item quantity="one">%d elemento procesado con éxito</item>
         <item quantity="other">%d elementos procesados con éxito</item>
     </plurals>
+    <string name="notif_remove_thumb_complete">Eliminación de miniaturas de portada completa</string>
+    <string name="notif_remove_thumb_failed">No se pudo eliminar las miniaturas de la portada.</string>
     <string name="notif_split_merge">Dividir / fusionar</string>
     <string name="notif_stream_complete">Transmisión completa</string>
     <string name="notif_stream_fail">Falló la transmisión</string>
@@ -768,6 +794,7 @@
     <string name="pause">Pausar</string>
     <string name="paused_dl_folder_credentials">No se puede descargar - Credenciales insuficientes en la carpeta de descarga. Usa la configuración de la aplicación para volver a seleccionarla</string>
     <string name="paused_dl_folder_not_found">No se puede descargar - Carpeta de descarga no encontrada. Usa la configuración de la aplicación para seleccionar una</string>
+    <string name="paused_dl_mobile_limit_reached">Se ha alcanzado el límite de datos de descarga móvil que has establecido.</string>
     <string name="paused_dl_no_available_downloads">No quedan descargas disponibles</string>
     <string name="paused_dl_stale_online_credentials">No se puede descargar - Cookies o credenciales obsoletas. Usa la notificación para volver a generarlas</string>
     <string name="paused_no_dl_folder">No se puede descargar - No hay carpeta de descarga. Usa la configuración de la aplicación para seleccionar una</string>
@@ -883,6 +910,7 @@
     <string name="refresh_step4_init">Importando la cola de descarga…</string>
     <string name="refresh_title">Actualizar ubicación</string>
     <string name="remove_generic">Eliminar</string>
+    <string name="remove_thumb_progress">Eliminando las miniaturas de la portada…</string>
     <string name="renaming_progress">Renombrando archivos</string>
     <string name="reorder_progress">Ordenando páginas…</string>
     <string name="reset">Reiniciar</string>
@@ -903,6 +931,7 @@
     <string name="revive_missing_webview">WebView no disponible, no se pueden recuperar las descargas ahora</string>
     <string name="revive_updating_webview">La WebView se está actualizando, no se pueden recuperar las descargas aún</string>
     <string name="revive_wait">Permanece en esta pantalla mientras se recupera tu descarga</string>
+    <string name="search_and">Y</string>
     <string name="search_bookid_label">Buscar \'%s\' en…</string>
     <plurals name="search_button">
         <item quantity="many">%s Resultados encontrados</item>
@@ -913,6 +942,7 @@
     <string name="search_entry_not_found">No está aquí, anda a descargarlo.</string>
     <string name="search_location">Ubicación</string>
     <string name="search_location_entries_1">Todas las ubicaciones</string>
+    <string name="search_or">o</string>
     <string name="search_prompt">Buscar %s</string>
     <string name="search_select_a_filter">Seleccionar un filtro</string>
     <string name="search_type">Tipo</string>
@@ -933,6 +963,7 @@
     <string name="slideshow_stop">Presentación detenida</string>
     <string name="sort_artist">Artista</string>
     <string name="sort_ascending">Ascendente</string>
+    <string name="sort_avg_size">Tamaño medio de página</string>
     <string name="sort_books">Libros</string>
     <string name="sort_custom">Personalizado</string>
     <string name="sort_descending">Descendente</string>
@@ -994,6 +1025,7 @@
     <string name="storage_strategy_fallover">Colapsar</string>
     <string name="storage_strategy_fallover_desc">GalleryCherry descarga en la Ubicación 1 hasta que se llene el %d%% de la capacidad, y procede a descargar en la Ubicación 2</string>
     <string name="storage_strategy_title">Estrategia de descarga: %s</string>
+    <string name="storage_stream_warning">Al menos un sitio web de su selección NO admite transmisión. Se desaconseja encarecidamente cambiar a streaming</string>
     <string name="storage_streamed">Transmitido</string>
     <string name="storage_streamed_description">No guardes imágenes en el almacenamiento, transmítelas mientras las lees</string>
     <string name="stream_canceled">Transmitido cancelado - libro no disponible online</string>
@@ -1041,7 +1073,9 @@
     <string name="title_submenu_library">Mi biblioteca</string>
     <string name="title_submenu_settings">Avanzado</string>
     <string name="torrent_dl_fail">No se pudo realizar la descarga del torrent: %s</string>
+    <string name="transcode_encoder_avif">AVIF</string>
     <string name="transcode_encoder_jpeg">JPEG</string>
+    <string name="transcode_encoder_jpegli">JPEGLI</string>
     <string name="transcode_encoder_jxl_lossless">JXL (sin pérdida)</string>
     <string name="transcode_encoder_jxl_lossy">JXL (con pérdida)</string>
     <string name="transcode_encoder_png">PNG</string>
@@ -1114,6 +1148,7 @@
     <string name="web_gallery">Regresar a la última página de la galería</string>
     <string name="web_home">Volver a la biblioteca</string>
     <string name="web_open_ext_browser">Navegador externo</string>
+    <string name="web_range_download_prompt">Rango de páginas de la galería para descargar (por ejemplo, 1-5 / 1;3;8 / 1-2;5-7)</string>
     <string name="web_refresh_stop">Actualizar/detener</string>
     <string name="web_storage_permission_denied">Permisos de almacenamiento denegados - no se puede usar el sistema de descargas</string>
     <string name="web_target_page_outside_restricted_domains">Host %s fuera de dominios restringidos</string>

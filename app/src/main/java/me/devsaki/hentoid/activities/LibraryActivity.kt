@@ -7,6 +7,7 @@ import android.graphics.Typeface
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.text.InputType
 import android.view.MenuItem
 import android.view.View
 import android.view.WindowManager
@@ -40,6 +41,7 @@ import me.devsaki.hentoid.activities.bundles.SearchActivityBundle
 import me.devsaki.hentoid.core.KRunnable
 import me.devsaki.hentoid.core.convertLocaleToEnglish
 import me.devsaki.hentoid.core.initDrawerLayout
+import me.devsaki.hentoid.core.isFocusedRecursive
 import me.devsaki.hentoid.database.CollectionDAO
 import me.devsaki.hentoid.database.ObjectBoxDAO
 import me.devsaki.hentoid.database.domains.Content
@@ -71,6 +73,7 @@ import me.devsaki.hentoid.util.file.isLowDeviceStorage
 import me.devsaki.hentoid.util.file.requestExternalStorageReadWritePermission
 import me.devsaki.hentoid.util.file.requestNotificationPermission
 import me.devsaki.hentoid.util.getThemedColor
+import me.devsaki.hentoid.util.isNumeric
 import me.devsaki.hentoid.util.openReader
 import me.devsaki.hentoid.util.runExternalImport
 import me.devsaki.hentoid.util.showTooltip
@@ -200,6 +203,9 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
     // Current Folder  search query
     private var folderSearchBundle: Bundle? = null
 
+    private lateinit var searchSubmitDebouncer: Debouncer<String>
+    private lateinit var searchLongSubmitDebouncer: Debouncer<String>
+
     // Used to avoid closing search panel immediately when user uses backspace to correct what he typed
     private lateinit var searchClearDebouncer: Debouncer<Int>
 
@@ -247,6 +253,14 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
         setContentView(activityBinding?.root)
 
         searchClearDebouncer = Debouncer(this.lifecycleScope, 1500) { clearSearch() }
+        searchLongSubmitDebouncer = Debouncer(this.lifecycleScope, 1500) {
+            setQuery(it)
+            signalCurrentFragment(CommunicationEvent.Type.SEARCH_NO_HISTORY, it)
+        }
+        searchSubmitDebouncer = Debouncer(this.lifecycleScope, 250) {
+            setQuery(it)
+            signalCurrentFragment(CommunicationEvent.Type.SEARCH_NO_HISTORY, it)
+        }
 
         initDrawerLayout(activityBinding!!.drawerLayout, binding!!.toolbar)
 
@@ -416,7 +430,7 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
     }
 
     private fun considerRefreshExtLib() {
-        if (Settings.externalLibraryUri.isEmpty()) return
+        if (Settings.externalLibraryUri.isEmpty() || !Settings.isAutoImportExternal) return
 
         // Wait at least X minutes between auto-refreshes to limit resource consumption
         val now = Instant.now().toEpochMilli()
@@ -595,6 +609,8 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
             actionSearchView = searchMenu?.actionView as SearchView?
             actionSearchView?.apply {
                 imeOptions = EditorInfoCompat.IME_FLAG_NO_PERSONALIZED_LEARNING
+                inputType = InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+                suggestionsAdapter = null
                 setIconifiedByDefault(true)
                 queryHint = getString(R.string.library_search_hint)
                 advancedSearch.searchClearBtn.setOnClickListener {
@@ -614,11 +630,18 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
                     }
 
                     override fun onQueryTextChange(s: String): Boolean {
-                        if (invalidateNextQueryTextChange) { // Should not happen when search panel is closing or opening
-                            invalidateNextQueryTextChange = false
-                        } else if (s.isEmpty()) {
+                        if (s == this@LibraryActivity.getQuery()) return true
+                        if (s.isEmpty()) {
+                            searchSubmitDebouncer.clear()
                             searchClearDebouncer.submit(1)
-                        } else searchClearDebouncer.clear()
+                        } else {
+                            // User has something very specific in mind
+                            if (isNumeric(s) || s.startsWith("http"))
+                                searchLongSubmitDebouncer.submit(s)
+                            else // classic full text search
+                                searchSubmitDebouncer.submit(s)
+                            searchClearDebouncer.clear()
+                        }
                         return true
                     }
                 })
@@ -654,8 +677,10 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
         actionSearchView?.let {
             if (isSearchQueryActive()) {
                 if (getQuery().isNotEmpty()) {
-                    it.setQuery(getQuery(), false)
-                    expandSearchMenu()
+                    if (!it.isFocusedRecursive) {
+                        it.setQuery(getQuery(), false)
+                        expandSearchMenu()
+                    }
                 } else if (nonEmptyResults) {
                     collapseSearchMenu()
                 }
@@ -666,9 +691,11 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
                     showSearchHistory = false
                 )
             } else {
-                collapseSearchMenu()
-                if (it.query.isNotEmpty()) actionSearchView?.setQuery("", false)
-                hideSearchSubBar()
+                if (it.query.isNotEmpty() && !it.isFocusedRecursive) {
+                    collapseSearchMenu()
+                    it.setQuery("", false)
+                    hideSearchSubBar()
+                }
             }
         }
     }
@@ -754,7 +781,7 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
                             if (getSearchCriteria().isEmpty() || query.isNotEmpty()) { // Universal search
                                 if (query.isNotEmpty()) {
                                     if (SearchRecord.EntityType.CONTENT == it.entityType)
-                                        viewModel.searchContentUniversal(query)
+                                        viewModel.searchContentFullText(query)
                                     else
                                         viewModel.setGroupQuery(query)
                                 }
@@ -1075,16 +1102,14 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
         selectedProcessedCount: Int,
         selectedLocalCount: Int,
         selectedStreamedCount: Int,
-        selectedNonArchivePdfExternalCount: Int,
-        selectedArchivePdfExternalCount: Int,
+        selectedExternalCount: Int,
+        selectedArchivePdfCount: Int,
         selectedRoots: Int = 0,
         insideExtLib: Boolean = false
     ) {
         val isMultipleSelection = selectedTotalCount > 1
         val hasProcessed = selectedProcessedCount > 0
         val selectedDownloadedCount = selectedLocalCount - selectedStreamedCount
-        val selectedExternalCount =
-            selectedNonArchivePdfExternalCount + selectedArchivePdfExternalCount
         binding?.selectionToolbar?.title = resources.getQuantityString(
             R.plurals.items_selected,
             selectedTotalCount,
@@ -1158,7 +1183,7 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
             splitMenu?.isVisible =
                 !hasProcessed && !isMultipleSelection && (1 == selectedLocalCount || 1 == selectedExternalCount)
             transformMenu?.isVisible =
-                !hasProcessed && 0 == selectedStreamedCount && 0 == selectedArchivePdfExternalCount
+                !hasProcessed && 0 == selectedStreamedCount && 0 == selectedArchivePdfCount
             exportMetaMenu?.isVisible = false
         }
     }

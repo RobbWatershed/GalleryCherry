@@ -21,6 +21,8 @@ import me.devsaki.hentoid.enums.AttributeType
 import me.devsaki.hentoid.fragments.SearchBottomSheetFragment.Companion.invoke
 import me.devsaki.hentoid.util.Location
 import me.devsaki.hentoid.util.SearchCriteria
+import me.devsaki.hentoid.util.Settings
+import me.devsaki.hentoid.util.Settings.Value
 import me.devsaki.hentoid.util.Type
 import me.devsaki.hentoid.util.applyTheme
 import me.devsaki.hentoid.util.capitalizeString
@@ -133,6 +135,20 @@ class SearchActivity : BaseActivity() {
             }
             locationPicker.setOnIndexChangeListener { index -> viewModel.setLocation(Location.entries.first { it.value == index }) }
             typePicker.setOnIndexChangeListener { index -> viewModel.setContentType(Type.entries.first { it.value == index }) }
+
+            viewModel.setCombinationMode(Settings.searchCombinationMode)
+            if (Value.SEARCH_COMBINATION_AND == Settings.searchCombinationMode) andChoice.isChecked = true
+            else orChoice.isChecked = true
+
+            andOrChoice.addOnButtonCheckedListener { _, checkedId, isChecked ->
+                if (!isChecked) return@addOnButtonCheckedListener
+
+                when (checkedId) {
+                    orChoice.id -> Settings.searchCombinationMode = Value.SEARCH_COMBINATION_OR
+                    andChoice.id -> Settings.searchCombinationMode = Value.SEARCH_COMBINATION_AND
+                }
+                viewModel.setCombinationMode(Settings.searchCombinationMode)
+            }
         }
     }
 
@@ -151,7 +167,8 @@ class SearchActivity : BaseActivity() {
                 null,
                 "",
                 locationPicker.index,
-                typePicker.index
+                typePicker.index,
+                if (andChoice.isChecked) Value.SEARCH_COMBINATION_AND else Value.SEARCH_COMBINATION_OR
             ).toString()
             outState.putAll(builder.bundle)
             outState.putBoolean("exclude", excludeClicked)
@@ -173,6 +190,9 @@ class SearchActivity : BaseActivity() {
                     viewModel.setContentType(contentType)
                     typePicker.index = contentType.value
                 }
+                viewModel.setCombinationMode(Settings.searchCombinationMode)
+                if (Value.SEARCH_COMBINATION_AND == Settings.searchCombinationMode) andChoice.isChecked = true
+                else orChoice.isChecked = true
             }
         }
     }
@@ -286,9 +306,10 @@ class SearchActivity : BaseActivity() {
                 null,
                 "",
                 locationPicker.index,
-                typePicker.index
+                typePicker.index,
+                if (andChoice.isChecked) Value.SEARCH_COMBINATION_AND else Value.SEARCH_COMBINATION_OR
             )
-            Timber.d("URI :%s", searchUri)
+            Timber.d("URI : $searchUri")
             val builder = SearchActivityBundle()
             builder.uri = searchUri.toString()
             builder.excludeMode = excludeClicked

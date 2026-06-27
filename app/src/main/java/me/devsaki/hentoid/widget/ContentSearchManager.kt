@@ -86,6 +86,10 @@ class ContentSearchManager() {
         values.contentType = value
     }
 
+    fun setCombinationMode(value: Int) {
+        values.combinationMode = value
+    }
+
     fun setGroup(value: Group?) {
         if (value != null) values.groupId = value.id else values.groupId = -1
     }
@@ -118,19 +122,11 @@ class ContentSearchManager() {
         setFilterRating(-1)
         setLocation(0)
         setContentType(0)
+        setCombinationMode(Settings.Value.SEARCH_COMBINATION_AND)
     }
 
     fun getLibrary(dao: CollectionDAO): LiveData<PagedList<Content>> {
-        val tags = parseSearchUri(values.attributes.toUri()).attributes
-        return when {
-            // Universal search
-            values.query.isNotEmpty() -> dao.searchBooksUniversal(values)
-            // Advanced search
-            tags.isNotEmpty() || values.excludedAttributeTypes?.isNotEmpty() ?: false || values.location > 0 || values.contentType > 0 ->
-                dao.searchBooks(values, tags)
-            // Default search (display recent)
-            else -> dao.selectRecentBooks(values)
-        }
+        return dao.searchStoredContent(values)
     }
 
     fun searchContentIds(dao: CollectionDAO): List<Long> {
@@ -139,16 +135,7 @@ class ContentSearchManager() {
 
     companion object {
         fun searchContentIds(data: ContentSearchBundle, dao: CollectionDAO): List<Long> {
-            val tags = parseSearchUri(data.attributes.toUri()).attributes
-            return when {
-                // Universal search
-                data.query.isNotEmpty() -> dao.searchBookIdsUniversal(data)
-                // Advanced search
-                tags.isNotEmpty() || data.excludedAttributeTypes?.isNotEmpty() ?: false || data.location > 0 || data.contentType > 0 ->
-                    dao.searchBookIds(data, tags)
-                // Default search (display recent)
-                else -> dao.selectRecentBookIds(data)
-            }
+            return dao.searchStoredContentIds(data)
         }
     }
 
@@ -185,6 +172,8 @@ class ContentSearchManager() {
 
         var contentType by bundle.int(default = 0)
 
+        var combinationMode by bundle.int(default = Settings.Value.SEARCH_COMBINATION_AND)
+
         var groupId by bundle.long(default = -1)
 
 
@@ -215,6 +204,7 @@ class ContentSearchManager() {
                     location = data.location.value
                     contentType = data.contentType.value
                     query = data.query
+                    combinationMode = data.combinationMode
                 }
 
                 return result

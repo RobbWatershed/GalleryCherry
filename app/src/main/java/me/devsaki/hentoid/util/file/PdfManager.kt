@@ -2,14 +2,11 @@ package me.devsaki.hentoid.util.file
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.Color
-import android.graphics.PointF
-import android.graphics.RectF
 import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 import com.itextpdf.io.image.ImageDataFactory
 import com.itextpdf.io.source.ByteArrayOutputStream
-import com.itextpdf.kernel.colors.ColorConstants
+import com.itextpdf.kernel.colors.Color
 import com.itextpdf.kernel.events.Event
 import com.itextpdf.kernel.events.IEventHandler
 import com.itextpdf.kernel.events.PdfDocumentEvent
@@ -17,8 +14,6 @@ import com.itextpdf.kernel.exceptions.PdfException
 import com.itextpdf.kernel.geom.PageSize
 import com.itextpdf.kernel.geom.Rectangle
 import com.itextpdf.kernel.pdf.PdfDocument
-import com.itextpdf.kernel.pdf.PdfName
-import com.itextpdf.kernel.pdf.PdfNumber
 import com.itextpdf.kernel.pdf.PdfReader
 import com.itextpdf.kernel.pdf.PdfWriter
 import com.itextpdf.kernel.pdf.canvas.PdfCanvas
@@ -28,9 +23,7 @@ import com.itextpdf.kernel.pdf.canvas.parser.data.IEventData
 import com.itextpdf.kernel.pdf.canvas.parser.data.ImageRenderInfo
 import com.itextpdf.kernel.pdf.canvas.parser.listener.IEventListener
 import com.itextpdf.layout.Document
-import com.itextpdf.layout.element.AreaBreak
 import com.itextpdf.layout.element.Image
-import com.itextpdf.layout.properties.AreaBreakType
 import com.itextpdf.layout.properties.HorizontalAlignment
 import me.devsaki.hentoid.core.READER_CACHE
 import me.devsaki.hentoid.core.THUMB_FILE_NAME
@@ -50,57 +43,11 @@ import java.io.OutputStream
 import java.util.concurrent.atomic.AtomicInteger
 
 // Inspired by https://github.com/T8RIN/ImageToolbox/blob/master/feature/pdf-tools/src/main/java/ru/tech/imageresizershrinker/feature/pdf_tools/data/AndroidPdfManager.kt
-private val PORTRAIT = PdfNumber(0)
-private val LANDSCAPE = PdfNumber(90)
 
 class PdfManager {
 
     private val extractedFiles = ArrayList<Uri>()
     private val currentPageIndex = AtomicInteger(0)
-
-    private fun computeScaleRatio(pageSize: PageSize, margin: RectF, imgDims: PointF): Float {
-        // Firstly get the scale ratio required to fit the image width
-        val pageWidth: Float = pageSize.width - margin.left - margin.right
-        var scaleRatio = pageWidth / imgDims.x
-
-        // Get scale ratio required to fit image height - if smaller, use this instead
-        val pageHeight: Float = pageSize.height - margin.top - margin.bottom
-        val heightScaleRatio: Float = pageHeight / imgDims.y
-        if (heightScaleRatio < scaleRatio) scaleRatio = heightScaleRatio
-
-        // Do not upscale - if the entire image can fit in the page, leave it unscaled.
-        if (scaleRatio > 1f) scaleRatio = 1f
-        return scaleRatio
-    }
-
-    private fun adjustImageLayout(
-        img: Image,
-        doc: Document,
-        pageSize: PageSize,
-        pageRotation: PdfNumber
-    ) {
-        // Expecting _radians_ here...
-        img.setRotationAngle(pageRotation.value * Math.PI / 180f)
-
-        var imgWidth = if (pageRotation == PORTRAIT) img.imageWidth else img.imageHeight
-        var imgHeight = if (pageRotation == PORTRAIT) img.imageHeight else img.imageWidth
-
-        val scaleRatio =
-            computeScaleRatio(
-                pageSize,
-                RectF(doc.leftMargin, doc.topMargin, doc.rightMargin, doc.bottomMargin),
-                PointF(imgWidth, imgHeight)
-            )
-        if (scaleRatio < 1F) img.scale(scaleRatio, scaleRatio)
-
-        val docUsefulWidth = pageSize.width - doc.leftMargin - doc.rightMargin
-        val docUsefulHeight = pageSize.height - doc.topMargin - doc.bottomMargin
-
-        imgWidth = if (pageRotation == PORTRAIT) img.imageScaledWidth else img.imageScaledHeight
-        imgHeight = if (pageRotation == PORTRAIT) img.imageScaledHeight else img.imageScaledWidth
-        img.setMarginLeft((docUsefulWidth - imgWidth) / 2)
-        img.setMarginTop((docUsefulHeight - imgHeight) / 2)
-    }
 
     private fun processFile(context: Context, doc: DocumentFile, keepFormat: Boolean): ByteArray? {
         // TODO don't keep format when non-PNG/JPG/WEBP
@@ -118,29 +65,34 @@ class PdfManager {
     }
 
     // Blocking call
-    fun convertImagesToPdf(
+    suspend fun convertImagesToPdf(
         context: Context,
         out: OutputStream,
         imageFiles: List<DocumentFile>,
         keepImgFormat: Boolean,
-        background: Color,
+        background: android.graphics.Color? = null,
         onProgressChange: ((Float) -> Unit)? = null
     ) {
         PdfDocument(PdfWriter(out)).use { pdfDoc ->
             Document(pdfDoc, PageSize.A4).use { doc ->
                 doc.setMargins(0f, 0f, 0f, 0f)
                 doc.setHorizontalAlignment(HorizontalAlignment.CENTER)
-                val bgColor = com.itextpdf.kernel.colors.Color.createColorWithColorSpace(
-                    arrayOf(background.red(), background.green(), background.blue()).toFloatArray()
-                )
-                doc.setBackgroundColor(bgColor)
 
-                val rotationEventHandler = PageRotationEventHandler()
-                pdfDoc.addEventHandler(PdfDocumentEvent.START_PAGE, rotationEventHandler)
+                // Background color
+                background?.let {
+                    val bgColor = Color.createColorWithColorSpace(
+                        arrayOf(it.red(), it.green(), it.blue()).toFloatArray()
+                    )
+                    doc.setBackgroundColor(bgColor)
 
-                val bgEventHandler = PageBackgroundEventHandler()
-                pdfDoc.addEventHandler(PdfDocumentEvent.START_PAGE, bgEventHandler)
-                bgEventHandler.setBackground(bgColor)
+                    val bgEventHandler = PageBackgroundEventHandler()
+                    pdfDoc.addEventHandler(PdfDocumentEvent.START_PAGE, bgEventHandler)
+                    bgEventHandler.setBackground(bgColor)
+                } ?: run {
+                    val bgColor =
+                        Color.createColorWithColorSpace(arrayOf(0f, 0f, 0f).toFloatArray())
+                    doc.setBackgroundColor(bgColor, 0f)
+                }
 
                 imageFiles
                     .asSequence()
@@ -159,17 +111,14 @@ class PdfManager {
                                         false, 0, 0, 0, 0, 0, 0, 1, PictureEncoder.PNG,
                                         PictureEncoder.JPEG, PictureEncoder.PNG, 90
                                     )
-                                    transform(data, params)
+                                    transform(context, data, params)
                                 } else data
                             )
                         )
 
-                        val isImageLandscape = image.imageWidth > image.imageHeight * 1.3
-                        val pageRotation = if (isImageLandscape) LANDSCAPE else PORTRAIT
-                        adjustImageLayout(image, doc, PageSize.A4, pageRotation)
-                        rotationEventHandler.setRotation(pageRotation)
+                        pdfDoc.addNewPage(PageSize(image.imageWidth, image.imageHeight))
+                        image.setFixedPosition(index + 1, 0f, 0f)
 
-                        if (index > 0) doc.add(AreaBreak(AreaBreakType.NEXT_PAGE))
                         doc.add(image)
 
                         onProgressChange?.invoke((index + 1) * 1f / imageFiles.size)
@@ -362,27 +311,16 @@ class PdfManager {
         return result
     }
 
-    private class PageRotationEventHandler : IEventHandler {
-        private var rotation: PdfNumber = PORTRAIT
-
-        fun setRotation(orientation: PdfNumber) {
-            this.rotation = orientation
-        }
-
-        override fun handleEvent(currentEvent: Event) {
-            val docEvent = currentEvent as PdfDocumentEvent
-            docEvent.page.put(PdfName.Rotate, rotation)
-        }
-    }
-
     private class PageBackgroundEventHandler : IEventHandler {
-        private var color = ColorConstants.WHITE
+        private var color: Color? = null
 
-        fun setBackground(color: com.itextpdf.kernel.colors.Color) {
+        fun setBackground(color: Color) {
             this.color = color
         }
 
         override fun handleEvent(currentEvent: Event) {
+            if (null == color) return
+
             val docEvent = currentEvent as PdfDocumentEvent
             val page = docEvent.page
 

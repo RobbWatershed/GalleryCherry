@@ -20,12 +20,16 @@ import android.view.WindowManager
 import android.widget.ImageView
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
+import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.PARENT_ID
+import androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.UNSET
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.isVisible
+import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePadding
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
@@ -1045,8 +1049,13 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
 
     private fun onUpdatePageNumDisplay() {
         binding?.apply {
-            viewerPagenumberText.visibility =
-                if (Settings.isReaderDisplayPageNum) View.VISIBLE else View.GONE
+            viewerPagenumberText.isVisible =
+                Settings.readerDisplayPageNum != Settings.Value.VIEWER_PAGENUM_NONE
+            if (Settings.Value.VIEWER_PAGENUM_TOP_CENTER == Settings.readerDisplayPageNum)
+                viewerPagenumberText.updateLayoutParams<ConstraintLayout.LayoutParams> {
+                    topToTop = PARENT_ID
+                    bottomToBottom = UNSET
+                }
         }
     }
 

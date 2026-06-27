@@ -209,7 +209,6 @@
     <string name="pref_viewer_delete_load_direction">Segui la direzione di lettura dopo aver eliminato un libro</string>
     <string name="pref_viewer_display_mode">Modalità di visualizzazione orizzontale</string>
     <string name="pref_viewer_display_notch">Mostra intorno al notch</string>
-    <string name="pref_viewer_display_pagenum">Mostra sempre il numero di pagina</string>
     <string name="pref_viewer_gallery_columns">Numero di colonne per la galleria</string>
     <string name="pref_viewer_horizontal_reader">Lettore orizzontale</string>
     <string name="pref_viewer_invert_volume">Inverti i tasti del volume</string>

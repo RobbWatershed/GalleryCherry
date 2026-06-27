@@ -27,6 +27,8 @@ import androidx.documentfile.provider.DocumentFile
 import me.devsaki.hentoid.BuildConfig
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.enums.Site
+import me.devsaki.hentoid.enums.StorageLocation
+import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.copy
 import me.devsaki.hentoid.util.exception.UnsupportedContentException
 import me.devsaki.hentoid.util.formatEpochToDate
@@ -163,8 +165,9 @@ private fun getFullPathFromTreeUri(context: Context, uri: Uri): String {
     if (uri == Uri.EMPTY) return ""
 
     // Chunk file Uri
-    val usedUri = if (uri.authority.equals(FILECHUNK_AUTHORITY)) FileChunkInfo.fromUri(uri).mainFileUri
-    else uri
+    val usedUri =
+        if (uri.authority.equals(FILECHUNK_AUTHORITY)) FileChunkInfo.fromUri(uri).mainFileUri
+        else uri
 
     var volumePath = getVolumePath(context, getVolumeIdFromUri(usedUri)) ?: "UnknownVolume"
     if (volumePath.endsWith(File.separator)) volumePath = volumePath.dropLast(1)
@@ -434,6 +437,8 @@ fun removeFile(file: File): Boolean {
  * @return True if succeeds; false if not
  */
 fun removeDocument(context: Context, docUri: Uri): Boolean {
+    if (docUri == Uri.EMPTY) return false
+
     // Check the document is not a site root
     val docPath = docUri.lastPathSegment ?: ""
     val docName = docPath.substringAfterLast('/')
@@ -441,6 +446,16 @@ fun removeDocument(context: Context, docUri: Uri): Boolean {
         Timber.w("Trying to delete a site folder : $docUri")
         return false
     }
+
+    // Check the document is not a Hentoid library root
+    if (docUri == Settings.getStorageUri(StorageLocation.EXTERNAL).toUri()
+        || docUri == Settings.getStorageUri(StorageLocation.PRIMARY_1).toUri()
+        || docUri == Settings.getStorageUri(StorageLocation.PRIMARY_2).toUri()
+    ) {
+        Timber.w("Trying to delete a library folder : $docUri")
+        return false
+    }
+
     return DocumentsContract.deleteDocument(context.contentResolver, docUri)
 }
 

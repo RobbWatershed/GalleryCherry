@@ -28,6 +28,7 @@ import me.devsaki.hentoid.events.ProcessEvent
 import me.devsaki.hentoid.notification.delete.DeleteCompleteNotification
 import me.devsaki.hentoid.notification.delete.DeleteProgressNotification
 import me.devsaki.hentoid.notification.delete.DeleteStartNotification
+import me.devsaki.hentoid.util.createFolderStreamedCover
 import me.devsaki.hentoid.util.download.selectDownloadLocation
 import me.devsaki.hentoid.util.exception.ContentNotProcessedException
 import me.devsaki.hentoid.util.exception.FileNotProcessedException
@@ -68,7 +69,7 @@ abstract class BaseDeleteWorker(
     BaseWorker(context, parameters, serviceId, "delete") {
 
     enum class Operation {
-        DELETE, PURGE, STREAM
+        DELETE, PURGE, STREAM, REMOVE_THUMB, CREATE_THUMB
     }
 
     enum class Target {
@@ -105,6 +106,9 @@ abstract class BaseDeleteWorker(
     // True to delete all queue records
     private val isDeleteAllQueueRecords: Boolean
 
+    // True to delete all content on the error tab of the queue screen
+    private val isDeleteAllErrorRecords: Boolean
+
     // True to delete groups only, without their books
     private val isDeleteGroupsOnly: Boolean
 
@@ -129,6 +133,7 @@ abstract class BaseDeleteWorker(
         docsRoot = inputData.docsRoot
         docsNames = inputData.docsNames
         isDeleteAllQueueRecords = inputData.isDeleteAllQueueRecords
+        isDeleteAllErrorRecords = inputData.isDeleteAllErrorRecords
         isDeleteGroupsOnly = inputData.isDeleteGroupsOnly
         operation = inputData.operation ?: throw IllegalArgumentException("Must set an Operation")
         isCleaning = inputData.isCleaning
@@ -169,6 +174,12 @@ abstract class BaseDeleteWorker(
                 // Remove Contents and associated QueueRecords
                 if (queueIds.isNotEmpty()) removeQueue(queueIds)
 
+                // If asked, make sure all QueueRecords are removed including dead ones
+                if (isDeleteAllQueueRecords || isDeleteAllErrorRecords) removeAllQueueRecords(
+                    isDeleteAllQueueRecords,
+                    isDeleteAllErrorRecords
+                )
+
                 // Remove files linked to the given ImageFile IDs
                 if (imageIds.isNotEmpty()) removeImageFiles(imageIds)
 
@@ -185,9 +196,6 @@ abstract class BaseDeleteWorker(
                         }
                     }
                 }
-
-                // If asked, make sure all QueueRecords are removed including dead ones
-                if (isDeleteAllQueueRecords) dao.deleteQueueRecordsCore()
             } finally {
                 dao.cleanup()
             }
@@ -246,6 +254,8 @@ abstract class BaseDeleteWorker(
                             Operation.DELETE -> deleteContent(it)
                             Operation.PURGE -> purgeContentFiles(it, purgeKeepCovers)
                             Operation.STREAM -> streamContent(it)
+                            Operation.REMOVE_THUMB -> removeThumb(it)
+                            Operation.CREATE_THUMB -> createThumb(it)
                         }
                     } catch (e: Exception) {
                         nbError++
@@ -419,7 +429,7 @@ abstract class BaseDeleteWorker(
             } else if (theGroup!!.grouping == Grouping.DYNAMIC) { // Delete books from dynamic group
                 val bundle = ContentSearchBundle()
                 bundle.groupId = theGroup.id
-                val containedContentList = dao.searchBookIdsUniversal(bundle).toLongArray()
+                val containedContentList = dao.searchStoredContentIds(bundle).toLongArray()
                 processContentList(containedContentList, Operation.DELETE)
             }
             if (theGroup != null) {
@@ -452,6 +462,17 @@ abstract class BaseDeleteWorker(
                 Log.WARN, "Queue JSON saving failed"
             )
         }
+    }
+
+    private suspend fun removeAllQueueRecords(queueRecords: Boolean, errorRecords: Boolean) {
+        if (queueRecords) {
+            removeQueue(dao.selectQueue().map { it.content.targetId }.toLongArray())
+            dao.deleteQueueRecordsCore()
+        }
+        if (errorRecords) processContentList(
+            dao.selectErrorContent().map { it.id }.toLongArray(),
+            Operation.DELETE
+        )
     }
 
     private suspend fun removeQueuedContent(content: Content) {
@@ -512,6 +533,39 @@ abstract class BaseDeleteWorker(
 
         progressDone()
         trace(Log.INFO, "Removed ${uris.size} documents")
+    }
+
+    private suspend fun removeThumb(content: Content) = withContext(Dispatchers.IO) {
+        // Using isReadable because isCover can be flagged on a normal page
+        if (content.isPdf || content.isArchive) return@withContext
+        if (content.imageList.isEmpty()) return@withContext
+        if (content.imageList.all { it.isReadable }) return@withContext
+
+        val thumbs = content.imageList.filter { !it.isReadable }
+        thumbs.forEach {
+            removeFile(applicationContext, it.fileUri.toUri())
+        }
+        dao.deleteImageFiles(thumbs)
+
+        val imgs = dao.selectImagesFromContent(content.id, true)
+        if (imgs.any { it.isCover } || imgs.isEmpty()) return@withContext
+
+        val first = imgs.first()
+        first.isCover = true
+        dao.insertImageFile(first)
+
+        dao.selectContent(content.id)?.let { persistJson(applicationContext, it) }
+    }
+
+    private suspend fun createThumb(content: Content) = withContext(Dispatchers.IO) {
+        try {
+            val images = createFolderStreamedCover(applicationContext, content)
+            dao.replaceImageList(content.id, images)
+            dao.selectContent(content.id)?.let { persistJson(applicationContext, it) }
+        } catch (e: Exception) {
+            nbError++
+            trace(Log.WARN, e.message)
+        }
     }
 
     @OptIn(DelicateCoroutinesApi::class)

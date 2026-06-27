@@ -45,6 +45,7 @@ import me.devsaki.hentoid.util.Debouncer
 import me.devsaki.hentoid.util.dimensAsDp
 import me.devsaki.hentoid.util.getIdForCurrentTheme
 import me.devsaki.hentoid.util.openReader
+import me.devsaki.hentoid.util.snack
 import me.devsaki.hentoid.util.toast
 import me.devsaki.hentoid.util.viewContentGalleryPage
 import me.devsaki.hentoid.viewholders.ContentItem
@@ -291,6 +292,10 @@ class ErrorsFragment : Fragment(R.layout.fragment_queue_errors), ItemTouchCallba
                 viewModel.invertQueue()
                 true
             }
+            it.menu.findItem(R.id.action_limit_download).setOnMenuItemClickListener {
+                LimitDownloadDialogFragment.invoke(this)
+                true
+            }
             it.menu.findItem(R.id.help).setOnMenuItemClickListener {
                 context?.startBrowserActivity(URL_WIKI_DOWNLOAD)
                 true
@@ -497,11 +502,14 @@ class ErrorsFragment : Fragment(R.layout.fragment_queue_errors), ItemTouchCallba
                 if (it.selections.isEmpty()) updateSelectionToolbarVis(false)
             }
         }
-        val content = item.content
-        if (content != null) viewModel.remove(listOf(content))
+        item.content?.let { viewModel.remove(listOf(it)) }
     }
 
     private fun onDeleteBooks(c: List<Content>) {
+        if (c.size > 1000) {
+            snack(R.string.delete_limit)
+            return
+        }
         if (c.size > 2) {
             isDeletingAll = true
             ProgressDialogFragment.invoke(
@@ -520,7 +528,7 @@ class ErrorsFragment : Fragment(R.layout.fragment_queue_errors), ItemTouchCallba
             resources.getString(R.string.cancel_queue_progress),
             R.plurals.book
         )
-        viewModel.removeAll()
+        viewModel.removeAllErrors()
     }
 
     @Subscribe(sticky = true, threadMode = ThreadMode.MAIN)

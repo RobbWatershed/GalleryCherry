@@ -7,6 +7,10 @@
     <string name="download_hitomi_avif_title">Ladda ner i AVIF-format</string>
     <string name="download_retries_active_title">Återförsök aktiverade</string>
     <string name="download_retries_screen_title">Automatiska åternerladdningsförsök</string>
+    <string name="download_separate_thumb_off">Markera förstasidan som miniatyrbild</string>
+    <string name="download_separate_thumb_on">Skapa en separat miniatyrbildsfil</string>
+    <string name="download_separate_thumb_title">miniatyrbild</string>
+    <string name="import_external_library_auto_title">Auto-importera nya filer</string>
     <string name="library_display_group_figure_title">Gruppfigur</string>
     <string name="mass_operations_summary">Masshandlingar för biblioteket</string>
     <string name="mass_operations_title">Masshandlingar</string>
@@ -77,11 +81,13 @@
     <string name="pref_browser_quick_dl_threshold_summary">Håll nere för den här tidslängden för att påbörja en snabbnedladdning\nNuvarande: %s</string>
     <string name="pref_browser_quick_dl_threshold_title">Snabbnedladdnings-håll-nere-tröskel</string>
     <string name="pref_browser_quick_dl_title">Snabbnedladdning</string>
+    <string name="pref_browser_range_download_summary">Ytterligare knapp för att definiera vilka gallerisidor att ladda ner</string>
     <string name="pref_browser_resume_last_off">En given webbplats öppnas alltid på sin hemsida</string>
     <string name="pref_browser_resume_last_on">En given webbplats öppnas på senast visad sida</string>
     <string name="pref_browser_resume_last_title">Fortsätt vid senast visad sida</string>
     <string name="pref_browser_visuals">Visuellt</string>
     <string name="pref_cat_advanced">Avancerat</string>
+    <string name="pref_cat_dl_skip_large">Skippa större nerladdningar</string>
     <string name="pref_cat_downloads_folder">GalleryCherrybibliotek</string>
     <string name="pref_cat_eh">E-hentai / ExHentai</string>
     <string name="pref_cat_external">Externt bibliotek</string>
@@ -119,6 +125,14 @@
     <string name="pref_dl_retries_number_title">Antalet återförsök innan avbrott</string>
     <string name="pref_dl_retries_off">Misslyckade nerladdningar kommer stanna i ett fel-läge</string>
     <string name="pref_dl_retries_on">Misslyckade nerladdningar kommer auto-återförsökas</string>
+    <string name="pref_dl_skip_large_allow_wifi_off">Skippa större nerladdningar på alla nätverk</string>
+    <string name="pref_dl_skip_large_allow_wifi_on">Större nerladdningar kräver Wi-Fi anslutning</string>
+    <string name="pref_dl_skip_large_allow_wifi_title">Tillåt större nerladdningar över Wi-Fi</string>
+    <string name="pref_dl_skip_large_off">Skippa större nerladdningar är avstängd</string>
+    <string name="pref_dl_skip_large_on">Skippa större nerladdningar är aktiv</string>
+    <string name="pref_dl_skip_large_pages_threshold_title">Sidgräns för större nerladdningar</string>
+    <string name="pref_dl_skip_large_size_threshold_title">Storleksgräns för större nerladdningar</string>
+    <string name="pref_dl_skip_large_title">Skippa större nerladdningar</string>
     <string name="pref_dl_speed_cap_title">Nerladdningshastighetsgräns</string>
     <string name="pref_dl_threads_quantity_summary">Antal bilder som laddas ner samtidigt\nNuvarande: %s</string>
     <string name="pref_dl_threads_quantity_title">Antal parallella nedladdningar</string>
@@ -170,6 +184,7 @@
     <string name="pref_queue_wifi_only_off">Nerladdningskön kommer påbörjas när enheten är ansluten till något nätverk överhuvudtaget</string>
     <string name="pref_queue_wifi_only_on">Nerladdningskön kommer endast påbörjas om ansluten till Wi-Fi</string>
     <string name="pref_queue_wifi_only_title">Ladda endast ner via Wi-Fi</string>
+    <string name="pref_range_download_title">Nerladdningsomfång</string>
     <string name="pref_refresh_library_summary">Manuellt fräscha upp biblioteksinnehåll</string>
     <string name="pref_refresh_library_title">Fräscha upp biblioteket</string>
     <string name="pref_screen_browser">Webbläsare</string>
@@ -209,7 +224,7 @@
     <string name="pref_viewer_delete_load_direction">Inläsningsriktning efter bokborttagning</string>
     <string name="pref_viewer_display_mode">Visningsläge för horisontell visning</string>
     <string name="pref_viewer_display_notch">Visa tryckområdet</string>
-    <string name="pref_viewer_display_pagenum">Visa alltid sidnummer</string>
+    <string name="pref_viewer_display_pagenum">Sidnummersvisning</string>
     <string name="pref_viewer_gallery_columns">Antalet kolumner för galleri</string>
     <string name="pref_viewer_horizontal_reader">Horisontell läsare</string>
     <string name="pref_viewer_invert_volume">Invertera volymknappar</string>

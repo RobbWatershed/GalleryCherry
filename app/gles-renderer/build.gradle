@@ -12,11 +12,11 @@ kotlin {
 
 android {
     namespace = 'me.devsaki.hentoid.gles_renderer'
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         minSdk = 26
-        targetSdkVersion 36
+        targetSdkVersion 37
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
@@ -33,15 +33,15 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
     lint {
-        targetSdk 36
+        targetSdk 37
     }
     testOptions {
-        targetSdk 36
+        targetSdk 37
     }
 }
 
 dependencies {
-    implementation 'androidx.core:core-ktx:1.17.0'
+    implementation 'androidx.core:core-ktx:1.19.0'
     implementation 'androidx.appcompat:appcompat:1.7.1'
     implementation 'androidx.lifecycle:lifecycle-common-java8:2.10.0'
 

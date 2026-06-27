@@ -218,6 +218,14 @@
             android:title="@string/pref_cat_external"
             app:iconSpaceReserved="false">
             <CheckBoxPreference
+                android:defaultValue="@string/pref_external_library_auot_import_default"
+                android:enabled="true"
+                android:key="import_external_library_auto"
+                android:summaryOff="@string/off"
+                android:summaryOn="@string/on"
+                android:title="@string/import_external_library_auto_title"
+                app:iconSpaceReserved="false" />
+            <CheckBoxPreference
                 android:defaultValue="@string/pref_external_library_delete_default"
                 android:enabled="false"
                 android:key="pref_external_library_delete"
@@ -470,39 +478,39 @@
         <PreferenceCategory
             android:title="@string/pref_cat_dl_skip_large"
             app:iconSpaceReserved="false" />
-            <CheckBoxPreference
-                android:defaultValue="@string/pref_dl_skip_large_default"
-                android:key="pref_dl_skip_large"
-                android:summaryOff="@string/pref_dl_skip_large_off"
-                android:summaryOn="@string/pref_dl_skip_large_on"
-                android:title="@string/pref_dl_skip_large_title"
-                app:iconSpaceReserved="false" />
-            <CheckBoxPreference
-                android:defaultValue="@string/pref_dl_skip_large_allow_wifi_default"
-                android:key="pref_dl_skip_large_allow_wifi"
-                android:dependency="pref_dl_skip_large"
-                android:summaryOff="@string/pref_dl_skip_large_allow_wifi_off"
-                android:summaryOn="@string/pref_dl_skip_large_allow_wifi_on"
-                android:title="@string/pref_dl_skip_large_allow_wifi_title"
-                app:iconSpaceReserved="false" />
-            <ListPreference
-                android:defaultValue="@string/pref_dl_skip_large_size_threshold_default"
-                android:dependency="pref_dl_skip_large"
-                android:entries="@array/pref_dl_skip_large_size_threshold_entries"
-                android:entryValues="@array/pref_dl_skip_large_size_threshold_values"
-                android:key="pref_dl_skip_large_size_threshold"
-                android:summary="@string/pref_attributes_list_order_summary"
-                android:title="@string/pref_dl_skip_large_size_threshold_title"
-                app:iconSpaceReserved="false" />
-            <ListPreference
-                android:defaultValue="@string/pref_dl_skip_large_pages_threshold_default"
-                android:dependency="pref_dl_skip_large"
-                android:entries="@array/pref_dl_skip_large_pages_threshold_entries"
-                android:entryValues="@array/pref_dl_skip_large_pages_threshold_values"
-                android:key="pref_dl_skip_large_pages_threshold"
-                android:summary="@string/pref_attributes_list_order_summary"
-                android:title="@string/pref_dl_skip_large_pages_threshold_title"
-                app:iconSpaceReserved="false" />
+        <CheckBoxPreference
+            android:defaultValue="@string/pref_dl_skip_large_default"
+            android:key="pref_dl_skip_large"
+            android:summaryOff="@string/pref_dl_skip_large_off"
+            android:summaryOn="@string/pref_dl_skip_large_on"
+            android:title="@string/pref_dl_skip_large_title"
+            app:iconSpaceReserved="false" />
+        <CheckBoxPreference
+            android:defaultValue="@string/pref_dl_skip_large_allow_wifi_default"
+            android:dependency="pref_dl_skip_large"
+            android:key="pref_dl_skip_large_allow_wifi"
+            android:summaryOff="@string/pref_dl_skip_large_allow_wifi_off"
+            android:summaryOn="@string/pref_dl_skip_large_allow_wifi_on"
+            android:title="@string/pref_dl_skip_large_allow_wifi_title"
+            app:iconSpaceReserved="false" />
+        <ListPreference
+            android:defaultValue="@string/pref_dl_skip_large_size_threshold_default"
+            android:dependency="pref_dl_skip_large"
+            android:entries="@array/pref_dl_skip_large_size_threshold_entries"
+            android:entryValues="@array/pref_dl_skip_large_size_threshold_values"
+            android:key="pref_dl_skip_large_size_threshold"
+            android:summary="@string/pref_attributes_list_order_summary"
+            android:title="@string/pref_dl_skip_large_size_threshold_title"
+            app:iconSpaceReserved="false" />
+        <ListPreference
+            android:defaultValue="@string/pref_dl_skip_large_pages_threshold_default"
+            android:dependency="pref_dl_skip_large"
+            android:entries="@array/pref_dl_skip_large_pages_threshold_entries"
+            android:entryValues="@array/pref_dl_skip_large_pages_threshold_values"
+            android:key="pref_dl_skip_large_pages_threshold"
+            android:summary="@string/pref_attributes_list_order_summary"
+            android:title="@string/pref_dl_skip_large_pages_threshold_title"
+            app:iconSpaceReserved="false" />
         <PreferenceCategory
             android:title="@string/tag_blocking_screen_title"
             app:iconSpaceReserved="false">
@@ -514,7 +522,7 @@
             <ListPreference
                 android:defaultValue="@string/pref_dl_blocked_tags_behaviour_default"
                 android:entries="@array/pref_dl_blocked_tags_behaviour_entries"
-                android:entryValues="@array/int_two"
+                android:entryValues="@array/int_three"
                 android:key="pref_dl_blocked_tags_behaviour"
                 android:summary="@string/pref_attributes_list_order_summary"
                 android:title="@string/pref_dl_blocked_tags_behaviour_title"
@@ -600,6 +608,14 @@
                 android:key="pref_dl_http_429_default_delay"
                 android:title="@string/pref_dl_http_429_default_delay_title"
                 app:iconSpaceReserved="false" />
+            <CheckBoxPreference
+                android:defaultValue="@string/pref_dl_separate_thumb"
+                android:key="pref_dl_separate_thumb"
+                android:summaryOff="@string/download_separate_thumb_off"
+                android:summaryOn="@string/download_separate_thumb_on"
+                android:title="@string/download_separate_thumb_title"
+                app:iconSpaceReserved="false"
+                app:sites="ANY" />
         </PreferenceCategory>
     </PreferenceScreen>
 
@@ -742,11 +758,6 @@
                 android:title="@string/pref_viewer_display_notch"
                 app:iconSpaceReserved="false" />
             <CheckBoxPreference
-                android:defaultValue="@bool/pref_viewer_display_pagenum_default"
-                android:key="pref_viewer_display_pagenum"
-                android:title="@string/pref_viewer_display_pagenum"
-                app:iconSpaceReserved="false" />
-            <CheckBoxPreference
                 android:defaultValue="@bool/pref_viewer_tap_transitions_default"
                 android:key="pref_viewer_tap_transitions"
                 android:title="@string/pref_viewer_tap_transitions"
@@ -755,6 +766,14 @@
                 android:defaultValue="@bool/pref_viewer_zoom_transitions_default"
                 android:key="pref_viewer_zoom_transitions"
                 android:title="@string/pref_viewer_zoom_transitions"
+                app:iconSpaceReserved="false" />
+            <ListPreference
+                android:defaultValue="@string/pref_viewer_display_pagenum_default"
+                android:entries="@array/pref_viewer_display_pagenum_entries"
+                android:entryValues="@array/int_three"
+                android:key="pref_viewer_display_pagenum2"
+                android:summary="@string/pref_generic_summary"
+                android:title="@string/pref_viewer_display_pagenum"
                 app:iconSpaceReserved="false" />
             <ListPreference
                 android:defaultValue="@string/pref_viewer_auto_rotate_default"

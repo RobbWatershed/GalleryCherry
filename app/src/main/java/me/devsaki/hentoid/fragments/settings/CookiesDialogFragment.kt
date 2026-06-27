@@ -54,7 +54,7 @@ class CookiesDialogFragment : BaseDialogFragment<Nothing>() {
     override fun onViewCreated(rootView: View, savedInstanceState: Bundle?) {
         super.onViewCreated(rootView, savedInstanceState)
 
-        sites = Settings.activeSites.filter { it.isVisible }.sortedBy { it.name }
+        sites = Settings.activeSites.filter { it.isUsable }.sortedBy { it.name }
 
         binding?.apply {
             val siteLbls: MutableList<String> = sites.map { s -> s.description }.toMutableList()

@@ -182,7 +182,7 @@ data class ImageFile(
             return result
         }
 
-        fun newCover(url: String, status: StatusContent): ImageFile {
+        fun newThumb(url: String, status: StatusContent): ImageFile {
             val result = ImageFile(
                 dbOrder = 0,
                 dbUrl = url,

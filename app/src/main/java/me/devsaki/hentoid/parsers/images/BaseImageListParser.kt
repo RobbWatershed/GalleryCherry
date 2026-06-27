@@ -67,7 +67,7 @@ abstract class BaseImageListParser : ImageListParser, Progressor {
     ): List<ImageFile> {
         val readerUrl = onlineContent.readerUrl
         require(URLUtil.isValidUrl(readerUrl)) { "Invalid URL : $readerUrl" }
-        Timber.d("Gallery URL: %s", readerUrl)
+        Timber.d("Gallery URL: $readerUrl")
         processedUrl = onlineContent.galleryUrl
         EventBus.getDefault().register(this)
         val result: List<ImageFile>
@@ -77,6 +77,7 @@ abstract class BaseImageListParser : ImageListParser, Progressor {
                 imgUrls,
                 onlineContent.downloadRange,
                 StatusContent.SAVED,
+                onlineContent.site,
                 onlineContent.coverImageUrl,
                 null
             )

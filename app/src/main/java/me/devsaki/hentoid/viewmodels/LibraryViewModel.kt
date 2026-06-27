@@ -206,18 +206,20 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
     }
 
     /**
-     * Perform a new content universal search using the given query
+     * Perform a new content full text search using the given query
+     * NB1 : Full text search is performed among content title _and_ attributes
+     * NB2 : Multiple fulltext search terms can be specified using a comma
      *
-     * @param query Query to use for the universal search
+     * @param query Query to use for the full text search
      */
-    fun searchContentUniversal(query: String) {
-        // If user searches in main toolbar, universal search takes over advanced search
+    fun searchContentFullText(query: String, recordHistory: Boolean = true) {
+        // If user searches in main toolbar, full text search takes over advanced search
         contentSearchManager.clearTags()
         contentSearchManager.setLocation(Location.ANY.value)
         contentSearchManager.setContentType(Type.ANY.value)
         contentSearchManager.setQuery(query)
         newContentSearch.value = true
-        if (query.isNotEmpty()) {
+        if (recordHistory && query.isNotEmpty()) {
             val searchUri = buildSearchUri(null, query = query)
             dao.insertSearchRecord(SearchRecord.contentSearch(searchUri), 10)
             dao.cleanup()
@@ -237,6 +239,7 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
         contentSearchManager.setTags(criteria.attributes)
         contentSearchManager.setLocation(criteria.location.value)
         contentSearchManager.setContentType(criteria.contentType.value)
+        contentSearchManager.setCombinationMode(criteria.combinationMode)
         newContentSearch.value = true
         if (!criteria.isEmpty()) {
             dao.insertSearchRecord(
@@ -544,13 +547,25 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
         this.group.postValue(group)
 
         if (Grouping.DYNAMIC == group.grouping) {
+            contentSearchManager.setGroup(null)
+
             val searchUri = SearchActivityBundle.parseSearchUri(group.searchUri)
             contentSearchManager.setTags(searchUri.attributes)
             contentSearchManager.setExcludedAttrs(searchUri.excludedAttributeTypes)
             contentSearchManager.setLocation(searchUri.location.value)
             contentSearchManager.setContentType(searchUri.contentType.value)
+            contentSearchManager.setCombinationMode(searchUri.combinationMode)
             contentSearchManager.setQuery(searchUri.query)
-        } else contentSearchManager.setGroup(group)
+        } else {
+            contentSearchManager.clearTags()
+            contentSearchManager.setExcludedAttrs(emptySet())
+            contentSearchManager.setLocation(0)
+            contentSearchManager.setContentType(0)
+            contentSearchManager.setCombinationMode(0)
+            contentSearchManager.setQuery("")
+
+            contentSearchManager.setGroup(group)
+        }
 
         newContentSearch.value = true
         // Don't search now as the UI will inevitably search as well upon switching to books view

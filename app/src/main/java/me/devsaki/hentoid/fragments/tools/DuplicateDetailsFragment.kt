@@ -220,14 +220,12 @@ class DuplicateDetailsFragment : Fragment(R.layout.fragment_duplicate_details),
 
         activity.get()?.updateTitle(duplicates.size)
         val externalCount =
-            duplicates.asSequence().map(DuplicateEntry::duplicateContent)
-                .filterNotNull()
-                .map { c -> c.status }
-                .filter { s -> s == StatusContent.EXTERNAL }.count()
-        val streamedCount = duplicates.asSequence().map(DuplicateEntry::duplicateContent)
-            .filterNotNull()
-            .map { c -> c.downloadMode }
-            .filter { mode -> mode == DownloadMode.STREAM }.count()
+            duplicates.asSequence()
+                .mapNotNull(DuplicateEntry::duplicateContent)
+                .map { c -> c.status }.count { s -> s == StatusContent.EXTERNAL }
+        val streamedCount = duplicates.asSequence()
+            .mapNotNull(DuplicateEntry::duplicateContent)
+            .map { c -> c.downloadMode }.count { mode -> mode == DownloadMode.STREAM }
         val localCount = duplicates.size - externalCount - streamedCount
 
         // streamed, external

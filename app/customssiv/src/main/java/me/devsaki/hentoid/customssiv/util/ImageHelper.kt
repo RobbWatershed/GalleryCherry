@@ -160,7 +160,14 @@ suspend fun getImageDimensions(context: Context, uri: Uri, data: ByteArray? = nu
     withContext(Dispatchers.IO) {
         if (null == data && !fileExists(context, uri)) return@withContext Point(0, 0)
 
-        val ext = getExtensionFromUri(uri.toString())
+        // Hentoid-specific hack
+        val fileName = if (uri.authority == FILECHUNK_AUTHORITY) {
+            uri.getQueryParameter("n")
+        } else uri.lastPathSegment
+        if (null == fileName) return@withContext Point(0, 0)
+
+        val ext = getExtensionFromUri(fileName)
+
         if (ext == "jxl" || ext == "avif") {
             return@withContext getDimsFromThirdParty(context, ext, uri)
         } else { // Natively supported by Android

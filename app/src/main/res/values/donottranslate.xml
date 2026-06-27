@@ -263,6 +263,7 @@
     <string-array name="pref_dl_blocked_tags_behaviour_entries" translatable="false">
         <item>@string/pref_dl_blocked_tags_behaviour_entries_1</item>
         <item>@string/pref_dl_blocked_tags_behaviour_entries_2</item>
+        <item>@string/pref_dl_blocked_tags_behaviour_entries_3</item>
     </string-array>
     <string-array name="pref_viewer_browse_mode_entries" translatable="false">
         <item>@string/pref_viewer_browse_mode_entries_1</item>
@@ -351,6 +352,11 @@
         <item>@string/pref_viewer_display_mode_entries_1</item>
         <item>@string/pref_viewer_display_mode_entries_2</item>
         <item>@string/pref_viewer_display_mode_entries_3</item>
+    </string-array>
+    <string-array name="pref_viewer_display_pagenum_entries" translatable="false">
+        <item>@string/pref_viewer_display_pagenum_entries_1</item>
+        <item>@string/pref_viewer_display_pagenum_entries_2</item>
+        <item>@string/pref_viewer_display_pagenum_entries_3</item>
     </string-array>
     <string-array name="pref_viewer_auto_rotate_entries" translatable="false">
         <item>@string/pref_viewer_auto_rotate_entries_1</item>
@@ -486,6 +492,7 @@
         <item>@string/light_grey</item>
         <item>@string/dark_grey</item>
         <item>@string/black</item>
+        <item>@string/none</item>
     </string-array>
 
     <!-- Lock dialog -->
@@ -499,6 +506,8 @@
     <string-array name="mass_operations_entries" translatable="false">
         <item>@string/mass_operation_1</item>
         <item>@string/mass_operation_2</item>
+        <item>@string/mass_operation_3</item>
+        <item>@string/mass_operation_4</item>
     </string-array>
     <string-array name="mass_operations_scope_entries" translatable="false">
         <item>@string/mass_operation_scope_1</item>
@@ -564,6 +573,7 @@
     <string name="pref_folder_trunc_default" translatable="false">100</string>
     <string name="pref_memory_alert_default" translatable="false">110</string>
     <string name="pref_external_library_delete_default" translatable="false">false</string>
+    <string name="pref_external_library_auot_import_default" translatable="false">true</string>
     <!-- Strings: Settings: Browser -->
     <string name="pref_browser_resume_last_default" translatable="false">false</string>
     <string name="pref_browser_dl_action_default" translatable="false">0</string>
@@ -608,6 +618,7 @@
     <string name="pref_dl_threads_quantity_default" translatable="false">0</string>
     <string name="pref_dl_speed_cap_default" translatable="false">-1</string>
     <string name="pref_dl_http_429_default_delay_default" translatable="false">120</string>
+    <string name="pref_dl_separate_thumb" translatable="false">true</string>
     <!-- Strings: Settings: Privacy -->
     <string name="pref_app_preview_default" translatable="false">false</string>
     <string name="pref_analytics_preference_default" translatable="false">true</string>
@@ -628,7 +639,7 @@
     <string name="pref_viewer_cap_tap_zoom_default" translatable="false">0</string>
     <bool name="pref_viewer_keep_screen_on_default" translatable="false">true</bool>
     <bool name="pref_viewer_display_notch_default" translatable="true">true</bool>
-    <bool name="pref_viewer_display_pagenum_default" translatable="false">false</bool>
+    <string name="pref_viewer_display_pagenum_default" translatable="false">0</string>
     <bool name="pref_viewer_tap_transitions_default" translatable="false">true</bool>
     <bool name="pref_viewer_zoom_transitions_default" translatable="false">true</bool>
     <bool name="pref_viewer_maintain_horizontal_zoom_default" translatable="false">false</bool>

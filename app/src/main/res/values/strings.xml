@@ -144,6 +144,7 @@
         <item quantity="other">Cancel the selected items\?</item>
     </plurals>
     <string name="invert_queue">Invert queue</string>
+    <string name="limit_download">Limit mobile data</string>
     <string name="redownload_all">Redownload all</string>
     <string name="cancel_all_errors">Cancel all errors</string>
     <string name="import_downloads">Import downloads</string>
@@ -171,6 +172,7 @@
     <string name="paused_dl_folder_credentials">Cannot download - Insufficient credentials on download folder. Use app settings to reselect it</string>
     <string name="paused_dl_stale_online_credentials">Cannot download - Stale Cookies or credentials. Use the notification to regenerate them</string>
     <string name="paused_dl_no_available_downloads">No available downloads remaining</string>
+    <string name="paused_dl_mobile_limit_reached">Mobile download data limit reached</string>
     <string name="step_init">Initializing</string>
     <string name="step_prepare_img">Preparing images</string>
     <string name="step_fetch_img">Fetching images</string>
@@ -225,6 +227,11 @@
     <string name="storage_streamed">Streamed</string>
     <string name="storage_streamed_description">Don\'t store images on storage, stream them as you read</string>
     <string name="storage_stream_warning">At least one website from your selection does NOT support streaming. Switching to streaming is highly discouraged.</string>
+    <string name="limit_download_limit_current">Current limit : %s / %s</string>
+    <string name="limit_download_limit_none">No limit set</string>
+    <string name="limit_download_set_new">Change limit</string>
+    <string name="limit_download_set_new_prompt">New limit (MB)</string>
+    <string name="limit_download_limit_caption">NB : This setting will reset when the app restarts</string>
 
     <!-- Import downloads -->
     <string name="import_downloads_title">Import downloads</string>
@@ -332,12 +339,14 @@
     <string name="refresh_options_remove_1">Remove folders where JSON file is absent (recommended)</string>
     <string name="refresh_options_remove_2">Remove folders where no image has been downloaded</string>
     <string name="refresh_options_remove_or">or</string>
-    <string name="refresh_auto_processing">Auto-refreshing external library (%d/%d)</string>
+    <string name="refresh_auto_processing">Auto-refreshing external library (%1$d/%2$d)</string>
 
     <!-- Mass operations -->
     <string name="mass_operation">Operation</string>
     <string name="mass_operation_1">Delete</string>
     <string name="mass_operation_2">Switch to streaming</string>
+    <string name="mass_operation_3">Remove cover thumbnail</string>
+    <string name="mass_operation_4">Create cover thumbnail</string>
     <string name="mass_operation_scope">Scope</string>
     <string name="mass_operation_scope_1">Current filter of the library screen</string>
     <string name="mass_operation_scope_2">All books except current filter of the library screen</string>
@@ -356,8 +365,16 @@
         <item quantity="one">Switch <x:g example="1" id="number">%1$d</x:g> book to streaming</item>
         <item quantity="other">Switch <x:g example="2" id="number">%1$d</x:g> books to streaming</item>
     </plurals>
+    <plurals name="book_remove_cover_thumbnail">
+        <item quantity="one">Remove cover thumbnails on <x:g example="1" id="number">%1$d</x:g> book</item>
+        <item quantity="other">Remove cover thumbnail on <x:g example="2" id="number">%1$d</x:g> books</item>
+    </plurals>
+    <plurals name="book_create_cover_thumbnail">
+        <item quantity="one">Create cover thumbnails on <x:g example="1" id="number">%1$d</x:g> book</item>
+        <item quantity="other">Create cover thumbnail on <x:g example="2" id="number">%1$d</x:g> books</item>
+    </plurals>
     <string name="mass_delete_confirm">I know what I\'m doing</string>
-    <string name="mass_delete_action">Mass delete</string>
+    <string name="mass_process_action">Mass process</string>
     <string name="mass_stream_action">Mass switch to stream</string>
     <string name="generic_progress" tools:ignore="MissingTranslation"><x:g example="7" id="number">%1$d</x:g> / <x:g example="42" id="total">%2$d</x:g> <x:g example="books" id="type">%3$s</x:g></string>
     <plurals name="book_progress">
@@ -527,6 +544,7 @@
     <string name="stream_limit">Cannot stream more than 1000 books at once</string>
     <string name="transform_limit">Cannot transform more than 1000 books at once</string>
     <string name="process_limit">Cannot process more than 1000 books at once</string>
+    <string name="cancel_limit">Cannot cancel more than 1000 books at once</string>
     <string name="new_group_name">Name of the new group\?</string>
     <string name="group_edit_name">Edit group name</string>
     <string name="book_edit_title">Edit book title</string>
@@ -539,6 +557,8 @@
     <string name="purge_progress">Purging…</string>
     <string name="stream_progress">Streaming…</string>
     <string name="delete_progress">Deleting…</string>
+    <string name="remove_thumb_progress">Removing cover thumbnails…</string>
+    <string name="create_thumb_progress">Creating cover thumbnails…</string>
     <string name="cancel_queue_progress">Canceling queue items</string>
     <plurals name="delete_success_books">
         <item quantity="one"><x:g example="1" id="count">%d</x:g> book</item>
@@ -684,12 +704,14 @@
     <string name="groups_flat">All books</string>
     <string name="groups_by_artist">By Artist</string>
     <string name="groups_by_dl_date">By Download date (processed)</string>
+    <string name="groups_by_series">By series</string>
     <string name="groups_dynamic">Saved searches</string>
     <string name="groups_custom">Custom groups</string>
     <string name="groups_folders">Folders</string>
     <string name="no_artist_group_name">[no artist]</string>
     <string name="no_circle_group_name">[no circle]</string>
     <string name="no_artist_circle_group_name">[no artist, no circle]</string>
+    <string name="no_series_group_name">[no series]</string>
 
     <!-- Sort / filter bottom panel -->
     <string name="sort_ascending">Ascending</string>
@@ -704,6 +726,7 @@
     <string name="sort_reads">Reads</string>
     <string name="sort_size">Size</string>
     <string name="sort_reading_progress">Reading progress</string>
+    <string name="sort_avg_size">Average page size</string>
     <string name="sort_random">Random</string>
     <string name="sort_custom">Custom</string>
     <string name="sort_invalid">-invalid-</string>
@@ -804,6 +827,7 @@
     <string name="help_web_download">You\'ve reached a book page.\nTime to download with the bottom bar!</string>
     <string name="blocked_tag">Book has a blocked tag (<x:g example="bad" id="tag">%s</x:g>)\nDownload canceled</string>
     <string name="blocked_tag_queued">Book has a blocked tag (<x:g example="bad" id="tag">%s</x:g>)\nQueued as an error</string>
+    <string name="blocked_tag_double">Book has a blocked tag (<x:g example="bad" id="tag">%s</x:g>)\Double tap to queue</string>
     <string name="bookmark_current">Bookmark current page</string>
     <string name="unbookmark_current">Remove bookmark on current page</string>
     <string name="bookmark_copy_url">Copy bookmark URL to clipboard</string>
@@ -826,7 +850,7 @@
     <string name="help_web_incomplete_exh_credentials">Incomplete credentials, please log in again. If the issue persists, consider accessing the site from another country or creating a new account.</string>
     <string name="help_web_hires_eh_account">To download hi-res pictures, you need to use or create an e-Hentai account</string>
 
-    <!-- SearchActivity -->
+    <!-- Advanced search -->
     <string name="category_any">Any</string>
     <string name="exclude">Exclude</string>
     <string name="search_category"><x:g example="Language" id="search_category">%s</x:g> search</string>
@@ -874,6 +898,8 @@
     <string name="search_type_entries_4">Archive</string>
     <string name="search_type_entries_5">Placeholder</string>
     <string name="search_type_entries_6">PDF</string>
+    <string name="search_and">AND</string>
+    <string name="search_or">OR</string>
 
     <!-- Image reader -->
     <string name="no_images">Could not load the book: No image found</string>
@@ -1117,6 +1143,8 @@
     <string name="notif_delete_complete">Deletion complete</string>
     <string name="notif_delete_prepurge_complete">Redownload/Stream pre-purge complete</string>
     <string name="notif_stream_complete">Streaming complete</string>
+    <string name="notif_remove_thumb_complete">Removing cover thumbnails complete</string>
+    <string name="notif_create_thumb_complete">Creating cover thumbnails complete</string>
     <plurals name="notif_process_complete_details">
         <item quantity="one"><x:g example="1" id="number">%d</x:g> book processed successfully</item>
         <item quantity="other"><x:g example="2" id="number">%d</x:g> books processed successfully</item>
@@ -1128,6 +1156,8 @@
     <string name="notif_delete_fail">Deletion failed</string>
     <string name="notif_delete_prepurge_fail">Redownload/Stream pre-purge failed</string>
     <string name="notif_stream_fail">Streaming failed</string>
+    <string name="notif_remove_thumb_failed">Removing cover thumbnails failed</string>
+    <string name="notif_create_thumb_failed">Creating cover thumbnails failed</string>
     <plurals name="notif_delete_fail_details">
         <item quantity="one"><x:g example="1" id="number">%d</x:g> item failed</item>
         <item quantity="other"><x:g example="2" id="number">%d</x:g> items failed</item>

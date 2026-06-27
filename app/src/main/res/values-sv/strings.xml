@@ -72,10 +72,15 @@
     <string name="biometric_dialog_title">Biometriskt lås</string>
     <string name="black">Svart</string>
     <string name="blocked_tag">Boken har en blockerad etikett (%s)\nNerladdning avbruten</string>
+    <string name="blocked_tag_double">Boken har en blockerad etikett (%s)\Dubbeltryck för att ändå köa</string>
     <string name="blocked_tag_queued">Boken har en blockerad etikett (%s)\nKöad som ett fel</string>
     <plurals name="book">
         <item quantity="one">bok</item>
         <item quantity="other">böcker</item>
+    </plurals>
+    <plurals name="book_create_cover_thumbnail">
+        <item quantity="one">Skapa miniatyrbildsomslag på så %1$d många böcker</item>
+        <item quantity="other">Skapa miniatyrbildsomslag på denna mängd %1$d böcker</item>
     </plurals>
     <plurals name="book_delete">
         <item quantity="one">Ta bort %1$d bok</item>
@@ -94,6 +99,10 @@
         <item quantity="one">%1$d / %2$d bok</item>
         <item quantity="other">%1$d / %2$d böcker</item>
     </plurals>
+    <plurals name="book_remove_cover_thumbnail">
+        <item quantity="one">Ta bort miniatyrbildsomslag på så %1$d många böcker</item>
+        <item quantity="other">Ta bort miniatyrbildsomslag på så %1$d många böcker</item>
+    </plurals>
     <string name="book_settings">Bokinställningar</string>
     <plurals name="book_stream">
         <item quantity="one">Byt %1$d bok till streaming</item>
@@ -111,6 +120,7 @@
     <string name="cancel">Avbryt</string>
     <string name="cancel_all">Avbryt alla</string>
     <string name="cancel_all_errors">Avbryt alla fel</string>
+    <string name="cancel_limit">Får inte avbryta mer än 1000 böcker åt gången</string>
     <string name="cancel_queue_progress">Avbryter köade saker</string>
     <string name="category_any">Någon</string>
     <string name="category_artist">Konstnär</string>
@@ -157,6 +167,7 @@
         <item quantity="other">Skapa arkiv</item>
     </plurals>
     <string name="create_generic">Skapa</string>
+    <string name="create_thumb_progress">Sätter miniatyrbildsomslag…</string>
     <string name="dark_grey">Mörkgrå</string>
     <string name="delete_books_progress">Tar bort böcker</string>
     <string name="delete_chapters_progress">Tar bort kapitel</string>
@@ -283,6 +294,7 @@
     <string name="errortype_networking">nätverk</string>
     <string name="errortype_parsing">Analys</string>
     <string name="errortype_site_limit">Nerladdnings/bandbreddsgräns nådd</string>
+    <string name="errortype_size">Bok skippades pga satt storleksgräns på nerladdningar</string>
     <string name="errortype_undefined">Odefinierad</string>
     <string name="exclude">Exkludera</string>
     <string name="export_answer_yes">Den här funktionen gjordes inte för att låta dig överföra din samling till en annan telefon. Det fungerar i vissa fall men några av dina böcker kanske blir omöjliga att åternerladda!</string>
@@ -348,10 +360,10 @@
     <string name="get_latest">Få den senaste versionen (%1$s)</string>
     <string name="goto_app_prefs">Appinställningar</string>
     <string name="goto_page">Gå till sid…</string>
+    <string name="group_3">Senaste 3 dagarna</string>
     <string name="group_30">Senaste 30 dagarna</string>
     <string name="group_60">Senaste 60 dagarna</string>
     <string name="group_7">Senaste 7 dagarna</string>
-    <string name="group_3">Senaste 3 dagarna</string>
     <string name="group_change">Flytta till anpassad grupp</string>
     <string name="group_delete_nothing">Valda grupper kan inte raderas manuellt</string>
     <plurals name="group_delete_selected_book">
@@ -390,6 +402,7 @@
     <string name="groups">Grupper</string>
     <string name="groups_by_artist">Via Konstnär</string>
     <string name="groups_by_dl_date">Via nerladdningsdatum (behandlad)</string>
+    <string name="groups_by_series">Efter serie</string>
     <string name="groups_custom">Anpassade grupper</string>
     <string name="groups_dynamic">Sparade sökningar</string>
     <string name="groups_flat">Alla böcker</string>
@@ -530,6 +543,12 @@
     <string name="library_metrics_storage_mb">%.0f MB</string>
     <string name="library_search_hint">Titel, konstnär, etikett eller bok-ID</string>
     <string name="light_grey">Ljusgrå</string>
+    <string name="limit_download">Begränsa mobildata</string>
+    <string name="limit_download_limit_caption">Notera: Denna inställning kommer återställas när appen startas om</string>
+    <string name="limit_download_limit_current">Nuvarande gräns : %s / %s</string>
+    <string name="limit_download_limit_none">Ingen gräns satt</string>
+    <string name="limit_download_set_new">Ändra gräns</string>
+    <string name="limit_download_set_new_prompt">Ny gräns (MB)</string>
     <string name="loading_archive">Laddar: %1$d/%2$d</string>
     <string name="loading_image">Laddar bild: %d%%</string>
     <string name="location_storage">%1$s (%2$d%%) fritt</string>
@@ -545,16 +564,18 @@
     <string name="logs_share">Dela logg</string>
     <string name="logs_title">Senaste loggar</string>
     <string name="malformed_url">Fel - Missbildad URL</string>
-    <string name="mass_delete_action">Ta bort i massor</string>
     <string name="mass_delete_confirm">Jag vet vad jag gör</string>
     <string name="mass_external_tip">Notera : Externa böcker kommer tas bort av den här handlingen</string>
     <string name="mass_external_warning_1">Ditt nuvarande val innehåller böcker från sidor som inte är tänkta att strömmas. Sådana böcker kommer ej behandlas.</string>
     <string name="mass_operation">Handling</string>
     <string name="mass_operation_1">Ta bort</string>
     <string name="mass_operation_2">Byt till streaming</string>
+    <string name="mass_operation_3">Ta bort miniatyrbildsomslag</string>
+    <string name="mass_operation_4">Skapa miniatyrbildsomslag</string>
     <string name="mass_operation_scope">Omfattning</string>
     <string name="mass_operation_scope_1">Nuvarande filter på biblioteksskärmen</string>
     <string name="mass_operation_scope_2">Alla böcker förutom nuvarande filter på biblioteksskärmen</string>
+    <string name="mass_process_action">Massprocess</string>
     <string name="mass_stream_action">Massbyt till stream</string>
     <string name="masterdata_no_result">Inga resultat :(</string>
     <string name="memory_database">Databas: %1$s (%2$.1f%% fullt)</string>
@@ -636,6 +657,7 @@
     <string name="no_circle_group_name">[Ingen cirkel]</string>
     <string name="no_error_detected">Inga fel hittade.</string>
     <string name="no_images">Kunde inte ladda boken: Ingen bild hittad</string>
+    <string name="no_series_group_name">[inga serier]</string>
     <string name="none">inget</string>
     <string name="notif_archive_complete">Arkivering lyckades</string>
     <plurals name="notif_archive_complete_details">
@@ -648,6 +670,8 @@
         <item quantity="other">%d böcker kunde inte bli arkiverade</item>
     </plurals>
     <string name="notif_archive_title">Innehållsarkivering</string>
+    <string name="notif_create_thumb_complete">Sättning av miniatyrbildsomslag färdig</string>
+    <string name="notif_create_thumb_failed">Skapande av miniatyrbildsomslag misslyckades</string>
     <string name="notif_delete_complete">Radering klar</string>
     <string name="notif_delete_fail">Radering misslyckades</string>
     <plurals name="notif_delete_fail_details">
@@ -668,6 +692,8 @@
         <item quantity="one">%d föremål framgångsrikt behandlat</item>
         <item quantity="other">%d föremål framgångsrikt behandlade</item>
     </plurals>
+    <string name="notif_remove_thumb_complete">Borttagning av miniatyrbildsomslag färdig</string>
+    <string name="notif_remove_thumb_failed">Borttagning av miniatyrbildsomslag misslyckades</string>
     <string name="notif_split_merge">Splittra / slå ihop</string>
     <string name="notif_stream_complete">Strömning färdig</string>
     <string name="notif_stream_fail">Strömning misslyckades</string>
@@ -719,6 +745,7 @@
     <string name="pause">Paus</string>
     <string name="paused_dl_folder_credentials">Kan inte ladda ner - Otillräckliga uppgifter på nedladdningsmappen. Använd appinställningarna för att välja ut den pånytt</string>
     <string name="paused_dl_folder_not_found">Kan inte ladda ner - kunde inte hitta nedladdningsmappen. Använd appinställningarna för att välja en</string>
+    <string name="paused_dl_mobile_limit_reached">Nådde mobil datagräns på nerladdningar</string>
     <string name="paused_dl_no_available_downloads">Inga tillgängliga nedladdningar kvar</string>
     <string name="paused_dl_stale_online_credentials">Kan inte ladda ner - förruttnade kakor eller inaktuella uppgifter. Använd notifikationen för att genenerera nybakade kakor och ordnade papper</string>
     <string name="paused_no_dl_folder">Kan inte ladda ner - ingen nedladdningsmapp. Använd appinställningarna för att välja en</string>
@@ -830,6 +857,7 @@
     <string name="refresh_step4_init">Importerar kö…</string>
     <string name="refresh_title">Fräscha upp platsen</string>
     <string name="remove_generic">Ta bort</string>
+    <string name="remove_thumb_progress">Tar bort miniatyrbildsomslag…</string>
     <string name="renaming_progress">Byter namn på filer…</string>
     <string name="reorder_progress">Sorterar om sidor…</string>
     <string name="reset">Återställ</string>
@@ -850,6 +878,7 @@
     <string name="revive_missing_webview">Webbvyn är otillgänglig, kan inte återuppta nedladdningar just nu</string>
     <string name="revive_updating_webview">Webbvyn uppdaterar just nu, kan inte återuppta nedladdningar ännu</string>
     <string name="revive_wait">Vänligen stanna kvar på denna skärm medan din nedladdning återupptas</string>
+    <string name="search_and">OCH</string>
     <string name="search_bookid_label">Sök \'%s\' i…</string>
     <plurals name="search_button">
         <item quantity="one">%s Resultat hittat</item>
@@ -859,6 +888,7 @@
     <string name="search_entry_not_found">Det där finns inte här, gå och ladda ner det.</string>
     <string name="search_location">Plats</string>
     <string name="search_location_entries_1">Alla platser</string>
+    <string name="search_or">eller</string>
     <string name="search_prompt">Sök %s</string>
     <string name="search_select_a_filter">Välj ett filter</string>
     <string name="search_type">Typ</string>
@@ -879,6 +909,7 @@
     <string name="slideshow_stop">Bildspel stoppat</string>
     <string name="sort_artist">Konstnär</string>
     <string name="sort_ascending">Stigande</string>
+    <string name="sort_avg_size">Genomsnittlig sidgräns</string>
     <string name="sort_books">Böcker</string>
     <string name="sort_custom">Anpassad</string>
     <string name="sort_descending">Fallande</string>
@@ -940,6 +971,7 @@
     <string name="storage_strategy_fallover">Våg</string>
     <string name="storage_strategy_fallover_desc">GalleryCherry laddar ner till plats 1 tills %d%% av kapaciteten är fylld, sedan laddar den ner till plats 2.</string>
     <string name="storage_strategy_title">Nerladdningsstrategi : %s</string>
+    <string name="storage_stream_warning">Minst en webbplats i din samling stödjer INTE streaming. Ett starkt råd är då att inte byta till streaming.</string>
     <string name="storage_streamed">Strömma</string>
     <string name="storage_streamed_description">Ladda inte ner till lagringsenhet, strömma dem medans du läser</string>
     <string name="stream_canceled">Streaming avbruten - bok otillgänglig online</string>
@@ -985,7 +1017,9 @@
     <string name="title_submenu_library">Mitt bibliotek</string>
     <string name="title_submenu_settings">Avancerat</string>
     <string name="torrent_dl_fail">Nerladdning av torrent misslyckades: %s</string>
+    <string name="transcode_encoder_avif">AVIF</string>
     <string name="transcode_encoder_jpeg">JPEG</string>
+    <string name="transcode_encoder_jpegli">JPEGLI</string>
     <string name="transcode_encoder_jxl_lossless">JXL (förlustfri)</string>
     <string name="transcode_encoder_jxl_lossy">JXL (förlustbenägen)</string>
     <string name="transcode_encoder_png">PNG</string>
@@ -1057,6 +1091,7 @@
     <string name="web_gallery">Tillbaka till senaste gallerisida</string>
     <string name="web_home">Tillbaka till biblioteket</string>
     <string name="web_open_ext_browser">Extern webbläsare</string>
+    <string name="web_range_download_prompt" tools:ignore="TypographyDashes">Omfång av sidor att ladda ner (ex 1-5 / 1;3;8 / 1-2;5-7)</string>
     <string name="web_refresh_stop">Fräscha upp/stoppa</string>
     <string name="web_storage_permission_denied">Lagringstillstånd nekat - får inte använda nerladdaren</string>
     <string name="web_target_page_outside_restricted_domains">Värd %s utanför begränsade domäner</string>

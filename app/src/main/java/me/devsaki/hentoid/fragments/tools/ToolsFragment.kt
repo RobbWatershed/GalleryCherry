@@ -3,6 +3,8 @@ package me.devsaki.hentoid.fragments.tools
 import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
+import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.commit
 import androidx.lifecycle.lifecycleScope
 import androidx.preference.Preference
@@ -11,6 +13,7 @@ import androidx.preference.PreferenceScreen
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
+import com.bytehamster.lib.preferencesearch.SearchPreference
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
@@ -86,6 +89,14 @@ class ToolsFragment : PreferenceFragmentCompat(),
 
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         setPreferencesFromResource(R.xml.tools, rootKey)
+
+        // Search bar
+        (findPreference("searchPreference") as SearchPreference?)?.apply {
+            val config = searchConfiguration
+            config.setActivity(activity as AppCompatActivity)
+            config.index(R.xml.tools)
+            config.setFuzzySearchEnabled(false)
+        }
     }
 
     override fun onPreferenceTreeClick(preference: Preference): Boolean =
@@ -186,15 +197,21 @@ class ToolsFragment : PreferenceFragmentCompat(),
             else -> super.onPreferenceTreeClick(preference)
         }
 
-    override fun onNavigateToScreen(preferenceScreen: PreferenceScreen) {
+    fun navigateToScreen(manager: FragmentManager, screenKey: String): ToolsFragment {
         val preferenceFragment = ToolsFragment().withArguments {
-            putString(ARG_PREFERENCE_ROOT, preferenceScreen.key)
+            putString(ARG_PREFERENCE_ROOT, screenKey)
         }
 
-        parentFragmentManager.commit(true) {
+        manager.commit(true) {
             replace(android.R.id.content, preferenceFragment)
             addToBackStack(null) // This triggers a memory leak in LeakCanary but is _not_ a leak : see https://stackoverflow.com/questions/27913009/memory-leak-in-fragmentmanager
         }
+
+        return preferenceFragment
+    }
+
+    override fun onNavigateToScreen(preferenceScreen: PreferenceScreen) {
+        navigateToScreen(parentFragmentManager, preferenceScreen.key)
     }
 
     private fun onExportSettings() {
@@ -251,6 +268,8 @@ class ToolsFragment : PreferenceFragmentCompat(),
         val op = when (operation) {
             ToolsActivity.MassOperation.DELETE -> BaseDeleteWorker.Operation.DELETE
             ToolsActivity.MassOperation.STREAM -> BaseDeleteWorker.Operation.STREAM
+            ToolsActivity.MassOperation.REMOVE_THUMB -> BaseDeleteWorker.Operation.REMOVE_THUMB
+            ToolsActivity.MassOperation.CREATE_THUMB -> BaseDeleteWorker.Operation.CREATE_THUMB
         }
         builder.setOperation(op)
         builder.setInvertFilterScope(invertScope)

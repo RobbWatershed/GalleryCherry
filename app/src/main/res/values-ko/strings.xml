@@ -212,7 +212,6 @@
     <string name="refresh_options_remove_2">이미지가 다운로드되지 않은 폴더 제거</string>
     <string name="refresh_options_remove_or">또는</string>
     <string name="keep_fav_groups">즐겨찾기 그룹 유지</string>
-    <string name="mass_delete_action">대규모 삭제</string>
     <string name="generic_progress">%1$d / %2$d%3$s</string>
     <string name="import_title">메타데이터 불러오기</string>
     <string name="import_mode_add">불러온 항목 개별 추가</string>

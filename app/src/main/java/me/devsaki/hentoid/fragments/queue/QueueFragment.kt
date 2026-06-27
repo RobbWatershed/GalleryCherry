@@ -73,6 +73,7 @@ import me.devsaki.hentoid.util.getIdForCurrentTheme
 import me.devsaki.hentoid.util.network.DownloadSpeedCalculator.getAvgSpeedKbps
 import me.devsaki.hentoid.util.openReader
 import me.devsaki.hentoid.util.showTooltip
+import me.devsaki.hentoid.util.snack
 import me.devsaki.hentoid.util.toast
 import me.devsaki.hentoid.util.viewContentGalleryPage
 import me.devsaki.hentoid.viewholders.ContentItem
@@ -362,6 +363,10 @@ class QueueFragment : Fragment(R.layout.fragment_queue), ItemTouchCallback,
                 viewModel.invertQueue()
                 true
             }
+            it.menu.findItem(R.id.action_limit_download).setOnMenuItemClickListener {
+                LimitDownloadDialogFragment.invoke(this)
+                true
+            }
             it.menu.findItem(R.id.action_import_downloads).setOnMenuItemClickListener {
                 invoke(this)
                 true
@@ -558,6 +563,9 @@ class QueueFragment : Fragment(R.layout.fragment_queue), ItemTouchCallback,
             DownloadEvent.Motive.NO_AVAILABLE_DOWNLOADS -> motiveMsg =
                 R.string.paused_dl_no_available_downloads
 
+            DownloadEvent.Motive.MOBILE_DOWNLOAD_LIMIT_REACHED -> motiveMsg =
+                R.string.paused_dl_mobile_limit_reached
+
             DownloadEvent.Motive.NONE -> motiveMsg = -1
         }
         if (motiveMsg != -1) message = getString(motiveMsg)
@@ -572,26 +580,26 @@ class QueueFragment : Fragment(R.layout.fragment_queue), ItemTouchCallback,
         }
     }
 
-    private fun formatStep(step: DownloadEvent.Step, log: String?): String {
+    private fun formatStep(step: Step, log: String?): String {
         val standardMsg = resources.getString(formatStep(step))
         return if (log != null) "$standardMsg $log" else standardMsg
     }
 
     @StringRes
-    private fun formatStep(step: DownloadEvent.Step): Int {
+    private fun formatStep(step: Step): Int {
         return when (step) {
-            DownloadEvent.Step.INIT -> R.string.step_init
-            DownloadEvent.Step.PROCESS_IMG -> R.string.step_prepare_img
-            DownloadEvent.Step.FETCH_IMG -> R.string.step_fetch_img
-            DownloadEvent.Step.PREPARE_FOLDER -> R.string.step_prepare_folder
-            DownloadEvent.Step.PREPARE_DOWNLOAD -> R.string.step_prepare_download
-            DownloadEvent.Step.SAVE_QUEUE -> R.string.step_save_queue
-            DownloadEvent.Step.WAIT_PURGE -> R.string.step_wait_purge
-            DownloadEvent.Step.START_DOWNLOAD -> R.string.step_start_download
-            DownloadEvent.Step.COMPLETE_DOWNLOAD -> R.string.step_complete_download
-            DownloadEvent.Step.REMOVE_DUPLICATE -> R.string.step_remove_duplicate
-            DownloadEvent.Step.ENCODE_ANIMATION -> R.string.step_encode_animation
-            DownloadEvent.Step.NONE -> R.string.empty_string
+            Step.INIT -> R.string.step_init
+            Step.PROCESS_IMG -> R.string.step_prepare_img
+            Step.FETCH_IMG -> R.string.step_fetch_img
+            Step.PREPARE_FOLDER -> R.string.step_prepare_folder
+            Step.PREPARE_DOWNLOAD -> R.string.step_prepare_download
+            Step.SAVE_QUEUE -> R.string.step_save_queue
+            Step.WAIT_PURGE -> R.string.step_wait_purge
+            Step.START_DOWNLOAD -> R.string.step_start_download
+            Step.COMPLETE_DOWNLOAD -> R.string.step_complete_download
+            Step.REMOVE_DUPLICATE -> R.string.step_remove_duplicate
+            Step.ENCODE_ANIMATION -> R.string.step_encode_animation
+            Step.NONE -> R.string.empty_string
         }
     }
 
@@ -841,7 +849,7 @@ class QueueFragment : Fragment(R.layout.fragment_queue), ItemTouchCallback,
     }
 
     private fun updateControlBar(
-        preparationStep: DownloadEvent.Step = DownloadEvent.Step.NONE,
+        preparationStep: Step = Step.NONE,
         log: String? = null,
         content: Content? = null
     ) {
@@ -945,10 +953,14 @@ class QueueFragment : Fragment(R.layout.fragment_queue), ItemTouchCallback,
                 if (selections.isEmpty()) updateSelectionToolbarVis(false)
             }
         }
-        if (item.content != null) viewModel.cancel(listOfNotNull(item.content))
+        item.content?.let { viewModel.remove(listOfNotNull(it)) }
     }
 
     private fun onCancelBooks(c: List<Content>) {
+        if (c.size > 1000) {
+            snack(R.string.cancel_limit)
+            return
+        }
         if (c.size > 2) {
             isCancelingAll = true
             ProgressDialogFragment.invoke(
@@ -957,7 +969,7 @@ class QueueFragment : Fragment(R.layout.fragment_queue), ItemTouchCallback,
                 R.plurals.book
             )
         }
-        viewModel.cancel(c)
+        viewModel.remove(c)
     }
 
     private fun onCancelAll() {
@@ -967,7 +979,7 @@ class QueueFragment : Fragment(R.layout.fragment_queue), ItemTouchCallback,
             resources.getString(R.string.cancel_queue_progress),
             R.plurals.book
         )
-        viewModel.cancelAll()
+        viewModel.cancelAllQueued()
     }
 
     @Subscribe(sticky = true, threadMode = ThreadMode.MAIN)

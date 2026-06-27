@@ -7,6 +7,10 @@
     <string name="download_hitomi_avif_title">Descargar en formato AVIF</string>
     <string name="download_retries_active_title">Reintentos activados</string>
     <string name="download_retries_screen_title">Reintentos de descarga automáticos</string>
+    <string name="download_separate_thumb_off">Marcar la página 1 como miniatura</string>
+    <string name="download_separate_thumb_on">Cree un archivo de miniatura independiente.</string>
+    <string name="download_separate_thumb_title">miniaturas</string>
+    <string name="import_external_library_auto_title">Importar automáticamente nuevos archivos</string>
     <string name="library_display_group_figure_title">Figura de grupo</string>
     <string name="mass_operations_summary">Operaciones masivas para la biblioteca</string>
     <string name="mass_operations_title">Operaciones masivas</string>
@@ -77,11 +81,13 @@
     <string name="pref_browser_quick_dl_threshold_summary">Tiempo de pulsación para iniciar la descarga rápida\nActual: %s</string>
     <string name="pref_browser_quick_dl_threshold_title">Umbral de pulsación para descarga rápida</string>
     <string name="pref_browser_quick_dl_title">Descarga rápida</string>
+    <string name="pref_browser_range_download_summary">Botón adicional para configurar qué páginas de la galería descargar</string>
     <string name="pref_browser_resume_last_off">Los sitios se abren en la página de inicio</string>
     <string name="pref_browser_resume_last_on">Los sitios se abren en la última página vista</string>
     <string name="pref_browser_resume_last_title">Reanudar en la última página vista</string>
     <string name="pref_browser_visuals">Visuales</string>
     <string name="pref_cat_advanced">Avanzadas</string>
+    <string name="pref_cat_dl_skip_large">Omitir descargas grandes</string>
     <string name="pref_cat_downloads_folder">Biblioteca de GalleryCherry</string>
     <string name="pref_cat_eh">E-hentai / ExHentai</string>
     <string name="pref_cat_external">Biblioteca externa</string>
@@ -119,6 +125,13 @@
     <string name="pref_dl_retries_number_title">Número de reintentos antes de abortar</string>
     <string name="pref_dl_retries_off">Las descargas fallidas se mantendrán en estado de error</string>
     <string name="pref_dl_retries_on">Las descargas fallidas se reintentarán automáticamente</string>
+    <string name="pref_dl_skip_large_allow_wifi_off">Omitir descargas grandes en todas las redes</string>
+    <string name="pref_dl_skip_large_allow_wifi_on">Permitir descargas grandes solo a través de Wi-Fi</string>
+    <string name="pref_dl_skip_large_off">Omitir descargas grandes está desactivado.</string>
+    <string name="pref_dl_skip_large_on">Omitir descargas grandes habilitada</string>
+    <string name="pref_dl_skip_large_pages_threshold_title">Umbral de páginas para descargas grandes</string>
+    <string name="pref_dl_skip_large_size_threshold_title">Umbral de tamaño para descargas grandes</string>
+    <string name="pref_dl_skip_large_title">Omitir descargas grandes</string>
     <string name="pref_dl_speed_cap_title">Límite de velocidad de descarga</string>
     <string name="pref_dl_threads_quantity_summary">Número de páginas descargadas de forma simultánea\nActual: %s</string>
     <string name="pref_dl_threads_quantity_title">Descargas paralelas</string>
@@ -133,7 +146,7 @@
     <string name="pref_external_library_delete_title">Permitir que se elimine contenido externo</string>
     <string name="pref_external_library_detach_summary">No incluir más la biblioteca externa en GalleryCherry</string>
     <string name="pref_external_library_detach_title">Desconectar biblioteca externa</string>
-    <string name="pref_external_library_ext_name_pattern">Patrón de nombres de files</string>
+    <string name="pref_external_library_ext_name_pattern">Patrón de nombres de archivo</string>
     <string name="pref_external_library_summary_empty">No está configurada ninguna biblioteca externa</string>
     <string name="pref_external_library_title">Biblioteca externa</string>
     <string name="pref_folder_naming_content_summary">Convención de nombrado de carpetas de libros:\n%s</string>
@@ -170,6 +183,7 @@
     <string name="pref_queue_wifi_only_off">Solo se iniciará la cola de descargas si se está conectado a cualquier red</string>
     <string name="pref_queue_wifi_only_on">Solo se iniciará la cola de descargas si se está conectado a una red Wi-Fi</string>
     <string name="pref_queue_wifi_only_title">Solo descargar mediante Wi-Fi</string>
+    <string name="pref_range_download_title">Descarga de rango</string>
     <string name="pref_refresh_library_summary">Actualizar contenidos de la biblioteca manualmente</string>
     <string name="pref_refresh_library_title">Actualizar biblioteca</string>
     <string name="pref_screen_browser">Navegador</string>
@@ -206,9 +220,10 @@
     <string name="pref_viewer_continuous_summary_on">Avanzar de página en la última página carga el siguiente libro</string>
     <string name="pref_viewer_continuous_title">Lectura continua</string>
     <string name="pref_viewer_controls">Controles</string>
+    <string name="pref_viewer_delete_load_direction">Dirección de carga después de eliminar el libro</string>
     <string name="pref_viewer_display_mode">Modo de visualización para la vista horizontal</string>
     <string name="pref_viewer_display_notch">Mostrar alrededor del notch</string>
-    <string name="pref_viewer_display_pagenum">Siempre mostrar número de página</string>
+    <string name="pref_viewer_display_pagenum">Visualización del número de página</string>
     <string name="pref_viewer_gallery_columns">Número de columnas en el modo galería</string>
     <string name="pref_viewer_horizontal_reader">Lector horizontal</string>
     <string name="pref_viewer_invert_volume">Invertir botones de volumen</string>

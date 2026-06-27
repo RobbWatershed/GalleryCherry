@@ -4,6 +4,8 @@ import android.os.Bundle
 import android.view.MenuItem
 import android.view.View
 import androidx.fragment.app.commit
+import com.bytehamster.lib.preferencesearch.SearchPreferenceResult
+import com.bytehamster.lib.preferencesearch.SearchPreferenceResultListener
 import com.google.android.material.snackbar.BaseTransientBottomBar
 import com.google.android.material.snackbar.Snackbar
 import me.devsaki.hentoid.R
@@ -15,16 +17,19 @@ import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
 
-class ToolsActivity : BaseActivity() {
+class ToolsActivity : BaseActivity(), SearchPreferenceResultListener {
     enum class MassOperation {
-        DELETE, STREAM
+        DELETE, STREAM, REMOVE_THUMB, CREATE_THUMB
     }
+
+    private lateinit var fragment: ToolsFragment
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         useLegacyInsets()
+        fragment = ToolsFragment()
         supportFragmentManager.commit {
-            replace(android.R.id.content, ToolsFragment())
+            replace(android.R.id.content, fragment)
         }
     }
 
@@ -66,5 +71,14 @@ class ToolsActivity : BaseActivity() {
                 snackbar.show()
             }
         }
+    }
+
+    override fun onSearchResultClicked(result: SearchPreferenceResult) {
+        if (result.screen != null) {
+            fragment = fragment.navigateToScreen(supportFragmentManager, result.screen)
+            fragment.view?.fitsSystemWindows = true
+        }
+        result.closeSearchPage(this)
+        result.highlight(fragment)
     }
 }

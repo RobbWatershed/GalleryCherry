@@ -50,7 +50,8 @@ class DownloadEvent(
         DOWNLOAD_FOLDER_NOT_FOUND,
         DOWNLOAD_FOLDER_NO_CREDENTIALS,
         STALE_CREDENTIALS,
-        NO_AVAILABLE_DOWNLOADS
+        NO_AVAILABLE_DOWNLOADS,
+        MOBILE_DOWNLOAD_LIMIT_REACHED
     }
 
     enum class Step {

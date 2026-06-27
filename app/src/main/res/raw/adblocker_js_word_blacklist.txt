@@ -1,9 +1,11 @@
+ the ad tag
 "ads"
 "adverts"
 &abvar=0
 'adsdomain'
 'closead'
 'plu_slider_frame'
+_usenativead
 ad-provider
 adMoxyCtrl
 ad_popup_force
@@ -11,6 +13,8 @@ ad_trigger_class
 adblock-proxy-super-secret
 adblocksucks
 adguardbase
+admage-script
+admage_tag_url
 admanager
 adprovider
 adsbyexoclick
@@ -28,11 +32,7 @@ exoloader
 exoslider
 exosrv.com
 exovideoslider
-popunder
 realsrv.com
 trackingurl
 zfgloadedbanner
 zfgloadedpopup
-admage_tag_url
-admage-script
- the ad tag

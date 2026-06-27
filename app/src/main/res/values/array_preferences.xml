@@ -69,6 +69,7 @@
     <!-- Choice for "Blocking behaviour" setting -->
     <string name="pref_dl_blocked_tags_behaviour_entries_1">Don\'t queue</string>
     <string name="pref_dl_blocked_tags_behaviour_entries_2">Queue as download error</string>
+    <string name="pref_dl_blocked_tags_behaviour_entries_3">Queue on 2nd tap</string>
     <!-- Choice for "Browse mode" setting -->
     <string name="pref_viewer_browse_mode_entries_1">Left to Right</string>
     <string name="pref_viewer_browse_mode_entries_2">Right to Left</string>
@@ -106,6 +107,10 @@
     <string name="pref_viewer_display_mode_entries_1">Fit to screen (default)</string>
     <string name="pref_viewer_display_mode_entries_2">Fill screen (proportionate)</string>
     <string name="pref_viewer_display_mode_entries_3">Fill screen (stretch)</string>
+    <!-- Choice for "Page number display" setting -->
+    <string name="pref_viewer_display_pagenum_entries_1">Disabled</string>
+    <string name="pref_viewer_display_pagenum_entries_2">Bottom center</string>
+    <string name="pref_viewer_display_pagenum_entries_3">Top center</string>
     <!-- Choice for "Auto rotate" setting -->
     <string name="pref_viewer_auto_rotate_entries_1">Off</string>
     <string name="pref_viewer_auto_rotate_entries_2">Auto-rotate left</string>

@@ -37,6 +37,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.webkit.ServiceWorkerClientCompat
 import androidx.webkit.ServiceWorkerControllerCompat
+import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.skydoves.balloon.ArrowOrientation
@@ -230,6 +231,9 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
     private val bookmarks = ArrayList<SiteBookmark>()
 
     // === OTHER VARIABLES
+    // Indicates the last timestamp of a download button tap
+    private var lastDownloadButtonTap = 0L
+
     // Indicates which mode the download button is in
     protected var actionButtonMode: ActionMode? = null
 
@@ -411,7 +415,6 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         super.onDestroy()
     }
 
-
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
 
@@ -423,6 +426,13 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
             if (WebkitPackageHelper.getWebViewAvailable()) bundle.url = url
             outState.putAll(bundle.bundle)
         }
+
+        // Save WebView state incl. back/forward history
+        if (Settings.isBrowserResumeLast && WebViewFeature.isFeatureSupported(WebViewFeature.SAVE_STATE)) {
+            val bundle = Bundle()
+            WebViewCompat.saveState(webView, bundle, 128 * 1024, true)
+            webViewStateCache[getStartSite()] = bundle
+        }
     }
 
     override fun onRestoreInstanceState(savedInstanceState: Bundle) {
@@ -432,6 +442,30 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         // doesn't work that well (bugged when using back/forward commands). A valid solution still has to be found
         val url = BaseBrowserActivityBundle(savedInstanceState).url
         if (url.isNotEmpty()) webView.loadUrl(url)
+    }
+
+    override fun onStart() {
+        super.onStart()
+        // Restore WebView state incl. back/forward history (even if creating a new WebView from scratch)
+        if (Settings.isBrowserResumeLast && WebViewFeature.isFeatureSupported(WebViewFeature.SAVE_STATE)) {
+            webViewStateCache[getStartSite()]?.let {
+                Timber.d("Restoring WebView state")
+                webView.restoreState(it)
+                refreshNavigationMenu(webClient.isResultsPage(webView.url ?: ""))
+            }
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        Timber.d("onStop")
+
+        // Save WebView state incl. back/forward history
+        if (Settings.isBrowserResumeLast && WebViewFeature.isFeatureSupported(WebViewFeature.SAVE_STATE)) {
+            val bundle = Bundle()
+            WebViewCompat.saveState(webView, bundle, 128 * 1024, true)
+            webViewStateCache[getStartSite()] = bundle
+        }
     }
 
     override fun onResume() {
@@ -742,20 +776,25 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         val result = webView.hitTestResult
         // Plain link
         val url: String? =
-            if (result.type == HitTestResult.SRC_ANCHOR_TYPE && result.extra != null) {
-                result.extra
-            } else if (result.type == HitTestResult.SRC_IMAGE_ANCHOR_TYPE) {
-                val handler = Handler(mainLooper)
-                val message = handler.obtainMessage()
-                webView.requestFocusNodeHref(message)
-                message.data.getString("url")
-            } else {
-                null
+            when (result.type) {
+                HitTestResult.SRC_ANCHOR_TYPE if result.extra != null -> {
+                    result.extra
+                }
+
+                HitTestResult.SRC_IMAGE_ANCHOR_TYPE -> {
+                    val handler = Handler(mainLooper)
+                    val message = handler.obtainMessage()
+                    webView.requestFocusNodeHref(message)
+                    message.data.getString("url")
+                }
+
+                else -> {
+                    null
+                }
             }
         if (!url.isNullOrEmpty() && webClient.isGalleryPage(url)) {
             binding?.apply {
-                setMargins(
-                    quickDlFeedback,
+                quickDlFeedback.setMargins(
                     x - quickDlFeedback.width / 2,
                     y - quickDlFeedback.height / 2 + topBar.bottom,
                     0,
@@ -913,13 +952,14 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         val intent = Intent(this, LibraryActivity::class.java)
         // If FLAG_ACTIVITY_CLEAR_TOP is not set,
         // it can interfere with Double-Back (press back twice) to exit
-        intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
+        intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(intent)
         if (Build.VERSION.SDK_INT >= 34) {
             overrideActivityTransition(OVERRIDE_TRANSITION_OPEN, 0, 0)
         } else {
             overridePendingTransition(0, 0)
         }
+        Timber.d("BaseBrowserActivity finishing")
         finish()
     }
 
@@ -1222,28 +1262,44 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         // Check if the tag blocker applies here
         val blockedTagsLocal = getBlockedTags(theContent.id, dao)
         if (blockedTagsLocal.isNotEmpty()) {
-            if (Settings.tagBlockingBehaviour == Settings.Value.DL_TAG_BLOCKING_BEHAVIOUR_DONT_QUEUE) { // Stop right here
-                toast(R.string.blocked_tag, blockedTagsLocal[0])
-            } else { // Insert directly as an error
-                val errors: MutableList<ErrorRecord> = ArrayList()
-                errors.add(
-                    ErrorRecord(
-                        type = ErrorType.BLOCKED,
-                        url = theContent.url,
-                        contentPart = "tags",
-                        description = "blocked tags : " + TextUtils.join(", ", blockedTagsLocal),
-                        timestamp = Instant.now()
+            var canQueue = false
+            when (Settings.tagBlockingBehaviour) {
+                Settings.Value.DL_TAG_BLOCKING_BEHAVIOUR_DONT_QUEUE ->
+                    toast(R.string.blocked_tag, blockedTagsLocal[0])
+
+                Settings.Value.DL_TAG_BLOCKING_BEHAVIOUR_QUEUE_2ND_TAP -> {
+                    val now = Instant.now().toEpochMilli()
+                    // Consts 40 and 300 come from android.view.ViewConfiguration
+                    if (now - lastDownloadButtonTap in 41..<300) canQueue = true
+                    else toast(R.string.blocked_tag_double, blockedTagsLocal[0])
+                    lastDownloadButtonTap = now
+                }
+
+                else -> {
+                    // Insert directly as an error
+                    val errors: MutableList<ErrorRecord> = ArrayList()
+                    errors.add(
+                        ErrorRecord(
+                            type = ErrorType.BLOCKED,
+                            url = theContent.url,
+                            contentPart = "tags",
+                            description = "blocked tags : " + TextUtils.join(
+                                ", ",
+                                blockedTagsLocal
+                            ),
+                            timestamp = Instant.now()
+                        )
                     )
-                )
-                theContent.setErrorLog(errors)
-                theContent.downloadMode = Settings.getBrowserDlAction()
-                theContent.status = StatusContent.ERROR
-                if (isReplaceDuplicate) theContent.setContentIdToReplace(duplicateId)
-                dao.insertContent(theContent)
-                toast(R.string.blocked_tag_queued, blockedTagsLocal[0])
-                lifecycleScope.launch { setActionMode(ActionMode.VIEW_QUEUE) }
+                    theContent.setErrorLog(errors)
+                    theContent.downloadMode = Settings.getBrowserDlAction()
+                    theContent.status = StatusContent.ERROR
+                    if (isReplaceDuplicate) theContent.setContentIdToReplace(duplicateId)
+                    dao.insertContent(theContent)
+                    toast(R.string.blocked_tag_queued, blockedTagsLocal[0])
+                    lifecycleScope.launch { setActionMode(ActionMode.VIEW_QUEUE) }
+                }
             }
-            return
+            if (!canQueue) return
         }
         val replacementTitleFinal = replacementTitle
         // No reason to block or ignore -> actually add to the queue
@@ -1320,18 +1376,16 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
     ) {
         Timber.i("Adding to queue  ${content.url} ${content.galleryUrl}")
         binding?.apply {
-            val coords = getCenter(quickDlFeedback)
+            val coords = quickDlFeedback.getCenter()
             if (coords != null && View.VISIBLE == quickDlFeedback.visibility) {
-                setMargins(
-                    animatedCheck,
+                animatedCheck.setMargins(
                     coords.x - animatedCheck.width / 2,
                     coords.y - animatedCheck.height / 2,
                     0,
                     0
                 )
             } else {
-                setMargins(
-                    animatedCheck,
+                animatedCheck.setMargins(
                     webView.width / 2 - animatedCheck.width / 2,
                     webView.height / 2 - animatedCheck.height / 2, 0, 0
                 )
@@ -1339,7 +1393,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
             animatedCheck.visibility = View.VISIBLE
             (animatedCheck.drawable as Animatable).start()
             Handler(mainLooper).postDelayed({
-                if (binding != null) animatedCheck.visibility = View.GONE
+                binding?.animatedCheck?.visibility = View.GONE
             }, 1000)
         }
         content.downloadMode = downloadMode
@@ -1428,7 +1482,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
                         ).use { onlineCover ->
                             val coverBody = onlineCover.body
                             val bodyStream = coverBody.byteStream()
-                            val b = getCoverBitmapFromStream(bodyStream)
+                            val b = getCoverBitmapFromStream(baseContext, bodyStream)
                             pHash = calcPhash(getHashEngine(), b)
                         }
                     } catch (e: IOException) {
@@ -1510,7 +1564,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         status: ContentStatus,
         quickDownload: Boolean
     ) {
-        binding?.quickDlFeedback?.visibility = View.INVISIBLE
+        binding?.quickDlFeedback?.visibility = View.GONE
         when (status) {
             ContentStatus.UNDOWNLOADABLE -> onResultFailed()
             ContentStatus.UNKNOWN -> {
@@ -1582,8 +1636,8 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
 
         var maxStoredImageOrder = 0
         val opt = storedContent.imageFiles
-            .filter { i: ImageFile -> isInLibrary(i.status) }
-            .maxOfOrNull { img -> img.order }
+            .filter { isInLibrary(it.status) }
+            .maxOfOrNull { it.order }
 
         if (opt != null) maxStoredImageOrder = opt
         val maxStoredImageOrderFinal = maxStoredImageOrder
@@ -1934,9 +1988,9 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
             webClient.setProxyEnabled(Settings.proxy.isNotEmpty())
             reload = true
         } else if (Settings.Key.BROWSER_QUICK_DL == key) {
-            if (Settings.isBrowserQuickDl) webView.setOnLongTapListener { x: Int, y: Int ->
-                onLongTap(x, y)
-            } else webView.setOnLongTapListener(null)
+            if (Settings.isBrowserQuickDl)
+                webView.setOnLongTapListener { x, y -> onLongTap(x, y) }
+            else webView.setOnLongTapListener(null)
         } else if (Settings.Key.BROWSER_QUICK_DL_THRESHOLD == key) {
             webView.setLongClickThreshold(Settings.browserQuickDlThreshold)
         } else if (key.startsWith(Settings.Key.WEB_ADBLOCKER)) {
@@ -1988,5 +2042,10 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
             Timber.d("XHR Begin %s : %s", url, body)
             handler.invoke(url, body ?: "")
         }
+    }
+
+    companion object {
+        // Remember back/forward states for the duration of a session
+        val webViewStateCache = HashMap<Site, Bundle>()
     }
 }

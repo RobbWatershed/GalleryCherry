@@ -91,19 +91,12 @@ class ObjectBoxDAO : CollectionDAO {
         return ObjectBoxDB.selectStoredContentQ(includeQueued, -1, false).build().count()
     }
 
-    override fun selectRecentBookIds(searchBundle: ContentSearchBundle): List<Long> {
-        return contentIdSearch(false, searchBundle, emptySet())
-    }
-
-    override fun searchBookIds(
-        searchBundle: ContentSearchBundle,
-        metadata: Set<Attribute>
-    ): List<Long> {
-        return contentIdSearch(false, searchBundle, metadata)
-    }
-
-    override fun searchBookIdsUniversal(searchBundle: ContentSearchBundle): List<Long> {
-        return contentIdSearch(true, searchBundle, emptySet())
+    override fun searchStoredContentIds(searchBundle: ContentSearchBundle): List<Long> {
+        return ObjectBoxDB.selectContentSearchId(
+            searchBundle,
+            getDynamicGroupContent(searchBundle.groupId),
+            ObjectBoxDB.libraryStatus
+        ).toList()
     }
 
     override fun insertAttribute(attr: Attribute): Long {
@@ -124,7 +117,8 @@ class ObjectBoxDAO : CollectionDAO {
         includeFreeAttrs: Boolean,
         page: Int,
         booksPerPage: Int,
-        orderStyle: Int
+        orderStyle: Int,
+        combinationMode: Int
     ): AttributeQueryResult {
         return pagedAttributeSearch(
             types,
@@ -137,7 +131,8 @@ class ObjectBoxDAO : CollectionDAO {
             includeFreeAttrs,
             orderStyle,
             page,
-            booksPerPage
+            booksPerPage,
+            combinationMode
         )
     }
 
@@ -145,14 +140,16 @@ class ObjectBoxDAO : CollectionDAO {
         groupId: Long,
         filter: Set<Attribute>?,
         location: Location,
-        contentType: Type
+        contentType: Type,
+        combinationMode: Int
     ): SparseIntArray {
         return countAttributes(
             groupId,
             getDynamicGroupContent(groupId),
             filter,
             location,
-            contentType
+            contentType,
+            combinationMode
         )
     }
 
@@ -180,7 +177,7 @@ class ObjectBoxDAO : CollectionDAO {
         bundle.attributes = buildSearchUri(sourceAttr, null, "", 0, 0).toString()
         bundle.sortField = Settings.Value.ORDER_FIELD_DOWNLOAD_PROCESSING_DATE
         return ObjectBoxLiveData(
-            ObjectBoxDB.selectContentUniversalQ(
+            ObjectBoxDB.selectContentFullTextQ(
                 bundle,
                 LongArray(0),
                 intArrayOf(StatusContent.ERROR.code)
@@ -206,7 +203,8 @@ class ObjectBoxDAO : CollectionDAO {
         groupId: Long,
         metadata: Set<Attribute>?,
         location: Location,
-        contentType: Type
+        contentType: Type,
+        combinationMode: Int
     ): LiveData<Int> {
         // This is not optimal because it fetches all the content and returns its size only
         // That's because ObjectBox v2.4.0 does not allow watching Query.count or Query.findLazy using LiveData, but only Query.find
@@ -216,8 +214,9 @@ class ObjectBoxDAO : CollectionDAO {
         bundle.location = location.value
         bundle.contentType = contentType.value
         bundle.sortField = Settings.Value.ORDER_FIELD_NONE
+        bundle.combinationMode = combinationMode
         val livedata = ObjectBoxLiveData(
-            ObjectBoxDB.selectContentSearchContentQ(
+            ObjectBoxDB.selectContentQ(
                 bundle,
                 getDynamicGroupContent(groupId),
                 metadata,
@@ -229,19 +228,8 @@ class ObjectBoxDAO : CollectionDAO {
         return result
     }
 
-    override fun selectRecentBooks(searchBundle: ContentSearchBundle): LiveData<PagedList<Content>> {
-        return getPagedContent(false, searchBundle, emptySet())
-    }
-
-    override fun searchBooks(
-        searchBundle: ContentSearchBundle,
-        metadata: Set<Attribute>
-    ): LiveData<PagedList<Content>> {
-        return getPagedContent(false, searchBundle, metadata)
-    }
-
-    override fun searchBooksUniversal(searchBundle: ContentSearchBundle): LiveData<PagedList<Content>> {
-        return getPagedContent(true, searchBundle, emptySet())
+    override fun searchStoredContent(searchBundle: ContentSearchBundle): LiveData<PagedList<Content>> {
+        return searchContentPaged(searchBundle)
     }
 
     override fun selectNoContent(): LiveData<PagedList<Content>> {
@@ -252,15 +240,13 @@ class ObjectBoxDAO : CollectionDAO {
     }
 
 
-    private fun getPagedContent(
-        isUniversal: Boolean,
-        searchBundle: ContentSearchBundle,
-        metadata: Set<Attribute>,
-    ): LiveData<PagedList<Content>> {
+    private fun searchContentPaged(searchBundle: ContentSearchBundle): LiveData<PagedList<Content>> {
         val isCustomOrder = searchBundle.sortField == Settings.Value.ORDER_FIELD_CUSTOM
+        val isDynamicCriteria =
+            searchBundle.sortField == Settings.Value.ORDER_FIELD_AVG_SIZE // To be extended
         val contentRetrieval: Pair<Long, DataSource.Factory<Int, Content>> =
-            if (isCustomOrder) getPagedContentByList(isUniversal, searchBundle, metadata)
-            else getPagedContentByQuery(isUniversal, searchBundle, metadata)
+            if (isCustomOrder || isDynamicCriteria) getPagedContentByList(searchBundle)
+            else getPagedContentByQuery(searchBundle)
         val nbPages = Settings.contentPageQuantity
         var initialLoad = nbPages * 3
         if (searchBundle.loadAll) {
@@ -273,29 +259,20 @@ class ObjectBoxDAO : CollectionDAO {
         return LivePagedListBuilder(contentRetrieval.second, cfg).build()
     }
 
-    private fun getPagedContentByQuery(
-        isUniversal: Boolean,
-        searchBundle: ContentSearchBundle,
-        metadata: Set<Attribute>
-    ): Pair<Long, DataSource.Factory<Int, Content>> {
+    private fun getPagedContentByQuery(searchBundle: ContentSearchBundle): Pair<Long, DataSource.Factory<Int, Content>> {
         val isRandom = searchBundle.sortField == Settings.Value.ORDER_FIELD_RANDOM
         val isExclusionSearch = searchBundle.excludedAttributeTypes?.isNotEmpty() ?: false
-        val query = if (isUniversal) {
-            ObjectBoxDB.selectContentUniversalQ(
-                searchBundle,
-                getDynamicGroupContent(searchBundle.groupId)
-            )
-        } else if (isExclusionSearch) {
+        val query = if (isExclusionSearch) {
             val excludedAttrs = searchBundle.excludedAttributeTypes!!
-            ObjectBoxDB.selectContentIdsWithoutAttributesQ(
+            ObjectBoxDB.selectContentWithoutAttributeTypesQ(
+                searchBundle,
+                getDynamicGroupContent(searchBundle.groupId),
                 excludedAttrs.map { AttributeType.searchByCode(it) }.filterNotNull()
             )
         } else {
-            ObjectBoxDB.selectContentSearchContentQ(
+            ObjectBoxDB.selectContentFullTextQ(
                 searchBundle,
-                getDynamicGroupContent(searchBundle.groupId),
-                metadata,
-                ObjectBoxDB.libraryStatus
+                getDynamicGroupContent(searchBundle.groupId)
             )
         }
         return if (isRandom) {
@@ -304,32 +281,35 @@ class ObjectBoxDAO : CollectionDAO {
         } else Pair(query.count(), ObjectBoxDataSource.Factory(query))
     }
 
-    private fun getPagedContentByList(
-        isUniversal: Boolean,
-        searchBundle: ContentSearchBundle,
-        metadata: Set<Attribute>
-    ): Pair<Long, DataSource.Factory<Int, Content>> {
+    private fun getPagedContentByList(searchBundle: ContentSearchBundle): Pair<Long, DataSource.Factory<Int, Content>> {
         val isExclusionSearch = searchBundle.excludedAttributeTypes?.isNotEmpty() ?: false
-        val ids = if (isUniversal) {
-            ObjectBoxDB.selectContentUniversalByGroupItem(
-                searchBundle,
-                getDynamicGroupContent(searchBundle.groupId)
-            )
-        } else if (isExclusionSearch) {
+        val contentQ = if (isExclusionSearch) {
             val excludedAttrs = searchBundle.excludedAttributeTypes!!
-            ObjectBoxDB.selectContentIdsWithoutAttributes(
+            ObjectBoxDB.selectContentWithoutAttributeTypesQ(
+                searchBundle,
+                getDynamicGroupContent(searchBundle.groupId),
                 excludedAttrs.map { AttributeType.searchByCode(it) }.filterNotNull()
             )
         } else {
-            ObjectBoxDB.selectContentSearchContentByGroupItem(
+            ObjectBoxDB.selectContentFullTextQ(
                 searchBundle,
-                getDynamicGroupContent(searchBundle.groupId),
-                metadata
+                getDynamicGroupContent(searchBundle.groupId)
             )
         }
+
+        val ids = if (searchBundle.sortField == Settings.Value.ORDER_FIELD_AVG_SIZE) {
+            val weighedResults = ArrayList<Pair<Float, Long>>()
+            contentQ.forEach { weighedResults.add(Pair(it.size / (1f * it.qtyPages), it.id)) }
+            if (searchBundle.sortDesc)
+                weighedResults.sortByDescending { it.first }
+            else
+                weighedResults.sortBy { it.first }
+            weighedResults.map { it.second }.toLongArray()
+        } else contentQ.safeFindIds()
+
         return Pair(
             ids.size.toLong(), PredeterminedDataSourceFactory(
-                { id -> ObjectBoxDB.selectContentById(id) }, ids
+                { ObjectBoxDB.selectContentById(it) }, ids
             )
         )
     }
@@ -579,15 +559,29 @@ class ObjectBoxDAO : CollectionDAO {
         countAll: Boolean
     ): LiveData<List<Group>> {
         val livedata: LiveData<List<Group>> =
-            if (grouping == Grouping.ARTIST.id) selectArtistGroupsLive(
-                query,
-                orderDesc,
-                artistGroupVisibility,
-                groupFavouritesOnly,
-                groupNonFavouritesOnly,
-                filterRating,
-                countAll
-            ) else ObjectBoxLiveData(
+            if (grouping == Grouping.ARTIST.id)
+            // Dynamic artist/circle groups
+                selectArtistGroupsLive(
+                    query,
+                    orderDesc,
+                    artistGroupVisibility,
+                    groupFavouritesOnly,
+                    groupNonFavouritesOnly,
+                    filterRating,
+                    countAll
+                )
+            else if (grouping == Grouping.SERIES.id)
+            // Dynamic series groups
+                selectSeriesGroupsLive(
+                    query,
+                    orderDesc,
+                    groupFavouritesOnly,
+                    groupNonFavouritesOnly,
+                    filterRating,
+                    countAll
+                )
+            else ObjectBoxLiveData(
+                // Database-persisted (static) groups
                 ObjectBoxDB.selectGroupsQ(
                     grouping,
                     query, orderField,
@@ -746,6 +740,111 @@ class ObjectBoxDAO : CollectionDAO {
         return contents.maxOfOrNull { it.downloadDate } ?: 0
     }
 
+    // TODO factorize with selectArtistGroupsLive
+    private fun selectSeriesGroupsLive(
+        query: String?,
+        orderDesc: Boolean,
+        groupFavouritesOnly: Boolean,
+        groupNonFavouritesOnly: Boolean,
+        filterRating: Int,
+        countAll: Boolean
+    ): LiveData<List<Group>> {
+        // Select as many groups as there are non-empty artist/circle master data
+        val attrsLive: LiveData<List<Attribute>> = ObjectBoxLiveData(
+            ObjectBoxDB.selectSeriesQ(query, orderDesc)
+        )
+
+        if (countAll) {
+            val countLive = MediatorLiveData<List<Group>>()
+            countLive.addSource(attrsLive) { attrs ->
+                // We're just counting, we don't need to instanciate multiple groups
+                // NB : +1 is for the "no series" group
+                val bogusGroup = Group()
+                val groups: MutableList<Group> = ArrayList(attrs.size + 1)
+                repeat(attrs.size + 1) { groups.add(bogusGroup) }
+                countLive.value = groups
+            }
+            return countLive
+        }
+
+        val livedata2 = MediatorLiveData<List<Group>>()
+        livedata2.addSource(attrsLive) { attrs ->
+            val groups = attrs
+                // Don't display empty groups
+                .filterNot { it.contents.isEmpty() }
+                .mapIndexed { idx, attr ->
+                    val group = Group(Grouping.DYNAMIC, attr.name, idx + 1)
+                    group.searchUri = buildSearchUri(setOf(attr)).toString()
+                    // WARNING : This is the place where things get slow
+                    val items = attr.contents
+                        .filter { isInLibrary(it.status) }
+                        .mapIndexed { idx2, c ->
+                            if (0 == idx2) group.coverContent.target = c
+                            GroupItem(c.id, group, idx2)
+                        }
+                    group.setItems(items)
+                    group
+                }
+            livedata2.value = groups
+        }
+
+        // Forge the "no series" group
+        val noSeriesLive: MutableLiveData<List<Group>> = MutableLiveData<List<Group>>()
+        val exludedGrpRes = R.string.no_series_group_name
+        val exludedGrpLbl = HentoidApp.getInstance().resources.getString(exludedGrpRes)
+        val noSeriesGroup = Group(Grouping.DYNAMIC, exludedGrpLbl, 0)
+        noSeriesGroup.subtype = 2
+        val excludedTypes: Set<AttributeType> = setOf(AttributeType.SERIE)
+        noSeriesGroup.searchUri = buildSearchUri(null, excludedTypes).toString()
+        // Populate with Content
+        val content = ObjectBoxDB.selectContentWithoutAttributeTypesQ(
+            ContentSearchBundle(),
+            LongArray(0),
+            excludedTypes
+        ).safeFind()
+        val items = content.mapIndexed { idx2, c ->
+            if (0 == idx2) noSeriesGroup.coverContent.target = c
+            GroupItem(c.id, noSeriesGroup, idx2)
+        }
+        noSeriesGroup.setItems(items)
+        noSeriesLive.postValue(listOf(noSeriesGroup))
+
+        // Flagged groups
+        val flaggedLive: LiveData<List<Group>> = ObjectBoxLiveData(
+            ObjectBoxDB.selectGroupsByGroupingQ(Grouping.SERIES.id, false)
+        )
+
+        // Merge actual groups with the "no series" forged group and enrich with flagged groups
+        val combined =
+            MergerLiveData.Three(
+                noSeriesLive,
+                livedata2,
+                flaggedLive,
+                false
+            ) { noSeriesGrp, dynamicGrps, flaggedGrps ->
+                val result = ArrayList<Group>()
+                result.addAll(noSeriesGrp)
+                val flaggedMap =
+                    flaggedGrps.groupBy { it.reducedStr }.mapValues { it.value.first() }
+                // TODO it's pointless to create groupItems and to discard them on the 2nd pass -> should filter on the go instead
+                val enrichedGrps = dynamicGrps.map { enrichGroupWithFlags(it, flaggedMap) }
+                if (groupFavouritesOnly || groupNonFavouritesOnly || filterRating > -1) {
+                    result.addAll(enrichedGrps.filter {
+                        filterGroup(
+                            it,
+                            groupFavouritesOnly,
+                            groupNonFavouritesOnly,
+                            filterRating
+                        )
+                    })
+                } else {
+                    result.addAll(enrichedGrps)
+                }
+                result.toList()
+            }
+        return combined
+    }
+
     private fun selectArtistGroupsLive(
         query: String?,
         orderDesc: Boolean,
@@ -814,7 +913,11 @@ class ObjectBoxDAO : CollectionDAO {
         }
         noArtistGroup.searchUri = buildSearchUri(null, excludedTypes).toString()
         // Populate with Content
-        val content = ObjectBoxDB.selectContentIdsWithoutAttributesQ(excludedTypes).safeFind()
+        val content = ObjectBoxDB.selectContentWithoutAttributeTypesQ(
+            ContentSearchBundle(),
+            LongArray(0),
+            excludedTypes
+        ).safeFind()
         val items = content.mapIndexed { idx2, c ->
             if (0 == idx2) noArtistGroup.coverContent.target = c
             GroupItem(c.id, noArtistGroup, idx2)
@@ -925,10 +1028,6 @@ class ObjectBoxDAO : CollectionDAO {
             // Actually delete the Groups
             flaggedGroups.remove()
         }
-    }
-
-    override fun deleteEmptyArtistGroups() {
-        ObjectBoxDB.deleteEmptyArtistGroups()
     }
 
     override fun insertGroupItem(item: GroupItem): Long {
@@ -1212,27 +1311,6 @@ class ObjectBoxDAO : CollectionDAO {
         return result.toLongArray()
     }
 
-    private fun contentIdSearch(
-        isUniversal: Boolean,
-        searchBundle: ContentSearchBundle,
-        metadata: Set<Attribute>
-    ): List<Long> {
-        return if (isUniversal) {
-            ObjectBoxDB.selectContentUniversalId(
-                searchBundle,
-                getDynamicGroupContent(searchBundle.groupId),
-                ObjectBoxDB.libraryStatus
-            ).toList()
-        } else {
-            ObjectBoxDB.selectContentSearchId(
-                searchBundle,
-                getDynamicGroupContent(searchBundle.groupId),
-                metadata,
-                ObjectBoxDB.libraryStatus
-            ).toList()
-        }
-    }
-
     private fun pagedAttributeSearch(
         attrTypes: List<AttributeType>,
         filter: String?,
@@ -1244,7 +1322,8 @@ class ObjectBoxDAO : CollectionDAO {
         includeFreeAttrs: Boolean,
         sortOrder: Int,
         pageNum: Int,
-        itemPerPage: Int
+        itemPerPage: Int,
+        combinationMode: Int
     ): AttributeQueryResult {
         val result: MutableList<Attribute> = ArrayList()
         var totalSelectedAttributes: Long = 0
@@ -1257,7 +1336,8 @@ class ObjectBoxDAO : CollectionDAO {
                         attrs,
                         location,
                         contentType,
-                        includeFreeAttrs
+                        includeFreeAttrs,
+                        combinationMode
                     )
                 )
                 totalSelectedAttributes = result.size.toLong()
@@ -1277,7 +1357,8 @@ class ObjectBoxDAO : CollectionDAO {
                             sortOrder,
                             pageNum,
                             itemPerPage,
-                            Settings.searchAttributesCount
+                            Settings.searchAttributesCount,
+                            combinationMode
                         )
                     )
                     totalSelectedAttributes += ObjectBoxDB.countAvailableAttributes(
@@ -1288,7 +1369,8 @@ class ObjectBoxDAO : CollectionDAO {
                         location,
                         contentType,
                         includeFreeAttrs,
-                        filter
+                        filter,
+                        combinationMode
                     )
                 }
             }
@@ -1301,7 +1383,8 @@ class ObjectBoxDAO : CollectionDAO {
         dynamicGroupContentIds: LongArray,
         filter: Set<Attribute>?,
         location: Location,
-        contentType: Type
+        contentType: Type,
+        combinationMode: Int
     ): SparseIntArray {
         val result: SparseIntArray
         if (filter.isNullOrEmpty() && Location.ANY == location && Type.ANY == contentType && -1L == groupId) {
@@ -1313,7 +1396,8 @@ class ObjectBoxDAO : CollectionDAO {
                 dynamicGroupContentIds,
                 filter,
                 location,
-                contentType
+                contentType,
+                combinationMode
             )
             result.put(
                 AttributeType.SOURCE.code,
@@ -1323,7 +1407,8 @@ class ObjectBoxDAO : CollectionDAO {
                     filter,
                     location,
                     contentType,
-                    false
+                    false,
+                    combinationMode
                 ).size
             )
         }

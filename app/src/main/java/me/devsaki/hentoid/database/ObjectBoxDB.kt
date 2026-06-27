@@ -6,6 +6,7 @@ import io.objectbox.Property
 import io.objectbox.android.Admin
 import io.objectbox.query.Query
 import io.objectbox.query.QueryBuilder
+import io.objectbox.query.QueryBuilder.StringOrder
 import io.objectbox.query.QueryCondition
 import me.devsaki.hentoid.BuildConfig
 import me.devsaki.hentoid.activities.bundles.SearchActivityBundle.Companion.buildSearchUri
@@ -474,7 +475,7 @@ object ObjectBoxDB {
                 bundle.attributes = buildSearchUri(sourceAttr, null, "", 0, 0).toString()
             }
             bundle.sortField = Settings.Value.ORDER_FIELD_NONE
-            val contentIds = selectContentHybridSearchId(
+            val contentIds = selectContentSearchId(
                 bundle,
                 LongArray(0),
                 getQueueTabStatuses()
@@ -533,7 +534,7 @@ object ObjectBoxDB {
     fun selectVisibleContentQ(): Query<Content> {
         val bundle = ContentSearchBundle()
         bundle.sortField = Settings.Value.ORDER_FIELD_NONE
-        return selectContentSearchContentQ(
+        return selectContentQ(
             bundle,
             LongArray(0),
             emptySet(),
@@ -712,11 +713,11 @@ object ObjectBoxDB {
             ).build().safeFind()
     }
 
-    private fun getIdsFromAttributes(attrs: Set<Attribute>): LongArray {
+    private fun getIdsFromAttributes(attrs: Set<Attribute>, combinationMode: Int): LongArray {
         if (attrs.isEmpty()) return LongArray(0)
         val firstAttr = attrs.firstOrNull()
         return if (firstAttr != null && firstAttr.isExcluded) {
-            val filteredBooks = selectFilteredContent(attrs)
+            val filteredBooks = selectFilteredContent(attrs, combinationMode)
 
             // Find all content positively matching the given attributes
             // TODO... but the attrs are already negative ^^"
@@ -760,6 +761,10 @@ object ObjectBoxDB {
              */
             return
         }
+        // Average size is a calculated value, not a stored value
+        // => Implemented post-query build
+        if (orderField == Settings.Value.ORDER_FIELD_AVG_SIZE) return
+
         val field = getPropertyFromField(orderField) ?: return
         if (orderDesc) query.orderDesc(field) else query.order(field)
 
@@ -790,157 +795,122 @@ object ObjectBoxDB {
         return store.boxFor(Content::class.java).query().equal(Content_.id, -1).build()
     }
 
-    fun selectContentSearchContentQ(
+    fun selectContentQ(
         searchBundle: ContentSearchBundle,
         dynamicGroupContentIds: LongArray,
         metadata: Set<Attribute>?,
-        statuses: IntArray
+        statuses: IntArray = libraryStatus,
+        additionalIds: LongArray = LongArray(0),
+        exclusionIds: LongArray = LongArray(0)
     ): Query<Content> {
-        if (Settings.Value.ORDER_FIELD_CUSTOM == searchBundle.sortField) return store.boxFor(
-            Content::class.java
-        ).query().build()
+        if (Settings.Value.ORDER_FIELD_CUSTOM == searchBundle.sortField)
+            return store.boxFor(Content::class.java).query().build()
+
         val metadataMap = AttributeMap()
         metadata?.let { metadataMap.addAll(it) }
-        val hasTitleFilter = searchBundle.query.isNotEmpty()
-        val sources = metadataMap[AttributeType.SOURCE]
-        val hasSiteFilter =
-            metadataMap.containsKey(AttributeType.SOURCE) && !sources.isNullOrEmpty()
+        val hasFullTextQuery = searchBundle.query.isNotEmpty()
+        val hasSiteFilter = !metadataMap[AttributeType.SOURCE].isNullOrEmpty()
         val hasTagFilter = metadataMap.keys.size > if (hasSiteFilter) 1 else 0
-        var qc = initContentQC(searchBundle, dynamicGroupContentIds, statuses)
-        if (hasSiteFilter) qc = qc.and(Content_.site.oneOf(getIdsFromAttributes(sources)))
-        if (hasTitleFilter) qc = qc.and(
-            Content_.title.contains(
-                searchBundle.query,
-                QueryBuilder.StringOrder.CASE_INSENSITIVE
-            )
-        )
-        if (hasTagFilter) {
-            for ((attrType, attrs) in metadataMap) {
-                if (attrType != AttributeType.SOURCE) { // Not a "real" attribute in database
-                    if (attrs.isNotEmpty()) {
-                        qc = qc.and(Content_.id.oneOf(selectFilteredContent(attrs)))
+
+        // Baseline
+        var qcBase = initContentQC(searchBundle, dynamicGroupContentIds, statuses)
+
+        // Attributes
+        if (hasSiteFilter || hasTagFilter) {
+            var qcAttrs: QueryCondition<Content>? = null
+
+            // Filter on given SOURCE attribute
+            if (hasSiteFilter)
+                metadataMap[AttributeType.SOURCE]?.let { sources ->
+                    qcAttrs = Content_.site.oneOf(
+                        getIdsFromAttributes(sources, searchBundle.combinationMode)
+                    )
+                }
+
+            // Filter on given non-SOURCE attributes
+            if (hasTagFilter) {
+                for ((attrType, attrs) in metadataMap) {
+                    // Source is not a "real" attribute in database and has been taken care of above
+                    if (attrs.isNotEmpty() && attrType != AttributeType.SOURCE) {
+                        val qc = Content_.id.oneOf(
+                            selectFilteredContent(attrs, searchBundle.combinationMode)
+                        )
+                        qcAttrs = if (null == qcAttrs) qc
+                        else if (Settings.Value.SEARCH_COMBINATION_AND == searchBundle.combinationMode) {
+                            qcAttrs.and(qc)
+                        } else {
+                            qcAttrs.or(qc)
+                        }
                     }
                 }
             }
+
+            qcBase = if (qcAttrs != null) qcBase.and(qcAttrs) else qcBase
         }
-        qc = applyContentLocationFilter(
-            qc,
+
+        var qcFinal = qcBase
+
+        // Full text search
+        if (hasFullTextQuery) {
+            // Search inside content title & unique ID
+            var qcFullText = Content_.title.contains(
+                searchBundle.query,
+                QueryBuilder.StringOrder.CASE_INSENSITIVE
+            ).or(
+                Content_.uniqueSiteId.equal(
+                    searchBundle.query,
+                    QueryBuilder.StringOrder.CASE_INSENSITIVE
+                )
+            )
+
+            // Search inside attributes
+            if (additionalIds.isNotEmpty())
+                qcFullText = qcFullText.or(Content_.id.oneOf(additionalIds))
+
+            qcFinal = qcBase.and(qcFullText)
+        }
+
+        // Exclude exclusions
+        if (exclusionIds.isNotEmpty())
+            qcFinal = qcFinal.and(Content_.id.notOneOf(exclusionIds))
+
+        // Filtering and ordering
+        qcFinal = applyContentLocationFilter(
+            qcFinal,
             Location.entries.first { it.value == searchBundle.location })
-        qc = applyContentTypeFilter(
-            qc,
+        qcFinal = applyContentTypeFilter(
+            qcFinal,
             Type.entries.first { it.value == searchBundle.contentType })
-        val query = store.boxFor(Content::class.java).query(qc)
+
+        val query = store.boxFor(Content::class.java).query(qcFinal)
         if (searchBundle.filterPageFavourites) filterWithPageFavs(query)
         applySortOrder(query, searchBundle.sortField, searchBundle.sortDesc)
         return query.build()
     }
 
-    fun selectContentSearchContentByGroupItem(
+    private fun selectContentFullTextAttributesQ(
         searchBundle: ContentSearchBundle,
         dynamicGroupContentIds: LongArray,
-        metadata: Set<Attribute>?
+        statuses: IntArray
     ): LongArray {
-        if (searchBundle.sortField != Settings.Value.ORDER_FIELD_CUSTOM) return longArrayOf()
-        val metadataMap = AttributeMap()
-        metadata?.let { metadataMap.addAll(it) }
-        val hasTitleFilter = searchBundle.query.isNotEmpty()
-        val sources = metadataMap[AttributeType.SOURCE]
-        val hasSiteFilter =
-            metadataMap.containsKey(AttributeType.SOURCE) && !sources.isNullOrEmpty()
-        val hasTagFilter = metadataMap.keys.size > if (hasSiteFilter) 1 else 0
+        val result: MutableSet<Long> = HashSet()
+        // Full-text search attributes; combine with AND logic
 
-        // Pre-filter and order on GroupItem
-        val query = store.boxFor(
-            GroupItem::class.java
-        ).query()
-        if (searchBundle.groupId > 0) {
-            if (dynamicGroupContentIds.isEmpty()) query.equal(
-                GroupItem_.groupId,
-                searchBundle.groupId
-            ) else query.`in`(GroupItem_.contentId, dynamicGroupContentIds)
-        }
-        if (searchBundle.sortDesc) query.orderDesc(GroupItem_.order) else query.order(GroupItem_.order)
-
-        // Get linked Content
-        val contentQuery = query.link(GroupItem_.content)
-        if (hasSiteFilter) contentQuery.`in`(Content_.site, getIdsFromAttributes(sources))
-        if (searchBundle.filterBookFavourites) contentQuery.equal(
-            Content_.favourite,
-            true
-        ) else if (searchBundle.filterBookNonFavourites) contentQuery.equal(
-            Content_.favourite,
-            false
-        )
-        if (searchBundle.filterBookCompleted) contentQuery.equal(
-            Content_.completed,
-            true
-        ) else if (searchBundle.filterBookNotCompleted) contentQuery.equal(
-            Content_.completed,
-            false
-        )
-        if (searchBundle.filterRating > -1) contentQuery.equal(
-            Content_.rating,
-            searchBundle.filterRating.toLong()
-        )
-        if (hasTitleFilter) contentQuery.contains(
-            Content_.title,
-            searchBundle.query,
-            QueryBuilder.StringOrder.CASE_INSENSITIVE
-        )
-        if (hasTagFilter) {
-            for ((attrType, attrs) in metadataMap) {
-                if (attrType != AttributeType.SOURCE) { // Not a "real" attribute in database
-                    if (attrs.isNotEmpty()) {
-                        contentQuery.`in`(Content_.id, selectFilteredContent(attrs))
-                    }
-                }
+        searchBundle.query.split(",").map { it.trim() }.forEach { fullTextQuery ->
+            val qc = initContentQC(searchBundle, dynamicGroupContentIds, statuses)
+            val query = store.boxFor(Content::class.java).query(qc)
+            if (searchBundle.filterPageFavourites) filterWithPageFavs(query)
+            query.link(Content_.attributes).contains(
+                Attribute_.name,
+                fullTextQuery,
+                StringOrder.CASE_INSENSITIVE
+            )
+            query.build().safeFindIds().toSet().let {
+                if (result.isEmpty()) result.addAll(it)
+                else result.retainAll(it)
             }
         }
-        return query.safeFind().map { gi -> gi.contentId }.toLongArray()
-    }
-
-    private fun selectContentUniversalAttributesQ(
-        searchBundle: ContentSearchBundle,
-        dynamicGroupContentIds: LongArray,
-        statuses: IntArray
-    ): Query<Content> {
-        val qc = initContentQC(searchBundle, dynamicGroupContentIds, statuses)
-        val query = store.boxFor(Content::class.java).query(qc)
-        if (searchBundle.filterPageFavourites) filterWithPageFavs(query)
-        query.link(Content_.attributes).contains(
-            Attribute_.name,
-            searchBundle.query,
-            QueryBuilder.StringOrder.CASE_INSENSITIVE
-        )
-        return query.build()
-    }
-
-    private fun selectContentUniversalContentQ(
-        searchBundle: ContentSearchBundle,
-        additionalIds: LongArray,
-        dynamicGroupContentIds: LongArray,
-        statuses: IntArray
-    ): Query<Content> {
-        if (Settings.Value.ORDER_FIELD_CUSTOM == searchBundle.sortField)
-            return store.boxFor(Content::class.java).query().build()
-        var qc = initContentQC(searchBundle, dynamicGroupContentIds, statuses)
-        qc = qc.and(
-            Content_.title.contains(
-                searchBundle.query,
-                QueryBuilder.StringOrder.CASE_INSENSITIVE
-            )
-                .or(
-                    Content_.uniqueSiteId.equal(
-                        searchBundle.query,
-                        QueryBuilder.StringOrder.CASE_INSENSITIVE
-                    )
-                )
-                .or(Content_.id.oneOf(additionalIds))
-        )
-        val qb = store.boxFor(Content::class.java).query(qc)
-        if (searchBundle.filterPageFavourites) filterWithPageFavs(qb)
-        applySortOrder(qb, searchBundle.sortField, searchBundle.sortDesc)
-        return qb.build()
+        return result.toLongArray()
     }
 
     private fun initContentQC(
@@ -953,103 +923,36 @@ object ObjectBoxDB {
         else if (searchBundle.filterBookNonFavourites) qc = qc.and(Content_.favourite.equal(false))
         if (searchBundle.filterBookCompleted) qc = qc.and(Content_.completed.equal(true))
         else if (searchBundle.filterBookNotCompleted) qc = qc.and(Content_.completed.equal(false))
-        if (searchBundle.filterRating > -1) qc =
-            qc.and(Content_.rating.equal(searchBundle.filterRating))
-        if (searchBundle.groupId > 0) qc =
-            applyContentGroupFilter(qc, searchBundle.groupId, dynamicGroupContentIds)
+        if (searchBundle.filterRating > -1)
+            qc = qc.and(Content_.rating.equal(searchBundle.filterRating))
+        if (searchBundle.groupId > 0)
+            qc = applyContentGroupFilter(qc, searchBundle.groupId, dynamicGroupContentIds)
         return qc
     }
 
-    private fun selectContentUniversalContentByGroupItem(
+    /**
+     * Full-text search on content _and_ attributes
+     */
+    fun selectContentFullTextQ(
         searchBundle: ContentSearchBundle,
         dynamicGroupContentIds: LongArray,
-        additionalIds: LongArray
-    ): LongArray {
-        if (searchBundle.sortField != Settings.Value.ORDER_FIELD_CUSTOM) return longArrayOf()
-
-        // Pre-filter and order on GroupItem
-        val query = store.boxFor(
-            GroupItem::class.java
-        ).query()
-        if (searchBundle.groupId > 0) query.equal(GroupItem_.groupId, searchBundle.groupId)
-        if (searchBundle.sortDesc) query.orderDesc(GroupItem_.order) else query.order(GroupItem_.order)
-
-        // Get linked content
-        val qb = query.link(GroupItem_.content)
-        qb.`in`(Content_.status, libraryStatus)
-        if (searchBundle.filterBookFavourites) qb.equal(
-            Content_.favourite,
-            true
-        ) else if (searchBundle.filterBookNonFavourites) qb.equal(Content_.favourite, false)
-        if (searchBundle.filterBookCompleted) qb.equal(
-            Content_.completed,
-            true
-        ) else if (searchBundle.filterBookNotCompleted) qb.equal(Content_.completed, false)
-        if (searchBundle.filterRating > -1) qb.equal(
-            Content_.rating,
-            searchBundle.filterRating.toLong()
-        )
-        qb.contains(
-            Content_.title,
-            searchBundle.query,
-            QueryBuilder.StringOrder.CASE_INSENSITIVE
-        )
-        qb.or().equal(
-            Content_.uniqueSiteId,
-            searchBundle.query,
-            QueryBuilder.StringOrder.CASE_INSENSITIVE
-        )
-        //        query.or().link(Content_.attributes).contains(Attribute_.name, queryStr, QueryBuilder.StringOrder.CASE_INSENSITIVE); // Use of or() here is not possible yet with ObjectBox v2.3.1
-        qb.or().`in`(Content_.id, additionalIds)
-        // TODO use applyContentGroupFilter instead; requires using QueryCondition instead of QueryBuilder
-        if (searchBundle.groupId > 0) {
-            if (dynamicGroupContentIds.isEmpty()) // Classic group
-                qb.`in`(Content_.id, selectFilteredContent(searchBundle.groupId)) else qb.`in`(
-                Content_.id,
-                dynamicGroupContentIds
-            ) // Dynamic group
-        }
-        return query.safeFind().map { gi -> gi.contentId }.toLongArray()
-    }
-
-    fun selectContentUniversalQ(
-        searchBundle: ContentSearchBundle,
-        dynamicGroupContentIds: LongArray
-    ): Query<Content> {
-        return selectContentUniversalQ(searchBundle, dynamicGroupContentIds, libraryStatus)
-    }
-
-    fun selectContentUniversalQ(
-        searchBundle: ContentSearchBundle,
-        dynamicGroupContentIds: LongArray,
-        status: IntArray
+        status: IntArray = libraryStatus
     ): Query<Content> {
         // Due to objectBox limitations (see https://github.com/objectbox/objectbox-java/issues/497)
         // querying Content and attributes have to be done separately
-        val ids = selectContentUniversalAttributesQ(
-            searchBundle,
-            dynamicGroupContentIds,
-            status
-        ).safeFindIds()
-        return selectContentUniversalContentQ(searchBundle, ids, dynamicGroupContentIds, status)
-    }
 
-    fun selectContentUniversalByGroupItem(
-        searchBundle: ContentSearchBundle,
-        dynamicGroupContentIds: LongArray
-    ): LongArray {
-        // Due to objectBox limitations (see https://github.com/objectbox/objectbox-java/issues/497)
-        // querying Content and attributes have to be done separately
-        val ids = selectContentUniversalAttributesQ(
-            searchBundle,
-            dynamicGroupContentIds,
-            libraryStatus
-        ).safeFindIds()
-        return selectContentUniversalContentByGroupItem(
-            searchBundle,
-            dynamicGroupContentIds,
-            ids
-        )
+        // Full-text search on attributes if applicable
+        val ids = if (searchBundle.query.isNotEmpty())
+            selectContentFullTextAttributesQ(
+                searchBundle,
+                dynamicGroupContentIds,
+                status
+            )
+        else LongArray(0)
+
+        // Search content taking attributes into account
+        val metadata: Set<Attribute> = parseSearchUri(searchBundle.attributes).attributes
+        return selectContentQ(searchBundle, dynamicGroupContentIds, metadata, status, ids)
     }
 
     fun getShuffledIds(): List<Long> {
@@ -1089,84 +992,62 @@ object ObjectBoxDB {
         return shuffledSet.toLongArray()
     }
 
-    // TODO use searchBundle to pass metadata instead of a separate argument (see selectContentHybridSearchId)
     fun selectContentSearchId(
         searchBundle: ContentSearchBundle,
         dynamicGroupContentIds: LongArray,
-        metadata: Set<Attribute>?,
-        statuses: IntArray
+        status: IntArray
     ): LongArray {
-        var result: LongArray
-        selectContentSearchContentQ(
-            searchBundle,
-            dynamicGroupContentIds,
-            metadata,
-            statuses
-        ).use { query ->
-            result = if (searchBundle.sortField != Settings.Value.ORDER_FIELD_RANDOM) {
-                query.findIds()
-            } else {
-                shuffleRandomSortId(query)
-            }
-        }
-        return result
-    }
-
-    fun selectContentUniversalId(
-        searchBundle: ContentSearchBundle,
-        dynamicGroupContentIds: LongArray,
-        statuses: IntArray
-    ): LongArray {
-        var result: LongArray
         // Due to objectBox limitations (see https://github.com/objectbox/objectbox-java/issues/497)
         // querying Content and attributes have to be done separately
-        val ids = selectContentUniversalAttributesQ(
-            searchBundle,
-            dynamicGroupContentIds,
-            statuses
-        ).safeFindIds()
-        selectContentUniversalContentQ(
-            searchBundle,
-            ids,
-            dynamicGroupContentIds,
-            statuses
-        ).use { query ->
-            result = if (searchBundle.sortField != Settings.Value.ORDER_FIELD_RANDOM) {
-                query.findIds()
-            } else {
-                shuffleRandomSortId(query)
+
+        // Full-text search on attributes if applicable
+        val attributeIds = if (searchBundle.query.isNotEmpty())
+            selectContentFullTextAttributesQ(
+                searchBundle,
+                dynamicGroupContentIds,
+                status
+            )
+        else LongArray(0)
+
+        // Excluded content if applicable
+        val excludedIds = HashSet<Long>()
+        if (searchBundle.excludedAttributeTypes?.isNotEmpty() ?: false) {
+            val excludedAttrs = searchBundle.excludedAttributeTypes!!
+                .map { AttributeType.searchByCode(it) }.filterNotNull()
+
+            excludedAttrs.forEach {
+                excludedIds.addAll(
+                    contentFromAttributeTypesSearchQ.setParameter(
+                        Attribute_.type,
+                        it.code.toLong()
+                    ).findIds().toSet()
+                )
             }
         }
-        return result
-    }
 
-    private fun selectContentHybridSearchId(
-        searchBundle: ContentSearchBundle,
-        dynamicGroupContentIds: LongArray,
-        statuses: IntArray
-    ): LongArray {
-        // Start with full text if query exists, as it has better chances of narrowing down results
-        val query = searchBundle.query
-        val idsFullText = if (query.isNotEmpty()) selectContentUniversalId(
+
+        // Search content taking attributes into account
+        selectContentQ(
             searchBundle,
             dynamicGroupContentIds,
-            statuses
-        ) else LongArray(0)
-        val metadata: Set<Attribute> = parseSearchUri(searchBundle.attributes).attributes
-        val idsAttrs = if (metadata.isNotEmpty()) selectContentSearchId(
-            searchBundle,
-            dynamicGroupContentIds,
-            metadata,
-            statuses
-        ) else LongArray(0)
-        // Intersect if needed
-        return if (idsFullText.isNotEmpty() && idsAttrs.isNotEmpty()) {
-            val fullTextSet = idsFullText.toMutableSet()
-            val attrsSet = idsAttrs.toSet()
-            fullTextSet.retainAll(attrsSet)
-            fullTextSet.toLongArray()
-        } else {
-            if (idsFullText.isNotEmpty()) idsFullText else idsAttrs
+            parseSearchUri(searchBundle.attributes).attributes,
+            status,
+            attributeIds,
+            exclusionIds = excludedIds.toLongArray()
+        ).use { query ->
+            return if (Settings.Value.ORDER_FIELD_RANDOM == searchBundle.sortField) {
+                shuffleRandomSortId(query)
+            } else if (Settings.Value.ORDER_FIELD_AVG_SIZE == searchBundle.sortField) {
+                val weighedResults = ArrayList<Pair<Float, Long>>()
+                query.forEach { weighedResults.add(Pair(it.size / (1f * it.qtyPages), it.id)) }
+                if (searchBundle.sortDesc)
+                    weighedResults.sortByDescending { it.first }
+                else
+                    weighedResults.sortBy { it.first }
+                weighedResults.map { it.second }.toLongArray()
+            } else {
+                query.findIds()
+            }
         }
     }
 
@@ -1177,11 +1058,12 @@ object ObjectBoxDB {
         return qb.safeFindIds()
     }
 
-    private fun selectFilteredContent(attrs: Set<Attribute>): LongArray {
+    private fun selectFilteredContent(attrs: Set<Attribute>, combinationMode: Int): LongArray {
         return selectFilteredContent(
             -1,
             LongArray(0),
             attrs,
+            combinationMode,
             Location.ANY,
             Type.ANY
         )
@@ -1191,6 +1073,7 @@ object ObjectBoxDB {
         groupId: Long,
         dynamicGroupContentIds: LongArray,
         attributesFilter: Set<Attribute>?,
+        combinationMode: Int,
         location: Location,
         contentType: Type
     ): LongArray {
@@ -1198,13 +1081,19 @@ object ObjectBoxDB {
         if (attrs.isEmpty() && groupId < 1 && Location.ANY == location && Type.ANY == contentType)
             return LongArray(0)
 
-        // Handle simple case where no attributes have been selected
-        if (attrs.isEmpty()) {
+        // 1- Handle simple case where no attributes have been selected
+        // 2- Prepare first iteration for exclusion mode
+        // If first tag is to be excluded, start with the whole database and _remove_ IDs (inverse logic)
+        var idsFullAsSet: MutableSet<Long> = HashSet()
+        if (attrs.isEmpty() || attrs.firstOrNull()?.isExcluded ?: false) {
             var qc: QueryCondition<Content> = Content_.status.oneOf(libraryStatus)
             if (groupId > 0) qc = applyContentGroupFilter(qc, groupId, dynamicGroupContentIds)
             qc = applyContentLocationFilter(qc, location)
             qc = applyContentTypeFilter(qc, contentType)
-            return store.boxFor(Content::class.java).query(qc).safeFindIds()
+            val idsFull = store.boxFor(Content::class.java).query(qc).safeFindIds()
+            // No attribute => one can leave now
+            if (attrs.isEmpty()) return idsFull
+            else idsFullAsSet = idsFull.toMutableSet()
         }
 
         // Pre-build queries to reuse them efficiently within the loops
@@ -1244,19 +1133,9 @@ object ObjectBoxDB {
             contentFromSourceQuery = store.boxFor(Content::class.java).query(qc).build()
         }
 
-        // Prepare first iteration for exclusion mode
-        // If first tag is to be excluded, start with the whole database and _remove_ IDs (inverse logic)
-        var idsFull = emptyList<Long>().toMutableList()
-        val firstAttr = attrs.firstOrNull()
-        if (firstAttr != null && firstAttr.isExcluded) {
-            val contentFromAttributesQueryBuilder1 = store.boxFor(Content::class.java).query()
-            contentFromAttributesQueryBuilder1.`in`(Content_.status, libraryStatus)
-            idsFull = contentFromAttributesQueryBuilder1.safeFindIds().toMutableList()
-        }
-
         // Cumulative query loop
         // Each iteration restricts the results of the next because advanced search uses an AND logic
-        var results = emptyList<Long>().toMutableList()
+        var results: MutableSet<Long> = HashSet()
         var ids: LongArray
         try {
             for (attr in attrs) {
@@ -1269,21 +1148,19 @@ object ObjectBoxDB {
                     ).setParameter(Attribute_.name, attr.name).findIds()
                 }
                 if (results.isEmpty()) { // First iteration
-                    results = ids.toMutableList()
-
                     // If first tag is to be excluded, start trimming results
-                    if (attr.isExcluded) {
-                        idsFull.removeAll(results)
-                        results = idsFull
-                    }
+                    results = if (attr.isExcluded) {
+                        idsFullAsSet.removeAll(ids.toSet())
+                        idsFullAsSet
+                    } else ids.toMutableSet() // AND and OR logic
                 } else {
                     // Filter results with newly found IDs (only common IDs should stay)
                     val idsAsSet = ids.toSet()
                     // Remove ids that fit the attribute from results
-                    // Careful with retainAll performance when using List instead of Set
-                    if (attr.isExcluded) results.removeAll(idsAsSet) else results.retainAll(
-                        idsAsSet
-                    )
+                    if (attr.isExcluded) results.removeAll(idsAsSet)
+                    else if (Settings.Value.SEARCH_COMBINATION_AND == combinationMode)
+                        results.retainAll(idsAsSet)
+                    else results.addAll(idsAsSet)
                 }
             }
         } finally {
@@ -1304,7 +1181,8 @@ object ObjectBoxDB {
             null,
             Location.ANY,
             Type.ANY,
-            false
+            false,
+            Settings.Value.SEARCH_COMBINATION_AND
         )
     }
 
@@ -1314,33 +1192,36 @@ object ObjectBoxDB {
         filter: Set<Attribute>?,
         location: Location,
         contentType: Type,
-        includeFreeAttrs: Boolean
+        includeFreeAttrs: Boolean,
+        combinationMode: Int
     ): List<Attribute> {
         var qc: QueryCondition<Content> = Content_.status.oneOf(libraryStatus)
-        if (!filter.isNullOrEmpty()) {
-            val metadataMap = AttributeMap()
-            metadataMap.addAll(filter)
-            val params = metadataMap[AttributeType.SOURCE]
-            if (!params.isNullOrEmpty()) qc =
-                qc.and(Content_.site.oneOf(getIdsFromAttributes(params)))
-            for ((attrType, attrs) in metadataMap) {
-                if (attrType != AttributeType.SOURCE) { // Not a "real" attribute in database
-                    if (attrs.isNotEmpty() && !includeFreeAttrs) qc =
-                        qc.and(Content_.id.oneOf(selectFilteredContent(attrs)))
-                }
-            }
-        }
         if (groupId > 0) qc = applyContentGroupFilter(qc, groupId, dynamicGroupContentIds)
         qc = applyContentLocationFilter(qc, location)
         qc = applyContentTypeFilter(qc, contentType)
-        val query = store.boxFor(Content::class.java).query(qc)
-        val content = query.safeFind()
+
+        if (Settings.Value.SEARCH_COMBINATION_AND == combinationMode && !filter.isNullOrEmpty()) {
+            val metadataMap = AttributeMap()
+            metadataMap.addAll(filter)
+            val params = metadataMap[AttributeType.SOURCE]
+            if (!params.isNullOrEmpty())
+                qc = qc.and(Content_.site.oneOf(getIdsFromAttributes(params, combinationMode)))
+            for ((attrType, attrs) in metadataMap) {
+                if (attrType != AttributeType.SOURCE) { // Not a "real" attribute in database
+                    if (attrs.isNotEmpty() && !includeFreeAttrs)
+                        qc = qc.and(
+                            Content_.id.oneOf(selectFilteredContent(attrs, combinationMode))
+                        )
+                }
+            }
+        }
+        val content = store.boxFor(Content::class.java).query(qc).safeFind()
 
         // SELECT field, COUNT(*) GROUP BY (field) is not implemented in ObjectBox v2.3.1
         // (see https://github.com/objectbox/objectbox-java/issues/422)
         // => Group by and count have to be done manually (thanks God Stream exists !)
         // Group and count by source
-        val map = content.groupBy { c -> c.site }
+        val map = content.groupBy { it.site }
         val result: MutableList<Attribute> = ArrayList()
         map.forEach {
             val size = it.value.size
@@ -1350,7 +1231,7 @@ object ObjectBoxDB {
             result.add(attr)
         }
         // Order by count desc
-        return result.sortedBy { a -> -a.count }
+        return result.sortedBy { -it.count }
     }
 
     fun selectErrorContentQ(): Query<Content> {
@@ -1371,9 +1252,7 @@ object ObjectBoxDB {
         dynamicGroupContentIds: LongArray
     ): QueryCondition<Content> {
         return if (dynamicGroupContentIds.isEmpty()) {
-            val group = store.boxFor(
-                Group::class.java
-            )[groupId]
+            val group = store.boxFor(Group::class.java)[groupId]
             if (group != null && group.grouping == Grouping.DL_DATE) // According to days since download date
                 applyContentDownloadDateFilter(
                     qc,
@@ -1408,23 +1287,22 @@ object ObjectBoxDB {
 
     private fun queryAvailableAttributesQ(
         type: AttributeType,
-        filter: String?,
+        textFilter: String?,
         filteredContent: LongArray,
         includeFreeAttrs: Boolean
     ): Query<Attribute> {
-        val query = store.boxFor(
-            Attribute::class.java
-        ).query()
+        val query = store.boxFor(Attribute::class.java).query()
         query.equal(Attribute_.type, type.code.toLong())
-        if (filter != null && filter.trim().isNotEmpty()) query.contains(
+        if (textFilter != null && textFilter.trim().isNotEmpty()) query.contains(
             Attribute_.name,
-            filter.trim { it <= ' ' },
+            textFilter.trim(),
             QueryBuilder.StringOrder.CASE_INSENSITIVE
         )
         if (!includeFreeAttrs) {
             if (filteredContent.isNotEmpty()) query.link(Attribute_.contents)
                 .`in`(Content_.id, filteredContent)
-                .`in`(Content_.status, libraryStatus) else query.link(Attribute_.contents)
+                .`in`(Content_.status, libraryStatus)
+            else query.link(Attribute_.contents)
                 .`in`(Content_.status, libraryStatus)
         }
         return query.build()
@@ -1438,16 +1316,20 @@ object ObjectBoxDB {
         location: Location,
         contentType: Type,
         includeFreeAttrs: Boolean,
-        filter: String?
+        filter: String?,
+        combinationMode: Int
     ): Long {
-        val filteredContent = if (includeFreeAttrs) LongArray(0)
-        else selectFilteredContent(
-            groupId,
-            dynamicGroupContentIds,
-            attributeFilter,
-            location,
-            contentType
-        )
+        val filteredContent =
+            if (includeFreeAttrs || Settings.Value.SEARCH_COMBINATION_OR == combinationMode)
+                LongArray(0)
+            else selectFilteredContent(
+                groupId,
+                dynamicGroupContentIds,
+                attributeFilter,
+                combinationMode,
+                location,
+                contentType
+            )
         return queryAvailableAttributesQ(
             type,
             filter,
@@ -1469,29 +1351,36 @@ object ObjectBoxDB {
         sortOrder: Int,
         page: Int,
         itemsPerPage: Int,
-        searchAttrCount: Boolean
+        searchAttrCount: Boolean,
+        combinationMode: Int
     ): List<Attribute> {
-        val filteredContent = if (includeFreeAttrs) LongArray(0) else selectFilteredContent(
-            groupId,
-            dynamicGroupContentIds,
-            attributeFilter,
-            location,
-            contentType
-        )
-        if (filteredContent.isEmpty() && !attributeFilter.isNullOrEmpty() && !includeFreeAttrs) return emptyList()
-        val result =
-            queryAvailableAttributesQ(
-                type,
-                filter,
-                filteredContent,
-                includeFreeAttrs
-            ).safeFind()
+        val filteredContent =
+            if (includeFreeAttrs || Settings.Value.SEARCH_COMBINATION_OR == combinationMode)
+                LongArray(0)
+            else selectFilteredContent(
+                groupId,
+                dynamicGroupContentIds,
+                attributeFilter,
+                combinationMode,
+                location,
+                contentType
+            )
+
+        if (filteredContent.isEmpty() && !attributeFilter.isNullOrEmpty() && !includeFreeAttrs && Settings.Value.SEARCH_COMBINATION_OR != combinationMode)
+            return emptyList()
+
+        val result = queryAvailableAttributesQ(
+            type,
+            filter,
+            filteredContent,
+            includeFreeAttrs
+        ).safeFind()
 
         // Compute attribute count for sorting
         if (searchAttrCount) {
-            result.forEach { a ->
-                // Only count the relevant Contents
-                a.count = countAttributeContents(a.id, libraryStatus, filteredContent).toInt()
+            result.forEach {
+                // Only count relevant Contents
+                it.count = countAttributeContents(it.id, libraryStatus, filteredContent).toInt()
             }
         }
 
@@ -1529,7 +1418,8 @@ object ObjectBoxDB {
             LongArray(0),
             null,
             Location.ANY,
-            Type.ANY
+            Type.ANY,
+            Settings.Value.SEARCH_COMBINATION_AND
         )
     }
 
@@ -1538,21 +1428,28 @@ object ObjectBoxDB {
         dynamicGroupContentIds: LongArray,
         attributeFilter: Set<Attribute>?,
         location: Location,
-        contentType: Type
+        contentType: Type,
+        combinationMode: Int
     ): SparseIntArray {
         // Get Content filtered by current selection
-        val filteredContent = selectFilteredContent(
-            groupId,
-            dynamicGroupContentIds,
-            attributeFilter,
-            location,
-            contentType
-        )
+        val filteredContent =
+            if (Settings.Value.SEARCH_COMBINATION_OR == combinationMode) LongArray(0)
+            else
+                selectFilteredContent(
+                    groupId,
+                    dynamicGroupContentIds,
+                    attributeFilter,
+                    combinationMode,
+                    location,
+                    contentType
+                )
+
         // Get available attributes of the resulting content list
         val query = store.boxFor(Attribute::class.java).query()
         if (filteredContent.isNotEmpty()) query.link(Attribute_.contents)
             .`in`(Content_.id, filteredContent)
-            .`in`(Content_.status, libraryStatus) else query.link(Attribute_.contents)
+            .`in`(Content_.status, libraryStatus)
+        else query.link(Attribute_.contents)
             .`in`(Content_.status, libraryStatus)
         val attributes = query.safeFind()
         val result = SparseIntArray()
@@ -1560,13 +1457,16 @@ object ObjectBoxDB {
         // (see https://github.com/objectbox/objectbox-java/issues/422)
         // => Group by and count have to be done manually (thanks God Stream exists !)
         // Group and count by type
-        val map = attributes.groupBy { a -> a.type }
+        val map = attributes.groupBy { it.type }
         map.forEach {
+            result.append(it.key.code, it.value.size)
+            /*
             if (filteredContent.isEmpty() && attributeFilter != null) {
                 result.append(it.key.code, 0)
             } else {
                 result.append(it.key.code, it.value.size)
             }
+             */
         }
         return result
     }
@@ -2071,6 +1971,24 @@ object ObjectBoxDB {
         return qb.build()
     }
 
+    fun selectSeriesQ(
+        query: String?,
+        orderDesc: Boolean
+    ): Query<Attribute> {
+        val qcSeries = Attribute_.type.equal(AttributeType.SERIE.code)
+        val qcName =
+            Attribute_.name.contains(query ?: "", QueryBuilder.StringOrder.CASE_INSENSITIVE)
+        val qcFinal = qcSeries.and(qcName)
+
+        val qb = store.boxFor(Attribute::class.java).query(qcFinal)
+
+        val property = Attribute_.name
+        // Order by number of children is done by the DAO
+        if (orderDesc) qb.orderDesc(property) else qb.order(property)
+
+        return qb.build()
+    }
+
     fun selectArtistsQ(
         query: String?,
         orderDesc: Boolean,
@@ -2097,27 +2015,9 @@ object ObjectBoxDB {
         return qb.build()
     }
 
-    fun selectContentIdsWithoutAttributes(
-        types: List<AttributeType>
-    ): LongArray {
-        // Select all eligible content
-        val allContentQ =
-            store.boxFor(Content::class.java).query().`in`(Content_.status, libraryStatus)
-        val allContent = allContentQ.safeFindIds().toMutableSet()
-
-        // Strip all content that have at least one attribute of the given types
-        types.forEach {
-            allContent.removeAll(
-                contentFromAttributeTypesSearchQ.setParameter(
-                    Attribute_.type,
-                    it.code.toLong()
-                ).findIds().toSet()
-            )
-        }
-        return allContent.toLongArray()
-    }
-
-    fun selectContentIdsWithoutAttributesQ(
+    fun selectContentWithoutAttributeTypesQ(
+        searchBundle: ContentSearchBundle,
+        dynamicGroupContentIds: LongArray,
         types: Collection<AttributeType>
     ): Query<Content> {
         // Build excluded IDs
@@ -2132,12 +2032,12 @@ object ObjectBoxDB {
         }
 
         // Select all eligible content
-        val allContentQ =
-            store.boxFor(Content::class.java).query()
-                .`in`(Content_.status, libraryStatus)
-                .notIn(Content_.id, excludedIds.toLongArray())
-
-        return allContentQ.build()
+        return selectContentQ(
+            searchBundle,
+            dynamicGroupContentIds,
+            parseSearchUri(searchBundle.attributes).attributes,
+            exclusionIds = excludedIds.toLongArray()
+        )
     }
 
     fun selectEditedGroups(grouping: Int): List<Group> {
@@ -2163,12 +2063,6 @@ object ObjectBoxDB {
 
     fun deleteGroup(groupId: Long) {
         store.boxFor(Group::class.java).remove(groupId)
-    }
-
-    fun deleteEmptyArtistGroups() {
-        return store.boxFor(Group::class.java).query()
-            .equal(Group_.grouping, 1)
-            .relationCount(Group_.items, 0).safeRemove()
     }
 
     fun selectGroupsByGroupingQ(groupingId: Int, onlyFlagged: Boolean = false): Query<Group> {

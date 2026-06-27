@@ -104,7 +104,7 @@ class BrowserViewModel(
         this.bookmarks.postValue(bookmarks)
 
         val bookmarkedSites = dao.selectAllBookmarks().groupBy { it.site }.keys
-        this.bookmarkedSites.postValue(Site.entries.filter { bookmarkedSites.contains(it) && it.isVisible })
+        this.bookmarkedSites.postValue(Site.entries.filter { bookmarkedSites.contains(it) && it.isUsable })
     }
 
     fun addBookmark(title: String) {

@@ -14,6 +14,10 @@ import androidx.work.OneTimeWorkRequest
 import androidx.work.WorkManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.squareup.moshi.JsonDataException
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.core.Consumer
 import me.devsaki.hentoid.core.DEFAULT_PRIMARY_FOLDER
@@ -875,10 +879,7 @@ fun scanBookFolder(
     } else { // Set all detected images
         result.setImageFiles(images)
     }
-    if (0 == result.qtyPages) {
-        val countUnreadable = images.filterNot { it.isReadable }.count()
-        result.qtyPages = images.size - countUnreadable // Minus unreadable pages (cover thumb)
-    }
+    if (0 == result.qtyPages) result.qtyPages = images.count { it.isReadable }
     result.computeSize()
     return result
 }
@@ -969,10 +970,7 @@ fun scanChapterFolders(
     val coverExists = images.any { it.isCover }
     if (!coverExists) createCover(images)
     result.setImageFiles(images)
-    if (0 == result.qtyPages) {
-        val countUnreadable = images.filterNot { it.isReadable }.count()
-        result.qtyPages = images.size - countUnreadable // Minus unreadable pages (cover thumb)
-    }
+    if (0 == result.qtyPages) result.qtyPages = images.count { it.isReadable }
     result.computeSize()
     return result
 }
@@ -1263,10 +1261,7 @@ private fun loadAsChapters(
     val coverExists = images.any { it.isCover }
     if (!coverExists) createCover(images)
     content.setImageFiles(images)
-    if (0 == content.qtyPages) {
-        val countUnreadable = images.filterNot { it.isReadable }.count()
-        content.qtyPages = images.size - countUnreadable // Minus unreadable pages (cover thumb)
-    }
+    if (0 == content.qtyPages) content.qtyPages = images.count { it.isReadable }
     content.setChapters(chapters)
     content.computeSize()
     return content
@@ -1364,10 +1359,7 @@ fun scanArchivePdf(
         lastEditDate = now
         if (content != null) mapMetadata(images, content.imageList)
         setImageFiles(images)
-        if (0 == qtyPages) {
-            val countUnreadable = images.filterNot { it.isReadable }.count()
-            qtyPages = images.size - countUnreadable // Minus unreadable pages (cover thumb)
-        }
+        if (0 == qtyPages) qtyPages = images.count { it.isReadable }
         computeSize()
         // e.g. when the ZIP table doesn't contain any size entry
         if (size <= 0) size = doc.length()
@@ -1624,6 +1616,7 @@ fun existsInCollection(
     return false
 }
 
+@OptIn(DelicateCoroutinesApi::class)
 fun jsonToContent(
     context: Context,
     dao: CollectionDAO,
@@ -1638,6 +1631,17 @@ fun jsonToContent(
         jsonToObject(context, jsonFile, JsonContent::class.java)?.let { content ->
             val result = content.toEntity(dao)
             result.jsonUri = jsonFile.uri.toString()
+            // Fix downloaded books in limbo
+            if (StatusContent.DOWNLOADING == result.status && result.imageList.all { StatusContent.DOWNLOADED == it.status }) {
+                Timber.i("Book taken out of limbo : ${result.title}")
+                result.status = StatusContent.DOWNLOADED
+                val now = Instant.now().toEpochMilli()
+                result.downloadDate = now
+                result.downloadCompletionDate = now
+                GlobalScope.launch(Dispatchers.Default) {
+                    updateJson(context, result)
+                }
+            }
             return result
         }
     } catch (e: IOException) {
@@ -1737,7 +1741,7 @@ fun parseBookmarks(input: InputStream): List<SiteBookmark> {
                 if (l.startsWith("http")) {
                     site = Site.searchByUrl(l) ?: Site.NONE
                 }
-                if (site != Site.NONE && site.isVisible) result.add(
+                if (site != Site.NONE && site.isUsable) result.add(
                     SiteBookmark(url = l, title = "", site = site)
                 )
             }
@@ -1750,5 +1754,5 @@ fun parseBookmarks(input: InputStream): List<SiteBookmark> {
 fun filterBookmark(b: SiteBookmark): Boolean {
     return b.url.startsWith("http")
             && b.site != Site.NONE
-            && b.site.isVisible
+            && b.site.isUsable
 }

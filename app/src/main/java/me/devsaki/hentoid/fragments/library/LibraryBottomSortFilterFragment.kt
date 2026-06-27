@@ -269,6 +269,7 @@ class LibraryBottomSortFilterFragment : BottomSheetDialogFragment() {
             result.add(createFromFieldCode(Settings.Value.ORDER_FIELD_READS))
             result.add(createFromFieldCode(Settings.Value.ORDER_FIELD_SIZE))
             result.add(createFromFieldCode(Settings.Value.ORDER_FIELD_READ_PROGRESS))
+            result.add(createFromFieldCode(Settings.Value.ORDER_FIELD_AVG_SIZE))
             if (Settings.getGroupingDisplayG().canReorderBooks && !isUngroupedGroupDisplayed
             ) result.add(
                 createFromFieldCode(
@@ -344,6 +345,7 @@ fun getNameFromFieldCode(prefFieldCode: Int): Int {
         Settings.Value.ORDER_FIELD_READS -> R.string.sort_reads
         Settings.Value.ORDER_FIELD_SIZE -> R.string.sort_size
         Settings.Value.ORDER_FIELD_READ_PROGRESS -> R.string.sort_reading_progress
+        Settings.Value.ORDER_FIELD_AVG_SIZE -> R.string.sort_avg_size
         Settings.Value.ORDER_FIELD_CUSTOM -> R.string.sort_custom
         Settings.Value.ORDER_FIELD_RANDOM -> R.string.sort_random
         Settings.Value.ORDER_FIELD_CHILDREN -> R.string.sort_books

@@ -209,6 +209,7 @@ class ExternalImportWorker(context: Context, parameters: WorkerParameters) :
     }
 
     // Write JSON file for every found book and persist it in the DB
+    @OptIn(DelicateCoroutinesApi::class)
     private fun onContentFound(
         context: Context,
         explorer: FileExplorer,
@@ -221,21 +222,23 @@ class ExternalImportWorker(context: Context, parameters: WorkerParameters) :
             itemsKO++
             return
         }
-        createJsonFileFor(context, content, explorer, logs)
-        addContent(context, dao.dao, content)
+        GlobalScope.launch(Dispatchers.IO) {
+            createJsonFileFor(context, content, explorer, logs)
+            addContent(context, dao.dao, content)
 
-        // Prepare structure for Beholder
-        content.parentStorageUri?.let { parentUri ->
-            val entry = addedContent[parentUri] ?: ArrayList()
-            addedContent[parentUri] = entry
-            content.getStorageDoc()?.let { it -> entry.add(Pair(it, content.id)) }
+            // Prepare structure for Beholder
+            content.parentStorageUri?.let { parentUri ->
+                val entry = addedContent[parentUri] ?: ArrayList()
+                addedContent[parentUri] = entry
+                content.getStorageDoc()?.let { it -> entry.add(Pair(it, content.id)) }
+            }
+            itemsOK++
+
+            newContentEvent(content, explorer.root, progress.getGlobalProgress())
+
+            // Clear the DAO every 1000 iterations to optimize memory
+            if (0 == itemsOK % 1000) dao.reset()
         }
-        itemsOK++
-
-        newContentEvent(content, explorer.root, progress.getGlobalProgress())
-
-        // Clear the DAO every 1000 iterations to optimize memory
-        if (0 == itemsOK % 1000) dao.reset()
     }
 
     private suspend fun updateWithBeholder(context: Context, folders: List<String>) {
@@ -526,6 +529,7 @@ class ExternalImportWorker(context: Context, parameters: WorkerParameters) :
     }
 
     // Write JSON file for every found book and persist it in the DB
+    @OptIn(DelicateCoroutinesApi::class)
     private fun onContentFoundBH(
         context: Context,
         explorer: FileExplorer,
@@ -534,8 +538,10 @@ class ExternalImportWorker(context: Context, parameters: WorkerParameters) :
         content: Content,
     ) {
         if (!existsInCollection(content, dao, true, logs)) {
-            createJsonFileFor(context, content, explorer, logs)
-            addContent(context, dao, content)
+            GlobalScope.launch(Dispatchers.IO) {
+                createJsonFileFor(context, content, explorer, logs)
+                addContent(context, dao, content)
+            }
         }
         // Update the beholder
         content.getStorageDoc()?.let { storageDoc ->
@@ -554,7 +560,7 @@ class ExternalImportWorker(context: Context, parameters: WorkerParameters) :
         docs: List<DocumentFile>,
         parent: Uri,
         archivePdf: DocumentFile,
-        parentNames : List<String>,
+        parentNames: List<String>,
         dao: CollectionDAO
     ): Content? {
         val jsons =

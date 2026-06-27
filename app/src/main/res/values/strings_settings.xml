@@ -81,6 +81,7 @@
     <string name="pref_external_library_delete_title">Allow deleting external content</string>
     <string name="pref_external_library_delete_on">GalleryCherry can delete books and pages in the external library</string>
     <string name="pref_external_library_delete_off">GalleryCherry can\'t delete books nor pages in the external library</string>
+    <string name="import_external_library_auto_title">Auto-import new files</string>
     <string name="pref_external_library_ext_name_pattern">File naming pattern</string>
     <string name="pref_external_library_detach_title">Detach external library</string>
     <string name="pref_external_library_detach_summary">Don\'t include the external library into GalleryCherry anymore</string>
@@ -197,6 +198,9 @@
     <string name="pref_dl_threads_quantity_summary">Number of images downloaded simultaneously\nCurrently: <x:g example="5" id="number">%s</x:g></string>
     <string name="pref_dl_speed_cap_title">Download speed limit</string>
     <string name="pref_dl_http_429_default_delay_title">HTTP 429 default delay (seconds)</string>
+    <string name="download_separate_thumb_title">Thumbnails</string>
+    <string name="download_separate_thumb_on">Create a separate thumbnail file</string>
+    <string name="download_separate_thumb_off">Flag page 1 as a sthumbnail</string>
 
     <!-- Privacy -->
     <string name="pref_screen_privacy">Privacy</string>
@@ -245,7 +249,7 @@
     <string name="pref_viewer_vertical_reader">Vertical reader</string>
     <string name="pref_viewer_keep_screen_on">Keep screen on</string>
     <string name="pref_viewer_display_notch">Display around notch area</string>
-    <string name="pref_viewer_display_pagenum">Always display page number</string>
+    <string name="pref_viewer_display_pagenum">Page number display</string>
     <string name="pref_viewer_tap_transitions">Enable page turn animation</string>
     <string name="pref_viewer_zoom_transitions">Enable zoom animation</string>
     <string name="pref_viewer_maintain_horizontal_zoom">Maintain zoom level between pages</string>
@@ -274,7 +278,7 @@
     <string name="pref_viewer_continuous_summary_off">Using next page on last page has no effect</string>
     <string name="pref_viewer_continuous_summary_on">Using next page on last page loads the next book</string>
     <string name="pref_viewer_read_threshold">Mark book as read after N pages</string>
-    <string name="pref_viewer_ratio_completed_threshold">Mark book as completed after N% pages</string>
+    <string name="pref_viewer_ratio_completed_threshold">Mark book as completed after N%% pages</string>
     <string name="pref_viewer_delete_load_direction">Load direction after deleting book</string>
     <string name="pref_viewer_slideshow_delay">Delay between each page (horizontal display)</string>
     <string name="pref_viewer_slideshow_delay_vertical">Scrolling speed (vertical display)</string>

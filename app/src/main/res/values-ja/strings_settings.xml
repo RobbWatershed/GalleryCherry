@@ -183,7 +183,6 @@
     <string name="pref_viewer_vertical_reader">垂直リーダー</string>
     <string name="pref_viewer_keep_screen_on">画面をオンにしておく</string>
     <string name="pref_viewer_display_notch">ノッチエリア周辺に表示</string>
-    <string name="pref_viewer_display_pagenum">常にページ番号を表示する</string>
     <string name="pref_viewer_tap_transitions">ページめくりアニメーションを有効にする</string>
     <string name="pref_viewer_zoom_transitions">ズームアニメーションを有効にする</string>
     <string name="pref_viewer_maintain_horizontal_zoom">ページ間のズームレベルを維持する</string>

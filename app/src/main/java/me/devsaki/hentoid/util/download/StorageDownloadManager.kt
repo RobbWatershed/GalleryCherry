@@ -87,7 +87,11 @@ class StorageDownloadManager {
                         getDocumentFromTreeUri(context, parent)
                     }
                     if (downloadMode == DownloadMode.DOWNLOAD_ARCHIVE)
-                        archiveStreamer = ArchiveStreamer(context, it.uri, true)
+                        archiveStreamer = ArchiveStreamer(
+                            context, it.uri,
+                            append = true,
+                            removeArchivedFiles = true
+                        )
                 } else {
                     downloadFolder = it
                 }
@@ -110,7 +114,11 @@ class StorageDownloadManager {
                     createFile(context, dlFolder.uri, archiveName, MIME_TYPE_CBZ).let { uri ->
                         getDocumentFromTreeUri(context, uri)?.let { content.setStorageDoc(it) }
                         downloadArchive = uri
-                        archiveStreamer = ArchiveStreamer(context, uri, false)
+                        archiveStreamer = ArchiveStreamer(
+                            context, uri,
+                            append = false,
+                            removeArchivedFiles = true
+                        )
                     }
                 } else {
                     content.setStorageDoc(dlFolder)
@@ -167,7 +175,11 @@ class StorageDownloadManager {
             createFile(context, containingFolder, archiveName, MIME_TYPE_CBZ).let { uri ->
                 getDocumentFromTreeUri(context, uri)?.let { targetContent.setStorageDoc(it) }
                 downloadArchive = uri
-                archiveStreamer = ArchiveStreamer(context, uri, false)
+                archiveStreamer = ArchiveStreamer(
+                    context, uri,
+                    append = false,
+                    removeArchivedFiles = true
+                )
             }
         } else {
             targetContent.setStorageDoc(dlFolder)
@@ -312,9 +324,9 @@ class StorageDownloadManager {
                         }
                     imgs.forEach { it.computeName(imgs.size) }
                     content.setImageFiles(imgs)
-                    content.qtyPages = imgs.size
                 }
             }
+
             content.qtyPages = content.imageList.count { it.isReadable }
 
             // Create JSON

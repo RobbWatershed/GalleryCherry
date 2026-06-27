@@ -11,7 +11,10 @@ abstract class BaseContentParser : ContentParser {
 
 
     override fun toContent(url: String): Content {
-        return update(Content(), url, true)
+        val result = update(Content(), url, true)
+        // Mark cover if there's none
+        if (result.imageFiles.none { it.isCover }) result.imageFiles.firstOrNull()?.isCover = true
+        return result
     }
 
     abstract override fun update(content: Content, url: String, updateImages: Boolean): Content

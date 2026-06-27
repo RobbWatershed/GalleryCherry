@@ -78,6 +78,7 @@ import me.devsaki.hentoid.util.removeExternalAttributes
 import me.devsaki.hentoid.util.scanBookFolder
 import me.devsaki.hentoid.util.scanForArchivesPdf
 import me.devsaki.hentoid.util.trace
+import me.devsaki.hentoid.util.updateJson
 import me.devsaki.hentoid.util.writeLog
 import me.devsaki.hentoid.workers.data.PrimaryImportData
 import org.greenrobot.eventbus.EventBus
@@ -492,7 +493,8 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
                 logFile
             )
             notificationManager.notify(ImportCompleteNotification(booksOK, booksKO))
-            EventBus.getDefault().postSticky(CommunicationEvent(Type.RELOAD, CommunicationEvent.Recipient.LIBRARY))
+            EventBus.getDefault()
+                .postSticky(CommunicationEvent(Type.RELOAD, CommunicationEvent.Recipient.LIBRARY))
         }
     }
 
@@ -563,6 +565,7 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
         }
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     private fun onArchiveFound(
         context: Context,
         c: Content,
@@ -593,22 +596,23 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
         }
 
         // If content has an external-library tag or an EXTERNAL status, remove it because we're importing for the primary library now
-        removeExternalAttributes(c)
-        addContent(context, dao, c)
-        val customGroups =
-            c.getGroupItems(Grouping.CUSTOM)
-                .mapNotNull { it.linkedGroup }
-                .map { it.name }
-        val groupStr =
-            if (customGroups.isEmpty()) "" else " in " + customGroups.joinToString(", ")
-        trace(
-            Log.INFO,
-            STEP_3_BOOKS,
-            log,
-            "Import book OK$groupStr : %s",
-            bookLocation
-        )
-        onProgress(c.title, true)
+        GlobalScope.launch(Dispatchers.IO) {
+            removeExternalAttributes(c)
+            addContent(context, dao, c)
+            val customGroups =
+                c.getGroupItems(Grouping.CUSTOM)
+                    .mapNotNull { it.linkedGroup }
+                    .map { it.name }
+            val groupStr =
+                if (customGroups.isEmpty()) "" else " in " + customGroups.joinToString(", ")
+            trace(
+                Log.INFO,
+                STEP_3_BOOKS,
+                log,
+                "Import book OK$groupStr : $bookLocation"
+            )
+            onProgress(c.title, true)
+        }
     }
 
     private suspend fun importFolder(
@@ -769,8 +773,7 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
                         }
                         if (coverImgs.size < contentImages.size) {
                             contentImages = coverImgs
-                            val nbCovers = contentImages.count { it.isCover }
-                            content.qtyPages = contentImages.size - nbCovers
+                            content.qtyPages = contentImages.count { it.isReadable }
                             cleaned = true
                         }
 
@@ -1087,7 +1090,7 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
         }
     }
 
-    private fun importQueue(
+    private suspend fun importQueue(
         context: Context,
         queueFile: DocumentFile,
         dao: CollectionDAO,
@@ -1335,6 +1338,7 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
         return if (file != null) importJsonV2(context, file, folder, dao) else null
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     @CheckResult
     @Throws(ParseException::class)
     private fun importJsonV2(
@@ -1348,6 +1352,17 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
                 val result = content.toEntity(dao)
                 result.jsonUri = json.uri.toString()
                 result.setStorageDoc(parentFolder)
+                // Fix downloaded books in limbo
+                if (StatusContent.DOWNLOADING == result.status && result.imageList.all { StatusContent.DOWNLOADED == it.status }) {
+                    Timber.i("Book taken out of limbo : ${result.title}")
+                    result.status = StatusContent.DOWNLOADED
+                    val now = Instant.now().toEpochMilli()
+                    result.downloadDate = now
+                    result.downloadCompletionDate = now
+                    GlobalScope.launch(Dispatchers.Default) {
+                        updateJson(context, result)
+                    }
+                }
                 return result
             }
             throw ParseException("Error reading JSON (v2) file")

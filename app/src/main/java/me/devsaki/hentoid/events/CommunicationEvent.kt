@@ -4,6 +4,7 @@ class CommunicationEvent(val type: Type, val recipient: Recipient = Recipient.AL
 
     enum class Type {
         SEARCH,
+        SEARCH_NO_HISTORY,
         ADVANCED_SEARCH,
         UPDATE_TOOLBAR,
         CLOSE_DRAWER,

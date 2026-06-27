@@ -25,6 +25,7 @@ private const val KEY_DOCS_NAMES = "docNames"
 private const val KEY_DOC_URIS = "docUris"
 private const val KEY_DELETE_FLAGGED_IMAGES = "deleteFlaggedImages"
 private const val KEY_DELETE_ALL_QUEUE_RECORDS = "deleteAllQueueRecords"
+private const val KEY_DELETE_ALL_ERROR_RECORDS = "deleteAllErrorRecords"
 private const val KEY_DELETE_GROUPS_ONLY = "deleteGroupsOnly"
 private const val KEY_IS_CLEANING = "isCleaning"
 private const val KEY_OPERATION = "operation"
@@ -68,6 +69,10 @@ class DeleteData {
 
         fun setDeleteAllQueueRecords(value: Boolean) {
             builder.putBoolean(KEY_DELETE_ALL_QUEUE_RECORDS, value)
+        }
+
+        fun setDeleteAllErrorRecords(value: Boolean) {
+            builder.putBoolean(KEY_DELETE_ALL_ERROR_RECORDS, value)
         }
 
         fun setDeleteGroupsOnly(value: Boolean) {
@@ -127,6 +132,8 @@ class DeleteData {
             }
         val isDeleteAllQueueRecords: Boolean
             get() = data.getBoolean(KEY_DELETE_ALL_QUEUE_RECORDS, false)
+        val isDeleteAllErrorRecords: Boolean
+            get() = data.getBoolean(KEY_DELETE_ALL_ERROR_RECORDS, false)
         val isDeleteGroupsOnly: Boolean
             get() = data.getBoolean(KEY_DELETE_GROUPS_ONLY, false)
         val isCleaning: Boolean

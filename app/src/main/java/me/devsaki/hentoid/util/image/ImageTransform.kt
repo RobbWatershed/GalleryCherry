@@ -84,17 +84,15 @@ internal data class ManhwaProcessingItem(
 /**
  * Transform the given raw picture data using the given params
  */
-fun transform(
+suspend fun transform(
+    context: Context,
     rawData: ByteArray,
     params: TransformParams,
     allowBogusAiRescale: Boolean = false
 ): ByteArray {
     if (isImageAnimated(rawData)) return rawData
 
-    val options = BitmapFactory.Options()
-    options.inJustDecodeBounds = true
-    BitmapFactory.decodeByteArray(rawData, 0, rawData.size, options)
-    val dims = Point(options.outWidth, options.outHeight)
+    val dims = getImageDimensions(context, data = rawData)
     val bitmapOut: Bitmap = if (params.resizeEnabled) {
         when (params.resizeMethod) {
             0 -> resizeScreenRatio(rawData, dims, params.resize1Ratio / 100f)
@@ -166,7 +164,7 @@ private fun resizePlainRatio(
     ratio: Float,
     allowUpscale: Boolean = false
 ): Bitmap {
-    val sourceBmp = BitmapFactory.decodeByteArray(source, 0, source.size)
+    val sourceBmp = decodeBitmap(source)
     return if (ratio > 0.99 && ratio < 1.01) sourceBmp // Don't do anything
     else if (ratio > 1.01 && !allowUpscale) sourceBmp // Prevent upscaling
     else {
@@ -186,7 +184,7 @@ fun determineEncoder(
     params: TransformParams
 ): PictureEncoder {
     // AI rescale always produces PNGs
-    if (3 == params.resizeMethod) return PictureEncoder.PNG
+    if (params.resizeEnabled && 3 == params.resizeMethod) return PictureEncoder.PNG
 
     // Other cases
     val result = when (params.transcodeMethod) {

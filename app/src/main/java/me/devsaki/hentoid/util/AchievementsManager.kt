@@ -133,7 +133,7 @@ object AchievementsManager {
             }
             if (!isRegistered(19)) {
                 val invisibleSites =
-                    Site.entries.filter { !it.isVisible }.filterNot { it == Site.NONE }
+                    Site.entries.filter { !it.isUsable }.filterNot { it == Site.NONE }
                 val count = db.countWithSitesOr(eligibleContent, invisibleSites)
                 if (count >= 10) registerAndSignal(19)
             }

@@ -1,7 +1,6 @@
 package me.devsaki.hentoid.views
 
 import android.os.Bundle
-import android.text.TextUtils
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -32,7 +31,7 @@ class ListPickerDialogFragment(val handler: Consumer<Int>) : BaseDialogFragment<
 
         private fun getArgs(entries: List<String>): Bundle {
             val args = Bundle()
-            args.putString(ENTRIES, TextUtils.join("|", entries))
+            args.putStringArray(ENTRIES, entries.toTypedArray())
             return args
         }
     }
@@ -50,8 +49,8 @@ class ListPickerDialogFragment(val handler: Consumer<Int>) : BaseDialogFragment<
 
         val bundle = arguments
         requireNotNull(bundle) { "No arguments found" }
-        val entriesStr = bundle.getString(ENTRIES, "")
-        entries.addAll(entriesStr.split("|"))
+        val entriesStr = bundle.getStringArray(ENTRIES) ?: throw Exception("ENTRIES not found")
+        entries.addAll(entriesStr)
     }
 
     override fun onDestroy() {

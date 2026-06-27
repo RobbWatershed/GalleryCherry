@@ -10,15 +10,18 @@ import timber.log.Timber
 
 
 // Safe-for-work/wife/gf option; not used anymore and kept here for retrocompatibility
-private val INVISIBLE_SITES = setOf(
+private val RETIRED_SITES = setOf(
     Site.HELLPORNO, // Removed their pictures section
     Site.JJGIRLS2, // Abandoned in favour of babe.today
     Site.HINA, // Dead service
     Site.ASIANSISTER, // Redirected to sisterasian.com; only hosts videos now
     Site.JPEGWORLD, // Dead site
     Site.NEXTPICTUREZ, // Dead site
-    Site.PORNPICGALLERIES, // Dead site
-    Site.MAL, // For metadata editor only
+    Site.PORNPICGALLERIES // Dead site
+)
+
+private val INVISIBLE_SITES = setOf(
+    Site.MAL,  // Specific to myAnimeList attributes retrieval
     Site.ANY, // Technical fallback
     Site.NONE // Technical fallback
 )
@@ -122,6 +125,11 @@ enum class Site(val code: Int, val description: String, val url: String, val ico
     var shouldBeStreamed = true
         private set
 
+
+    val isUsable: Boolean
+        get() {
+            return !INVISIBLE_SITES.contains(this) && !RETIRED_SITES.contains(this)
+        }
 
     val isVisible: Boolean
         get() {
