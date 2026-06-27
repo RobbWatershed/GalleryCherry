@@ -89,7 +89,7 @@ class Manhwa18Parser : BaseChapteredImageListParser() {
                 )
             }
         } ?: run {
-            Timber.i("Chapter parsing failed for %s : no response", chp.url)
+            Timber.i("Chapter parsing failed for ${chp.url} : no response")
             emptyList()
         }
     }

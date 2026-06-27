@@ -10,6 +10,7 @@ import me.devsaki.hentoid.parsers.getExtraChaptersbyUrl
 import me.devsaki.hentoid.parsers.getMaxChapterOrder
 import me.devsaki.hentoid.parsers.getMaxImageOrder
 import me.devsaki.hentoid.parsers.setDownloadParams
+import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.exception.EmptyResultException
 import me.devsaki.hentoid.util.exception.PreparationInterruptedException
 import me.devsaki.hentoid.util.network.getOnlineDocument
@@ -118,8 +119,11 @@ abstract class BaseChapteredImageListParser : BaseImageListParser() {
         if (minEpoch > 0 && minEpoch < Long.MAX_VALUE) onlineContent.uploadDate = minEpoch
 
         // Add cover if it's a first download
-        if (storedChapters.isEmpty() && onlineContent.coverImageUrl.isNotEmpty())
-            result.add(ImageFile.newCover(onlineContent.coverImageUrl, StatusContent.SAVED))
+        if (storedChapters.isEmpty()
+            && onlineContent.coverImageUrl.isNotEmpty()
+            && Settings.isThumbSeparateFile(onlineContent.site)
+        )
+            result.add(ImageFile.newThumb(onlineContent.coverImageUrl, StatusContent.SAVED))
 
         return result
     }

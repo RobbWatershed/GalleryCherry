@@ -42,7 +42,6 @@ object DatabaseMaintenance {
             this::createGroups,
             this::computeReadingProgress,
             this::reattachGroupCovers,
-            this::cleanOrphanGroups,
             this::setDbUpdateVersion,
         )
     }
@@ -182,7 +181,7 @@ object DatabaseMaintenance {
                 for (c in contents) {
                     val images: MutableList<ImageFile> = c.imageList.toMutableList()
                     val newCover =
-                        ImageFile.newCover(c.coverImageUrl, StatusContent.ONLINE)
+                        ImageFile.newThumb(c.coverImageUrl, StatusContent.ONLINE)
                     newCover.contentId = c.id
                     images.add(0, newCover)
                     images[1].isCover = false
@@ -575,18 +574,6 @@ object DatabaseMaintenance {
                     withContext(Dispatchers.Main) { emitter(pos++ / max) }
                 }
                 Timber.i("Reattaching group covers : done")
-            } finally {
-                db.cleanup()
-            }
-        }
-
-    private suspend fun cleanOrphanGroups(context: Context, emitter: (Float) -> Unit) =
-        withContext(Dispatchers.IO) {
-            val db = MaintenanceDAO()
-            try {
-                Timber.i("Clean orphan artist groups : start")
-                db.deleteOrphanArtistGroups()
-                Timber.i("Clean orphan artist groups : done")
             } finally {
                 db.cleanup()
             }

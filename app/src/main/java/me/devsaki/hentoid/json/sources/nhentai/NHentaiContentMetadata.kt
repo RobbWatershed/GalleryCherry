@@ -73,8 +73,6 @@ data class NHentaiContentMetadata(
         }
         content.putAttributes(attributes)
 
-
-
         content.coverImageUrl = cover?.let { covr ->
             fixUrl(covr.path, "https://t1.nhentai.net")
         } ?: thumbnail?.let { covr ->
@@ -85,15 +83,15 @@ data class NHentaiContentMetadata(
             val imageUrls = pages
                 .sortedBy { it.number }
                 .map { fixUrl(it.path, "https://i2.nhentai.net") }
-            content.qtyPages = numPages
-            content.setImageFiles(
-                urlsToImageFiles(
-                    imageUrls,
-                    content.downloadRange,
-                    StatusContent.SAVED,
-                    content.coverImageUrl
-                )
+            val imgs = urlsToImageFiles(
+                imageUrls,
+                content.downloadRange,
+                StatusContent.SAVED,
+                Site.NHENTAI,
+                content.coverImageUrl
             )
+            content.setImageFiles(imgs)
+            content.qtyPages = imgs.count { it.isReadable }
         }
     }
 

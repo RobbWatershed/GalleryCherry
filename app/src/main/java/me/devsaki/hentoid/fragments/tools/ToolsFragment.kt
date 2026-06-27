@@ -268,6 +268,8 @@ class ToolsFragment : PreferenceFragmentCompat(),
         val op = when (operation) {
             ToolsActivity.MassOperation.DELETE -> BaseDeleteWorker.Operation.DELETE
             ToolsActivity.MassOperation.STREAM -> BaseDeleteWorker.Operation.STREAM
+            ToolsActivity.MassOperation.REMOVE_THUMB -> BaseDeleteWorker.Operation.REMOVE_THUMB
+            ToolsActivity.MassOperation.CREATE_THUMB -> BaseDeleteWorker.Operation.CREATE_THUMB
         }
         builder.setOperation(op)
         builder.setInvertFilterScope(invertScope)

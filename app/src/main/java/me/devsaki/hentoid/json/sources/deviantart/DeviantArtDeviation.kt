@@ -10,6 +10,7 @@ import me.devsaki.hentoid.enums.AttributeType
 import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.parsers.cleanup
+import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.parseDatetimeToEpoch
 import timber.log.Timber
 import kotlin.math.max
@@ -93,9 +94,8 @@ data class DeviantArtDeviation(
             } else ImageFile.fromImageUrl(1, pictureUrl, StatusContent.SAVED, 1000)
 
             val result = ArrayList<ImageFile>()
-            if (media.getThumbUrl().isNotEmpty()) result.add(
-                ImageFile.newCover(media.getThumbUrl(), StatusContent.SAVED)
-            )
+            if (media.getThumbUrl().isNotEmpty() && Settings.isThumbSeparateFile(Site.DEVIANTART))
+                result.add(ImageFile.newThumb(media.getThumbUrl(), StatusContent.SAVED))
             result.add(picture)
             return result
         }

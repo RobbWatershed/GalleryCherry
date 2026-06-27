@@ -7,6 +7,7 @@ import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.parsers.getImgSrc
 import me.devsaki.hentoid.parsers.getUserAgent
 import me.devsaki.hentoid.retrofit.DeviantArtServer
+import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.exception.ParseException
 import me.devsaki.hentoid.util.network.getCookies
 import me.devsaki.hentoid.util.network.getOnlineDocument
@@ -151,10 +152,6 @@ class DeviantArtParser : BaseImageListParser() {
             }
 
             urls?.let {
-                // Thumb
-                if (urls.first.isNotEmpty())
-                    result.add(ImageFile.newCover(urls.first, StatusContent.SAVED))
-                // Image
                 val img = ImageFile.fromImageUrl(1, urls.first, StatusContent.SAVED, 1)
                 img.backupUrl = urls.second
                 result.add(img)

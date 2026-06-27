@@ -36,6 +36,7 @@ import me.devsaki.hentoid.util.file.createFile
 import me.devsaki.hentoid.util.file.fileExists
 import me.devsaki.hentoid.util.file.findSequencePosition
 import me.devsaki.hentoid.util.file.getExtension
+import me.devsaki.hentoid.util.file.getExtensionFromMimeType
 import me.devsaki.hentoid.util.file.getInputStream
 import me.devsaki.hentoid.util.file.getOutputStream
 import me.devsaki.hentoid.util.file.removeFile
@@ -326,7 +327,8 @@ private fun calculateInSampleSize(
  * @throws IOException If anything bad happens at load-time
  */
 @Throws(IOException::class)
-fun decodeSampledBitmapFromStream(
+suspend fun decodeSampledBitmapFromStream(
+    context: Context,
     stream: InputStream,
     targetWidth: Int,
     targetHeight: Int
@@ -336,20 +338,29 @@ fun decodeSampledBitmapFromStream(
     val workStream2 = streams[1]
 
     // First decode with inJustDecodeBounds=true to check dimensions
-    val options = BitmapFactory.Options()
-    options.inJustDecodeBounds = true
-    workStream1.use { workStream1 ->
-        BitmapFactory.decodeStream(workStream1, null, options)
+    val dimsAndMime = workStream1.use {
+        val rawData = it.readBytes()
+        val dims = getImageDimensions(context, data = rawData)
+        val mime = getMimeTypeFromPictureBinary(rawData)
+        Pair(dims, mime)
     }
 
-    // Calculate inSampleSize
-    options.inSampleSize =
-        calculateInSampleSize(options.outWidth, options.outHeight, targetWidth, targetHeight)
+    val mime = dimsAndMime.second
+    if (mime == MIME_IMAGE_JXL || mime == MIME_IMAGE_AVIF) {
+        // Can't optimize here; using basic load
+        return decodeBitmap(workStream2, mime)
+    } else {
+        // Calculate inSampleSize
+        val dims = dimsAndMime.first
+        val options = BitmapFactory.Options()
+        options.inSampleSize =
+            calculateInSampleSize(dims.x, dims.y, targetWidth, targetHeight)
 
-    // Decode final bitmap with inSampleSize set
-    options.inJustDecodeBounds = false
-    return workStream2.use { workStream2 ->
-        BitmapFactory.decodeStream(workStream2, null, options)
+        // Decode final bitmap with inSampleSize set
+        options.inJustDecodeBounds = false
+        return workStream2.use { workStream2 ->
+            BitmapFactory.decodeStream(workStream2, null, options)
+        }
     }
 }
 
@@ -422,8 +433,10 @@ fun assembleGif(
 }
 
 /**
+ * Return the scaled down version of the given bitmap. Useful to create thumbnails.
+ *
  * @param bitmap    the Bitmap to be scaled
- * @param maxDim    the maxium dimension (either width or height) of the scaled bitmap
+ * @param maxDim    the maximum dimension (either width or height) of the scaled bitmap
  * @param noRecycle is it necessary to keep the original bitmap? If not recycle the original bitmap to prevent memory leak.
  */
 fun getScaledDownBitmap(
@@ -542,7 +555,11 @@ fun needsRotating(screenWidth: Int, screenHeight: Int, width: Int, height: Int):
  * @param data    Raw data of the image to be read; overrides Uri if set
  * @return Dimensions (x,y) of the given image
  */
-suspend fun getImageDimensions(context: Context, uri: String, data: ByteArray? = null): Point =
+suspend fun getImageDimensions(
+    context: Context,
+    uri: String = Uri.EMPTY.toString(),
+    data: ByteArray? = null
+): Point =
     withContext(Dispatchers.IO) {
         val fileUri = uri.toUri()
         if (null == data && !fileExists(context, fileUri)) return@withContext Point(0, 0)
@@ -551,7 +568,9 @@ suspend fun getImageDimensions(context: Context, uri: String, data: ByteArray? =
             FileChunkInfo.fromUri(uri.toUri()).displayName
         } else uri
 
-        val ext = getExtensionFromUri(fileName)
+        val ext = if (fileUri != Uri.EMPTY || null == data) getExtensionFromUri(fileName)
+        else getExtensionFromMimeType(getMimeTypeFromPictureBinary(data))
+
         if (ext == "jxl" || ext == "avif") {
             return@withContext if (null == data) {
                 getDimsFromThirdParty(context, ext, fileUri)
@@ -653,12 +672,12 @@ fun loadBitmap(context: Context, file: DocumentFile): Bitmap? {
     }
 }
 
-fun decodeBitmap(inputStream: InputStream, mime: String, config: Bitmap.Config): Bitmap? {
+fun decodeBitmap(inputStream: InputStream, mime: String, config: Bitmap.Config? = null): Bitmap? {
     return when (mime) {
         MIME_IMAGE_JXL, MIME_IMAGE_AVIF -> inputStream.use { decodeBitmap(it.readBytes(), config) }
         else -> {
             val options = BitmapFactory.Options()
-            options.inPreferredConfig = config
+            if (config != null) options.inPreferredConfig = config
             // If that is not set, some PNGs are read with a ColorSpace of code "Unknown" (-1),
             // which makes resizing buggy (generates a black picture)
             options.inPreferredColorSpace = ColorSpace.get(ColorSpace.Named.SRGB)

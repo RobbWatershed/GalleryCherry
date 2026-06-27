@@ -496,7 +496,7 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
         // Mark the cover for downloading when saving a streamed book
         if (downloadMode == DownloadMode.STREAM) content.cover.status = StatusContent.SAVED
         dao.insertContent(content)
-        Timber.i("Downloading '%s' [%s]", content.title, content.id)
+        Timber.i("Downloading '${content.title}' [${content.id}]")
 
         // Wait until the end of purge if the content is being purged (e.g. redownload from scratch)
         val isBeingDeleted = content.isBeingProcessed
@@ -539,41 +539,32 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
 
         val downloadFolder = dlManager.getDownloadFolder(context)
 
-        // Streamed download => just get the cover
+        // Streamed download => just get the thumb
         if (downloadMode == DownloadMode.STREAM) {
-            content.cover.let { cover ->
-                enrichImageDownloadParams(cover, content)
+            content.imageList.firstOrNull { !it.isReadable }?.let { thumb ->
+                enrichImageDownloadParams(thumb, content)
                 requestQueueManager.queueRequest(
-                    buildImageDownloadRequest(cover, downloadFolder, content)
+                    buildImageDownloadRequest(thumb, downloadFolder, content)
                 )
             }
-        } else { // Regular download
-            val covers = ArrayList<ImageFile>()
+        } else { // Folder or archive download
             // Queue image download requests
-            images.forEachIndexed { idx, img ->
+            images.forEach { img ->
                 if (img.status == StatusContent.SAVED) {
                     enrichImageDownloadParams(img, content)
 
-                    // Set the next image of the list as a backup in case the cover URL is stale (might happen when restarting old downloads)
-                    // NB : Per convention, cover is always the 1st picture of a given set
-                    if (img.isCover && !img.url.isEmpty()) {
-                        if (images.size > idx + 1) img.backupUrl = images[idx + 1].url
-                        covers.add(img)
-                    }
+                    // Set 1st readable image as a backup in case the cover URL is stale (might happen when restarting old downloads)
+                    // NB : Per convention, cover is the 1st picture of a given set
+                    if (img.isCover && img.url.isNotEmpty())
+                        img.backupUrl = images.firstOrNull { it.isReadable }?.url ?: ""
+
                     if (img.needsPageParsing) pagesToParse.add(img)
                     else if (img.downloadParams.contains(KEY_DL_PARAMS_UGOIRA_FRAMES))
                         ugoirasToDownload.add(img)
-                    else if (!img.isCover) requestQueueManager.queueRequest(
+                    else requestQueueManager.queueRequest(
                         buildImageDownloadRequest(img, downloadFolder, content)
                     )
                 }
-            }
-
-            // Download cover last, to avoid being blocked by the server when downloading cover and page 1 back to back when they are the same resource
-            covers.forEach {
-                requestQueueManager.queueRequest(
-                    buildImageDownloadRequest(it, downloadFolder, content)
-                )
             }
 
             // Parse pages for images
@@ -600,7 +591,7 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
                     }
                 }
             }
-        }
+        } // Folder or archive download
         EventBus.getDefault()
             .post(DownloadEvent.fromPreparationStep(DownloadEvent.Step.SAVE_QUEUE, content))
         if (updateQueueJson(applicationContext, dao))
@@ -626,7 +617,7 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
         // NB : exclusive to the other cases
         if (isCase4) {
             content.chaptersList.forEachIndexed { idx, ch ->
-                if (ch.imageList.all { img -> img.status == StatusContent.ERROR }) {
+                if (ch.imageList.all { it.status == StatusContent.ERROR }) {
                     /* There are two very different cases to consider
                      1- parse an actual chapter belonging to the overarching content (or at least originating from the same site)
                      2- parse a content merged inside the overarching content and stored as a chapter,
@@ -639,17 +630,17 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
                     // We should parse a Content but all we have is a Chapter (merged book)
                     // Forge a bogus Content from the given chapter to retrieve images
                     val forgedContent = Content(site = chapterSite)
-                    forgedContent.qtyPages = ch.imageList.size
+                    forgedContent.qtyPages = ch.imageList.count { it.isReadable }
                     forgedContent.setRawUrl(ch.url)
                     val onlineImages = fetchImageURLs(forgedContent, ch.url, targetImageStatus)
 
                     // Link the chapter to the found pages
                     for (img in onlineImages) img.chapterId = ch.id
 
-                    // Remplace the image set within the results
-                    val index = result.indexOfFirst { img -> img.chapterId == ch.id }
+                    // Replace the image set within the results
+                    val index = result.indexOfFirst { it.chapterId == ch.id }
                     if (index > -1) {
-                        result.removeIf { img -> img.chapterId == ch.id }
+                        result.removeIf { it.chapterId == ch.id }
                         result.addAll(index, onlineImages)
                     }
 
@@ -692,6 +683,9 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
                 }
             }
         }
+
+        // Mark cover if there's none
+        if (result.none { it.isCover }) result.firstOrNull()?.isCover = true
 
         content.qtyPages = 0
         dao.insertContent(content)
@@ -943,222 +937,224 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
             DownloadEvent.fromPreparationStep(DownloadEvent.Step.COMPLETE_DOWNLOAD, content)
         )
 
-        val context = applicationContext
-        if (!downloadProcessStopped) {
-            val images: List<ImageFile> = content.imageList
-            val nbImages = images.count { !it.isCover } // Don't count the cover
-            var hasError = false
-            // Set error state if no image has been detected at all
-            if (0 == content.qtyPages && 0 == nbImages) {
-                logErrorRecord(
-                    contentId,
-                    ErrorType.PARSING,
-                    content.galleryUrl,
-                    "pages",
-                    "The book has no pages"
-                )
-                hasError = true
-            }
-
-            // Determine if missing pages are voluntary
-            // They are if the book had been previously downloaded
-            val isPreviousDownload = content.downloadCompletionDate > 0
-
-            // Set error state if less pages than initially detected - More than 10% difference in number of pages
-            if (content.qtyPages > 0 && nbImages < content.qtyPages && !isPreviousDownload
-                && abs(nbImages - content.qtyPages) > content.qtyPages * 0.1
-            ) {
-                val errorMsg =
-                    "The number of images found ($nbImages) does not match the book's number of pages (${content.qtyPages})"
-                logErrorRecord(
-                    contentId,
-                    ErrorType.PARSING,
-                    content.galleryUrl,
-                    "pages",
-                    errorMsg
-                )
-                hasError = true
-            }
-            // Set error state if there are non-downloaded pages
-            // NB : this should not happen theoretically
-            val nbDownloadedPages = content.getNbDownloadedPages()
-            if (nbDownloadedPages < content.qtyPages && !isPreviousDownload) {
-                val errorMsg =
-                    "The number of downloaded images ($nbDownloadedPages) does not match the book's number of pages (${content.qtyPages})"
-                logErrorRecord(
-                    contentId,
-                    ErrorType.PARSING,
-                    content.galleryUrl,
-                    "pages",
-                    errorMsg
-                )
-                hasError = true
-            }
-
-            // If additional pages have been downloaded (e.g. new chapters on existing book),
-            // update the book's number of pages and download date
-            val now = Instant.now().toEpochMilli()
-            if (nbImages > content.qtyPages) {
-                content.qtyPages = nbImages
-                content.downloadDate = now
-            }
-
-            try {
-                dlManager.completeDownload(context, content)
-            } catch (e: ArchiveException) {
-                hasError = true
-                logErrorRecord(
-                    contentId,
-                    ErrorType.IO,
-                    content.galleryUrl,
-                    "archive",
-                    e.message
-                )
-            }
-
-            if (content.storageUri.isEmpty()) return
-
-            // Auto-retry when error pages are remaining and conditions are met
-            // NB : Differences between expected and detected pages (see block above) can't be solved by retrying - it's a parsing issue
-            if (pagesKO > 0 && Settings.isDlRetriesActive && content.numberDownloadRetries < Settings.dlRetriesNumber) {
-                content.getContainingFolder(context)?.let { containingUri ->
-                    val freeSpaceRatio =
-                        MemoryUsageFigures(context, containingUri).freeUsageRatio100
-                    if (freeSpaceRatio < Settings.dlRetriesMemLimit) {
-                        Timber.i(
-                            "Initiating auto-retry #%s for content %s (%s%% free space)",
-                            content.numberDownloadRetries + 1,
-                            content.title,
-                            freeSpaceRatio
-                        )
-                        logErrorRecord(
-                            content.id,
-                            ErrorType.UNDEFINED,
-                            "",
-                            content.title,
-                            "Auto-retry #" + content.numberDownloadRetries
-                        )
-                    }
-                    content.increaseNumberDownloadRetries()
-
-                    // Re-queue all failed images
-                    for (img in images) if (img.status == StatusContent.ERROR) {
-                        Timber.i(
-                            "Auto-retry #%s for content %s / image @ %s",
-                            content.numberDownloadRetries,
-                            content.title,
-                            img.url
-                        )
-                        img.status = StatusContent.SAVED
-                        dao.updateImageFile(img)
-                        requestQueueManager.queueRequest(
-                            buildImageDownloadRequest(
-                                img,
-                                content.storageUri.toUri(),
-                                content
-                            )
-                        )
-                    }
-                    return
-                }
-            }
-
-            // Mark content as downloaded (download processing date; if none set before)
-            if (0L == content.downloadDate) content.downloadDate = now
-            if (0 == pagesKO && !hasError) {
-                content.downloadParams = ""
-                content.downloadCompletionDate = now
-                content.lastEditDate = now
-                content.status = StatusContent.DOWNLOADED
-                applyRenamingRules(content)
+        if (downloadProcessStopped) {
+            if (downloadCanceled.get()) {
+                Timber.d("Content download canceled: ${content.title} [$contentId]")
+                notificationManager.cancel()
             } else {
-                content.status = StatusContent.ERROR
+                Timber.d("Content download skipped : ${content.title} [$contentId]")
             }
-            content.computeSize()
+            return
+        }
 
-            // Replace the book with its new title, if any
-            @Suppress("USELESS_ELVIS") // Central log reports NPE here (probably because of ObjectBox not applying default value to a new field)
-            if ((content.replacementTitle ?: "").isNotEmpty()) {
-                content.title = content.replacementTitle
-                content.replacementTitle = ""
-            }
+        val context = applicationContext
+        val images: List<ImageFile> = content.imageList
+        val nbImages = images.count { it.isReadable }
+        var hasError = false
+        // Set error state if no image has been detected at all
+        if (0 == content.qtyPages && 0 == nbImages) {
+            logErrorRecord(
+                contentId,
+                ErrorType.PARSING,
+                content.galleryUrl,
+                "pages",
+                "The book has no pages"
+            )
+            hasError = true
+        }
 
-            addContent(applicationContext, dao, content)
+        // Determine if missing pages are voluntary
+        // They are if the book had been previously downloaded
+        val isPreviousDownload = content.downloadCompletionDate > 0
 
-            // Compute perceptual hash for the cover picture
-            computeAndSaveCoverHash(applicationContext, content, dao)
+        // Set error state if less pages than initially detected - More than 10% difference in number of pages
+        if (content.qtyPages > 0 && nbImages < content.qtyPages && !isPreviousDownload
+            && abs(nbImages - content.qtyPages) > content.qtyPages * 0.1
+        ) {
+            val errorMsg =
+                "The number of images found ($nbImages) does not match the book's number of pages (${content.qtyPages})"
+            logErrorRecord(
+                contentId,
+                ErrorType.PARSING,
+                content.galleryUrl,
+                "pages",
+                errorMsg
+            )
+            hasError = true
+        }
+        // Set error state if there are non-downloaded pages
+        // NB : this should not happen theoretically
+        val nbDownloadedPages = content.getNbDownloadedPages()
+        if (nbDownloadedPages < content.qtyPages && !isPreviousDownload) {
+            val errorMsg =
+                "The number of downloaded images ($nbDownloadedPages) does not match the book's number of pages (${content.qtyPages})"
+            logErrorRecord(
+                contentId,
+                ErrorType.PARSING,
+                content.galleryUrl,
+                "pages",
+                errorMsg
+            )
+            hasError = true
+        }
 
-            persistJson(applicationContext, content)
+        // If additional pages have been downloaded (e.g. new chapters on existing book),
+        // update the book's number of pages and download date
+        val now = Instant.now().toEpochMilli()
+        if (nbImages > content.qtyPages) {
+            content.qtyPages = nbImages
+            content.downloadDate = now
+        }
 
-            // Delete the duplicate book that was meant to be replaced, if any
-            if (!content.contentToReplace.isNull) {
-                val contentToReplace = content.contentToReplace.target
-                if (contentToReplace != null) {
-                    // Keep that content's custom group and order if needed
-                    val groupItems = contentToReplace.getGroupItems(Grouping.CUSTOM)
-                    if (groupItems.isNotEmpty()) {
-                        for (gi in groupItems) {
-                            moveContentToCustomGroup(
-                                content, gi.linkedGroup, dao, gi.order
-                            )
-                        }
-                    }
-                    EventBus.getDefault().post(
-                        DownloadEvent.fromPreparationStep(
-                            DownloadEvent.Step.REMOVE_DUPLICATE,
+        try {
+            dlManager.completeDownload(context, content)
+        } catch (e: ArchiveException) {
+            hasError = true
+            logErrorRecord(
+                contentId,
+                ErrorType.IO,
+                content.galleryUrl,
+                "archive",
+                e.message
+            )
+        }
+
+        if (content.storageUri.isEmpty()) return
+
+        // Auto-retry when error pages are remaining and conditions are met
+        // NB : Differences between expected and detected pages (see block above) can't be solved by retrying - it's a parsing issue
+        if (pagesKO > 0 && Settings.isDlRetriesActive && content.numberDownloadRetries < Settings.dlRetriesNumber) {
+            content.getContainingFolder(context)?.let { containingUri ->
+                val freeSpaceRatio =
+                    MemoryUsageFigures(context, containingUri).freeUsageRatio100
+                if (freeSpaceRatio < Settings.dlRetriesMemLimit) {
+                    Timber.i(
+                        "Initiating auto-retry #%s for content %s (%s%% free space)",
+                        content.numberDownloadRetries + 1,
+                        content.title,
+                        freeSpaceRatio
+                    )
+                    logErrorRecord(
+                        content.id,
+                        ErrorType.UNDEFINED,
+                        "",
+                        content.title,
+                        "Auto-retry #" + content.numberDownloadRetries
+                    )
+                }
+                content.increaseNumberDownloadRetries()
+
+                // Re-queue all failed images
+                for (img in images) if (img.status == StatusContent.ERROR) {
+                    Timber.i(
+                        "Auto-retry #%s for content %s / image @ %s",
+                        content.numberDownloadRetries,
+                        content.title,
+                        img.url
+                    )
+                    img.status = StatusContent.SAVED
+                    dao.updateImageFile(img)
+                    requestQueueManager.queueRequest(
+                        buildImageDownloadRequest(
+                            img,
+                            content.storageUri.toUri(),
                             content
                         )
                     )
-                    try {
-                        removeContent(applicationContext, dao, contentToReplace)
-                    } catch (e: ContentNotProcessedException) {
-                        Timber.w(e)
+                }
+                return
+            }
+        }
+
+        // Mark content as downloaded (download processing date; if none set before)
+        if (0L == content.downloadDate) content.downloadDate = now
+        if (0 == pagesKO && !hasError) {
+            content.downloadParams = ""
+            content.downloadCompletionDate = now
+            content.lastEditDate = now
+            content.status = StatusContent.DOWNLOADED
+            applyRenamingRules(content)
+        } else {
+            content.status = StatusContent.ERROR
+        }
+        content.computeSize()
+
+        // Replace the book with its new title, if any
+        @Suppress("USELESS_ELVIS") // Central log reports NPE here (probably because of ObjectBox not applying default value to a new field)
+        if ((content.replacementTitle ?: "").isNotEmpty()) {
+            content.title = content.replacementTitle
+            content.replacementTitle = ""
+        }
+
+        addContent(applicationContext, dao, content)
+
+        // Compute perceptual hash for the cover picture
+        computeAndSaveCoverHash(applicationContext, content, dao)
+
+        persistJson(applicationContext, content)
+
+        // Delete the duplicate book that was meant to be replaced, if any
+        if (!content.contentToReplace.isNull) {
+            val contentToReplace = content.contentToReplace.target
+            if (contentToReplace != null) {
+                // Keep that content's custom group and order if needed
+                val groupItems = contentToReplace.getGroupItems(Grouping.CUSTOM)
+                if (groupItems.isNotEmpty()) {
+                    for (gi in groupItems) {
+                        moveContentToCustomGroup(
+                            content, gi.linkedGroup, dao, gi.order
+                        )
                     }
                 }
-            }
-            Timber.i("Content download finished: ${content.title} [$contentId]")
-
-            // Delete book from queue
-            dao.deleteQueue(content)
-
-            // Increase downloads count
-            ContentQueueManager.downloadComplete()
-            if (0 == pagesKO) {
-                val downloadCount = ContentQueueManager.downloadCount
-                notificationManager.notify(DownloadSuccessNotification(downloadCount))
-            } else {
-                notificationManager.notify(DownloadErrorNotification(content))
-            }
-
-            // Signals current download as completed
-            Timber.d("CompleteActivity : OK = $pagesOK; KO = $pagesKO")
-            EventBus.getDefault().post(
-                DownloadEvent(
-                    content = content,
-                    eventType = DownloadEvent.Type.EV_COMPLETE,
-                    pagesOK = pagesOK,
-                    pagesKO = pagesKO,
-                    pagesTotal = nbImages,
-                    downloadedSizeB = sizeDownloadedBytes
+                EventBus.getDefault().post(
+                    DownloadEvent.fromPreparationStep(
+                        DownloadEvent.Step.REMOVE_DUPLICATE,
+                        content
+                    )
                 )
-            )
-            val context = applicationContext
-            if (updateQueueJson(context, dao))
-                Timber.i(context.getString(R.string.queue_json_saved))
-            else Timber.w(
-                context.getString(
-                    R.string.queue_json_failed
-                )
-            )
-
-            AchievementsManager.checkStorage(context)
-            AchievementsManager.checkCollection()
-        } else if (downloadCanceled.get()) {
-            Timber.d("Content download canceled: ${content.title} [$contentId]")
-            notificationManager.cancel()
-        } else {
-            Timber.d("Content download skipped : ${content.title} [$contentId]")
+                try {
+                    removeContent(applicationContext, dao, contentToReplace)
+                } catch (e: ContentNotProcessedException) {
+                    Timber.w(e)
+                }
+            }
         }
+        Timber.i("Content download finished: ${content.title} [$contentId]")
+
+        // Delete book from queue
+        dao.deleteQueue(content)
+
+        // Increase downloads count
+        ContentQueueManager.downloadComplete()
+        if (0 == pagesKO) {
+            val downloadCount = ContentQueueManager.downloadCount
+            notificationManager.notify(DownloadSuccessNotification(downloadCount))
+        } else {
+            notificationManager.notify(DownloadErrorNotification(content))
+        }
+
+        // Signal current download as completed
+        Timber.d("CompleteActivity : OK = $pagesOK; KO = $pagesKO")
+        EventBus.getDefault().post(
+            DownloadEvent(
+                content = content,
+                eventType = DownloadEvent.Type.EV_COMPLETE,
+                pagesOK = pagesOK,
+                pagesKO = pagesKO,
+                pagesTotal = nbImages,
+                downloadedSizeB = sizeDownloadedBytes
+            )
+        )
+        if (updateQueueJson(context, dao))
+            Timber.i(context.getString(R.string.queue_json_saved))
+        else Timber.w(
+            context.getString(
+                R.string.queue_json_failed
+            )
+        )
+
+        AchievementsManager.checkStorage(context)
+        AchievementsManager.checkCollection()
     }
 
     /**

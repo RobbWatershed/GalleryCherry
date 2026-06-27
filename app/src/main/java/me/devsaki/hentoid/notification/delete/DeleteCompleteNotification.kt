@@ -17,12 +17,16 @@ class DeleteCompleteNotification(
             when (operation) {
                 BaseDeleteWorker.Operation.STREAM -> R.string.notif_stream_fail
                 BaseDeleteWorker.Operation.PURGE -> R.string.notif_delete_prepurge_fail
+                BaseDeleteWorker.Operation.REMOVE_THUMB -> R.string.notif_remove_thumb_failed
+                BaseDeleteWorker.Operation.CREATE_THUMB -> R.string.notif_create_thumb_failed
                 else -> R.string.notif_delete_fail
             }
         } else {
             when (operation) {
                 BaseDeleteWorker.Operation.STREAM -> R.string.notif_stream_complete
                 BaseDeleteWorker.Operation.PURGE -> R.string.notif_delete_prepurge_complete
+                BaseDeleteWorker.Operation.REMOVE_THUMB -> R.string.notif_remove_thumb_complete
+                BaseDeleteWorker.Operation.CREATE_THUMB -> R.string.notif_create_thumb_complete
                 else -> R.string.notif_delete_complete
             }
         }

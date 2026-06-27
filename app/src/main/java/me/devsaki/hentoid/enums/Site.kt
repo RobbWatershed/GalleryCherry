@@ -18,6 +18,7 @@ private val RETIRED_SITES = setOf(
     Site.KSK,  // Dead
     Site.ANCHIRA,  // Dead
     Site.TSUMINO,  // Dead
+    Site.MANHWA, // Dead
     Site.FAKKU,  // Old Fakku; kept for retrocompatibility
     Site.FAKKU2,  // Dropped after Fakku decided to flag downloading accounts and IPs
     Site.ASMHENTAI_COMICS,  // Does not work directly

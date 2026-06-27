@@ -24,6 +24,7 @@ class MrmParser : BaseChapteredImageListParser() {
             parseContentImages(onlineContent),
             onlineContent.downloadRange,
             StatusContent.SAVED,
+            Site.MRM,
             onlineContent.coverImageUrl
         )
     }
@@ -38,14 +39,12 @@ class MrmParser : BaseChapteredImageListParser() {
         // NB : We can't just guess the URLs by starting to 1 and increment them
         // because the site provides "subchapters" (e.g. 4.6, 2.5)
         val chapterUrls: MutableList<String> = ArrayList()
-        val doc = getOnlineDocument(
+        getOnlineDocument(
             content.galleryUrl,
             headers,
             Site.MRM.useMobileAgent, Site.MRM.useHentoidAgent, Site.MRM.useWebviewAgent
-        )
-        if (doc != null) {
-            val chapterContainer = doc.select("div.entry-pagination").first()
-            if (chapterContainer != null) {
+        )?.let { doc ->
+            doc.select("div.entry-pagination").first()?.let { chapterContainer ->
                 for (e in chapterContainer.children()) {
                     if (e.hasClass("current")) chapterUrls.add(content.galleryUrl) // current chapter; this is the reason why MrmParser still has its own parseImages function
                     else if (e.hasAttr("href")) chapterUrls.add(e.attr("href"))

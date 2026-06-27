@@ -69,6 +69,7 @@
     <!-- Choice for "Blocking behaviour" setting -->
     <string name="pref_dl_blocked_tags_behaviour_entries_1">Don\'t queue</string>
     <string name="pref_dl_blocked_tags_behaviour_entries_2">Queue as download error</string>
+    <string name="pref_dl_blocked_tags_behaviour_entries_3">Queue on 2nd tap</string>
     <!-- Choice for "Browse mode" setting -->
     <string name="pref_viewer_browse_mode_entries_1">Left to Right</string>
     <string name="pref_viewer_browse_mode_entries_2">Right to Left</string>

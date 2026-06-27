@@ -27,11 +27,13 @@ import java.util.Date
 
 
 private val FILE = byteArrayOfInts(0x50, 0x4B, 0x03, 0x04)
+private val DATA_DESCRIPTOR = byteArrayOfInts(0x50, 0x4b, 0x07, 0x08)
 private val TOCFILE = byteArrayOfInts(0x50, 0x4B, 0x01, 0x02)
 private val TOCEND64 = byteArrayOfInts(0x50, 0x4B, 0x06, 0x06)
 private val TOCEND64_LOCATOR = byteArrayOfInts(0x50, 0x4B, 0x06, 0x07)
 private val TOCEND = byteArrayOfInts(0x50, 0x4B, 0x05, 0x06)
 private val FILE_EXTRA64 = byteArrayOfInts(0x01, 0x00)
+private const val FLAG_SIZE_UNKNOWN: UShort = 0x08u
 private const val FLAG_ENCRYPTED: UShort = 0x01u
 private const val FLAG_UTF8_ENCODE: UShort = 0x800u
 
@@ -40,6 +42,11 @@ private const val FLAG_UTF8_ENCODE: UShort = 0x800u
  */
 private const val DOSTIME_BEFORE_1980 = (1 shl 21) or (1 shl 16)
 
+/**
+ * Read a ZIP file
+ *
+ * NB : Doesn't support archives that span over multiple files ("disks" as specs call them)
+ */
 class ZipReader(context: Context, archiveUri: Uri, failOnUnsupported: Boolean = false) {
     val records = ArrayList<ArchiveEntry>()
     val allNotCompressed: Boolean
@@ -67,15 +74,20 @@ class ZipReader(context: Context, archiveUri: Uri, failOnUnsupported: Boolean = 
             tocOffset = footerData.tocOffset
             var hasOneCompressed = false
             var hasError = footerData.error
+            val tocSizes: MutableList<Pair<Long, Long>> = ArrayList()
             if (!hasError) {
                 Timber.d("footerData ${footerData.cdrCount} ${footerData.cdrSize} $tocOffset")
 
                 // Start with a brand-new file stream to avoid mark/reset nightmares
-                val tocInfo = getInputStream(context, archiveUri).use { fis ->
-                    readToC(fis, tocOffset, footerData.cdrCount, failOnUnsupported)
-                } // FileInputStream
+                val tocInfo = getInputStream(context, archiveUri).use {
+                    readToC(it, tocOffset, footerData.cdrCount, failOnUnsupported)
+                }
                 hasOneCompressed = tocInfo.hasOneCompressed
-                hasError = tocInfo.isCorrupted
+                hasError = tocInfo.isCorrupted || tocInfo.isInconsistent
+
+                // Keep sizes declared in ToC in case local headers refer to them (0 or 0xFFFF)
+                if (tocInfo.isInconsistent)
+                    tocSizes.addAll(records.map { Pair(it.compressedSize, it.size) })
             }
 
             // Try parsing all file entries if table of contents is corrupted
@@ -84,6 +96,7 @@ class ZipReader(context: Context, archiveUri: Uri, failOnUnsupported: Boolean = 
                 Timber.d("Errors in footer; trying to parse file entries")
                 records.clear()
                 getInputStream(context, archiveUri).asSource().buffered().use {
+                    var uses64 = false
                     var offset = 0L
                     var id = it.readByteArray(4)
                     try {
@@ -92,9 +105,9 @@ class ZipReader(context: Context, archiveUri: Uri, failOnUnsupported: Boolean = 
                             val flags = it.readUShortLe()
                             if (FLAG_ENCRYPTED == (flags and FLAG_ENCRYPTED) && failOnUnsupported)
                                 throw UnsupportedOperationException("Encrypted ZIP entries are not supported")
-                            if (FLAG_UTF8_ENCODE == (flags and FLAG_UTF8_ENCODE)) { // Bit 11 : Language encoding flag (EFS)
+                            if (FLAG_UTF8_ENCODE == (flags and FLAG_UTF8_ENCODE)) // Bit 11 : Language encoding flag (EFS)
                                 charset = Charsets.UTF_8
-                            }
+                            val sizeUnknown = (FLAG_SIZE_UNKNOWN == (flags and FLAG_SIZE_UNKNOWN))
                             val compressionMode = it.readUShortLe()
                             if (compressionMode > 0u) hasOneCompressed = true
                             val datetime = dosToJavaTime(it.readUIntLe().toLong())
@@ -112,8 +125,13 @@ class ZipReader(context: Context, archiveUri: Uri, failOnUnsupported: Boolean = 
                                     val size = it.readUShortLe().toLong()
                                     when (extraId) {
                                         0x0001 -> { // ZIP64 extended information
-                                            uncompressedSize = it.readLongLe()
-                                            if (size > 8) compressedSize = it.readLongLe()
+                                            uses64 = true
+                                            var tmpData = it.readLongLe()
+                                            if (tmpData > 0) uncompressedSize = tmpData
+                                            if (size > 8) {
+                                                var tmpData = it.readLongLe()
+                                                if (tmpData > 0) compressedSize = tmpData
+                                            }
                                             if (size > 16) it.skip(8)
                                             if (size > 24) it.skip(4)
                                         }
@@ -136,6 +154,15 @@ class ZipReader(context: Context, archiveUri: Uri, failOnUnsupported: Boolean = 
                                 } while (read < extraDataLength)
                             }
                             val headerSize = 30 + nameLength + extraDataLength
+
+                            // Use sizes declared in the ToC if locally-declared sizes are unusable
+                            if (tocSizes.size > records.size) {
+                                if (0L == compressedSize || UInt.MAX_VALUE.toLong() == compressedSize)
+                                    compressedSize = tocSizes[records.size].first
+                                if (0L == uncompressedSize || UInt.MAX_VALUE.toLong() == uncompressedSize)
+                                    uncompressedSize = tocSizes[records.size].second
+                            }
+
                             records.add(
                                 ArchiveEntry(
                                     name.endsWith("/"),
@@ -153,6 +180,16 @@ class ZipReader(context: Context, archiveUri: Uri, failOnUnsupported: Boolean = 
                             offset += headerSize + compressedSize
 
                             id = it.readByteArray(4)
+
+                            if (sizeUnknown) {
+                                var extra = 4L // CRC
+                                // Optional header
+                                if (id.contentEquals(DATA_DESCRIPTOR)) extra += 4
+                                extra += if (uses64) 16 else 8 // Sizes
+                                it.skip(extra - 4) // First 4 already read
+                                offset += extra
+                                id = it.readByteArray(4)
+                            }
                         } while (id.contentEquals(FILE))
                     } catch (e: EOFException) {
                         Timber.w(e)
@@ -160,7 +197,7 @@ class ZipReader(context: Context, archiveUri: Uri, failOnUnsupported: Boolean = 
                     Timber.d("Ended @ $offset")
 
                     if (id.contentEquals(TOCFILE)) tocOffset = offset
-                }
+                } // use source
             } // hasError
 
             allNotCompressed = !hasOneCompressed
@@ -169,7 +206,7 @@ class ZipReader(context: Context, archiveUri: Uri, failOnUnsupported: Boolean = 
         if (BuildConfig.DEBUG) {
             Timber.d("Read completed; ${records.size} records found")
             records.forEachIndexed { i, e ->
-                Timber.d("RECORD $i ${e.path} (${e.isFolder}) ${e.size} @${e.offset}")
+                Timber.d("RECORD $i ${e.path} (${e.isFolder}) ${e.size} @${e.offset} (${e.headerSize})")
             }
         }
     } // init
@@ -309,8 +346,15 @@ class ZipReader(context: Context, archiveUri: Uri, failOnUnsupported: Boolean = 
                 }
                 it.skip(commentLength)
 
-                // Assuming the local header stores the very same extra data as the central header ^^"
-                // (minus the zip64hack)
+                /* The following instruction assumes the local header stores the very same extra data
+                as the central header (minus the zip64hack), which may not be the case at all.
+
+                We also can't deduce entry header size from data size and offsets as there can be
+                parasite blocks (e.g. 0x08074b50) between the end of file data and the start of the
+                next local header.
+
+                Issues will be detected by the consistency check at the end of the method
+                 */
                 val headerSize = 30 + nameLength + extraDataLength + zip64hack
                 records.add(
                     ArchiveEntry(
@@ -325,8 +369,22 @@ class ZipReader(context: Context, archiveUri: Uri, failOnUnsupported: Boolean = 
                         crc = crc
                     )
                 )
-            } // cdrCount
-        } // asSource.buffered
+            } // cdrCount loop
+        } // use asSource.buffered
+
+        // Check consistency of ToC information
+        records.forEachIndexed { idx, record ->
+            if (result.isInconsistent) return@forEachIndexed
+            if (record.isChunkable) {
+                val predictedOffset =
+                    record.offset + record.headerSize + if (record.size > 0) record.size else record.compressedSize
+                if (idx < records.size - 1 && records[idx + 1].offset != predictedOffset) {
+                    Timber.d("Inconsistent ToC declaration : offset ${records[idx + 1].offset} != $predictedOffset on entry ${records[idx + 1].path}")
+                    result.isInconsistent = true
+                }
+            }
+        }
+
         return result
     }
 
@@ -555,6 +613,7 @@ class ZipStream(context: Context, archiveUri: Uri, append: Boolean) : Closeable 
 
     data class ToCInformation(
         var hasOneCompressed: Boolean = false,
-        var isCorrupted: Boolean = false
+        var isCorrupted: Boolean = false,
+        var isInconsistent: Boolean = false
     )
 }

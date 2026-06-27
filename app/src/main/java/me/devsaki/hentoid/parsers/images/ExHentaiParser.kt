@@ -103,6 +103,7 @@ class ExHentaiParser : ImageListParser {
                 try {
                     EHentaiParser.loadMpv(
                         mpvUrl,
+                        Site.EXHENTAI,
                         headers,
                         useMobileAgent,
                         useHentoidAgent,

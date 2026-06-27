@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+  <string name="slide_01_header">Selamat datang di Hentoid!</string>
+  <string name="slide_01_text">Hentoid adalah aplikasi peng-arsip Doujinshi\n&amp; H-Manga.</string>
+  <string name="slide_02_browser_mode_description">Gunakan aplikasi untuk menjelajahi situs web.\n\nAnda tidak akan dapat mengunduh buku apa pun maupun mengelola perpustakaan Anda.\n\nTidak memerlukan izin apa pun.</string>
+  <string name="slide_02_browser_mode_title">Hanya browsing</string>
+  <string name="slide_02_header">Izin aplikasi</string>
+  <string name="slide_02_library_mode_description">Gunakan aplikasi untuk mengunduh dan mengelola perpustakaan Anda.\n\nIzin akses penyimpanan diperlukan.</string>
+  <string name="slide_02_library_mode_title">Browsing &amp; Download</string>
+  <string name="slide_04_header">Perpustakaan</string>
+  <string name="slide_04_skip">Lewati</string>
+  <string name="slide_04_skip_msg">Anda tidak bisa mendownload jika anda melewati langkah ini. \nUntuk mendownload, anda harus menentukan folder unduhan di pengaturan aplikasi</string>
+  <string name="slide_04_skip_title">Lewati\?</string>
+  <string name="slide_04_text">Hentoid memerlukan folder untuk menyimpan file yang diunduh</string>
+  <string name="slide_05_header">Tema</string>
+  <string name="slide_05_text">Pilih tema aplikasi</string>
+  <string name="slide_06_header">Sumber</string>
+  <string name="slide_06_subtext">Anda dapat mengganti pengaturan ini dilain waktu di pengaturan aplikasi &gt; Sumber</string>
+  <string name="slide_06_text">Pilih sumber untuk mengunduh konten.</string>
+  <string name="slide_end_header">Semua konfigurasi selesai!</string>
+  <string name="slide_end_text">Semua konfigurasi selesai!\nSelamat menikmati aplikasinya.</string>
+</resources>

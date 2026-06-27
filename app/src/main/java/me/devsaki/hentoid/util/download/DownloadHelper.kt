@@ -138,7 +138,7 @@ suspend fun downloadPic(
 
         return@withContext Pair(resourceId, Uri.fromFile(targetFile).toString())
     } catch (_: DownloadInterruptedException) {
-        Timber.d("Download interrupted for pic %d", resourceId)
+        Timber.d("Download interrupted for pic $resourceId" )
     } catch (e: Exception) {
         Timber.w(e)
     }

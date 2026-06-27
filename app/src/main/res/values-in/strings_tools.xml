@@ -1,0 +1,35 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+  <string name="tools_cache_app">Hapus cache app</string>
+  <string name="tools_cache_app_success">Cache app berhasil di hapus</string>
+  <string name="tools_cache_browser">Hapus cache browser</string>
+  <string name="tools_cache_browser_missing_webview">Webview tidak tersedia saat ini, Tidak bisa menghapus cahce saat ini</string>
+  <string name="tools_cache_browser_success">Cache webview telah berhasil dihapus</string>
+  <string name="tools_cache_browser_updating_webview">Webview sedang dalam pembaharuan, tidak bisa menghapus cache saat ini</string>
+  <string name="tools_duplicate_detector_summary">Identifikasi dan hapus buku duplikat</string>
+  <string name="tools_duplicate_detector_title">Pendeteksi duplikat</string>
+  <string name="tools_export_library_summary">Expor buku Hentoid menjadi file JSON</string>
+  <string name="tools_export_library_title">Expor metadata</string>
+  <string name="tools_export_settings_summary">Expor pengaturen ke file JSON</string>
+  <string name="tools_export_settings_title">Pengaturan ekspor</string>
+  <string name="tools_import_empty_books_entries_1">Jangan ekspor</string>
+  <string name="tools_import_empty_books_entries_2">Impor sebagai buku kosong</string>
+  <string name="tools_import_empty_books_entries_3">Impor buku dengan metode streaming jika memungkinkan</string>
+  <string name="tools_import_empty_books_entries_4">Tambahkan ke antrian error</string>
+  <string name="tools_import_empty_books_intro">Jika tidak ada file gambar yang terdeteksi...</string>
+  <string name="tools_import_library_summary">Pulihkan buku-buku hentoid dari file JSON</string>
+  <string name="tools_import_library_title">Impor metadata</string>
+  <string name="tools_import_settings_summary">Pulihkan Pengaturan expor dari file JSON</string>
+  <string name="tools_import_settings_title">Impor pengaturan</string>
+  <string name="tools_latest_logs_summary">Lihat log aplikasi terbaru</string>
+  <string name="tools_latest_logs_title">log aplikasi</string>
+  <string name="tools_ram_usage_summary">Perlihatkan penggunaan ram saat ini</string>
+  <string name="tools_ram_usage_title">Pengunaan Ram</string>
+  <string name="tools_renaming_rules_summary">Atur pengaturan penamaan atribut</string>
+  <string name="tools_renaming_rules_title">Pengaturan penamaan atribut</string>
+  <string name="tools_screen_cache">Pengaturan cache</string>
+  <string name="tools_screen_cat_settings">Pengaturan</string>
+  <string name="tools_screen_import_export">Impor / Expor</string>
+  <string name="tools_screen_library">Pengaturan perpustakaan</string>
+  <string name="tools_title">Tool</string>
+</resources>

@@ -365,9 +365,6 @@ class MetadataEditViewModel(
             // Save Content itself
             it.imageFiles.let { imgs -> dao.insertImageFiles(imgs) }
             dao.insertContent(it)
-
-            // Cleanup
-            dao.deleteEmptyArtistGroups()
         }
 
         contentList.value?.let {

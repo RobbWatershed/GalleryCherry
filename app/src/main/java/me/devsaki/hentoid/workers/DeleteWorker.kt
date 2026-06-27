@@ -28,6 +28,7 @@ import me.devsaki.hentoid.events.ProcessEvent
 import me.devsaki.hentoid.notification.delete.DeleteCompleteNotification
 import me.devsaki.hentoid.notification.delete.DeleteProgressNotification
 import me.devsaki.hentoid.notification.delete.DeleteStartNotification
+import me.devsaki.hentoid.util.createFolderStreamedCover
 import me.devsaki.hentoid.util.download.selectDownloadLocation
 import me.devsaki.hentoid.util.exception.ContentNotProcessedException
 import me.devsaki.hentoid.util.exception.FileNotProcessedException
@@ -68,7 +69,7 @@ abstract class BaseDeleteWorker(
     BaseWorker(context, parameters, serviceId, "delete") {
 
     enum class Operation {
-        DELETE, PURGE, STREAM
+        DELETE, PURGE, STREAM, REMOVE_THUMB, CREATE_THUMB
     }
 
     enum class Target {
@@ -253,6 +254,8 @@ abstract class BaseDeleteWorker(
                             Operation.DELETE -> deleteContent(it)
                             Operation.PURGE -> purgeContentFiles(it, purgeKeepCovers)
                             Operation.STREAM -> streamContent(it)
+                            Operation.REMOVE_THUMB -> removeThumb(it)
+                            Operation.CREATE_THUMB -> createThumb(it)
                         }
                     } catch (e: Exception) {
                         nbError++
@@ -530,6 +533,39 @@ abstract class BaseDeleteWorker(
 
         progressDone()
         trace(Log.INFO, "Removed ${uris.size} documents")
+    }
+
+    private suspend fun removeThumb(content: Content) = withContext(Dispatchers.IO) {
+        // Using isReadable because isCover can be flagged on a normal page
+        if (content.isPdf || content.isArchive) return@withContext
+        if (content.imageList.isEmpty()) return@withContext
+        if (content.imageList.all { it.isReadable }) return@withContext
+
+        val thumbs = content.imageList.filter { !it.isReadable }
+        thumbs.forEach {
+            removeFile(applicationContext, it.fileUri.toUri())
+        }
+        dao.deleteImageFiles(thumbs)
+
+        val imgs = dao.selectImagesFromContent(content.id, true)
+        if (imgs.any { it.isCover } || imgs.isEmpty()) return@withContext
+
+        val first = imgs.first()
+        first.isCover = true
+        dao.insertImageFile(first)
+
+        dao.selectContent(content.id)?.let { persistJson(applicationContext, it) }
+    }
+
+    private suspend fun createThumb(content: Content) = withContext(Dispatchers.IO) {
+        try {
+            val images = createFolderStreamedCover(applicationContext, content)
+            dao.replaceImageList(content.id, images)
+            dao.selectContent(content.id)?.let { persistJson(applicationContext, it) }
+        } catch (e: Exception) {
+            nbError++
+            trace(Log.WARN, e.message)
+        }
     }
 
     @OptIn(DelicateCoroutinesApi::class)

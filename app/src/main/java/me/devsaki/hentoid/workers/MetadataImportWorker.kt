@@ -11,7 +11,6 @@ import me.devsaki.hentoid.R
 import me.devsaki.hentoid.core.JSON_FILE_NAME_V2
 import me.devsaki.hentoid.core.SuspendRunnable
 import me.devsaki.hentoid.database.CollectionDAO
-import me.devsaki.hentoid.database.ObjectBoxDAO
 import me.devsaki.hentoid.database.ObjectBoxDAOContainer
 import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.database.domains.DownloadMode
@@ -192,7 +191,12 @@ class MetadataImportWorker(val context: Context, val params: WorkerParameters) :
         if (!isStopped) onFinish.invoke()
     }
 
-    private fun importItem(context: Context, o: Any, emptyBooksOption: Int, dao: CollectionDAO) {
+    private suspend fun importItem(
+        context: Context,
+        o: Any,
+        emptyBooksOption: Int,
+        dao: CollectionDAO
+    ) {
         if (o is JsonContent) importContent(
             context,
             o,
@@ -203,7 +207,7 @@ class MetadataImportWorker(val context: Context, val params: WorkerParameters) :
 
     // Try to map the given imported content to an existing book in the downloads folders
     // Folder names can be formatted in many ways _but_ they always contain the book unique ID !
-    private fun importContent(
+    private suspend fun importContent(
         context: Context,
         jsonContent: JsonContent,
         emptyBooksOption: Int,

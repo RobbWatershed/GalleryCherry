@@ -69,16 +69,14 @@ class EdoujinContent : BaseContentParser() {
             EdoujinParser.getDataFromScripts(scripts)?.let { info ->
                 val chapterImgs = info.getImages()
                 if (updateImages && chapterImgs.isNotEmpty()) {
-                    val coverUrl = chapterImgs[0]
-                    content.setImageFiles(
-                        urlsToImageFiles(
-                            chapterImgs,
-                            content.downloadRange,
-                            StatusContent.SAVED,
-                            coverUrl
-                        )
+                    val imgs = urlsToImageFiles(
+                        chapterImgs,
+                        content.downloadRange,
+                        StatusContent.SAVED,
+                        Site.EDOUJIN
                     )
-                    content.qtyPages = chapterImgs.size
+                    content.setImageFiles(imgs)
+                    content.qtyPages = imgs.count { it.isReadable }
                 }
             }
         } catch (ioe: IOException) {

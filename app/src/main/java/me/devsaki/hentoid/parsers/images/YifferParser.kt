@@ -9,7 +9,7 @@ class YifferParser : BaseImageListParser() {
         val result: MutableList<String> = ArrayList()
 
         getOnlineDocument(content.galleryUrl)?.let { doc ->
-            doc.select(".comicPage")?.let { imgs ->
+            doc.select(".comicPage").let { imgs ->
                 result.addAll(imgs.map { getImgSrc(it) })
             }
         }

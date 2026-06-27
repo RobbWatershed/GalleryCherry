@@ -65,7 +65,7 @@ class PdfManager {
     }
 
     // Blocking call
-    fun convertImagesToPdf(
+    suspend fun convertImagesToPdf(
         context: Context,
         out: OutputStream,
         imageFiles: List<DocumentFile>,
@@ -111,7 +111,7 @@ class PdfManager {
                                         false, 0, 0, 0, 0, 0, 0, 1, PictureEncoder.PNG,
                                         PictureEncoder.JPEG, PictureEncoder.PNG, 90
                                     )
-                                    transform(data, params)
+                                    transform(context, data, params)
                                 } else data
                             )
                         )

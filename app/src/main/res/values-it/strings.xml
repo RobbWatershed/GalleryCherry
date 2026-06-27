@@ -591,7 +591,6 @@
     <string name="logs_share">Condividi registro</string>
     <string name="logs_title">Ultimi registri</string>
     <string name="malformed_url">Errore - URL non valido</string>
-    <string name="mass_delete_action">Cancellazione di massa</string>
     <string name="mass_delete_confirm">So ciò che sto facendo</string>
     <string name="mass_external_tip">Nota: I libri esterni verranno cancellati da questa operazione</string>
     <string name="mass_external_warning_1">La tua attuale selezione contiene libri da siti che non dovrebbero essere streammati. Questi libri non saranno processati.</string>
@@ -857,7 +856,7 @@
     </plurals>
     <string name="redownloaded_updating_webview">WebView si sta aggiornando, ancora impossibile riscaricare </string>
     <string name="refresh_allow_write">Si prega di consentire il permesso di scrittura</string>
-    <string name="refresh_auto_processing">Aggiornamento automatico della libreria esterna (%d/%d)</string>
+    <string name="refresh_auto_processing">Aggiornamento automatico della libreria esterna (%1$d/%2$d)</string>
     <string name="refresh_caption">Aggiorna automaticamente i dati della libreria con una nuova scansione di file e cartelle.</string>
     <string name="refresh_location_external">Libreria esterna</string>
     <string name="refresh_location_internal">Libreria primaria (tutte)</string>

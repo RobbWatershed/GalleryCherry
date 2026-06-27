@@ -10,6 +10,7 @@ import me.devsaki.hentoid.parsers.cleanup
 import me.devsaki.hentoid.parsers.getImgSrc
 import me.devsaki.hentoid.parsers.parseAttribute
 import me.devsaki.hentoid.parsers.parseAttributes
+import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.capitalizeString
 import me.devsaki.hentoid.util.isNumeric
 import me.devsaki.hentoid.util.network.getOnlineDocument
@@ -120,19 +121,10 @@ class MusesContent : BaseContentParser() {
             content.qtyPages =
                 nbImages // Cover is duplicated in the code below; no need to decrease nbImages here
             var thumbParts: MutableList<String>
-            var index = 0
             val images: MutableList<ImageFile> = ArrayList()
-            // Cover
-            val cover = ImageFile.fromImageUrl(
-                index++,
-                Site.MUSES.url + imagesUrls[0],
-                StatusContent.SAVED,
-                nbImages
-            )
-            content.coverImageUrl = cover.url
-            cover.isCover = true
-            images.add(cover)
+
             // Images
+            var index = 1
             for (u in imagesUrls) {
                 thumbParts = u.split("/").toMutableList()
                 if (thumbParts.size > 3) {

@@ -263,6 +263,7 @@
     <string-array name="pref_dl_blocked_tags_behaviour_entries" translatable="false">
         <item>@string/pref_dl_blocked_tags_behaviour_entries_1</item>
         <item>@string/pref_dl_blocked_tags_behaviour_entries_2</item>
+        <item>@string/pref_dl_blocked_tags_behaviour_entries_3</item>
     </string-array>
     <string-array name="pref_viewer_browse_mode_entries" translatable="false">
         <item>@string/pref_viewer_browse_mode_entries_1</item>
@@ -507,6 +508,8 @@
     <string-array name="mass_operations_entries" translatable="false">
         <item>@string/mass_operation_1</item>
         <item>@string/mass_operation_2</item>
+        <item>@string/mass_operation_3</item>
+        <item>@string/mass_operation_4</item>
     </string-array>
     <string-array name="mass_operations_scope_entries" translatable="false">
         <item>@string/mass_operation_scope_1</item>
@@ -616,6 +619,7 @@
     <string name="pref_dl_threads_quantity_default" translatable="false">0</string>
     <string name="pref_dl_speed_cap_default" translatable="false">-1</string>
     <string name="pref_dl_http_429_default_delay_default" translatable="false">120</string>
+    <string name="pref_dl_separate_thumb" translatable="false">true</string>
     <!-- Strings: Settings: Privacy -->
     <string name="pref_app_preview_default" translatable="false">false</string>
     <string name="pref_analytics_preference_default" translatable="false">true</string>

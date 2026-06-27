@@ -3,7 +3,6 @@ package me.devsaki.hentoid.parsers.images
 import me.devsaki.hentoid.database.domains.Chapter
 import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.database.domains.ImageFile
-import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.parsers.urlsToImageFiles
 import me.devsaki.hentoid.util.isNumeric
@@ -17,11 +16,7 @@ class EdoujinParser : BaseChapteredImageListParser() {
 
     data class EdoujinInfo(private val sources: List<EdoujinSource>?) {
         fun getImages(): List<String> {
-            val result: MutableList<String> = ArrayList()
-            if (sources != null) {
-                for (s in sources) if (s.images != null) result.addAll(s.images)
-            }
-            return result
+            return sources?.flatMap { it.images ?: emptyList() } ?: emptyList()
         }
     }
 
@@ -89,9 +84,9 @@ class EdoujinParser : BaseChapteredImageListParser() {
                         chp
                     )
                 }
-            } ?: run { Timber.i("Chapter parsing failed for %s : no pictures found", chp.url) }
+            } ?: run { Timber.i("Chapter parsing failed for ${chp.url} : no pictures found") }
         } ?: run {
-            Timber.i("Chapter parsing failed for %s : no response", chp.url)
+            Timber.i("Chapter parsing failed for ${chp.url} : no response")
         }
         return emptyList()
     }

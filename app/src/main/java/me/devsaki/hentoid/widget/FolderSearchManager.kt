@@ -15,6 +15,7 @@ import me.devsaki.hentoid.R
 import me.devsaki.hentoid.core.THUMBS_CACHE
 import me.devsaki.hentoid.util.InnerNameNumberDisplayFileComparator
 import me.devsaki.hentoid.util.Settings
+import me.devsaki.hentoid.util.Settings.libraryGridCardWidthDP
 import me.devsaki.hentoid.util.boolean
 import me.devsaki.hentoid.util.file.DisplayFile
 import me.devsaki.hentoid.util.file.FileExplorer
@@ -154,7 +155,7 @@ class FolderSearchManager() {
                         val archiveCover =
                             if (isSupportedArchivePdf(fileName)) {
                                 getPictureThumbCached(
-                                    context, it.uri, 100, null,
+                                    context, it.uri, libraryGridCardWidthDP, null,
                                     StorageCache.createFinder(THUMBS_CACHE),
                                     StorageCache.createCreator(THUMBS_CACHE)
                                 ) ?: Uri.EMPTY

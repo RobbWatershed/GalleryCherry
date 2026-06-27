@@ -71,12 +71,15 @@ class ManhwaContent : BaseContentParser() {
         if (updateImages) {
             chapterImgs?.let { chpImg ->
                 val imgUrls = chpImg.map { getImgSrc(it) }
-                var coverUrl = ""
-                if (imgUrls.isNotEmpty()) coverUrl = imgUrls[0]
-                content.setImageFiles(
-                    urlsToImageFiles(imgUrls, content.downloadRange, StatusContent.SAVED, coverUrl)
-                )
-                content.qtyPages = imgUrls.size
+                val imgs =
+                    urlsToImageFiles(
+                        imgUrls,
+                        content.downloadRange,
+                        StatusContent.SAVED,
+                        Site.MANHWA
+                    )
+                content.setImageFiles(imgs)
+                content.qtyPages = imgs.count { it.isReadable }
             }
         }
         return content

@@ -37,6 +37,7 @@ import me.devsaki.hentoid.util.getStorageRoot
 import me.devsaki.hentoid.util.image.TransformParams
 import me.devsaki.hentoid.util.image.clearCoilCache
 import me.devsaki.hentoid.util.image.determineEncoder
+import me.devsaki.hentoid.util.image.getImageDimensions
 import me.devsaki.hentoid.util.image.isImageLossless
 import me.devsaki.hentoid.util.image.transform
 import me.devsaki.hentoid.util.image.transformManhwaChapter
@@ -323,21 +324,19 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
                 return@use it.readBytes()
             }
         }
-        val imageId = img.fileUri
-        val metadataOpts = BitmapFactory.Options()
-        metadataOpts.inJustDecodeBounds = true
+        val imageUri = img.fileUri
 
         val targetData: ByteArray
         if (upscaler != null) { // AI upscale
-            targetData = upscale(imageId, rawData)
+            targetData = upscale(imageUri, rawData)
         } else { // regular resize
-            BitmapFactory.decodeByteArray(rawData, 0, rawData.size, metadataOpts)
-            val isManhwa = metadataOpts.outHeight * 1.0 / metadataOpts.outWidth > 3
+            val sourceDims = getImageDimensions(applicationContext, data = rawData)
+            val isManhwa = sourceDims.y * 1.0 / sourceDims.x > 3
 
             if (isManhwa) nbManhwa.incrementAndGet()
             params.forceManhwa = nbManhwa.get() * 1.0 / nbPages > 0.9
 
-            targetData = transform(rawData, params)
+            targetData = transform(applicationContext, rawData, params)
         }
         if (isStopped) return img
         if (targetData == rawData) return img // Unchanged picture
@@ -346,8 +345,7 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
         val isLossless = isImageLossless(rawData)
         val sourceName = sourceFile.name ?: ""
 
-        BitmapFactory.decodeByteArray(targetData, 0, targetData.size, metadataOpts)
-        val targetDims = Point(metadataOpts.outWidth, metadataOpts.outHeight)
+        val targetDims = getImageDimensions(applicationContext, data = targetData)
         val targetMime = determineEncoder(isLossless, targetDims, params).mimeType
         val targetName = img.name + "." + getExtensionFromMimeType(targetMime)
         val newFile = sourceName != targetName
@@ -366,7 +364,7 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
             img.isTransformed = true
 
             nextOK()
-            globalProgress.setProgress(imageId, 1f)
+            globalProgress.setProgress(imageUri, 1f)
             launchProgressNotification()
         } else {
             nextKO()

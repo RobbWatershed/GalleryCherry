@@ -24,7 +24,6 @@ import android.webkit.WebView
 import android.webkit.WebView.HitTestResult
 import androidx.activity.OnBackPressedCallback
 import androidx.annotation.DrawableRes
-import androidx.annotation.OptIn
 import androidx.annotation.StringRes
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.content.ContextCompat
@@ -231,6 +230,9 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
     private val bookmarks = ArrayList<SiteBookmark>()
 
     // === OTHER VARIABLES
+    // Indicates the last timestamp of a download button tap
+    private var lastDownloadButtonTap = 0L
+
     // Indicates which mode the download button is in
     protected var actionButtonMode: ActionMode? = null
 
@@ -1252,28 +1254,44 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         // Check if the tag blocker applies here
         val blockedTagsLocal = getBlockedTags(theContent.id, dao)
         if (blockedTagsLocal.isNotEmpty()) {
-            if (Settings.tagBlockingBehaviour == Settings.Value.DL_TAG_BLOCKING_BEHAVIOUR_DONT_QUEUE) { // Stop right here
-                toast(R.string.blocked_tag, blockedTagsLocal[0])
-            } else { // Insert directly as an error
-                val errors: MutableList<ErrorRecord> = ArrayList()
-                errors.add(
-                    ErrorRecord(
-                        type = ErrorType.BLOCKED,
-                        url = theContent.url,
-                        contentPart = "tags",
-                        description = "blocked tags : " + TextUtils.join(", ", blockedTagsLocal),
-                        timestamp = Instant.now()
+            var canQueue = false
+            when (Settings.tagBlockingBehaviour) {
+                Settings.Value.DL_TAG_BLOCKING_BEHAVIOUR_DONT_QUEUE ->
+                    toast(R.string.blocked_tag, blockedTagsLocal[0])
+
+                Settings.Value.DL_TAG_BLOCKING_BEHAVIOUR_QUEUE_2ND_TAP -> {
+                    val now = Instant.now().toEpochMilli()
+                    // Consts 40 and 300 come from android.view.ViewConfiguration
+                    if (now - lastDownloadButtonTap in 41..<300) canQueue = true
+                    else toast(R.string.blocked_tag_double, blockedTagsLocal[0])
+                    lastDownloadButtonTap = now
+                }
+
+                else -> {
+                    // Insert directly as an error
+                    val errors: MutableList<ErrorRecord> = ArrayList()
+                    errors.add(
+                        ErrorRecord(
+                            type = ErrorType.BLOCKED,
+                            url = theContent.url,
+                            contentPart = "tags",
+                            description = "blocked tags : " + TextUtils.join(
+                                ", ",
+                                blockedTagsLocal
+                            ),
+                            timestamp = Instant.now()
+                        )
                     )
-                )
-                theContent.setErrorLog(errors)
-                theContent.downloadMode = Settings.getBrowserDlAction()
-                theContent.status = StatusContent.ERROR
-                if (isReplaceDuplicate) theContent.setContentIdToReplace(duplicateId)
-                dao.insertContent(theContent)
-                toast(R.string.blocked_tag_queued, blockedTagsLocal[0])
-                lifecycleScope.launch { setActionMode(ActionMode.VIEW_QUEUE) }
+                    theContent.setErrorLog(errors)
+                    theContent.downloadMode = Settings.getBrowserDlAction()
+                    theContent.status = StatusContent.ERROR
+                    if (isReplaceDuplicate) theContent.setContentIdToReplace(duplicateId)
+                    dao.insertContent(theContent)
+                    toast(R.string.blocked_tag_queued, blockedTagsLocal[0])
+                    lifecycleScope.launch { setActionMode(ActionMode.VIEW_QUEUE) }
+                }
             }
-            return
+            if (!canQueue) return
         }
         val replacementTitleFinal = replacementTitle
         // No reason to block or ignore -> actually add to the queue
@@ -1367,7 +1385,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
             animatedCheck.visibility = View.VISIBLE
             (animatedCheck.drawable as Animatable).start()
             Handler(mainLooper).postDelayed({
-                if (binding != null) animatedCheck.visibility = View.GONE
+                binding?.animatedCheck?.visibility = View.GONE
             }, 1000)
         }
         content.downloadMode = downloadMode
@@ -1456,7 +1474,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
                         ).use { onlineCover ->
                             val coverBody = onlineCover.body
                             val bodyStream = coverBody.byteStream()
-                            val b = getCoverBitmapFromStream(bodyStream)
+                            val b = getCoverBitmapFromStream(baseContext, bodyStream)
                             pHash = calcPhash(getHashEngine(), b)
                         }
                     } catch (e: IOException) {
@@ -1610,8 +1628,8 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
 
         var maxStoredImageOrder = 0
         val opt = storedContent.imageFiles
-            .filter { i: ImageFile -> isInLibrary(i.status) }
-            .maxOfOrNull { img -> img.order }
+            .filter { isInLibrary(it.status) }
+            .maxOfOrNull { it.order }
 
         if (opt != null) maxStoredImageOrder = opt
         val maxStoredImageOrderFinal = maxStoredImageOrder

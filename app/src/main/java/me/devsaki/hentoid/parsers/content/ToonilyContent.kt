@@ -74,12 +74,14 @@ class ToonilyContent : BaseContentParser() {
         if (updateImages) {
             chapterImgs?.let { chpImg ->
                 val imgUrls = chpImg.map { getImgSrc(it) }.filterNot { it.isEmpty() }.distinct()
-                var coverUrl = ""
-                if (imgUrls.isNotEmpty()) coverUrl = imgUrls[0]
-                content.setImageFiles(
-                    urlsToImageFiles(imgUrls, content.downloadRange, StatusContent.SAVED, coverUrl)
+                val imgs = urlsToImageFiles(
+                    imgUrls,
+                    content.downloadRange,
+                    StatusContent.SAVED,
+                    Site.TOONILY
                 )
-                content.qtyPages = imgUrls.size
+                content.setImageFiles(imgs)
+                content.qtyPages = imgs.count { it.isReadable }
             }
         }
         return content

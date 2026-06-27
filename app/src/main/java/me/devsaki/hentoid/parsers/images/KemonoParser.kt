@@ -10,6 +10,7 @@ import me.devsaki.hentoid.parsers.Progressor
 import me.devsaki.hentoid.parsers.cleanup
 import me.devsaki.hentoid.parsers.getUserAgent
 import me.devsaki.hentoid.retrofit.sources.KemonoServer
+import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.download.DownloadRateLimiter
 import me.devsaki.hentoid.util.download.DownloadRateLimiter.setRateLimit
 import me.devsaki.hentoid.util.exception.EmptyResultException
@@ -207,9 +208,10 @@ class KemonoParser : BaseImageListParser() {
                 }
                 content.setChapters(chapters)
                 val images = chapters.flatMap { it.imageList }.toMutableList()
-                images.add(0, ImageFile.newCover(artist.iconUrl, StatusContent.SAVED))
+                if (Settings.isThumbSeparateFile(Site.KEMONO))
+                    images.add(0, ImageFile.newThumb(artist.iconUrl, StatusContent.SAVED))
                 content.setImageFiles(images)
-                content.qtyPages = images.size - 1  // Don't count the cover
+                content.qtyPages = images.count { it.isReadable }
                 progressor?.progressComplete()
                 return content
             } catch (e: IOException) {

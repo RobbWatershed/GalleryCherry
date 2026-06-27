@@ -54,9 +54,7 @@ class TsuminoContent : BaseContentParser() {
         content.setRawUrl(theUrl)
 
         var coverUrl = ""
-        cover?.let {
-            coverUrl = getImgSrc(it)
-        }
+        cover?.let { coverUrl = getImgSrc(it) }
         if (!coverUrl.startsWith("http")) coverUrl = Site.TSUMINO.url + coverUrl
         content.coverImageUrl = coverUrl
         content.title = cleanup(title)

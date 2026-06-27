@@ -571,6 +571,7 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
         }
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     private fun onArchiveFound(
         context: Context,
         c: Content,
@@ -601,22 +602,23 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
         }
 
         // If content has an external-library tag or an EXTERNAL status, remove it because we're importing for the primary library now
-        removeExternalAttributes(c)
-        addContent(context, dao, c)
-        val customGroups =
-            c.getGroupItems(Grouping.CUSTOM)
-                .mapNotNull { it.linkedGroup }
-                .map { it.name }
-        val groupStr =
-            if (customGroups.isEmpty()) "" else " in " + customGroups.joinToString(", ")
-        trace(
-            Log.INFO,
-            STEP_3_BOOKS,
-            log,
-            "Import book OK$groupStr : %s",
-            bookLocation
-        )
-        onProgress(c.title, true)
+        GlobalScope.launch(Dispatchers.IO) {
+            removeExternalAttributes(c)
+            addContent(context, dao, c)
+            val customGroups =
+                c.getGroupItems(Grouping.CUSTOM)
+                    .mapNotNull { it.linkedGroup }
+                    .map { it.name }
+            val groupStr =
+                if (customGroups.isEmpty()) "" else " in " + customGroups.joinToString(", ")
+            trace(
+                Log.INFO,
+                STEP_3_BOOKS,
+                log,
+                "Import book OK$groupStr : $bookLocation"
+            )
+            onProgress(c.title, true)
+        }
     }
 
     private suspend fun importFolder(
@@ -777,8 +779,7 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
                         }
                         if (coverImgs.size < contentImages.size) {
                             contentImages = coverImgs
-                            val nbCovers = contentImages.count { it.isCover }
-                            content.qtyPages = contentImages.size - nbCovers
+                            content.qtyPages = contentImages.count { it.isReadable }
                             cleaned = true
                         }
 
@@ -1095,7 +1096,7 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
         }
     }
 
-    private fun importQueue(
+    private suspend fun importQueue(
         context: Context,
         queueFile: DocumentFile,
         dao: CollectionDAO,

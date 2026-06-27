@@ -109,7 +109,12 @@ class MassOperationsDialogFragment : BaseDialogFragment<MassOperationsDialogFrag
                     counts.totalCount - counts.scope.size,
                     counts.totalCount - counts.scope.size
                 ) + " / " + resources.getQuantityString(
-                    if (0 == massOperation.index) R.plurals.book_delete else R.plurals.book_stream,
+                    when (massOperation.index) {
+                        0 -> R.plurals.book_delete
+                        1 -> R.plurals.book_stream
+                        2 -> R.plurals.book_remove_cover_thumbnail
+                        else -> R.plurals.book_create_cover_thumbnail
+                    },
                     counts.scope.size,
                     counts.scope.size
                 )
@@ -136,7 +141,12 @@ class MassOperationsDialogFragment : BaseDialogFragment<MassOperationsDialogFrag
     private fun onActionClick() {
         binding?.apply {
             parent?.onMassProcess(
-                if (0 == massOperation.index) ToolsActivity.MassOperation.DELETE else ToolsActivity.MassOperation.STREAM,
+                when (massOperation.index) {
+                    0 -> ToolsActivity.MassOperation.DELETE
+                    1 -> ToolsActivity.MassOperation.STREAM
+                    2 -> ToolsActivity.MassOperation.REMOVE_THUMB
+                    else -> ToolsActivity.MassOperation.CREATE_THUMB
+                },
                 1 == massOperationScope.index,
                 keepFavGroups.isChecked
             )
