@@ -42,6 +42,7 @@
       {"sourceName":"NHENTAI", "status":"RED" , "fixedByBuild":"921"},
       {"sourceName":"LUSCIOUS", "status":"ORANGE" , "fixedByBuild":"931"},
       {"sourceName":"MULTPORN", "status":"ORANGE" , "fixedByBuild":"931"},
+      {"sourceName":"KEMONO", "status":"RED"},
 	  {"sourceName":"MANHWA", "status":"BLACK"},  
       {"sourceName":"TMO", "status":"BLACK"},
       {"sourceName":"ANCHIRA", "status":"BLACK"},
