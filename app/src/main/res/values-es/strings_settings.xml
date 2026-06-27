@@ -127,6 +127,7 @@
     <string name="pref_dl_retries_on">Las descargas fallidas se reintentarán automáticamente</string>
     <string name="pref_dl_skip_large_allow_wifi_off">Omitir descargas grandes en todas las redes</string>
     <string name="pref_dl_skip_large_allow_wifi_on">Permitir descargas grandes solo a través de Wi-Fi</string>
+    <string name="pref_dl_skip_large_allow_wifi_title">Permitir descargas grandes en Wi-Fi</string>
     <string name="pref_dl_skip_large_off">Omitir descargas grandes está desactivado.</string>
     <string name="pref_dl_skip_large_on">Omitir descargas grandes habilitada</string>
     <string name="pref_dl_skip_large_pages_threshold_title">Umbral de páginas para descargas grandes</string>
