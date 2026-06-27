@@ -2010,12 +2010,6 @@ object ObjectBoxDB {
         store.boxFor(Group::class.java).remove(groupId)
     }
 
-    fun deleteEmptyArtistGroups() {
-        return store.boxFor(Group::class.java).query()
-            .equal(Group_.grouping, 1)
-            .relationCount(Group_.items, 0).safeRemove()
-    }
-
     fun selectGroupsByGroupingQ(groupingId: Int, onlyFlagged: Boolean = false): Query<Group> {
         val baseQc = Group_.grouping.equal(groupingId)
         var finalQc: QueryCondition<Group> = baseQc

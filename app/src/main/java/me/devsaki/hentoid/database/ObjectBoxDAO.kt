@@ -1019,10 +1019,6 @@ class ObjectBoxDAO : CollectionDAO {
         }
     }
 
-    override fun deleteEmptyArtistGroups() {
-        ObjectBoxDB.deleteEmptyArtistGroups()
-    }
-
     override fun insertGroupItem(item: GroupItem): Long {
         // Auto-number max order when not provided
         if (-1 == item.order) item.order = ObjectBoxDB.getMaxGroupItemOrderFor(item.groupId) + 1
@@ -1312,7 +1308,7 @@ class ObjectBoxDAO : CollectionDAO {
         sortOrder: Int,
         pageNum: Int,
         itemPerPage: Int,
-        combinationMode : Int
+        combinationMode: Int
     ): AttributeQueryResult {
         val result: MutableList<Attribute> = ArrayList()
         var totalSelectedAttributes: Long = 0

@@ -156,8 +156,6 @@ interface CollectionDAO {
 
     fun deleteAllFlaggedGroups()
 
-    fun deleteEmptyArtistGroups()
-
     fun insertGroupItem(item: GroupItem): Long
 
     fun selectGroupItems(contentId: Long, grouping: Grouping): List<GroupItem>
