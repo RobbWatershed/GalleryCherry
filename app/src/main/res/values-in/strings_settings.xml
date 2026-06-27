@@ -238,7 +238,7 @@
   <string name="pref_viewer_page_turn_tap">Ketuk tepi</string>
   <string name="pref_viewer_page_turn_tap_2x">Area ketuk lebih besar</string>
   <string name="pref_viewer_page_turn_volume">Tombol volume</string>
-  <string name="pref_viewer_ratio_completed_threshold">Tandai buku sebagai selesai setelah N% halaman</string>
+  <string name="pref_viewer_ratio_completed_threshold">Tandai buku sebagai selesai setelah N%% halaman</string>
   <string name="pref_viewer_read_threshold">Tandai buku sebagai telah dibaca setelah N halaman</string>
   <string name="pref_viewer_rendering">Perenderan</string>
   <string name="pref_viewer_rendering_mode">Mode perenderan</string>
