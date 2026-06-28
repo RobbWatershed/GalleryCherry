@@ -303,3 +303,17 @@ fun rangeToNumbers(range: String): List<Int> {
     }
     return result
 }
+
+fun findClosure(data: String): Int {
+    val blockOpenings = arrayOf('[', '{')
+    val blockClosings = arrayOf(']', '}')
+
+    val firstOpeningIndex = data.indexOfFirst { blockOpenings.contains(it) }
+    var depth = 0
+    for (i in firstOpeningIndex..<data.length) {
+        if (blockOpenings.contains(data[i])) depth++
+        else if (blockClosings.contains(data[i])) depth--
+        if (0 == depth) return i
+    }
+    return data.length - 1
+}

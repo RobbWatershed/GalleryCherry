@@ -67,6 +67,7 @@ enum class Site(val code: Int, val description: String, val url: String, val ico
     V2PH(27, "V2PH", "https://www.v2ph.com/", R.drawable.ic_site_v2ph),
     EVERIA(28, "Everia.club", "https://everia.club/", R.drawable.ic_site_everia),
     FAPELLO(29, "Fapello", "https://fapello.com/", R.drawable.ic_site_fapello),
+    GALLERYEPIC(30, "GalleryEpic", "https://galleryepic.com/", R.drawable.ic_site_galleryepic),
 
     MAL(96, "MyAnimeList", "", R.drawable.ic_app),
 

@@ -10,6 +10,7 @@ import me.devsaki.hentoid.parsers.content.EveriaContent
 import me.devsaki.hentoid.parsers.content.FapalityContent
 import me.devsaki.hentoid.parsers.content.FapelloContent
 import me.devsaki.hentoid.parsers.content.FoamGirlContent
+import me.devsaki.hentoid.parsers.content.GalleryEpicContent
 import me.devsaki.hentoid.parsers.content.GirlsTopContent
 import me.devsaki.hentoid.parsers.content.JjgirlsContent
 import me.devsaki.hentoid.parsers.content.KemonoContent
@@ -29,6 +30,7 @@ import me.devsaki.hentoid.parsers.images.EveriaParser
 import me.devsaki.hentoid.parsers.images.FapalityParser
 import me.devsaki.hentoid.parsers.images.FapelloParser
 import me.devsaki.hentoid.parsers.images.FoamGirlParser
+import me.devsaki.hentoid.parsers.images.GalleryEpicParser
 import me.devsaki.hentoid.parsers.images.ImageListParser
 import me.devsaki.hentoid.parsers.images.KemonoParser
 import me.devsaki.hentoid.parsers.images.KiutakuParser
@@ -66,6 +68,7 @@ object ContentParserFactory {
             Site.V2PH -> V2PhContent::class.java
             Site.EVERIA -> EveriaContent::class.java
             Site.FAPELLO -> FapelloContent::class.java
+            Site.GALLERYEPIC -> GalleryEpicContent::class.java
             else -> SmartContent::class.java
         }
     }
@@ -89,6 +92,7 @@ object ContentParserFactory {
             Site.V2PH -> V2PhParser()
             Site.EVERIA -> EveriaParser()
             Site.FAPELLO -> FapelloParser()
+            Site.GALLERYEPIC -> GalleryEpicParser()
             else -> DummyParser()
         }
     }
