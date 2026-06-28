@@ -402,10 +402,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
 
         // Cancel any previous extra page load
         EventBus.getDefault().post(
-            DownloadCommandEvent(
-                DownloadCommandEvent.Type.EV_INTERRUPT_CONTENT,
-                currentContent
-            )
+            DownloadCommandEvent(DownloadCommandEvent.Type.EV_INTERRUPT_CONTENT, currentContent)
         )
         if (EventBus.getDefault().isRegistered(this)) EventBus.getDefault().unregister(this)
         binding = null
