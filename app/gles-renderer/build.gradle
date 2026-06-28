@@ -43,7 +43,7 @@ android {
 dependencies {
     implementation 'androidx.core:core-ktx:1.19.0'
     implementation 'androidx.appcompat:appcompat:1.7.1'
-    implementation 'androidx.lifecycle:lifecycle-common-java8:2.10.0'
+    implementation 'androidx.lifecycle:lifecycle-common-java8:2.11.0'
 
     // Timber (Extensible Logger): github.com/JakeWharton/timber
     implementation 'com.jakewharton.timber:timber:5.0.1'
