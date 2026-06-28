@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="doh_warning">Alcuni siti web non funzioneranno bene con DNS via HTTPS. Utilizza un’applicazione DNS esterna se riscontri problemi durante la navigazione (ad esempio pagine vuote, campi di login che non rispondono)</string>
     <string name="download_eh_hires_title">Scarica immagini ad alta risoluzione</string>
     <string name="download_hitomi_avif_off">Scarica le immagini in formato WEBP</string>
@@ -7,6 +7,10 @@
     <string name="download_hitomi_avif_title">Scarica in formato AVIF</string>
     <string name="download_retries_active_title">Tentativi attivati</string>
     <string name="download_retries_screen_title">Tentativi di download automatici</string>
+    <string name="download_separate_thumb_off">Tratta pagina 1 come una copertina</string>
+    <string name="download_separate_thumb_on">Crea un file copertina separato</string>
+    <string name="download_separate_thumb_title">Copertine</string>
+    <string name="import_external_library_auto_title">Importa automaticamentei i file nuovi</string>
     <string name="library_display_group_figure_title">Contatore dei gruppi</string>
     <string name="mass_operations_summary">Operazioni di massa della libreria</string>
     <string name="mass_operations_title">Operazioni di massa</string>
@@ -77,11 +81,13 @@
     <string name="pref_browser_quick_dl_threshold_summary">Tieni premuto per questa durata per iniziare un download rapido\nAttualmente: %s</string>
     <string name="pref_browser_quick_dl_threshold_title">Soglia di pressione prolungata per il download rapido</string>
     <string name="pref_browser_quick_dl_title">Download rapido</string>
+    <string name="pref_browser_range_download_summary">Tasto aggiuntivo per scegliere quali pagine della galleria scaricare</string>
     <string name="pref_browser_resume_last_off">Qualsiasi sito si apre sempre sulla sua pagina iniziale</string>
     <string name="pref_browser_resume_last_on">Qualsiasi sito si apre sull’ultima pagina visualizzata</string>
     <string name="pref_browser_resume_last_title">Riprendi dall’ultima pagina visualizzata</string>
     <string name="pref_browser_visuals">Visualizzazione</string>
     <string name="pref_cat_advanced">Avanzato</string>
+    <string name="pref_cat_dl_skip_large">Evita i download grandi</string>
     <string name="pref_cat_downloads_folder">Libreria di Hentoid</string>
     <string name="pref_cat_eh">E-hentai / ExHentai</string>
     <string name="pref_cat_external">Libreria esterna</string>
@@ -119,6 +125,14 @@
     <string name="pref_dl_retries_number_title">Numero di tentativi prima d’interrompere</string>
     <string name="pref_dl_retries_off">I download falliti rimarranno in stato di errore</string>
     <string name="pref_dl_retries_on">I download falliti verranno riprovati automaticamente</string>
+    <string name="pref_dl_skip_large_allow_wifi_off">Evita i download grandi su tutte le reti</string>
+    <string name="pref_dl_skip_large_allow_wifi_on">Consenti download grandi solo su Wi-Fi</string>
+    <string name="pref_dl_skip_large_allow_wifi_title">Consenti download grandi su Wi-Fi</string>
+    <string name="pref_dl_skip_large_off">Evita i download grandi: disattivato</string>
+    <string name="pref_dl_skip_large_on">Evita i download grandi: attivato</string>
+    <string name="pref_dl_skip_large_pages_threshold_title">Soglia pagine per download grandi</string>
+    <string name="pref_dl_skip_large_size_threshold_title">Soglia dimensione per download grandi</string>
+    <string name="pref_dl_skip_large_title">Evita i grandi download</string>
     <string name="pref_dl_speed_cap_title">Limite velocità download</string>
     <string name="pref_dl_threads_quantity_summary">Numero d’immagini scaricate contemporaneamente\nAttualmente: %s</string>
     <string name="pref_dl_threads_quantity_title">Download paralleli</string>
@@ -170,6 +184,7 @@
     <string name="pref_queue_wifi_only_off">La coda dei download si avvierà se il dispositivo è connesso a qualsiasi rete</string>
     <string name="pref_queue_wifi_only_on">La coda dei download inizierà solo se connesso al Wi-Fi</string>
     <string name="pref_queue_wifi_only_title">Scarica solo su Wi-Fi</string>
+    <string name="pref_range_download_title">Download selezionato</string>
     <string name="pref_refresh_library_summary">Aggiorna manualmente i contenuti della libreria</string>
     <string name="pref_refresh_library_title">Aggiorna libreria</string>
     <string name="pref_screen_browser">Browser</string>
@@ -209,6 +224,7 @@
     <string name="pref_viewer_delete_load_direction">Segui la direzione di lettura dopo aver eliminato un libro</string>
     <string name="pref_viewer_display_mode">Modalità di visualizzazione orizzontale</string>
     <string name="pref_viewer_display_notch">Mostra intorno al notch</string>
+    <string name="pref_viewer_display_pagenum">Mostra il numero di pagina</string>
     <string name="pref_viewer_gallery_columns">Numero di colonne per la galleria</string>
     <string name="pref_viewer_horizontal_reader">Lettore orizzontale</string>
     <string name="pref_viewer_invert_volume">Inverti i tasti del volume</string>

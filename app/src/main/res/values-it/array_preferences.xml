@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="library_display_group_figure_entries_1">Numero di libri (predefinito)</string>
     <string name="library_display_group_figure_entries_2">Dimensione totale</string>
     <string name="pref_attribute_list_order_entries_1">Alfabetico</string>
@@ -12,12 +12,13 @@
     <string name="pref_browser_quick_dl_threshold_entries_5">3 sec</string>
     <string name="pref_dl_blocked_tags_behaviour_entries_1">Non mettere in coda</string>
     <string name="pref_dl_blocked_tags_behaviour_entries_2">Metti in coda come errore di download</string>
+    <string name="pref_dl_blocked_tags_behaviour_entries_3">Metti in coda al secondo tap</string>
+    <string name="pref_dl_retries_mem_limit_entries_4">Nessuno</string>
     <string name="pref_dl_skip_large_pages_threshold_entries_1">Nessun limite di pagine</string>
     <string name="pref_dl_skip_large_pages_threshold_entries_2">60 pagine</string>
     <string name="pref_dl_skip_large_pages_threshold_entries_3">120 pagine</string>
     <string name="pref_dl_skip_large_pages_threshold_entries_4">200 pagine</string>
     <string name="pref_dl_skip_large_pages_threshold_entries_5">500 pagine</string>
-    <string name="pref_dl_retries_mem_limit_entries_4">Nessuno</string>
     <string name="pref_dl_skip_large_size_threshold_entries_1">Nessun limite di dimensioni</string>
     <string name="pref_dl_skip_large_size_threshold_entries_2">20 MB</string>
     <string name="pref_dl_skip_large_size_threshold_entries_3">40 MB</string>
@@ -69,6 +70,9 @@
     <string name="pref_viewer_display_mode_entries_1">Adatta allo schermo (predefinito)</string>
     <string name="pref_viewer_display_mode_entries_2">Riempi lo schermo (proporzionato)</string>
     <string name="pref_viewer_display_mode_entries_3">Riempi lo schermo (allunga)</string>
+    <string name="pref_viewer_display_pagenum_entries_1">Disattivato</string>
+    <string name="pref_viewer_display_pagenum_entries_2">Giù al centro</string>
+    <string name="pref_viewer_display_pagenum_entries_3">Sù al centro</string>
     <string name="pref_viewer_dl_action_entries_1">Scarica tutte le pagine</string>
     <string name="pref_viewer_dl_action_entries_2">Mostra le pagine mentre leggi</string>
     <string name="pref_viewer_dl_action_entries_3">Chiedi ogni volta</string>
