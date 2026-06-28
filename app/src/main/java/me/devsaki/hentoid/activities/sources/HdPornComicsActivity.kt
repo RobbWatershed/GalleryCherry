@@ -6,7 +6,7 @@ class HdPornComicsActivity : BaseBrowserActivity() {
 
     companion object {
         private const val DOMAIN_FILTER = "hdporncomics.com"
-        private val GALLERY_FILTER = arrayOf("hdporncomics.com/[\\w\\-]+/$")
+        private val GALLERY_FILTER = arrayOf("$DOMAIN_FILTER/[\\w\\-]+/$","$DOMAIN_FILTER/[\\w\\-]+/[\\w\\-]+/$")
     }
 
     override fun getStartSite(): Site {
