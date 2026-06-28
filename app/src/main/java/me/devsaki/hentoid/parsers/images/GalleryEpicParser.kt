@@ -53,7 +53,7 @@ class GalleryEpicParser : BaseImageListParser() {
 
     companion object {
         fun fromImgsJsBlock(data: String): List<String>? {
-            val cleanData1 = if (data.endsWith(',')) data.substring(0, data.length - 2) else data
+            val cleanData1 = if (data.endsWith(',')) data.substring(0, data.length - 1) else data
             val cleanData2 = cleanData1
                 .replace("\\\\\\\"", "'")
                 .replace("\\\"", "\"")
