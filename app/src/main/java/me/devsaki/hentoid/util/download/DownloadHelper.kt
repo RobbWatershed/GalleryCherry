@@ -337,11 +337,6 @@ private suspend fun downloadToFile(
         response.code,
         "Network error ${response.code}"
     )
-    /* !!!!!!!!!!!!!!!!!!!!!! */
-    /* !!!!!!!!!!!!!!!!!!!!!! */
-    if (0 == resourceId % 10) throw NetworkingException(404, "bogus error")
-    /* !!!!!!!!!!!!!!!!!!!!!! */
-    /* !!!!!!!!!!!!!!!!!!!!!! */
     val body = response.body
     val size = body.contentLength()
     val sizeStr =
