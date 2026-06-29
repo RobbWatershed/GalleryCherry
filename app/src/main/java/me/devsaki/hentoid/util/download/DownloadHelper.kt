@@ -138,7 +138,7 @@ suspend fun downloadPic(
 
         return@withContext Pair(resourceId, Uri.fromFile(targetFile).toString())
     } catch (_: DownloadInterruptedException) {
-        Timber.d("Download interrupted for pic $resourceId" )
+        Timber.d("Download interrupted for pic $resourceId")
     } catch (e: Exception) {
         Timber.w(e)
     }
@@ -153,9 +153,7 @@ suspend fun downloadPic(
  * @param resourceId        Internal ID for the page to download, for remapping purposes (usually, the page index)
  * @param requestHeaders    HTTP request headers to use
  * @param isCanceled        Used to interrupt the download whenever the value switches to true. If that happens, the file will be deleted.
- * @return Pair containing
- * - Left : Downloaded file
- * - Right : Detected mime-type of the downloaded resource
+ * @return Uri of downloaded file
  * @throws UnsupportedContentException, IOException, LimitReachedException, EmptyResultException, DownloadInterruptedException in case something horrible happens
  */
 @Throws(
@@ -296,9 +294,7 @@ suspend fun downloadToFile(
  * @param failFast          True for a shorter read timeout; false for a regular, patient download
  * @param resourceId        ID of the corresponding resource (for logging purposes only)
  * @param notifyProgress    Consumer called with the download progress %
- * @return Pair containing
- * - Left : Uri of downloaded file
- * - Right : Detected mime-type of the downloaded resource
+ * @return Uri of downloaded file
  */
 @Throws(
     IOException::class,
@@ -322,7 +318,7 @@ private suspend fun downloadToFile(
     val headers =
         if (site.noReferer) requestHeaders.filterNot { it.first == HEADER_REFERER_KEY } else requestHeaders
     if (isCanceled?.invoke() == true) throw DownloadInterruptedException("Download interrupted 1")
-    Timber.d("DOWNLOADING %d %s", resourceId, url)
+    Timber.d("DOWNLOADING $resourceId $url")
     val response = if (failFast) getOnlineResourceFast(
         url,
         headers,
@@ -336,21 +332,21 @@ private suspend fun downloadToFile(
         site.useHentoidAgent,
         site.useWebviewAgent
     )
-    Timber.d("DOWNLOADING %d - RESPONSE %s", resourceId, response.code)
+    Timber.d("DOWNLOADING $resourceId - RESPONSE ${response.code}")
     if (response.code >= 300) throw NetworkingException(
         response.code,
-        "Network error " + response.code,
-        null
+        "Network error ${response.code}"
     )
+    /* !!!!!!!!!!!!!!!!!!!!!! */
+    /* !!!!!!!!!!!!!!!!!!!!!! */
+    if (0 == resourceId % 10) throw NetworkingException(404, "bogus error")
+    /* !!!!!!!!!!!!!!!!!!!!!! */
+    /* !!!!!!!!!!!!!!!!!!!!!! */
     val body = response.body
     val size = body.contentLength()
     val sizeStr =
         if (size < 1) "unknown" else formatHumanReadableSize(size, context.resources)
-    Timber.d(
-        "STARTING DOWNLOAD FOR %d (size %s)",
-        resourceId,
-        sizeStr
-    )
+    Timber.d("STARTING DOWNLOAD FOR $resourceId (size $sizeStr)")
     var mimeType = forceMimeType ?: ""
     val buffer = ByteArray(DL_IO_BUFFER_SIZE_B)
     val notificationResolution = 250 * 1024 / DL_IO_BUFFER_SIZE_B // Notify every 250 KB

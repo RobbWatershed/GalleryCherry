@@ -66,6 +66,10 @@
     <string name="pref_attribute_list_order_entries_2">Item count (most used first)</string>
     <!-- Choice for "Mem usage threshold before aborting" setting -->
     <string name="pref_dl_retries_mem_limit_entries_4">None</string>
+    <!-- Choice for "HTTP 404 handling" setting -->
+    <string name="download_404_entries_1">Files with HTTP 404 are flagged as errors (default)</string>
+    <string name="download_404_entries_2">Files with HTTP 404 are replaced with a placeholder picture</string>
+    <string name="download_404_entries_3">Files with HTTP 404 are ignored</string>
     <!-- Choice for "Blocking behaviour" setting -->
     <string name="pref_dl_blocked_tags_behaviour_entries_1">Don\'t queue</string>
     <string name="pref_dl_blocked_tags_behaviour_entries_2">Queue as download error</string>

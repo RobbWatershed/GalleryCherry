@@ -616,6 +616,15 @@
                 android:title="@string/download_separate_thumb_title"
                 app:iconSpaceReserved="false"
                 app:sites="ANY" />
+            <ListPreference
+                android:defaultValue="@string/pref_dl_404_default"
+                android:entries="@array/download_404_entries"
+                android:entryValues="@array/int_three"
+                android:key="pref_dl_404"
+                android:summary="@string/pref_generic_summary"
+                android:title="@string/download_404_title"
+                app:iconSpaceReserved="false"
+                app:sites="ANY" />
         </PreferenceCategory>
     </PreferenceScreen>
 

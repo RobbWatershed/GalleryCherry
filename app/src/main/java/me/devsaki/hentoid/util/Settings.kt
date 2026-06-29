@@ -379,6 +379,7 @@ object Settings {
         )
     }
     var isAppThumbSeparateFile: Boolean by BoolSetting("pref_dl_separate_thumb", true)
+    val download404Mode: Int by IntSettingStr("pref_dl_404", 0)
 
 
     // READER
@@ -911,6 +912,10 @@ object Settings {
         const val DL_SPEED_CAP_200 = 1
         const val DL_SPEED_CAP_400 = 2
         const val DL_SPEED_CAP_800 = 3
+
+        const val DL_404_ERROR = 0
+        const val DL_404_PLACEHOLDER = 1
+        const val DL_404_IGNORE = 2
 
 
         const val VIEWER_DISPLAY_FIT = 0

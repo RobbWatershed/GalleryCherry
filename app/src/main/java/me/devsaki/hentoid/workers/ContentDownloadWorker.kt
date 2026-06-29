@@ -3,6 +3,7 @@ package me.devsaki.hentoid.workers
 import android.annotation.SuppressLint
 import android.content.Context
 import android.net.Uri
+import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import androidx.work.Data
@@ -10,6 +11,7 @@ import androidx.work.WorkerParameters
 import kotlinx.coroutines.*
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.core.CLOUDFLARE_COOKIE
+import me.devsaki.hentoid.core.HentoidApp
 import me.devsaki.hentoid.core.HentoidApp.Companion.isInForeground
 import me.devsaki.hentoid.core.THUMB_FILE_NAME
 import me.devsaki.hentoid.core.UGOIRA_CACHE_FOLDER
@@ -43,6 +45,7 @@ import me.devsaki.hentoid.util.MAP_STRINGS
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.addContent
 import me.devsaki.hentoid.util.computeAndSaveCoverHash
+import me.devsaki.hentoid.util.copy
 import me.devsaki.hentoid.util.download.ContentQueueManager
 import me.devsaki.hentoid.util.download.ContentQueueManager.pauseQueue
 import me.devsaki.hentoid.util.download.DownloadDataLimiter
@@ -65,12 +68,18 @@ import me.devsaki.hentoid.util.exception.PreparationInterruptedException
 import me.devsaki.hentoid.util.fetchImageURLs
 import me.devsaki.hentoid.util.file.MIME_TYPE_ZIP
 import me.devsaki.hentoid.util.file.MemoryUsageFigures
+import me.devsaki.hentoid.util.file.createFile
 import me.devsaki.hentoid.util.file.extractArchiveEntries
 import me.devsaki.hentoid.util.file.fileSizeFromUri
 import me.devsaki.hentoid.util.file.formatHumanReadableSize
 import me.devsaki.hentoid.util.file.getOrCreateCacheFolder
+import me.devsaki.hentoid.util.file.getOutputStream
 import me.devsaki.hentoid.util.getContainingFolder
+import me.devsaki.hentoid.util.image.MIME_IMAGE_WEBP
 import me.devsaki.hentoid.util.image.assembleGif
+import me.devsaki.hentoid.util.image.bitmapToWebp
+import me.devsaki.hentoid.util.image.getBitmapFromVectorDrawable
+import me.devsaki.hentoid.util.image.tintBitmap
 import me.devsaki.hentoid.util.jsonToObject
 import me.devsaki.hentoid.util.moveContentToCustomGroup
 import me.devsaki.hentoid.util.network.Connectivity
@@ -95,6 +104,7 @@ import me.devsaki.hentoid.util.updateQueueJson
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import timber.log.Timber
+import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.IOException
 import java.security.InvalidParameterException
@@ -1299,8 +1309,40 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
             return
         }
 
-        // If no backup, then process the error
+        // Handle 404 if setting is on
         val statusCode = error.statusCode
+        if (404 == statusCode && Settings.download404Mode > 0) {
+            if (Settings.Value.DL_404_PLACEHOLDER == Settings.download404Mode) {
+                // Generate a temp file with the site's icon to use as a placeholder
+                val siteIcon = bitmapToWebp(
+                    tintBitmap(
+                        getBitmapFromVectorDrawable(
+                            HentoidApp.getInstance(), request.site.ico
+                        ),
+                        ContextCompat.getColor(
+                            HentoidApp.getInstance(),
+                            R.color.secondary_light
+                        )
+                    )
+                )
+                val fileUri = createFile(
+                    applicationContext,
+                    applicationContext.cacheDir.toUri(),
+                    "${request.site.name}.webp",
+                    MIME_IMAGE_WEBP
+                )
+                getOutputStream(applicationContext, fileUri)?.use { fos ->
+                    ByteArrayInputStream(siteIcon)
+                        .use { input -> copy(input, fos) }
+                }
+                onRequestSuccess(request, fileUri)
+            } else if (Settings.Value.DL_404_IGNORE == Settings.download404Mode) {
+                updateImageProperties(img, true)
+            }
+            return
+        }
+
+        // If we're here, flag as error
         val message = error.message + if (img.isBackup) " (from backup URL)" else ""
         var cause = "Network error"
         if (error.type === RequestOrder.NetworkErrorType.FILE_IO) cause = "File I/O"
@@ -1311,6 +1353,7 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
             contentId, ErrorType.NETWORKING, img.url, img.name,
             "$cause; HTTP statusCode=$statusCode; message=$message"
         )
+
         // Handle cloudflare blocks
         if (request.site.useCloudflare && 503 == statusCode && !isCloudFlareBlocked) {
             // prevent associated events & notifs to be fired more than once
