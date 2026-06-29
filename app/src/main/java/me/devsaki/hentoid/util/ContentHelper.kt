@@ -2138,7 +2138,7 @@ suspend fun mergeContents(
                         }
                     } // Archives and PDFs
 
-                    if (!img.isReadable && coverFound) continue // Skip thumbs from 2+ rank merged books
+                    if ((!img.isReadable && coverFound) || !img.isUsable) continue // Skip thumbs from 2+ rank merged books
                     val newImg = ImageFile(img, populateContent = false, populateChapter = false)
                     newImg.id = 0 // Force creating a new DB object
                     newImg.fileUri = img.fileUri // Retrieve initial, full (unoptimized) Uri
@@ -2173,7 +2173,7 @@ suspend fun mergeContents(
                     newImg.id = dao.insertImageFile(newImg)
 
                     // If exists, move the picture file to the merged books' folder
-                    if (isInLibrary(newImg.status)) {
+                    if (isInLibrary(newImg.status) && img.fileUri.isNotBlank()) {
                         val referenceExt =
                             getExtensionFromUri(img.fileUri).ifBlank { getExtensionFromUri(img.url) }
                         dlManager.appendFile(

@@ -297,6 +297,11 @@ data class ImageFile(
             return !name.startsWith(THUMB_FILE_NAME) && !name.startsWith(EXT_THUMB_FILE_PREFIX)
         }
 
+    val isUsable: Boolean
+        get() {
+            return dbFileUri.isNotBlank() || url.startsWith("http")
+        }
+
     val usableUri: String
         get() {
             if (displayUri.isNotBlank()) return displayUri

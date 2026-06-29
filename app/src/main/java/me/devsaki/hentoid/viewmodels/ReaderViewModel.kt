@@ -626,7 +626,7 @@ class ReaderViewModel(
             imgs.sortedBy { it.order * if (reverse) -1 else 1 }
         }
         // Don't keep the cover thumb nor the unreadable images
-        imgs = imgs.filter { it.isReadable && !(it.fileUri.isBlank() && StatusContent.ONLINE != it.status) }
+        imgs = imgs.filter { it.isReadable && it.isUsable }
         if (true == getShowFavouritesOnly().value) {
             imgs = imgs.filter { it.favourite }
         }
