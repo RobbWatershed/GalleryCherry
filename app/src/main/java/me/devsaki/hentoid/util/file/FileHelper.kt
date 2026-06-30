@@ -174,7 +174,7 @@ private fun getFullPathFromTreeUri(context: Context, uri: Uri): String {
 
     var documentPath = getDocumentPathFromUri(usedUri) ?: ""
     if (documentPath.endsWith(File.separator)) documentPath = documentPath.dropLast(1)
-    if (!documentPath.startsWith(File.separator)) documentPath = File.separator + documentPath
+    if (documentPath.startsWith(File.separator)) documentPath = documentPath.drop(1)
 
     val chunkName = if (uri.authority.equals(FILECHUNK_AUTHORITY))
         File.separator + FileChunkInfo.fromUri(uri).displayName
