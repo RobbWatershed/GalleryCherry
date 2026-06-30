@@ -135,10 +135,9 @@ class StorageUsageDialogFragment : BaseDialogFragment<Nothing>() {
     private fun getStats(location: StorageLocation): Pair<Long, Long> {
         val root = Settings.getStorageUri(location)
         if (root.isNotEmpty()) {
-            val rootFolder = getDocumentFromTreeUriString(requireActivity(), root)
-            if (rootFolder != null) {
+            getDocumentFromTreeUriString(requireActivity(), root)?.let { rootFolder ->
                 val memUsage = MemoryUsageFigures(requireContext(), rootFolder)
-                return Pair(memUsage.getfreeUsageBytes(), memUsage.totalSpaceBytes)
+                return Pair(memUsage.freeUsageBytes, memUsage.totalSpaceBytes)
             }
         }
         return Pair(-1, -1)

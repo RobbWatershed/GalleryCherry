@@ -461,7 +461,7 @@ fun selectDownloadLocation(context: Context): StorageLocation {
     return if (Settings.Value.STORAGE_FILL_FALLOVER == strategy) {
         if (100 - memUsage1.freeUsageRatio100 > Settings.storageSwitchThresholdPc) StorageLocation.PRIMARY_2 else StorageLocation.PRIMARY_1
     } else {
-        if (memUsage1.getfreeUsageBytes() > memUsage2.getfreeUsageBytes()) StorageLocation.PRIMARY_1 else StorageLocation.PRIMARY_2
+        if (memUsage1.freeUsageBytes > memUsage2.freeUsageBytes) StorageLocation.PRIMARY_1 else StorageLocation.PRIMARY_2
     }
 }
 
@@ -522,14 +522,11 @@ private fun testDownloadFolder(
             .post(DownloadEvent.fromPauseMotive(DownloadEvent.Motive.DOWNLOAD_FOLDER_NO_CREDENTIALS))
         return false
     }
-    val spaceLeftBytes = MemoryUsageFigures(context, rootFolder).getfreeUsageBytes()
-    if (spaceLeftBytes < 2L * 1024 * 1024) {
+    val memStats = MemoryUsageFigures(context, rootFolder)
+    if (memStats.hasStats && memStats.freeUsageBytes < 2L * 1024 * 1024) {
         Timber.i("Device very low on storage space (<2 MB). Queue paused.")
         EventBus.getDefault().post(
-            DownloadEvent.fromPauseMotive(
-                DownloadEvent.Motive.NO_STORAGE,
-                spaceLeftBytes
-            )
+            DownloadEvent.fromPauseMotive(DownloadEvent.Motive.NO_STORAGE, memStats.freeUsageBytes)
         )
         return false
     }

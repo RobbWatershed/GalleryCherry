@@ -229,12 +229,11 @@ class SettingsStorageActivity : BaseActivity(), DownloadStrategyDialogFragment.P
             val uri = uriStr.toUri()
             path.text = getFullPathFromUri(baseContext, uri)
 
-            val rootFolder = getDocumentFromTreeUriString(baseContext, uriStr)
-            if (rootFolder != null) {
+            getDocumentFromTreeUriString(baseContext, uriStr)?.let { rootFolder ->
                 val memUsage = MemoryUsageFigures(baseContext, rootFolder)
-                val locationFreeBytes = memUsage.getfreeUsageBytes()
-                val locationTotalBytes = memUsage.totalSpaceBytes
-                if (locationTotalBytes > 0) {
+                if (memUsage.hasStats) {
+                    val locationFreeBytes = memUsage.freeUsageBytes
+                    val locationTotalBytes = memUsage.totalSpaceBytes
                     statsTxt.text = resources.getString(
                         R.string.location_storage,
                         formatHumanReadableSize(locationFreeBytes, resources),
@@ -422,9 +421,8 @@ class SettingsStorageActivity : BaseActivity(), DownloadStrategyDialogFragment.P
         var location1free = -1L
         val root1 = Settings.getStorageUri(StorageLocation.PRIMARY_1)
         if (root1.isNotEmpty()) {
-            val root1Folder = getDocumentFromTreeUriString(this, root1)
-            if (root1Folder != null) {
-                location1free = MemoryUsageFigures(this, root1Folder).getfreeUsageBytes()
+            getDocumentFromTreeUriString(this, root1)?.let { root1Folder ->
+                location1free = MemoryUsageFigures(this, root1Folder).freeUsageBytes
             }
         }
 

@@ -1357,18 +1357,20 @@ class MemoryUsageFigures(context: Context, fUri: Uri) {
         }
     }
 
-    val freeUsageRatio100: Double
-        /**
-         * Get free usage ratio (0 = all memory full; 100 = all memory free)
-         */
-        get() = freeMemBytes * 100.0 / totalSpaceBytes
+    val hasStats : Boolean
+        get() = totalSpaceBytes > 0
 
     /**
-     * Get free storage capacity in bytes
+     * Free usage ratio (0 = all memory full; 100 = all memory free)
      */
-    fun getfreeUsageBytes(): Long {
-        return freeMemBytes
-    }
+    val freeUsageRatio100: Double
+        get() = if (totalSpaceBytes > 0) freeMemBytes * 100.0 / totalSpaceBytes else 0.0
+
+    /**
+     * Free storage capacity in bytes
+     */
+    val freeUsageBytes: Long
+        get() = freeMemBytes
 }
 
 /**
