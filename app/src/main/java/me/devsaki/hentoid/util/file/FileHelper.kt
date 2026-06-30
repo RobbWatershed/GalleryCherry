@@ -196,13 +196,11 @@ private fun getVolumePath(context: Context, volumeId: String): String? {
     try {
         // StorageVolume exists since API19, has an uiid since API21 but is only visible since API24
         val mStorageManager = context.getSystemService(Context.STORAGE_SERVICE) as StorageManager
-        var volumes = mStorageManager.storageVolumes
+        val volumes: MutableSet<StorageVolume> = HashSet()
+        volumes.addAll(mStorageManager.storageVolumes)
 
         // getRecentStorageVolumes (API30+) can detect USB storage on certain devices where getVolumeList can't
-        if (Build.VERSION.SDK_INT >= 30) {
-            val recentVolumes = mStorageManager.recentStorageVolumes
-            volumes = if ((volumes.size > recentVolumes.size)) volumes else recentVolumes
-        }
+        if (Build.VERSION.SDK_INT >= 30) volumes.addAll(mStorageManager.recentStorageVolumes)
 
         volumes.firstOrNull { volumeIdMatch(it.uuid ?: "", it.isPrimary, volumeId) }?.let {
             return getVolumePath(it)
@@ -246,6 +244,22 @@ private fun getVolumePath(storageVolume: Any): String {
     if (path.isEmpty() && absolutePath.isEmpty()) return canonicalPath
     if (path.isEmpty()) return absolutePath
     return path
+}
+
+private fun getVolumeFile(storageVolume: Any): File? {
+    try {
+        val storageVolumeClazz = Class.forName("android.os.storage.StorageVolume")
+        if (Build.VERSION.SDK_INT < 30) {
+            val getPathFile = storageVolumeClazz.getMethod("getPathFile") // Removed in API30
+            return getPathFile.invoke(storageVolume) as File
+        } else {
+            val getDirectory = storageVolumeClazz.getMethod("getDirectory")
+            return getDirectory.invoke(storageVolume) as File?
+        }
+    } catch (e: Exception) {
+        Timber.w(e)
+    }
+    return null
 }
 
 /**
@@ -1264,17 +1278,7 @@ class MemoryUsageFigures(context: Context, fUri: Uri) {
     // Init for API 21 to 25
     private fun init21(context: Context, fUri: Uri) {
         val fullPath = getFullPathFromUri(context, fUri) // Oh so dirty !!
-        try {
-            if (fullPath.isNotEmpty()) {
-                val stat = StatFs(fullPath)
-
-                val blockSize = stat.blockSizeLong
-                totalSpaceBytes = stat.blockCountLong * blockSize
-                freeMemBytes = stat.availableBlocksLong * blockSize
-            }
-        } catch (e: Exception) {
-            Timber.w(e)
-        }
+        if (fullPath.isNotEmpty()) doStatFs(fullPath)
     }
 
     // Init for API 26+
@@ -1289,31 +1293,19 @@ class MemoryUsageFigures(context: Context, fUri: Uri) {
         // No need to test anything, there's just one single volume
         if (1 == volumes.size) targetVolume = volumes[0]
         else { // Look for a match among listed volumes
-            for (v in volumes) {
-                if (v.isPrimary) primaryVolume = v
-
-                if (volumeIdMatch(v, volumeId)) {
-                    targetVolume = v
-                    break
-                }
-            }
+            primaryVolume = volumes.firstOrNull { it.isPrimary }
+            targetVolume = volumes.firstOrNull { volumeIdMatch(it, volumeId) }
         }
 
         // If no volume matches, default to Primary
         // NB : necessary to avoid defaulting to the root on rooted phones
         // (rooted phone's root is a separate volume with specific memory usage figures)
-        if (null == targetVolume) {
-            targetVolume = primaryVolume
-        }
+        if (null == targetVolume) targetVolume = primaryVolume
+        if (null == targetVolume) return
 
         // Process target volume
-        if (targetVolume != null) {
-            if (targetVolume.isPrimary) {
-                processPrimary(context)
-            } else {
-                processSecondary(targetVolume)
-            }
-        }
+        if (targetVolume.isPrimary) processPrimary(context)
+        else processSecondary(context, targetVolume)
     }
 
     // Use StorageStatsManager on primary volume
@@ -1332,16 +1324,35 @@ class MemoryUsageFigures(context: Context, fUri: Uri) {
     // StorageStatsManager doesn't work for volumes other than the primary volume since
     // the "UUID" available for non-primary volumes is not acceptable to
     // StorageStatsManager. We must revert to statvfs(path) for non-primary volumes.
-    private fun processSecondary(volume: StorageVolume) {
+    private fun processSecondary(context: Context, volume: StorageVolume) {
+        val volumePath = getVolumePath(volume) ?: return
+        if (volumePath.isNotEmpty()) doStatvFs(volumePath)
+
+
+    }
+
+    private fun doStatFs(path: String) {
         try {
-            val volumePath = getVolumePath(volume)
-            if (volumePath.isNotEmpty()) {
-                val stats = Os.statvfs(volumePath)
-                val blockSize = stats.f_bsize
-                totalSpaceBytes = stats.f_blocks * blockSize
-                freeMemBytes = stats.f_bavail * blockSize
-            }
-        } catch (e: Exception) { // On some devices, Os.statvfs can throw other exceptions than ErrnoException
+            Timber.v("Calling statFs $path")
+            val stat = StatFs(path)
+            val blockSize = stat.blockSizeLong
+            totalSpaceBytes = stat.blockCountLong * blockSize
+            freeMemBytes = stat.availableBlocksLong * blockSize
+            Timber.v("SUCCESS")
+        } catch (e: Exception) {
+            Timber.w(e)
+        }
+    }
+
+    private fun doStatvFs(path: String) {
+        try {
+            Timber.v("Calling statvFs $path")
+            val stats = Os.statvfs(path)
+            val blockSize = stats.f_bsize
+            totalSpaceBytes = stats.f_blocks * blockSize
+            freeMemBytes = stats.f_bavail * blockSize
+            Timber.v("SUCCESS")
+        } catch (e: Exception) {
             Timber.w(e)
         }
     }
