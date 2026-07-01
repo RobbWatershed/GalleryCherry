@@ -344,6 +344,9 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
                     Settings.isBrowserAugmented(getStartSite())
         )
 
+        // Prevent physical mouse clicks from passing through
+        binding?.bottomNavigation?.setOnGenericMotionListener { _, _ -> true  }
+        
         viewModel =
             ViewModelProvider(
                 this@BaseBrowserActivity,
