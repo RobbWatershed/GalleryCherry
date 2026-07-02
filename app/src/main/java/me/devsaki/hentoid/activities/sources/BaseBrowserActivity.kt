@@ -345,8 +345,8 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         )
 
         // Prevent physical mouse clicks from passing through
-        binding?.bottomNavigation?.setOnGenericMotionListener { _, _ -> true  }
-        
+        binding?.bottomNavigation?.setOnGenericMotionListener { _, _ -> true }
+
         viewModel =
             ViewModelProvider(
                 this@BaseBrowserActivity,
@@ -682,9 +682,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
 
         // Download immediately on long click on a link / image link
         if (Settings.isBrowserQuickDl) {
-            webView.setOnLongTapListener { x: Int, y: Int ->
-                onLongTap(x, y)
-            }
+            webView.setOnLongTapListener { x, y -> onLongTap(x, y) }
             webView.setLongClickThreshold(Settings.browserQuickDlThreshold)
         }
         val cookieManager = CookieManager.getInstance()
