@@ -3,6 +3,7 @@ package me.devsaki.hentoid.views
 import android.content.Context
 import android.graphics.Point
 import android.util.AttributeSet
+import android.view.InputDevice
 import android.view.MotionEvent
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
@@ -56,17 +57,38 @@ open class VariableLongClickWebView : WebView {
         init(threshold, context as AppCompatActivity)
     }
 
+    // Non-mouse events
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (event.isFromSource(InputDevice.SOURCE_MOUSE)) return false
+
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN ->
                 longTapDebouncer.submit(Point(event.x.toInt(), event.y.toInt()))
 
-            MotionEvent.ACTION_POINTER_UP, MotionEvent.ACTION_UP/*, MotionEvent.ACTION_CANCEL*/ ->
+            MotionEvent.ACTION_POINTER_UP, MotionEvent.ACTION_UP ->
                 longTapDebouncer.clear()
 
-            else -> {}
+            else -> {  /* Nothing */
+            }
         }
         return super.onTouchEvent(event)
+    }
+
+    // Mouse events
+    override fun onGenericMotionEvent(event: MotionEvent): Boolean {
+        if (!event.isFromSource(InputDevice.SOURCE_MOUSE)) return false
+
+        when (event.actionMasked) {
+            MotionEvent.ACTION_BUTTON_PRESS -> {
+                // Right click
+                if (MotionEvent.BUTTON_SECONDARY == event.actionButton)
+                    onLongClickListener?.invoke(event.x.toInt(), event.y.toInt())
+            }
+
+            else -> { /* Nothing */
+            }
+        }
+        return super.onGenericMotionEvent(event)
     }
 
     override fun onCreateInputConnection(info: EditorInfo): InputConnection? {
