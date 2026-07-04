@@ -18,7 +18,7 @@ import me.devsaki.hentoid.R
 import me.devsaki.hentoid.database.CollectionDAO
 import me.devsaki.hentoid.database.ObjectBoxDAO
 import me.devsaki.hentoid.database.domains.SiteBookmark
-import me.devsaki.hentoid.databinding.DialogWebBookmarksImportBinding
+import me.devsaki.hentoid.databinding.DialogBrowserBookmarksImportBinding
 import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.fragments.BaseDialogFragment
 import me.devsaki.hentoid.fragments.browser.BookmarksImportDialogFragment.Parent
@@ -49,7 +49,7 @@ class BookmarksImportDialogFragment : BaseDialogFragment<Parent>() {
     }
 
 
-    private var binding: DialogWebBookmarksImportBinding? = null
+    private var binding: DialogBrowserBookmarksImportBinding? = null
 
 
     private val pickFile = registerForActivityResult(PickFileContract()) { result ->
@@ -70,7 +70,7 @@ class BookmarksImportDialogFragment : BaseDialogFragment<Parent>() {
         container: ViewGroup?,
         savedState: Bundle?
     ): View? {
-        binding = DialogWebBookmarksImportBinding.inflate(inflater, container, false)
+        binding = DialogBrowserBookmarksImportBinding.inflate(inflater, container, false)
         return binding?.root
     }
 

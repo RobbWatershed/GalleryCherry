@@ -6,7 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.FragmentActivity
 import me.devsaki.hentoid.core.startBrowserActivity
-import me.devsaki.hentoid.databinding.DialogWebUrlBinding
+import me.devsaki.hentoid.databinding.DialogBrowserUrlBinding
 import me.devsaki.hentoid.fragments.BaseDialogFragment
 import me.devsaki.hentoid.util.shareText
 
@@ -25,7 +25,7 @@ class UrlDialogFragment : BaseDialogFragment<Nothing>() {
         }
     }
 
-    private var binding: DialogWebUrlBinding? = null
+    private var binding: DialogBrowserUrlBinding? = null
 
     private var url = ""
 
@@ -39,9 +39,9 @@ class UrlDialogFragment : BaseDialogFragment<Nothing>() {
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedState: Bundle?
-    ): View {
-        binding = DialogWebUrlBinding.inflate(inflater, container, false)
-        return binding!!.root
+    ): View? {
+        binding = DialogBrowserUrlBinding.inflate(inflater, container, false)
+        return binding?.root
     }
 
     override fun onViewCreated(rootView: View, savedInstanceState: Bundle?) {

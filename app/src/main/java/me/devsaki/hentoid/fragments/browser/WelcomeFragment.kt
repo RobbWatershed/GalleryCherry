@@ -14,7 +14,7 @@ import me.devsaki.hentoid.R
 import me.devsaki.hentoid.activities.settings.SettingsSourceSelectActivity
 import me.devsaki.hentoid.activities.sources.CustomWebViewClient
 import me.devsaki.hentoid.database.domains.SiteHistory
-import me.devsaki.hentoid.databinding.FragmentWebWelcomeBinding
+import me.devsaki.hentoid.databinding.FragmentBrowserWelcomeBinding
 import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.launchBrowserFor
@@ -25,7 +25,7 @@ import me.devsaki.hentoid.viewmodels.BrowserViewModel
 import me.devsaki.hentoid.viewmodels.ViewModelFactory
 import java.net.URLDecoder
 
-class WelcomeFragment : Fragment(R.layout.fragment_web_welcome) {
+class WelcomeFragment : Fragment(R.layout.fragment_browser_welcome) {
 
     // == COMMUNICATION
     // Viewmodel
@@ -36,7 +36,7 @@ class WelcomeFragment : Fragment(R.layout.fragment_web_welcome) {
 
 
     // === UI
-    private var binding: FragmentWebWelcomeBinding? = null
+    private var binding: FragmentBrowserWelcomeBinding? = null
 
     private val sitesItemAdapter = ItemAdapter<IconItem<Site>>()
     private val sitesFastAdapter = FastAdapter.with(sitesItemAdapter)
@@ -65,7 +65,7 @@ class WelcomeFragment : Fragment(R.layout.fragment_web_welcome) {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        binding = FragmentWebWelcomeBinding.inflate(inflater, container, false)
+        binding = FragmentBrowserWelcomeBinding.inflate(inflater, container, false)
 
         viewModel = ViewModelProvider(
             requireActivity(),

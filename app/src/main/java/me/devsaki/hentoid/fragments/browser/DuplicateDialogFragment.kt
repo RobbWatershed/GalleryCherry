@@ -12,7 +12,7 @@ import me.devsaki.hentoid.database.CollectionDAO
 import me.devsaki.hentoid.database.ObjectBoxDAO
 import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.database.domains.DownloadMode
-import me.devsaki.hentoid.databinding.DialogWebDuplicateBinding
+import me.devsaki.hentoid.databinding.DialogBrowserDuplicateBinding
 import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.fragments.BaseDialogFragment
@@ -47,7 +47,7 @@ class DuplicateDialogFragment : BaseDialogFragment<DuplicateDialogFragment.Paren
         }
     }
 
-    private var binding: DialogWebDuplicateBinding? = null
+    private var binding: DialogBrowserDuplicateBinding? = null
 
     enum class ActionMode {
         DOWNLOAD,  // Download book
@@ -84,7 +84,7 @@ class DuplicateDialogFragment : BaseDialogFragment<DuplicateDialogFragment.Paren
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedState: Bundle?
     ): View? {
-        binding = DialogWebDuplicateBinding.inflate(inflater, container, false)
+        binding = DialogBrowserDuplicateBinding.inflate(inflater, container, false)
         return binding?.root
     }
 

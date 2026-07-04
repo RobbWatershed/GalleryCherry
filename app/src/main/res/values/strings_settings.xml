@@ -102,8 +102,8 @@
     <string name="pref_browser_dl_action_title">Download action</string>
     <string name="pref_browser_quick_dl_title">Quick download</string>
     <string name="pref_browser_quick_dl_summary">On the books list page, long tap to download any book</string>
-    <string name="pref_browser_grab_pics_title">Grab picture on long tap</string>
-    <string name="pref_browser_grab_pics_summary">Long tap to grab any picture</string>
+    <string name="pref_browser_grab_pics_title">Grab picture</string>
+    <string name="pref_browser_grab_pics_summary">Long tap on a picture to share or download it</string>
     <string name="pref_browser_nhentai_invisible_blacklist_title">Hide nhentai-blacklisted books</string>
     <string name="pref_browser_nhentai_invisible_blacklist_off">Nhentai-blacklisted books are blurred</string>
     <string name="pref_browser_nhentai_invisible_blacklist_on">Nhentai-blacklisted books are invisible</string>

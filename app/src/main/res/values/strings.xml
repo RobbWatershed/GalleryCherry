@@ -844,6 +844,8 @@
     <string name="web_target_page_outside_restricted_domains">Host %s outside restricted domains</string>
     <string name="web_range_download_prompt" tools:ignore="TypographyDashes">Range of gallery pages to download (e.g. 1-5 / 1;3;8 / 1-2;5-7)</string>
     <string name="web_download_image">Download single image</string>
+    <string name="web_long_tap_actions_title">Choose long tap actions</string>
+    <string name="web_long_tap_actions_notice">NB : These settings can be changed later using the settings screen</string>
 
     <!-- Web browser (site specifics) -->
     <string name="help_web_exh_account">Please use or create an exHentai account</string>

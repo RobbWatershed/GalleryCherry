@@ -81,6 +81,7 @@ import me.devsaki.hentoid.events.DownloadEvent
 import me.devsaki.hentoid.events.DownloadPreparationEvent
 import me.devsaki.hentoid.fragments.browser.BookmarksDrawerFragment
 import me.devsaki.hentoid.fragments.browser.DuplicateDialogFragment
+import me.devsaki.hentoid.fragments.browser.LongTapActionsDialogFragment
 import me.devsaki.hentoid.fragments.browser.UrlDialogFragment
 import me.devsaki.hentoid.json.core.UpdateInfo
 import me.devsaki.hentoid.parsers.ContentParserFactory
@@ -770,16 +771,18 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
     }
 
     private fun onLongTap(x: Int, y: Int) {
-        if (Settings.isBrowserMode) return
-        if (!Settings.isBrowserQuickDl && !Settings.isBrowserGrabPics) return
+        if (!Settings.isBrowserQuickDl && !Settings.isBrowserGrabPics) {
+            if (!Settings.areLongTapActionsChosen) LongTapActionsDialogFragment.invoke(this)
+            return
+        }
 
         val result = webView.hitTestResult
         var linkUrl: String? = null
         var imgUrl: String? = null
 
         when (result.type) {
-            HitTestResult.SRC_ANCHOR_TYPE if result.extra != null -> {
-                result.extra
+            HitTestResult.SRC_ANCHOR_TYPE -> {
+                linkUrl = result.extra
             }
 
             HitTestResult.SRC_IMAGE_ANCHOR_TYPE -> {
@@ -797,7 +800,9 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         }
 
         // Priority to quick download if activated and possible
-        if (Settings.isBrowserQuickDl && !linkUrl.isNullOrEmpty() && webClient.isGalleryPage(linkUrl)) {
+        if (Settings.isBrowserQuickDl && !Settings.isBrowserMode
+            && !linkUrl.isNullOrEmpty() && webClient.isGalleryPage(linkUrl)
+        ) {
             binding?.apply {
                 quickDlFeedback.setMargins(
                     x - quickDlFeedback.width / 2,

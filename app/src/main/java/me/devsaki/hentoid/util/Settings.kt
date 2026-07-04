@@ -290,8 +290,9 @@ object Settings {
         return DownloadMode.fromValue(browserDlActionInt)
     }
 
-    val isBrowserQuickDl: Boolean by BoolSetting(Key.BROWSER_QUICK_DL, true)
-    val isBrowserGrabPics: Boolean by BoolSetting(Key.BROWSER_GRAB_PICS, false)
+    var areLongTapActionsChosen: Boolean by BoolSetting("web_long_tap_actions", false)
+    var isBrowserQuickDl: Boolean by BoolSetting(Key.BROWSER_QUICK_DL, false)
+    var isBrowserGrabPics: Boolean by BoolSetting(Key.BROWSER_GRAB_PICS, false)
     val browserLongTapThreshold: Int by IntSettingStr(
         Key.BROWSER_LONG_TAP_THRESHOLD,
         1500 // 1.5s
