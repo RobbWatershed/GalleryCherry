@@ -24,6 +24,7 @@ import net.sf.sevenzipjbinding.ISequentialOutStream
 import net.sf.sevenzipjbinding.PropID
 import net.sf.sevenzipjbinding.SevenZip
 import net.sf.sevenzipjbinding.SevenZipException
+import net.sf.sevenzipjbinding.SevenZipNativeInitializationException
 import timber.log.Timber
 import java.io.EOFException
 import java.io.File
@@ -31,6 +32,8 @@ import java.io.FileInputStream
 import java.io.IOException
 import java.io.OutputStream
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
+
 
 /**
  * Archive / unarchive helper for formats supported by 7Z
@@ -55,6 +58,23 @@ private val RAR5_SIGNATURE = byteArrayOfInts(0x52, 0x61, 0x72, 0x21, 0x1A, 0x07,
 private val RAR_SIGNATURE = byteArrayOfInts(0x52, 0x61, 0x72, 0x21)
 
 private const val BUFFER = 32 * 1024
+
+val isSevenZipInitialized: AtomicBoolean = AtomicBoolean(false)
+
+// https://sourceforge.net/p/sevenzipjbind/discussion/757965/thread/f582f1d2/#fd34
+private fun initSevenZip() {
+    synchronized(isSevenZipInitialized)
+    {
+        if (isSevenZipInitialized.get()) return
+        try {
+            SevenZip.initSevenZipFromPlatformJAR()
+            Timber.v("7zip initialized successfully!")
+            isSevenZipInitialized.set(true)
+        } catch (e: SevenZipNativeInitializationException) {
+            Timber.e(e, "Unable to initialize 7zip!")
+        }
+    }
+}
 
 
 fun getSupportedExtensions(): Set<String> {
@@ -166,6 +186,7 @@ private fun Context.getArchiveEntries(format: ArchiveFormat, uri: Uri): List<Arc
     val result = ArrayList<ArchiveEntry>()
     try {
         DocumentFileRandomInStream(this, uri).use { stream ->
+            initSevenZip()
             SevenZip.openInArchive(format, stream, callback).use { inArchive ->
                 val itemCount = inArchive.numberOfItems
                 for (i in 0 until itemCount) {
@@ -353,6 +374,7 @@ private fun Context.extractArchiveEntries(
     // TODO handle the case where the extracted elements would saturate storage space
     try {
         DocumentFileRandomInStream(this, uri).use { stream ->
+            initSevenZip()
             SevenZip.openInArchive(format, stream).use { inArchive ->
                 val itemCount = inArchive.numberOfItems
                 for (archiveIndex in 0 until itemCount) {
