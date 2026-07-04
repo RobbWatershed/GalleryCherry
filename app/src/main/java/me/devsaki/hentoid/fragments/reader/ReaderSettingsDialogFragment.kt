@@ -27,6 +27,7 @@ class ReaderSettingsDialogFragment : BaseDialogFragment<ReaderSettingsDialogFrag
         const val BROWSE_MODE = "browse_mode"
         const val TWOPAGES_MODE = "twopages_mode"
         const val DISPLAY_MODE = "display_mode"
+        const val OPEN_GALLERY = "open_gallery"
         const val SITE = "site"
 
         fun invoke(parent: Fragment, site: Site, bookPrefs: Map<String, String>) {
@@ -47,6 +48,10 @@ class ReaderSettingsDialogFragment : BaseDialogFragment<ReaderSettingsDialogFrag
                 DISPLAY_MODE,
                 Settings.getContentDisplayMode(site, bookPrefs)
             )
+            if (Settings.isReaderOpenInGalleryMode(site) != Settings.isAppReaderOpenInGalleryMode
+                || bookPrefs.containsKey(Settings.Key.VIEWER_OPEN_GALLERY)
+            ) args.putBoolean(OPEN_GALLERY, Settings.isContentOpenInGalleryMode(site, bookPrefs))
+
             args.putInt(SITE, site.code)
             invoke(parent, ReaderSettingsDialogFragment(), args)
         }
@@ -60,6 +65,7 @@ class ReaderSettingsDialogFragment : BaseDialogFragment<ReaderSettingsDialogFrag
     private var bookBrowseMode = 0
     private var bookDisplayMode = 0
     private var bookTwoPagesMode = false
+    private var bookOpenGallery = false
     private var hasSiteBrowseMode = false
     private var siteBrowseMode = 0
     private var site = Site.NONE
@@ -72,6 +78,7 @@ class ReaderSettingsDialogFragment : BaseDialogFragment<ReaderSettingsDialogFrag
         bookBrowseMode = requireArguments().getInt(BROWSE_MODE, -1)
         bookDisplayMode = requireArguments().getInt(DISPLAY_MODE, -1)
         bookTwoPagesMode = requireArguments().getBoolean(TWOPAGES_MODE, false)
+        bookOpenGallery = requireArguments().getBoolean(OPEN_GALLERY, false)
         site = Site.searchByCode(requireArguments().getInt(SITE, Site.ANY.code))
         siteBrowseMode = Settings.getReaderBrowseMode(site)
         hasSiteBrowseMode = siteBrowseMode != Settings.appReaderBrowseMode
@@ -115,6 +122,7 @@ class ReaderSettingsDialogFragment : BaseDialogFragment<ReaderSettingsDialogFrag
             browsePicker.index = min(bookBrowseMode + 1, browsePicker.entries.size - 1)
             browsePicker.setOnIndexChangeListener { refreshValues() }
             twoPagesSwitch.isChecked = bookTwoPagesMode
+            openGallerySwitch.isChecked = bookOpenGallery
         }
 
         val renderingModes = resources.getStringArray(R.array.pref_viewer_rendering_entries)
@@ -175,6 +183,7 @@ class ReaderSettingsDialogFragment : BaseDialogFragment<ReaderSettingsDialogFrag
                 if (browsePicker.index > 0) newPrefs[VIEWER_BROWSE_MODE] =
                     (browsePicker.index - 1).toString()
                 newPrefs[Settings.Key.READER_TWOPAGES] = twoPagesSwitch.isChecked.toString()
+                newPrefs[Settings.Key.VIEWER_OPEN_GALLERY] = openGallerySwitch.isChecked.toString()
                 if (displayPicker.index > 0) newPrefs[VIEWER_IMAGE_DISPLAY] =
                     (displayPicker.index - 1).toString()
             }

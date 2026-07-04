@@ -371,6 +371,7 @@ object Settings {
             isAppRangeDownloadOn
         )
     }
+
     var isAppRangeDownloadOn: Boolean by BoolSetting(Key.BROWSER_RANGE_DOWNLOAD, false)
     fun isThumbSeparateFile(site: Site): Boolean {
         return sharedPreferences.getBoolean(
@@ -378,6 +379,7 @@ object Settings {
             isAppThumbSeparateFile
         )
     }
+
     var isAppThumbSeparateFile: Boolean by BoolSetting("pref_dl_separate_thumb", true)
     val download404Mode: Int by IntSettingStr("pref_dl_404", 0)
 
@@ -478,7 +480,23 @@ object Settings {
     val isReaderSwipeToTurn: Boolean by BoolSetting(Key.VIEWER_PAGE_TURN_SWIPE, true)
     val isReaderKeyboardToTurn: Boolean by BoolSetting("pref_viewer_page_turn_keyboard", true)
     val isReaderVolumeToSwitchBooks: Boolean by BoolSetting("pref_viewer_book_switch_volume", false)
-    val isReaderOpenBookInGalleryMode: Boolean by BoolSetting("pref_viewer_open_gallery", false)
+
+    fun isReaderOpenInGalleryMode(site: Site): Boolean {
+        return sharedPreferences.getBoolean(
+            makeSiteKey(Key.VIEWER_OPEN_GALLERY, site),
+            isAppReaderOpenInGalleryMode
+        )
+    }
+
+    var isAppReaderOpenInGalleryMode: Boolean by BoolSetting(Key.VIEWER_OPEN_GALLERY, false)
+    fun isContentOpenInGalleryMode(site: Site, bookPrefs: Map<String, String>): Boolean {
+        if (bookPrefs.containsKey(Key.VIEWER_OPEN_GALLERY)) {
+            val value = bookPrefs[Key.VIEWER_OPEN_GALLERY]
+            if (value != null) return value.toBoolean()
+        }
+        return isReaderOpenInGalleryMode(site)
+    }
+
     val isReaderChapteredNavigation: Boolean by BoolSetting("viewer_chaptered_navigation", false)
     val isReaderContinuous: Boolean by BoolSetting(Key.VIEWER_CONTINUOUS, false)
     val readerPageReadThreshold: Int by IntSettingStr(
@@ -801,6 +819,7 @@ object Settings {
         const val VIEWER_DISPLAY_AROUND_NOTCH = "pref_viewer_display_notch"
         const val VIEWER_IMAGE_DISPLAY = "pref_viewer_image_display"
         const val VIEWER_BROWSE_MODE = "pref_viewer_browse_mode"
+        const val VIEWER_OPEN_GALLERY = "pref_viewer_open_gallery"
         const val VIEWER_RENDERING = "pref_viewer_rendering"
         const val VIEWER_DISPLAY_PAGENUM = "pref_viewer_display_pagenum2"
         const val VIEWER_TURN_TRANSITIONS = "pref_viewer_tap_transitions"

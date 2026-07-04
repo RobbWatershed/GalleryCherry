@@ -49,7 +49,7 @@ class HiperdexParser : BaseChapteredImageListParser() {
         headers: List<Pair<String, String>>?,
         fireProgressEvents: Boolean
     ): List<ImageFile> {
-        pause(1000) // Rate-limitedn but only on site pages
+        pause(1000) // Rate-limited but only on site pages
         getOnlineDocument(
             chp.url,
             headers ?: fetchHeaders(content),

@@ -5,15 +5,20 @@ import android.os.Bundle
 import android.view.KeyEvent
 import android.view.WindowManager
 import androidx.core.content.ContextCompat
-import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.activities.bundles.ReaderActivityBundle
+import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.fragments.reader.ReaderGalleryFragment
 import me.devsaki.hentoid.fragments.reader.ReaderPagerFragment
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.file.RQST_STORAGE_PERMISSION
 import me.devsaki.hentoid.util.file.requestExternalStorageReadPermission
+import me.devsaki.hentoid.util.pause
 import me.devsaki.hentoid.util.toast
 import me.devsaki.hentoid.viewmodels.ReaderViewModel
 import me.devsaki.hentoid.viewmodels.ViewModelFactory
@@ -24,6 +29,9 @@ open class ReaderActivity : BaseActivity() {
     private var readerKeyListener: ReaderKeyListener? = null
     private lateinit var viewModel: ReaderViewModel
 
+    private var bookPreferences: Map<String, String> = emptyMap()
+    private var bookSite: Site = Site.NONE
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -32,6 +40,10 @@ open class ReaderActivity : BaseActivity() {
         val vmFactory = ViewModelFactory(application)
         viewModel = ViewModelProvider(this, vmFactory)[ReaderViewModel::class.java]
         viewModel.observeDbImages(this)
+        viewModel.getContent().observe(this) {
+            bookSite = it?.site ?: Site.NONE
+            bookPreferences = it?.bookPreferences ?: emptyMap()
+        }
 
         val intent = intent
         require(!(null == intent || null == intent.extras)) { "Required init arguments not found" }
@@ -76,18 +88,29 @@ open class ReaderActivity : BaseActivity() {
             window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
         }
 
-        if (null == savedInstanceState) {
-            val fragment: Fragment =
-                if (Settings.isReaderOpenBookInGalleryMode || parser.isForceShowGallery) ReaderGalleryFragment() else ReaderPagerFragment()
-            supportFragmentManager.beginTransaction()
-                .add(android.R.id.content, fragment)
-                .commit()
-        }
         if (!Settings.recentVisibility) window.setFlags(
             WindowManager.LayoutParams.FLAG_SECURE,
             WindowManager.LayoutParams.FLAG_SECURE
         )
         setRunning(true)
+
+        if (null == savedInstanceState) {
+            lifecycleScope.launch(Dispatchers.Main) {
+                withContext(Dispatchers.Default) {
+                    var remainingIterations = 10 // Timeout 500ms
+                    while (Site.NONE == bookSite && remainingIterations-- > 0) pause(50)
+                }
+
+                val fragment = if (parser.isForceShowGallery ||
+                    Settings.isContentOpenInGalleryMode(bookSite, bookPreferences)
+                ) ReaderGalleryFragment()
+                else ReaderPagerFragment()
+
+                supportFragmentManager.beginTransaction()
+                    .add(android.R.id.content, fragment)
+                    .commit()
+            }
+        }
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {

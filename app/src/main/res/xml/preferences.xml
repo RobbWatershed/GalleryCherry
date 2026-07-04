@@ -882,7 +882,8 @@
                 android:defaultValue="@bool/pref_viewer_open_gallery_default"
                 android:key="pref_viewer_open_gallery"
                 android:title="@string/pref_viewer_open_gallery"
-                app:iconSpaceReserved="false" />
+                app:iconSpaceReserved="false"
+                app:sites="ANY" />
             <CheckBoxPreference
                 android:defaultValue="@bool/pref_viewer_chaptered_navigation_default"
                 android:key="viewer_chaptered_navigation"
