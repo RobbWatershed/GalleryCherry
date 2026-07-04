@@ -101,12 +101,14 @@
     <string name="pref_browser_resume_last_on">Any site opens on its last viewed page</string>
     <string name="pref_browser_dl_action_title">Download action</string>
     <string name="pref_browser_quick_dl_title">Quick download</string>
-    <string name="pref_browser_quick_dl_summary">On the books list page, hold tap to download any book</string>
+    <string name="pref_browser_quick_dl_summary">On the books list page, long tap to download any book</string>
+    <string name="pref_browser_grab_pics_title">Grab picture on long tap</string>
+    <string name="pref_browser_grab_pics_summary">Long tap to grab any picture</string>
     <string name="pref_browser_nhentai_invisible_blacklist_title">Hide nhentai-blacklisted books</string>
     <string name="pref_browser_nhentai_invisible_blacklist_off">Nhentai-blacklisted books are blurred</string>
     <string name="pref_browser_nhentai_invisible_blacklist_on">Nhentai-blacklisted books are invisible</string>
-    <string name="pref_browser_quick_dl_threshold_title">Quick download long press threshold</string>
-    <string name="pref_browser_quick_dl_threshold_summary">Hold down for this duration to start quick downloading\nCurrent: <x:g example="1 s" id="time">%s</x:g></string>
+    <string name="pref_browser_quick_dl_threshold_title">Long tap threshold</string>
+    <string name="pref_browser_quick_dl_threshold_summary">Hold down for this duration to trigger quick download or picture grab\nCurrent: <x:g example="1 s" id="time">%s</x:g></string>
     <string name="pref_browser_duplicate_detector">Duplicate detector</string>
     <string name="pref_browser_duplicate_ask_title">Duplicates checking</string>
     <string name="pref_browser_duplicate_ask_off">No: always download</string>

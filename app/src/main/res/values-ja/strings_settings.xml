@@ -67,13 +67,9 @@
     <string name="pref_browser_resume_last_off">どのサイトも常にホームページで開きます</string>
     <string name="pref_browser_resume_last_on">すべてのサイトは最後に表示されたページで開きます</string>
     <string name="pref_browser_dl_action_title">アクションをダウンロード</string>
-    <string name="pref_browser_quick_dl_title">クイックダウンロード</string>
-    <string name="pref_browser_quick_dl_summary">書籍リストページで、タップを押したままにして書籍をダウンロードします</string>
     <string name="pref_browser_nhentai_invisible_blacklist_title">nhentaiを隠す-ブラックリストに載っている本</string>
     <string name="pref_browser_nhentai_invisible_blacklist_off">nhentai-ブラックリストに載っている本はぼやけています</string>
     <string name="pref_browser_nhentai_invisible_blacklist_on">nhentai-ブラックリストに載っている本は見えない</string>
-    <string name="pref_browser_quick_dl_threshold_title">クイックダウンロード長押ししきい値</string>
-    <string name="pref_browser_quick_dl_threshold_summary">この期間は、\ ncurrentの迅速なダウンロードを開始するために保持します:%s</string>
     <string name="pref_browser_duplicate_detector">重複検出器</string>
     <string name="pref_browser_duplicate_ask_title">重複をチェックします</string>
     <string name="pref_browser_duplicate_ask_off">いいえ：常にダウンロードしてください</string>

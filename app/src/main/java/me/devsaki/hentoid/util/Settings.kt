@@ -291,8 +291,9 @@ object Settings {
     }
 
     val isBrowserQuickDl: Boolean by BoolSetting(Key.BROWSER_QUICK_DL, true)
-    val browserQuickDlThreshold: Int by IntSettingStr(
-        Key.BROWSER_QUICK_DL_THRESHOLD,
+    val isBrowserGrabPics: Boolean by BoolSetting(Key.BROWSER_GRAB_PICS, false)
+    val browserLongTapThreshold: Int by IntSettingStr(
+        Key.BROWSER_LONG_TAP_THRESHOLD,
         1500 // 1.5s
     )
     val isBrowserNhentaiInvisibleBlacklist: Boolean by BoolSetting(
@@ -787,7 +788,8 @@ object Settings {
         const val BROWSER_MARK_BLOCKED = "browser_mark_blocked"
         const val BROWSER_DL_ACTION = "pref_browser_dl_action"
         const val BROWSER_QUICK_DL = "pref_browser_quick_dl"
-        const val BROWSER_QUICK_DL_THRESHOLD = "pref_browser_quick_dl_threshold"
+        const val BROWSER_GRAB_PICS = "pref_browser_grab_pics"
+        const val BROWSER_LONG_TAP_THRESHOLD = "pref_browser_quick_dl_threshold"
         const val BROWSER_DNS_OVER_HTTPS = "pref_browser_dns_over_https"
         const val BROWSER_PROXY = "pref_browser_proxy"
         const val BROWSER_CLEAR_COOKIES = "pref_browser_clear_cookies"

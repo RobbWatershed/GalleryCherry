@@ -385,8 +385,7 @@ private suspend fun downloadToFile(
                 notifyProgress?.invoke(100f)
                 out?.flush()
                 if (targetFileUri != null) {
-                    val targetFileSize =
-                        fileSizeFromUri(context, targetFileUri)
+                    val targetFileSize = fileSizeFromUri(context, targetFileUri)
                     Timber.d(
                         "DOWNLOAD %d [%s] WRITTEN TO %s (%s)",
                         resourceId,

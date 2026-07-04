@@ -290,7 +290,7 @@ class MetaExportDialogFragment : BaseDialogFragment<Nothing>() {
         return jsonContentCollection
     }
 
-    private fun onJsonSerialized(
+    private suspend fun onJsonSerialized(
         json: String,
         exportLibrary: Boolean,
         exportFavsOnly: Boolean,

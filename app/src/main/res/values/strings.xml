@@ -56,6 +56,7 @@
     <string name="invalid_selection_generic">Invalid selection</string>
     <string name="user_generic">User</string>
     <string name="copy_generic">Copy</string>
+    <string name="picture_generic">Picture</string>
 
     <!-- Colours -->
     <string name="white">White</string>
@@ -842,6 +843,7 @@
     <string name="web_target_page_unavailable">Webpage not available%s; loading welcome page instead</string>
     <string name="web_target_page_outside_restricted_domains">Host %s outside restricted domains</string>
     <string name="web_range_download_prompt" tools:ignore="TypographyDashes">Range of gallery pages to download (e.g. 1-5 / 1;3;8 / 1-2;5-7)</string>
+    <string name="web_download_image">Download single image</string>
 
     <!-- Web browser (site specifics) -->
     <string name="help_web_exh_account">Please use or create an exHentai account</string>

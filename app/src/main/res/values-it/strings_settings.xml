@@ -77,9 +77,6 @@
     <string name="pref_browser_nhentai_invisible_blacklist_on">I libri della lista nera di NHentai sono nascosti</string>
     <string name="pref_browser_nhentai_invisible_blacklist_title">Nascondi i libri della lista nera di NHentai</string>
     <string name="pref_browser_proxy_title">Proxy</string>
-    <string name="pref_browser_quick_dl_summary">Nella pagina dell’elenco dei libri, tieni premuto per scaricare qualsiasi libro</string>
-    <string name="pref_browser_quick_dl_threshold_summary">Tieni premuto per questa durata per iniziare un download rapido\nAttualmente: %s</string>
-    <string name="pref_browser_quick_dl_threshold_title">Soglia di pressione prolungata per il download rapido</string>
     <string name="pref_browser_quick_dl_title">Download rapido</string>
     <string name="pref_browser_range_download_summary">Tasto aggiuntivo per scegliere quali pagine della galleria scaricare</string>
     <string name="pref_browser_resume_last_off">Qualsiasi sito si apre sempre sulla sua pagina iniziale</string>

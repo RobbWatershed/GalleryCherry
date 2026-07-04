@@ -9,6 +9,7 @@ import android.graphics.drawable.Animatable
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
+import android.os.Message
 import android.text.TextUtils
 import android.view.MenuItem
 import android.view.View
@@ -40,6 +41,7 @@ import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.skydoves.balloon.ArrowOrientation
+import com.skydoves.powermenu.PowerMenuItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -91,15 +93,22 @@ import me.devsaki.hentoid.util.calcPhash
 import me.devsaki.hentoid.util.copyPlainTextToClipboard
 import me.devsaki.hentoid.util.download.ContentQueueManager.isQueueActive
 import me.devsaki.hentoid.util.download.ContentQueueManager.resumeQueue
+import me.devsaki.hentoid.util.download.downloadToFile
+import me.devsaki.hentoid.util.exportToDownloadsFolder
 import me.devsaki.hentoid.util.file.RQST_STORAGE_PERMISSION
 import me.devsaki.hentoid.util.file.getAssetAsString
+import me.devsaki.hentoid.util.file.getExtensionFromMimeType
+import me.devsaki.hentoid.util.file.getInputStream
+import me.devsaki.hentoid.util.file.removeFile
 import me.devsaki.hentoid.util.file.requestExternalStorageReadWritePermission
+import me.devsaki.hentoid.util.file.shareFile
 import me.devsaki.hentoid.util.findDuplicate
 import me.devsaki.hentoid.util.getBlockedTags
 import me.devsaki.hentoid.util.getCenter
 import me.devsaki.hentoid.util.getCoverBitmapFromStream
 import me.devsaki.hentoid.util.getFixedContext
 import me.devsaki.hentoid.util.getHashEngine
+import me.devsaki.hentoid.util.image.getMimeTypeFromPictureBinary
 import me.devsaki.hentoid.util.isInLibrary
 import me.devsaki.hentoid.util.isInQueue
 import me.devsaki.hentoid.util.network.HEADER_COOKIE_KEY
@@ -122,6 +131,7 @@ import me.devsaki.hentoid.viewmodels.ViewModelFactory
 import me.devsaki.hentoid.views.NestedScrollWebView
 import me.devsaki.hentoid.widget.showAddQueueMenu
 import me.devsaki.hentoid.widget.showDownloadModeMenu
+import me.devsaki.hentoid.widget.showImageMenu
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
@@ -681,10 +691,8 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         }
 
         // Download immediately on long click on a link / image link
-        if (Settings.isBrowserQuickDl) {
-            webView.setOnLongTapListener { x, y -> onLongTap(x, y) }
-            webView.setLongClickThreshold(Settings.browserQuickDlThreshold)
-        }
+        webView.setOnLongTapListener { x, y -> onLongTap(x, y) }
+        webView.setLongClickThreshold(Settings.browserLongTapThreshold)
         val cookieManager = CookieManager.getInstance()
         cookieManager.setAcceptThirdPartyCookies(webView, true)
         val webSettings = webView.settings
@@ -763,26 +771,33 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
 
     private fun onLongTap(x: Int, y: Int) {
         if (Settings.isBrowserMode) return
+        if (!Settings.isBrowserQuickDl && !Settings.isBrowserGrabPics) return
+
         val result = webView.hitTestResult
-        // Plain link
-        val url: String? =
-            when (result.type) {
-                HitTestResult.SRC_ANCHOR_TYPE if result.extra != null -> {
-                    result.extra
-                }
+        var linkUrl: String? = null
+        var imgUrl: String? = null
 
-                HitTestResult.SRC_IMAGE_ANCHOR_TYPE -> {
-                    val handler = Handler(mainLooper)
-                    val message = handler.obtainMessage()
-                    webView.requestFocusNodeHref(message)
-                    message.data.getString("url")
-                }
-
-                else -> {
-                    null
-                }
+        when (result.type) {
+            HitTestResult.SRC_ANCHOR_TYPE if result.extra != null -> {
+                result.extra
             }
-        if (!url.isNullOrEmpty() && webClient.isGalleryPage(url)) {
+
+            HitTestResult.SRC_IMAGE_ANCHOR_TYPE -> {
+                val handler = Handler(mainLooper)
+                val linkMsg = handler.obtainMessage()
+                val imgMsg = Message.obtain(linkMsg)
+                webView.requestFocusNodeHref(linkMsg)
+                linkUrl = linkMsg.data.getString("url")
+                webView.requestImageRef(imgMsg)
+                imgUrl = imgMsg.data.getString("url")
+            }
+
+            else -> { /* Nothing */
+            }
+        }
+
+        // Priority to quick download if activated and possible
+        if (Settings.isBrowserQuickDl && !linkUrl.isNullOrEmpty() && webClient.isGalleryPage(linkUrl)) {
             binding?.apply {
                 quickDlFeedback.setMargins(
                     x - quickDlFeedback.width / 2,
@@ -791,16 +806,69 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
                     0
                 )
                 quickDlFeedback.setIndicatorColor(
-                    ContextCompat.getColor(
-                        baseContext,
-                        R.color.medium_gray
-                    )
+                    ContextCompat.getColor(baseContext, R.color.medium_gray)
                 )
                 quickDlFeedback.visibility = View.VISIBLE
             }
 
-            webClient.flagAsQuickDownload(url)
-            browserFetch(url)
+            webClient.flagAsQuickDownload(linkUrl)
+            browserFetch(linkUrl)
+        } else if (Settings.isBrowserGrabPics && !imgUrl.isNullOrEmpty()) { // Else process image
+            showImageMenu(this, webView, x, y, this) { position: Int, _: PowerMenuItem? ->
+                lifecycleScope.launch { grabImage(imgUrl, position) }
+            }
+        }
+    }
+
+    private suspend fun grabImage(url: String, position: Int) = withContext(Dispatchers.IO) {
+        val ctx = this@BaseBrowserActivity
+        val site = getStartSite()
+        // Download img to temp folder
+        val tempFolder = cacheDir.toUri()
+        val name = "img-${site.name}"
+
+        val requestHeadersList: MutableList<Pair<String, String>> = ArrayList()
+        val cookieStr = getCookies(
+            url,
+            null,
+            site.useMobileAgent,
+            site.useHentoidAgent,
+            site.useWebviewAgent
+        )
+        if (cookieStr.isNotEmpty()) requestHeadersList.add(Pair(HEADER_COOKIE_KEY, cookieStr))
+
+        val tmpUri = downloadToFile(
+            ctx,
+            site,
+            url,
+            requestHeadersList,
+            tempFolder,
+            name,
+            isCanceled = { false },
+            resourceId = 0
+        )
+            ?: throw IOException("Couldn't download single image from $url")
+
+        try {
+            val mime =
+                getInputStream(ctx, tmpUri).use { input ->
+                    val data = ByteArray(16)
+                    input.read(data, 0, 16)
+                    getMimeTypeFromPictureBinary(data)
+                }
+            val ext = getExtensionFromMimeType(mime)
+
+            // Process it
+            when (position) {
+                0 -> shareFile(ctx, tmpUri, "$name.$ext", mime)
+                else -> {
+                    getInputStream(ctx, tmpUri).use {
+                        exportToDownloadsFolder(ctx, it, "$name.$ext", webView)
+                    }
+                }
+            }
+        } finally {
+            if (position > 0) removeFile(ctx, tmpUri)
         }
     }
 
@@ -1997,12 +2065,8 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         } else if (Settings.Key.BROWSER_PROXY == key) {
             webClient.setProxyEnabled(Settings.proxy.isNotEmpty())
             reload = true
-        } else if (Settings.Key.BROWSER_QUICK_DL == key) {
-            if (Settings.isBrowserQuickDl)
-                webView.setOnLongTapListener { x, y -> onLongTap(x, y) }
-            else webView.setOnLongTapListener(null)
-        } else if (Settings.Key.BROWSER_QUICK_DL_THRESHOLD == key) {
-            webView.setLongClickThreshold(Settings.browserQuickDlThreshold)
+        } else if (Settings.Key.BROWSER_LONG_TAP_THRESHOLD == key) {
+            webView.setLongClickThreshold(Settings.browserLongTapThreshold)
         } else if (key.startsWith(Settings.Key.WEB_ADBLOCKER)) {
             val newVal = Settings.isAdBlockerOn(getStartSite())
             if (newVal && !Settings.isBrowserAugmented(getStartSite()))

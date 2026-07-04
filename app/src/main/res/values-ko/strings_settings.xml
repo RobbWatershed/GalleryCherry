@@ -64,12 +64,9 @@
     <string name="pref_browser_resume_last_on">사이트에서 마지막으로 봤던 페이지를 엽니다</string>
     <string name="pref_browser_dl_action_title">다운로드 설정</string>
     <string name="pref_browser_quick_dl_title">빠른 다운로드</string>
-    <string name="pref_browser_quick_dl_summary">목록 페이지에서 길게 눌러서 다운로드 합니다</string>
     <string name="pref_browser_nhentai_invisible_blacklist_title">Nhentai 블랙리스트 숨기기</string>
     <string name="pref_browser_nhentai_invisible_blacklist_off">Nhentai에서 블랙리스트 된 항목은 흐리게 표시됩니다</string>
     <string name="pref_browser_nhentai_invisible_blacklist_on">Nhentai에서 블랙리스트 된 항목은 흐리게 표시됩니다</string>
-    <string name="pref_browser_quick_dl_threshold_title">빠른 다운로드 인식 시간</string>
-    <string name="pref_browser_quick_dl_threshold_summary">빠른 다운로드를 시작하기까지 눌러야되는 시간을 설정합니다\n현재: %s</string>
     <string name="pref_browser_duplicate_detector">중복 탐지기</string>
     <string name="pref_browser_duplicate_ask_title">중복 확인</string>
     <string name="pref_browser_duplicate_ask_off">언제나 다운로드 합니다</string>

@@ -19,9 +19,9 @@ import me.devsaki.hentoid.util.PickFolderContract
 import me.devsaki.hentoid.util.PickerResult
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.copy
+import me.devsaki.hentoid.util.file.DEFAULT_MIME_TYPE
 import me.devsaki.hentoid.util.file.FILECHUNK_AUTHORITY
 import me.devsaki.hentoid.util.file.FileChunkInfo
-import me.devsaki.hentoid.util.file.DEFAULT_MIME_TYPE
 import me.devsaki.hentoid.util.file.RQST_STORAGE_PERMISSION
 import me.devsaki.hentoid.util.file.createNewDownloadFile
 import me.devsaki.hentoid.util.file.fileExists
@@ -232,11 +232,7 @@ class ReaderCopyImgDialogFragment : BaseDialogFragment<ReaderCopyImgDialogFragme
         if (null == outputStream) {
             outputStream = getOutputStream(
                 requireContext(),
-                createNewDownloadFile(
-                    requireContext(),
-                    targetFileName,
-                    mimeType
-                )
+                createNewDownloadFile(requireContext(), targetFileName, mimeType)
             )
             docFile = null
             file = getDownloadsFolder()

@@ -604,14 +604,23 @@ fun isSupportedArchivePdf(fileName: String): Boolean {
     return isSupportedArchive(fileName) || getExtension(fileName).equals("pdf", true)
 }
 
+suspend fun exportToDownloadsFolder(
+    context: Context,
+    data: ByteArray,
+    fileName: String,
+    view: View?
+) {
+    exportToDownloadsFolder(context, ByteArrayInputStream(data), fileName, view)
+}
+
 /**
  * Export the given data to the device's Downloads folder, using the given file name
  * @param fileName  Name of the file to create, extension included
  * @param view      View to display feedback using a snackbar; optional
  */
-fun exportToDownloadsFolder(
+suspend fun exportToDownloadsFolder(
     context: Context,
-    data: ByteArray,
+    input: InputStream,
     fileName: String,
     view: View?
 ) {
@@ -623,46 +632,50 @@ fun exportToDownloadsFolder(
         ) + ".$ext"
 
     try {
-        getOutputStream(
-            context,
-            createNewDownloadFile(
+        withContext(Dispatchers.IO) {
+            getOutputStream(
                 context,
-                targetFileName,
-                getMimeTypeFromFileName(fileName)
-            )
-        )?.use { newFile ->
-            ByteArrayInputStream(data)
-                .use { input -> copy(input, newFile) }
+                createNewDownloadFile(
+                    context,
+                    targetFileName,
+                    getMimeTypeFromFileName(fileName)
+                )
+            )?.use { newFile ->
+                copy(input, newFile)
+            }
         }
-        view?.let {
-            Snackbar.make(
-                it,
-                R.string.copy_download_folder_success,
-                BaseTransientBottomBar.LENGTH_LONG
-            )
-                .setAction(R.string.open_folder) {
-                    openFile(
-                        context,
-                        getDownloadsFolder()
-                    )
-                }
-                .show()
+        withContext(Dispatchers.Main) {
+            view?.let {
+                Snackbar.make(
+                    it,
+                    R.string.copy_download_folder_success,
+                    BaseTransientBottomBar.LENGTH_LONG
+                )
+                    .setAction(R.string.open_folder) {
+                        openFile(context, getDownloadsFolder())
+                    }
+                    .show()
+            }
         }
     } catch (_: IOException) {
         view?.let {
-            Snackbar.make(
-                it,
-                R.string.copy_download_folder_fail,
-                BaseTransientBottomBar.LENGTH_LONG
-            ).show()
+            withContext(Dispatchers.Main) {
+                Snackbar.make(
+                    it,
+                    R.string.copy_download_folder_fail,
+                    BaseTransientBottomBar.LENGTH_LONG
+                ).show()
+            }
         }
     } catch (_: IllegalArgumentException) {
         view?.let {
-            Snackbar.make(
-                it,
-                R.string.copy_download_folder_fail,
-                BaseTransientBottomBar.LENGTH_LONG
-            ).show()
+            withContext(Dispatchers.Main) {
+                Snackbar.make(
+                    it,
+                    R.string.copy_download_folder_fail,
+                    BaseTransientBottomBar.LENGTH_LONG
+                ).show()
+            }
         }
     }
 }

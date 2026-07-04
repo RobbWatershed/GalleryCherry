@@ -243,7 +243,7 @@ class ToolsFragment : PreferenceFragmentCompat(),
         return jsonSettings
     }
 
-    private fun onSettingsJsonSerialized(json: String) {
+    private suspend fun onSettingsJsonSerialized(json: String) {
         exportToDownloadsFolder(
             requireContext(),
             json.toByteArray(StandardCharsets.UTF_8),

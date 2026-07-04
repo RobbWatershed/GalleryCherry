@@ -68,12 +68,9 @@
     <string name="pref_browser_resume_last_on">Сайти відкриватимуться з останньої сторінки, яка була відкрита на них</string>
     <string name="pref_browser_dl_action_title">Завантаження</string>
     <string name="pref_browser_quick_dl_title">Швидке завантаження</string>
-    <string name="pref_browser_quick_dl_summary">Не відкриваючи книгу, натисніть на неї, щоб завантажити</string>
     <string name="pref_browser_nhentai_invisible_blacklist_title">Заблоковані на книги nhentai відображаються…</string>
     <string name="pref_browser_nhentai_invisible_blacklist_off">Відображаються з розмиттям</string>
     <string name="pref_browser_nhentai_invisible_blacklist_on">Не відображаються</string>
-    <string name="pref_browser_quick_dl_threshold_title">Поріг довгого натискання для швидкого завантаження</string>
-    <string name="pref_browser_quick_dl_threshold_summary">Не відпускайте палець протягом цього часу після натискання, щоб почати швидке завантаження\nЗараз: <x:g example="1 с" id="time">%s</x:g></string>
     <string name="pref_browser_duplicate_ask_title">Перевірка на дублікати</string>
     <string name="pref_browser_duplicate_ask_off">Ні: завжди завантажувати</string>
     <string name="pref_browser_duplicate_ask_on">Так: запитувати перед завантаженням</string>
