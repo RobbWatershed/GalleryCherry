@@ -347,8 +347,9 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
         outState.putBoolean(KEY_GALLERY_SHOWN, hasGalleryBeenShown)
         // Memorize current page
         outState.putInt(KEY_IMG_INDEX, absImageIndex)
-        slideshowMgr.onSaveInstanceState(outState)
-        viewModel.setViewerStartingIndex(absImageIndex)
+        // Might crash in certain circumstances (rotating screen), hence the extra checks
+        if (this::slideshowMgr.isInitialized) slideshowMgr.onSaveInstanceState(outState)
+        if (this::viewModel.isInitialized) viewModel.setViewerStartingIndex(absImageIndex)
     }
 
     override fun onViewStateRestored(savedInstanceState: Bundle?) {
