@@ -224,6 +224,7 @@ class ReaderViewModel(
      */
     fun loadContentFromId(contentId: Long, pageNumber: Int) {
         if (contentId > 0) {
+            Timber.d("Loading content from ID : $contentId / page $pageNumber")
             viewModelScope.launch {
                 val loadedContent =
                     withContext(Dispatchers.IO) {
@@ -669,8 +670,9 @@ class ReaderViewModel(
 
                 if (startIndex > -1) onPageChange(startIndex - 1, 1, true)
                 else {
-                    currentImageViewerIndex =
+                    currentImageViewerIndex = if (viewerImagesInternal.isNotEmpty())
                         currentImageViewerIndex.coerceIn(0, viewerImagesInternal.size - 1)
+                    else 0
                     onPageChange(currentImageViewerIndex, 1, false)
                 }
             }
@@ -978,9 +980,8 @@ class ReaderViewModel(
             } else {
                 if (currentContentIndex > 1) currentContentIndex--
             }
-            if (contentIds.size > currentContentIndex) loadContentFromId(
-                contentIds[currentContentIndex], -1
-            )
+            if (contentIds.size > currentContentIndex)
+                loadContentFromId(contentIds[currentContentIndex], -1)
         } else { // Close the viewer if the list is empty (single book)
             content.postValue(null)
         }
