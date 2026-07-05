@@ -166,6 +166,9 @@
             android:name=".activities.sources.YifferActivity"
             android:configChanges="orientation|screenSize" />
         <activity
+            android:name=".activities.sources.PawActivity"
+            android:configChanges="orientation|screenSize" />
+        <activity
             android:name=".activities.LibraryActivity"
             android:configChanges="orientation|screenSize"
             android:label="@string/title_activity_downloads"
@@ -686,6 +689,17 @@
                 <data
                     android:host="yiffer.xyz"
                     android:pathPattern="/c/..*"
+                    android:scheme="https" />
+            </intent-filter>
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="pawchive.pw"
+                    android:pathPattern="/..*/user/..*/post/..*"
                     android:scheme="https" />
             </intent-filter>
         </activity>

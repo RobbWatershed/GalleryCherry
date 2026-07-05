@@ -28,6 +28,7 @@ import me.devsaki.hentoid.parsers.content.MultpornContent
 import me.devsaki.hentoid.parsers.content.MusesContent
 import me.devsaki.hentoid.parsers.content.NhentaiContent
 import me.devsaki.hentoid.parsers.content.NovelcrowContent
+import me.devsaki.hentoid.parsers.content.PawContent
 import me.devsaki.hentoid.parsers.content.PixivContent
 import me.devsaki.hentoid.parsers.content.PorncomixContent
 import me.devsaki.hentoid.parsers.content.PururinContent
@@ -62,6 +63,7 @@ import me.devsaki.hentoid.parsers.images.MultpornParser
 import me.devsaki.hentoid.parsers.images.MusesParser
 import me.devsaki.hentoid.parsers.images.NhentaiParser
 import me.devsaki.hentoid.parsers.images.NovelcrowParser
+import me.devsaki.hentoid.parsers.images.PawParser
 import me.devsaki.hentoid.parsers.images.PixivParser
 import me.devsaki.hentoid.parsers.images.PorncomixParser
 import me.devsaki.hentoid.parsers.images.PururinParser
@@ -107,6 +109,7 @@ object ContentParserFactory {
             Site.KEMONO -> KemonoContent::class.java
             Site.EROMANGA -> EromangaContent::class.java
             Site.YIFFER -> YifferContent::class.java
+            Site.PAWCHIVE -> PawContent::class.java
             else -> DummyContent::class.java
         }
     }
@@ -149,6 +152,7 @@ object ContentParserFactory {
             Site.KEMONO -> KemonoParser()
             Site.EROMANGA -> EromangaParser()
             Site.YIFFER -> YifferParser()
+            Site.PAWCHIVE -> PawParser()
             else -> DummyParser()
         }
     }

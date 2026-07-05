@@ -89,6 +89,7 @@ enum class Site(val code: Int, val description: String, val url: String, val ico
     KEMONO(37, "Kemono.cr", "https://kemono.cr/", R.drawable.ic_site_kemono),
     EROMANGA(38, "Eromanga-Sora", "https://eromanga-sora.com/", R.drawable.ic_site_sora),
     YIFFER(39, "Yiffer", "https://yiffer.xyz/", R.drawable.ic_site_yiffer),
+    PAWCHIVE(40, "Pawchive", "https://pawchive.pw/", R.drawable.ic_site_pawchive),
 
     MAL(96, "MyAnimeList", "", R.drawable.ic_app),
 
@@ -111,6 +112,7 @@ enum class Site(val code: Int, val description: String, val url: String, val ico
         private set
     var useWebviewAgent = true
         private set
+
     // TODO remove is still unused on v1.23.x
     var useManagedRequests = false
         private set
