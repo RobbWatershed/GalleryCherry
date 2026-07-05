@@ -5,6 +5,7 @@ import me.devsaki.hentoid.activities.sources.KEMONO_DOMAIN_FILTER
 import me.devsaki.hentoid.database.domains.Chapter
 import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.parsers.urlsToImageFiles
+import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.getRandomInt
 import me.devsaki.hentoid.util.image.isSupportedImage
 import java.net.URLEncoder
@@ -27,27 +28,33 @@ data class KemonoPost(
     fun getImageUrls(
         serverMapping: Map<String?, String?>? = null
     ): List<String> {
-        // Try using attachments
-        var result = attachments
-            .filter { isSupportedImage(it.path ?: "") }
-            .distinct()
-            .map {
-                val server = serverMapping?.get(it.path)
-                    ?: "https://n${(getRandomInt(4) + 1)}.$KEMONO_DOMAIN_FILTER"
-                val origin = URLEncoder.encode(it.name ?: "Attachment", "UTF-8")
-                "$server/data/${it.path}?f=$origin"
+        if (Settings.isKemonoHiRes) {
+            // Try using attachments
+            var result = attachments
+                .filter { isSupportedImage(it.path ?: "") }
+                .distinct()
+                .map {
+                    val server = serverMapping?.get(it.path)
+                        ?: "https://n${(getRandomInt(4) + 1)}.$KEMONO_DOMAIN_FILTER"
+                    val origin = URLEncoder.encode(it.name ?: "Attachment", "UTF-8")
+                    "$server/data/${it.path}?f=$origin"
+                }
+            // Add file as the sole attached image
+            if (result.isEmpty()) {
+                file?.path?.let {
+                    if (isSupportedImage(it))
+                        result = listOf(
+                            "https://img.${KEMONO_DOMAIN_FILTER}/thumbnail/data/${it}"
+                                .replace("//", "/")
+                        )
+                }
             }
-        // Add file as the sole attached image
-        if (result.isEmpty()) {
-            file?.path?.let {
-                if (isSupportedImage(it))
-                    result = listOf(
-                        "https://img.${KEMONO_DOMAIN_FILTER}/thumbnail/data/${it}"
-                            .replace("//", "/")
-                    )
-            }
+            return result
+        } else {
+            return attachments.filter { isSupportedImage(it.path ?: "") }
+                .distinct()
+                .map { "https://img.$KEMONO_DOMAIN_FILTER/thumbnail/data${it.path}" }
         }
-        return result
     }
 
     fun toChapter(

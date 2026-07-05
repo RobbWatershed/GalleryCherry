@@ -589,6 +589,19 @@
                 app:sites="HITOMI" />
         </PreferenceCategory>
         <PreferenceCategory
+            android:title="@string/pref_cat_kemono"
+            app:iconSpaceReserved="false">
+            <CheckBoxPreference
+                android:defaultValue="@string/pref_dl_kemono_hires"
+                android:key="pref_dl_kemono_hires"
+                android:summaryOff="@string/pref_dl_kemono_hires_off"
+                android:summaryOn="@string/pref_dl_kemono_hires_on"
+                android:title="@string/download_kemono_hires_title"
+                app:iconSpaceReserved="false"
+                app:isGlobal="true"
+                app:sites="KEMONO" />
+        </PreferenceCategory>
+        <PreferenceCategory
             android:title="@string/pref_cat_advanced"
             app:iconSpaceReserved="false">
             <ListPreference
