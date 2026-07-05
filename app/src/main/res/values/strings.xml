@@ -989,6 +989,7 @@
         <item quantity="one">Delete selected chapter\?\nNB : This will not delete image files</item>
         <item quantity="other">Delete <x:g example="2" id="count">%d</x:g> selected chapters\?\nNB : This will not delete image files</item>
     </plurals>
+    <string name="book_loaded">Book loaded : %s</string>
 
     <!-- Changelog -->
     <string name="view_changelog">Changelog</string>

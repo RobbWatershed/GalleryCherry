@@ -88,6 +88,7 @@ import me.devsaki.hentoid.util.exception.ContentNotProcessedException
 import me.devsaki.hentoid.util.getThemedColor
 import me.devsaki.hentoid.util.openReader
 import me.devsaki.hentoid.util.toast
+import me.devsaki.hentoid.util.toastShort
 import me.devsaki.hentoid.util.tryShowMenuIcons
 import me.devsaki.hentoid.viewmodels.ReaderViewModel
 import me.devsaki.hentoid.viewmodels.ViewModelFactory
@@ -165,7 +166,7 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
     private var isComputingImageList = false
     private var targetStartingIndex = -1
     private var startingIndexLoaded = false
-    private var contentId: Long = -1
+    private var contentId = -1L
 
     // == UI ==
     private var binding: FragmentReaderPagerBinding? = null
@@ -838,7 +839,11 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
             adjustDisplay(content.site, content.bookPreferences)
             startingIndexLoaded = false
         }
+
+        // Signal loading of a new book after the initial load
+        if (contentId > 0) toastShort(R.string.book_loaded, content.title)
         contentId = content.id
+
         absImageIndex = -1 // Will be updated by onStartingIndexChanged
         reachedPosition = -1
         navigator.onContentChanged(content)
