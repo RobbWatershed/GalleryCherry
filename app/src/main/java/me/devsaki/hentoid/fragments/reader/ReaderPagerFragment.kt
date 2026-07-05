@@ -841,7 +841,7 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
         }
 
         // Signal loading of a new book after the initial load
-        if (contentId > 0) toastShort(R.string.book_loaded, content.title)
+        if (contentId > 0 && contentId != content.id) toastShort(R.string.book_loaded, content.title)
         contentId = content.id
 
         absImageIndex = -1 // Will be updated by onStartingIndexChanged
