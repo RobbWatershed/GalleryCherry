@@ -1713,8 +1713,6 @@ object ObjectBoxDB {
     }
 
     // BOOKMARKS
-
-    // BOOKMARKS
     fun selectBookmarksQ(s: Site?): Query<SiteBookmark> {
         val qb = store.boxFor(SiteBookmark::class.java).query()
         if (s != null) qb.equal(SiteBookmark_.site, s.code.toLong())
