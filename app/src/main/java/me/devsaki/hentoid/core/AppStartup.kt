@@ -308,7 +308,7 @@ object AppStartup {
 
             StorageCache.init(context, READER_CACHE, sizeLimit)
             Timber.i(
-                "Reacer cache : initialized with ${
+                "Reader cache : initialized with ${
                     formatHumanReadableSize(
                         sizeLimit.toLong(),
                         context.resources

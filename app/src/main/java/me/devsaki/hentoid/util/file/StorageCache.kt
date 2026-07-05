@@ -81,9 +81,10 @@ object StorageCache {
             }
         }
 
+        // Initialize observer if unset
+        if (!cleanupObservers.containsKey(cacheId)) cleanupObservers[cacheId] = HashMap()
+
         // Call existing observers as initializing an existing cache cleans it up
-        if (cleanupObservers.containsKey(cacheId))
-            cleanupObservers[cacheId] = HashMap<String, () -> Unit>()
         cleanupObservers[cacheId]?.forEach { it.value.invoke() }
     }
 
@@ -180,14 +181,14 @@ object StorageCache {
     fun addCleanupObserver(cacheId: String, key: String, observer: () -> Unit) {
         cleanupObservers[cacheId]?.let {
             it[key] = observer
-            Timber.d("Observer added; %d registered", it.size)
+            Timber.d("Observer added for $cacheId : $key; %d total registered", it.size)
         }
     }
 
     fun removeCleanupObserver(cacheId: String, key: String) {
         cleanupObservers[cacheId]?.let {
             it.remove(key)
-            Timber.d("Observer removed; %d registered", it.size)
+            Timber.d("Observer removed for $cacheId : $key; %d total registered", it.size)
         }
     }
 }
