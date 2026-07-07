@@ -156,7 +156,6 @@ class PawParser : BaseImageListParser() {
             try {
                 // Get artist info
                 progressor?.progressStart(content, isIndeterminate = true)
-                Timber.d("get artist info $service $userId")
                 val artist = getArtistAttr(service, userId, cookieStr, userAgent)
                 content.site = Site.PAWCHIVE
                 content.url = url.replace("/api/v1/", "/")
@@ -182,7 +181,6 @@ class PawParser : BaseImageListParser() {
 
                 try {
                     while (true) {
-                        Timber.d("get artist galleries $collectedGalleries")
                         PawServer.api.getArtistGalleries(
                             service = service,
                             userId = userId,
