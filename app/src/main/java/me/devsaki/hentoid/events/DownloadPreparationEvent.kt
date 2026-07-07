@@ -6,7 +6,8 @@ package me.devsaki.hentoid.events
 class DownloadPreparationEvent(
     val contentId: Long,  // ID of the corresponding content (<=0 if not defined)
     private val storedId: Long,  // Stored ID of the corresponding content (<=0 if not defined)
-    val progress: Float // Progress
+    val progress: Float, // Progress
+    val indefinite : Boolean = false
 ) {
 
     fun getRelevantId(): Long {

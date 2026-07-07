@@ -255,18 +255,6 @@ fun urlToImageFile(
 }
 
 /**
- * Signal download preparation event for the given processed elements
- *
- * @param contentId Online content ID being processed
- * @param storedId  Stored content ID being processed
- * @param progress  Progress (0.0 -> 1.0)
- */
-fun signalProgress(contentId: Long, storedId: Long, progress: Float) {
-    EventBus.getDefault()
-        .post(DownloadPreparationEvent(contentId, storedId, progress))
-}
-
-/**
  * Extract the cookie string, if it exists, from the given download parameters
  *
  * @param downloadParams Download parameters to extract the cookie string from

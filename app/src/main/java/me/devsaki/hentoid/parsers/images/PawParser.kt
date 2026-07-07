@@ -122,8 +122,6 @@ class PawParser : BaseImageListParser() {
             try {
                 // Get artist info
                 val artist = getArtistAttr(service, userId, cookieStr, userAgent)
-                DownloadRateLimiter.take()
-
                 // Get gallery info
                 PawServer.api.getGallery(
                     service = service,
@@ -134,6 +132,7 @@ class PawParser : BaseImageListParser() {
                     userAgent = userAgent
                 ).execute().body()?.update(content, url, updateImages)?.let { result ->
                     // Add artist info
+                    DownloadRateLimiter.take()
                     return result.addAttributes(listOf(artist.toAttribute()))
                 }
                 throw ParseException("No content found")
@@ -156,9 +155,9 @@ class PawParser : BaseImageListParser() {
             // Get galleries info
             try {
                 // Get artist info
-                progressor?.progressStart(content)
+                progressor?.progressStart(content, isIndeterminate = true)
+                Timber.d("get artist info $service $userId")
                 val artist = getArtistAttr(service, userId, cookieStr, userAgent)
-                DownloadRateLimiter.take()
                 content.site = Site.PAWCHIVE
                 content.url = url.replace("/api/v1/", "/")
                     .replace("/posts", "/")
@@ -183,6 +182,7 @@ class PawParser : BaseImageListParser() {
 
                 try {
                     while (true) {
+                        Timber.d("get artist galleries $collectedGalleries")
                         PawServer.api.getArtistGalleries(
                             service = service,
                             userId = userId,
@@ -191,14 +191,14 @@ class PawParser : BaseImageListParser() {
                             userAgent = userAgent,
                             offset = 50 * iteration++
                         ).execute().body()?.let { post ->
-//                            if (0 == nbResultsPerCall) nbResultsPerCall = post.count()
+                            if (0 == post.count()) break
                             collectedGalleries += post.count()
                             post.forEachIndexed { _, result ->
                                 chapters.add(
                                     result.toChapter(artist.id, chapterOrder, pageOrder)
                                 )
                             }
-//                            progressor?.progressPlus(collectedGalleries * 1f / artist.postCount)
+                            progressor?.progressPlus(collectedGalleries * 1f)
                             DownloadRateLimiter.take()
                         }
                     }
@@ -231,7 +231,10 @@ class PawParser : BaseImageListParser() {
                 cookies = cookieStr,
                 accept = "text/css",
                 userAgent = userAgent
-            ).execute().body()?.let { return it }
+            ).execute().body()?.let {
+                DownloadRateLimiter.take()
+                return it
+            }
             throw ParseException("No artist found")
         }
     }

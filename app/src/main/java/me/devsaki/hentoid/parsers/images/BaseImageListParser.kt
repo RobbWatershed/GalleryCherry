@@ -91,11 +91,12 @@ abstract class BaseImageListParser : ImageListParser, Progressor {
     override fun progressStart(
         onlineContent: Content,
         storedContent: Content?,
-        maxSteps: Int
+        maxSteps: Int,
+        isIndeterminate : Boolean
     ) {
         if (progress.hasStarted()) return
         val storedId = storedContent?.id ?: -1
-        progress.start(onlineContent.id, storedId, maxSteps)
+        progress.start(onlineContent.id, storedId, maxSteps, isIndeterminate)
     }
 
     override fun progressPlus(progress: Float) {

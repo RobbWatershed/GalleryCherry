@@ -13,7 +13,7 @@ import timber.log.Timber
 const val PAW_DOMAIN_FILTER = "pawchive.pw"
 private val GALLERY_FILTER = arrayOf(
     "$PAW_DOMAIN_FILTER/[\\w%\\-]+/user/[\\w\\-]+$",
-    "$PAW_DOMAIN_FILTER/api/v1/[\\w%\\-]+/user/[\\w\\-]+/posts[-legacy]{0,1}$",
+    "$PAW_DOMAIN_FILTER/api/v1/[\\w%\\-]+/user/[\\w\\-]+$",
     "$PAW_DOMAIN_FILTER/[\\w%\\-]+/user/[\\w\\-]+/post/[\\d\\-]+$",
     "$PAW_DOMAIN_FILTER/api/v1/[\\w%\\-]+/user/[\\w\\-]+/post/[\\d\\-]+$"
 )

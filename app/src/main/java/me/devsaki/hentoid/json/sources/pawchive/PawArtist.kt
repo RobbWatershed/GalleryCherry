@@ -1,6 +1,5 @@
 package me.devsaki.hentoid.json.sources.pawchive
 
-import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import me.devsaki.hentoid.activities.sources.PAW_DOMAIN_FILTER
 import me.devsaki.hentoid.database.domains.Attribute
@@ -23,5 +22,5 @@ data class PawArtist(
     }
 
     val iconUrl
-        get() = "https://img.$PAW_DOMAIN_FILTER/icons/$service/$id"
+        get() = "https://$PAW_DOMAIN_FILTER/icons/$service/$id"
 }
