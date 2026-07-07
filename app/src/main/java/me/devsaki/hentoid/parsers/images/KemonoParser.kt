@@ -195,17 +195,28 @@ class KemonoParser : BaseImageListParser() {
                         collectedGalleries += post.count()
                         post.forEachIndexed { _, result ->
                             chapters.add(
-                                result.toChapter(
-                                    artist.id,
-                                    chapterOrder,
-                                    pageOrder
-                                )
+                                result.toChapter(artist.id, chapterOrder, pageOrder)
                             )
                         }
                         progressor?.progressPlus(collectedGalleries * 1f / artist.postCount)
                         DownloadRateLimiter.take()
                     }
                 }
+
+                // Reverse order : older to newer
+                val nbPages = chapters.sumOf { it.imageFiles.count() }
+                chapters.reverse()
+                var imgIdx = 1
+                chapters.forEachIndexed { index, chapter ->
+                    chapter.order = index + 1
+                    chapter.imageFiles.forEach {
+                        if (it.isReadable) {
+                            it.order = imgIdx++
+                            it.computeName(nbPages)
+                        } else it.order = 0
+                    }
+                }
+
                 content.setChapters(chapters)
                 val images = chapters.flatMap { it.imageList }.toMutableList()
                 if (Settings.isThumbSeparateFile(Site.KEMONO))

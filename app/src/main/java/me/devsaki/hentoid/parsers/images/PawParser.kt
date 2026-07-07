@@ -203,6 +203,21 @@ class PawParser : BaseImageListParser() {
                 } catch (_: Exception) {
                     Timber.v("Artist download ended")
                 }
+
+                // Reverse order : older to newer
+                val nbPages = chapters.sumOf { it.imageFiles.count() }
+                chapters.reverse()
+                var imgIdx = 1
+                chapters.forEachIndexed { index, chapter ->
+                    chapter.order = index + 1
+                    chapter.imageFiles.forEach {
+                        if (it.isReadable) {
+                            it.order = imgIdx++
+                            it.computeName(nbPages)
+                        } else it.order = 0
+                    }
+                }
+
                 content.setChapters(chapters)
                 val images = chapters.flatMap { it.imageList }.toMutableList()
                 if (Settings.isThumbSeparateFile(Site.PAWCHIVE))
