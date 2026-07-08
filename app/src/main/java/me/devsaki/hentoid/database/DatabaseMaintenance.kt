@@ -55,7 +55,7 @@ object DatabaseMaintenance {
             this::cleanOrphanChapters,
             this::cleanOrphanImageFiles,
             this::refreshJsonForSecondDownloadDate,
-            this::migrateKemonoBookmarksOneShot,
+            this::migrateKemonoBookmarks,
             this::setDbUpdateVersion // Should ALWAYS stay in last position
         )
     }
@@ -653,14 +653,18 @@ object DatabaseMaintenance {
         }
     }
 
-    private suspend fun migrateKemonoBookmarksOneShot(
+    private suspend fun migrateKemonoBookmarks(
         context: Context,
         emitter: (Float) -> Unit
     ) = withContext(Dispatchers.IO) {
-        if (Settings.lastDBUpdateVersion > DB_UPDATE_VERSION - 1) return@withContext
         try {
+            val pBookmarks = ObjectBoxDB.selectBookmarksQ(Site.PAWCHIVE)
+            if (pBookmarks.count() > 0) return@withContext
+            val kBookmarks = ObjectBoxDB.selectBookmarksQ(Site.KEMONO)
+            if (0L == kBookmarks.count()) return@withContext
+
             Timber.i("Migrating Kemono -> Pawchive bookmarks : start")
-            ObjectBoxDB.selectBookmarksQ(Site.KEMONO).use { entries ->
+            kBookmarks.use { entries ->
                 Timber.i(
                     "Migrating Kemono -> Pawchive bookmarks : %d bookmarks detected",
                     entries.count()
