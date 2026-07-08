@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="@dimen/dialog_width"
     android:layout_height="match_parent"
     android:layout_gravity="center|center_vertical">
@@ -38,7 +39,6 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:checked="false"
-            android:paddingStart="8dp"
             android:text="@string/reader_two_pages_mode"
             app:layout_constraintTop_toBottomOf="@id/browse_picker" />
 
@@ -68,9 +68,46 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:checked="false"
-            android:paddingStart="8dp"
             android:text="@string/pref_viewer_open_gallery"
             app:layout_constraintTop_toBottomOf="@id/display_picker" />
+
+        <TextView
+            android:id="@+id/open_color_picker"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_marginTop="8dp"
+            android:checked="false"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:text="@string/pref_viewer_color_filter"
+            app:layout_constraintEnd_toStartOf="@id/open_color_picker_reset"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/open_gallery_switch" />
+
+        <ImageView
+            android:id="@+id/open_color_picker_color"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginEnd="16dp"
+            android:clickable="false"
+            android:focusable="false"
+            android:src="@drawable/bg_badge"
+            app:layout_constraintBottom_toBottomOf="@id/open_color_picker"
+            app:layout_constraintEnd_toEndOf="@id/open_color_picker"
+            app:layout_constraintTop_toTopOf="@id/open_color_picker"
+            tools:ignore="ContentDescription" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/open_color_picker_reset"
+            style="?attr/materialIconButtonFilledTonalStyle"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            app:icon="@drawable/ic_cancel"
+            app:layout_constraintBottom_toBottomOf="@id/open_color_picker"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@id/open_color_picker"
+            app:strokeColor="@color/secondary_color_selector" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/app_prefs_btn"
@@ -81,18 +118,17 @@
             android:text="@string/goto_app_prefs"
             app:icon="@drawable/ic_settings"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/open_gallery_switch" />
+            app:layout_constraintTop_toBottomOf="@id/open_color_picker" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/action_button"
             style="@style/Widget.Material3.Button.TonalButton.Icon"
             android:layout_width="96dp"
             android:layout_height="?android:attr/actionBarSize"
-            android:layout_marginTop="16dp"
             android:text="@string/ok"
             app:icon="@drawable/ic_checked"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/open_gallery_switch" />
+            app:layout_constraintTop_toTopOf="@id/app_prefs_btn" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </ScrollView>

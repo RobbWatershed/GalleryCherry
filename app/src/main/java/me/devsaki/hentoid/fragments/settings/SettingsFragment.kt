@@ -27,6 +27,7 @@ import androidx.work.WorkManager
 import com.bytehamster.lib.preferencesearch.SearchPreference
 import com.google.android.material.snackbar.BaseTransientBottomBar
 import com.google.android.material.snackbar.Snackbar
+import com.skydoves.colorpickerpreference.ColorPickerPreference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -41,6 +42,7 @@ import me.devsaki.hentoid.core.withArguments
 import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.enums.Theme
 import me.devsaki.hentoid.events.DownloadCommandEvent
+import me.devsaki.hentoid.parsers.images.PawParser
 import me.devsaki.hentoid.retrofit.BergServer
 import me.devsaki.hentoid.retrofit.BergUpdateServer
 import me.devsaki.hentoid.retrofit.DeviantArtServer
@@ -48,6 +50,7 @@ import me.devsaki.hentoid.retrofit.JikanServer
 import me.devsaki.hentoid.retrofit.sources.EHentaiServer
 import me.devsaki.hentoid.retrofit.sources.KemonoServer
 import me.devsaki.hentoid.retrofit.sources.LusciousServer
+import me.devsaki.hentoid.retrofit.sources.PawServer
 import me.devsaki.hentoid.retrofit.sources.PixivServer
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.applyTheme
@@ -188,6 +191,7 @@ class SettingsFragment : PreferenceFragmentCompat(),
         if (Settings.Key.APP_LOCK == key) return // Don't display that ^^"
         if (preference is CheckBoxPreference) return
         if (preference is ListPreference) return
+        if (preference is ColorPickerPreference) return
         preference.setSummary(preference.sharedPreferences?.getString(key, "") ?: "")
     }
 
@@ -239,6 +243,11 @@ class SettingsFragment : PreferenceFragmentCompat(),
 
             "download_schedule" -> {
                 TimeRangeDialogFragment.invoke(this)
+                true
+            }
+
+            "viewer_color_filter_reset" -> {
+                Settings.readerColorFilter = 0
                 true
             }
 
@@ -315,6 +324,7 @@ class SettingsFragment : PreferenceFragmentCompat(),
                 KemonoServer.init()
                 JikanServer.init()
                 BergUpdateServer.init()
+                PawServer.init()
             }
         }
     }
@@ -338,6 +348,7 @@ class SettingsFragment : PreferenceFragmentCompat(),
                 KemonoServer.init()
                 JikanServer.init()
                 BergUpdateServer.init()
+                PawServer.init()
             }
         }
     }

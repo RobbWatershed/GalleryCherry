@@ -24,6 +24,7 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.PARENT_ID
 import androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.UNSET
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.toDrawable
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -242,6 +243,13 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
         onUpdateSwipeToFling()
         onUpdatePageNumDisplay()
         onUpdateSwipeToTurn()
+
+        // Overlay
+        binding?.viewerColourFilter?.apply {
+            isVisible = Settings.readerColorFilter != 0
+            if (isVisible)
+                foreground = Settings.readerColorFilter.toDrawable()
+        }
 
         // Top bar controls
         binding?.let {
@@ -841,7 +849,10 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
         }
 
         // Signal loading of a new book after the initial load
-        if (contentId > 0 && contentId != content.id) toastShort(R.string.book_loaded, content.title)
+        if (contentId > 0 && contentId != content.id) toastShort(
+            R.string.book_loaded,
+            content.title
+        )
         contentId = content.id
 
         absImageIndex = -1 // Will be updated by onStartingIndexChanged
@@ -1006,6 +1017,13 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
     override fun onContentSettingsChanged(newPrefs: Map<String, String>) {
         viewModel.updateContentPreferences(newPrefs, absImageIndex)
         bookPreferences = newPrefs
+    }
+
+    override fun onFilterColorChanged(color: Int) {
+        binding?.viewerColourFilter?.apply {
+            isVisible = color != 0
+            if (isVisible) foreground = color.toDrawable()
+        }
     }
 
     private fun onUpdatePrefsScreenOn() {

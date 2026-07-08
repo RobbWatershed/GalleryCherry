@@ -810,6 +810,21 @@
                 android:summary="@string/pref_generic_summary"
                 android:title="@string/pref_viewer_auto_rotate"
                 app:iconSpaceReserved="false" />
+            <com.skydoves.colorpickerpreference.ColorPickerPreference
+                android:key="viewer_color_filter"
+                android:title="@string/pref_viewer_color_filter"
+                app:iconSpaceReserved="false"
+                app:preference_attachAlphaSlideBar="true"
+                app:preference_attachBrightnessSlideBar="true"
+                app:preference_colorBox_radius="26dp"
+                app:preference_dialog_negative="@string/cancel"
+                app:preference_dialog_positive="@string/ok"
+                app:preference_palette="@drawable/palette"
+                app:preference_selector="@drawable/wheel" />
+            <Preference
+                android:key="viewer_color_filter_reset"
+                android:title="@string/pref_viewer_color_filter_reset"
+                app:iconSpaceReserved="false" />
             <PreferenceCategory
                 android:title="@string/pref_viewer_rendering"
                 app:iconSpaceReserved="false">

@@ -224,6 +224,9 @@ dependencies {
     // Time range picker
     implementation "nl.joery.timerangepicker:timerangepicker:1.0.0"
 
+    // Color picker
+    implementation "com.github.skydoves:colorpickerpreference:2.0.6"
+
 
     /**
      * NETWORKING

@@ -1,12 +1,15 @@
 package me.devsaki.hentoid.fragments.reader
 
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import com.skydoves.colorpickerview.ColorPickerDialog
+import com.skydoves.colorpickerview.listeners.ColorListener
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.activities.bundles.SettingsBundle
 import me.devsaki.hentoid.activities.settings.SettingsActivity
@@ -15,10 +18,12 @@ import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.fragments.BaseDialogFragment
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.Settings.Key.VIEWER_BROWSE_MODE
+import me.devsaki.hentoid.util.Settings.Key.VIEWER_COLOR_FILTER
 import me.devsaki.hentoid.util.Settings.Key.VIEWER_IMAGE_DISPLAY
 import me.devsaki.hentoid.util.Settings.Key.VIEWER_RENDERING
 import me.devsaki.hentoid.util.Settings.Value.VIEWER_BROWSE_TTB
 import kotlin.math.min
+
 
 class ReaderSettingsDialogFragment : BaseDialogFragment<ReaderSettingsDialogFragment.Parent>() {
     companion object {
@@ -28,6 +33,7 @@ class ReaderSettingsDialogFragment : BaseDialogFragment<ReaderSettingsDialogFrag
         const val TWOPAGES_MODE = "twopages_mode"
         const val DISPLAY_MODE = "display_mode"
         const val OPEN_GALLERY = "open_gallery"
+        const val COLOR_FILTER = "color_filter"
         const val SITE = "site"
 
         fun invoke(parent: Fragment, site: Site, bookPrefs: Map<String, String>) {
@@ -51,6 +57,10 @@ class ReaderSettingsDialogFragment : BaseDialogFragment<ReaderSettingsDialogFrag
             if (Settings.isReaderOpenInGalleryMode(site) != Settings.isAppReaderOpenInGalleryMode
                 || bookPrefs.containsKey(Settings.Key.VIEWER_OPEN_GALLERY)
             ) args.putBoolean(OPEN_GALLERY, Settings.isContentOpenInGalleryMode(site, bookPrefs))
+            if (bookPrefs.containsKey(VIEWER_COLOR_FILTER)) args.putInt(
+                COLOR_FILTER,
+                Settings.getContentReaderColorFilter(bookPrefs)
+            )
 
             args.putInt(SITE, site.code)
             invoke(parent, ReaderSettingsDialogFragment(), args)
@@ -68,6 +78,7 @@ class ReaderSettingsDialogFragment : BaseDialogFragment<ReaderSettingsDialogFrag
     private var bookOpenGallery = false
     private var hasSiteBrowseMode = false
     private var siteBrowseMode = 0
+    private var colorFilter = 0
     private var site = Site.NONE
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -79,9 +90,10 @@ class ReaderSettingsDialogFragment : BaseDialogFragment<ReaderSettingsDialogFrag
         bookDisplayMode = requireArguments().getInt(DISPLAY_MODE, -1)
         bookTwoPagesMode = requireArguments().getBoolean(TWOPAGES_MODE, false)
         bookOpenGallery = requireArguments().getBoolean(OPEN_GALLERY, false)
-        site = Site.searchByCode(requireArguments().getInt(SITE, Site.ANY.code))
         siteBrowseMode = Settings.getReaderBrowseMode(site)
         hasSiteBrowseMode = siteBrowseMode != Settings.appReaderBrowseMode
+        colorFilter = requireArguments().getInt(COLOR_FILTER, 0)
+        site = Site.searchByCode(requireArguments().getInt(SITE, Site.ANY.code))
     }
 
     override fun onCreateView(
@@ -165,6 +177,48 @@ class ReaderSettingsDialogFragment : BaseDialogFragment<ReaderSettingsDialogFrag
             displayPicker.index = bookDisplayMode + 1
         }
 
+        // Color filter
+        binding?.openColorPicker?.setOnClickListener {
+            val startColor = Settings.readerColorFilter
+            val builder = ColorPickerDialog.Builder(activity)
+            builder.setPositiveButton(
+                getString(R.string.ok),
+                object : ColorListener {
+                    override fun onColorSelected(color: Int, fromUser: Boolean) {
+                        Settings.readerColorFilter = color
+                        this@ReaderSettingsDialogFragment.parent?.onFilterColorChanged(color)
+                        refreshFilterColor()
+                    }
+                })
+                .setNegativeButton(getString(R.string.cancel)) { dialogInterface, _ ->
+                    dialogInterface.dismiss()
+                    this@ReaderSettingsDialogFragment.parent?.onFilterColorChanged(startColor)
+                }
+                .setOnCancelListener {
+                    this@ReaderSettingsDialogFragment.parent?.onFilterColorChanged(startColor)
+                }
+                .setOnDismissListener { binding?.root?.isVisible = true }
+                .setBottomSpace(4)
+
+            builder.colorPickerView.apply {
+                setInitialColor(if (0 == startColor) -2097152001 else startColor) // Transparent white
+                setColorListener(object : ColorListener {
+                    override fun onColorSelected(color: Int, fromUser: Boolean) {
+                        this@ReaderSettingsDialogFragment.parent?.onFilterColorChanged(color)
+                    }
+                })
+                fireColorListener(startColor, false)
+            }
+            binding?.root?.isVisible = false
+            builder.show()
+        }
+        refreshFilterColor()
+        binding?.openColorPickerReset?.setOnClickListener {
+            Settings.readerColorFilter = 0
+            this@ReaderSettingsDialogFragment.parent?.onFilterColorChanged(0)
+            binding?.openColorPickerColor?.isVisible = false
+        }
+
         // == Bottom buttons
         binding?.appPrefsBtn?.setOnClickListener {
             val intent = Intent(requireActivity(), SettingsActivity::class.java)
@@ -201,7 +255,16 @@ class ReaderSettingsDialogFragment : BaseDialogFragment<ReaderSettingsDialogFrag
         }
     }
 
+    private fun refreshFilterColor() {
+        binding?.openColorPickerColor?.apply {
+            isVisible = Settings.readerColorFilter != 0
+            if (isVisible)
+                imageTintList = ColorStateList.valueOf(Settings.readerColorFilter)
+        }
+    }
+
     interface Parent {
         fun onContentSettingsChanged(newPrefs: Map<String, String>)
+        fun onFilterColorChanged(color: Int)
     }
 }
