@@ -844,8 +844,8 @@ class LibraryContentFragment : Fragment(), ChangeGroupDialogFragment.Parent,
                 }
             }
 
-            CommunicationEvent.Type.SEARCH -> onSubmitSearch(event.message)
-            CommunicationEvent.Type.SEARCH_NO_HISTORY -> onSubmitSearch(event.message, false)
+            CommunicationEvent.Type.SEARCH -> onSubmitSearch()
+            CommunicationEvent.Type.SEARCH_NO_HISTORY -> onSubmitSearch( false)
             CommunicationEvent.Type.ADVANCED_SEARCH -> onAdvancedSearchButtonClick()
             CommunicationEvent.Type.UNSELECT -> leaveSelectionMode()
             CommunicationEvent.Type.UPDATE_EDIT_MODE -> setPagingMethod(
@@ -928,7 +928,10 @@ class LibraryContentFragment : Fragment(), ChangeGroupDialogFragment.Parent,
         }
     }
 
-    private fun onSubmitSearch(query: String, recordHistory : Boolean = true) {
+    private fun onSubmitSearch(recordHistory : Boolean = true) {
+        val act = activity.get()?:return
+        val query = act.getQuery()
+        val criteria = act.getSearchCriteria()
         if (query.startsWith("http")) { // Quick-open a page
             when (Site.searchByUrl(query)) {
                 null -> snack(R.string.malformed_url)
@@ -936,7 +939,7 @@ class LibraryContentFragment : Fragment(), ChangeGroupDialogFragment.Parent,
                 else -> launchBrowserFor(requireContext(), query)
             }
         } else {
-            viewModel.searchContentFullText(query, recordHistory)
+            viewModel.searchContent(query, criteria, recordHistory)
         }
     }
 
@@ -954,7 +957,7 @@ class LibraryContentFragment : Fragment(), ChangeGroupDialogFragment.Parent,
         builder.excludeMode = excludeClicked
         search.putExtras(builder.bundle)
         advancedSearchReturnLauncher.launch(search)
-        activity.get()!!.collapseSearchMenu()
+        activity.get()?.collapseSearchMenu()
     }
 
     /**
@@ -967,7 +970,7 @@ class LibraryContentFragment : Fragment(), ChangeGroupDialogFragment.Parent,
             excludeClicked = parser.excludeMode
             val criteria = parseSearchUri(searchUri)
             setMetadata(criteria)
-            viewModel.searchContent(getQuery(), criteria, searchUri)
+            viewModel.searchContent(getQuery(), criteria)
         }
     }
 

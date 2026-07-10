@@ -206,34 +206,12 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
     }
 
     /**
-     * Perform a new content full text search using the given query
-     * NB1 : Full text search is performed among content title _and_ attributes
-     * NB2 : Multiple fulltext search terms can be specified using a comma
-     *
-     * @param query Query to use for the full text search
-     */
-    fun searchContentFullText(query: String, recordHistory: Boolean = true) {
-        // If user searches in main toolbar, full text search takes over advanced search
-        contentSearchManager.clearTags()
-        contentSearchManager.setLocation(Location.ANY.value)
-        contentSearchManager.setContentType(Type.ANY.value)
-        contentSearchManager.setQuery(query)
-        newContentSearch.value = true
-        if (recordHistory && query.isNotEmpty()) {
-            val searchUri = buildSearchUri(null, query = query)
-            dao.insertSearchRecord(SearchRecord.contentSearch(searchUri), 10)
-            dao.cleanup()
-        }
-        viewModelScope.launch { doSearchContent() }
-    }
-
-    /**
      * Perform a new content search using the given query and metadata
      *
      * @param query    Query to use for the search
      * @param criteria Metadata to use for the search
      */
-    fun searchContent(query: String, criteria: SearchCriteria, searchUri: Uri) {
+    fun searchContent(query: String, criteria: SearchCriteria, recordHistory: Boolean = true) {
         contentSearchManager.setQuery(query)
         contentSearchManager.setExcludedAttrs(criteria.excludedAttributeTypes)
         contentSearchManager.setTags(criteria.attributes)
@@ -241,10 +219,10 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
         contentSearchManager.setContentType(criteria.contentType.value)
         contentSearchManager.setCombinationMode(criteria.combinationMode)
         newContentSearch.value = true
-        if (!criteria.isEmpty()) {
+        if (recordHistory && (query.isNotEmpty() || !criteria.isEmpty())) {
             dao.insertSearchRecord(
                 SearchRecord.contentSearch(
-                    searchUri,
+                    buildSearchUri(criteria, query),
                     criteria.toString(getApplication())
                 ), 10
             )
