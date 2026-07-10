@@ -751,6 +751,8 @@
 
         <receiver android:name=".receiver.AppUpdateDownloadReceiver" />
 
+        <receiver android:name=".receiver.UpdateNotificationStopReceiver" />
+
         <!-- Providers -->
 
         <provider

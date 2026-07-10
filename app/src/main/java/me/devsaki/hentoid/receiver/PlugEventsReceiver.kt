@@ -13,6 +13,9 @@ import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.getRandomInt
 import org.greenrobot.eventbus.EventBus
 
+/**
+ * IMPORTANT : Every Received must be registered on the manifest!
+ */
 class PlugEventsReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
         if (!isInForeground()) return

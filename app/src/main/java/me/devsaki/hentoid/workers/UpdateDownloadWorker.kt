@@ -35,6 +35,8 @@ class UpdateDownloadWorker(context: Context, parameters: WorkerParameters) :
     private var progressPc = 0f
     private val killSwitch = AtomicBoolean(false)
 
+    private lateinit var progressNotification: UpdateProgressNotification
+
     companion object {
         fun isRunning(context: Context): Boolean {
             return isRunning(context, R.id.update_download_service)
@@ -84,7 +86,7 @@ class UpdateDownloadWorker(context: Context, parameters: WorkerParameters) :
             emptyList(),
             Uri.fromFile(applicationContext.externalCacheDir),
             "hentoid.apk",
-            isCanceled = { killSwitch.get() },
+            isCanceled = { killSwitch.get() || isStopped },
             resourceId = 0,
             forceMimeType = APK_MIMETYPE
         ) {
@@ -92,7 +94,7 @@ class UpdateDownloadWorker(context: Context, parameters: WorkerParameters) :
             if (0 == (progressPc.roundToInt() % 5)) launchProgressNotification()
         }
 
-        if (killSwitch.get()) {
+        if (killSwitch.get() || isStopped) {
             notificationManager.cancel()
             return
         }
@@ -133,6 +135,12 @@ class UpdateDownloadWorker(context: Context, parameters: WorkerParameters) :
                 0, 0, progressPc
             )
         )
-        notificationManager.notify(UpdateProgressNotification(progressPc.roundToInt()))
+        if (!this::progressNotification.isInitialized) {
+            progressNotification =
+                UpdateProgressNotification(0)
+        } else {
+            progressNotification.progress = progressPc.roundToInt()
+        }
+        notificationManager.notify(progressNotification)
     }
 }

@@ -8,6 +8,7 @@ import me.devsaki.hentoid.R
 
 /**
  * Broadcast receiver for the stop button on Transform notifications
+ * IMPORTANT : Every Received must be registered on the manifest!
  */
 class TransformNotificationStopReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
