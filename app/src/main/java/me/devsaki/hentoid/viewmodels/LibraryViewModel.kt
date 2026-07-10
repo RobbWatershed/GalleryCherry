@@ -45,6 +45,7 @@ import me.devsaki.hentoid.database.domains.Group
 import me.devsaki.hentoid.database.domains.SearchRecord
 import me.devsaki.hentoid.enums.Grouping
 import me.devsaki.hentoid.enums.StatusContent
+import me.devsaki.hentoid.enums.StorageLocation
 import me.devsaki.hentoid.util.JSON_MIME_TYPE
 import me.devsaki.hentoid.util.Location
 import me.devsaki.hentoid.util.MergerLiveData
@@ -1379,58 +1380,60 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
             val initialJsonUri = content.jsonUri.toUri()
             val initialArchiveUri = content.storageUri.toUri()
 
-            // Create target folder for streaming from scratch
-            val location = selectDownloadLocation(context)
-            getOrCreateContentDownloadDir(
+            val location = if (content.status == StatusContent.EXTERNAL) StorageLocation.EXTERNAL
+            else selectDownloadLocation(context)
+
+            val extractDir = getOrCreateContentDownloadDir(
                 context,
                 content,
                 location,
-                createFromScratch = true
-            )?.let { f ->
-                // Copy the JSON file inside target folder
-                copyFile(
-                    context,
-                    content.jsonUri.toUri(),
-                    f,
-                    JSON_FILE_NAME_V2,
-                    JSON_MIME_TYPE
-                )?.let { content.jsonUri = it.toString() }
-                    ?: throw IOException("Couldn't copy JSON file")
+                createFromScratch = true,
+                siblingLocation = initialArchiveUri
+            ) ?: throw IOException("Couldn't create book folder")
 
-                // Unarchive the whole book inside target folder
-                val imgs = content.imageList
-                val toExtract: List<Triple<String, Long, String>> = imgs
-                    .filter { it.isReadable }
-                    .mapIndexed { i, e ->
-                        val filePath = getArchivedFileName(content.storageUri, e.fileUri)
-                        Triple(filePath, i.toLong(), filePath)
-                    }
-                val imgUris = context.extractArchiveEntriesBlocking(
-                    content.storageUri.toUri(),
-                    f.uri,
-                    toExtract
-                )
-                content.storageUri = f.uri.toString()
-                content.downloadMode = DownloadMode.DOWNLOAD
+            // Copy the JSON file inside target folder
+            copyFile(
+                context,
+                content.jsonUri.toUri(),
+                extractDir,
+                JSON_FILE_NAME_V2,
+                JSON_MIME_TYPE
+            )?.let { content.jsonUri = it.toString() }
+                ?: throw IOException("Couldn't copy JSON file")
 
-                // Save core
-                dao.insertContentCore(content)
+            // Unarchive the whole book inside target folder
+            val imgs = content.imageList
+            val toExtract: List<Triple<String, Long, String>> = imgs
+                .filter { it.isReadable }
+                .mapIndexed { i, e ->
+                    val filePath = getArchivedFileName(content.storageUri, e.fileUri)
+                    Triple(filePath, i.toLong(), filePath)
+                }
+            val imgUris = context.extractArchiveEntriesBlocking(
+                content.storageUri.toUri(),
+                extractDir.uri,
+                toExtract
+            )
+            content.storageUri = extractDir.uri.toString()
+            content.downloadMode = DownloadMode.DOWNLOAD
 
-                // Remap pictures
-                imgs.filter { it.isReadable }
-                    .forEachIndexed { i, e ->
-                        if (imgUris.size <= i) return@forEachIndexed
-                        imgUris[i].toString().let { e.fileUri = it }
-                    }
+            // Save core
+            dao.insertContentCore(content)
 
-                // Don't move thumb as it can keep being read from the archive cache folder
+            // Remap pictures
+            imgs.filter { it.isReadable }
+                .forEachIndexed { i, e ->
+                    if (imgUris.size <= i) return@forEachIndexed
+                    imgUris[i].toString().let { e.fileUri = it }
+                }
 
-                // Save pictures
-                dao.insertImageFiles(imgs)
+            // Don't move thumb as it can keep being read from the archive cache folder
 
-                // Remove the initial archive and its JSON
-                removeDocument(context, initialJsonUri)
-                removeDocument(context, initialArchiveUri)
-            } ?: throw IOException("Couldn't create book folder")
+            // Save pictures
+            dao.insertImageFiles(imgs)
+
+            // Remove the initial archive and its JSON
+            removeDocument(context, initialJsonUri)
+            removeDocument(context, initialArchiveUri)
         }
 }
