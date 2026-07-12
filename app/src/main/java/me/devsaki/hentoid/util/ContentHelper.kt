@@ -713,6 +713,7 @@ suspend fun addContent(context: Context, dao: CollectionDAO, content: Content): 
 
         content.optimizeImageFileUris()
         val newContentId = dao.insertContent(content)
+        dao.replaceImageList(newContentId, content.imageList)
         content.id = newContentId
 
         if (isArchivePdf) createArchivePdfCover(context, content, dao)
@@ -769,8 +770,9 @@ suspend fun createFolderStreamedCover(context: Context, content: Content): List<
             }
         }
 
-        // Reset flag of the previous cover now that an actual thumb exists
+        // Reset flags of the previous cover now that an actual thumb exists
         cover.isCover = false
+        cover.read = false
     } finally {
         // Cleanup downloaded cover
         if (cover.isOnline) removeFile(context, coverUri.toUri())
