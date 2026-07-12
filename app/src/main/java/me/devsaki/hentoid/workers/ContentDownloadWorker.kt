@@ -1432,7 +1432,7 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
 
     /**
      * Download and unzip the given Ugoira to the given folder as an animated GIF file
-     * NB : Ugoiuras are Pixiv's own animated pictures
+     * NB : Ugoiras are Pixiv's own animated pictures
      *
      * @param img             Link to the Ugoira file
      * @param site            Correponding site
