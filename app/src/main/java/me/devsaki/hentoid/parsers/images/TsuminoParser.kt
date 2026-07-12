@@ -2,6 +2,7 @@ package me.devsaki.hentoid.parsers.images
 
 import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.enums.Site
+import me.devsaki.hentoid.parsers.fetchHeaders
 import me.devsaki.hentoid.util.exception.CaptchaException
 import me.devsaki.hentoid.util.exception.ParseException
 import me.devsaki.hentoid.util.locateDigits

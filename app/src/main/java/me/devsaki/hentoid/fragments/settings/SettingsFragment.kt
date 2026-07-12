@@ -48,6 +48,7 @@ import me.devsaki.hentoid.retrofit.BergUpdateServer
 import me.devsaki.hentoid.retrofit.DeviantArtServer
 import me.devsaki.hentoid.retrofit.JikanServer
 import me.devsaki.hentoid.retrofit.sources.EHentaiServer
+import me.devsaki.hentoid.retrofit.sources.HiperdexServer
 import me.devsaki.hentoid.retrofit.sources.KemonoServer
 import me.devsaki.hentoid.retrofit.sources.LusciousServer
 import me.devsaki.hentoid.retrofit.sources.PawServer
@@ -325,6 +326,7 @@ class SettingsFragment : PreferenceFragmentCompat(),
                 JikanServer.init()
                 BergUpdateServer.init()
                 PawServer.init()
+                HiperdexServer.init()
             }
         }
     }
@@ -349,6 +351,7 @@ class SettingsFragment : PreferenceFragmentCompat(),
                 JikanServer.init()
                 BergUpdateServer.init()
                 PawServer.init()
+                HiperdexServer.init()
             }
         }
     }

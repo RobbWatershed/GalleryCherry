@@ -2,6 +2,7 @@ package me.devsaki.hentoid.parsers.images
 
 import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.enums.Site
+import me.devsaki.hentoid.parsers.fetchHeaders
 import me.devsaki.hentoid.util.network.HEADER_REFERER_KEY
 import me.devsaki.hentoid.util.network.addCurrentCookiesToHeader
 import me.devsaki.hentoid.util.network.fixUrl

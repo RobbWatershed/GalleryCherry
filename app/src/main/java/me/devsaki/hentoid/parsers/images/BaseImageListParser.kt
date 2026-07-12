@@ -132,18 +132,4 @@ abstract class BaseImageListParser : ImageListParser, Progressor {
             DownloadCommandEvent.Type.EV_UNPAUSE, DownloadCommandEvent.Type.EV_RESET_REQUEST_QUEUE -> {}
         }
     }
-
-    protected open fun fetchHeaders(content: Content): List<Pair<String, String>> {
-        return fetchHeaders(content.galleryUrl, content.downloadParams)
-    }
-
-    protected open fun fetchHeaders(
-        url: String,
-        downloadParams: String? = null
-    ): List<Pair<String, String>> {
-        val headers: MutableList<Pair<String, String>> = ArrayList()
-        if (downloadParams != null) addSavedCookiesToHeader(downloadParams, headers)
-        headers.add(Pair(HEADER_REFERER_KEY, url))
-        return headers
-    }
 }

@@ -2000,6 +2000,9 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
             if (getStartSite() == Site.NHENTAI && Settings.isBrowserNhentaiInvisibleBlacklist) getAssetAsString(
                 assets, "nhentai_invisible_blacklist.css", sb
             )
+            if (getStartSite() == Site.NHENTAI) getAssetAsString(
+                assets, "nhentai.css", sb
+            )
             if (getStartSite() == Site.IMHENTAI) getAssetAsString(
                 assets, "imhentai.css", sb
             )
@@ -2009,11 +2012,8 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
             if (getStartSite() == Site.HENTAIFOX) getAssetAsString(
                 assets, "hentaifox.css", sb
             )
-            if (getStartSite() == Site.NHENTAI) getAssetAsString(
-                assets, "nhentai.css", sb
-            )
-            if (getStartSite() == Site.KSK) getAssetAsString(
-                assets, "ksk.css", sb
+            if (getStartSite() == Site.HIPERDEX) getAssetAsString(
+                assets, "hiperdex.css", sb
             )
             if (getStartSite() == Site.PIXIV && Settings.isBrowserAugmented(getStartSite()))
                 getAssetAsString(assets, "pixiv.css", sb)
