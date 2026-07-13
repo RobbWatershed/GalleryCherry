@@ -8,6 +8,7 @@ import org.greenrobot.eventbus.EventBus
 
 /**
  * Broadcast receiver for the pause button on download notifications
+ * IMPORTANT : Every Received must be registered on the manifest!
  */
 class DownloadNotificationPauseReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context?, intent: Intent?) {

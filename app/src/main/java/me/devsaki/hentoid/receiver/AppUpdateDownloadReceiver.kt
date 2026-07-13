@@ -9,6 +9,7 @@ import timber.log.Timber
 
 /**
  * Broadcast receiver for when an "update available" notification is tapped
+ * IMPORTANT : Every Received must be registered on the manifest!
  */
 class AppUpdateDownloadReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {

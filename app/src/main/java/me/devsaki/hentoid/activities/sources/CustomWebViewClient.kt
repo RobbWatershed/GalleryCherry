@@ -561,7 +561,6 @@ open class CustomWebViewClient : WebViewClient {
                     activity?.onPageFinished(url, isResultsPage(url), isGalleryPage(url))
                 }
             }
-
         }
     }
 

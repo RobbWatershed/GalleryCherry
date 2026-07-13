@@ -299,7 +299,8 @@ data class ImageFile(
 
     val isUsable: Boolean
         get() {
-            return dbFileUri.isNotBlank() || url.startsWith("http")
+            // NB : pageUrl can be more complex than a plain URL (e.g. ExH / E-H MPV data)
+            return dbFileUri.isNotBlank() || url.startsWith("http") || pageUrl.isNotBlank()
         }
 
     val usableUri: String

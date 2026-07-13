@@ -384,6 +384,7 @@ object Settings {
 
     var isAppThumbSeparateFile: Boolean by BoolSetting("pref_dl_separate_thumb", true)
     val download404Mode: Int by IntSettingStr("pref_dl_404", 0)
+    val isKemonoHiRes: Boolean by BoolSetting("pref_dl_kemono_hires", false)
 
 
     // READER
@@ -559,6 +560,15 @@ object Settings {
     )
     var latestReaderTargetFolderUri: String by StringSetting("READER_TARGET_FOLDER_LATEST", "")
     val isReaderSmartCrop: Boolean by BoolSetting(Key.READER_SMART_CROP, false)
+    var readerColorFilter: Int by IntSetting(Key.VIEWER_COLOR_FILTER, 0)
+    fun getContentReaderColorFilter(bookPrefs: Map<String, String>): Int {
+        if (bookPrefs.containsKey(Key.VIEWER_COLOR_FILTER)) {
+            val value = bookPrefs[Key.VIEWER_COLOR_FILTER]
+            if (value != null) return value.toInt()
+        }
+        return readerColorFilter
+    }
+
 
     // METADATA & RULES EDITOR
     var ruleSortField: Int by IntSetting("pref_order_rule_field", Value.ORDER_FIELD_SOURCE_NAME)
@@ -821,6 +831,7 @@ object Settings {
         const val VIEWER_KEEP_SCREEN_ON = "pref_viewer_keep_screen_on"
         const val VIEWER_DISPLAY_AROUND_NOTCH = "pref_viewer_display_notch"
         const val VIEWER_IMAGE_DISPLAY = "pref_viewer_image_display"
+        const val VIEWER_COLOR_FILTER = "viewer_color_filter"
         const val VIEWER_BROWSE_MODE = "pref_viewer_browse_mode"
         const val VIEWER_OPEN_GALLERY = "pref_viewer_open_gallery"
         const val VIEWER_RENDERING = "pref_viewer_rendering"

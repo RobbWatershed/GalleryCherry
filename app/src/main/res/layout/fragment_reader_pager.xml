@@ -25,6 +25,12 @@
             tools:listitem="@layout/item_reader_image" />
     </me.devsaki.hentoid.views.ZoomableFrame>
 
+    <FrameLayout
+        android:id="@+id/viewer_colour_filter"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:foreground="@color/accent_red" />
+
     <TextView
         android:id="@+id/viewer_no_img_txt"
         android:layout_width="wrap_content"

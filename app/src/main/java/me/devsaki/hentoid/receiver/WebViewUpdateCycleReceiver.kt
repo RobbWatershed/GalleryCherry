@@ -9,6 +9,9 @@ import me.devsaki.hentoid.util.network.WebkitPackageHelper.setWebViewAvailable
 import me.devsaki.hentoid.util.network.WebkitPackageHelper.setWebViewUpdating
 import timber.log.Timber
 
+/**
+ * IMPORTANT : Every Received must be registered on the manifest!
+ */
 class WebViewUpdateCycleReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context?, intent: Intent?) {
         if (intent == null || intent.data == null) {

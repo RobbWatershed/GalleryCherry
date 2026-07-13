@@ -489,7 +489,7 @@ private fun sharpRescale(
 
 fun sharpRescale(src: Bitmap, targetScale: Float): Bitmap {
     val resizeParams = computeRescaleParams(targetScale)
-    Timber.d(">> resizing successively to scale %s", resizeParams.second)
+    Timber.d(">> resizing successively to scale ${resizeParams.second}")
     return successiveRescale(src, resizeParams.first)
 }
 
@@ -559,60 +559,59 @@ suspend fun getImageDimensions(
     context: Context,
     uri: String = Uri.EMPTY.toString(),
     data: ByteArray? = null
-): Point =
-    withContext(Dispatchers.IO) {
-        val fileUri = uri.toUri()
-        if (null == data && !fileExists(context, fileUri)) return@withContext Point(0, 0)
+): Point = withContext(Dispatchers.IO) {
+    val fileUri = uri.toUri()
+    if (null == data && !fileExists(context, fileUri)) return@withContext Point(0, 0)
 
-        val fileName = if (uri.startsWith(FILECHUNK_AUTHORITY)) {
-            FileChunkInfo.fromUri(uri.toUri()).displayName
-        } else uri
+    val fileName = if (uri.startsWith(FILECHUNK_AUTHORITY)) {
+        FileChunkInfo.fromUri(uri.toUri()).displayName
+    } else uri
 
-        val ext = if (fileUri != Uri.EMPTY || null == data) getExtensionFromUri(fileName)
-        else getExtensionFromMimeType(getMimeTypeFromPictureBinary(data))
+    val ext = if (fileUri != Uri.EMPTY || null == data) getExtensionFromUri(fileName)
+    else getExtensionFromMimeType(getMimeTypeFromPictureBinary(data))
 
-        if (ext == "jxl" || ext == "avif") {
-            return@withContext if (null == data) {
-                getDimsFromThirdParty(context, ext, fileUri)
-            } else {
-                getDimsFromThirdParty(ext, data)
-            }
-        } else { // Natively supported by Android
-            return@withContext try {
-                if (null == data) {
-                    var dims = Point(0, 0)
-                    try {
-                        dims = getDimsFromBitmapFactory(context, fileUri)
-                    } catch (e: Exception) {
-                        Timber.d(e)
-                    }
-                    if (dims.x < 1 || dims.y < 1) {
-                        // Fallback for formats unsupported by BitmapFactory but supported by Android Media (e.g. MP4)
-                        try {
-                            dims = getDimsFromMediaRetriever(context, fileUri)
-                        } catch (e: Exception) {
-                            Timber.w(e)
-                        }
-                    }
-                    dims
-                } else {
-                    val options = BitmapFactory.Options()
-                    options.inJustDecodeBounds = true
-                    BitmapFactory.decodeByteArray(data, 0, data.size, options)
-                    Point(options.outWidth, options.outHeight)
+    if (ext == "jxl" || ext == "avif") {
+        return@withContext if (null == data) {
+            getDimsFromThirdParty(context, ext, fileUri)
+        } else {
+            getDimsFromThirdParty(ext, data)
+        }
+    } else { // Natively supported by Android
+        return@withContext try {
+            if (null == data) {
+                var dims = Point(0, 0)
+                try {
+                    dims = getDimsFromBitmapFactory(context, fileUri)
+                } catch (e: Exception) {
+                    Timber.d(e)
                 }
-            } catch (e: IOException) {
-                Timber.w(e)
-                Point(0, 0)
-            } catch (e: IllegalArgumentException) {
-                Timber.w(e)
-                Point(0, 0)
+                if (dims.x < 1 || dims.y < 1) {
+                    // Fallback for formats unsupported by BitmapFactory but supported by Android Media (e.g. MP4)
+                    try {
+                        dims = getDimsFromMediaRetriever(context, fileUri)
+                    } catch (e: Exception) {
+                        Timber.w(e)
+                    }
+                }
+                dims
+            } else {
+                val options = BitmapFactory.Options()
+                options.inJustDecodeBounds = true
+                BitmapFactory.decodeByteArray(data, 0, data.size, options)
+                Point(options.outWidth, options.outHeight)
             }
+        } catch (e: IOException) {
+            Timber.w(e)
+            Point(0, 0)
+        } catch (e: IllegalArgumentException) {
+            Timber.w(e)
+            Point(0, 0)
         }
     }
+}
 
 @Throws(Exception::class)
-fun getDimsFromBitmapFactory(context: Context, uri: Uri): Point {
+private fun getDimsFromBitmapFactory(context: Context, uri: Uri): Point {
     val options = BitmapFactory.Options()
     options.inJustDecodeBounds = true
     getInputStream(context, uri).use {
@@ -622,7 +621,7 @@ fun getDimsFromBitmapFactory(context: Context, uri: Uri): Point {
 }
 
 @Throws(Exception::class)
-fun getDimsFromMediaRetriever(context: Context, uri: Uri): Point {
+private fun getDimsFromMediaRetriever(context: Context, uri: Uri): Point {
     val retriever = MediaMetadataRetriever()
     try {
         retriever.setDataSource(context, uri)
@@ -638,11 +637,11 @@ fun getDimsFromMediaRetriever(context: Context, uri: Uri): Point {
     }
 }
 
-fun getDimsFromThirdParty(context: Context, ext: String, uri: Uri): Point {
+private fun getDimsFromThirdParty(context: Context, ext: String, uri: Uri): Point {
     return getInputStream(context, uri).use { getDimsFromThirdParty(ext, it.readBytes()) }
 }
 
-fun getDimsFromThirdParty(ext: String, rawData: ByteArray): Point {
+private fun getDimsFromThirdParty(ext: String, rawData: ByteArray): Point {
     return when (ext) {
         "jxl" -> {
             JxlCoder.getSize(rawData)?.let {

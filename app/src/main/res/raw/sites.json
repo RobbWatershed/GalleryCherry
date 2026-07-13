@@ -111,6 +111,11 @@
     },
     "YIFFER": {
       "useWebviewAgent": false
+    },
+    "PAWCHIVE": {
+      "useWebviewAgent": false,
+      "requestsCapPerSecond": 1,
+      "parallelDownloadCap": 1
     }
   }
 }

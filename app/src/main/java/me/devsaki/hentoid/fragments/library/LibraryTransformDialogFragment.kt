@@ -415,10 +415,10 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
             return TransformParams(
                 resizeSwitch.isChecked,
                 resizeMethod.index,
-                resizeMethod1Ratio.editText!!.text.toString().toInt(),
+                resizeMethod1Ratio.editText!!.text.toString().toFloat() / 100f,
                 resizeMethod2MaxHeight.editText!!.text.toString().toInt(),
                 resizeMethod2MaxWidth.editText!!.text.toString().toInt(),
-                resizeMethod3Ratio.editText!!.text.toString().toInt(),
+                resizeMethod3Ratio.editText!!.text.toString().toFloat() / 100f,
                 resizeMethod5Images.editText!!.text.toString().toInt(),
                 transcodeMethod.index,
                 PictureEncoder.fromValue(encoderAll.value.toInt())!!,

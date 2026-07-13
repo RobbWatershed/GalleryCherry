@@ -280,7 +280,7 @@ class PixivParser : BaseImageListParser() {
         if (Settings.isThumbSeparateFile(Site.PIXIV))
             result.add(ImageFile.newThumb(onlineContent.coverImageUrl, StatusContent.SAVED))
         val attrs: MutableSet<Attribute> = HashSet()
-        illustIds.forEachIndexed { index, illustId ->
+        illustIds.reversed().forEachIndexed { index, illustId ->
             if (processHalted.get()) return@forEachIndexed
             val illustResp = call429(
                 id = illustId,

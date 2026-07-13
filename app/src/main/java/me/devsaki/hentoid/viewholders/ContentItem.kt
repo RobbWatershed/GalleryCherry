@@ -433,7 +433,7 @@ class ContentItem : AbstractItem<ContentItem.ViewHolder>,
                 val imgs = content.imageList
                 if (!content.completed) {
                     visibility = View.VISIBLE
-                    max = imgs.count { imf -> imf.isReadable }
+                    max = imgs.count { it.isReadable }
                     progress = content.readPagesCount
                 } else {
                     visibility = View.INVISIBLE

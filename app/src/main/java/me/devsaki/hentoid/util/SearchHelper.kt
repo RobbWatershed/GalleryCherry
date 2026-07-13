@@ -72,21 +72,19 @@ data class SearchCriteria(
 
     // For labeling only
     fun toString(context: Context): String {
-        // Universal search
-        if (query.isNotEmpty()) return query
-        // Advanced search
-        val labelElts: MutableList<String> =
-            attributes.map { a -> formatAttribute(a, context.resources) }.toMutableList()
+        val labelElts = attributes.map { formatAttribute(it, context.resources) }.toMutableList()
         if (location != Location.ANY) labelElts.add(
             "loc:" + context.resources.getString(formatLocation(location)).lowercase()
         )
         if (contentType != Type.ANY) labelElts.add(
             "type:" + context.resources.getString(formatContentType(contentType)).lowercase()
         )
-        labelElts.add(
-            "cb:" + if (Settings.Value.SEARCH_COMBINATION_AND == combinationMode) "and" else "or"
-        )
-        var label = TextUtils.join("|", labelElts)
+        if (attributes.count() > 1)
+            labelElts.add(
+                "cb:" + if (Settings.Value.SEARCH_COMBINATION_AND == combinationMode) "and" else "or"
+            )
+        var label = if (query.isNotEmpty()) "$query " else ""
+        label += TextUtils.join("|", labelElts)
         if (label.length > 50) label = label.substring(0, 50) + "…"
         return label
     }

@@ -38,6 +38,7 @@ import me.devsaki.hentoid.activities.sources.MultpornActivity
 import me.devsaki.hentoid.activities.sources.MusesActivity
 import me.devsaki.hentoid.activities.sources.NhentaiActivity
 import me.devsaki.hentoid.activities.sources.NovelcrowActivity
+import me.devsaki.hentoid.activities.sources.PawActivity
 import me.devsaki.hentoid.activities.sources.PixivActivity
 import me.devsaki.hentoid.activities.sources.PorncomixActivity
 import me.devsaki.hentoid.activities.sources.PururinActivity
@@ -235,6 +236,7 @@ data class Content(
                 Site.KEMONO -> KemonoActivity::class.java
                 Site.EROMANGA -> EromangaActivity::class.java
                 Site.YIFFER -> YifferActivity::class.java
+                Site.PAWCHIVE -> PawActivity::class.java
                 else -> BaseBrowserActivity::class.java
             }
         }
@@ -402,7 +404,7 @@ data class Content(
                 return paths[max(0, paths.size - indexDelta)]
             }
 
-            Site.KEMONO -> {
+            Site.KEMONO, Site.PAWCHIVE -> {
                 // Service, user ID and content ID
                 paths = url.split("/")
                 val userIdx = paths.indexOf("user")

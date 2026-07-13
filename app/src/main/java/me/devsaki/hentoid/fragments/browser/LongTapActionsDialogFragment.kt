@@ -17,7 +17,7 @@ class LongTapActionsDialogFragment : BaseDialogFragment<Nothing>() {
     companion object {
         operator fun invoke(parent: FragmentActivity) {
             val args = Bundle()
-            invoke(parent, LongTapActionsDialogFragment(), args)
+            invoke(parent, LongTapActionsDialogFragment(), args, false)
         }
     }
 
@@ -39,6 +39,12 @@ class LongTapActionsDialogFragment : BaseDialogFragment<Nothing>() {
                 Settings.areLongTapActionsChosen = true
                 Settings.isBrowserQuickDl = chQuickDl.isChecked
                 Settings.isBrowserGrabPics = chGrabImg.isChecked
+                dismissAllowingStateLoss()
+            }
+            disableBtn.setOnClickListener {
+                Settings.areLongTapActionsChosen = true
+                Settings.isBrowserQuickDl = false
+                Settings.isBrowserGrabPics = false
                 dismissAllowingStateLoss()
             }
         }

@@ -621,7 +621,11 @@ class QueueFragment : Fragment(R.layout.fragment_queue), ItemTouchCallback,
                 visibility = View.INVISIBLE
             }
 
-            progress = round(event.progress * 100).toInt()
+            if (event.indefinite) isIndeterminate = true
+            else {
+                isIndeterminate = false
+                progress = round(event.progress * 100).toInt()
+            }
         }
     }
 

@@ -5,6 +5,7 @@ import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.database.domains.ImageFile
 import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.enums.StatusContent
+import me.devsaki.hentoid.parsers.fetchHeaders
 import me.devsaki.hentoid.parsers.getImgSrc
 import me.devsaki.hentoid.parsers.urlsToImageFiles
 import me.devsaki.hentoid.util.download.getCanonicalUrl
@@ -37,11 +38,10 @@ class ManhwaParser : BaseChapteredImageListParser() {
         val postId = doc.select("#manga-chapters-holder").attr("data-id")
         if (postId.isNotEmpty()) {
             val postUrl = onlineContent.site.url + "wp-admin/admin-ajax.php"
-            val headers = fetchHeaders(onlineContent)
             // Retrieve the chapters page chunk
             postOnlineDocument(
                 postUrl,
-                headers,
+                fetchHeaders(onlineContent),
                 Site.MANHWA.useHentoidAgent, Site.MANHWA.useWebviewAgent,
                 "action=ajax_chap&post_id=$postId",
                 POST_MIME_TYPE

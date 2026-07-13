@@ -33,7 +33,7 @@ android {
         minSdkVersion 26
         targetSdkVersion 37
         versionCode 130 // is updated automatically by BitRise; only used when building locally
-        versionName '1.22.5'
+        versionName '1.22.6'
 
         def includeObjectBoxBrowser = System.getenv("INCLUDE_OBJECTBOX_BROWSER") ?: "false"
         def includeLeakCanary = System.getenv("INCLUDE_LEAK_CANARY") ?: "false"
@@ -223,6 +223,9 @@ dependencies {
 
     // Time range picker
     implementation "nl.joery.timerangepicker:timerangepicker:1.0.0"
+
+    // Color picker
+    implementation "com.github.skydoves:colorpickerpreference:2.0.6"
 
 
     /**

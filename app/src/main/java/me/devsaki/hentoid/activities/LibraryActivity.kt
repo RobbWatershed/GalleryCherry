@@ -411,13 +411,13 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
                     )
                 snackbar.setAction(R.string.resume) {
                     Timber.i(
-                        "Reopening book %d",
-                        previouslyViewedContent
+                        "Reopening book $previouslyViewedContent"
                     )
                     val dao: CollectionDAO = ObjectBoxDAO()
                     try {
-                        val c = dao.selectContent(previouslyViewedContent)
-                        if (c != null) openReader(this, c, searchParams = contentSearchBundle)
+                        dao.selectContent(previouslyViewedContent)?.let {
+                            openReader(this, it, searchParams = contentSearchBundle)
+                        }
                     } finally {
                         dao.cleanup()
                     }
@@ -624,7 +624,7 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
                 setOnQueryTextListener(object : SearchView.OnQueryTextListener {
                     override fun onQueryTextSubmit(s: String): Boolean {
                         setQuery(s.trim())
-                        signalCurrentFragment(CommunicationEvent.Type.SEARCH, query.toString())
+                        signalCurrentFragment(CommunicationEvent.Type.SEARCH)
                         clearFocus()
                         return true
                     }
@@ -778,20 +778,9 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
                             val searchUri = it.searchString.toUri()
                             setAdvancedSearchCriteria(SearchActivityBundle.parseSearchUri(searchUri))
                             val query = getQuery()
-                            if (getSearchCriteria().isEmpty() || query.isNotEmpty()) { // Universal search
-                                if (query.isNotEmpty()) {
-                                    if (SearchRecord.EntityType.CONTENT == it.entityType)
-                                        viewModel.searchContentFullText(query)
-                                    else
-                                        viewModel.setGroupQuery(query)
-                                }
-                            } else { // Advanced search; content only
-                                viewModel.searchContent(
-                                    getQuery(),
-                                    getSearchCriteria(),
-                                    searchUri
-                                )
-                            }
+                            if (SearchRecord.EntityType.CONTENT == it.entityType)
+                                viewModel.searchContent(query, getSearchCriteria())
+                            else if (query.isNotEmpty()) viewModel.setGroupQuery(query)
                         }
                     } else { // Clear history
                         val builder = MaterialAlertDialogBuilder(this@LibraryActivity)

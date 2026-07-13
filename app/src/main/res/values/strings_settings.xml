@@ -87,6 +87,7 @@
     <string name="pref_external_library_detach_summary">Don\'t include the external library into Hentoid anymore</string>
     <string name="pref_cat_eh">E-hentai / ExHentai</string>
     <string name="pref_cat_hitomi">Hitomi</string>
+    <string name="pref_cat_kemono">Kemono</string>
     <string name="pref_cat_advanced">Advanced</string>
     <string name="pref_refresh_library_title">Refresh library</string>
     <string name="pref_refresh_library_summary">Manually refresh library contents</string>
@@ -196,6 +197,9 @@
     <string name="download_hitomi_avif_title">Download in AVIF format</string>
     <string name="download_hitomi_avif_on">Download pictures in AVIF format when available</string>
     <string name="download_hitomi_avif_off">Download pictures in WEBP format</string>
+    <string name="download_kemono_hires_title">Download hi-res pictures</string>
+    <string name="pref_dl_kemono_hires_on">Download hi-res pictures\nNB : Currently broken on the site</string>
+    <string name="pref_dl_kemono_hires_off">Download pictures that are displayed on the website</string>
     <string name="pref_dl_threads_quantity_title">Parallel downloads</string>
     <string name="pref_dl_threads_quantity_summary">Number of images downloaded simultaneously\nCurrently: <x:g example="5" id="number">%s</x:g></string>
     <string name="pref_dl_speed_cap_title">Download speed limit</string>
@@ -289,6 +293,8 @@
     <string name="doh_warning">Some websites won\'t work well with DNS over HTTPS. Use an external DNS app if you experience issues during navigation (e.g. blank pages, unresponsive login forms)</string>
     <string name="proxy_warning">Some websites won\'t work well with a proxy. Use an external DNS app if you experience issues during navigation (e.g. blank pages, unresponsive login forms)</string>
     <string name="material_you_warning">Your device doesn\'t support Material You; switching back to Light theme</string>
+    <string name="pref_viewer_color_filter">Color filter</string>
+    <string name="pref_viewer_color_filter_reset">Reset color filter</string>
 
     <!-- Misc -->
     <string name="pref_next_schedule">Next run scheduled in %.0f mins</string>

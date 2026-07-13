@@ -15,7 +15,9 @@ import me.devsaki.hentoid.database.domains.Group
 import me.devsaki.hentoid.database.domains.GroupItem
 import me.devsaki.hentoid.database.domains.ImageFile
 import me.devsaki.hentoid.database.domains.SearchRecord
+import me.devsaki.hentoid.database.domains.SiteBookmark
 import me.devsaki.hentoid.enums.Grouping
+import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.isInLibrary
@@ -24,7 +26,7 @@ import me.devsaki.hentoid.workers.data.UpdateJsonData
 import timber.log.Timber
 
 // TODO update when adding tasks to "oneShot" functions
-const val DB_UPDATE_VERSION = 3
+const val DB_UPDATE_VERSION = 5
 
 @Suppress("UNUSED_PARAMETER")
 object DatabaseMaintenance {
@@ -41,8 +43,7 @@ object DatabaseMaintenance {
             this::computeContentSize,
             this::createGroups,
             this::computeReadingProgress,
-            this::reattachGroupCovers,
-            this::setDbUpdateVersion,
+            this::reattachGroupCovers
         )
     }
 
@@ -53,7 +54,9 @@ object DatabaseMaintenance {
             this::cleanOrphanAttributes,
             this::cleanOrphanChapters,
             this::cleanOrphanImageFiles,
-            this::refreshJsonForSecondDownloadDate
+            this::refreshJsonForSecondDownloadDate,
+            this::migrateKemonoBookmarks,
+            this::setDbUpdateVersion // Should ALWAYS stay in last position
         )
     }
 
@@ -645,6 +648,39 @@ object DatabaseMaintenance {
                 Timber.i("Refresh Json for second download date : done")
                 Settings.isRefreshJson1Complete = true
             }
+        } finally {
+            ObjectBoxDB.cleanup()
+        }
+    }
+
+    private suspend fun migrateKemonoBookmarks(
+        context: Context,
+        emitter: (Float) -> Unit
+    ) = withContext(Dispatchers.IO) {
+        try {
+            val pBookmarks = ObjectBoxDB.selectBookmarksQ(Site.PAWCHIVE)
+            if (pBookmarks.count() > 0) return@withContext
+            val kBookmarks = ObjectBoxDB.selectBookmarksQ(Site.KEMONO)
+            if (0L == kBookmarks.count()) return@withContext
+
+            Timber.i("Migrating Kemono -> Pawchive bookmarks : start")
+            kBookmarks.use { entries ->
+                Timber.i(
+                    "Migrating Kemono -> Pawchive bookmarks : %d bookmarks detected",
+                    entries.count()
+                )
+                val pawCopies = entries.safeFind().map {
+                    SiteBookmark(
+                        site = Site.PAWCHIVE,
+                        title = it.title,
+                        url = it.url.replace(Site.KEMONO.url, Site.PAWCHIVE.url),
+                        order = it.order,
+                        isHomepage = it.isHomepage
+                    )
+                }
+                ObjectBoxDB.insertBookmarks(pawCopies)
+            }
+            Timber.i("Migrating Kemono -> Pawchive bookmarks : done")
         } finally {
             ObjectBoxDB.cleanup()
         }

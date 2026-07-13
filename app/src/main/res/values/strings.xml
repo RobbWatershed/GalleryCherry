@@ -846,6 +846,7 @@
     <string name="web_download_image">Download single image</string>
     <string name="web_long_tap_actions_title">Choose long tap actions</string>
     <string name="web_long_tap_actions_notice">NB : These settings can be changed later using the settings screen</string>
+    <string name="disable_long_tap">Disable long tap</string>
 
     <!-- Web browser (site specifics) -->
     <string name="help_web_exh_account">Please use or create an exHentai account</string>

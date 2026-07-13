@@ -5,6 +5,7 @@ import me.devsaki.hentoid.database.domains.Chapter
 import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.database.domains.ImageFile
 import me.devsaki.hentoid.enums.StatusContent
+import me.devsaki.hentoid.parsers.fetchHeaders
 import me.devsaki.hentoid.parsers.getChaptersFromLinks
 import me.devsaki.hentoid.parsers.getExtraChaptersbyUrl
 import me.devsaki.hentoid.parsers.getMaxChapterOrder
