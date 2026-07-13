@@ -20,11 +20,10 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <CheckBox
+    <com.google.android.material.materialswitch.MaterialSwitch
         android:id="@+id/ch_quick_dl"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:checked="false"
         android:text="@string/pref_browser_quick_dl_title"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/title" />
@@ -42,13 +41,12 @@
         app:layout_constraintStart_toStartOf="@id/ch_quick_dl"
         app:layout_constraintTop_toBottomOf="@id/ch_quick_dl" />
 
-    <CheckBox
+    <com.google.android.material.materialswitch.MaterialSwitch
         android:id="@+id/ch_grab_img"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:checked="false"
         android:text="@string/pref_browser_grab_pics_title"
+        android:layout_marginTop="8dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/ch_quick_dl_desc" />
 
