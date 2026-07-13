@@ -45,16 +45,17 @@ import kotlin.math.roundToInt
 data class TransformParams(
     val resizeEnabled: Boolean,
     val resizeMethod: Int,
-    val resize1Ratio: Int,
+    val resize1Ratio: Float,
     val resize2Height: Int,
     val resize2Width: Int,
-    val resize3Ratio: Int,
+    val resize3Ratio: Float,
     val resize5Pages: Int,
     val transcodeMethod: Int,
     val transcoderAll: PictureEncoder,
     val transcoderLossy: PictureEncoder,
     val transcoderLossless: PictureEncoder,
     val transcodeQuality: Int,
+    val allowUpscale: Boolean = false,
     @Transient var forceManhwa: Boolean = false
 )
 
@@ -95,12 +96,12 @@ suspend fun transform(
     val dims = getImageDimensions(context, data = rawData)
     val bitmapOut: Bitmap = if (params.resizeEnabled) {
         when (params.resizeMethod) {
-            0 -> resizeScreenRatio(rawData, dims, params.resize1Ratio / 100f)
+            0 -> resizeScreenRatio(rawData, dims, params.resize1Ratio)
             1 -> resizeDims(
                 rawData, dims, params.resize2Height, params.resize2Width, params.forceManhwa
             )
 
-            2 -> resizePlainRatio(rawData, dims, params.resize3Ratio / 100f)
+            2 -> resizePlainRatio(rawData, dims, params.resize3Ratio, params.allowUpscale)
             3 -> { // AI rescale; handled at Worker level
                 val scale = if (allowBogusAiRescale) 2f else 1f
                 resizePlainRatio(rawData, dims, scale, allowBogusAiRescale)
