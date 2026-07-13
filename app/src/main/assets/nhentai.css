@@ -2,3 +2,8 @@
 .search input {
     width: 90%;
 }
+/* Custom style to override ad style */
+.ad-wrapper {
+    height: 0px !important;
+    display: none !important;
+}
