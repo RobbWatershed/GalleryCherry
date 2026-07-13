@@ -53,7 +53,7 @@ object HiperdexServer {
             @Header("cookie") cookies: String,
             @Header("referer") referer: String,
             @Query("input") input: String,
-            @Header("x-svc-gate") gate: String = "f5pabmx7sdek", // use HeaderMap?
+            @Header("x-cfg-auth") secret: String = "yceqt7qgu004", // use HeaderMap?
             @Query("batch") batch: Int = 1
         ): Call<List<HiperPages>>
     }
