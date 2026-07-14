@@ -191,7 +191,9 @@ class VideoEncoder {
         // Init OpenGL, once we have initialized context and surface
         val renderer = TextureRenderer()
 
+        var idx = 1f
         for (frame in frames) {
+            if (isCanceled.invoke()) break
             // Get encoded data and feed it to muxer
             drainEncoder(false)
 
@@ -211,6 +213,8 @@ class VideoEncoder {
 
             // Feed encoder with next frame produced by OpenGL
             EGL14.eglSwapBuffers(eglDisplay, eglSurface)
+
+            onProgress?.invoke(idx++ / frames.size)
         }
 
         // Drain last remaining encoded data and finalize the video file
