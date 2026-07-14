@@ -1,10 +1,10 @@
 package me.devsaki.hentoid.util.video
 
+import android.content.ContentResolver
 import android.content.Context
 import android.media.MediaCodec
 import android.media.MediaCodecInfo
 import android.media.MediaFormat
-import android.media.MediaFormat.MIMETYPE_VIDEO_AVC
 import android.media.MediaMuxer
 import android.net.Uri
 import android.opengl.EGL14
@@ -34,12 +34,13 @@ class VideoEncoder {
 
     private var outFileDescriptor: ParcelFileDescriptor? = null
 
-    private var mime = MIMETYPE_VIDEO_AVC
+    private var mime = "video/avc"
 
     private var trackIndex = -1
 
-    // Current video length, in microseconds
     private var presentationTimeUs = 0L
+
+    private var frameRate = 30
 
     private val timeoutUs = 10000L
 
@@ -60,19 +61,14 @@ class VideoEncoder {
     private var surface: Surface? = null
 
 
-    /**
-     * @param frames Frames : first = Frame file Uri; second = Frame duration (ms)
-     */
     suspend fun encodeVideo(
         context: Context,
-        outUri: Uri,
-        frames: List<Pair<Uri, Int>>,
-        isCanceled: () -> Boolean,
-        onProgress: ((Float) -> Unit)? = null
+        outVideoUri: Uri,
+        imageUris: List<Uri>
     ) {
         try {
-            initEncoder(context, outUri, frames)
-            encodeImages(context, frames, isCanceled, onProgress)
+            initEncoder(context, outVideoUri, imageUris)
+            encodeImages(context, imageUris)
         } catch (e: Exception) {
             Timber.e(e, "Encoding failed")
         } finally {
@@ -83,12 +79,13 @@ class VideoEncoder {
     private suspend fun initEncoder(
         context: Context,
         outVideoUri: Uri,
-        frames: List<Pair<Uri, Int>>
+        imageUris: List<Uri>
     ) = withContext(Dispatchers.Default) {
         encoder = MediaCodec.createEncoderByType(mime)
 
         // Try to find supported size by checking the resolution of first supplied image
-        size = getSupportedSize(context, frames[0].first)
+        // This could also be set manually as parameter to TimeLapseEncoder
+        size = getSupportedSize(context, imageUris[0])
 
         val format = getFormat(size!!)
 
@@ -180,49 +177,38 @@ class VideoEncoder {
             throw RuntimeException("eglMakeCurrent(): " + GLUtils.getEGLErrorString(EGL14.eglGetError()))
     }
 
-    private suspend fun encodeImages(
-        context: Context,
-        frames: List<Pair<Uri, Int>>,
-        isCanceled: () -> Boolean,
-        onProgress: ((Float) -> Unit)? = null
-    ) = withContext(Dispatchers.Default) {
-        // Init OpenGL, once we have initialized context and surface
-        val renderer = TextureRenderer()
+    private suspend fun encodeImages(context: Context, imageUris: List<Uri>) =
+        withContext(Dispatchers.Default) {
+            // Init OpenGL, once we have initialized context and surface
+            val renderer = TextureRenderer()
 
-        var idx = 1f
-        for (frame in frames) {
-            if (isCanceled.invoke()) break
-            // Get encoded data and feed it to muxer
-            drainEncoder(false, frame.second)
+            for (imageUri in imageUris) {
+                // Get encoded data and feed it to muxer
+                drainEncoder(false)
 
-            // Render the bitmap/texture here
-            loadBitmap(context, frame.first)?.let { bitmap ->
-                try {
-                    renderer.draw(size!!.width, size!!.height, bitmap, getMvp())
-                } finally {
-                    bitmap.recycle()
+                // Render the bitmap/texture here
+                loadBitmap(context, imageUri)?.let { bitmap ->
+                    try {
+                        renderer.draw(size!!.width, size!!.height, bitmap, getMvp())
+                    } finally {
+                        bitmap.recycle()
+                    }
                 }
+
+                EGLExt.eglPresentationTimeANDROID(
+                    eglDisplay, eglSurface,
+                    presentationTimeUs * 1000
+                )
+
+                // Feed encoder with next frame produced by OpenGL
+                EGL14.eglSwapBuffers(eglDisplay, eglSurface)
             }
 
-            EGLExt.eglPresentationTimeANDROID(
-                eglDisplay, eglSurface,
-                presentationTimeUs * 1000 // yes, those are nanoseconds
-            )
-
-            // Feed encoder with next frame produced by OpenGL
-            EGL14.eglSwapBuffers(eglDisplay, eglSurface)
-
-            onProgress?.invoke(idx++ / frames.size)
+            // Drain last remaining encoded data and finalize the video file
+            drainEncoder(true)
         }
 
-        // Drain last remaining encoded data and finalize the video file
-        drainEncoder(true, frames.minBy { it.second }.second)
-    }
-
-    private suspend fun drainEncoder(
-        endOfStream: Boolean,
-        frameDurationMs: Int
-    ) = withContext(Dispatchers.IO) {
+    private suspend fun drainEncoder(endOfStream: Boolean) = withContext(Dispatchers.IO) {
         if (endOfStream) encoder.signalEndOfInputStream()
 
         while (true) {
@@ -236,7 +222,7 @@ class VideoEncoder {
                 bufferInfo.presentationTimeUs = presentationTimeUs
                 muxer?.writeSampleData(trackIndex, encodedBuffer, bufferInfo)
 
-                presentationTimeUs += frameDurationMs * 1000
+                presentationTimeUs += 1000000 / frameRate
 
                 encoder.releaseOutputBuffer(outBufferId, false)
 

@@ -1548,21 +1548,8 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
             encoder.encodeVideo(
                 applicationContext,
                 tempFile,
-                frames,
-                isCanceled = {
-                    this.isStopped || downloadProcessStopped || ContentQueueManager.isQueuePaused
-                }
-            ) { f ->
-                EventBus.getDefault().post(
-                    DownloadEvent(
-                        eventType = DownloadEvent.Type.EV_PROGRESS,
-                        step = DownloadEvent.Step.ENCODE_ANIMATION,
-                        fileDownloadProgress = f * 100
-                    )
-                )
-            } // TODO format choice in Settings
-            // TODO streamline interfaces between GIF and MP4 encoder
-            // TODO animated webp?
+                frames.map { it.first }
+            ) // TODO progress notification
 
             updateImageProperties(img, true, tempFile)
 
