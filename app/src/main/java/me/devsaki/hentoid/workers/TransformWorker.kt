@@ -1,8 +1,6 @@
 package me.devsaki.hentoid.workers
 
 import android.content.Context
-import android.graphics.BitmapFactory
-import android.graphics.Point
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import androidx.work.Data
@@ -37,7 +35,7 @@ import me.devsaki.hentoid.util.getStorageRoot
 import me.devsaki.hentoid.util.image.TransformParams
 import me.devsaki.hentoid.util.image.clearCoilCache
 import me.devsaki.hentoid.util.image.determineEncoder
-import me.devsaki.hentoid.util.image.getImageDimensions
+import me.devsaki.hentoid.util.image.getMediaDimensions
 import me.devsaki.hentoid.util.image.isImageLossless
 import me.devsaki.hentoid.util.image.transform
 import me.devsaki.hentoid.util.image.transformManhwaChapter
@@ -330,7 +328,7 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
         if (upscaler != null) { // AI upscale
             targetData = upscale(imageUri, rawData)
         } else { // regular resize
-            val sourceDims = getImageDimensions(applicationContext, data = rawData)
+            val sourceDims = getMediaDimensions(applicationContext, data = rawData)
             val isManhwa = sourceDims.y * 1.0 / sourceDims.x > 3
 
             if (isManhwa) nbManhwa.incrementAndGet()
@@ -345,7 +343,7 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
         val isLossless = isImageLossless(rawData)
         val sourceName = sourceFile.name ?: ""
 
-        val targetDims = getImageDimensions(applicationContext, data = targetData)
+        val targetDims = getMediaDimensions(applicationContext, data = targetData)
         val targetMime = determineEncoder(isLossless, targetDims, params).mimeType
         val targetName = img.name + "." + getExtensionFromMimeType(targetMime)
         val newFile = sourceName != targetName

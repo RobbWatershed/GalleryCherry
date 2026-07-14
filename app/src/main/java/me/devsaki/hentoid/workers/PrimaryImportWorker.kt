@@ -71,7 +71,7 @@ import me.devsaki.hentoid.util.findDuplicateContentByUrl
 import me.devsaki.hentoid.util.formatFolderName
 import me.devsaki.hentoid.util.getPathRoot
 import me.devsaki.hentoid.util.image.clearCoilCache
-import me.devsaki.hentoid.util.image.isSupportedImage
+import me.devsaki.hentoid.util.image.isSupportedMedia
 import me.devsaki.hentoid.util.importBookmarks
 import me.devsaki.hentoid.util.importRenamingRules
 import me.devsaki.hentoid.util.isInQueue
@@ -642,7 +642,7 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
         if (cleanNoImages) {
             bookFiles = explorer.listFiles(context, bookFolder, null)
             val nbImages = bookFiles.count {
-                isSupportedImage(it.name ?: "")
+                isSupportedMedia(it.name ?: "")
             }
             if (0 == nbImages && !explorer.hasFolders(bookFolder)) { // No supported images nor subfolders
                 var doRemove = true
@@ -741,7 +741,7 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
                 }
 
                 // Attach image file Uri's to the book's images
-                val imageFiles = bookFiles.filter { isSupportedImage(it.name ?: "") }
+                val imageFiles = bookFiles.filter { isSupportedMedia(it.name ?: "") }
                 if (imageFiles.isNotEmpty()) {
                     // No images described in the JSON -> recreate them
                     if (contentImages.isEmpty()) {

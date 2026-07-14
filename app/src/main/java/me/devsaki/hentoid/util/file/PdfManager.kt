@@ -32,9 +32,9 @@ import me.devsaki.hentoid.enums.PictureEncoder
 import me.devsaki.hentoid.util.copy
 import me.devsaki.hentoid.util.hash64
 import me.devsaki.hentoid.util.image.TransformParams
-import me.devsaki.hentoid.util.image.getImageDimensions
+import me.devsaki.hentoid.util.image.getMediaDimensions
 import me.devsaki.hentoid.util.image.getMimeTypeFromPictureBinary
-import me.devsaki.hentoid.util.image.isSupportedImage
+import me.devsaki.hentoid.util.image.isSupportedMedia
 import me.devsaki.hentoid.util.image.loadBitmap
 import me.devsaki.hentoid.util.image.screenWidth
 import me.devsaki.hentoid.util.image.transform
@@ -53,16 +53,20 @@ class PdfManager {
     private val extractedFiles = ArrayList<Uri>()
     private val currentPageIndex = AtomicInteger(0)
 
-    private fun processFile(context: Context, doc: DocumentFile, keepFormat: Boolean): ByteArray? {
+    private suspend fun processFile(context: Context, file: Uri, keepFormat: Boolean): ByteArray? {
         // TODO don't keep format when non-PNG/JPG/WEBP
         val stream = ByteArrayOutputStream()
         if (keepFormat) {
-            getInputStream(context, doc).use { copy(it, stream) }
+            getInputStream(context, file).use { copy(it, stream) }
             return stream.toByteArray()
         } else {
-            loadBitmap(context, doc)?.let { bmp ->
-                bmp.compress(Bitmap.CompressFormat.PNG, 100, stream)
-                return stream.toByteArray()
+            loadBitmap(context, file)?.let { bmp ->
+                try {
+                    bmp.compress(Bitmap.CompressFormat.PNG, 100, stream)
+                    return stream.toByteArray()
+                } finally {
+                    bmp.recycle()
+                }
             }
         }
         return null
@@ -79,13 +83,13 @@ class PdfManager {
     ) {
         val allDims = ArrayList<Point>()
         val imgFiles = imageFiles
-            .filter { isSupportedImage(it.name ?: "") }
+            .filter { isSupportedMedia(it.name ?: "") }
             .filterNot {
                 getFileNameWithoutExtension(it.name ?: "")
                     .equals(THUMB_FILE_NAME, true)
             }
         imgFiles.forEach {
-            allDims.add(getImageDimensions(context, it.uri.toString()))
+            allDims.add(getMediaDimensions(context, it.uri.toString()))
         }
         val medianWidth = median(allDims.map { it.x }.toIntArray())
         val minWidth = screenWidth * 0.75
@@ -116,7 +120,8 @@ class PdfManager {
                 imgFiles.forEachIndexed { index, file ->
                     // Convert to PNG or JPEG; use proper ratio to reach target width
                     val ratio = targetWidth / (allDims[index].x * 1.0)
-                    val data = processFile(context, file, keepImgFormat) ?: return@forEachIndexed
+                    val data =
+                        processFile(context, file.uri, keepImgFormat) ?: return@forEachIndexed
                     val params = TransformParams(
                         true, 2, 0f, 0, 0, ratio.toFloat(), 0, 1, PictureEncoder.PNG,
                         PictureEncoder.JPEG, PictureEncoder.PNG, 90, allowUpscale = true

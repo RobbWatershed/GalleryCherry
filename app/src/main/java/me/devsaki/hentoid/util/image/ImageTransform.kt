@@ -93,7 +93,7 @@ suspend fun transform(
 ): ByteArray {
     if (isImageAnimated(rawData)) return rawData
 
-    val dims = getImageDimensions(context, data = rawData)
+    val dims = getMediaDimensions(context, data = rawData)
     val bitmapOut: Bitmap = if (params.resizeEnabled) {
         when (params.resizeMethod) {
             0 -> resizeScreenRatio(rawData, dims, params.resize1Ratio)

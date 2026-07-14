@@ -97,7 +97,7 @@ import me.devsaki.hentoid.util.file.removeDocument
 import me.devsaki.hentoid.util.file.removeFile
 import me.devsaki.hentoid.util.image.clearCoilKey
 import me.devsaki.hentoid.util.image.getScaledDownBitmap
-import me.devsaki.hentoid.util.image.isSupportedImage
+import me.devsaki.hentoid.util.image.isSupportedMedia
 import me.devsaki.hentoid.util.network.CloudflareHelper.CloudflareProtectedException
 import me.devsaki.hentoid.util.network.HEADER_COOKIE_KEY
 import me.devsaki.hentoid.util.network.HEADER_REFERER_KEY
@@ -567,7 +567,7 @@ suspend fun getPictureFilesFromContent(context: Context, content: Content): List
 
         return@withContext listFoldersFilter(context, folder) {
             it.lowercase(Locale.getDefault()).startsWith(THUMB_FILE_NAME)
-                    && isSupportedImage(it)
+                    && isSupportedMedia(it)
         }
     }
 
@@ -656,7 +656,7 @@ fun detachAllExternalContent(context: Context, dao: CollectionDAO) {
 
     // Remove all images stored in the app's persistent folder (archive covers)
     val appFolder = context.filesDir
-    appFolder.listFiles { _, s: String? -> isSupportedImage(s ?: "") }?.forEach { removeFile(it) }
+    appFolder.listFiles { _, s: String? -> isSupportedMedia(s ?: "") }?.forEach { removeFile(it) }
 }
 
 /**
@@ -847,7 +847,7 @@ fun getPictureThumbCached(
                 val entries = if (resource.isNullOrBlank()) {
                     // No targeted resource => take the first one
                     context.getArchiveEntries(archive.uri)
-                        .filter { isSupportedImage(it.path) }.filter { it.size > 0 }
+                        .filter { isSupportedMedia(it.path) }.filter { it.size > 0 }
                         .sortedWith(InnerNameNumberArchiveComparator())
                 } else {
                     // Get targeted resource

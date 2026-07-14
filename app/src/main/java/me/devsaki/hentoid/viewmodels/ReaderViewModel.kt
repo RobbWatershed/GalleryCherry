@@ -70,7 +70,6 @@ import me.devsaki.hentoid.util.image.MIME_IMAGE_GIF
 import me.devsaki.hentoid.util.image.MIME_IMAGE_JXL
 import me.devsaki.hentoid.util.image.MIME_IMAGE_PNG
 import me.devsaki.hentoid.util.image.MIME_IMAGE_WEBP
-import me.devsaki.hentoid.util.image.MIME_VIDEO_MP4
 import me.devsaki.hentoid.util.image.getMimeTypeFromPictureBinary
 import me.devsaki.hentoid.util.image.isImageAnimated
 import me.devsaki.hentoid.util.matchFilesToImageList
@@ -85,6 +84,7 @@ import me.devsaki.hentoid.util.scanArchivePdf
 import me.devsaki.hentoid.util.scanBookFolder
 import me.devsaki.hentoid.util.setAndSaveContentCover
 import me.devsaki.hentoid.util.updateContentReadStats
+import me.devsaki.hentoid.util.video.MIME_VIDEO_MP4
 import me.devsaki.hentoid.widget.ContentSearchManager
 import me.devsaki.hentoid.widget.FolderSearchManager
 import me.devsaki.hentoid.workers.BaseDeleteWorker

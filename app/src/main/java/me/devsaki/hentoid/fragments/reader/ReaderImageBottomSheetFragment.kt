@@ -30,7 +30,7 @@ import me.devsaki.hentoid.util.file.getFullPathFromUri
 import me.devsaki.hentoid.util.file.openFile
 import me.devsaki.hentoid.util.file.shareFile
 import me.devsaki.hentoid.util.getIdForCurrentTheme
-import me.devsaki.hentoid.util.image.getImageDimensions
+import me.devsaki.hentoid.util.image.getMediaDimensions
 import me.devsaki.hentoid.util.setStyle
 import me.devsaki.hentoid.viewmodels.ReaderViewModel
 import me.devsaki.hentoid.viewmodels.ViewModelFactory
@@ -154,7 +154,7 @@ class ReaderImageBottomSheetFragment : BottomSheetDialogFragment(),
     }
 
     private suspend fun formatImageStats(img: ImageFile): String {
-        val dimensions = getImageDimensions(requireContext(), img.displayUri)
+        val dimensions = getMediaDimensions(requireContext(), img.displayUri)
         val sizeStr = formatHumanReadableSize(
             if (img.size > 0) {
                 img.size

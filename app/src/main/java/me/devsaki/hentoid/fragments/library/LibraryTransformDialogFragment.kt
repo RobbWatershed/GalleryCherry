@@ -42,7 +42,7 @@ import me.devsaki.hentoid.util.file.getInputStream
 import me.devsaki.hentoid.util.file.getOrCreateCacheFolder
 import me.devsaki.hentoid.util.image.TransformParams
 import me.devsaki.hentoid.util.image.determineEncoder
-import me.devsaki.hentoid.util.image.getImageDimensions
+import me.devsaki.hentoid.util.image.getMediaDimensions
 import me.devsaki.hentoid.util.image.getMimeTypeFromPictureBinary
 import me.devsaki.hentoid.util.image.isImageLossless
 import me.devsaki.hentoid.util.image.screenHeight
@@ -324,7 +324,7 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
         lifecycleScope.launch {
             val isLossless = isImageLossless(sourceBmp.rawData)
             val sourceSize = formatHumanReadableSize(sourceBmp.rawData.size.toLong(), resources)
-            val sourceDims = getImageDimensions(requireContext(), sourceBmp.uri)
+            val sourceDims = getMediaDimensions(requireContext(), sourceBmp.uri)
             val sourceMime = getMimeTypeFromPictureBinary(sourceBmp.rawData)
             val sourceName = sourceBmp.name + "." + getExtensionFromMimeType(sourceMime)
             val params = buildParams()
@@ -339,7 +339,7 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
             val targetSize = formatHumanReadableSize(targetData.size.toLong(), resources)
             val targetMime = determineEncoder(isLossless, Point(), params).mimeType
             val targetName = sourceBmp.name + "." + getExtensionFromMimeType(targetMime)
-            val targetDims = getImageDimensions(requireContext(), data = targetData)
+            val targetDims = getMediaDimensions(requireContext(), data = targetData)
             targetDimsWarning = (targetDims.x > DIMS_LIMIT || targetDims.y > DIMS_LIMIT)
             refreshControls()
 

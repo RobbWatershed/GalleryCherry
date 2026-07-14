@@ -49,7 +49,7 @@ import me.devsaki.hentoid.util.file.getParent
 import me.devsaki.hentoid.util.file.removeFile
 import me.devsaki.hentoid.util.image.clearCoilCache
 import me.devsaki.hentoid.util.image.imageNamesFilter
-import me.devsaki.hentoid.util.image.isSupportedImage
+import me.devsaki.hentoid.util.image.isSupportedMedia
 import me.devsaki.hentoid.util.isSupportedArchivePdf
 import me.devsaki.hentoid.util.jsonToContent
 import me.devsaki.hentoid.util.notification.BaseNotification
@@ -150,7 +150,7 @@ class ExternalImportWorker(context: Context, parameters: WorkerParameters) :
 
             // Remove all images stored in the app's persistent folder (archive covers)
             val appFolder = context.filesDir
-            appFolder.listFiles { _, s: String? -> isSupportedImage(s ?: "") }
+            appFolder.listFiles { _, s: String? -> isSupportedMedia(s ?: "") }
                 ?.forEach { removeFile(it) }
 
             val addedContent = HashMap<String, MutableList<Pair<DocumentFile, Long>>>()

@@ -66,7 +66,7 @@ import me.devsaki.hentoid.util.file.isSupportedArchive
 import me.devsaki.hentoid.util.file.listFoldersFilter
 import me.devsaki.hentoid.util.file.persistNewUriPermission
 import me.devsaki.hentoid.util.image.imageNamesFilter
-import me.devsaki.hentoid.util.image.isSupportedImage
+import me.devsaki.hentoid.util.image.isSupportedMedia
 import me.devsaki.hentoid.workers.ExternalImportWorker
 import me.devsaki.hentoid.workers.PrimaryImportWorker
 import me.devsaki.hentoid.workers.STEP_3_BOOKS
@@ -1312,7 +1312,7 @@ fun scanArchivePdf(
 
     val appJsonEntries = entries.filter { it.path.endsWith(JSON_FILE_NAME_V2) }
     val archiveEntries = entries.filter { isSupportedArchive(it.path) }
-    val imageEntries = entries.filter { isSupportedImage(it.path) }.filter { it.size > 0 }
+    val imageEntries = entries.filter { isSupportedMedia(it.path) }.filter { it.size > 0 }
 
     if (imageEntries.isEmpty()) {
         // If it just contains other archives, raise an error

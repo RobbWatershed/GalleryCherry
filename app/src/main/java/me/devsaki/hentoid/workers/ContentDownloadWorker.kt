@@ -76,7 +76,6 @@ import me.devsaki.hentoid.util.file.getOrCreateCacheFolder
 import me.devsaki.hentoid.util.file.getOutputStream
 import me.devsaki.hentoid.util.getContainingFolder
 import me.devsaki.hentoid.util.image.MIME_IMAGE_WEBP
-import me.devsaki.hentoid.util.image.assembleGif
 import me.devsaki.hentoid.util.image.bitmapToWebp
 import me.devsaki.hentoid.util.image.getBitmapFromVectorDrawable
 import me.devsaki.hentoid.util.image.tintBitmap
@@ -101,6 +100,8 @@ import me.devsaki.hentoid.util.persistJson
 import me.devsaki.hentoid.util.removeContent
 import me.devsaki.hentoid.util.serializeToJson
 import me.devsaki.hentoid.util.updateQueueJson
+import me.devsaki.hentoid.util.video.MIME_VIDEO_MP4
+import me.devsaki.hentoid.util.video.VideoEncoder
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import timber.log.Timber
@@ -1520,6 +1521,7 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
             )
 
             // Assemble the GIF
+            /*
             val ugoiraGifFile = assembleGif(
                 applicationContext,
                 downloadFolder,
@@ -1537,10 +1539,34 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
                     )
                 )
             } ?: throw IOException("Couldn't assemble ugoira file")
+             */
+            val encoder = VideoEncoder()
+            val tempFile = createFile(
+                applicationContext, downloadFolder, "${img.name}.mp4",
+                MIME_VIDEO_MP4
+            )
+            encoder.encodeVideo(
+                applicationContext,
+                tempFile,
+                frames,
+                isCanceled = {
+                    this.isStopped || downloadProcessStopped || ContentQueueManager.isQueuePaused
+                }
+            ) { f ->
+                EventBus.getDefault().post(
+                    DownloadEvent(
+                        eventType = DownloadEvent.Type.EV_PROGRESS,
+                        step = DownloadEvent.Step.ENCODE_ANIMATION,
+                        fileDownloadProgress = f * 100
+                    )
+                )
+            } // TODO format choice in Settings
+            // TODO streamline interfaces between GIF and MP4 encoder
+            // TODO animated webp?
 
-            updateImageProperties(img, true, ugoiraGifFile)
+            updateImageProperties(img, true, tempFile)
 
-            dlManager.appendFile(applicationContext, false, ugoiraGifFile)
+            dlManager.appendFile(applicationContext, false, tempFile)
         } catch (e: Exception) {
             Timber.w(e)
             isError = true

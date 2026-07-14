@@ -8,7 +8,7 @@ import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.parsers.cleanup
 import me.devsaki.hentoid.parsers.urlsToImageFiles
-import me.devsaki.hentoid.util.image.isSupportedImage
+import me.devsaki.hentoid.util.image.isSupportedMedia
 import me.devsaki.hentoid.util.parseDatetimeToEpoch
 import java.net.URLEncoder
 import java.util.concurrent.atomic.AtomicInteger
@@ -30,7 +30,7 @@ data class PawPost(
     fun getImageUrls(): List<String> {
         // Try using attachments
         var result = attachments
-            .filter { isSupportedImage(it.path ?: "") }
+            .filter { isSupportedMedia(it.path ?: "") }
             .distinct()
             .map {
                 val server = "https://file.$PAW_DOMAIN_FILTER"
@@ -40,7 +40,7 @@ data class PawPost(
         // Add file as the sole attached image
         if (result.isEmpty()) {
             file?.path?.let {
-                if (isSupportedImage(it))
+                if (isSupportedMedia(it))
                     result = listOf(
                         "https://img.$PAW_DOMAIN_FILTER/thumbnail/data/${it}"
                             .replace("//", "/")

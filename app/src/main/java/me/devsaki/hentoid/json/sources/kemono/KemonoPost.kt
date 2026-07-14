@@ -7,7 +7,7 @@ import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.parsers.urlsToImageFiles
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.getRandomInt
-import me.devsaki.hentoid.util.image.isSupportedImage
+import me.devsaki.hentoid.util.image.isSupportedMedia
 import java.net.URLEncoder
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -31,7 +31,7 @@ data class KemonoPost(
         if (Settings.isKemonoHiRes) {
             // Try using attachments
             var result = attachments
-                .filter { isSupportedImage(it.path ?: "") }
+                .filter { isSupportedMedia(it.path ?: "") }
                 .distinct()
                 .map {
                     val server = serverMapping?.get(it.path)
@@ -42,7 +42,7 @@ data class KemonoPost(
             // Add file as the sole attached image
             if (result.isEmpty()) {
                 file?.path?.let {
-                    if (isSupportedImage(it))
+                    if (isSupportedMedia(it))
                         result = listOf(
                             "https://img.${KEMONO_DOMAIN_FILTER}/thumbnail/data/${it}"
                                 .replace("//", "/")
@@ -51,7 +51,7 @@ data class KemonoPost(
             }
             return result
         } else {
-            return attachments.filter { isSupportedImage(it.path ?: "") }
+            return attachments.filter { isSupportedMedia(it.path ?: "") }
                 .distinct()
                 .map { "https://img.$KEMONO_DOMAIN_FILTER/thumbnail/data${it.path}" }
         }

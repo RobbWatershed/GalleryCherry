@@ -11,7 +11,7 @@ import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.parsers.cleanup
 import me.devsaki.hentoid.parsers.urlsToImageFiles
 import me.devsaki.hentoid.util.Settings
-import me.devsaki.hentoid.util.image.isSupportedImage
+import me.devsaki.hentoid.util.image.isSupportedMedia
 import me.devsaki.hentoid.util.parseDatetimeToEpoch
 
 @JsonClass(generateAdapter = true)
@@ -50,7 +50,7 @@ data class KemonoGallery(
             val serverMapping = previews.associateBy({ it.path }, { it.server })
             post.getImageUrls(serverMapping)
         } else {
-            previews.filter { isSupportedImage(it.path ?: "") }
+            previews.filter { isSupportedMedia(it.path ?: "") }
                 .distinct()
                 .map { "https://img.$KEMONO_DOMAIN_FILTER/thumbnail/data${it.path}" }
         }

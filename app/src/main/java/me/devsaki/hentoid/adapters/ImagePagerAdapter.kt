@@ -53,7 +53,7 @@ import me.devsaki.hentoid.util.Settings.Value.VIEWER_SEPARATING_BARS_LARGE
 import me.devsaki.hentoid.util.Settings.Value.VIEWER_SEPARATING_BARS_MEDIUM
 import me.devsaki.hentoid.util.Settings.Value.VIEWER_SEPARATING_BARS_SMALL
 import me.devsaki.hentoid.util.getScreenDimensionsPx
-import me.devsaki.hentoid.util.image.getImageDimensions
+import me.devsaki.hentoid.util.image.getMediaDimensions
 import me.devsaki.hentoid.util.image.needsRotating
 import me.devsaki.hentoid.views.ZoomableRecyclerView
 import me.devsaki.hentoid.widget.OnZoneTapListener
@@ -503,7 +503,7 @@ class ImagePagerAdapter(context: Context) :
                 else -> {
                     withContext(Dispatchers.IO) {
                         // Preload the pic to get its dimensions
-                        val dims = getImageDimensions(view.context, uri.toString())
+                        val dims = getMediaDimensions(view.context, uri.toString())
                         needsRotating(screenWidth, screenHeight, dims.x, dims.y)
                     }
                 }
