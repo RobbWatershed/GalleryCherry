@@ -38,6 +38,7 @@ class VideoEncoder {
 
     private var trackIndex = -1
 
+    // Current video length, in microseconds
     private var presentationTimeUs = 0L
 
     private var frameRate = 30
@@ -61,14 +62,19 @@ class VideoEncoder {
     private var surface: Surface? = null
 
 
+    /**
+     * @param frames Frames : first = Frame file Uri; second = Frame duration (ms)
+     */
     suspend fun encodeVideo(
         context: Context,
-        outVideoUri: Uri,
-        imageUris: List<Uri>
+        outUri: Uri,
+        frames: List<Pair<Uri, Int>>,
+        isCanceled: () -> Boolean,
+        onProgress: ((Float) -> Unit)? = null
     ) {
         try {
-            initEncoder(context, outVideoUri, imageUris)
-            encodeImages(context, imageUris)
+            initEncoder(context, outUri, frames)
+            encodeImages(context, frames, isCanceled, onProgress)
         } catch (e: Exception) {
             Timber.e(e, "Encoding failed")
         } finally {
@@ -79,13 +85,12 @@ class VideoEncoder {
     private suspend fun initEncoder(
         context: Context,
         outVideoUri: Uri,
-        imageUris: List<Uri>
+        frames: List<Pair<Uri, Int>>
     ) = withContext(Dispatchers.Default) {
         encoder = MediaCodec.createEncoderByType(mime)
 
         // Try to find supported size by checking the resolution of first supplied image
-        // This could also be set manually as parameter to TimeLapseEncoder
-        size = getSupportedSize(context, imageUris[0])
+        size = getSupportedSize(context, frames[0].first)
 
         val format = getFormat(size!!)
 
@@ -177,36 +182,40 @@ class VideoEncoder {
             throw RuntimeException("eglMakeCurrent(): " + GLUtils.getEGLErrorString(EGL14.eglGetError()))
     }
 
-    private suspend fun encodeImages(context: Context, imageUris: List<Uri>) =
-        withContext(Dispatchers.Default) {
-            // Init OpenGL, once we have initialized context and surface
-            val renderer = TextureRenderer()
+    private suspend fun encodeImages(
+        context: Context,
+        frames: List<Pair<Uri, Int>>,
+        isCanceled: () -> Boolean,
+        onProgress: ((Float) -> Unit)? = null
+    ) = withContext(Dispatchers.Default) {
+        // Init OpenGL, once we have initialized context and surface
+        val renderer = TextureRenderer()
 
-            for (imageUri in imageUris) {
-                // Get encoded data and feed it to muxer
-                drainEncoder(false)
+        for (frame in frames) {
+            // Get encoded data and feed it to muxer
+            drainEncoder(false)
 
-                // Render the bitmap/texture here
-                loadBitmap(context, imageUri)?.let { bitmap ->
-                    try {
-                        renderer.draw(size!!.width, size!!.height, bitmap, getMvp())
-                    } finally {
-                        bitmap.recycle()
-                    }
+            // Render the bitmap/texture here
+            loadBitmap(context, frame.first)?.let { bitmap ->
+                try {
+                    renderer.draw(size!!.width, size!!.height, bitmap, getMvp())
+                } finally {
+                    bitmap.recycle()
                 }
-
-                EGLExt.eglPresentationTimeANDROID(
-                    eglDisplay, eglSurface,
-                    presentationTimeUs * 1000
-                )
-
-                // Feed encoder with next frame produced by OpenGL
-                EGL14.eglSwapBuffers(eglDisplay, eglSurface)
             }
 
-            // Drain last remaining encoded data and finalize the video file
-            drainEncoder(true)
+            EGLExt.eglPresentationTimeANDROID(
+                eglDisplay, eglSurface,
+                presentationTimeUs * 1000 // yes, those are nanoseconds
+            )
+
+            // Feed encoder with next frame produced by OpenGL
+            EGL14.eglSwapBuffers(eglDisplay, eglSurface)
         }
+
+        // Drain last remaining encoded data and finalize the video file
+        drainEncoder(true)
+    }
 
     private suspend fun drainEncoder(endOfStream: Boolean) = withContext(Dispatchers.IO) {
         if (endOfStream) encoder.signalEndOfInputStream()
