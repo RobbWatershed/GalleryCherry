@@ -1,10 +1,10 @@
 package me.devsaki.hentoid.util.video
 
-import android.content.ContentResolver
 import android.content.Context
 import android.media.MediaCodec
 import android.media.MediaCodecInfo
 import android.media.MediaFormat
+import android.media.MediaFormat.MIMETYPE_VIDEO_AVC
 import android.media.MediaMuxer
 import android.net.Uri
 import android.opengl.EGL14
@@ -34,7 +34,7 @@ class VideoEncoder {
 
     private var outFileDescriptor: ParcelFileDescriptor? = null
 
-    private var mime = "video/avc"
+    private var mime = MIMETYPE_VIDEO_AVC
 
     private var trackIndex = -1
 
