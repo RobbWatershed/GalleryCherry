@@ -27,6 +27,7 @@ import kotlinx.io.IOException
 import me.devsaki.hentoid.util.image.getMediaDimensions
 import me.devsaki.hentoid.util.image.loadBitmap
 import timber.log.Timber
+import kotlin.math.roundToInt
 
 // Heavily inspired by https://github.com/sixo/vid-proc/blob/master/app/src/main/java/eu/sisik/vidproc/TimeLapseEncoder.kt
 class VideoEncoder {
@@ -45,9 +46,7 @@ class VideoEncoder {
     // Current video length, in microseconds
     private var presentationTimeUs = 0L
 
-    private var frameRate = 30
-
-    private val timeoutUs = 10000L
+    private val timeoutUs = 200 * 1000L // quality over speed; no frame drop ffs
 
     private val bufferInfo = MediaCodec.BufferInfo()
 
@@ -71,11 +70,12 @@ class VideoEncoder {
         context: Context,
         outUri: Uri,
         frames: List<Pair<Uri, Int>>,
+        quality: Float,
         isCanceled: () -> Boolean,
         onProgress: ((Float) -> Unit)? = null
     ) = withContext(Dispatchers.Default) {
         try {
-            val size = initEncoder(context, outUri, frames)
+            val size = initEncoder(context, outUri, frames, quality)
             encodeImages(context, size, frames, isCanceled, onProgress)
         } catch (e: Exception) {
             Timber.e(e, "Encoding failed")
@@ -87,7 +87,8 @@ class VideoEncoder {
     private suspend fun initEncoder(
         context: Context,
         outVideoUri: Uri,
-        frames: List<Pair<Uri, Int>>
+        frames: List<Pair<Uri, Int>>,
+        quality: Float
     ): Size {
         encoder = MediaCodec.createEncoderByType(mime)
 
@@ -95,7 +96,10 @@ class VideoEncoder {
         val size = getSupportedSize(context, frames[0].first)
         Timber.d("Using size ${size.width}x${size.height}")
 
-        val format = getFormat(size)
+        // Calculate max FPS given input frame values
+        val maxFps = frames.filterNot { 0 == it.second }.maxOf { 1000f / it.second.toFloat() }
+        Timber.d("Using maxFps=$maxFps; quality=$quality with ${frames.size} frames")
+        val format = createFormat(size, maxFps, quality)
 
         encoder.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
 
@@ -119,15 +123,15 @@ class VideoEncoder {
             return@withContext getBestSupportedResolution(encoder, mime, Size(dims.x, dims.y))
         }
 
-    private fun getFormat(size: Size): MediaFormat {
+    private fun createFormat(size: Size, maxFps: Float, quality: Float): MediaFormat {
         val format = MediaFormat.createVideoFormat(mime, size.width, size.height)
         format.setInteger(
             MediaFormat.KEY_COLOR_FORMAT,
             MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface
         )
-        format.setInteger(MediaFormat.KEY_BIT_RATE, 2000000)
-        format.setInteger(MediaFormat.KEY_FRAME_RATE, 60)
-        format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 15)
+        format.setInteger(MediaFormat.KEY_BIT_RATE, (3000000f * quality).roundToInt())
+        format.setInteger(MediaFormat.KEY_FRAME_RATE, maxFps.roundToInt())
+        format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, (maxFps / 2).roundToInt())
 
         return format
     }
@@ -198,57 +202,75 @@ class VideoEncoder {
         val renderer = TextureRenderer()
 
         var frameNum = 0
+        var framesMissed = 0
         for (frame in frames) {
             if (isCanceled.invoke()) break
-            frameNum++
+            try {
+                frameNum++
 
-            // Render the bitmap/texture here
-            loadBitmap(context, frame.first)?.let { bitmap ->
-                try {
-                    renderer.draw(size.width, size.height, bitmap, getMvp())
-                } finally {
-                    bitmap.recycle()
+                // Render the bitmap/texture here
+                loadBitmap(context, frame.first)?.let { bitmap ->
+                    try {
+                        renderer.draw(size.width, size.height, bitmap, getMvp())
+                    } finally {
+                        bitmap.recycle()
+                    }
+                } ?: throw IOException("Cannot open ${frame.first}")
+
+                EGLExt.eglPresentationTimeANDROID(
+                    eglDisplay, eglSurface,
+                    presentationTimeUs * 1000 // yes, those are nanoseconds
+                )
+
+                // Feed encoder with next frame produced by OpenGL
+                EGL14.eglSwapBuffers(eglDisplay, eglSurface)
+
+                // Get encoded data and feed it to muxer
+                val frameProcessed = drainEncoder(frameNum == frames.size, frame.second, frameNum)
+                if (!frameProcessed) {
+                    Timber.d("FRAME MISSED @$frameNum")
+                    framesMissed++
                 }
-            } ?: throw IOException("Cannot open ${frame.first}")
 
-            EGLExt.eglPresentationTimeANDROID(
-                eglDisplay, eglSurface,
-                presentationTimeUs * 1000 // yes, those are nanoseconds
-            )
-
-            // Feed encoder with next frame produced by OpenGL
-            EGL14.eglSwapBuffers(eglDisplay, eglSurface)
-
-            // Get encoded data and feed it to muxer
-            drainEncoder(frameNum == frames.size, frame.second)
-
-            onProgress?.apply {
-                if (0 == frameNum % 10) {
-                    // Handle notifications on another coroutine not to steal focus for unnecessary stuff
-                    GlobalScope.launch(Dispatchers.Default) {
-                        invoke(frameNum * 1f / frames.size)
+                onProgress?.apply {
+                    if (0 == frameNum % 10) {
+                        // Handle notifications on another coroutine not to steal focus for unnecessary stuff
+                        GlobalScope.launch(Dispatchers.Default) {
+                            invoke(frameNum * 1f / frames.size)
+                        }
                     }
                 }
+            } catch (e: Exception) {
+                Timber.w(e, "An issue occured while rendering frame $frameNum")
             }
         }
+        if (framesMissed > 0) Timber.w("Frames missed : $framesMissed")
     }
 
     private suspend fun drainEncoder(
         endOfStream: Boolean,
-        frameDurationMs : Int
-    ) = withContext(Dispatchers.IO) {
+        frameDurationMs: Int,
+        frameNum: Int
+    ): Boolean {
         if (endOfStream) encoder.signalEndOfInputStream()
+        Timber.d("drainEncoder 0 @$frameNum")
+        var isFrameProcessed = false
 
         while (true) {
             val outBufferId = encoder.dequeueOutputBuffer(bufferInfo, timeoutUs)
 
             if (outBufferId >= 0) {
+                Timber.d("drainEncoder 1 @$frameNum")
                 val encodedBuffer = encoder.getOutputBuffer(outBufferId) ?: break
+                Timber.d("drainEncoder 2 @$frameNum")
+                isFrameProcessed = true
 
                 // MediaMuxer is ignoring KEY_FRAMERATE, so I set it manually here
                 // to achieve the desired frame rate
                 bufferInfo.presentationTimeUs = presentationTimeUs
-                muxer?.writeSampleData(trackIndex, encodedBuffer, bufferInfo)
+                withContext(Dispatchers.IO) {
+                    muxer?.writeSampleData(trackIndex, encodedBuffer, bufferInfo)
+                }
 
                 presentationTimeUs += frameDurationMs * 1000
 
@@ -269,6 +291,7 @@ class VideoEncoder {
                 }
             }
         }
+        return isFrameProcessed
     }
 
     private fun getMvp(): FloatArray {

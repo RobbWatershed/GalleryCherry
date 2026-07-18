@@ -1549,6 +1549,7 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
                 applicationContext,
                 tempFile,
                 frames,
+                0.8f,
                 isCanceled = {
                     this.isStopped || downloadProcessStopped || ContentQueueManager.isQueuePaused
                 }
