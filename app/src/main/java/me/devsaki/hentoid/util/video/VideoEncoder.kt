@@ -197,13 +197,10 @@ class VideoEncoder {
         // Init OpenGL, once we have initialized context and surface
         val renderer = TextureRenderer()
 
-        var idx = 1
+        var frameNum = 0
         for (frame in frames) {
             if (isCanceled.invoke()) break
-            idx++
-
-            // Get encoded data and feed it to muxer
-            drainEncoder(false)
+            frameNum++
 
             // Render the bitmap/texture here
             loadBitmap(context, frame.first)?.let { bitmap ->
@@ -222,21 +219,24 @@ class VideoEncoder {
             // Feed encoder with next frame produced by OpenGL
             EGL14.eglSwapBuffers(eglDisplay, eglSurface)
 
+            // Get encoded data and feed it to muxer
+            drainEncoder(frameNum == frames.size, frame.second)
+
             onProgress?.apply {
-                if (0 == idx % 10) {
+                if (0 == frameNum % 10) {
                     // Handle notifications on another coroutine not to steal focus for unnecessary stuff
                     GlobalScope.launch(Dispatchers.Default) {
-                        invoke(idx * 1f / frames.size)
+                        invoke(frameNum * 1f / frames.size)
                     }
                 }
             }
         }
-
-        // Drain last remaining encoded data and finalize the video file
-        drainEncoder(true)
     }
 
-    private suspend fun drainEncoder(endOfStream: Boolean) = withContext(Dispatchers.IO) {
+    private suspend fun drainEncoder(
+        endOfStream: Boolean,
+        frameDurationMs : Int
+    ) = withContext(Dispatchers.IO) {
         if (endOfStream) encoder.signalEndOfInputStream()
 
         while (true) {
@@ -250,7 +250,7 @@ class VideoEncoder {
                 bufferInfo.presentationTimeUs = presentationTimeUs
                 muxer?.writeSampleData(trackIndex, encodedBuffer, bufferInfo)
 
-                presentationTimeUs += 1000000 / frameRate
+                presentationTimeUs += frameDurationMs * 1000
 
                 encoder.releaseOutputBuffer(outBufferId, false)
 
