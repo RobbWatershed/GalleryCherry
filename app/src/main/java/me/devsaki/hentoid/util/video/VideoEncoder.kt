@@ -18,8 +18,12 @@ import android.opengl.Matrix
 import android.os.ParcelFileDescriptor
 import android.util.Size
 import android.view.Surface
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.io.IOException
 import me.devsaki.hentoid.util.image.getMediaDimensions
 import me.devsaki.hentoid.util.image.loadBitmap
 import timber.log.Timber
@@ -47,8 +51,6 @@ class VideoEncoder {
 
     private val bufferInfo = MediaCodec.BufferInfo()
 
-    private var size: Size? = null
-
 
     // EGL
     private var eglDisplay: EGLDisplay? = null
@@ -71,10 +73,10 @@ class VideoEncoder {
         frames: List<Pair<Uri, Int>>,
         isCanceled: () -> Boolean,
         onProgress: ((Float) -> Unit)? = null
-    ) {
+    ) = withContext(Dispatchers.Default) {
         try {
-            initEncoder(context, outUri, frames)
-            encodeImages(context, frames, isCanceled, onProgress)
+            val size = initEncoder(context, outUri, frames)
+            encodeImages(context, size, frames, isCanceled, onProgress)
         } catch (e: Exception) {
             Timber.e(e, "Encoding failed")
         } finally {
@@ -86,13 +88,14 @@ class VideoEncoder {
         context: Context,
         outVideoUri: Uri,
         frames: List<Pair<Uri, Int>>
-    ) = withContext(Dispatchers.Default) {
+    ): Size {
         encoder = MediaCodec.createEncoderByType(mime)
 
         // Try to find supported size by checking the resolution of first supplied image
-        size = getSupportedSize(context, frames[0].first)
+        val size = getSupportedSize(context, frames[0].first)
+        Timber.d("Using size ${size.width}x${size.height}")
 
-        val format = getFormat(size!!)
+        val format = getFormat(size)
 
         encoder.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
 
@@ -107,6 +110,7 @@ class VideoEncoder {
         outFileDescriptor?.let {
             muxer = MediaMuxer(it.fileDescriptor, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
         }
+        return size
     }
 
     private suspend fun getSupportedSize(context: Context, inBitmapUri: Uri): Size =
@@ -182,29 +186,33 @@ class VideoEncoder {
             throw RuntimeException("eglMakeCurrent(): " + GLUtils.getEGLErrorString(EGL14.eglGetError()))
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     private suspend fun encodeImages(
         context: Context,
+        size: Size,
         frames: List<Pair<Uri, Int>>,
         isCanceled: () -> Boolean,
         onProgress: ((Float) -> Unit)? = null
-    ) = withContext(Dispatchers.Default) {
+    ) {
         // Init OpenGL, once we have initialized context and surface
         val renderer = TextureRenderer()
 
-        var idx = 1f
+        var idx = 1
         for (frame in frames) {
             if (isCanceled.invoke()) break
+            idx++
+
             // Get encoded data and feed it to muxer
             drainEncoder(false)
 
             // Render the bitmap/texture here
             loadBitmap(context, frame.first)?.let { bitmap ->
                 try {
-                    renderer.draw(size!!.width, size!!.height, bitmap, getMvp())
+                    renderer.draw(size.width, size.height, bitmap, getMvp())
                 } finally {
                     bitmap.recycle()
                 }
-            }
+            } ?: throw IOException("Cannot open ${frame.first}")
 
             EGLExt.eglPresentationTimeANDROID(
                 eglDisplay, eglSurface,
@@ -214,7 +222,14 @@ class VideoEncoder {
             // Feed encoder with next frame produced by OpenGL
             EGL14.eglSwapBuffers(eglDisplay, eglSurface)
 
-            onProgress?.invoke(idx++ / frames.size)
+            onProgress?.apply {
+                if (0 == idx % 10) {
+                    // Handle notifications on another coroutine not to steal focus for unnecessary stuff
+                    GlobalScope.launch(Dispatchers.Default) {
+                        invoke(idx * 1f / frames.size)
+                    }
+                }
+            }
         }
 
         // Drain last remaining encoded data and finalize the video file
@@ -265,6 +280,7 @@ class VideoEncoder {
     }
 
     private fun releaseEncoder() {
+        Timber.d("Releasing encoder")
         encoder.stop()
         encoder.release()
 
@@ -277,7 +293,6 @@ class VideoEncoder {
         outFileDescriptor?.close()
         outFileDescriptor = null
 
-        size = null
         trackIndex = -1
         presentationTimeUs = 0L
     }

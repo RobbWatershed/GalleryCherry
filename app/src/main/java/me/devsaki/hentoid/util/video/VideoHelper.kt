@@ -15,14 +15,11 @@ fun getBestSupportedResolution(
     mime: String,
     preferredResolution: Size
 ): Size {
+    val capabilities = mediaCodec.codecInfo.getCapabilitiesForType(mime).videoCapabilities
+        ?: throw RuntimeException("Unsupported size for MIME $mime : ${preferredResolution.width}x${preferredResolution.height}")
 
     // First check if exact combination supported
-    if (mediaCodec.codecInfo.getCapabilitiesForType(mime)
-            .videoCapabilities!!.isSizeSupported(
-                preferredResolution.width,
-                preferredResolution.height
-            )
-    )
+    if (capabilities.isSizeSupported(preferredResolution.width, preferredResolution.height))
         return preferredResolution
 
     // I try the resolutions suggested by docs for H.264 and VP8
@@ -55,12 +52,8 @@ fun getBestSupportedResolution(
             })
     )
 
-    for (size in nearestToFurthest) {
-        if (mediaCodec.codecInfo.getCapabilitiesForType(mime)
-                .videoCapabilities!!.isSizeSupported(size.width, size.height)
-        )
-            return size
-    }
+    for (size in nearestToFurthest)
+        if (capabilities.isSizeSupported(size.width, size.height)) return size
 
     throw RuntimeException("Couldn't find supported resolution")
 }
