@@ -1562,7 +1562,6 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
                     )
                 )
             } // TODO format choice in Settings
-            // TODO streamline interfaces between GIF and MP4 encoder
             // TODO animated webp?
 
             updateImageProperties(img, true, tempFile)

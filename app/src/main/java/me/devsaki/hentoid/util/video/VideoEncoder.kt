@@ -21,21 +21,26 @@ import android.view.Surface
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.io.IOException
 import me.devsaki.hentoid.util.image.getMediaDimensions
 import me.devsaki.hentoid.util.image.loadBitmap
 import timber.log.Timber
+import java.util.concurrent.Executors
 import kotlin.math.roundToInt
 
-// Heavily inspired by https://github.com/sixo/vid-proc/blob/master/app/src/main/java/eu/sisik/vidproc/TimeLapseEncoder.kt
+// Heavily inspired by
+//  https://github.com/sixo/vid-proc/blob/master/app/src/main/java/eu/sisik/vidproc/TimeLapseEncoder.kt
+//  https://bigflake.com/mediacodec/EncodeAndMuxTest.java.txt
 class VideoEncoder {
 
     // MediaCodec and encoding configuration
     private lateinit var encoder: MediaCodec
 
     private var muxer: MediaMuxer? = null
+    private var muxerStarted = false
 
     private var outFileDescriptor: ParcelFileDescriptor? = null
 
@@ -46,7 +51,7 @@ class VideoEncoder {
     // Current video length, in microseconds
     private var presentationTimeUs = 0L
 
-    private val timeoutUs = 200 * 1000L // quality over speed; no frame drop ffs
+    private val timeoutUs = 10000L
 
     private val bufferInfo = MediaCodec.BufferInfo()
 
@@ -65,6 +70,8 @@ class VideoEncoder {
 
     /**
      * @param frames Frames : first = Frame file Uri; second = Frame duration (ms)
+     *
+     * Making sure we're using a single computing thread as GLES context requires it
      */
     suspend fun encodeVideo(
         context: Context,
@@ -73,7 +80,7 @@ class VideoEncoder {
         quality: Float,
         isCanceled: () -> Boolean,
         onProgress: ((Float) -> Unit)? = null
-    ) = withContext(Dispatchers.Default) {
+    ) = withContext(Executors.newFixedThreadPool(1).asCoroutineDispatcher()) {
         try {
             val size = initEncoder(context, outUri, frames, quality)
             encodeImages(context, size, frames, isCanceled, onProgress)
@@ -114,6 +121,7 @@ class VideoEncoder {
         outFileDescriptor?.let {
             muxer = MediaMuxer(it.fileDescriptor, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
         }
+        muxerStarted = false
         return size
     }
 
@@ -186,8 +194,12 @@ class VideoEncoder {
         if (err != EGL14.EGL_SUCCESS)
             throw RuntimeException(GLUtils.getEGLErrorString(err))
 
-        if (!EGL14.eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext))
+        if (!makeCurrent())
             throw RuntimeException("eglMakeCurrent(): " + GLUtils.getEGLErrorString(EGL14.eglGetError()))
+    }
+
+    private fun makeCurrent(): Boolean {
+        return EGL14.eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext)
     }
 
     @OptIn(DelicateCoroutinesApi::class)
@@ -221,14 +233,16 @@ class VideoEncoder {
                     eglDisplay, eglSurface,
                     presentationTimeUs * 1000 // yes, those are nanoseconds
                 )
+                checkEglError("eglPresentationTimeANDROID")
 
                 // Feed encoder with next frame produced by OpenGL
                 EGL14.eglSwapBuffers(eglDisplay, eglSurface)
+                checkEglError("eglSwapBuffers")
 
                 // Get encoded data and feed it to muxer
-                val frameProcessed = drainEncoder(frameNum == frames.size, frame.second, frameNum)
+                val frameProcessed = drainEncoder(frameNum == frames.size, frameNum)
                 if (!frameProcessed) {
-                    Timber.d("FRAME MISSED @$frameNum")
+                    Timber.d("FRAME MISSED @$frameNum") // Not super reliable; encoder may just be waiting to flush its buffer
                     framesMissed++
                 }
 
@@ -240,16 +254,24 @@ class VideoEncoder {
                         }
                     }
                 }
+                presentationTimeUs += frame.second * 1000
             } catch (e: Exception) {
                 Timber.w(e, "An issue occured while rendering frame $frameNum")
+                framesMissed++
             }
         }
         if (framesMissed > 0) Timber.w("Frames missed : $framesMissed")
     }
 
+    private fun checkEglError(msg: String?) {
+        val error: Int
+        if ((EGL14.eglGetError().also { error = it }) != EGL14.EGL_SUCCESS) {
+            throw java.lang.RuntimeException(msg + ": EGL error: 0x" + Integer.toHexString(error))
+        }
+    }
+
     private suspend fun drainEncoder(
         endOfStream: Boolean,
-        frameDurationMs: Int,
         frameNum: Int
     ): Boolean {
         if (endOfStream) encoder.signalEndOfInputStream()
@@ -257,37 +279,66 @@ class VideoEncoder {
         var isFrameProcessed = false
 
         while (true) {
-            val outBufferId = encoder.dequeueOutputBuffer(bufferInfo, timeoutUs)
+            val encoderStatus = encoder.dequeueOutputBuffer(bufferInfo, timeoutUs)
 
-            if (outBufferId >= 0) {
-                Timber.d("drainEncoder 1 @$frameNum")
-                val encodedBuffer = encoder.getOutputBuffer(outBufferId) ?: break
-                Timber.d("drainEncoder 2 @$frameNum")
-                isFrameProcessed = true
+            if (encoderStatus == MediaCodec.INFO_TRY_AGAIN_LATER) {
+                // no output available yet
+                if (!endOfStream) {
+                    Timber.v("no output available")
+                    break      // out of while
+                } else {
+                    Timber.d("no output available, spinning to await EOS")
+                }
+            } else if (encoderStatus == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
+                // should happen before receiving buffers, and should only happen once
+                if (muxerStarted) throw RuntimeException("format changed twice")
 
-                // MediaMuxer is ignoring KEY_FRAMERATE, so I set it manually here
-                // to achieve the desired frame rate
-                bufferInfo.presentationTimeUs = presentationTimeUs
-                withContext(Dispatchers.IO) {
-                    muxer?.writeSampleData(trackIndex, encodedBuffer, bufferInfo)
+                val newFormat = encoder.outputFormat
+                Timber.d("encoder output format changed: $newFormat")
+
+                // Start the muxer for good
+                muxer?.apply {
+                    trackIndex = addTrack(newFormat)
+                    start()
+                    muxerStarted = true
+                } ?: throw RuntimeException("muxer should be initialized")
+            } else if (encoderStatus < 0) {
+                Timber.w("unexpected result from encoder.dequeueOutputBuffer: $encoderStatus")
+                // let's ignore it
+            } else {
+                val encodedData = encoder.getOutputBuffer(encoderStatus)
+                    ?: throw RuntimeException("encoderOutputBuffer $encoderStatus was null")
+
+                if ((bufferInfo.flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG) != 0) {
+                    // The codec config data was pulled out and fed to the muxer when we got
+                    // the INFO_OUTPUT_FORMAT_CHANGED status.  Ignore it.
+                    Timber.d("ignoring BUFFER_FLAG_CODEC_CONFIG")
+                    bufferInfo.size = 0
                 }
 
-                presentationTimeUs += frameDurationMs * 1000
+                if (bufferInfo.size != 0) {
+                    if (!muxerStarted) throw RuntimeException("muxer hasn't started")
 
-                encoder.releaseOutputBuffer(outBufferId, false)
+                    // adjust the ByteBuffer values to match BufferInfo (not needed?)
+                    encodedData.position(bufferInfo.offset)
+                    encodedData.limit(bufferInfo.offset + bufferInfo.size)
+                    isFrameProcessed = true
 
-                // Are we finished here?
-                if ((bufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0)
-                    break
-            } else if (outBufferId == MediaCodec.INFO_TRY_AGAIN_LATER) {
-                if (!endOfStream)
-                    break
+                    withContext(Dispatchers.IO) {
+                        muxer?.writeSampleData(trackIndex, encodedData, bufferInfo)
+                        Timber.d("sent ${bufferInfo.size} bytes to muxer")
+                    }
+                }
 
-                // End of stream, but still no output available. Try again.
-            } else if (outBufferId == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
-                muxer?.apply {
-                    trackIndex = addTrack(encoder.outputFormat)
-                    start()
+                encoder.releaseOutputBuffer(encoderStatus, false)
+
+                if ((bufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
+                    if (!endOfStream) {
+                        Timber.w("reached end of stream unexpectedly")
+                    } else {
+                        Timber.d("end of stream reached")
+                    }
+                    break      // out of while
                 }
             }
         }
@@ -312,6 +363,7 @@ class VideoEncoder {
         muxer?.stop()
         muxer?.release()
         muxer = null
+        muxerStarted = false
 
         outFileDescriptor?.close()
         outFileDescriptor = null
