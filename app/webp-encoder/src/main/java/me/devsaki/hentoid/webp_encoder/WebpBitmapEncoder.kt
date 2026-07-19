@@ -38,6 +38,8 @@ class WebpBitmapEncoder(uri: Uri, resolver: ContentResolver) : Closeable {
         _muxer.setBg(bg)
     }
 
+
+
     /**
      * @param compress 100 for lossless; <100 for lossy
      */

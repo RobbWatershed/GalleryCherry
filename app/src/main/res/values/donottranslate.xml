@@ -129,6 +129,11 @@
         <item>@string/pref_queue_new_position_entries_2</item>
         <item>@string/pref_queue_new_position_entries_3</item>
     </string-array>
+    <string-array name="pref_dl_animation_format_entries" translatable="false">
+        <item>GIF</item>
+        <item>WEBP</item>
+        <item>AVC (MP4)</item>
+    </string-array>
     <string-array name="pref_dl_skip_large_size_threshold_entries" translatable="false">
         <item>@string/pref_dl_skip_large_size_threshold_entries_1</item>
         <item>@string/pref_dl_skip_large_size_threshold_entries_2</item>
@@ -493,7 +498,8 @@
         <item>ZIP</item>
         <item>CBZ</item>
         <item>PDF</item>
-    </string-array>*
+    </string-array>
+    *
     <string-array name="background_color_entries" translatable="false">
         <item>@string/white</item>
         <item>@string/light_grey</item>
@@ -628,6 +634,8 @@
     <string name="pref_dl_http_429_default_delay_default" translatable="false">120</string>
     <string name="pref_dl_separate_thumb" translatable="false">true</string>
     <string name="pref_dl_404_default" translatable="false">0</string>
+    <string name="pref_dl_animation_format_default" translatable="false">1</string>
+    <string name="pref_dl_animation_quality_default" translatable="false">80</string>
     <!-- Strings: Settings: Privacy -->
     <string name="pref_app_preview_default" translatable="false">false</string>
     <string name="pref_analytics_preference_default" translatable="false">true</string>

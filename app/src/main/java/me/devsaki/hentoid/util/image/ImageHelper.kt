@@ -21,7 +21,6 @@ import androidx.core.net.toUri
 import com.awxkee.jxlcoder.JxlCoder
 import com.radzivon.bartoshyk.avif.coder.HeifCoder
 import com.radzivon.bartoshyk.avif.coder.PreferredColorConfig
-import com.shakster.gifkt.GifEncoder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import me.devsaki.hentoid.core.CHARSET_LATIN_1
@@ -31,15 +30,12 @@ import me.devsaki.hentoid.util.duplicateInputStream
 import me.devsaki.hentoid.util.file.FILECHUNK_AUTHORITY
 import me.devsaki.hentoid.util.file.FileChunkInfo
 import me.devsaki.hentoid.util.file.NameFilter
-import me.devsaki.hentoid.util.file.createFile
 import me.devsaki.hentoid.util.file.fileExists
 import me.devsaki.hentoid.util.file.findSequencePosition
 import me.devsaki.hentoid.util.file.getExtension
 import me.devsaki.hentoid.util.file.getExtensionFromMimeType
 import me.devsaki.hentoid.util.file.getInputStream
 import me.devsaki.hentoid.util.file.getMimeTypeFromFileUri
-import me.devsaki.hentoid.util.file.getOutputStream
-import me.devsaki.hentoid.util.file.removeFile
 import me.devsaki.hentoid.util.network.getExtensionFromUri
 import me.devsaki.hentoid.util.startsWith
 import me.devsaki.hentoid.util.video.MIME_VIDEO_MP4
@@ -51,8 +47,6 @@ import kotlin.math.abs
 import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.roundToInt
-import kotlin.time.DurationUnit
-import kotlin.time.toDuration
 
 
 const val PIXEL_BUFFER_HEIGHT = 1024
@@ -364,71 +358,6 @@ suspend fun decodeSampledBitmapFromStream(
 }
 
 /**
- * Create GIF file by assembling the given files into frames
- *
- * @param folder Temp folder where the GIF file is assembled
- * @param frames Frames : first = Frame file Uri; second = Frame duration (ms)
- *
- * @return Uri of generated GIF file
- */
-@Throws(IOException::class, IllegalArgumentException::class)
-suspend fun assembleGif(
-    context: Context,
-    folder: Uri,
-    name: String,
-    frames: List<Pair<Uri, Int>>,
-    isCanceled: () -> Boolean,
-    onProgress: ((Float) -> Unit)? = null
-): Uri? {
-    require(frames.isNotEmpty()) { "No frames given" }
-    require(!isCanceled.invoke())
-    val dims = getMediaDimensions(context, frames[0].first.toString())
-    val buffer = IntArray(dims.x * dims.y)
-
-    val tempFile = createFile(context, folder, "$name.gif", MIME_IMAGE_GIF)
-    getOutputStream(context, tempFile)?.use { out ->
-        val gifEncoderBuilder = GifEncoder.builder(out)
-        gifEncoderBuilder.minimumFrameDurationCentiseconds = 1
-
-        val gifEncoder = gifEncoderBuilder.build { framesWritten, writtenDuration ->
-            Timber.d("framesWritten=$framesWritten writtenDuration=$writtenDuration")
-        }
-        gifEncoder.use {
-            frames.forEachIndexed { idx, frame ->
-                if (isCanceled.invoke()) return@forEachIndexed
-                Timber.d("encoding frame $idx [duration ${frame.second} ms]")
-                getInputStream(context, frame.first).use { input ->
-                    decodeBitmap(
-                        input,
-                        getMimeTypeFromFileUri(frame.first.toString()),
-                        Bitmap.Config.ARGB_8888
-                    )?.let { bmp ->
-                        bmp.getPixels(buffer, 0, dims.x, 0, 0, dims.x, dims.y)
-                        try {
-                            gifEncoder.writeFrame(
-                                buffer,
-                                dims.x,
-                                dims.y,
-                                // Warning : if frame.second is <= 1ms, GIFs will be read slower on most readers
-                                // (see https://android.googlesource.com/platform/frameworks/base/+/2be87bb707e2c6d75f668c4aff6697b85fbf5b15)
-                                frame.second.toDuration(DurationUnit.MILLISECONDS)
-                            )
-                        } finally {
-                            bmp.recycle()
-                        }
-                    }
-                }
-                onProgress?.invoke(idx / frames.size.toFloat())
-            }
-        }
-    }
-    if (isCanceled.invoke()) {
-        removeFile(context, tempFile)
-        return null
-    } else return tempFile
-}
-
-/**
  * Return the scaled down version of the given bitmap. Useful to create thumbnails.
  *
  * @param bitmap    the Bitmap to be scaled
@@ -658,11 +587,13 @@ private fun getDimsFromThirdParty(ext: String, rawData: ByteArray): Point {
 suspend fun loadBitmap(context: Context, uri: Uri): Bitmap? = withContext(Dispatchers.IO) {
     if (!fileExists(context, uri)) return@withContext null
     return@withContext try {
-        decodeBitmap(
-            getInputStream(context, uri),
-            getMimeTypeFromFileUri(uri.toString()),
-            Bitmap.Config.ARGB_8888
-        )
+        getInputStream(context, uri).use { input ->
+            decodeBitmap(
+                input,
+                getMimeTypeFromFileUri(uri.toString()),
+                Bitmap.Config.ARGB_8888
+            )
+        }
     } catch (e: Exception) {
         Timber.w(e)
         null

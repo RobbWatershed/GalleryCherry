@@ -3,11 +3,23 @@ package me.devsaki.hentoid.util.video
 import android.media.MediaCodec
 import android.util.Size
 import me.devsaki.hentoid.core.CHARSET_LATIN_1
+import me.devsaki.hentoid.util.Settings
 import kotlin.math.absoluteValue
 
 const val MIME_VIDEO_MP4 = "video/mp4"
 
 val MP4_SIGNATURE = "ftyp".toByteArray(CHARSET_LATIN_1)
+
+/**
+ * @param format As defined in Settings.Values.ANIM_ constants
+ */
+fun getAnimationEncoder(format: Int): AnimationEncoder {
+    return when (format) {
+        Settings.Value.ANIM_WEBP -> WebpEncoder()
+        Settings.Value.ANIM_AVC -> VideoEncoder()
+        else -> GifEncoder()
+    }
+}
 
 // From https://github.com/sixo/vid-proc/blob/master/app/src/main/java/eu/sisik/vidproc/Utils.kt
 fun getBestSupportedResolution(

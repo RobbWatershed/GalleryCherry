@@ -2,6 +2,7 @@ package me.devsaki.hentoid.workers
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.media.MediaFormat.MIMETYPE_VIDEO_AVC
 import android.net.Uri
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
@@ -72,13 +73,15 @@ import me.devsaki.hentoid.util.file.createFile
 import me.devsaki.hentoid.util.file.extractArchiveEntries
 import me.devsaki.hentoid.util.file.fileSizeFromUri
 import me.devsaki.hentoid.util.file.formatHumanReadableSize
+import me.devsaki.hentoid.util.file.getExtensionFromMimeType
 import me.devsaki.hentoid.util.file.getOrCreateCacheFolder
 import me.devsaki.hentoid.util.file.getOutputStream
+import me.devsaki.hentoid.util.file.removeFile
 import me.devsaki.hentoid.util.getContainingFolder
+import me.devsaki.hentoid.util.image.MIME_IMAGE_GIF
 import me.devsaki.hentoid.util.image.MIME_IMAGE_WEBP
 import me.devsaki.hentoid.util.image.bitmapToWebp
 import me.devsaki.hentoid.util.image.getBitmapFromVectorDrawable
-import me.devsaki.hentoid.util.image.loadBitmap
 import me.devsaki.hentoid.util.image.tintBitmap
 import me.devsaki.hentoid.util.jsonToObject
 import me.devsaki.hentoid.util.moveContentToCustomGroup
@@ -101,7 +104,7 @@ import me.devsaki.hentoid.util.persistJson
 import me.devsaki.hentoid.util.removeContent
 import me.devsaki.hentoid.util.serializeToJson
 import me.devsaki.hentoid.util.updateQueueJson
-import me.devsaki.hentoid.webp_encoder.WebpBitmapEncoder
+import me.devsaki.hentoid.util.video.getAnimationEncoder
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import timber.log.Timber
@@ -1521,90 +1524,44 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
                 DownloadEvent.fromPreparationStep(DownloadEvent.Step.ENCODE_ANIMATION, content)
             )
 
-            // Assemble the GIF
-            /*
-            val ugoiraGifFile = assembleGif(
-                applicationContext,
-                downloadFolder,
-                img.name,
-                frames,
-                isCanceled = {
-                    this.isStopped || downloadProcessStopped || ContentQueueManager.isQueuePaused
-                }
-            ) { f ->
-                EventBus.getDefault().post(
-                    DownloadEvent(
-                        eventType = DownloadEvent.Type.EV_PROGRESS,
-                        step = DownloadEvent.Step.ENCODE_ANIMATION,
-                        fileDownloadProgress = f * 100
-                    )
-                )
-            } ?: throw IOException("Couldn't assemble ugoira file")
-             */
-
-            /*
-                        val encoder = VideoEncoder()
-                        val tempFile = createFile(
-                            applicationContext, downloadFolder, "${img.name}.mp4",
-                            MIME_VIDEO_MP4
-                        )
-                        encoder.encodeVideo(
-                            applicationContext,
-                            tempFile,
-                            frames,
-                            0.8f,
-                            isCanceled = {
-                                this.isStopped || downloadProcessStopped || ContentQueueManager.isQueuePaused
-                            }
-                        ) { f ->
-                            EventBus.getDefault().post(
-                                DownloadEvent(
-                                    eventType = DownloadEvent.Type.EV_PROGRESS,
-                                    step = DownloadEvent.Step.ENCODE_ANIMATION,
-                                    fileDownloadProgress = f * 100
-                                )
-                            )
-                        }
-             */
+            val targetMime = when (Settings.downloadAnimationFormat) {
+                Settings.Value.ANIM_WEBP -> MIME_IMAGE_WEBP
+                Settings.Value.ANIM_AVC -> MIMETYPE_VIDEO_AVC
+                else -> MIME_IMAGE_GIF
+            }
+            val targetExt = getExtensionFromMimeType(targetMime)
+            val targetQuality = Settings.downloadAnimationQuality.coerceIn(0, 100)
 
             val tempFile = createFile(
-                applicationContext, downloadFolder, "${img.name}.webp",
-                MIME_IMAGE_WEBP
+                applicationContext, downloadFolder, "${img.name}.$targetExt",
+                targetMime
             )
-            WebpBitmapEncoder(tempFile, applicationContext.contentResolver).use { encoder ->
-                encoder.setLoops(0)
-                var frameNum = 0
-                for (frame in frames) {
-                    if (this.isStopped || downloadProcessStopped || ContentQueueManager.isQueuePaused) break
-                    frameNum++
-                    encoder.setDuration(frame.second)
-                    loadBitmap(applicationContext, frame.first)?.let { bitmap ->
-                        try {
-                            encoder.writeFrame(bitmap, 80)
-                        } finally {
-                            bitmap.recycle()
-                        }
-                    } ?: run {
-                        Timber.w("Cannot open ${frame.first}")
+            getAnimationEncoder(Settings.downloadAnimationFormat).use { encoder ->
+                encoder.encode(
+                    applicationContext,
+                    tempFile,
+                    frames,
+                    targetQuality.toFloat() / 100f,
+                    isCanceled = {
+                        this.isStopped || downloadProcessStopped || ContentQueueManager.isQueuePaused
                     }
-                    if (0 == frameNum % 10) {
-                        // Handle notifications on another coroutine not to steal focus for unnecessary stuff
-                        GlobalScope.launch(Dispatchers.Default) {
-                            EventBus.getDefault().post(
-                                DownloadEvent(
-                                    eventType = DownloadEvent.Type.EV_PROGRESS,
-                                    step = DownloadEvent.Step.ENCODE_ANIMATION,
-                                    fileDownloadProgress = frameNum * 100f / frames.size
-                                )
+                ) { f ->
+                    GlobalScope.launch(Dispatchers.Default) {
+                        EventBus.getDefault().post(
+                            DownloadEvent(
+                                eventType = DownloadEvent.Type.EV_PROGRESS,
+                                step = DownloadEvent.Step.ENCODE_ANIMATION,
+                                fileDownloadProgress = f * 100
                             )
-                        }
+                        )
                     }
                 }
             }
 
-            // TODO format choice in Settings
-            if (this.isStopped || downloadProcessStopped || ContentQueueManager.isQueuePaused)
+            if (this.isStopped || downloadProcessStopped || ContentQueueManager.isQueuePaused) {
+                removeFile(applicationContext, tempFile)
                 throw RuntimeException("Animation assembly has been interrupted")
+            }
 
             updateImageProperties(img, true, tempFile)
 

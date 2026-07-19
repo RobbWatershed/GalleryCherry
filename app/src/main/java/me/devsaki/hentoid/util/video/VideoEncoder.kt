@@ -18,11 +18,8 @@ import android.opengl.Matrix
 import android.os.ParcelFileDescriptor
 import android.util.Size
 import android.view.Surface
-import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.asCoroutineDispatcher
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.io.IOException
 import me.devsaki.hentoid.util.image.getMediaDimensions
@@ -34,7 +31,7 @@ import kotlin.math.roundToInt
 // Heavily inspired by
 //  https://github.com/sixo/vid-proc/blob/master/app/src/main/java/eu/sisik/vidproc/TimeLapseEncoder.kt
 //  https://bigflake.com/mediacodec/EncodeAndMuxTest.java.txt
-class VideoEncoder {
+class VideoEncoder : AnimationEncoder {
 
     // MediaCodec and encoding configuration
     private lateinit var encoder: MediaCodec
@@ -73,22 +70,16 @@ class VideoEncoder {
      *
      * Making sure we're using a single computing thread as GLES context requires it
      */
-    suspend fun encodeVideo(
+    override suspend fun encode(
         context: Context,
         outUri: Uri,
         frames: List<Pair<Uri, Int>>,
         quality: Float,
         isCanceled: () -> Boolean,
-        onProgress: ((Float) -> Unit)? = null
+        onProgress: ((Float) -> Unit)?
     ) = withContext(Executors.newFixedThreadPool(1).asCoroutineDispatcher()) {
-        try {
-            val size = initEncoder(context, outUri, frames, quality)
-            encodeImages(context, size, frames, isCanceled, onProgress)
-        } catch (e: Exception) {
-            Timber.e(e, "Encoding failed")
-        } finally {
-            releaseEncoder()
-        }
+        val size = initEncoder(context, outUri, frames, quality)
+        encodeImages(context, size, frames, isCanceled, onProgress)
     }
 
     private suspend fun initEncoder(
@@ -202,7 +193,6 @@ class VideoEncoder {
         return EGL14.eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext)
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
     private suspend fun encodeImages(
         context: Context,
         size: Size,
@@ -249,9 +239,7 @@ class VideoEncoder {
                 onProgress?.apply {
                     if (0 == frameNum % 10) {
                         // Handle notifications on another coroutine not to steal focus for unnecessary stuff
-                        GlobalScope.launch(Dispatchers.Default) {
-                            invoke(frameNum * 1f / frames.size)
-                        }
+                        invoke(frameNum * 1f / frames.size)
                     }
                 }
                 presentationTimeUs += frame.second * 1000
@@ -353,7 +341,7 @@ class VideoEncoder {
         return mvp
     }
 
-    private fun releaseEncoder() {
+    override fun close() {
         Timber.d("Releasing encoder")
         encoder.stop()
         encoder.release()

@@ -385,6 +385,8 @@ object Settings {
     var isAppThumbSeparateFile: Boolean by BoolSetting("pref_dl_separate_thumb", true)
     val download404Mode: Int by IntSettingStr("pref_dl_404", 0)
     val isKemonoHiRes: Boolean by BoolSetting("pref_dl_kemono_hires", false)
+    val downloadAnimationFormat: Int by IntSettingStr("pref_dl_animation_format", Value.ANIM_WEBP)
+    val downloadAnimationQuality: Int by IntSettingStr("pref_dl_animation_quality", 80)
 
 
     // READER
@@ -949,6 +951,10 @@ object Settings {
         const val DL_404_ERROR = 0
         const val DL_404_PLACEHOLDER = 1
         const val DL_404_IGNORE = 2
+
+        const val ANIM_GIF = 0
+        const val ANIM_WEBP = 1
+        const val ANIM_AVC = 2
 
 
         const val VIEWER_DISPLAY_FIT = 0
