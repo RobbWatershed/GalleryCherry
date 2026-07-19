@@ -98,6 +98,7 @@ android {
 dependencies {
     implementation project(path: ':app:gles-renderer')
     implementation project(path: ':app:customssiv')
+    implementation project(path: ':app:webp-encoder')
     implementation files('../ai-upscale/ai-upscale.aar')
 
     def includeObjectBoxBrowser = System.getenv("INCLUDE_OBJECTBOX_BROWSER") ?: "false"

@@ -45,7 +45,7 @@ class WebpContainerWriter(val outputStream: SeekableOutputStream) {
 
     @Throws(IOException::class)
     fun write(chunk: WebpChunk) {
-        Timber.d("Writting type ${chunk.type}")
+        Timber.v("Writting type ${chunk.type}")
         when (chunk.type) {
             WebpChunkType.VP8L -> writePayloadChunk(
                 chunk,
@@ -89,7 +89,7 @@ class WebpContainerWriter(val outputStream: SeekableOutputStream) {
         // |Rsv|I|L|E|X|A|R|                   Reserved                    |
         // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
         // |7|6|5|4|3|2|1|0|
-        Timber.i(" writeVp8x() hasAnim ${chunk.hasAnim}, hasAlpha ${chunk.hasAlpha}")
+        Timber.d(" writeVp8x() hasAnim ${chunk.hasAnim}, hasAlpha ${chunk.hasAlpha}")
         // 0 R (reserved)
         bs.set(1, chunk.hasAnim) // A hasAnim
         bs.set(2, chunk.hasXmp) // X hasXmp
@@ -101,8 +101,8 @@ class WebpContainerWriter(val outputStream: SeekableOutputStream) {
         // TODO: canvas is 0 as not its not coming from encoder callee
         // so using height or width +1. +1 to maintain original scale.
         // // till now it worked with few animatedimages
-        Timber.i("chunk 🏁🏁🏁🏁::::::::: chunk.canvasHeight %s", chunk.canvasHeight)
-        Timber.i("chunk 🏁🏁🏁🏁::::::::: chunk.canvasWidth %s", chunk.canvasWidth)
+        Timber.d("chunk 🏁🏁🏁🏁::::::::: chunk.canvasHeight %s", chunk.canvasHeight)
+        Timber.d("chunk 🏁🏁🏁🏁::::::::: chunk.canvasWidth %s", chunk.canvasWidth)
         write(bitSetToBytes(bs, 4))
         writeUInt24(chunk.width)
         writeUInt24(chunk.height)
@@ -126,7 +126,7 @@ class WebpContainerWriter(val outputStream: SeekableOutputStream) {
 
     @Throws(IOException::class)
     private fun writeAnmf(chunk: WebpChunk) {
-        Timber.i("writeAnmf() ")
+        Timber.d("writeAnmf() ")
         write(
             byteArrayOf(
                 'A'.code.toByte(),
@@ -136,11 +136,11 @@ class WebpContainerWriter(val outputStream: SeekableOutputStream) {
             )
         )
 
-        var ALPHSize = 0
-        if (chunk.alphaData.isNotEmpty()) ALPHSize = 8 + chunk.alphaData.size
+        var alphSize = 0
+        if (chunk.alphaData.isNotEmpty()) alphSize = 8 + chunk.alphaData.size
 
         // FourC + Size Holder + Payload Length
-        writeUInt32(chunk.payload.size + 24 + ALPHSize)
+        writeUInt32(chunk.payload.size + 24 + alphSize)
 
         writeUInt24(chunk.x) // 3 bytes (3)
         writeUInt24(chunk.y) // 3 bytes (6)

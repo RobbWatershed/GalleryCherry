@@ -78,6 +78,7 @@ import me.devsaki.hentoid.util.getContainingFolder
 import me.devsaki.hentoid.util.image.MIME_IMAGE_WEBP
 import me.devsaki.hentoid.util.image.bitmapToWebp
 import me.devsaki.hentoid.util.image.getBitmapFromVectorDrawable
+import me.devsaki.hentoid.util.image.loadBitmap
 import me.devsaki.hentoid.util.image.tintBitmap
 import me.devsaki.hentoid.util.jsonToObject
 import me.devsaki.hentoid.util.moveContentToCustomGroup
@@ -100,8 +101,7 @@ import me.devsaki.hentoid.util.persistJson
 import me.devsaki.hentoid.util.removeContent
 import me.devsaki.hentoid.util.serializeToJson
 import me.devsaki.hentoid.util.updateQueueJson
-import me.devsaki.hentoid.util.video.MIME_VIDEO_MP4
-import me.devsaki.hentoid.util.video.VideoEncoder
+import me.devsaki.hentoid.webp_encoder.WebpBitmapEncoder
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import timber.log.Timber
@@ -281,7 +281,7 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
             return Pair(QueuingResult.QUEUE_END, null)
         }
 
-        // Check for wifi if wifi-only mode is on
+        // Check for Wi-Fi if wifi-only mode is on
         if (Settings.isQueueWifiOnly && Connectivity.WIFI != connectivity) {
             Timber.i("No wi-fi connection available. Queue paused.")
             EventBus.getDefault()
@@ -344,9 +344,9 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
         // == PREPARATION PHASE ==
         // Parse images from the site (using image list parser)
         //   - Case 1 : If no image is present => parse all images
-        //   - Case 2 : If all images are in ERROR state => re-parse all images
+        //   - Case 2 : If all images are in ERROR state => reparse all images
         //   - Case 3 : If some images are in ERROR state and the site has backup URLs
-        //     => re-parse images with ERROR state using their order as reference
+        //     => reparse images with ERROR state using their order as reference
         //   - Case 4 : If the book is merged and some chapters have zero images
         //     (equivalent to case 1 for chapters) => parse all images from these chapters
         EventBus.getDefault()
@@ -479,7 +479,7 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
         }
 
         // In case the download has been canceled while in preparation phase
-        // NB : No log of any sort because this is normal behaviour
+        // NB : No log of any sort because this is normal behavior
         if (downloadProcessStopped) return Pair(QueuingResult.CONTENT_SKIPPED, null)
         EventBus.getDefault()
             .post(DownloadEvent.fromPreparationStep(DownloadEvent.Step.PREPARE_FOLDER, content))
@@ -543,7 +543,7 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
         requestQueueManager.start()
 
         // In case the download has been canceled while in preparation phase
-        // NB : No log of any sort because this is normal behaviour
+        // NB : No log of any sort because this is normal behavior
         if (downloadProcessStopped) return Pair(QueuingResult.CONTENT_SKIPPED, null)
         val pagesToParse: MutableList<ImageFile> = ArrayList()
         val ugoirasToDownload: MutableList<ImageFile> = ArrayList()
@@ -1438,6 +1438,7 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
      * @param img             Link to the Ugoira file
      * @param site            Correponding site
      */
+    @OptIn(DelicateCoroutinesApi::class)
     private suspend fun downloadAndUnzipUgoira(
         content: Content,
         img: ImageFile,
@@ -1540,29 +1541,70 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
                 )
             } ?: throw IOException("Couldn't assemble ugoira file")
              */
-            val encoder = VideoEncoder()
+
+            /*
+                        val encoder = VideoEncoder()
+                        val tempFile = createFile(
+                            applicationContext, downloadFolder, "${img.name}.mp4",
+                            MIME_VIDEO_MP4
+                        )
+                        encoder.encodeVideo(
+                            applicationContext,
+                            tempFile,
+                            frames,
+                            0.8f,
+                            isCanceled = {
+                                this.isStopped || downloadProcessStopped || ContentQueueManager.isQueuePaused
+                            }
+                        ) { f ->
+                            EventBus.getDefault().post(
+                                DownloadEvent(
+                                    eventType = DownloadEvent.Type.EV_PROGRESS,
+                                    step = DownloadEvent.Step.ENCODE_ANIMATION,
+                                    fileDownloadProgress = f * 100
+                                )
+                            )
+                        }
+             */
+
             val tempFile = createFile(
-                applicationContext, downloadFolder, "${img.name}.mp4",
-                MIME_VIDEO_MP4
+                applicationContext, downloadFolder, "${img.name}.webp",
+                MIME_IMAGE_WEBP
             )
-            encoder.encodeVideo(
-                applicationContext,
-                tempFile,
-                frames,
-                0.8f,
-                isCanceled = {
-                    this.isStopped || downloadProcessStopped || ContentQueueManager.isQueuePaused
+            WebpBitmapEncoder(tempFile, applicationContext.contentResolver).use { encoder ->
+                encoder.setLoops(0)
+                var frameNum = 0
+                for (frame in frames) {
+                    if (this.isStopped || downloadProcessStopped || ContentQueueManager.isQueuePaused) break
+                    frameNum++
+                    encoder.setDuration(frame.second)
+                    loadBitmap(applicationContext, frame.first)?.let { bitmap ->
+                        try {
+                            encoder.writeFrame(bitmap, 80)
+                        } finally {
+                            bitmap.recycle()
+                        }
+                    } ?: run {
+                        Timber.w("Cannot open ${frame.first}")
+                    }
+                    if (0 == frameNum % 10) {
+                        // Handle notifications on another coroutine not to steal focus for unnecessary stuff
+                        GlobalScope.launch(Dispatchers.Default) {
+                            EventBus.getDefault().post(
+                                DownloadEvent(
+                                    eventType = DownloadEvent.Type.EV_PROGRESS,
+                                    step = DownloadEvent.Step.ENCODE_ANIMATION,
+                                    fileDownloadProgress = frameNum * 100f / frames.size
+                                )
+                            )
+                        }
+                    }
                 }
-            ) { f ->
-                EventBus.getDefault().post(
-                    DownloadEvent(
-                        eventType = DownloadEvent.Type.EV_PROGRESS,
-                        step = DownloadEvent.Step.ENCODE_ANIMATION,
-                        fileDownloadProgress = f * 100
-                    )
-                )
-            } // TODO format choice in Settings
-            // TODO animated webp?
+            }
+
+            // TODO format choice in Settings
+            if (this.isStopped || downloadProcessStopped || ContentQueueManager.isQueuePaused)
+                throw RuntimeException("Animation assembly has been interrupted")
 
             updateImageProperties(img, true, tempFile)
 

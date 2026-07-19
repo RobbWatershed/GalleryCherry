@@ -5,6 +5,7 @@ import me.devsaki.hentoid.webp_encoder.utils.WebpChunk
 import me.devsaki.hentoid.webp_encoder.utils.WebpChunkType
 import timber.log.Timber
 import java.io.ByteArrayOutputStream
+import java.io.Closeable
 import java.io.IOException
 import java.io.InputStream
 import java.nio.ByteBuffer
@@ -12,13 +13,12 @@ import java.nio.ByteOrder
 import java.util.BitSet
 
 // Credits go to https://github.com/KishorJena/Webp_Transcoder
-class WebpContainerReader(val inputStream: InputStream, val debug: Boolean) {
-    private val _inputStream: InputStream? = null
+class WebpContainerReader(val inputStream: InputStream, val debug: Boolean) : Closeable {
     private var _fileSize = 0
     private var _offset = 0
 
     @Throws(IOException::class)
-    fun close() {
+    override fun close() {
 //		_inputStream.close();
     }
 
@@ -40,7 +40,7 @@ class WebpContainerReader(val inputStream: InputStream, val debug: Boolean) {
         val fcc = ByteArray(4)
 
         if (read(fcc, 4) > 0) {
-            Timber.d("read() 4C - " + String(fcc))
+            Timber.v("read() 4C - " + String(fcc))
             if (isFourCc(fcc, 'V', 'P', '8', 'X')) {
                 return readVp8x()
             }
@@ -69,7 +69,7 @@ class WebpContainerReader(val inputStream: InputStream, val debug: Boolean) {
             try {
                 readUnknown(fcc)
                 //				Logs.w(this,"readUnknown() - "+new String(fcc));
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 throw IOException(
                     String.format(
                         "Not supported FourCC: %c.%c.%c.%c.",
@@ -92,12 +92,7 @@ class WebpContainerReader(val inputStream: InputStream, val debug: Boolean) {
     @Throws(IOException::class)
     private fun readUnknown(fcc: ByteArray?): WebpChunk {
         val chunkSize = readUInt32()
-        val payload = readPayload(chunkSize)
-
-        if (payload.size < 0) {
-            throw IOException("Invalid chunk size")
-        }
-
+        readPayload(chunkSize)
         return WebpChunk(WebpChunkType.UNKNOWN)
     }
 
@@ -106,7 +101,7 @@ class WebpContainerReader(val inputStream: InputStream, val debug: Boolean) {
         val chunkSize = readUInt32()
         if (chunkSize != 10) throw IOException("Expected 10 bytes for VP8X.")
 
-        val chunk: WebpChunk = WebpChunk(WebpChunkType.VP8X)
+        val chunk = WebpChunk(WebpChunkType.VP8X)
 
         val flags = ByteArray(4)
         read(flags, 4)
@@ -119,41 +114,39 @@ class WebpContainerReader(val inputStream: InputStream, val debug: Boolean) {
         chunk.hasAlpha = bs.get(4) // L Alpha
         chunk.hasIccp = bs.get(5) // I ICCP
 
-        Timber.i("vp8x-bs: %s", bs)
+        Timber.v("vp8x-bs: $bs")
 
         chunk.canvasWidth = readUInt24()
         chunk.canvasHeight = readUInt24()
         chunk.flags = flags
 
-        //		Logs.enable(this);
-        Timber.i(
-            "canvasWidth " + chunk.canvasWidth + " chunk.canvasHeight " + chunk.canvasHeight
+        Timber.d(
+            "canvasWidth ${chunk.canvasWidth} chunk.canvasHeight ${chunk.canvasHeight}"
         )
 
-        Timber.d(String.format("VP8X: size = %dx%d", chunk.width, chunk.height))
+        Timber.v("VP8X: size = ${chunk.width}x${chunk.height}")
         return chunk
     }
 
     @Throws(IOException::class)
     private fun readAnim(): WebpChunk {
-//		Logs.e(this," ANIM- ");
         val chunkSize = readUInt32()
         if (chunkSize != 6) throw IOException("Expected 6 bytes for ANIM.")
 
-        val chunk: WebpChunk = WebpChunk(WebpChunkType.ANIM)
+        val chunk = WebpChunk(WebpChunkType.ANIM)
         chunk.background = readUInt32()
         chunk.loops = readUInt16()
 
-        Timber.i("anim-bg: " + chunk.background + ", color.trans->" + Color.TRANSPARENT)
-        Timber.d(String.format("ANIM: loops = %d", chunk.loops))
+        Timber.d("anim-bg: " + chunk.background + ", color.trans->" + Color.TRANSPARENT)
+        Timber.v("ANIM: loops = ${chunk.loops}")
         return chunk
     }
 
     @Throws(IOException::class)
     private fun readAnmf(): WebpChunk {
-        val chunkSize = readUInt32()
+//        val chunkSize = readUInt32()
         //		Logs.v(this,"chunkSize "+(chunkSize-16));
-        val chunk: WebpChunk = WebpChunk(WebpChunkType.ANMF)
+        val chunk = WebpChunk(WebpChunkType.ANMF)
 
         // 15 bytes
         chunk.x = readUInt24()
@@ -182,8 +175,10 @@ class WebpContainerReader(val inputStream: InputStream, val debug: Boolean) {
         val cch = ByteArray(4)
         read(cch, 4)
 
+        /*
         var bitStream: ByteArray? = null
         val alphaData: ByteArray? = null
+         */
         //		Logs.enable(this);
 //		Logs.d(this,"ANMF payload size "+chunkSize);
         if (isFourCc(cch, 'A', 'L', 'P', 'H')) {
@@ -207,7 +202,7 @@ class WebpContainerReader(val inputStream: InputStream, val debug: Boolean) {
                 var vp8Size = readUInt32()
                 if ((vp8Size and 1) == 1) {
                     vp8Size += 1
-                    Timber.e("ANMF/ALPH/VP8 payload size " + vp8Size)
+                    Timber.w("ANMF/ALPH/VP8 payload size $vp8Size")
                 }
                 chunk.bitStream = readPayload(vp8Size)
             }
@@ -217,7 +212,7 @@ class WebpContainerReader(val inputStream: InputStream, val debug: Boolean) {
             var vp8Size = readUInt32()
             if ((vp8Size and 1) == 1) {
                 vp8Size += 1
-                Timber.e("ANMF/VP8 payload size " + vp8Size)
+                Timber.w("ANMF/VP8 payload size $vp8Size")
             }
             chunk.bitStream = readPayload(vp8Size)
         } else if (isFourCc(cch, 'V', 'P', '8', 'L')) {
@@ -226,11 +221,11 @@ class WebpContainerReader(val inputStream: InputStream, val debug: Boolean) {
             var vp8lSize = readUInt32()
             if ((vp8lSize and 1) == 1) {
                 vp8lSize += 1
-                Timber.v("ANMF/VP8L | payload size " + vp8lSize)
+                Timber.v("ANMF/VP8L | payload size $vp8lSize")
             }
 
             chunk.bitStream = readPayload(vp8lSize)
-            bitStream = chunk.bitStream
+//            bitStream = chunk.bitStream
 
             //			int align = padding(vp8lSize);
 //			Logs.i(this,"padding "+align);
@@ -246,24 +241,15 @@ class WebpContainerReader(val inputStream: InputStream, val debug: Boolean) {
         return chunk
     }
 
-
-    fun concatenateByteArrays(a: ByteArray, b: ByteArray): ByteArray {
-        val result = ByteArray(a.size + b.size)
-        System.arraycopy(a, 0, result, 0, a.size)
-        System.arraycopy(b, 0, result, a.size, b.size)
-        return result
-    }
-
-
     @Throws(IOException::class)
     private fun readVp8(): WebpChunk {
         val chunkSize = readUInt32()
 
-        val chunk: WebpChunk = WebpChunk(WebpChunkType.VP8)
+        val chunk = WebpChunk(WebpChunkType.VP8)
         chunk.isLossless = false
         chunk.payload = readPayload(chunkSize)
 
-        Timber.d(String.format("VP8: bytes = %d", chunkSize))
+        Timber.v(String.format("VP8: bytes = $chunkSize"))
         return chunk
     }
 
@@ -271,12 +257,12 @@ class WebpContainerReader(val inputStream: InputStream, val debug: Boolean) {
     private fun readVp8l(): WebpChunk {
         val chunkSize = readUInt32()
 
-        val chunk: WebpChunk = WebpChunk(WebpChunkType.VP8L)
+        val chunk = WebpChunk(WebpChunkType.VP8L)
         chunk.isLossless = true
         //		chunkSize is not telling the correct size of payload to read.
 //		chunk.payload = readPayload(chunkSize);
         chunk.payload = readAllBytes()
-        Timber.d(String.format("VP8L: bytes = %d", chunkSize))
+        Timber.v(String.format("VP8L: bytes = $chunkSize"))
         return chunk
     }
 
@@ -284,8 +270,8 @@ class WebpContainerReader(val inputStream: InputStream, val debug: Boolean) {
     @Throws(IOException::class)
     private fun readAlph(): WebpChunk {
         var chunkSize = readUInt32() // 4
-        val chunk: WebpChunk = WebpChunk(WebpChunkType.ALPH)
-        Timber.i("chunkSize of alph " + chunkSize)
+        val chunk = WebpChunk(WebpChunkType.ALPH)
+        Timber.v("chunkSize of alph chunkSize")
 
         if ((chunkSize and 1) == 1) chunkSize += 1
         val payload = readPayload(chunkSize)
@@ -299,7 +285,7 @@ class WebpContainerReader(val inputStream: InputStream, val debug: Boolean) {
     @Throws(IOException::class)
     private fun readIccp(): WebpChunk {
         val chunkSize = readUInt32()
-        val chunk: WebpChunk = WebpChunk(WebpChunkType.ICCP)
+        val chunk = WebpChunk(WebpChunkType.ICCP)
 
         readPayload(chunkSize)
 
@@ -310,7 +296,7 @@ class WebpContainerReader(val inputStream: InputStream, val debug: Boolean) {
     @Throws(IOException::class)
     private fun readExif(): WebpChunk {
         val chunkSize = readUInt32()
-        val chunk: WebpChunk = WebpChunk(WebpChunkType.EXIF)
+        val chunk = WebpChunk(WebpChunkType.EXIF)
         val payload = readPayload(chunkSize)
         chunk.payload = payload
         return chunk
@@ -319,7 +305,7 @@ class WebpContainerReader(val inputStream: InputStream, val debug: Boolean) {
     @Throws(IOException::class)
     private fun readXmp(): WebpChunk {
         val chunkSize = readUInt32()
-        val chunk: WebpChunk = WebpChunk(WebpChunkType.XMP)
+        val chunk = WebpChunk(WebpChunkType.XMP)
         val payload = readPayload(chunkSize)
         chunk.payload = payload
         return chunk
@@ -336,7 +322,7 @@ class WebpContainerReader(val inputStream: InputStream, val debug: Boolean) {
 
     @Throws(IOException::class)
     private fun read(buffer: ByteArray, bytes: Int): Int {
-        val count = _inputStream!!.read(buffer, 0, bytes)
+        val count = inputStream.read(buffer, 0, bytes)
         _offset += count
         return count
     }
@@ -372,7 +358,7 @@ class WebpContainerReader(val inputStream: InputStream, val debug: Boolean) {
         ByteArrayOutputStream().use { outputStream ->
             val buffer = ByteArray(1024)
             var numRead: Int
-            while ((_inputStream!!.read(buffer).also { numRead = it }) != -1) {
+            while ((inputStream.read(buffer).also { numRead = it }) != -1) {
                 outputStream.write(buffer, 0, numRead)
                 _offset += numRead
             }

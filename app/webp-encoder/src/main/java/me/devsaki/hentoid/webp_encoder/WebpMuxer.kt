@@ -45,11 +45,11 @@ class WebpMuxer(val writer: WebpContainerWriter) {
 
     @Throws(IOException::class)
     fun writeFirstFrameFromWebm(inputStream: InputStream) {
-        val reader = WebpContainerReader(inputStream, false)
-        reader.readHeader()
-        val chunk: WebpChunk = readFirstChunkWithPayload(reader)
-        reader.close()
-        writeFrame(chunk, chunk.payload, chunk.isLossless)
+        WebpContainerReader(inputStream, false).use { reader ->
+            reader.readHeader()
+            val chunk: WebpChunk = readFirstChunkWithPayload(reader)
+            writeFrame(chunk, chunk.payload, chunk.isLossless)
+        }
     }
 
     @Throws(IOException::class)
@@ -114,7 +114,7 @@ class WebpMuxer(val writer: WebpContainerWriter) {
     private fun writeHeader(chunk: WebpChunk) {
         writer.writeHeader()
 
-        val vp8x: WebpChunk = WebpChunk(WebpChunkType.VP8X)
+        val vp8x = WebpChunk(WebpChunkType.VP8X)
         vp8x.hasAnim = true // TODO: make it dyanamic
         vp8x.hasAlpha = false // TODO: make it dyanamic
         vp8x.hasXmp = false
@@ -126,7 +126,7 @@ class WebpMuxer(val writer: WebpContainerWriter) {
 
         if (vp8x.hasAnim) {
             Timber.i("this.hasAnim then writeANIM ${chunk.type}")
-            val anim: WebpChunk = WebpChunk(WebpChunkType.ANIM)
+            val anim = WebpChunk(WebpChunkType.ANIM)
             anim.background = _bg // TODO: make it dyanamic
             anim.loops = _loops
             writer.write(anim)
@@ -136,7 +136,7 @@ class WebpMuxer(val writer: WebpContainerWriter) {
     @Throws(IOException::class)
     private fun writeAnmf(chunk: WebpChunk, payload: ByteArray, isLossless: Boolean) {
         Timber.i("writeAnmf ${chunk.type}")
-        val anmf: WebpChunk = WebpChunk(WebpChunkType.ANMF)
+        val anmf = WebpChunk(WebpChunkType.ANMF)
         anmf.x = 0 // it was 0
         anmf.y = 0 // it was 0
         anmf.width = _width - 1
@@ -159,7 +159,7 @@ class WebpMuxer(val writer: WebpContainerWriter) {
 
     @Throws(IOException::class)
     private fun writeVp8(payload: ByteArray, isLossless: Boolean) {
-        val vp8: WebpChunk = WebpChunk(
+        val vp8 = WebpChunk(
             if (isLossless)
                 WebpChunkType.VP8L
             else
