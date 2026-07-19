@@ -83,6 +83,7 @@ import me.devsaki.hentoid.util.image.MIME_IMAGE_GIF
 import me.devsaki.hentoid.util.image.MIME_IMAGE_WEBP
 import me.devsaki.hentoid.util.image.bitmapToWebp
 import me.devsaki.hentoid.util.image.getBitmapFromVectorDrawable
+import me.devsaki.hentoid.util.image.getMediaDimensions
 import me.devsaki.hentoid.util.image.tintBitmap
 import me.devsaki.hentoid.util.jsonToObject
 import me.devsaki.hentoid.util.moveContentToCustomGroup
@@ -105,7 +106,9 @@ import me.devsaki.hentoid.util.persistJson
 import me.devsaki.hentoid.util.removeContent
 import me.devsaki.hentoid.util.serializeToJson
 import me.devsaki.hentoid.util.updateQueueJson
-import me.devsaki.hentoid.util.video.getAnimationEncoder
+import me.devsaki.hentoid.util.video.GifStreamedEncoder
+import me.devsaki.hentoid.util.video.VideoStreamedEncoder
+import me.devsaki.hentoid.util.video.WebpStreamedEncoder
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import timber.log.Timber
@@ -1531,20 +1534,38 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
                 else -> MIME_IMAGE_GIF
             }
             val targetExt = getExtensionFromMimeType(targetMime)
-            val targetQuality =
-                if (Settings.downloadAnimationFormat == PictureEncoder.WEBP_LOSSLESS.value) 100
-                else Settings.downloadAnimationQuality.coerceIn(0, 100)
+            val quality =
+                (if (Settings.downloadAnimationFormat == PictureEncoder.WEBP_LOSSLESS.value) 100f
+                else Settings.downloadAnimationQuality.coerceIn(0, 100).toFloat()) / 100f
+            val targetDuration = frames.sumOf { it.second }
+            val dims = getMediaDimensions(applicationContext, frames[0].first.toString())
 
             val tempFile = createFile(
                 applicationContext, downloadFolder, "${img.name}.$targetExt",
                 targetMime
             )
-            getAnimationEncoder(Settings.downloadAnimationFormat).use { encoder ->
+
+            val animEncoder = when (Settings.downloadAnimationFormat) {
+                PictureEncoder.WEBP_LOSSLESS.value, PictureEncoder.WEBP_LOSSY.value -> WebpStreamedEncoder(
+                    quality,
+                    targetDuration
+                )
+
+                PictureEncoder.AVC.value -> VideoStreamedEncoder(
+                    dims,
+                    quality,
+                    frames.filterNot { 0 == it.second }.maxOf { 1000f / it.second.toFloat() },
+                    frames.size
+                )
+
+                else -> GifStreamedEncoder(dims)
+            }
+
+            animEncoder.use { encoder ->
+                encoder.init(applicationContext, tempFile)
                 encoder.encode(
                     applicationContext,
-                    tempFile,
                     frames,
-                    targetQuality.toFloat() / 100f,
                     isCanceled = {
                         this.isStopped || downloadProcessStopped || ContentQueueManager.isQueuePaused
                     }

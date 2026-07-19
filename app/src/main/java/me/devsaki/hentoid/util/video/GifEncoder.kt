@@ -7,17 +7,18 @@ import me.devsaki.hentoid.util.file.getOutputStream
 import me.devsaki.hentoid.util.image.getMediaDimensions
 import me.devsaki.hentoid.util.image.loadBitmap
 import timber.log.Timber
+import java.io.Closeable
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 import kotlin.use
 
-class GifEncoder : AnimationEncoder {
+class GifEncoder : Closeable {
     /**
      * Create GIF file by assembling the given files into frames
      *
      * @param frames Frames : first = Frame file Uri; second = Frame duration (ms)
      */
-    override suspend fun encode(
+    suspend fun encode(
         context: Context,
         outUri: Uri,
         frames: List<Pair<Uri, Int>>,

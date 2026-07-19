@@ -11,14 +11,6 @@ const val MIME_VIDEO_MP4 = "video/mp4" // MediaFormat.MIMETYPE_VIDEO_AVC ?
 val MP4_SIGNATURE = "ftyp".toByteArray(CHARSET_LATIN_1)
 
 
-fun getAnimationEncoder(format: Int): AnimationEncoder {
-    return when (format) {
-        PictureEncoder.WEBP_LOSSLESS.value, PictureEncoder.WEBP_LOSSY.value -> WebpEncoder()
-        PictureEncoder.AVC.value -> VideoEncoder()
-        else -> GifEncoder()
-    }
-}
-
 // From https://github.com/sixo/vid-proc/blob/master/app/src/main/java/eu/sisik/vidproc/Utils.kt
 fun getBestSupportedResolution(
     mediaCodec: MediaCodec,

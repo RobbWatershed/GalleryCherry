@@ -1,6 +1,8 @@
 package me.devsaki.hentoid.util.video
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Point
 import android.media.MediaCodec
 import android.media.MediaCodecInfo
 import android.media.MediaFormat
@@ -22,17 +24,23 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.withContext
 import kotlinx.io.IOException
-import me.devsaki.hentoid.util.image.getMediaDimensions
 import me.devsaki.hentoid.util.image.loadBitmap
 import timber.log.Timber
-import java.io.Closeable
 import java.util.concurrent.Executors
 import kotlin.math.roundToInt
 
 // Heavily inspired by
 //  https://github.com/sixo/vid-proc/blob/master/app/src/main/java/eu/sisik/vidproc/TimeLapseEncoder.kt
 //  https://bigflake.com/mediacodec/EncodeAndMuxTest.java.txt
-class VideoEncoder : Closeable {
+class VideoStreamedEncoder(
+    val dims: Point,
+    val quality: Float,
+    val maxFps: Float,
+    val nbFrames: Int
+) : AnimationEncoder {
+
+    // Threading
+    val singleThread = Executors.newFixedThreadPool(1).asCoroutineDispatcher()
 
     // MediaCodec and encoding configuration
     private lateinit var encoder: MediaCodec
@@ -43,8 +51,11 @@ class VideoEncoder : Closeable {
     private var outFileDescriptor: ParcelFileDescriptor? = null
 
     private var mime = MIMETYPE_VIDEO_AVC
+    private var outSize = Size(0, 0)
 
     private var trackIndex = -1
+    private var frameNum = 0
+    private var framesMissed = 0
 
     // Current video length, in microseconds
     private var presentationTimeUs = 0L
@@ -61,44 +72,23 @@ class VideoEncoder : Closeable {
 
     private var eglSurface: EGLSurface? = null
 
+    private lateinit var renderer: TextureRenderer
+
 
     // Surface provided by MediaCodec and used to get data produced by OpenGL
     private var surface: Surface? = null
 
 
-    /**
-     * @param frames Frames : first = Frame file Uri; second = Frame duration (ms)
-     *
-     * Making sure we're using a single computing thread as GLES context requires it
-     */
-    suspend fun encode(
-        context: Context,
-        outUri: Uri,
-        frames: List<Pair<Uri, Int>>,
-        quality: Float,
-        isCanceled: () -> Boolean,
-        onProgress: ((Float) -> Unit)?
-    ) = withContext(Executors.newFixedThreadPool(1).asCoroutineDispatcher()) {
-        val size = initEncoder(context, outUri, frames, quality)
-        encodeImages(context, size, frames, isCanceled, onProgress)
-    }
-
-    private suspend fun initEncoder(
-        context: Context,
-        outVideoUri: Uri,
-        frames: List<Pair<Uri, Int>>,
-        quality: Float
-    ): Size {
+    override suspend fun init(context: Context, outUri: Uri) = withContext(singleThread) {
         encoder = MediaCodec.createEncoderByType(mime)
 
         // Try to find supported size by checking the resolution of first supplied image
-        val size = getSupportedSize(context, frames[0].first)
-        Timber.d("Using size ${size.width}x${size.height}")
+        outSize = getBestSupportedResolution(encoder, mime, Size(dims.x, dims.y))
+        Timber.d("Using size ${outSize.width}x${outSize.height}")
 
         // Calculate max FPS given input frame values
-        val maxFps = frames.filterNot { 0 == it.second }.maxOf { 1000f / it.second.toFloat() }
-        Timber.d("Using maxFps=$maxFps; quality=$quality with ${frames.size} frames")
-        val format = createFormat(size, maxFps, quality)
+        Timber.d("Using maxFps=$maxFps; quality=$quality")
+        val format = createFormat(outSize, maxFps, quality)
 
         encoder.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
 
@@ -109,19 +99,30 @@ class VideoEncoder : Closeable {
         encoder.start()
 
         // Prepare muxer
-        outFileDescriptor = context.contentResolver.openFileDescriptor(outVideoUri, "wt")
+        outFileDescriptor = context.contentResolver.openFileDescriptor(outUri, "wt")
         outFileDescriptor?.let {
             muxer = MediaMuxer(it.fileDescriptor, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
         }
         muxerStarted = false
-        return size
+
+        // Init OpenGL, once we have initialized context and surface
+        renderer = TextureRenderer()
     }
 
-    private suspend fun getSupportedSize(context: Context, inBitmapUri: Uri): Size =
-        withContext(Dispatchers.IO) {
-            val dims = getMediaDimensions(context, inBitmapUri.toString())
-            return@withContext getBestSupportedResolution(encoder, mime, Size(dims.x, dims.y))
-        }
+    /**
+     * @param frames Frames : first = Frame file Uri; second = Frame duration (ms)
+     *
+     * Making sure we're using a single computing thread as GLES context requires it
+     */
+    override suspend fun encode(
+        context: Context,
+        frames: List<Pair<Uri, Int>>,
+        isCanceled: () -> Boolean,
+        onProgress: ((Float) -> Unit)?
+    ) = withContext(singleThread) {
+        if (0 == outSize.height) throw RuntimeException("Init must be called before encode")
+        encodeImages(context, frames, isCanceled, onProgress)
+    }
 
     private fun createFormat(size: Size, maxFps: Float, quality: Float): MediaFormat {
         val format = MediaFormat.createVideoFormat(mime, size.width, size.height)
@@ -186,64 +187,32 @@ class VideoEncoder : Closeable {
         if (err != EGL14.EGL_SUCCESS)
             throw RuntimeException(GLUtils.getEGLErrorString(err))
 
-        if (!makeCurrent())
+        if (!EGL14.eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext))
             throw RuntimeException("eglMakeCurrent(): " + GLUtils.getEGLErrorString(EGL14.eglGetError()))
-    }
-
-    private fun makeCurrent(): Boolean {
-        return EGL14.eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext)
     }
 
     private suspend fun encodeImages(
         context: Context,
-        size: Size,
         frames: List<Pair<Uri, Int>>,
         isCanceled: () -> Boolean,
         onProgress: ((Float) -> Unit)? = null
     ) {
-        // Init OpenGL, once we have initialized context and surface
-        val renderer = TextureRenderer()
-
-        var frameNum = 0
-        var framesMissed = 0
         for (frame in frames) {
             if (isCanceled.invoke()) break
             try {
-                frameNum++
-
-                // Render the bitmap/texture here
                 loadBitmap(context, frame.first)?.let { bitmap ->
                     try {
-                        renderer.draw(size.width, size.height, bitmap, getMvp())
+                        addFrame(bitmap, frame.second)
                     } finally {
                         bitmap.recycle()
                     }
                 } ?: throw IOException("Cannot open ${frame.first}")
 
-                EGLExt.eglPresentationTimeANDROID(
-                    eglDisplay, eglSurface,
-                    presentationTimeUs * 1000 // yes, those are nanoseconds
-                )
-                checkEglError("eglPresentationTimeANDROID")
-
-                // Feed encoder with next frame produced by OpenGL
-                EGL14.eglSwapBuffers(eglDisplay, eglSurface)
-                checkEglError("eglSwapBuffers")
-
-                // Get encoded data and feed it to muxer
-                val frameProcessed = drainEncoder(frameNum == frames.size, frameNum)
-                if (!frameProcessed) {
-                    Timber.d("FRAME MISSED @$frameNum") // Not super reliable; encoder may just be waiting to flush its buffer
-                    framesMissed++
-                }
-
                 onProgress?.apply {
                     if (0 == frameNum % 10) {
-                        // Handle notifications on another coroutine not to steal focus for unnecessary stuff
                         invoke(frameNum * 1f / frames.size)
                     }
                 }
-                presentationTimeUs += frame.second * 1000
             } catch (e: Exception) {
                 Timber.w(e, "An issue occured while rendering frame $frameNum")
                 framesMissed++
@@ -252,17 +221,40 @@ class VideoEncoder : Closeable {
         if (framesMissed > 0) Timber.w("Frames missed : $framesMissed")
     }
 
-    private fun checkEglError(msg: String?) {
+    private fun checkEglError(msg: String) {
         val error: Int
         if ((EGL14.eglGetError().also { error = it }) != EGL14.EGL_SUCCESS) {
             throw java.lang.RuntimeException(msg + ": EGL error: 0x" + Integer.toHexString(error))
         }
     }
 
+    override suspend fun addFrame(bitmap: Bitmap, durationMs: Int) = withContext(singleThread) {
+        frameNum++
+        renderer.draw(outSize.width, outSize.height, bitmap, getMvp())
+
+        EGLExt.eglPresentationTimeANDROID(
+            eglDisplay, eglSurface,
+            presentationTimeUs * 1000 // yes, those are nanoseconds
+        )
+        checkEglError("eglPresentationTimeANDROID")
+        presentationTimeUs += durationMs * 1000
+
+        // Feed encoder with next frame produced by OpenGL
+        EGL14.eglSwapBuffers(eglDisplay, eglSurface)
+        checkEglError("eglSwapBuffers")
+
+        // Get encoded data and feed it to muxer
+        val frameProcessed = drainEncoder(frameNum == nbFrames, frameNum)
+        if (!frameProcessed) {
+            Timber.d("FRAME MISSED @$frameNum") // Not super reliable; encoder may just be waiting to flush its buffer
+            framesMissed++
+        }
+    }
+
     private suspend fun drainEncoder(
         endOfStream: Boolean,
         frameNum: Int
-    ): Boolean {
+    ): Boolean = withContext(singleThread) {
         if (endOfStream) encoder.signalEndOfInputStream()
         Timber.d("drainEncoder 0 @$frameNum")
         var isFrameProcessed = false
@@ -331,7 +323,7 @@ class VideoEncoder : Closeable {
                 }
             }
         }
-        return isFrameProcessed
+        return@withContext isFrameProcessed
     }
 
     private fun getMvp(): FloatArray {

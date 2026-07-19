@@ -1,6 +1,7 @@
 package me.devsaki.hentoid.workers
 
 import android.content.Context
+import android.net.Uri
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import androidx.work.Data
@@ -14,6 +15,7 @@ import me.devsaki.hentoid.database.CollectionDAO
 import me.devsaki.hentoid.database.ObjectBoxDAO
 import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.database.domains.ImageFile
+import me.devsaki.hentoid.enums.PictureEncoder
 import me.devsaki.hentoid.notification.transform.TransformCompleteNotification
 import me.devsaki.hentoid.notification.transform.TransformProgressNotification
 import me.devsaki.hentoid.util.AchievementsManager
@@ -45,6 +47,9 @@ import me.devsaki.hentoid.util.network.UriParts
 import me.devsaki.hentoid.util.notification.BaseNotification
 import me.devsaki.hentoid.util.pause
 import me.devsaki.hentoid.util.updateJson
+import me.devsaki.hentoid.util.video.GifStreamedEncoder
+import me.devsaki.hentoid.util.video.VideoStreamedEncoder
+import me.devsaki.hentoid.util.video.WebpStreamedEncoder
 import me.devsaki.hentoid.util.video.getPenfeiFrameStreamer
 import me.robb.ai_upscale.AiUpscaler
 import okio.IOException
@@ -379,16 +384,37 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
 
     private suspend fun transformAnimatedImage(
         img: ImageFile,
-        props : ImageProperties,
+        props: ImageProperties,
         contentFolder: DocumentFile,
         params: TransformParams
     ): ImageFile {
-
+        val quality =
+            (if (params.transcodeAnim == PictureEncoder.WEBP_LOSSLESS) 100f
+            else params.transcodeAnimQuality.coerceIn(0, 100).toFloat()) / 100f
 
         getInputStream(applicationContext, img.fileUri.toUri()).use { input ->
             getPenfeiFrameStreamer(props.mime, input)?.let { fs ->
-                fs.streamFrames(this::isStopped) { f ->
 
+                val animEncoder = when (params.transcodeAnim) {
+                    PictureEncoder.WEBP_LOSSLESS, PictureEncoder.WEBP_LOSSY -> WebpStreamedEncoder(
+                        quality,
+                        fs.durationMs
+                    )
+
+                    PictureEncoder.AVC -> VideoStreamedEncoder(
+                        fs.dims,
+                        quality,
+                        fs.nbFrames * 1000f / fs.durationMs.toFloat(),
+                        fs.nbFrames
+                    )
+
+                    else -> GifStreamedEncoder(fs.dims)
+                }
+                animEncoder.use {
+                    animEncoder.init(applicationContext, Uri.EMPTY) // TODO which Uri?
+                    fs.streamFrames(this::isStopped) { f ->
+                        animEncoder.addFrame(f.first, f.second)
+                    }
                 }
             }
         }

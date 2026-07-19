@@ -5,14 +5,15 @@ import android.net.Uri
 import kotlinx.coroutines.DelicateCoroutinesApi
 import me.devsaki.hentoid.util.image.loadBitmap
 import me.devsaki.hentoid.webp_encoder.WebpBitmapEncoder
+import okio.Closeable
 import timber.log.Timber
 import kotlin.math.roundToInt
 import kotlin.use
 
-class WebpEncoder : AnimationEncoder {
+class WebpEncoder : Closeable {
 
     @OptIn(DelicateCoroutinesApi::class)
-    override suspend fun encode(
+    suspend fun encode(
         context: Context,
         outUri: Uri,
         frames: List<Pair<Uri, Int>>,

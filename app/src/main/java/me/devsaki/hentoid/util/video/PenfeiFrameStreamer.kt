@@ -1,6 +1,7 @@
 package me.devsaki.hentoid.util.video
 
 import android.graphics.Bitmap
+import android.graphics.Point
 import com.github.penfeizhou.animation.apng.decode.APNGDecoder
 import com.github.penfeizhou.animation.avif.decode.AVIFDecoder
 import com.github.penfeizhou.animation.decode.FrameSeqDecoder
@@ -27,9 +28,30 @@ fun getPenfeiFrameStreamer(mime: String, input: InputStream): PenfeiFrameStreame
 }
 
 class PenfeiFrameStreamer<R : Reader, W : Writer>(val decoder: FrameSeqDecoder<R, W>) {
-    fun streamFrames(
+
+    val nbFrames: Int
+        get() = decoder.frameCount
+
+    val durationMs: Int
+        get() {
+            var result = 0
+            for (i in 0..<nbFrames) {
+                result += decoder.getFrame(i).frameDuration
+            }
+            return result
+        }
+
+    val dims: Point
+        get() {
+            decoder.getFrame(0).let {
+                return Point(it.frameWidth, it.frameHeight)
+            }
+        }
+
+
+    suspend fun streamFrames(
         isCanceled: () -> Boolean,
-        onFrameFound: (Pair<Bitmap, Int>) -> Unit
+        onFrameFound: suspend (Pair<Bitmap, Int>) -> Unit
     ) {
         try {
             val nbFrames = decoder.frameCount
