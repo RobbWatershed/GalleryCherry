@@ -36,7 +36,8 @@
             android:visibility="gone"
             app:entries="@array/resize_method_entries"
             app:layout_constraintTop_toBottomOf="@id/resize_switch"
-            app:title="@string/method" />
+            app:title="@string/method"
+            tools:visibility="visible" />
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/resize_method_1_ratio"
@@ -45,7 +46,8 @@
             android:hint="@string/resize_method_1_prompt"
             android:visibility="gone"
             app:counterMaxLength="3"
-            app:layout_constraintTop_toBottomOf="@id/resize_method">
+            app:layout_constraintTop_toBottomOf="@id/resize_method"
+            tools:visibility="visible">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:layout_width="match_parent"
@@ -63,7 +65,8 @@
             android:hint="@string/resize_method_2_prompt_max_height"
             android:visibility="gone"
             app:counterMaxLength="3"
-            app:layout_constraintTop_toBottomOf="@id/resize_method_1_ratio">
+            app:layout_constraintTop_toBottomOf="@id/resize_method_1_ratio"
+            tools:visibility="visible">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:layout_width="match_parent"
@@ -81,7 +84,8 @@
             android:hint="@string/resize_method_2_prompt_max_width"
             android:visibility="gone"
             app:counterMaxLength="3"
-            app:layout_constraintTop_toBottomOf="@id/resize_method_2_max_height">
+            app:layout_constraintTop_toBottomOf="@id/resize_method_2_max_height"
+            tools:visibility="visible">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:layout_width="match_parent"
@@ -99,7 +103,8 @@
             android:hint="@string/resize_method_3_prompt"
             android:visibility="gone"
             app:counterMaxLength="3"
-            app:layout_constraintTop_toBottomOf="@id/resize_method_2_max_width">
+            app:layout_constraintTop_toBottomOf="@id/resize_method_2_max_width"
+            tools:visibility="visible">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:layout_width="match_parent"
@@ -117,7 +122,8 @@
             android:hint="@string/resize_method_5_prompt"
             android:visibility="gone"
             app:counterMaxLength="3"
-            app:layout_constraintTop_toBottomOf="@id/resize_method_3_ratio">
+            app:layout_constraintTop_toBottomOf="@id/resize_method_3_ratio"
+            tools:visibility="visible">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:layout_width="match_parent"
@@ -249,7 +255,7 @@
             android:layout_marginTop="4dp"
             android:adjustViewBounds="true"
             android:clickable="true"
-            android:contentDescription="@string/preview"
+            android:contentDescription="@string/picture_generic"
             android:focusable="true"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/preview_header"
@@ -299,6 +305,7 @@
             style="?attr/materialIconButtonFilledTonalStyle"
             android:layout_width="48dp"
             android:layout_height="48dp"
+            android:hint="@string/previous_page"
             android:tooltipText="@string/previous_page"
             app:icon="@drawable/ic_action_previous_item"
             app:layout_constraintBottom_toBottomOf="@id/thumb"
@@ -311,6 +318,7 @@
             style="?attr/materialIconButtonFilledTonalStyle"
             android:layout_width="48dp"
             android:layout_height="48dp"
+            android:hint="@string/next_page"
             android:tooltipText="@string/next_page"
             app:icon="@drawable/ic_action_next_item"
             app:layout_constraintBottom_toBottomOf="@id/thumb"
