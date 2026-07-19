@@ -1077,14 +1077,8 @@
     <string name="title_submenu_library">La mia libreria</string>
     <string name="title_submenu_settings">Avanzato</string>
     <string name="torrent_dl_fail">Download del torrent fallito: %s</string>
-    <string name="transcode_encoder_avif">AVIF</string>
-    <string name="transcode_encoder_jpeg">JPEG</string>
-    <string name="transcode_encoder_jpegli">JPEGLI</string>
-    <string name="transcode_encoder_jxl_lossless">JXL (mantenendo dati)</string>
-    <string name="transcode_encoder_jxl_lossy">JXL (perdendo dati)</string>
-    <string name="transcode_encoder_png">PNG</string>
-    <string name="transcode_encoder_webp_lossless">WEBP (mantenendo dati)</string>
-    <string name="transcode_encoder_webp_lossy">WEBP (perdendo dati)</string>
+    <string name="lossless_generic">mantenendo dati</string>
+    <string name="lossy_generic">perdendo dati</string>
     <string name="transcode_method_1">Stesso encoder per tutte le immagini</string>
     <string name="transcode_method_2">Differenzia le immagini con perdita di dati da quelle senza</string>
     <string name="transform">Trasforma</string>

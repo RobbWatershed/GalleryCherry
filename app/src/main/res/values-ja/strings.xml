@@ -703,10 +703,8 @@
     <string name="encoder">エンコーダー</string>
     <string name="encoder_lossless">ロスレスエンコーダー</string>
     <string name="encoder_lossy">非可逆エンコーダー</string>
-    <string name="transcode_encoder_webp_lossless">WEBP（ロスレス）</string>
-    <string name="transcode_encoder_png">PNG</string>
-    <string name="transcode_encoder_webp_lossy">WEBP（非可逆）</string>
-    <string name="transcode_encoder_jpeg">JPEG</string>
+    <string name="lossless_generic">ロスレス</string>
+    <string name="lossy_generic">非可逆</string>
     <string name="encoder_quality">品質</string>
     <string name="encoder_warning">WEBP 形式は、横幅と高さが16383ピクセルに制限されています。 大きな画像は自動的にPNGまたはJPGにエンコードされます。</string>
     <string name="retransform_warning">%dページは既に変換されています。 複数回変換すると、品質が低下する可能性があります。\n元の画像を再ダウンロードし、一度変換することをお勧めします。</string>

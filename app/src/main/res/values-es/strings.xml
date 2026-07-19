@@ -1073,14 +1073,8 @@
     <string name="title_submenu_library">Mi biblioteca</string>
     <string name="title_submenu_settings">Avanzado</string>
     <string name="torrent_dl_fail">No se pudo realizar la descarga del torrent: %s</string>
-    <string name="transcode_encoder_avif">AVIF</string>
-    <string name="transcode_encoder_jpeg">JPEG</string>
-    <string name="transcode_encoder_jpegli">JPEGLI</string>
-    <string name="transcode_encoder_jxl_lossless">JXL (sin pérdida)</string>
-    <string name="transcode_encoder_jxl_lossy">JXL (con pérdida)</string>
-    <string name="transcode_encoder_png">PNG</string>
-    <string name="transcode_encoder_webp_lossless">WEBP (sin pérdida)</string>
-    <string name="transcode_encoder_webp_lossy">WEBP (con pérdida)</string>
+    <string name="lossless_generic">sin pérdida</string>
+    <string name="lossy_generic">con pérdida</string>
     <string name="transcode_method_1">Mismo codificador para todas las imágenes</string>
     <string name="transcode_method_2">Diferenciar imágenes con y sin pérdida</string>
     <string name="transform">Transformar</string>

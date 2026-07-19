@@ -1,20 +1,41 @@
 package me.devsaki.hentoid.enums
 
+import android.media.MediaFormat.MIMETYPE_VIDEO_AVC
+import androidx.annotation.StringRes
+import me.devsaki.hentoid.R
+import me.devsaki.hentoid.core.HentoidApp
 import me.devsaki.hentoid.util.image.MIME_IMAGE_AVIF
 import me.devsaki.hentoid.util.image.MIME_IMAGE_JPEG
 import me.devsaki.hentoid.util.image.MIME_IMAGE_JXL
 import me.devsaki.hentoid.util.image.MIME_IMAGE_PNG
 import me.devsaki.hentoid.util.image.MIME_IMAGE_WEBP
+import me.devsaki.hentoid.util.losslessStr
+import me.devsaki.hentoid.util.lossyStr
 
-enum class PictureEncoder(val value: Int, val mimeType: String, val isLossless: Boolean = false) {
-    WEBP_LOSSLESS(0, MIME_IMAGE_WEBP, true),
-    WEBP_LOSSY(1, MIME_IMAGE_WEBP),
-    PNG(2, MIME_IMAGE_PNG, true),
-    JPEG(3, MIME_IMAGE_JPEG),
-    JXL_LOSSY(4, MIME_IMAGE_JXL),
-    JXL_LOSSLESS(5, MIME_IMAGE_JXL, true),
-    JPEGLI(6, MIME_IMAGE_JPEG, false),
-    AVIF(7, MIME_IMAGE_AVIF, false);
+enum class PictureEncoder(
+    val value: Int,
+    val mimeType: String,
+    @StringRes private val descriptionRes: Int,
+    val isLossless: Boolean = false,
+    val isAnimatedOnly : Boolean = false
+) {
+    WEBP_LOSSLESS(0, MIME_IMAGE_WEBP, R.string.transcode_encoder_webp, true),
+    WEBP_LOSSY(1, MIME_IMAGE_WEBP, R.string.transcode_encoder_webp),
+    PNG(2, MIME_IMAGE_PNG, R.string.transcode_encoder_png, true),
+    JPEG(3, MIME_IMAGE_JPEG, R.string.transcode_encoder_jpeg),
+    JXL_LOSSY(4, MIME_IMAGE_JXL, R.string.transcode_encoder_jxl),
+    JXL_LOSSLESS(5, MIME_IMAGE_JXL, R.string.transcode_encoder_jxl, true),
+    JPEGLI(6, MIME_IMAGE_JPEG, R.string.transcode_encoder_jpegli),
+    AVIF(7, MIME_IMAGE_AVIF, R.string.transcode_encoder_avif),
+    AVC(8, MIMETYPE_VIDEO_AVC, R.string.transcode_encoder_avc, isAnimatedOnly = true);
+
+    val description: String
+        get() {
+            val descStr = HentoidApp.getInstance().resources.getString(descriptionRes)
+            return if (descStr.contains("%s")) {
+                descStr.replace("%s", if (isLossless) losslessStr else lossyStr)
+            } else descStr
+        }
 
     companion object {
         fun fromValue(data: Int): PictureEncoder? {

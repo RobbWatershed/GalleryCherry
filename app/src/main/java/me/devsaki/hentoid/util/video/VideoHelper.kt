@@ -3,20 +3,18 @@ package me.devsaki.hentoid.util.video
 import android.media.MediaCodec
 import android.util.Size
 import me.devsaki.hentoid.core.CHARSET_LATIN_1
-import me.devsaki.hentoid.util.Settings
+import me.devsaki.hentoid.enums.PictureEncoder
 import kotlin.math.absoluteValue
 
-const val MIME_VIDEO_MP4 = "video/mp4"
+const val MIME_VIDEO_MP4 = "video/mp4" // MediaFormat.MIMETYPE_VIDEO_AVC ?
 
 val MP4_SIGNATURE = "ftyp".toByteArray(CHARSET_LATIN_1)
 
-/**
- * @param format As defined in Settings.Values.ANIM_ constants
- */
+
 fun getAnimationEncoder(format: Int): AnimationEncoder {
     return when (format) {
-        Settings.Value.ANIM_WEBP -> WebpEncoder()
-        Settings.Value.ANIM_AVC -> VideoEncoder()
+        PictureEncoder.WEBP_LOSSLESS.value, PictureEncoder.WEBP_LOSSY.value -> WebpEncoder()
+        PictureEncoder.AVC.value -> VideoEncoder()
         else -> GifEncoder()
     }
 }

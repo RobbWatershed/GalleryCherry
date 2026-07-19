@@ -646,10 +646,8 @@
     <string name="encoder">인코더</string>
     <string name="encoder_lossless">무손실 인코더</string>
     <string name="encoder_lossy">손실 인코더</string>
-    <string name="transcode_encoder_webp_lossless">WEBP (무손실)</string>
-    <string name="transcode_encoder_png">PNG</string>
-    <string name="transcode_encoder_webp_lossy">WEBP (손실)</string>
-    <string name="transcode_encoder_jpeg">JPEG</string>
+    <string name="lossless_generic">무손실</string>
+    <string name="lossy_generic">손실</string>
     <string name="encoder_quality">품질</string>
     <string name="encoder_warning">WEBP 형식은 너비와 높이가 16383 픽셀로 제한됩니다. 더 큰 이미지은 자동으로 PNG 또는 JPG로 인코딩됩니다.</string>
     <string name="retransform_warning">%d개의 페이지가 이미 변환되었습니다. 여러 번 변환하면 품질이 눈에 띄게 저하될 수 있습니다.\n원본 이미지를 다시 다운로드하여 한 번만 변환하는 것이 좋습니다.</string>

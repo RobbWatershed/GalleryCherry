@@ -27,6 +27,7 @@ import me.devsaki.hentoid.database.domains.RenamingRule
 import me.devsaki.hentoid.enums.AttributeType
 import me.devsaki.hentoid.enums.ErrorType
 import me.devsaki.hentoid.enums.Grouping
+import me.devsaki.hentoid.enums.PictureEncoder
 import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.events.DownloadCommandEvent
@@ -1525,8 +1526,8 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
             )
 
             val targetMime = when (Settings.downloadAnimationFormat) {
-                Settings.Value.ANIM_WEBP -> MIME_IMAGE_WEBP
-                Settings.Value.ANIM_AVC -> MIMETYPE_VIDEO_AVC
+                PictureEncoder.WEBP_LOSSY.value, PictureEncoder.WEBP_LOSSLESS.value -> MIME_IMAGE_WEBP
+                PictureEncoder.AVC.value -> MIMETYPE_VIDEO_AVC
                 else -> MIME_IMAGE_GIF
             }
             val targetExt = getExtensionFromMimeType(targetMime)

@@ -3,7 +3,6 @@ package me.devsaki.hentoid.util
 import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
-import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -125,7 +124,6 @@ import java.io.IOException
 import java.net.URL
 import java.time.Instant
 import java.util.Locale
-import java.util.regex.Pattern
 import kotlin.math.abs
 
 
@@ -257,27 +255,6 @@ private val libraryStatus = intArrayOf(
 private val queueStatus =
     intArrayOf(StatusContent.DOWNLOADING.code, StatusContent.PAUSED.code, StatusContent.ERROR.code)
 private val queueTabStatus = intArrayOf(StatusContent.DOWNLOADING.code, StatusContent.PAUSED.code)
-
-var chapterStr: String = "Chapter" // Default english value; will be overriden at init
-    internal set
-
-var ongoingStr: String = "Ongoing" // Default english value; will be overriden at init
-    internal set
-
-var completedStr: String = "Completed" // Default english value; will be overriden at init
-    internal set
-
-var disabledStr: String = "Disabled" // Default english value; will be overriden at init
-    internal set
-
-val VANILLA_CHAPTERNAME_PATTERN: Pattern by lazy { Pattern.compile("$chapterStr [0-9]+") }
-
-fun initResources(res: Resources) {
-    chapterStr = res.getString(R.string.gallery_chapter_prefix)
-    ongoingStr = res.getString(R.string.tag_ongoing)
-    completedStr = res.getString(R.string.tag_completed)
-    disabledStr = res.getString(R.string.disabled_generic)
-}
 
 fun getLibraryStatuses(): IntArray {
     return libraryStatus

@@ -231,6 +231,7 @@ fun transcodeTo(bitmap: Bitmap, encoder: PictureEncoder, quality: Int): ByteArra
         )
 
         PictureEncoder.AVIF -> return HeifCoder().encodeAvif(bitmap)
+        else -> return output.toByteArray()
     }
     return output.toByteArray()
 }

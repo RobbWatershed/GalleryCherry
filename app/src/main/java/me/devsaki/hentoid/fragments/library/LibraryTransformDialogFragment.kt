@@ -182,15 +182,22 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
                 refreshControls()
                 updatePreviewDebouncer.submit(Unit)
             }
+            val stillEncoders = PictureEncoder.entries.filter { !it.isAnimatedOnly }
+            encoderAll.entries = stillEncoders.map { it.description }
+            encoderAll.values = stillEncoders.map { it.value.toString() }
             encoderAll.setOnValueChangeListener { value ->
                 Settings.transcodeEncoderAll = value.toInt()
                 refreshControls()
                 updatePreviewDebouncer.submit(Unit)
             }
+            encoderLossless.entries = stillEncoders.filter { it.isLossless }.map { it.description }
+            encoderLossless.values = stillEncoders.filter { it.isLossless }.map { it.value.toString() }
             encoderLossless.setOnValueChangeListener { value ->
                 Settings.transcodeEncoderLossless = value.toInt()
                 updatePreviewDebouncer.submit(Unit)
             }
+            encoderLossy.entries = stillEncoders.filter { !it.isLossless }.map { it.description }
+            encoderLossy.values = stillEncoders.filter { !it.isLossless }.map { it.value.toString() }
             encoderLossy.setOnValueChangeListener { value ->
                 Settings.transcodeEncoderLossy = value.toInt()
                 updatePreviewDebouncer.submit(Unit)

@@ -878,10 +878,8 @@
     <string name="encoder">Энкодер</string>
     <string name="encoder_lossless">Энкодер без потерь</string>
     <string name="encoder_lossy">Энкодер с потерями</string>
-    <string name="transcode_encoder_webp_lossless">WEBP (без потерь)</string>
-    <string name="transcode_encoder_png">PNG</string>
-    <string name="transcode_encoder_webp_lossy">WEBP (с потерями)</string>
-    <string name="transcode_encoder_jpeg">JPEG</string>
+    <string name="lossless_generic">без потерь</string>
+    <string name="lossy_generic">с потерями</string>
     <string name="encoder_quality">Качество</string>
     <string name="encoder_warning">Формат WEBP ограничен размером 16383 пикселей в ширину и высоту. Изображения большего размера будут автоматически кодироваться в формат PNG или JPG.</string>
     <string name="retransform_warning">%d страницы уже преобразованы. Преобразование несколько раз может привести к заметной потере качества.\nМы рекомендуем повторно загрузить исходные изображения и преобразовать их один раз.</string>

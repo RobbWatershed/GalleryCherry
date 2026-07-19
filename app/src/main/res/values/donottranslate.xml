@@ -131,7 +131,8 @@
     </string-array>
     <string-array name="pref_dl_animation_format_entries" translatable="false">
         <item>GIF</item>
-        <item>WEBP</item>
+        <item>WEBP (lossy)</item>
+        <item>WEBP (lossless)</item>
         <item>AVC (MP4)</item>
     </string-array>
     <string-array name="pref_dl_skip_large_size_threshold_entries" translatable="false">
@@ -443,51 +444,6 @@
         <item>@string/transcode_method_1</item>
         <item>@string/transcode_method_2</item>
     </string-array>
-    <string-array name="transcode_encoders_all" translatable="false">
-        <item>@string/transcode_encoder_webp_lossless</item>
-        <item>@string/transcode_encoder_png</item>
-        <item>@string/transcode_encoder_webp_lossy</item>
-        <item>@string/transcode_encoder_jpeg</item>
-        <item>@string/transcode_encoder_jxl_lossy</item>
-        <item>@string/transcode_encoder_jxl_lossless</item>
-        <item>@string/transcode_encoder_jpegli</item>
-        <item>@string/transcode_encoder_avif</item>
-    </string-array>
-    <string-array name="transcode_encoders_lossless" translatable="false">
-        <item>@string/transcode_encoder_webp_lossless</item>
-        <item>@string/transcode_encoder_png</item>
-        <item>@string/transcode_encoder_jxl_lossless</item>
-    </string-array>
-    <string-array name="transcode_encoders_lossy" translatable="false">
-        <item>@string/transcode_encoder_webp_lossy</item>
-        <item>@string/transcode_encoder_jpeg</item>
-        <item>@string/transcode_encoder_jxl_lossy</item>
-        <item>@string/transcode_encoder_jpegli</item>
-        <item>@string/transcode_encoder_avif</item>
-    </string-array>
-    <!-- Values from PictureEncoder -->
-    <string-array name="transcode_encoders_all_vals" translatable="false">
-        <item>0</item>
-        <item>2</item>
-        <item>1</item>
-        <item>3</item>
-        <item>4</item>
-        <item>5</item>
-        <item>6</item>
-        <item>7</item>
-    </string-array>
-    <string-array name="transcode_encoders_lossless_vals" translatable="false">
-        <item>0</item>
-        <item>2</item>
-        <item>5</item>
-    </string-array>
-    <string-array name="transcode_encoders_lossy_vals" translatable="false">
-        <item>1</item>
-        <item>3</item>
-        <item>4</item>
-        <item>6</item>
-        <item>7</item>
-    </string-array>
 
     <!-- Archive dialog -->
     <string-array name="target_folder_entries" translatable="false">
@@ -534,6 +490,13 @@
     <string name="percent_no_digits" translatable="false">%.0f%%</string>
     <string name="what" translatable="false">\???</string>
     <string name="empty_string" translatable="false" />
+    <string name="transcode_encoder_png" tools:ignore="MissingTranslation">PNG</string>
+    <string name="transcode_encoder_webp" tools:ignore="MissingTranslation">WEBP (%s)</string>
+    <string name="transcode_encoder_jpeg" tools:ignore="MissingTranslation">JPEG</string>
+    <string name="transcode_encoder_jxl" tools:ignore="MissingTranslation">JXL (%s)</string>
+    <string name="transcode_encoder_jpegli" tools:ignore="MissingTranslation">JPEGLI</string>
+    <string name="transcode_encoder_avif" tools:ignore="MissingTranslation">AVIF</string>
+    <string name="transcode_encoder_avc" tools:ignore="MissingTranslation">AVC/MP4</string>
 
     <!-- Strings: Main: Import Activity -->
     <!-- for logging only -->
