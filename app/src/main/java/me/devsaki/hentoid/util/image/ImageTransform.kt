@@ -55,6 +55,8 @@ data class TransformParams(
     val transcoderLossy: PictureEncoder,
     val transcoderLossless: PictureEncoder,
     val transcodeQuality: Int,
+    val transcodeAnim: PictureEncoder,
+    val transcodeAnimQuality: Int,
     val allowUpscale: Boolean = false,
     @Transient var forceManhwa: Boolean = false
 )

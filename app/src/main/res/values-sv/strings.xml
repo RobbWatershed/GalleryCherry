@@ -1033,7 +1033,7 @@
     <string name="transform_resize_pics">Storleksändra bilder</string>
     <string name="transform_resizing">Storleksändring</string>
     <string name="transform_start">Transformera bilder</string>
-    <string name="transform_transcoding">Omkodning</string>
+    <string name="transform_transcoding">Omkodning (%s)</string>
     <string name="transform_unsupported">Transformation stöds ej</string>
     <string name="u_byte">bitar</string>
     <string name="u_gigabyte">GB</string>

@@ -872,7 +872,7 @@
     <string name="resize_method_2_prompt_max_height">Максимальная высота (манга)</string>
     <string name="resize_method_2_prompt_max_width">Максимальная ширина (манхва, вебтун)</string>
     <string name="resize_method_3_prompt">% от исходного размера</string>
-    <string name="transform_transcoding">Транскодирование</string>
+    <string name="transform_transcoding">Транскодирование (%s)</string>
     <string name="transcode_method_1">Один и тот же энкодер для всех изображений</string>
     <string name="transcode_method_2">Различие сжатых с потерями и без потерь изображений</string>
     <string name="encoder">Энкодер</string>

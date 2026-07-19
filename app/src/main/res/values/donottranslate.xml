@@ -496,6 +496,7 @@
     <string name="transcode_encoder_jxl" tools:ignore="MissingTranslation">JXL (%s)</string>
     <string name="transcode_encoder_jpegli" tools:ignore="MissingTranslation">JPEGLI</string>
     <string name="transcode_encoder_avif" tools:ignore="MissingTranslation">AVIF</string>
+    <string name="transcode_encoder_gif" tools:ignore="MissingTranslation">GIF</string>
     <string name="transcode_encoder_avc" tools:ignore="MissingTranslation">AVC/MP4</string>
 
     <!-- Strings: Main: Import Activity -->

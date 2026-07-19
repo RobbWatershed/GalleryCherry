@@ -1095,6 +1095,8 @@
     <string name="resize_method_3_prompt">% of original size</string>
     <string name="resize_method_5_prompt">Number of images per chapter</string>
     <string name="transform_transcoding">Transcoding (%s)</string>
+    <string name="transform_images">images</string>
+    <string name="transform_animations">animations</string>
     <string name="transcode_method_1">Same encoder for all pictures</string>
     <string name="transcode_method_2">Differentiate lossy and lossless pictures</string>
     <string name="encoder">Encoder</string>

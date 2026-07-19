@@ -135,7 +135,7 @@
         </com.google.android.material.textfield.TextInputLayout>
 
         <TextView
-            android:id="@+id/transcode_header"
+            android:id="@+id/transcode_img_header"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
@@ -150,7 +150,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             app:entries="@array/transcode_method_entries"
-            app:layout_constraintTop_toBottomOf="@id/transcode_header"
+            app:layout_constraintTop_toBottomOf="@id/transcode_img_header"
             app:title="@string/method" />
 
         <me.devsaki.hentoid.views.ListPickerView
@@ -197,6 +197,45 @@
 
         </com.google.android.material.textfield.TextInputLayout>
 
+        <TextView
+            android:id="@+id/transcode_anim_header"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/transform_transcoding"
+            android:textSize="@dimen/text_header_6"
+            android:textStyle="bold"
+            app:layout_constraintTop_toBottomOf="@id/encoder_quality" />
+
+        <me.devsaki.hentoid.views.ListPickerView
+            android:id="@+id/encoder_anim"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:visibility="gone"
+            app:layout_constraintTop_toBottomOf="@id/transcode_anim_header"
+            app:title="@string/encoder"
+            tools:visibility="visible" />
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/encoder_anim_quality"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/encoder_quality"
+            android:visibility="gone"
+            app:counterMaxLength="3"
+            app:layout_constraintTop_toBottomOf="@id/encoder_anim"
+            tools:visibility="visible">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:imeOptions="flagNoPersonalizedLearning"
+                android:inputType="number"
+                android:textCursorDrawable="@null" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/warnings_list"
             android:layout_width="match_parent"
@@ -209,7 +248,7 @@
             android:visibility="gone"
             app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/encoder_quality"
+            app:layout_constraintTop_toBottomOf="@id/encoder_anim_quality"
             app:maxHeight="120dp"
             tools:layout_height="120dp"
             tools:listitem="@layout/item_drawer"

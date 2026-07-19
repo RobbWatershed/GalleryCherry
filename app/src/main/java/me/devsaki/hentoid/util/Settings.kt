@@ -239,7 +239,12 @@ object Settings {
         "TRANSFORM_TRANSCODE_ENC_LOSSY",
         PictureEncoder.JPEG.value
     )
+    var transcodeEncoderAnim: Int by IntSettingStr(
+        "TRANSFORM_TRANSCODE_ENC_ANIM",
+        PictureEncoder.WEBP_LOSSY.value
+    )
     var transcodeQuality: Int by IntSettingStr("TRANSFORM_TRANSCODE_QUALITY", 90)
+    var transcodeAnimQuality: Int by IntSettingStr("TRANSFORM_TRANSCODE_ANIM_QUALITY", 90)
 
     // ARCHIVES
     var archiveTargetFolder: String by StringSetting(

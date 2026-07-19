@@ -1531,7 +1531,9 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
                 else -> MIME_IMAGE_GIF
             }
             val targetExt = getExtensionFromMimeType(targetMime)
-            val targetQuality = Settings.downloadAnimationQuality.coerceIn(0, 100)
+            val targetQuality =
+                if (Settings.downloadAnimationFormat == PictureEncoder.WEBP_LOSSLESS.value) 100
+                else Settings.downloadAnimationQuality.coerceIn(0, 100)
 
             val tempFile = createFile(
                 applicationContext, downloadFolder, "${img.name}.$targetExt",

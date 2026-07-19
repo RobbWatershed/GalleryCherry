@@ -177,12 +177,18 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
                     updatePreviewDebouncer.submit(Unit)
                 }
             }
+
+            // Images
+            transcodeImgHeader.text = resources.getString(
+                R.string.transform_transcoding,
+                resources.getString(R.string.transform_images)
+            )
             transcodeMethod.setOnIndexChangeListener { index ->
                 Settings.transcodeMethod = index
                 refreshControls()
                 updatePreviewDebouncer.submit(Unit)
             }
-            val stillEncoders = PictureEncoder.entries.filter { !it.isAnimatedOnly }
+            val stillEncoders = PictureEncoder.entries.filter { it.isImage }
             encoderAll.entries = stillEncoders.map { it.description }
             encoderAll.values = stillEncoders.map { it.value.toString() }
             encoderAll.setOnValueChangeListener { value ->
@@ -191,13 +197,15 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
                 updatePreviewDebouncer.submit(Unit)
             }
             encoderLossless.entries = stillEncoders.filter { it.isLossless }.map { it.description }
-            encoderLossless.values = stillEncoders.filter { it.isLossless }.map { it.value.toString() }
+            encoderLossless.values =
+                stillEncoders.filter { it.isLossless }.map { it.value.toString() }
             encoderLossless.setOnValueChangeListener { value ->
                 Settings.transcodeEncoderLossless = value.toInt()
                 updatePreviewDebouncer.submit(Unit)
             }
             encoderLossy.entries = stillEncoders.filter { !it.isLossless }.map { it.description }
-            encoderLossy.values = stillEncoders.filter { !it.isLossless }.map { it.value.toString() }
+            encoderLossy.values =
+                stillEncoders.filter { !it.isLossless }.map { it.value.toString() }
             encoderLossy.setOnValueChangeListener { value ->
                 Settings.transcodeEncoderLossy = value.toInt()
                 updatePreviewDebouncer.submit(Unit)
@@ -208,6 +216,27 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
                     updatePreviewDebouncer.submit(Unit)
                 }
             }
+
+            // Animations
+            transcodeAnimHeader.text = resources.getString(
+                R.string.transform_transcoding,
+                resources.getString(R.string.transform_animations)
+            )
+            val animEncoders = PictureEncoder.entries.filter { it.isAnimation }
+            encoderAnim.entries = animEncoders.map { it.description }
+            encoderAnim.values = animEncoders.map { it.value.toString() }
+            encoderAnim.setOnValueChangeListener { value ->
+                Settings.transcodeEncoderAnim = value.toInt()
+                updatePreviewDebouncer.submit(Unit)
+            }
+            encoderAnimQuality.editText?.setOnTextChangedListener(lifecycleScope) { value ->
+                if (checkRange(encoderQuality, 75, 100)) {
+                    Settings.transcodeAnimQuality = value.toInt()
+                    updatePreviewDebouncer.submit(Unit)
+                }
+            }
+
+            // Preview
             prevPageBtn.setOnClickListener {
                 if (pageIndex > 0) pageIndex--
                 updatePreviewDebouncer.submit(Unit)
@@ -252,8 +281,8 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
             resizeMethod5Images.isVisible = (4 == resizeMethod.index && resizeMethod.isVisible)
             if (applyValues) resizeMethod5Images.editText?.setText(Settings.resizeMethod5Images.toString())
 
-            // Transcode
-            transcodeHeader.isVisible = !isAiUpscale
+            // Transcode images
+            transcodeImgHeader.isVisible = !isAiUpscale
             transcodeMethod.isVisible = !isAiUpscale
             if (applyValues) transcodeMethod.index = Settings.transcodeMethod
             encoderAll.isVisible = (0 == transcodeMethod.index && !isAiUpscale)
@@ -268,6 +297,17 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
                 (1 == transcodeMethod.index || (0 == transcodeMethod.index && isEncoderAllLossy))
             if (isAiUpscale) encoderQuality.isVisible = false
             if (applyValues) encoderQuality.editText?.setText(Settings.transcodeQuality.toString())
+
+            // Transcode animations
+            transcodeAnimHeader.isVisible = !isAiUpscale
+            encoderAnim.isVisible = !isAiUpscale
+            encoderQuality.isVisible = !isAiUpscale
+            if (applyValues) {
+                encoderAnim.value = Settings.transcodeEncoderAnim.toString()
+                encoderAnimQuality.isVisible =
+                    (false == PictureEncoder.fromValue(Settings.transcodeEncoderAnim)?.isLossless)
+                encoderAnimQuality.editText?.setText(Settings.transcodeAnimQuality.toString())
+            }
 
             // Warning list
             warningsList.adapter = fastAdapter
@@ -432,6 +472,8 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
                 PictureEncoder.fromValue(encoderLossy.value.toInt())!!,
                 PictureEncoder.fromValue(encoderLossless.value.toInt())!!,
                 encoderQuality.editText!!.text.toString().toInt(),
+                PictureEncoder.fromValue(encoderAnim.value.toInt())!!,
+                encoderAnimQuality.editText!!.text.toString().toInt()
             )
         }
     }
@@ -481,7 +523,7 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
             return false
         }
         val intValue = editTxt.text.toString().toInt()
-        if (intValue < minValue || intValue > maxValue) {
+        if (intValue !in minValue..maxValue) {
             text.isErrorEnabled = true
             text.error = errMsg
             return false
