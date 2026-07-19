@@ -25,6 +25,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import me.devsaki.hentoid.core.CHARSET_LATIN_1
 import me.devsaki.hentoid.enums.PictureEncoder
+import me.devsaki.hentoid.util.assertNonUiThread
 import me.devsaki.hentoid.util.byteArrayOfInts
 import me.devsaki.hentoid.util.duplicateInputStream
 import me.devsaki.hentoid.util.file.FILECHUNK_AUTHORITY
@@ -87,6 +88,12 @@ private val AVIF_ANIMATED_SIGNATURE = "ftypavis".toByteArray(CHARSET_LATIN_1)
 val imageNamesFilter = NameFilter { isMediaExtensionSupported(getExtension(it)) }
 
 
+data class ImageProperties(
+    val mime: String,
+    val isLossless: Boolean,
+    val isAnimated: Boolean
+)
+
 /**
  * Determine if the given image MIME type is supported by the app
  *
@@ -128,6 +135,30 @@ private fun isMediaExtensionSupported(extension: String): Boolean {
 
 fun isSupportedMedia(fileName: String): Boolean {
     return isMediaExtensionSupported(getExtension(fileName))
+}
+
+fun getImageProperties(context: Context, uri: Uri): ImageProperties? {
+    assertNonUiThread()
+    try {
+        getInputStream(context, uri).use { input ->
+            return getImageProperties(input)
+        }
+    } catch (e: Exception) {
+        Timber.w(e, "Unable to open image file $uri")
+    }
+    return null
+}
+
+fun getImageProperties(input: InputStream): ImageProperties? {
+    val header = ByteArray(1000)
+    if (input.read(header) > 0) {
+        return ImageProperties(
+            mime = getMimeTypeFromPictureBinary(header),
+            isAnimated = isImageAnimated(header),
+            isLossless = isImageLossless(header)
+        )
+    }
+    return null
 }
 
 /**

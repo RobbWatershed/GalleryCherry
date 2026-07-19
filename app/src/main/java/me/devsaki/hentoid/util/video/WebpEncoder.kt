@@ -23,10 +23,10 @@ class WebpEncoder : AnimationEncoder {
         require(frames.isNotEmpty()) { "No frames given" }
         require(!isCanceled.invoke())
         WebpBitmapEncoder(outUri, context.contentResolver).use { encoder ->
-            encoder.setLoops(0)
+            encoder.setLoops(0) // Infinite looping
+            encoder.setDuration(frames.sumOf { it.second })
             frames.forEachIndexed { index, frame ->
                 if (isCanceled.invoke()) return@forEachIndexed
-                encoder.setDuration(frame.second)
                 loadBitmap(context, frame.first)?.let { bitmap ->
                     try {
                         encoder.writeFrame(bitmap, (quality * 100).roundToInt())

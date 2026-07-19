@@ -44,7 +44,6 @@ import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.Settings.Value.VIEWER_DELETE_ASK_AGAIN
 import me.devsaki.hentoid.util.Settings.Value.VIEWER_DELETE_ASK_BOOK
 import me.devsaki.hentoid.util.addContent
-import me.devsaki.hentoid.util.assertNonUiThread
 import me.devsaki.hentoid.util.chapterStr
 import me.devsaki.hentoid.util.clearFileNameMatchCache
 import me.devsaki.hentoid.util.coerceIn
@@ -61,17 +60,16 @@ import me.devsaki.hentoid.util.file.getDocumentFromTreeUri
 import me.devsaki.hentoid.util.file.getDocumentFromTreeUriString
 import me.devsaki.hentoid.util.file.getExtension
 import me.devsaki.hentoid.util.file.getFileFromSingleUriString
-import me.devsaki.hentoid.util.file.getInputStream
 import me.devsaki.hentoid.util.file.isSupportedArchive
 import me.devsaki.hentoid.util.formatCacheKey
 import me.devsaki.hentoid.util.getPictureFilesFromContent
+import me.devsaki.hentoid.util.image.MIME_IMAGE_APNG
 import me.devsaki.hentoid.util.image.MIME_IMAGE_AVIF
 import me.devsaki.hentoid.util.image.MIME_IMAGE_GIF
 import me.devsaki.hentoid.util.image.MIME_IMAGE_JXL
 import me.devsaki.hentoid.util.image.MIME_IMAGE_PNG
 import me.devsaki.hentoid.util.image.MIME_IMAGE_WEBP
-import me.devsaki.hentoid.util.image.getMimeTypeFromPictureBinary
-import me.devsaki.hentoid.util.image.isImageAnimated
+import me.devsaki.hentoid.util.image.getImageProperties
 import me.devsaki.hentoid.util.matchFilesToImageList
 import me.devsaki.hentoid.util.network.WebkitPackageHelper
 import me.devsaki.hentoid.util.pause
@@ -2134,35 +2132,22 @@ class ReaderViewModel(
 }
 
 private fun readImageType(context: Context, uri: Uri): ImageType {
-    assertNonUiThread()
-    if (uri == Uri.EMPTY) return ImageType.IMG_TYPE_ERROR
-
-    try {
-        getInputStream(context, uri).use { input ->
-            val header = ByteArray(400)
-            if (input.read(header) > 0) {
-                val mime = getMimeTypeFromPictureBinary(header)
-                val isAnimated = isImageAnimated(header)
-                if (isAnimated) {
-                    when (mime) {
-                        MIME_IMAGE_PNG -> return ImageType.IMG_TYPE_APNG
-                        MIME_IMAGE_WEBP -> return ImageType.IMG_TYPE_AWEBP
-                        MIME_IMAGE_GIF -> return ImageType.IMG_TYPE_GIF
-                        MIME_IMAGE_AVIF -> return ImageType.IMG_TYPE_AAVIF
-                        MIME_VIDEO_MP4 -> return ImageType.IMG_TYPE_VIDEO
-                    }
-                } else {
-                    when (mime) {
-                        MIME_IMAGE_GIF -> return ImageType.IMG_TYPE_GIF
-                        MIME_IMAGE_JXL -> return ImageType.IMG_TYPE_JXL
-                        MIME_IMAGE_AVIF -> return ImageType.IMG_TYPE_AVIF
-                    }
-                }
-                return ImageType.IMG_TYPE_OTHER
-            }
+    val props = getImageProperties(context, uri) ?: return ImageType.IMG_TYPE_ERROR
+    if (props.isAnimated) {
+        when (props.mime) {
+            MIME_IMAGE_APNG -> return ImageType.IMG_TYPE_APNG
+            MIME_IMAGE_PNG -> return ImageType.IMG_TYPE_APNG
+            MIME_IMAGE_WEBP -> return ImageType.IMG_TYPE_AWEBP
+            MIME_IMAGE_GIF -> return ImageType.IMG_TYPE_GIF
+            MIME_IMAGE_AVIF -> return ImageType.IMG_TYPE_AAVIF
+            MIME_VIDEO_MP4 -> return ImageType.IMG_TYPE_VIDEO
         }
-    } catch (e: Exception) {
-        Timber.w(e, "Unable to open image file $uri")
+    } else {
+        when (props.mime) {
+            MIME_IMAGE_GIF -> return ImageType.IMG_TYPE_GIF
+            MIME_IMAGE_JXL -> return ImageType.IMG_TYPE_JXL
+            MIME_IMAGE_AVIF -> return ImageType.IMG_TYPE_AVIF
+        }
     }
-    return ImageType.IMG_TYPE_ERROR
+    return ImageType.IMG_TYPE_OTHER
 }

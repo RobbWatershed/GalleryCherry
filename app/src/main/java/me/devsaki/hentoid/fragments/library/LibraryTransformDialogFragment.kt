@@ -47,8 +47,8 @@ import me.devsaki.hentoid.util.image.getMimeTypeFromPictureBinary
 import me.devsaki.hentoid.util.image.isImageLossless
 import me.devsaki.hentoid.util.image.screenHeight
 import me.devsaki.hentoid.util.image.screenWidth
-import me.devsaki.hentoid.util.image.transform
 import me.devsaki.hentoid.util.image.transformManhwaChapter
+import me.devsaki.hentoid.util.image.transformStill
 import me.devsaki.hentoid.viewholders.DrawerItem
 import me.devsaki.hentoid.workers.TransformWorker
 import okio.use
@@ -379,7 +379,7 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
                 return@withContext if (params.resizeEnabled && 4 == params.resizeMethod) {
                     val res = transformManhwa(params, pageIndex)
                     if (res.isEmpty()) sourceBmp.rawData else res
-                } else transform(requireContext(), sourceBmp.rawData, params, true)
+                } else transformStill(requireContext(), sourceBmp.rawData, params, true)
             }
             val unchanged = targetData == sourceBmp.rawData
 

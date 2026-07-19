@@ -32,17 +32,20 @@ import me.devsaki.hentoid.util.file.getParent
 import me.devsaki.hentoid.util.file.removeDocument
 import me.devsaki.hentoid.util.file.saveBinary
 import me.devsaki.hentoid.util.getStorageRoot
+import me.devsaki.hentoid.util.image.ImageProperties
 import me.devsaki.hentoid.util.image.TransformParams
 import me.devsaki.hentoid.util.image.clearCoilCache
 import me.devsaki.hentoid.util.image.determineEncoder
+import me.devsaki.hentoid.util.image.getImageProperties
 import me.devsaki.hentoid.util.image.getMediaDimensions
 import me.devsaki.hentoid.util.image.isImageLossless
-import me.devsaki.hentoid.util.image.transform
 import me.devsaki.hentoid.util.image.transformManhwaChapter
+import me.devsaki.hentoid.util.image.transformStill
 import me.devsaki.hentoid.util.network.UriParts
 import me.devsaki.hentoid.util.notification.BaseNotification
 import me.devsaki.hentoid.util.pause
 import me.devsaki.hentoid.util.updateJson
+import me.devsaki.hentoid.util.video.getPenfeiFrameStreamer
 import me.robb.ai_upscale.AiUpscaler
 import okio.IOException
 import timber.log.Timber
@@ -116,8 +119,8 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
         // +count the total number of images to convert
         dao.updateContentsProcessedFlagById(contentIds.filter { it > 0 }, true)
 
-        contentIds.forEach {
-            totalItems += dao.selectImagesFromContent(it, true).count { i -> i.isReadable }
+        contentIds.forEach { c ->
+            totalItems += dao.selectImagesFromContent(c, true).count { it.isReadable }
             if (isStopped) return
         }
 
@@ -311,6 +314,9 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
         nbManhwa: AtomicInteger,
         nbPages: Int
     ): ImageFile {
+        val props = getImageProperties(applicationContext, img.fileUri.toUri()) ?: return img
+        if (props.isAnimated) return transformAnimatedImage(img, props, contentFolder, params)
+
         val sourceFile = withContext(Dispatchers.IO) {
             getDocumentFromTreeUriString(applicationContext, img.fileUri)
         } ?: run {
@@ -334,7 +340,7 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
             if (isManhwa) nbManhwa.incrementAndGet()
             params.forceManhwa = nbManhwa.get() * 1.0 / nbPages > 0.9
 
-            targetData = transform(applicationContext, rawData, params)
+            targetData = transformStill(applicationContext, rawData, params)
         }
         if (isStopped) return img
         if (targetData == rawData) return img // Unchanged picture
@@ -368,6 +374,26 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
             nextKO()
             launchProgressNotification()
         }
+        return img
+    }
+
+    private suspend fun transformAnimatedImage(
+        img: ImageFile,
+        props : ImageProperties,
+        contentFolder: DocumentFile,
+        params: TransformParams
+    ): ImageFile {
+
+
+        getInputStream(applicationContext, img.fileUri.toUri()).use { input ->
+            getPenfeiFrameStreamer(props.mime, input)?.let { fs ->
+                fs.streamFrames(this::isStopped) { f ->
+
+                }
+            }
+        }
+
+        // TODO
         return img
     }
 

@@ -37,7 +37,7 @@ import me.devsaki.hentoid.util.image.getMimeTypeFromPictureBinary
 import me.devsaki.hentoid.util.image.isSupportedMedia
 import me.devsaki.hentoid.util.image.loadBitmap
 import me.devsaki.hentoid.util.image.screenWidth
-import me.devsaki.hentoid.util.image.transform
+import me.devsaki.hentoid.util.image.transformStill
 import me.devsaki.hentoid.util.median
 import me.devsaki.hentoid.util.network.UriParts
 import me.devsaki.hentoid.util.pause
@@ -124,9 +124,9 @@ class PdfManager {
                         processFile(context, file.uri, keepImgFormat) ?: return@forEachIndexed
                     val params = TransformParams(
                         true, 2, 0f, 0, 0, ratio.toFloat(), 0, 1, PictureEncoder.PNG,
-                        PictureEncoder.JPEG, PictureEncoder.PNG, 90, allowUpscale = true
+                        PictureEncoder.JPEG, PictureEncoder.PNG, 90, PictureEncoder.WEBP_LOSSY, 90, allowUpscale = true
                     )
-                    val dataOut = transform(context, data, params)
+                    val dataOut = transformStill(context, data, params)
                     val image = Image(ImageDataFactory.create(dataOut))
 
                     Timber.d("Adding new page @ $index : ${image.imageWidth}x${image.imageHeight} (ratio : $ratio)")

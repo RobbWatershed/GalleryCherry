@@ -172,9 +172,12 @@ dependencies {
     implementation 'com.github.awxkee:jpegli-coder:1.0.2'
 
     // Animated pics that Coil doesn't support (APNG, animated AVIF) -> https://github.com/penfeizhou/APNG4Android
+    // + frame streaming
     def APNG4Android_version = '3.0.5'
+    implementation "com.github.penfeizhou.android.animation:gif:$APNG4Android_version"
     implementation "com.github.penfeizhou.android.animation:apng:$APNG4Android_version"
     implementation "com.github.penfeizhou.android.animation:avif:$APNG4Android_version"
+    implementation "com.github.penfeizhou.android.animation:awebp:$APNG4Android_version"
 
     // Animated GIF creator -> https://github.com/shaksternano/gif.kt
     implementation('com.shakster:gifkt:0.3.3')

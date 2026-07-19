@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Point
+import android.media.MediaFormat.MIMETYPE_VIDEO_AVC
 import android.net.Uri
 import android.os.Build
 import androidx.core.graphics.createBitmap
@@ -17,22 +18,30 @@ import com.squareup.moshi.JsonClass
 import io.github.awxkee.jpegli.coder.IccStrategy
 import io.github.awxkee.jpegli.coder.JpegliCoder
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.devsaki.hentoid.core.HentoidApp
 import me.devsaki.hentoid.database.domains.ImageFile
 import me.devsaki.hentoid.enums.PictureEncoder
 import me.devsaki.hentoid.enums.StatusContent
+import me.devsaki.hentoid.events.DownloadEvent
+import me.devsaki.hentoid.util.Settings
+import me.devsaki.hentoid.util.download.ContentQueueManager
 import me.devsaki.hentoid.util.file.copyFile
 import me.devsaki.hentoid.util.file.createFile
 import me.devsaki.hentoid.util.file.fileSizeFromUri
 import me.devsaki.hentoid.util.file.getDocumentFromTreeUri
 import me.devsaki.hentoid.util.file.getDocumentFromTreeUriString
+import me.devsaki.hentoid.util.file.getExtensionFromMimeType
 import me.devsaki.hentoid.util.file.getInputStream
 import me.devsaki.hentoid.util.file.getMimeTypeFromFileName
 import me.devsaki.hentoid.util.file.saveBinary
 import me.devsaki.hentoid.util.formatIntAsStr
 import me.devsaki.hentoid.util.getScreenDimensionsPx
 import me.devsaki.hentoid.util.network.UriParts
+import me.devsaki.hentoid.util.video.getAnimationEncoder
+import org.greenrobot.eventbus.EventBus
 import timber.log.Timber
 import java.io.ByteArrayOutputStream
 import kotlin.math.abs
@@ -83,18 +92,50 @@ internal data class ManhwaProcessingItem(
     val toConsumeHeight: Int
 )
 
+/*
+private suspend fun transformAnimated(
+    context: Context,
+    sourceFile : Uri,
+    params: TransformParams,
+    isCanceled: () -> Boolean,
+    onProgress: ((Float) -> Unit)? = null
+): ByteArray {
+    val targetQuality =
+        if (Settings.downloadAnimationFormat == PictureEncoder.WEBP_LOSSLESS.value) 100
+        else Settings.downloadAnimationQuality.coerceIn(0, 100)
+    getAnimationEncoder(params.transcodeAnim.value).use { encoder ->
+        encoder.encode(
+            context,
+            tempFile,
+            frames,
+            targetQuality.toFloat() / 100f,
+            isCanceled = {
+                this.isStopped || downloadProcessStopped || ContentQueueManager.isQueuePaused
+            }
+        ) { f ->
+            GlobalScope.launch(Dispatchers.Default) {
+                EventBus.getDefault().post(
+                    DownloadEvent(
+                        eventType = DownloadEvent.Type.EV_PROGRESS,
+                        step = DownloadEvent.Step.ENCODE_ANIMATION,
+                        fileDownloadProgress = f * 100
+                    )
+                )
+            }
+        }
+    }
+}
+ */
 
 /**
  * Transform the given raw picture data using the given params
  */
-suspend fun transform(
+suspend fun transformStill(
     context: Context,
     rawData: ByteArray,
     params: TransformParams,
     allowBogusAiRescale: Boolean = false
 ): ByteArray {
-    if (isImageAnimated(rawData)) return rawData
-
     val dims = getMediaDimensions(context, data = rawData)
     val bitmapOut: Bitmap = if (params.resizeEnabled) {
         when (params.resizeMethod) {
