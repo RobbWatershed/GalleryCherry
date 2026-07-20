@@ -1,7 +1,9 @@
 package me.devsaki.hentoid.fragments.library
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.graphics.Point
+import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -36,12 +38,13 @@ import me.devsaki.hentoid.fragments.BaseDialogFragment
 import me.devsaki.hentoid.util.Debouncer
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.file.createFile
+import me.devsaki.hentoid.util.file.fileSizeFromUri
 import me.devsaki.hentoid.util.file.formatHumanReadableSize
 import me.devsaki.hentoid.util.file.getBinary
 import me.devsaki.hentoid.util.file.getExtensionFromMimeType
 import me.devsaki.hentoid.util.file.getInputStream
 import me.devsaki.hentoid.util.file.getOrCreateCacheFolder
-import me.devsaki.hentoid.util.file.removeFile
+import me.devsaki.hentoid.util.file.tryCleanDirectory
 import me.devsaki.hentoid.util.image.ImageProperties
 import me.devsaki.hentoid.util.image.TransformParams
 import me.devsaki.hentoid.util.image.determineEncoder
@@ -63,6 +66,7 @@ import kotlin.math.roundToInt
 
 private const val KEY_CONTENTS = "contents"
 private const val CACHE_TRANSFORM_MANHWA = "transform-manhwa"
+private const val CACHE_PREVIEW = "preview"
 private const val DIMS_LIMIT = 20000
 
 class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialogFragment.Parent>() {
@@ -109,6 +113,12 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
 
     override fun onDestroy() {
         updatePreviewDebouncer.clear()
+        // Empty cache
+        context?.apply {
+            getOrCreateCacheFolder(this, CACHE_PREVIEW)?.let {
+                if (!tryCleanDirectory(it)) Timber.d("Failed to clean preview cache")
+            }
+        }
         super.onDestroy()
     }
 
@@ -383,44 +393,42 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
             val sourceName =
                 sourceBmp.name + "." + getExtensionFromMimeType(sourceBmp.properties.mime)
             val params = buildParams()
-            val targetData = withContext(Dispatchers.IO) {
+            val targetData: BitmapInfo = withContext(Dispatchers.IO) {
                 return@withContext if (params.resizeEnabled && 4 == params.resizeMethod) {
                     // Manhwa resize
                     val res = transformManhwa(params, pageIndex)
-                    if (res.isEmpty()) sourceBmp.rawData else res
+                    BitmapInfo(if (res.isEmpty()) sourceBmp.rawData else res)
                 } else if (sourceBmp.properties.isAnimated) {
                     withContext(Dispatchers.Main) {
                         binding?.previewProgress?.isIndeterminate = false
                         binding?.previewProgress?.max = 100
                     }
+                    val tempFolder = getOrCreateCacheFolder(context, CACHE_PREVIEW)?.toUri()
+                        ?: return@withContext BitmapInfo(sourceBmp.rawData)
                     val tempFile = createFile(
-                        context, context.cacheDir.toUri(), "temp",
+                        context, tempFolder, "temp",
                         params.transcodeAnim.mimeType
                     )
-                    try {
-                        transformAnimated(
-                            context,
-                            sourceBmp.uri.toUri(),
-                            sourceBmp.properties.mime,
-                            tempFile,
-                            params,
-                            { false }
-                        ) {
-                            lifecycleScope.launch(Dispatchers.Main) {
-                                binding?.previewProgress?.progress = (it * 100).roundToInt()
-                            }
+                    transformAnimated(
+                        context,
+                        sourceBmp.uri.toUri(),
+                        sourceBmp.properties.mime,
+                        tempFile,
+                        params,
+                        { false }
+                    ) {
+                        lifecycleScope.launch(Dispatchers.Main) {
+                            binding?.previewProgress?.progress = (it * 100).roundToInt()
                         }
-                        getBinary(context, tempFile) // TODO find something more memory-efficient
-                    } finally {
-                        removeFile(context, tempFile)
                     }
-                } else transformStill(context, sourceBmp.rawData, params, true)
+                    BitmapInfo(tempFile)
+                } else BitmapInfo(transformStill(context, sourceBmp.rawData, params, true))
             }
 
             @Suppress("ARRAY_EQUALITY_OPERATOR_CAN_BE_REPLACED_WITH_CONTENT_EQUALS")
-            val unchanged = targetData == sourceBmp.rawData
+            val unchanged = targetData.rawData == sourceBmp.rawData
 
-            val targetSize = formatHumanReadableSize(targetData.size.toLong(), resources)
+            val targetSize = formatHumanReadableSize(targetData.getSize(context), resources)
             val targetMime = determineEncoder(
                 sourceBmp.properties.isLossless,
                 sourceBmp.properties.isAnimated,
@@ -428,7 +436,7 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
                 params
             ).mimeType
             val targetName = sourceBmp.name + "." + getExtensionFromMimeType(targetMime)
-            val targetDims = getMediaDimensions(context, data = targetData)
+            val targetDims = targetData.getDimensions(context)
             targetDimsWarning = (targetDims.x > DIMS_LIMIT || targetDims.y > DIMS_LIMIT)
             refreshControls()
 
@@ -582,7 +590,20 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
         val name: String,
         val rawData: ByteArray
     ) {
+        constructor(uri: Uri) : this(uri.toString(), "", ByteArray(0))
+        constructor(rawData: ByteArray) : this("", "", rawData)
+
         val properties: ImageProperties by lazy { getImageProperties(rawData) }
+
+        fun getSize(context: Context): Long {
+            return if (rawData.isNotEmpty()) rawData.size.toLong()
+            else fileSizeFromUri(context, uri.toUri())
+        }
+
+        suspend fun getDimensions(context: Context): Point {
+            return if (rawData.isNotEmpty()) getMediaDimensions(context, data = rawData)
+            else getMediaDimensions(context, uri)
+        }
     }
 
     interface Parent {

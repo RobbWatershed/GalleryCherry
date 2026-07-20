@@ -4,8 +4,11 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
 import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import me.devsaki.hentoid.util.file.getOutputStream
 import me.devsaki.hentoid.util.image.loadBitmap
+import me.devsaki.hentoid.util.pause
 import me.devsaki.hentoid.webp_encoder.WebpBitmapEncoder
 import timber.log.Timber
 import java.io.OutputStream
@@ -48,11 +51,14 @@ class WebpStreamedEncoder(val quality: Float, val frameDurationMs: Int) : Animat
         }
     }
 
-    override suspend fun addFrame(bitmap: Bitmap, durationMs: Int) {
+    override suspend fun addFrame(bitmap: Bitmap, durationMs: Int) = withContext(Dispatchers.IO) {
         encoder.writeFrame(bitmap, (quality * 100).roundToInt())
     }
 
     override fun close() {
+        // Use extra second to finalize all that might be still happening on other threads
+        pause(1000)
+        Timber.d("Closing WebpStreamedEncoder")
         encoder.close()
         outputStream.close()
     }

@@ -52,7 +52,7 @@ class VideoStreamedEncoder(
 
     private var outFileDescriptor: ParcelFileDescriptor? = null
 
-    private var mime = MIMETYPE_VIDEO_AVC
+    private var videoMime = MIMETYPE_VIDEO_AVC
     private var outSize = Size(0, 0)
 
     private var trackIndex = -1
@@ -83,10 +83,10 @@ class VideoStreamedEncoder(
 
 
     override suspend fun init(context: Context, outUri: Uri) = withContext(singleThread) {
-        encoder = MediaCodec.createEncoderByType(mime)
+        encoder = MediaCodec.createEncoderByType(videoMime)
 
         // Try to find supported size by checking the resolution of first supplied image
-        outSize = getBestSupportedResolution(encoder, mime, Size(dims.x, dims.y))
+        outSize = getBestSupportedResolution(encoder, videoMime, Size(dims.x, dims.y))
         Timber.d("Using size ${outSize.width}x${outSize.height}")
 
         // Calculate max FPS given input frame values
@@ -128,7 +128,7 @@ class VideoStreamedEncoder(
     }
 
     private fun createFormat(size: Size, maxFps: Float, quality: Float): MediaFormat {
-        val format = MediaFormat.createVideoFormat(mime, size.width, size.height)
+        val format = MediaFormat.createVideoFormat(videoMime, size.width, size.height)
         format.setInteger(
             MediaFormat.KEY_COLOR_FORMAT,
             MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface
