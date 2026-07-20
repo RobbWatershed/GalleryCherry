@@ -20,12 +20,15 @@ import android.opengl.Matrix
 import android.os.ParcelFileDescriptor
 import android.util.Size
 import android.view.Surface
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.withContext
 import kotlinx.io.IOException
 import me.devsaki.hentoid.util.image.loadBitmap
+import me.devsaki.hentoid.util.pause
 import timber.log.Timber
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.roundToInt
 
 // Heavily inspired by
@@ -55,6 +58,7 @@ class VideoStreamedEncoder(
     private var trackIndex = -1
     private var frameNum = 0
     private var framesMissed = 0
+    private var isProcessing = AtomicBoolean(false)
 
     // Current video length, in microseconds
     private var presentationTimeUs = 0L
@@ -227,7 +231,8 @@ class VideoStreamedEncoder(
         }
     }
 
-    override fun addFrame(bitmap: Bitmap, durationMs: Int) /*= withContext(singleThread)*/ {
+    override suspend fun addFrame(bitmap: Bitmap, durationMs: Int) = withContext(singleThread) {
+        isProcessing.set(true)
         frameNum++
         renderer.draw(outSize.width, outSize.height, bitmap, getMvp())
 
@@ -243,17 +248,15 @@ class VideoStreamedEncoder(
         checkEglError("eglSwapBuffers")
 
         // Get encoded data and feed it to muxer
-        val frameProcessed = drainEncoder(frameNum == nbFrames, frameNum)
+        val frameProcessed = drainEncoder(frameNum == nbFrames)
+        isProcessing.set(false)
         if (!frameProcessed) {
             Timber.d("FRAME MISSED @$frameNum") // Not super reliable; encoder may just be waiting to flush its buffer
             framesMissed++
         }
     }
 
-    private fun drainEncoder(
-        endOfStream: Boolean,
-        frameNum: Int
-    ): Boolean /*= withContext(singleThread)*/ {
+    private suspend fun drainEncoder(endOfStream: Boolean): Boolean = withContext(singleThread) {
         if (endOfStream) encoder.signalEndOfInputStream()
         Timber.d("drainEncoder 0 @$frameNum")
         var isFrameProcessed = false
@@ -304,10 +307,10 @@ class VideoStreamedEncoder(
                     encodedData.limit(bufferInfo.offset + bufferInfo.size)
                     isFrameProcessed = true
 
-//                    withContext(Dispatchers.IO) {
-                    muxer?.writeSampleData(trackIndex, encodedData, bufferInfo)
-                    Timber.d("sent ${bufferInfo.size} bytes to muxer")
-//                    }
+                    withContext(Dispatchers.IO) {
+                        muxer?.writeSampleData(trackIndex, encodedData, bufferInfo)
+                        Timber.d("sent ${bufferInfo.size} bytes to muxer")
+                    }
                 }
 
                 encoder.releaseOutputBuffer(encoderStatus, false)
@@ -322,8 +325,7 @@ class VideoStreamedEncoder(
                 }
             }
         }
-        //return@withContext isFrameProcessed
-        return isFrameProcessed
+        return@withContext isFrameProcessed
     }
 
     private fun getMvp(): FloatArray {
@@ -335,6 +337,14 @@ class VideoStreamedEncoder(
     }
 
     override fun close() {
+        // Use extra second to finalize all that might be still happening on other threads
+        pause(1000)
+        var tries = 0
+        while (isProcessing.get() && tries++ < 10) {
+            Timber.d("Waiting for processing to finish ($tries)...")
+            pause(500)
+        }
+
         Timber.d("Releasing encoder")
         encoder.stop()
         encoder.release()
@@ -345,6 +355,7 @@ class VideoStreamedEncoder(
         muxer?.release()
         muxer = null
         muxerStarted = false
+        isProcessing.set(false)
 
         outFileDescriptor?.close()
         outFileDescriptor = null

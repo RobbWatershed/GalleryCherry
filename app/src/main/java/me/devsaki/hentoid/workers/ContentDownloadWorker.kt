@@ -2,7 +2,6 @@ package me.devsaki.hentoid.workers
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.media.MediaFormat.MIMETYPE_VIDEO_AVC
 import android.net.Uri
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
@@ -79,7 +78,6 @@ import me.devsaki.hentoid.util.file.getOrCreateCacheFolder
 import me.devsaki.hentoid.util.file.getOutputStream
 import me.devsaki.hentoid.util.file.removeFile
 import me.devsaki.hentoid.util.getContainingFolder
-import me.devsaki.hentoid.util.image.MIME_IMAGE_GIF
 import me.devsaki.hentoid.util.image.MIME_IMAGE_WEBP
 import me.devsaki.hentoid.util.image.bitmapToWebp
 import me.devsaki.hentoid.util.image.getBitmapFromVectorDrawable
@@ -1528,11 +1526,8 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
                 DownloadEvent.fromPreparationStep(DownloadEvent.Step.ENCODE_ANIMATION, content)
             )
 
-            val targetMime = when (Settings.downloadAnimationFormat) {
-                PictureEncoder.WEBP_LOSSY.value, PictureEncoder.WEBP_LOSSLESS.value -> MIME_IMAGE_WEBP
-                PictureEncoder.AVC.value -> MIMETYPE_VIDEO_AVC
-                else -> MIME_IMAGE_GIF
-            }
+            val targetMime = PictureEncoder.fromValue(Settings.downloadAnimationFormat)?.mimeType
+                ?: return
             val targetExt = getExtensionFromMimeType(targetMime)
             val quality =
                 (if (Settings.downloadAnimationFormat == PictureEncoder.WEBP_LOSSLESS.value) 100f
@@ -1541,7 +1536,7 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
             val dims = getMediaDimensions(applicationContext, frames[0].first.toString())
 
             val tempFile = createFile(
-                applicationContext, applicationContext.cacheDir.toUri(), "${img.name}.$targetExt",
+                applicationContext, downloadFolder, "${img.name}.$targetExt",
                 targetMime
             )
 

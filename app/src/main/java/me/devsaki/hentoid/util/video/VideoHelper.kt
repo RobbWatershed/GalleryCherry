@@ -6,7 +6,7 @@ import me.devsaki.hentoid.core.CHARSET_LATIN_1
 import me.devsaki.hentoid.enums.PictureEncoder
 import kotlin.math.absoluteValue
 
-const val MIME_VIDEO_MP4 = "video/mp4" // MediaFormat.MIMETYPE_VIDEO_AVC ?
+const val MIME_VIDEO_MP4 = "video/mp4"
 
 val MP4_SIGNATURE = "ftyp".toByteArray(CHARSET_LATIN_1)
 

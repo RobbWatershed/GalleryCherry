@@ -432,6 +432,7 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
             targetDimsWarning = (targetDims.x > DIMS_LIMIT || targetDims.y > DIMS_LIMIT)
             refreshControls()
 
+            // TODO preview MP4 video
             binding?.apply {
                 if (unchanged) {
                     previewName.text = resources.getText(R.string.transform_unsupported)

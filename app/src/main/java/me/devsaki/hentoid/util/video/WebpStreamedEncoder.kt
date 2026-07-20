@@ -48,7 +48,7 @@ class WebpStreamedEncoder(val quality: Float, val frameDurationMs: Int) : Animat
         }
     }
 
-    override fun addFrame(bitmap: Bitmap, durationMs: Int) {
+    override suspend fun addFrame(bitmap: Bitmap, durationMs: Int) {
         encoder.writeFrame(bitmap, (quality * 100).roundToInt())
     }
 

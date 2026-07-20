@@ -14,6 +14,10 @@ import com.github.penfeizhou.animation.io.StreamReader
 import com.github.penfeizhou.animation.io.Writer
 import com.github.penfeizhou.animation.loader.Loader
 import com.github.penfeizhou.animation.webp.decode.WebPDecoder
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import me.devsaki.hentoid.core.HentoidApp
 import me.devsaki.hentoid.util.file.fileExists
 import me.devsaki.hentoid.util.image.MIME_IMAGE_APNG
@@ -68,11 +72,16 @@ class PenfeiFrameStreamer<R : Reader, W : Writer>(val decoder: FrameSeqDecoder<R
         fps = totalFrames * 1000f / durationMs
     }
 
-    fun streamFramesBlocking(
+    @OptIn(DelicateCoroutinesApi::class)
+    suspend fun streamFramesBlocking(
         isCanceled: () -> Boolean,
-        onFrameFound: (Pair<Bitmap, Int>) -> Unit
+        onFrameFound: suspend (Pair<Bitmap, Int>) -> Unit
     ) {
-        this.onFrameFound = onFrameFound
+        this.onFrameFound = { f ->
+            GlobalScope.launch(Dispatchers.Default) {
+                onFrameFound.invoke(f)
+            }
+        }
         try {
             decoder.start()
             while (framesRendered < totalFrames && !isCanceled.invoke()) {

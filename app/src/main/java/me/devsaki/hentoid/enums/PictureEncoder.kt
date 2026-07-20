@@ -1,6 +1,5 @@
 package me.devsaki.hentoid.enums
 
-import android.media.MediaFormat.MIMETYPE_VIDEO_AVC
 import androidx.annotation.StringRes
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.core.HentoidApp
@@ -12,6 +11,7 @@ import me.devsaki.hentoid.util.image.MIME_IMAGE_PNG
 import me.devsaki.hentoid.util.image.MIME_IMAGE_WEBP
 import me.devsaki.hentoid.util.losslessStr
 import me.devsaki.hentoid.util.lossyStr
+import me.devsaki.hentoid.util.video.MIME_VIDEO_MP4
 
 enum class PictureEncoder(
     val value: Int,
@@ -30,7 +30,7 @@ enum class PictureEncoder(
     JPEGLI(6, MIME_IMAGE_JPEG, R.string.transcode_encoder_jpegli),
     AVIF(7, MIME_IMAGE_AVIF, R.string.transcode_encoder_avif),
     GIF(8, MIME_IMAGE_GIF, R.string.transcode_encoder_gif, isImage = false, isAnimation = true),
-    AVC(9, MIMETYPE_VIDEO_AVC, R.string.transcode_encoder_avc, isImage = false, isAnimation = true);
+    AVC(9, MIME_VIDEO_MP4, R.string.transcode_encoder_avc, isImage = false, isAnimation = true);
 
     val description: String
         get() {
