@@ -35,18 +35,21 @@ import me.devsaki.hentoid.enums.PictureEncoder
 import me.devsaki.hentoid.fragments.BaseDialogFragment
 import me.devsaki.hentoid.util.Debouncer
 import me.devsaki.hentoid.util.Settings
+import me.devsaki.hentoid.util.file.createFile
 import me.devsaki.hentoid.util.file.formatHumanReadableSize
 import me.devsaki.hentoid.util.file.getBinary
 import me.devsaki.hentoid.util.file.getExtensionFromMimeType
 import me.devsaki.hentoid.util.file.getInputStream
 import me.devsaki.hentoid.util.file.getOrCreateCacheFolder
+import me.devsaki.hentoid.util.file.removeFile
+import me.devsaki.hentoid.util.image.ImageProperties
 import me.devsaki.hentoid.util.image.TransformParams
 import me.devsaki.hentoid.util.image.determineEncoder
+import me.devsaki.hentoid.util.image.getImageProperties
 import me.devsaki.hentoid.util.image.getMediaDimensions
-import me.devsaki.hentoid.util.image.getMimeTypeFromPictureBinary
-import me.devsaki.hentoid.util.image.isImageLossless
 import me.devsaki.hentoid.util.image.screenHeight
 import me.devsaki.hentoid.util.image.screenWidth
+import me.devsaki.hentoid.util.image.transformAnimated
 import me.devsaki.hentoid.util.image.transformManhwaChapter
 import me.devsaki.hentoid.util.image.transformStill
 import me.devsaki.hentoid.viewholders.DrawerItem
@@ -56,6 +59,7 @@ import timber.log.Timber
 import kotlin.math.floor
 import kotlin.math.log10
 import kotlin.math.max
+import kotlin.math.roundToInt
 
 private const val KEY_CONTENTS = "contents"
 private const val CACHE_TRANSFORM_MANHWA = "transform-manhwa"
@@ -227,6 +231,7 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
             encoderAnim.values = animEncoders.map { it.value.toString() }
             encoderAnim.setOnValueChangeListener { value ->
                 Settings.transcodeEncoderAnim = value.toInt()
+                refreshControls()
                 updatePreviewDebouncer.submit(Unit)
             }
             encoderAnimQuality.editText?.setOnTextChangedListener(lifecycleScope) { value ->
@@ -302,10 +307,10 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
             transcodeAnimHeader.isVisible = !isAiUpscale
             encoderAnim.isVisible = !isAiUpscale
             encoderQuality.isVisible = !isAiUpscale
+            encoderAnimQuality.isVisible =
+                (false == PictureEncoder.fromValue(Settings.transcodeEncoderAnim)?.isLossless)
             if (applyValues) {
                 encoderAnim.value = Settings.transcodeEncoderAnim.toString()
-                encoderAnimQuality.isVisible =
-                    (false == PictureEncoder.fromValue(Settings.transcodeEncoderAnim)?.isLossless)
                 encoderAnimQuality.editText?.setText(Settings.transcodeAnimQuality.toString())
             }
 
@@ -364,29 +369,66 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
     @SuppressLint("SetTextI18n")
     private fun refreshPreview() {
         val sourceBmp = getCurrentBitmap() ?: return
+        val context = requireContext()
 
-        binding?.previewGrp?.visibility = View.INVISIBLE
-        binding?.previewProgress?.isVisible = true
+        binding?.apply {
+            previewGrp.visibility = View.INVISIBLE
+            previewProgress.isIndeterminate = true
+            previewProgress.isVisible = true
+        }
 
         lifecycleScope.launch {
-            val isLossless = isImageLossless(sourceBmp.rawData)
             val sourceSize = formatHumanReadableSize(sourceBmp.rawData.size.toLong(), resources)
-            val sourceDims = getMediaDimensions(requireContext(), sourceBmp.uri)
-            val sourceMime = getMimeTypeFromPictureBinary(sourceBmp.rawData)
-            val sourceName = sourceBmp.name + "." + getExtensionFromMimeType(sourceMime)
+            val sourceDims = getMediaDimensions(context, sourceBmp.uri)
+            val sourceName =
+                sourceBmp.name + "." + getExtensionFromMimeType(sourceBmp.properties.mime)
             val params = buildParams()
             val targetData = withContext(Dispatchers.IO) {
                 return@withContext if (params.resizeEnabled && 4 == params.resizeMethod) {
+                    // Manhwa resize
                     val res = transformManhwa(params, pageIndex)
                     if (res.isEmpty()) sourceBmp.rawData else res
-                } else transformStill(requireContext(), sourceBmp.rawData, params, true)
+                } else if (sourceBmp.properties.isAnimated) {
+                    withContext(Dispatchers.Main) {
+                        binding?.previewProgress?.isIndeterminate = false
+                        binding?.previewProgress?.max = 100
+                    }
+                    val tempFile = createFile(
+                        context, context.cacheDir.toUri(), "temp",
+                        params.transcodeAnim.mimeType
+                    )
+                    try {
+                        transformAnimated(
+                            context,
+                            sourceBmp.uri.toUri(),
+                            sourceBmp.properties.mime,
+                            tempFile,
+                            params,
+                            { false }
+                        ) {
+                            lifecycleScope.launch(Dispatchers.Main) {
+                                binding?.previewProgress?.progress = (it * 100).roundToInt()
+                            }
+                        }
+                        getBinary(context, tempFile) // TODO find something more memory-efficient
+                    } finally {
+                        removeFile(context, tempFile)
+                    }
+                } else transformStill(context, sourceBmp.rawData, params, true)
             }
+
+            @Suppress("ARRAY_EQUALITY_OPERATOR_CAN_BE_REPLACED_WITH_CONTENT_EQUALS")
             val unchanged = targetData == sourceBmp.rawData
 
             val targetSize = formatHumanReadableSize(targetData.size.toLong(), resources)
-            val targetMime = determineEncoder(isLossless, Point(), params).mimeType
+            val targetMime = determineEncoder(
+                sourceBmp.properties.isLossless,
+                sourceBmp.properties.isAnimated,
+                Point(),
+                params
+            ).mimeType
             val targetName = sourceBmp.name + "." + getExtensionFromMimeType(targetMime)
-            val targetDims = getMediaDimensions(requireContext(), data = targetData)
+            val targetDims = getMediaDimensions(context, data = targetData)
             targetDimsWarning = (targetDims.x > DIMS_LIMIT || targetDims.y > DIMS_LIMIT)
             refreshControls()
 
@@ -533,11 +575,14 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
         return true
     }
 
+    @Suppress("ArrayInDataClass")
     data class BitmapInfo(
         val uri: String,
         val name: String,
         val rawData: ByteArray
-    )
+    ) {
+        val properties: ImageProperties by lazy { getImageProperties(rawData) }
+    }
 
     interface Parent {
         fun leaveSelectionMode()

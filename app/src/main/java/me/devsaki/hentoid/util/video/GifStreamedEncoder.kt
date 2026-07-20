@@ -28,7 +28,7 @@ class GifStreamedEncoder(val dims: Point) : AnimationEncoder {
         }
     }
 
-    override suspend fun addFrame(bitmap: Bitmap, durationMs: Int) {
+    override fun addFrame(bitmap: Bitmap, durationMs: Int) {
         bitmap.getPixels(buffer, 0, dims.x, 0, 0, dims.x, dims.y)
         encoder.writeFrame(
             buffer,

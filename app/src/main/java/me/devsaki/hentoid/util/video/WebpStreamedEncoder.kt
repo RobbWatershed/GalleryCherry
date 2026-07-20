@@ -11,7 +11,7 @@ import timber.log.Timber
 import java.io.OutputStream
 import kotlin.math.roundToInt
 
-class WebpStreamedEncoder(val quality: Float, val durationMs: Int) : AnimationEncoder {
+class WebpStreamedEncoder(val quality: Float, val frameDurationMs: Int) : AnimationEncoder {
 
     lateinit var outputStream: OutputStream
     lateinit var encoder: WebpBitmapEncoder
@@ -21,7 +21,7 @@ class WebpStreamedEncoder(val quality: Float, val durationMs: Int) : AnimationEn
             getOutputStream(context, outUri) ?: throw RuntimeException("Can't open $outUri")
         encoder = WebpBitmapEncoder(outUri, context.contentResolver)
         encoder.setLoops(0) // Infinite looping
-        encoder.setDuration(durationMs)
+        encoder.setDuration(frameDurationMs)
     }
 
     @OptIn(DelicateCoroutinesApi::class)
@@ -48,7 +48,7 @@ class WebpStreamedEncoder(val quality: Float, val durationMs: Int) : AnimationEn
         }
     }
 
-    override suspend fun addFrame(bitmap: Bitmap, durationMs: Int) {
+    override fun addFrame(bitmap: Bitmap, durationMs: Int) {
         encoder.writeFrame(bitmap, (quality * 100).roundToInt())
     }
 

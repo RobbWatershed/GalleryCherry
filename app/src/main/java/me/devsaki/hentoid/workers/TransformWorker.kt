@@ -1,7 +1,6 @@
 package me.devsaki.hentoid.workers
 
 import android.content.Context
-import android.net.Uri
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import androidx.work.Data
@@ -15,7 +14,6 @@ import me.devsaki.hentoid.database.CollectionDAO
 import me.devsaki.hentoid.database.ObjectBoxDAO
 import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.database.domains.ImageFile
-import me.devsaki.hentoid.enums.PictureEncoder
 import me.devsaki.hentoid.notification.transform.TransformCompleteNotification
 import me.devsaki.hentoid.notification.transform.TransformProgressNotification
 import me.devsaki.hentoid.util.AchievementsManager
@@ -24,6 +22,7 @@ import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.createJson
 import me.devsaki.hentoid.util.file.Beholder
 import me.devsaki.hentoid.util.file.copyFile
+import me.devsaki.hentoid.util.file.fileSizeFromUri
 import me.devsaki.hentoid.util.file.getDocumentFromTreeUri
 import me.devsaki.hentoid.util.file.getDocumentFromTreeUriString
 import me.devsaki.hentoid.util.file.getExtensionFromMimeType
@@ -34,23 +33,19 @@ import me.devsaki.hentoid.util.file.getParent
 import me.devsaki.hentoid.util.file.removeDocument
 import me.devsaki.hentoid.util.file.saveBinary
 import me.devsaki.hentoid.util.getStorageRoot
-import me.devsaki.hentoid.util.image.ImageProperties
 import me.devsaki.hentoid.util.image.TransformParams
 import me.devsaki.hentoid.util.image.clearCoilCache
 import me.devsaki.hentoid.util.image.determineEncoder
 import me.devsaki.hentoid.util.image.getImageProperties
 import me.devsaki.hentoid.util.image.getMediaDimensions
 import me.devsaki.hentoid.util.image.isImageLossless
+import me.devsaki.hentoid.util.image.transformAnimated
 import me.devsaki.hentoid.util.image.transformManhwaChapter
 import me.devsaki.hentoid.util.image.transformStill
 import me.devsaki.hentoid.util.network.UriParts
 import me.devsaki.hentoid.util.notification.BaseNotification
 import me.devsaki.hentoid.util.pause
 import me.devsaki.hentoid.util.updateJson
-import me.devsaki.hentoid.util.video.GifStreamedEncoder
-import me.devsaki.hentoid.util.video.VideoStreamedEncoder
-import me.devsaki.hentoid.util.video.WebpStreamedEncoder
-import me.devsaki.hentoid.util.video.getPenfeiFrameStreamer
 import me.robb.ai_upscale.AiUpscaler
 import okio.IOException
 import timber.log.Timber
@@ -319,25 +314,41 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
         nbManhwa: AtomicInteger,
         nbPages: Int
     ): ImageFile {
-        val props = getImageProperties(applicationContext, img.fileUri.toUri()) ?: return img
-        if (props.isAnimated) return transformAnimatedImage(img, props, contentFolder, params)
-
         val sourceFile = withContext(Dispatchers.IO) {
             getDocumentFromTreeUriString(applicationContext, img.fileUri)
         } ?: run {
             nextKO()
             return img
         }
+
+        val props = getImageProperties(applicationContext, sourceFile.uri) ?: return img
+        return if (props.isAnimated) transformAnimatedImage(
+            img,
+            sourceFile,
+            props.mime,
+            contentFolder,
+            params
+        ) else transformStillImage(img, sourceFile, contentFolder, params, nbManhwa, nbPages)
+    }
+
+    private suspend fun transformStillImage(
+        img: ImageFile,
+        sourceFile: DocumentFile,
+        contentFolder: DocumentFile,
+        params: TransformParams,
+        nbManhwa: AtomicInteger,
+        nbPages: Int
+    ): ImageFile {
         val rawData = withContext(Dispatchers.IO) {
             getInputStream(applicationContext, sourceFile).use {
                 return@use it.readBytes()
             }
         }
-        val imageUri = img.fileUri
+        val progressId = img.fileUri
 
         val targetData: ByteArray
         if (upscaler != null) { // AI upscale
-            targetData = upscale(imageUri, rawData)
+            targetData = upscale(progressId, rawData)
         } else { // regular resize
             val sourceDims = getMediaDimensions(applicationContext, data = rawData)
             val isManhwa = sourceDims.y * 1.0 / sourceDims.x > 3
@@ -355,11 +366,11 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
         val sourceName = sourceFile.name ?: ""
 
         val targetDims = getMediaDimensions(applicationContext, data = targetData)
-        val targetMime = determineEncoder(isLossless, targetDims, params).mimeType
+        val targetMime = determineEncoder(isLossless, false, targetDims, params).mimeType
         val targetName = img.name + "." + getExtensionFromMimeType(targetMime)
-        val newFile = sourceName != targetName
+        val isSameFile = sourceName.equals(targetName, true)
 
-        val targetUri = if (!newFile) sourceFile.uri
+        val targetUri = if (isSameFile) sourceFile.uri
         else {
             val targetFile = contentFolder.createFile(targetMime, targetName)
             if (targetFile != null) sourceFile.delete()
@@ -373,7 +384,7 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
             img.isTransformed = true
 
             nextOK()
-            globalProgress.setProgress(imageUri, 1f)
+            globalProgress.setProgress(progressId, 1f)
             launchProgressNotification()
         } else {
             nextKO()
@@ -384,46 +395,60 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
 
     private suspend fun transformAnimatedImage(
         img: ImageFile,
-        props: ImageProperties,
+        sourceFile: DocumentFile,
+        sourceMime: String,
         contentFolder: DocumentFile,
         params: TransformParams
     ): ImageFile {
-        val quality =
-            (if (params.transcodeAnim == PictureEncoder.WEBP_LOSSLESS) 100f
-            else params.transcodeAnimQuality.coerceIn(0, 100).toFloat()) / 100f
+        val sourceName = sourceFile.name ?: ""
+        val targetMime = params.transcodeAnim.mimeType
+        val targetExt = getExtensionFromMimeType(targetMime)
 
-        getInputStream(applicationContext, img.fileUri.toUri()).use { input ->
-            getPenfeiFrameStreamer(props.mime, input)?.let { fs ->
+        var targetName = img.name
+        while (sourceName.equals("$targetName.$targetExt", true)) {
+            targetName += "_"
+        }
+        targetName += ".$targetExt"
 
-                val animEncoder = when (params.transcodeAnim) {
-                    PictureEncoder.WEBP_LOSSLESS, PictureEncoder.WEBP_LOSSY -> WebpStreamedEncoder(
-                        quality,
-                        fs.durationMs
-                    )
-
-                    PictureEncoder.AVC -> VideoStreamedEncoder(
-                        fs.dims,
-                        quality,
-                        fs.nbFrames * 1000f / fs.durationMs.toFloat(),
-                        fs.nbFrames
-                    )
-
-                    else -> GifStreamedEncoder(fs.dims)
-                }
-                animEncoder.use {
-                    animEncoder.init(applicationContext, Uri.EMPTY) // TODO which Uri?
-                    fs.streamFrames(this::isStopped) { f ->
-                        animEncoder.addFrame(f.first, f.second)
-                    }
-                }
-            }
+        val targetFile = contentFolder.createFile(targetMime, targetName) ?: run {
+            Timber.w("Couldn't create $targetName inside ${contentFolder.uri}")
+            nextKO()
+            return img
         }
 
-        // TODO
+        val progressId = img.fileUri
+        val isError = transformAnimated(
+            applicationContext,
+            sourceFile.uri,
+            sourceMime,
+            targetFile.uri,
+            params,
+            this::isStopped,
+        ) {
+            globalProgress.setProgress(progressId, it)
+            launchProgressNotification()
+        }
+
+        if (isError) {
+            targetFile.delete()
+            nextKO()
+            launchProgressNotification()
+        } else {
+            sourceFile.delete()
+
+            // Update image properties
+            img.fileUri = targetFile.uri.toString()
+            img.size = fileSizeFromUri(applicationContext, targetFile.uri)
+            img.isTransformed = true
+
+            nextOK()
+            globalProgress.setProgress(progressId, 1f)
+            launchProgressNotification()
+        }
         return img
     }
 
-    private fun upscale(imgId: String, rawData: ByteArray): ByteArray {
+    private fun upscale(progressId: String, rawData: ByteArray): ByteArray {
         val cacheDir =
             getOrCreateCacheFolder(applicationContext, "upscale") ?: return rawData
         val outputFile = File(cacheDir, "upscale.png")
@@ -454,7 +479,7 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
                     }
 
                     val p = progress.get(0)
-                    globalProgress.setProgress(imgId, p / 100f)
+                    globalProgress.setProgress(progressId, p / 100f)
                     launchProgressNotification()
 
                     iterations++

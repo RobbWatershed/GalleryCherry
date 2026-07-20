@@ -1537,18 +1537,18 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
             val quality =
                 (if (Settings.downloadAnimationFormat == PictureEncoder.WEBP_LOSSLESS.value) 100f
                 else Settings.downloadAnimationQuality.coerceIn(0, 100).toFloat()) / 100f
-            val targetDuration = frames.sumOf { it.second }
+            val avgFrameDuration = frames.sumOf { it.second } / frames.count()
             val dims = getMediaDimensions(applicationContext, frames[0].first.toString())
 
             val tempFile = createFile(
-                applicationContext, downloadFolder, "${img.name}.$targetExt",
+                applicationContext, applicationContext.cacheDir.toUri(), "${img.name}.$targetExt",
                 targetMime
             )
 
             val animEncoder = when (Settings.downloadAnimationFormat) {
                 PictureEncoder.WEBP_LOSSLESS.value, PictureEncoder.WEBP_LOSSY.value -> WebpStreamedEncoder(
                     quality,
-                    targetDuration
+                    avgFrameDuration
                 )
 
                 PictureEncoder.AVC.value -> VideoStreamedEncoder(

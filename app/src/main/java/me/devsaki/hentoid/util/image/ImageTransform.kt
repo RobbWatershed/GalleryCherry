@@ -33,6 +33,10 @@ import me.devsaki.hentoid.util.file.saveBinary
 import me.devsaki.hentoid.util.formatIntAsStr
 import me.devsaki.hentoid.util.getScreenDimensionsPx
 import me.devsaki.hentoid.util.network.UriParts
+import me.devsaki.hentoid.util.video.GifStreamedEncoder
+import me.devsaki.hentoid.util.video.VideoStreamedEncoder
+import me.devsaki.hentoid.util.video.WebpStreamedEncoder
+import me.devsaki.hentoid.util.video.getPenfeiFrameStreamer
 import timber.log.Timber
 import java.io.ByteArrayOutputStream
 import kotlin.math.abs
@@ -83,40 +87,60 @@ internal data class ManhwaProcessingItem(
     val toConsumeHeight: Int
 )
 
-/*
-private suspend fun transformAnimated(
+suspend fun transformAnimated(
     context: Context,
-    sourceFile : Uri,
+    sourceFile: Uri,
+    sourceMime: String,
+    targetFile: Uri,
     params: TransformParams,
     isCanceled: () -> Boolean,
     onProgress: ((Float) -> Unit)? = null
-): ByteArray {
-    val targetQuality =
-        if (Settings.downloadAnimationFormat == PictureEncoder.WEBP_LOSSLESS.value) 100
-        else Settings.downloadAnimationQuality.coerceIn(0, 100)
-    getAnimationEncoder(params.transcodeAnim.value).use { encoder ->
-        encoder.encode(
-            context,
-            tempFile,
-            frames,
-            targetQuality.toFloat() / 100f,
-            isCanceled = {
-                this.isStopped || downloadProcessStopped || ContentQueueManager.isQueuePaused
-            }
-        ) { f ->
-            GlobalScope.launch(Dispatchers.Default) {
-                EventBus.getDefault().post(
-                    DownloadEvent(
-                        eventType = DownloadEvent.Type.EV_PROGRESS,
-                        step = DownloadEvent.Step.ENCODE_ANIMATION,
-                        fileDownloadProgress = f * 100
-                    )
+): Boolean {
+    val quality =
+        (if (params.transcodeAnim == PictureEncoder.WEBP_LOSSLESS) 100f
+        else params.transcodeAnimQuality.coerceIn(0, 100).toFloat()) / 100f
+
+    var isError = false
+    try {
+        getPenfeiFrameStreamer(sourceFile, sourceMime)?.let { fs ->
+            val totalFrames = fs.totalFrames
+            val animEncoder = when (params.transcodeAnim) {
+                PictureEncoder.WEBP_LOSSLESS, PictureEncoder.WEBP_LOSSY -> WebpStreamedEncoder(
+                    quality,
+                    (fs.durationMs * 1f / fs.totalFrames).roundToInt()
                 )
+
+                PictureEncoder.AVC -> VideoStreamedEncoder(
+                    fs.dims,
+                    quality,
+                    totalFrames * 1000f / fs.durationMs.toFloat(),
+                    totalFrames
+                )
+
+                PictureEncoder.GIF -> GifStreamedEncoder(fs.dims)
+
+                else -> throw RuntimeException("Couldn't find a valid encoder for ${params.transcodeAnim}")
+            }
+            animEncoder.use {
+                it.init(context, targetFile)
+                var nbFrames = 1f
+                fs.streamFramesBlocking(isCanceled) { f ->
+                    try {
+                        it.addFrame(f.first, f.second)
+                    } finally {
+                        f.first.recycle()
+                    }
+                    onProgress?.invoke(nbFrames++ / totalFrames)
+                }
             }
         }
+            ?: throw RuntimeException("Couldn't find a valid frame streamer for $sourceFile (${sourceMime})")
+    } catch (e: Exception) {
+        Timber.w(e, "An error occured while encoding $targetFile")
+        isError = true
     }
+    return isError
 }
- */
 
 /**
  * Transform the given raw picture data using the given params
@@ -152,7 +176,7 @@ suspend fun transformStill(
     val isLossless = isImageLossless(rawData)
     val targetDims = Point(bitmapOut.width, bitmapOut.height)
     try {
-        val encoder = determineEncoder(isLossless, targetDims, params)
+        val encoder = determineEncoder(isLossless, false, targetDims, params)
         val noResize = (targetDims.x == dims.x && targetDims.y == dims.y)
         return if (noResize && PictureEncoder.JXL_LOSSLESS == encoder
             && getMimeTypeFromPictureBinary(rawData) == MIME_IMAGE_JPEG
@@ -161,7 +185,7 @@ suspend fun transformStill(
         } else {
             transcodeTo(
                 bitmapOut,
-                determineEncoder(isLossless, targetDims, params),
+                determineEncoder(isLossless, false, targetDims, params),
                 params.transcodeQuality
             )
         }
@@ -215,22 +239,27 @@ private fun resizePlainRatio(
 
 fun determineEncoder(
     isLossless: Boolean,
+    isAnimated: Boolean,
     dims: Point,
     params: TransformParams
 ): PictureEncoder {
-    // AI rescale always produces PNGs
-    if (params.resizeEnabled && 3 == params.resizeMethod) return PictureEncoder.PNG
+    if (!isAnimated) {
+        // AI rescale always produces PNGs
+        if (params.resizeEnabled && 3 == params.resizeMethod) return PictureEncoder.PNG
 
-    // Other cases
-    val result = when (params.transcodeMethod) {
-        0 -> params.transcoderAll
-        else -> if (isLossless) params.transcoderLossless else params.transcoderLossy
+        // Other cases
+        val result = when (params.transcodeMethod) {
+            0 -> params.transcoderAll
+            else -> if (isLossless) params.transcoderLossless else params.transcoderLossy
+        }
+        return if (PictureEncoder.WEBP_LOSSY == result && max(dims.x, dims.y) > MAX_WEBP_DIMENSION)
+            PictureEncoder.JPEG
+        else if (PictureEncoder.WEBP_LOSSLESS == result && max(dims.x, dims.y) > MAX_WEBP_DIMENSION)
+            PictureEncoder.PNG
+        else result
+    } else {
+        return params.transcodeAnim
     }
-    return if (PictureEncoder.WEBP_LOSSY == result && max(dims.x, dims.y) > MAX_WEBP_DIMENSION)
-        PictureEncoder.JPEG
-    else if (PictureEncoder.WEBP_LOSSLESS == result && max(dims.x, dims.y) > MAX_WEBP_DIMENSION)
-        PictureEncoder.PNG
-    else result
 }
 
 @Suppress("DEPRECATION")
@@ -583,6 +612,7 @@ private suspend fun processManhwaImageQueue(
         val encoder =
             determineEncoder(
                 containsLossless,
+                false,
                 Point(bmpBuffer.width, bmpBuffer.height),
                 params
             )

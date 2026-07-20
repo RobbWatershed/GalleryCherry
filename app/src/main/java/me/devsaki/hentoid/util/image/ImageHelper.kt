@@ -151,14 +151,17 @@ fun getImageProperties(context: Context, uri: Uri): ImageProperties? {
 
 fun getImageProperties(input: InputStream): ImageProperties? {
     val header = ByteArray(1000)
-    if (input.read(header) > 0) {
-        return ImageProperties(
-            mime = getMimeTypeFromPictureBinary(header),
-            isAnimated = isImageAnimated(header),
-            isLossless = isImageLossless(header)
-        )
-    }
+    if (input.read(header) > 0) return getImageProperties(header)
     return null
+}
+
+fun getImageProperties(header: ByteArray): ImageProperties {
+    val mime = getMimeTypeFromPictureBinary(header)
+    return ImageProperties(
+        mime = mime,
+        isAnimated = isImageAnimated(header, mime),
+        isLossless = isImageLossless(header, mime)
+    )
 }
 
 /**
@@ -205,10 +208,11 @@ fun getMimeTypeFromPictureBinary(data: ByteArray, limit: Int = -1): String {
  * @param data Binary picture file header (400 bytes minimum)
  * @return True if the format is animated and supported by the app
  */
-fun isImageAnimated(data: ByteArray): Boolean {
+fun isImageAnimated(data: ByteArray, mime: String = ""): Boolean {
     // TODO JXL (specs aren't public :/)
     val limit = min(data.size, 1000)
-    return when (getMimeTypeFromPictureBinary(data, limit)) {
+    val mimeFinal = mime.ifEmpty { getMimeTypeFromPictureBinary(data, limit) }
+    return when (mimeFinal) {
         MIME_IMAGE_APNG -> true
         MIME_VIDEO_MP4 -> true
         MIME_IMAGE_GIF ->
@@ -251,8 +255,9 @@ fun isImageAnimated(data: ByteArray): Boolean {
  * @param data Binary picture file header (16 bytes minimum)
  * @return True if the format is lossless and supported by the app
  */
-fun isImageLossless(data: ByteArray): Boolean {
-    return if (data.size < 16) false else when (getMimeTypeFromPictureBinary(data)) {
+fun isImageLossless(data: ByteArray, mime: String = ""): Boolean {
+    val mimeFinal = mime.ifEmpty { getMimeTypeFromPictureBinary(data) }
+    return if (data.size < 16) false else when (mimeFinal) {
         MIME_IMAGE_PNG -> true
         MIME_IMAGE_APNG -> true
         MIME_IMAGE_GIF -> true

@@ -20,7 +20,6 @@ import android.opengl.Matrix
 import android.os.ParcelFileDescriptor
 import android.util.Size
 import android.view.Surface
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.withContext
 import kotlinx.io.IOException
@@ -228,7 +227,7 @@ class VideoStreamedEncoder(
         }
     }
 
-    override suspend fun addFrame(bitmap: Bitmap, durationMs: Int) = withContext(singleThread) {
+    override fun addFrame(bitmap: Bitmap, durationMs: Int) /*= withContext(singleThread)*/ {
         frameNum++
         renderer.draw(outSize.width, outSize.height, bitmap, getMvp())
 
@@ -251,10 +250,10 @@ class VideoStreamedEncoder(
         }
     }
 
-    private suspend fun drainEncoder(
+    private fun drainEncoder(
         endOfStream: Boolean,
         frameNum: Int
-    ): Boolean = withContext(singleThread) {
+    ): Boolean /*= withContext(singleThread)*/ {
         if (endOfStream) encoder.signalEndOfInputStream()
         Timber.d("drainEncoder 0 @$frameNum")
         var isFrameProcessed = false
@@ -305,10 +304,10 @@ class VideoStreamedEncoder(
                     encodedData.limit(bufferInfo.offset + bufferInfo.size)
                     isFrameProcessed = true
 
-                    withContext(Dispatchers.IO) {
-                        muxer?.writeSampleData(trackIndex, encodedData, bufferInfo)
-                        Timber.d("sent ${bufferInfo.size} bytes to muxer")
-                    }
+//                    withContext(Dispatchers.IO) {
+                    muxer?.writeSampleData(trackIndex, encodedData, bufferInfo)
+                    Timber.d("sent ${bufferInfo.size} bytes to muxer")
+//                    }
                 }
 
                 encoder.releaseOutputBuffer(encoderStatus, false)
@@ -323,7 +322,8 @@ class VideoStreamedEncoder(
                 }
             }
         }
-        return@withContext isFrameProcessed
+        //return@withContext isFrameProcessed
+        return isFrameProcessed
     }
 
     private fun getMvp(): FloatArray {
