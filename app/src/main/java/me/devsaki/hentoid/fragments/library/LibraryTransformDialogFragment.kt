@@ -641,8 +641,7 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
         }
 
         suspend fun getDimensions(context: Context): Point {
-            return if (rawData.isNotEmpty()) getMediaDimensions(context, data = rawData)
-            else getMediaDimensions(context, uri)
+            return getMediaDimensions(context, uri, rawData)
         }
     }
 
