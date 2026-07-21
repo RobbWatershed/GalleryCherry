@@ -161,6 +161,7 @@ dependencies {
     implementation("io.coil-kt.coil3:coil:$Coil_version")
     implementation("io.coil-kt.coil3:coil-network-okhttp:$Coil_version")
     implementation("io.coil-kt.coil3:coil-gif:$Coil_version")
+    implementation("io.coil-kt.coil3:coil-video:$Coil_version")
 
     // Coil support for JXL
     implementation 'io.github.awxkee:jxl-coder-coil:2.6.1'

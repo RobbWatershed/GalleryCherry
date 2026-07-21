@@ -16,6 +16,7 @@ import coil3.ImageLoader
 import coil3.SingletonImageLoader
 import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
+import coil3.video.VideoFrameDecoder
 import com.awxkee.jxlcoder.coil.AnimatedJxlDecoder
 import com.github.awxkee.avifcoil.decoder.HeifDecoder
 import com.google.firebase.analytics.FirebaseAnalytics

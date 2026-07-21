@@ -19,6 +19,7 @@ import coil3.request.ImageRequest
 import coil3.request.Options
 import coil3.request.target
 import coil3.serviceLoaderEnabled
+import coil3.video.VideoFrameDecoder
 import com.awxkee.jxlcoder.coil.JxlDecoder
 import com.github.awxkee.avifcoil.decoder.HeifDecoder
 import com.github.penfeizhou.animation.apng.APNGDrawable
@@ -70,6 +71,7 @@ private fun initStillImageLoader(): ImageLoader {
             .components {
                 add(JxlDecoder.Factory())
                 add(HeifDecoder.Factory())
+                add(VideoFrameDecoder.Factory())
             }
             .diskCache {
                 DiskCache.Builder()
