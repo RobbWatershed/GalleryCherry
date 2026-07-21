@@ -33,6 +33,7 @@ import kotlinx.coroutines.withContext
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.core.BiConsumer
 import me.devsaki.hentoid.core.lifecycleScope
+import me.devsaki.hentoid.core.load
 import me.devsaki.hentoid.core.requireById
 import me.devsaki.hentoid.customssiv.CustomSubsamplingScaleImageView
 import me.devsaki.hentoid.customssiv.CustomSubsamplingScaleImageView.AutoRotateMethod
@@ -543,12 +544,7 @@ class ImagePagerAdapter(context: Context) :
         fun loadVideoView(uri: Uri) {
             // No auto-rotate
             Timber.d("Picture $absoluteAdapterPosition : Using VideoView")
-            videoView.setVideoURI(uri)
-            videoView.setOnPreparedListener { mp ->
-                mp.setVolume(0f, 0f)
-                mp.isLooping = true
-                videoView.start()
-            }
+            videoView.load(uri)
         }
 
         fun setTapListener() {

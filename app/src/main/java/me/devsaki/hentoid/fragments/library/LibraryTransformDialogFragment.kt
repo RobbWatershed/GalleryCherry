@@ -29,6 +29,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.core.WORK_CLOSEABLE
+import me.devsaki.hentoid.core.load
 import me.devsaki.hentoid.core.setOnTextChangedListener
 import me.devsaki.hentoid.database.ObjectBoxDAO
 import me.devsaki.hentoid.database.domains.Content
@@ -260,11 +261,17 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
                 if (pageIndex < maxPages - 1) pageIndex++
                 updatePreviewDebouncer.submit(Unit)
             }
-            thumb.setOnClickListener {
-                preview.isVisible = true
+            imgThumb.setOnClickListener {
+                imgPreview.isVisible = true
             }
-            preview.setOnClickListener {
-                preview.isVisible = false
+            imgPreview.setOnClickListener {
+                imgPreview.isVisible = false
+            }
+            videoThumb.setOnClickListener {
+                videoPreview.isVisible = true
+            }
+            videoPreview.setOnClickListener {
+                videoPreview.isVisible = false
             }
             actionButton.setOnClickListener { onActionClick(buildParams()) }
         }
@@ -389,7 +396,7 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
 
         lifecycleScope.launch {
             val sourceSize = formatHumanReadableSize(sourceBmp.rawData.size.toLong(), resources)
-            val sourceDims = getMediaDimensions(context, sourceBmp.uri)
+            val sourceDims = sourceBmp.getDimensions(context)
             val sourceName =
                 sourceBmp.name + "." + getExtensionFromMimeType(sourceBmp.properties.mime)
             val params = buildParams()
@@ -440,7 +447,6 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
             targetDimsWarning = (targetDims.x > DIMS_LIMIT || targetDims.y > DIMS_LIMIT)
             refreshControls()
 
-            // TODO preview MP4 video
             binding?.apply {
                 if (unchanged) {
                     previewName.text = resources.getText(R.string.transform_unsupported)
@@ -452,8 +458,22 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
                         "${sourceDims.x} x ${sourceDims.y} ➤ ${targetDims.x} x ${targetDims.y}"
                     previewSize.text = "$sourceSize ➤ $targetSize"
                 }
-                thumb.load(targetData)
-                preview.load(targetData)
+                videoThumb.isVisible = targetMime.contains("video/")
+                imgThumb.isVisible = !videoThumb.isVisible
+                Timber.d("target : $targetMime / ${targetData.uri}")
+                if (targetMime.contains("video/")) {
+                    // Those are only available through Uris
+                    videoThumb.load(targetData.uri.toUri())
+                    videoPreview.load(targetData.uri.toUri())
+                } else {
+                    if (targetData.rawData.isEmpty()) {
+                        imgThumb.load(targetData.uri)
+                        imgPreview.load(targetData.uri)
+                    } else {
+                        imgThumb.load(targetData.rawData)
+                        imgPreview.load(targetData.rawData)
+                    }
+                }
                 previewProgress.isVisible = false
                 previewGrp.visibility = View.VISIBLE
             }

@@ -281,8 +281,21 @@
             app:layout_constraintTop_toTopOf="@id/preview_header"
             tools:visibility="visible" />
 
+        <VideoView
+            android:id="@+id/video_thumb"
+            android:layout_width="81dp"
+            android:layout_height="108dp"
+            android:layout_gravity="center_vertical|center_horizontal"
+            android:adjustViewBounds="true"
+            android:clickable="true"
+            android:focusable="true"
+            android:visibility="gone"
+            app:layout_constraintStart_toStartOf="@id/img_thumb"
+            app:layout_constraintTop_toTopOf="@id/img_thumb"
+            tools:ignore="ContentDescription" />
+
         <ImageView
-            android:id="@+id/thumb"
+            android:id="@+id/img_thumb"
             android:layout_width="81dp"
             android:layout_height="108dp"
             android:layout_marginTop="4dp"
@@ -303,8 +316,8 @@
             android:text=""
             android:textSize="@dimen/caption"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toEndOf="@id/thumb"
-            app:layout_constraintTop_toTopOf="@id/thumb"
+            app:layout_constraintStart_toEndOf="@id/img_thumb"
+            app:layout_constraintTop_toTopOf="@id/img_thumb"
             tools:text="001.png ➤ 001.webp" />
 
         <TextView
@@ -316,7 +329,7 @@
             android:text=""
             android:textSize="@dimen/caption"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toEndOf="@id/thumb"
+            app:layout_constraintStart_toEndOf="@id/img_thumb"
             app:layout_constraintTop_toBottomOf="@id/preview_name"
             tools:text="1250x1800 ➤ 1250x1800" />
 
@@ -329,7 +342,7 @@
             android:text=""
             android:textSize="@dimen/caption"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toEndOf="@id/thumb"
+            app:layout_constraintStart_toEndOf="@id/img_thumb"
             app:layout_constraintTop_toBottomOf="@id/preview_dims"
             tools:text="548 KB ➤ 450 KB" />
 
@@ -341,9 +354,9 @@
             android:hint="@string/previous_page"
             android:tooltipText="@string/previous_page"
             app:icon="@drawable/ic_action_previous_item"
-            app:layout_constraintBottom_toBottomOf="@id/thumb"
+            app:layout_constraintBottom_toBottomOf="@id/img_thumb"
             app:layout_constraintEnd_toStartOf="@id/next_page_btn"
-            app:layout_constraintStart_toEndOf="@id/thumb"
+            app:layout_constraintStart_toEndOf="@id/img_thumb"
             tools:ignore="ContentDescription" />
 
         <com.google.android.material.button.MaterialButton
@@ -354,7 +367,7 @@
             android:hint="@string/next_page"
             android:tooltipText="@string/next_page"
             app:icon="@drawable/ic_action_next_item"
-            app:layout_constraintBottom_toBottomOf="@id/thumb"
+            app:layout_constraintBottom_toBottomOf="@id/img_thumb"
             app:layout_constraintStart_toEndOf="@id/prev_page_btn"
             tools:ignore="ContentDescription" />
 
@@ -366,12 +379,28 @@
             android:layout_marginTop="8dp"
             android:text="@string/transform"
             app:icon="@drawable/ic_action_transform"
-            app:layout_constraintTop_toBottomOf="@id/thumb" />
+            app:layout_constraintTop_toBottomOf="@id/img_thumb" />
 
+        <!-- Fullscreen previews that appears when tapping the thumb -->
         <ImageView
-            android:id="@+id/preview"
+            android:id="@+id/img_preview"
             android:layout_width="0dp"
             android:layout_height="0dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:ignore="ContentDescription" />
+
+        <VideoView
+            android:id="@+id/video_preview"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_gravity="center_vertical|center_horizontal"
+            android:adjustViewBounds="true"
             android:clickable="true"
             android:focusable="true"
             android:visibility="gone"
@@ -386,7 +415,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:visibility="invisible"
-            app:constraint_referenced_ids="next_page_btn, prev_page_btn, preview_size, preview_dims, preview_name, thumb"
+            app:constraint_referenced_ids="next_page_btn, prev_page_btn, preview_size, preview_dims, preview_name, img_thumb, video_thumb"
             tools:visibility="visible" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
