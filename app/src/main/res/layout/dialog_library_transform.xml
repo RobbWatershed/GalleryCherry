@@ -281,19 +281,6 @@
             app:layout_constraintTop_toTopOf="@id/preview_header"
             tools:visibility="visible" />
 
-        <VideoView
-            android:id="@+id/video_thumb"
-            android:layout_width="81dp"
-            android:layout_height="108dp"
-            android:layout_gravity="center_vertical|center_horizontal"
-            android:adjustViewBounds="true"
-            android:clickable="true"
-            android:focusable="true"
-            android:visibility="gone"
-            app:layout_constraintStart_toStartOf="@id/img_thumb"
-            app:layout_constraintTop_toTopOf="@id/img_thumb"
-            tools:ignore="ContentDescription" />
-
         <ImageView
             android:id="@+id/img_thumb"
             android:layout_width="81dp"
@@ -307,6 +294,26 @@
             app:layout_constraintTop_toBottomOf="@id/preview_header"
             tools:src="@drawable/ic_app"
             tools:tint="@color/medium_gray" />
+
+        <androidx.media3.ui.AspectRatioFrameLayout
+            android:id="@+id/video_thumb_frame"
+            android:layout_width="81dp"
+            android:layout_height="108dp"
+            android:clickable="true"
+            android:focusable="true"
+            app:layout_constraintBottom_toBottomOf="@id/img_thumb"
+            app:layout_constraintStart_toEndOf="@id/img_thumb"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@id/img_thumb"
+            app:resize_mode="fit">
+
+            <SurfaceView
+                android:id="@+id/video_thumb"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@null"
+                tools:ignore="ContentDescription" />
+        </androidx.media3.ui.AspectRatioFrameLayout>
 
         <TextView
             android:id="@+id/preview_name"
@@ -395,12 +402,10 @@
             app:layout_constraintTop_toTopOf="parent"
             tools:ignore="ContentDescription" />
 
-        <VideoView
-            android:id="@+id/video_preview"
+        <androidx.media3.ui.AspectRatioFrameLayout
+            android:id="@+id/video_preview_frame"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:layout_gravity="center_vertical|center_horizontal"
-            android:adjustViewBounds="true"
             android:clickable="true"
             android:focusable="true"
             android:visibility="gone"
@@ -408,14 +413,22 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            tools:ignore="ContentDescription" />
+            app:resize_mode="fit">
+
+            <SurfaceView
+                android:id="@+id/video_preview"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@null"
+                tools:ignore="ContentDescription" />
+        </androidx.media3.ui.AspectRatioFrameLayout>
 
         <androidx.constraintlayout.widget.Group
             android:id="@+id/preview_grp"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:visibility="invisible"
-            app:constraint_referenced_ids="next_page_btn, prev_page_btn, preview_size, preview_dims, preview_name, img_thumb, video_thumb"
+            app:constraint_referenced_ids="next_page_btn, prev_page_btn, preview_size, preview_dims, preview_name, img_thumb, video_thumb_frame"
             tools:visibility="visible" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>

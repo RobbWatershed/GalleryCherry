@@ -13,7 +13,6 @@ import android.graphics.drawable.InsetDrawable
 import android.os.Build
 import android.os.Debug
 import android.os.Looper
-import android.os.MemoryFile
 import android.util.TypedValue
 import android.view.Menu
 import android.view.View
@@ -56,7 +55,6 @@ import timber.log.Timber
 import java.io.BufferedInputStream
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
-import java.io.FileDescriptor
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream

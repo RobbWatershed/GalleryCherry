@@ -13,6 +13,9 @@ import androidx.core.view.children
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player.REPEAT_MODE_ONE
+import androidx.media3.exoplayer.ExoPlayer
 import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequest
@@ -29,7 +32,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.core.WORK_CLOSEABLE
-import me.devsaki.hentoid.core.load
 import me.devsaki.hentoid.core.setOnTextChangedListener
 import me.devsaki.hentoid.database.ObjectBoxDAO
 import me.devsaki.hentoid.database.domains.Content
@@ -55,6 +57,7 @@ import me.devsaki.hentoid.util.image.screenWidth
 import me.devsaki.hentoid.util.image.transformAnimated
 import me.devsaki.hentoid.util.image.transformManhwaChapter
 import me.devsaki.hentoid.util.image.transformStill
+import me.devsaki.hentoid.util.video.videoOnlyRenderersFactory
 import me.devsaki.hentoid.viewholders.DrawerItem
 import me.devsaki.hentoid.workers.TransformWorker
 import okio.use
@@ -98,6 +101,7 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
     private val itemAdapter = ItemAdapter<DrawerItem<Any>>()
     private val fastAdapter = FastAdapter.with(itemAdapter)
     private var targetDimsWarning = false
+    private var player: ExoPlayer? = null
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -130,6 +134,7 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
     }
 
     override fun onDestroyView() {
+        player?.release()
         binding = null
         super.onDestroyView()
     }
@@ -273,11 +278,13 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
             imgPreview.setOnClickListener {
                 imgPreview.isVisible = false
             }
-            videoThumb.setOnClickListener {
-                videoPreview.isVisible = true
+            videoThumbFrame.setOnClickListener {
+                player?.setVideoSurfaceView(videoPreview)
+                videoPreviewFrame.isVisible = true
             }
-            videoPreview.setOnClickListener {
-                videoPreview.isVisible = false
+            videoPreviewFrame.setOnClickListener {
+                player?.setVideoSurfaceView(videoThumb)
+                videoPreviewFrame.isVisible = false
             }
             actionButton.setOnClickListener { onActionClick(buildParams()) }
         }
@@ -401,6 +408,7 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
             previewProgress.isVisible = true
         }
 
+        @androidx.media3.common.util.UnstableApi
         lifecycleScope.launch {
             val sourceSize = formatHumanReadableSize(sourceBmp.rawData.size.toLong(), resources)
             val sourceDims = sourceBmp.getDimensions(context)
@@ -469,14 +477,23 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
                 }
 
                 videoThumb.isVisible = targetMime.contains("video/")
-                imgThumb.isVisible = !videoThumb.isVisible
+                imgThumb.visibility = if (videoThumb.isVisible) View.INVISIBLE else View.VISIBLE
 
                 Timber.d("target : $targetMime / ${displayData.uri}")
 
                 if (targetMime.contains("video/")) {
-                    // Those are only available through Uris
-                    videoThumb.load(displayData.uri)
-                    videoPreview.load(displayData.uri)
+                    videoThumbFrame.setAspectRatio(targetDims.x.toFloat() / targetDims.y)
+                    videoPreviewFrame.setAspectRatio(targetDims.x.toFloat() / targetDims.y)
+                    ExoPlayer.Builder(requireContext(), videoOnlyRenderersFactory).build().apply {
+                        player = this
+                        setVideoSurfaceView(videoThumb)
+                        // Those are only available through Uris
+                        val mediaItem = MediaItem.fromUri(displayData.uri)
+                        setMediaItem(mediaItem)
+                        repeatMode = REPEAT_MODE_ONE
+                        prepare()
+                        play()
+                    }
                 } else {
                     if (displayData.rawData.isEmpty()) {
                         imgThumb.load(displayData.uri)
