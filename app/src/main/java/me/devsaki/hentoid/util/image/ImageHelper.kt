@@ -17,7 +17,6 @@ import androidx.annotation.DrawableRes
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.scale
-import androidx.core.net.toUri
 import com.awxkee.jxlcoder.JxlCoder
 import com.radzivon.bartoshyk.avif.coder.HeifCoder
 import com.radzivon.bartoshyk.avif.coder.PreferredColorConfig
@@ -510,6 +509,7 @@ fun needsRotating(screenWidth: Int, screenHeight: Int, width: Int, height: Int):
 
 /**
  * Return the given media's dimensions
+ * NB : Won't work for videos if they are provided using the 'data' parameter
  *
  * @param context Context to be used
  * @param uri     Uri of the media file to be read
@@ -518,38 +518,37 @@ fun needsRotating(screenWidth: Int, screenHeight: Int, width: Int, height: Int):
  */
 suspend fun getMediaDimensions(
     context: Context,
-    uri: String = Uri.EMPTY.toString(),
+    uri: Uri = Uri.EMPTY,
     data: ByteArray? = null
 ): Point = withContext(Dispatchers.IO) {
-    val fileUri = uri.toUri()
-    if (null == data && !fileExists(context, fileUri)) return@withContext Point(0, 0)
+    val isDataUsable = !(null == data || data.isEmpty())
+    if (!isDataUsable && !fileExists(context, uri)) return@withContext Point(0, 0)
 
-    val fileName = if (uri.startsWith(FILECHUNK_AUTHORITY)) {
-        FileChunkInfo.fromUri(uri.toUri()).displayName
-    } else uri
+    val fileName = if (uri.authority == FILECHUNK_AUTHORITY) FileChunkInfo.fromUri(uri).displayName
+    else uri.lastPathSegment ?: ""
 
-    val ext = if (fileUri != Uri.EMPTY || null == data) getExtensionFromUri(fileName)
+    val ext = if (uri != Uri.EMPTY || !isDataUsable) getExtensionFromUri(fileName)
     else getExtensionFromMimeType(getMimeTypeFromPictureBinary(data))
 
     if (ext == "jxl" || ext == "avif") {
         return@withContext if (null == data) {
-            getDimsFromThirdParty(context, ext, fileUri)
+            getDimsFromThirdParty(context, ext, uri)
         } else {
             getDimsFromThirdParty(ext, data)
         }
     } else { // Natively supported by Android
         return@withContext try {
-            if (null == data) {
+            if (uri != Uri.EMPTY || !isDataUsable) {
                 var dims = Point(0, 0)
                 try {
-                    dims = getDimsFromBitmapFactory(context, fileUri)
+                    dims = getDimsFromBitmapFactory(context, uri)
                 } catch (e: Exception) {
                     Timber.d(e)
                 }
                 if (dims.x < 1 || dims.y < 1) {
                     // Fallback for formats unsupported by BitmapFactory but supported by Android Media (e.g. MP4)
                     try {
-                        dims = getDimsFromMediaRetriever(context, fileUri)
+                        dims = getDimsFromMediaRetriever(context, uri)
                     } catch (e: Exception) {
                         Timber.w(e)
                     }
@@ -561,10 +560,7 @@ suspend fun getMediaDimensions(
                 BitmapFactory.decodeByteArray(data, 0, data.size, options)
                 Point(options.outWidth, options.outHeight)
             }
-        } catch (e: IOException) {
-            Timber.w(e)
-            Point(0, 0)
-        } catch (e: IllegalArgumentException) {
+        } catch (e: Exception) {
             Timber.w(e)
             Point(0, 0)
         }

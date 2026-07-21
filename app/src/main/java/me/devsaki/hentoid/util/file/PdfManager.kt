@@ -89,7 +89,7 @@ class PdfManager {
                     .equals(THUMB_FILE_NAME, true)
             }
         imgFiles.forEach {
-            allDims.add(getMediaDimensions(context, it.uri.toString()))
+            allDims.add(getMediaDimensions(context, it.uri))
         }
         val medianWidth = median(allDims.map { it.x }.toIntArray())
         val minWidth = screenWidth * 0.75

@@ -417,7 +417,7 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
         }
 
         val progressId = img.fileUri
-        val isError = transformAnimated(
+        val isError = !transformAnimated(
             applicationContext,
             sourceFile.uri,
             sourceMime,

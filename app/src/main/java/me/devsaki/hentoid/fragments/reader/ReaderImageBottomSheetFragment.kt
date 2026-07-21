@@ -154,7 +154,7 @@ class ReaderImageBottomSheetFragment : BottomSheetDialogFragment(),
     }
 
     private suspend fun formatImageStats(img: ImageFile): String {
-        val dimensions = getMediaDimensions(requireContext(), img.displayUri)
+        val dimensions = getMediaDimensions(requireContext(), img.displayUri.toUri())
         val sizeStr = formatHumanReadableSize(
             if (img.size > 0) {
                 img.size

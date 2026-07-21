@@ -139,7 +139,7 @@ suspend fun transformAnimated(
         Timber.w(e, "An error occured while encoding $targetFile")
         isError = true
     }
-    return isError
+    return !isError
 }
 
 /**

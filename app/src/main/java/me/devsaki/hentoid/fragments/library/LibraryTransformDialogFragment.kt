@@ -48,7 +48,6 @@ import me.devsaki.hentoid.util.file.getOrCreateCacheFolder
 import me.devsaki.hentoid.util.file.tryCleanDirectory
 import me.devsaki.hentoid.util.image.ImageProperties
 import me.devsaki.hentoid.util.image.TransformParams
-import me.devsaki.hentoid.util.image.determineEncoder
 import me.devsaki.hentoid.util.image.getImageProperties
 import me.devsaki.hentoid.util.image.getMediaDimensions
 import me.devsaki.hentoid.util.image.screenHeight
@@ -392,8 +391,9 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
     @Suppress("ReplaceArrayEqualityOpWithArraysEquals")
     @SuppressLint("SetTextI18n")
     private fun refreshPreview() {
-        val sourceBmp = getCurrentBitmap() ?: return
         val context = requireContext()
+        val sourceBmp = getCurrentBitmap() ?: return
+        val sourceProps = sourceBmp.getProperties(context)
 
         binding?.apply {
             previewGrp.visibility = View.INVISIBLE
@@ -405,14 +405,14 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
             val sourceSize = formatHumanReadableSize(sourceBmp.rawData.size.toLong(), resources)
             val sourceDims = sourceBmp.getDimensions(context)
             val sourceName =
-                sourceBmp.name + "." + getExtensionFromMimeType(sourceBmp.properties.mime)
+                sourceBmp.name + "." + getExtensionFromMimeType(sourceProps.mime)
             val params = buildParams()
             val targetData: BitmapInfo = withContext(Dispatchers.IO) {
                 return@withContext if (params.resizeEnabled && 4 == params.resizeMethod) {
                     // Manhwa resize
                     val res = transformManhwa(params, pageIndex)
                     BitmapInfo(if (res.isEmpty()) sourceBmp.rawData else res)
-                } else if (sourceBmp.properties.isAnimated) {
+                } else if (sourceProps.isAnimated) {
                     withContext(Dispatchers.Main) {
                         binding?.previewProgress?.isIndeterminate = false
                         binding?.previewProgress?.max = 100
@@ -423,34 +423,36 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
                         context, tempFolder, "temp",
                         params.transcodeAnim.mimeType
                     )
-                    transformAnimated(
-                        context,
-                        sourceBmp.uri.toUri(),
-                        sourceBmp.properties.mime,
-                        tempFile,
-                        params,
-                        { false }
-                    ) {
-                        lifecycleScope.launch(Dispatchers.Main) {
-                            binding?.previewProgress?.progress = (it * 100).roundToInt()
+                    if (transformAnimated(
+                            context,
+                            sourceBmp.uri,
+                            sourceProps.mime,
+                            tempFile,
+                            params,
+                            { false }
+                        ) {
+                            lifecycleScope.launch(Dispatchers.Main) {
+                                binding?.previewProgress?.progress = (it * 100).roundToInt()
+                            }
                         }
-                    }
-                    BitmapInfo(tempFile)
+                    ) BitmapInfo(tempFile)
+                    else BitmapInfo(sourceBmp.rawData)
                 } else BitmapInfo(transformStill(context, sourceBmp.rawData, params, true))
             }
 
             @Suppress("ARRAY_EQUALITY_OPERATOR_CAN_BE_REPLACED_WITH_CONTENT_EQUALS")
             val unchanged = targetData.rawData == sourceBmp.rawData
 
-            val targetSize = formatHumanReadableSize(targetData.getSize(context), resources)
-            val targetMime = determineEncoder(
-                sourceBmp.properties.isLossless,
-                sourceBmp.properties.isAnimated,
-                Point(),
-                params
-            ).mimeType
+            val displayData = if (unchanged) sourceBmp else targetData
+            val displayProps = withContext(Dispatchers.IO) {
+                displayData.getProperties(context)
+            }
+            val targetSize = withContext(Dispatchers.IO) {
+                formatHumanReadableSize(displayData.getSize(context), resources)
+            }
+            val targetMime = displayProps.mime
             val targetName = sourceBmp.name + "." + getExtensionFromMimeType(targetMime)
-            val targetDims = targetData.getDimensions(context)
+            val targetDims = displayData.getDimensions(context)
             targetDimsWarning = (targetDims.x > DIMS_LIMIT || targetDims.y > DIMS_LIMIT)
             refreshControls()
 
@@ -465,22 +467,26 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
                         "${sourceDims.x} x ${sourceDims.y} ➤ ${targetDims.x} x ${targetDims.y}"
                     previewSize.text = "$sourceSize ➤ $targetSize"
                 }
+
                 videoThumb.isVisible = targetMime.contains("video/")
                 imgThumb.isVisible = !videoThumb.isVisible
-                Timber.d("target : $targetMime / ${targetData.uri}")
+
+                Timber.d("target : $targetMime / ${displayData.uri}")
+
                 if (targetMime.contains("video/")) {
                     // Those are only available through Uris
-                    videoThumb.load(targetData.uri.toUri())
-                    videoPreview.load(targetData.uri.toUri())
+                    videoThumb.load(displayData.uri)
+                    videoPreview.load(displayData.uri)
                 } else {
-                    if (targetData.rawData.isEmpty()) {
-                        imgThumb.load(targetData.uri)
-                        imgPreview.load(targetData.uri)
+                    if (displayData.rawData.isEmpty()) {
+                        imgThumb.load(displayData.uri)
+                        imgPreview.load(displayData.uri)
                     } else {
-                        imgThumb.load(targetData.rawData)
-                        imgPreview.load(targetData.rawData)
+                        imgThumb.load(displayData.rawData)
+                        imgPreview.load(displayData.rawData)
                     }
                 }
+
                 previewProgress.isVisible = false
                 previewGrp.visibility = View.VISIBLE
             }
@@ -496,7 +502,7 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
             val page = pages[pageIndex]
             try {
                 getInputStream(requireContext(), page.fileUri.toUri()).use {
-                    return BitmapInfo(page.fileUri, page.name, it.readBytes())
+                    return BitmapInfo(page.fileUri.toUri(), page.name, it.readBytes())
                 }
             } catch (t: Throwable) {
                 Timber.w(t)
@@ -613,18 +619,25 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
 
     @Suppress("ArrayInDataClass")
     data class BitmapInfo(
-        val uri: String,
+        val uri: Uri,
         val name: String,
         val rawData: ByteArray
     ) {
-        constructor(uri: Uri) : this(uri.toString(), "", ByteArray(0))
-        constructor(rawData: ByteArray) : this("", "", rawData)
+        constructor(uri: Uri) : this(uri, "", ByteArray(0))
+        constructor(rawData: ByteArray) : this(Uri.EMPTY, "", rawData)
 
-        val properties: ImageProperties by lazy { getImageProperties(rawData) }
+        fun getProperties(context: Context): ImageProperties {
+            return if (rawData.isNotEmpty()) getImageProperties(rawData)
+            else getImageProperties(context, uri) ?: ImageProperties(
+                "",
+                isLossless = false,
+                isAnimated = false
+            )
+        }
 
         fun getSize(context: Context): Long {
             return if (rawData.isNotEmpty()) rawData.size.toLong()
-            else fileSizeFromUri(context, uri.toUri())
+            else fileSizeFromUri(context, uri)
         }
 
         suspend fun getDimensions(context: Context): Point {

@@ -504,7 +504,7 @@ class ImagePagerAdapter(context: Context) :
                 else -> {
                     withContext(Dispatchers.IO) {
                         // Preload the pic to get its dimensions
-                        val dims = getMediaDimensions(view.context, uri.toString())
+                        val dims = getMediaDimensions(view.context, uri)
                         needsRotating(screenWidth, screenHeight, dims.x, dims.y)
                     }
                 }
