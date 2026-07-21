@@ -3,27 +3,15 @@ package me.devsaki.hentoid.util.video
 import android.media.MediaCodec
 import android.util.Size
 import me.devsaki.hentoid.core.CHARSET_LATIN_1
-import kotlin.math.absoluteValue
+import kotlin.math.ceil
 
 const val MIME_VIDEO_MP4 = "video/mp4"
 
 val MP4_SIGNATURE = "ftyp".toByteArray(CHARSET_LATIN_1)
 
+const val MULTIPLE = 4
 
-// I try the resolutions suggested by docs for H.264 and VP8
-// https://developer.android.com/guide/topics/media/media-formats#video-encoding
-// TODO: find more supported resolutions
-private val suggestedResolutionsH264 = arrayListOf(
-    Size(176, 144),
-    Size(320, 240),
-    Size(320, 180),
-    Size(640, 360),
-    Size(720, 480),
-    Size(1280, 720),
-    Size(1920, 1080)
-)
-
-// From https://github.com/sixo/vid-proc/blob/master/app/src/main/java/eu/sisik/vidproc/Utils.kt
+// Original idea from https://github.com/sixo/vid-proc/blob/master/app/src/main/java/eu/sisik/vidproc/Utils.kt
 fun getBestSupportedResolution(
     mediaCodec: MediaCodec,
     videoMime: String,
@@ -36,25 +24,10 @@ fun getBestSupportedResolution(
     if (capabilities.isSizeSupported(preferredResolution.width, preferredResolution.height))
         return preferredResolution
 
-    // I prefer similar resolution with similar aspect
-    val pix = preferredResolution.width * preferredResolution.height
-    val preferredAspect = preferredResolution.width.toFloat() / preferredResolution.height.toFloat()
-
-    val nearestToFurthest = suggestedResolutionsH264.sortedWith(
-        compareBy(
-            {
-                pix - it.width * it.height
-            },
-            // First compare by aspect
-            {
-                val aspect = if (it.width < it.height) it.width.toFloat() / it.height.toFloat()
-                else it.height.toFloat() / it.width.toFloat()
-                (preferredAspect - aspect).absoluteValue
-            })
+    // Return adjusted size with every dimension a multiple of MULTIPLE (H264 constraints)
+    return Size(
+        ceil(preferredResolution.width.toFloat() / MULTIPLE.toFloat()).toInt() * MULTIPLE,
+        ceil(preferredResolution.height.toFloat() / MULTIPLE.toFloat()).toInt() * MULTIPLE
     )
 
-    for (size in nearestToFurthest)
-        if (capabilities.isSizeSupported(size.width, size.height)) return size
-
-    throw RuntimeException("Couldn't find supported resolution")
 }
