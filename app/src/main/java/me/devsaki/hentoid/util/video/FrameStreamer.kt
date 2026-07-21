@@ -1,12 +1,16 @@
 package me.devsaki.hentoid.util.video
 
-import android.content.Context
-import com.github.penfeizhou.animation.decode.Frame
+import android.graphics.Bitmap
+import android.graphics.Point
 import java.io.Closeable
 
 interface FrameStreamer : Closeable {
-    fun streamFrames(
-        onFrameFound: (Frame<*, *>) -> Unit,
-        isCanceled: () -> Boolean
+    suspend fun streamFrames(
+        isCanceled: () -> Boolean,
+        onFrameFound: suspend (Pair<Bitmap, Int>) -> Unit
     )
+
+    val dims: Point
+    val totalFrames: Int
+    val durationMs: Int
 }

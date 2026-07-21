@@ -36,7 +36,7 @@ import me.devsaki.hentoid.util.network.UriParts
 import me.devsaki.hentoid.util.video.GifEncoder
 import me.devsaki.hentoid.util.video.VideoEncoder
 import me.devsaki.hentoid.util.video.WebpEncoder
-import me.devsaki.hentoid.util.video.getPenfeiFrameStreamer
+import me.devsaki.hentoid.util.video.instanciateFrameStreamer
 import timber.log.Timber
 import java.io.ByteArrayOutputStream
 import kotlin.math.abs
@@ -102,12 +102,13 @@ suspend fun transformAnimated(
 
     var isError = false
     try {
-        getPenfeiFrameStreamer(sourceFile, sourceMime)?.let { fs ->
+        instanciateFrameStreamer(context, sourceFile, sourceMime)?.let { fs ->
             val totalFrames = fs.totalFrames
+            Timber.d("Found frame streamer for $totalFrames frames / ${fs.durationMs}ms")
             val animEncoder = when (params.transcodeAnim) {
                 PictureEncoder.WEBP_LOSSLESS, PictureEncoder.WEBP_LOSSY -> WebpEncoder(
                     quality,
-                    (fs.durationMs * 1f / fs.totalFrames).roundToInt()
+                    (fs.durationMs.toFloat() / fs.totalFrames).roundToInt()
                 )
 
                 PictureEncoder.AVC -> VideoEncoder(
@@ -124,7 +125,7 @@ suspend fun transformAnimated(
             animEncoder.use {
                 it.init(context, targetFile)
                 var nbFrames = 1f
-                fs.streamFramesBlocking(isCanceled) { f ->
+                fs.streamFrames(isCanceled) { f ->
                     try {
                         it.addFrame(f.first, f.second)
                     } finally {

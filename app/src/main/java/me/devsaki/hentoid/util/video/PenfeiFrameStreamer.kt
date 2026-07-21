@@ -32,7 +32,7 @@ import java.nio.ByteBuffer
 import kotlin.math.roundToInt
 
 
-fun getPenfeiFrameStreamer(uri: Uri, mime: String): PenfeiFrameStreamer<*, *>? {
+fun getPenfeiFrameStreamer(uri: Uri, mime: String): FrameStreamer? {
     val frameSeqDecoder = when (mime) {
         MIME_IMAGE_APNG, MIME_IMAGE_PNG -> APNGDecoder(ImgLoader(uri), null)
         MIME_IMAGE_WEBP -> WebPDecoder(ImgLoader(uri), null)
@@ -44,13 +44,12 @@ fun getPenfeiFrameStreamer(uri: Uri, mime: String): PenfeiFrameStreamer<*, *>? {
 }
 
 class PenfeiFrameStreamer<R : Reader, W : Writer>(val decoder: FrameSeqDecoder<R, W>) :
-    FrameSeqDecoder.RenderListener {
+    FrameSeqDecoder.RenderListener, FrameStreamer {
 
-    val dims: Point
-    val sampleSize: Int
-    val fps: Float
-    val totalFrames: Int
-    val durationMs: Int
+    override val dims: Point
+    private val sampleSize: Int
+    override val totalFrames: Int
+    override val durationMs: Int
 
     var framesRendered = 0
     var onFrameFound: ((Pair<Bitmap, Int>) -> Unit)? = null
@@ -69,11 +68,10 @@ class PenfeiFrameStreamer<R : Reader, W : Writer>(val decoder: FrameSeqDecoder<R
             res += decoder.getFrame(i).frameDuration
         }
         durationMs = res
-        fps = totalFrames * 1000f / durationMs
     }
 
     @OptIn(DelicateCoroutinesApi::class)
-    suspend fun streamFramesBlocking(
+    override suspend fun streamFrames(
         isCanceled: () -> Boolean,
         onFrameFound: suspend (Pair<Bitmap, Int>) -> Unit
     ) {
@@ -102,12 +100,16 @@ class PenfeiFrameStreamer<R : Reader, W : Writer>(val decoder: FrameSeqDecoder<R
         val bitmap = createBitmap(dims.x / sampleSize, dims.y / sampleSize)
         byteBuffer.position(0) // Go back to the beginning to read it
         bitmap.copyPixelsFromBuffer(byteBuffer)
-        onFrameFound?.invoke(Pair(bitmap, (durationMs * 1f / totalFrames).roundToInt()))
+        onFrameFound?.invoke(Pair(bitmap, (durationMs.toFloat() / totalFrames).roundToInt()))
         framesRendered++
     }
 
     override fun onEnd() {
         Timber.v("onEnd")
+    }
+
+    override fun close() {
+        decoder.stop()
     }
 }
 
