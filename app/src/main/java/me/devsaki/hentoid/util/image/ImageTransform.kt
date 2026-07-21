@@ -33,9 +33,9 @@ import me.devsaki.hentoid.util.file.saveBinary
 import me.devsaki.hentoid.util.formatIntAsStr
 import me.devsaki.hentoid.util.getScreenDimensionsPx
 import me.devsaki.hentoid.util.network.UriParts
-import me.devsaki.hentoid.util.video.GifStreamedEncoder
-import me.devsaki.hentoid.util.video.VideoStreamedEncoder
-import me.devsaki.hentoid.util.video.WebpStreamedEncoder
+import me.devsaki.hentoid.util.video.GifEncoder
+import me.devsaki.hentoid.util.video.VideoEncoder
+import me.devsaki.hentoid.util.video.WebpEncoder
 import me.devsaki.hentoid.util.video.getPenfeiFrameStreamer
 import timber.log.Timber
 import java.io.ByteArrayOutputStream
@@ -105,19 +105,19 @@ suspend fun transformAnimated(
         getPenfeiFrameStreamer(sourceFile, sourceMime)?.let { fs ->
             val totalFrames = fs.totalFrames
             val animEncoder = when (params.transcodeAnim) {
-                PictureEncoder.WEBP_LOSSLESS, PictureEncoder.WEBP_LOSSY -> WebpStreamedEncoder(
+                PictureEncoder.WEBP_LOSSLESS, PictureEncoder.WEBP_LOSSY -> WebpEncoder(
                     quality,
                     (fs.durationMs * 1f / fs.totalFrames).roundToInt()
                 )
 
-                PictureEncoder.AVC -> VideoStreamedEncoder(
+                PictureEncoder.AVC -> VideoEncoder(
                     fs.dims,
                     quality,
                     totalFrames * 1000f / fs.durationMs.toFloat(),
                     totalFrames
                 )
 
-                PictureEncoder.GIF -> GifStreamedEncoder(fs.dims)
+                PictureEncoder.GIF -> GifEncoder(fs.dims)
 
                 else -> throw RuntimeException("Couldn't find a valid encoder for ${params.transcodeAnim}")
             }

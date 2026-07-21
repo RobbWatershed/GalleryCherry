@@ -104,9 +104,9 @@ import me.devsaki.hentoid.util.persistJson
 import me.devsaki.hentoid.util.removeContent
 import me.devsaki.hentoid.util.serializeToJson
 import me.devsaki.hentoid.util.updateQueueJson
-import me.devsaki.hentoid.util.video.GifStreamedEncoder
-import me.devsaki.hentoid.util.video.VideoStreamedEncoder
-import me.devsaki.hentoid.util.video.WebpStreamedEncoder
+import me.devsaki.hentoid.util.video.GifEncoder
+import me.devsaki.hentoid.util.video.VideoEncoder
+import me.devsaki.hentoid.util.video.WebpEncoder
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import timber.log.Timber
@@ -1541,19 +1541,19 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
             )
 
             val animEncoder = when (Settings.downloadAnimationFormat) {
-                PictureEncoder.WEBP_LOSSLESS.value, PictureEncoder.WEBP_LOSSY.value -> WebpStreamedEncoder(
+                PictureEncoder.WEBP_LOSSLESS.value, PictureEncoder.WEBP_LOSSY.value -> WebpEncoder(
                     quality,
                     avgFrameDuration
                 )
 
-                PictureEncoder.AVC.value -> VideoStreamedEncoder(
+                PictureEncoder.AVC.value -> VideoEncoder(
                     dims,
                     quality,
                     frames.filterNot { 0 == it.second }.maxOf { 1000f / it.second.toFloat() },
                     frames.size
                 )
 
-                else -> GifStreamedEncoder(dims)
+                else -> GifEncoder(dims)
             }
 
             animEncoder.use { encoder ->
