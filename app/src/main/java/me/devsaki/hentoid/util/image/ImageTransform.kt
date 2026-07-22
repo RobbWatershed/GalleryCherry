@@ -7,6 +7,8 @@ import android.graphics.BitmapFactory
 import android.graphics.Point
 import android.net.Uri
 import android.os.Build
+import android.os.Build.VERSION.SDK_INT
+import android.os.ParcelFileDescriptor
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.scale
 import androidx.core.net.toUri
@@ -35,9 +37,10 @@ import me.devsaki.hentoid.util.formatIntAsStr
 import me.devsaki.hentoid.util.getScreenDimensionsPx
 import me.devsaki.hentoid.util.network.UriParts
 import me.devsaki.hentoid.util.video.GifEncoder
+import me.devsaki.hentoid.util.video.MediaFrameStreamer
 import me.devsaki.hentoid.util.video.VideoEncoder
 import me.devsaki.hentoid.util.video.WebpEncoder
-import me.devsaki.hentoid.util.video.newFrameStreamer
+import me.devsaki.hentoid.util.video.getPenfeiFrameStreamer
 import timber.log.Timber
 import java.io.ByteArrayOutputStream
 import kotlin.math.abs
@@ -97,59 +100,73 @@ suspend fun transformAnimated(
     isCanceled: () -> Boolean,
     onProgress: ((Float) -> Unit)? = null
 ): Boolean {
+    var pfd: ParcelFileDescriptor? = null
     val quality =
         (if (params.transcodeAnim == PictureEncoder.WEBP_LOSSLESS) 100f
         else params.transcodeAnimQuality.coerceIn(0, 100).toFloat()) / 100f
 
     var isError = false
     try {
-        newFrameStreamer(context, sourceFile, sourceMime)?.let { fs ->
-            val totalFrames = fs.totalFrames
-
-            // Pre-resize the first frame to determine target dimensions
-            val targetDims = if (params.resizeEnabled) {
-                val bogusFrame = createBitmap(fs.dims.x, fs.dims.y, Config.RGB_565)
-                try {
-                    val resizedBmp = resize(context, ImageData(bogusFrame), params).first
-                    try {
-                        Point(resizedBmp.width, resizedBmp.height)
-                    } finally {
-                        resizedBmp.recycle()
-                    }
-                } finally {
-                    bogusFrame.recycle()
+        val fs = if (sourceMime.startsWith("video/")) {
+            if (SDK_INT >= 28) {
+                context.contentResolver.openFileDescriptor(sourceFile, "r")?.let {
+                    pfd = it
+                    MediaFrameStreamer(it.fileDescriptor)
                 }
-            } else fs.dims
+            } else null
+        } else {
+            getPenfeiFrameStreamer(sourceFile, sourceMime)
+        }
+        if (null == fs) throw RuntimeException("Couldn't find a valid frame streamer for $sourceFile (${sourceMime})")
 
-            Timber.d("Found frame streamer for $totalFrames frames / ${fs.durationMs}ms")
-            val animEncoder = when (params.transcodeAnim) {
-                PictureEncoder.WEBP_LOSSLESS, PictureEncoder.WEBP_LOSSY -> WebpEncoder(
-                    targetDims,
-                    quality,
-                    (fs.durationMs.toFloat() / fs.totalFrames).roundToInt()
-                )
+        val totalFrames = fs.totalFrames
 
-                PictureEncoder.AVC -> VideoEncoder(
-                    targetDims,
-                    quality,
-                    totalFrames * 1000f / fs.durationMs.toFloat(),
-                    totalFrames
-                )
-
-                PictureEncoder.GIF -> GifEncoder(targetDims)
-
-                else -> throw RuntimeException("Couldn't find a valid encoder for ${params.transcodeAnim}")
+        // Pre-resize the first frame to determine target dimensions
+        val targetDims = if (params.resizeEnabled) {
+            val bogusFrame = createBitmap(fs.dims.x, fs.dims.y, Config.RGB_565)
+            try {
+                val resizedBmp = resize(context, ImageData(bogusFrame), params).first
+                try {
+                    Point(resizedBmp.width, resizedBmp.height)
+                } finally {
+                    resizedBmp.recycle()
+                }
+            } finally {
+                bogusFrame.recycle()
             }
-            animEncoder.use {
-                it.init(context, targetFile)
-                var nbFrames = 1f
+        } else fs.dims
+
+        Timber.d("Found frame streamer for $totalFrames frames / ${fs.durationMs}ms")
+        val animEncoder = when (params.transcodeAnim) {
+            PictureEncoder.WEBP_LOSSLESS, PictureEncoder.WEBP_LOSSY -> WebpEncoder(
+                targetDims,
+                quality,
+                (fs.durationMs.toFloat() / fs.totalFrames).roundToInt()
+            )
+
+            PictureEncoder.AVC -> VideoEncoder(
+                targetDims,
+                quality,
+                totalFrames * 1000f / fs.durationMs.toFloat(),
+                totalFrames
+            )
+
+            PictureEncoder.GIF -> GifEncoder(targetDims)
+
+            else -> throw RuntimeException("Couldn't find a valid encoder for ${params.transcodeAnim}")
+        }
+        animEncoder.use {
+            animEncoder.init(context, targetFile)
+            var nbFrames = 1f
+            fs.use {
+                // Launch streaming; call should be blocking
                 fs.streamFrames(isCanceled) { f ->
                     try {
                         val outBitmap = if (params.resizeEnabled) {
                             resize(context, ImageData(f.first), params).first
                         } else f.first
                         try {
-                            it.addFrame(outBitmap, f.second)
+                            animEncoder.addFrame(outBitmap, f.second)
                         } finally {
                             outBitmap.recycle()
                         }
@@ -160,10 +177,11 @@ suspend fun transformAnimated(
                 }
             }
         }
-            ?: throw RuntimeException("Couldn't find a valid frame streamer for $sourceFile (${sourceMime})")
     } catch (e: Exception) {
         Timber.w(e, "An error occured while encoding $targetFile")
         isError = true
+    } finally {
+        pfd?.close()
     }
     return !isError
 }
@@ -320,11 +338,11 @@ fun determineEncoder(
 fun transcodeTo(bitmap: Bitmap, encoder: PictureEncoder, quality: Int): ByteArray {
     val output = ByteArrayOutputStream()
     when (encoder) {
-        PictureEncoder.WEBP_LOSSY -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
+        PictureEncoder.WEBP_LOSSY -> if (SDK_INT >= Build.VERSION_CODES.R)
             bitmap.compress(Bitmap.CompressFormat.WEBP_LOSSY, quality, output)
         else bitmap.compress(Bitmap.CompressFormat.WEBP, quality, output)
 
-        PictureEncoder.WEBP_LOSSLESS -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
+        PictureEncoder.WEBP_LOSSLESS -> if (SDK_INT >= Build.VERSION_CODES.R)
             bitmap.compress(Bitmap.CompressFormat.WEBP_LOSSLESS, 100, output)
         else bitmap.compress(Bitmap.CompressFormat.WEBP, 100, output)
 

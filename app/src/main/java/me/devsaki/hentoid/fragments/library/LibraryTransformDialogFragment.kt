@@ -481,12 +481,14 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
                     previewSize.text = "$sourceSize ➤ $targetSize"
                 }
 
-                videoThumb.isVisible = targetMime.contains("video/")
-                imgThumb.visibility = if (videoThumb.isVisible) View.INVISIBLE else View.VISIBLE
+                videoThumbFrame.isVisible = targetMime.startsWith("video/")
+                videoThumb.isVisible = videoThumbFrame.isVisible
+                imgThumb.visibility =
+                    if (videoThumbFrame.isVisible) View.INVISIBLE else View.VISIBLE
 
                 Timber.d("target : $targetMime / ${displayData.uri}")
 
-                if (targetMime.contains("video/")) {
+                if (videoThumbFrame.isVisible) {
                     videoThumbFrame.setAspectRatio(targetDims.x.toFloat() / targetDims.y)
                     videoPreviewFrame.setAspectRatio(targetDims.x.toFloat() / targetDims.y)
                     if (null == player) {
@@ -503,8 +505,8 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
                     }
                 } else {
                     if (displayData.rawData.isEmpty()) {
-                        imgThumb.load(displayData.uri)
-                        imgPreview.load(displayData.uri)
+                        imgThumb.load(displayData.uri.toString())
+                        imgPreview.load(displayData.uri.toString())
                     } else {
                         imgThumb.load(displayData.rawData)
                         imgPreview.load(displayData.rawData)

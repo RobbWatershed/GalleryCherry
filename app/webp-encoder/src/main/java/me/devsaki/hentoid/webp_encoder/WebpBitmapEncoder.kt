@@ -50,21 +50,19 @@ class WebpBitmapEncoder(uri: Uri, resolver: ContentResolver) : Closeable {
      */
     @Throws(IOException::class)
     fun writeFrame(frame: Bitmap, compress: Int) {
-        val outBuffer = ByteArrayOutputStream()
+        ByteArrayOutputStream().use { outBuffer ->
+            val format = if (Build.VERSION.SDK_INT == Build.VERSION_CODES.R) {
+                if (compress == 100) CompressFormat.WEBP_LOSSLESS
+                else CompressFormat.WEBP_LOSSY
+            } else {
+                CompressFormat.WEBP
+            }
 
-        val format = if (Build.VERSION.SDK_INT == Build.VERSION_CODES.R) {
-            if (compress == 100) CompressFormat.WEBP_LOSSLESS
-            else CompressFormat.WEBP_LOSSY
-        } else {
-            CompressFormat.WEBP
+            frame.compress(format, compress, outBuffer)
+            ByteArrayInputStream(outBuffer.toByteArray()).use { inBuffer ->
+                _muxer.writeFirstFrameFromWebm(inBuffer)
+            }
         }
-
-
-        frame.compress(format, compress, outBuffer)
-        val inBuffer = ByteArrayInputStream(outBuffer.toByteArray())
-        _muxer.writeFirstFrameFromWebm(inBuffer)
-        outBuffer.close()
-        inBuffer.close()
     }
 
     @Throws(IOException::class)

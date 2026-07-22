@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.Build.VERSION.SDK_INT
 import android.os.Handler
 import android.util.Size
+import androidx.core.net.toUri
 import androidx.media3.exoplayer.Renderer
 import androidx.media3.exoplayer.RenderersFactory
 import androidx.media3.exoplayer.audio.AudioRendererEventListener
@@ -24,12 +25,6 @@ const val MIME_VIDEO_MP4 = "video/mp4"
 val MP4_SIGNATURE = "ftyp".toByteArray(CHARSET_LATIN_1)
 
 const val MULTIPLE = 4
-
-fun newFrameStreamer(context: Context, uri: Uri, mime: String): FrameStreamer? {
-    return if (mime.startsWith("video/") && Build.VERSION.SDK_INT >= 28)
-        MediaFrameStreamer(context, uri)
-    else getPenfeiFrameStreamer(uri, mime)
-}
 
 @androidx.media3.common.util.UnstableApi
 val videoOnlyRenderersFactory =

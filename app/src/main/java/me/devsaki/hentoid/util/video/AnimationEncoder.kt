@@ -15,7 +15,7 @@ interface AnimationEncoder : Closeable {
         onProgress: ((Float) -> Unit)? = null
     )
 
-    suspend fun addFrame(
+    fun addFrame(
         bitmap: Bitmap,
         durationMs: Int
     )

@@ -22,13 +22,12 @@ import android.os.ParcelFileDescriptor
 import android.util.Size
 import android.view.Surface
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.withContext
 import kotlinx.io.IOException
 import me.devsaki.hentoid.util.image.loadBitmap
-import me.devsaki.hentoid.util.pause
 import timber.log.Timber
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.roundToInt
 
@@ -43,7 +42,7 @@ class VideoEncoder(
 ) : AnimationEncoder {
 
     // Threading
-    val singleThread = Executors.newFixedThreadPool(1).asCoroutineDispatcher()
+    val sgt = Executors.newSingleThreadExecutor()
 
     // MediaCodec and encoding configuration
     private lateinit var encoder: MediaCodec
@@ -83,7 +82,7 @@ class VideoEncoder(
     private var surface: Surface? = null
 
 
-    override suspend fun init(context: Context, outUri: Uri) = withContext(singleThread) {
+    override suspend fun init(context: Context, outUri: Uri) {
         encoder = MediaCodec.createEncoderByType(videoMime)
         val capabilities = encoder.codecInfo.getCapabilitiesForType(videoMime)
 
@@ -99,21 +98,24 @@ class VideoEncoder(
 
         encoder.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
 
-        // Prepare surface
-        initEgl()
+        // Make sure EGL-related calls are run on a single thread
+        sgt.submit {
+            // Prepare surface
+            initEgl()
 
-        // Switch to executing state - we're ready to encode
-        encoder.start()
+            // Switch to executing state - we're ready to encode
+            encoder.start()
 
-        // Prepare muxer
-        outFileDescriptor = context.contentResolver.openFileDescriptor(outUri, "wt")
-        outFileDescriptor?.let {
-            muxer = MediaMuxer(it.fileDescriptor, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
-        }
-        muxerStarted = false
+            // Prepare muxer
+            outFileDescriptor = context.contentResolver.openFileDescriptor(outUri, "wt")
+            outFileDescriptor?.let {
+                muxer = MediaMuxer(it.fileDescriptor, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
+            }
+            muxerStarted = false
 
-        // Init OpenGL, once we have initialized context and surface
-        renderer = TextureRenderer()
+            // Init OpenGL, once we have initialized context and surface
+            renderer = TextureRenderer()
+        }.get(4, TimeUnit.SECONDS)
     }
 
     /**
@@ -126,7 +128,7 @@ class VideoEncoder(
         frames: List<Pair<Uri, Int>>,
         isCanceled: () -> Boolean,
         onProgress: ((Float) -> Unit)?
-    ) = withContext(singleThread) {
+    ) {
         if (0 == outSize.height) throw RuntimeException("Init must be called before encode")
         encodeImages(context, frames, isCanceled, onProgress)
     }
@@ -220,7 +222,7 @@ class VideoEncoder(
         frames: List<Pair<Uri, Int>>,
         isCanceled: () -> Boolean,
         onProgress: ((Float) -> Unit)? = null
-    ) {
+    ) = withContext(Dispatchers.IO) {
         for (frame in frames) {
             if (isCanceled.invoke()) break
             try {
@@ -252,32 +254,33 @@ class VideoEncoder(
         }
     }
 
-    override suspend fun addFrame(bitmap: Bitmap, durationMs: Int) = withContext(singleThread) {
-        isProcessing.set(true)
-        frameNum++
-        renderer.draw(outSize.width, outSize.height, bitmap, getMvp())
+    override fun addFrame(bitmap: Bitmap, durationMs: Int) {
+        // Make sure EGL-related calls are run on a single thread
+        sgt.submit {
+            frameNum++
+            renderer.draw(outSize.width, outSize.height, bitmap, getMvp())
 
-        EGLExt.eglPresentationTimeANDROID(
-            eglDisplay, eglSurface,
-            presentationTimeUs * 1000 // yes, those are nanoseconds
-        )
-        checkEglError("eglPresentationTimeANDROID")
-        presentationTimeUs += durationMs * 1000
+            EGLExt.eglPresentationTimeANDROID(
+                eglDisplay, eglSurface,
+                presentationTimeUs * 1000 // yes, those are nanoseconds
+            )
+            checkEglError("eglPresentationTimeANDROID")
+            presentationTimeUs += durationMs * 1000
 
-        // Feed encoder with next frame produced by OpenGL
-        EGL14.eglSwapBuffers(eglDisplay, eglSurface)
-        checkEglError("eglSwapBuffers")
+            // Feed encoder with next frame produced by OpenGL
+            EGL14.eglSwapBuffers(eglDisplay, eglSurface)
+            checkEglError("eglSwapBuffers")
 
-        // Get encoded data and feed it to muxer
-        val frameProcessed = drainEncoder(frameNum == nbFrames)
-        isProcessing.set(false)
-        if (!frameProcessed) {
-            Timber.d("FRAME MISSED @$frameNum") // Not super reliable; encoder may just be waiting to flush its buffer
-            framesMissed++
-        }
+            // Get encoded data and feed it to muxer
+            val frameProcessed = drainEncoder(frameNum == nbFrames)
+            if (!frameProcessed) {
+                Timber.d("FRAME MISSED @$frameNum") // Not super reliable; encoder may just be waiting to flush its buffer
+                framesMissed++
+            }
+        }.get(3, TimeUnit.SECONDS)
     }
 
-    private suspend fun drainEncoder(endOfStream: Boolean): Boolean = withContext(singleThread) {
+    private fun drainEncoder(endOfStream: Boolean): Boolean {
         if (endOfStream) encoder.signalEndOfInputStream()
         Timber.d("drainEncoder 0 @$frameNum")
         var isFrameProcessed = false
@@ -328,10 +331,10 @@ class VideoEncoder(
                     encodedData.limit(bufferInfo.offset + bufferInfo.size)
                     isFrameProcessed = true
 
-                    withContext(Dispatchers.IO) {
-                        muxer?.writeSampleData(trackIndex, encodedData, bufferInfo)
-                        Timber.d("sent ${bufferInfo.size} bytes to muxer")
-                    }
+//                    withContext(Dispatchers.IO) {
+                    muxer?.writeSampleData(trackIndex, encodedData, bufferInfo)
+                    Timber.d("sent ${bufferInfo.size} bytes to muxer")
+//                    }
                 }
 
                 encoder.releaseOutputBuffer(encoderStatus, false)
@@ -346,7 +349,7 @@ class VideoEncoder(
                 }
             }
         }
-        return@withContext isFrameProcessed
+        return isFrameProcessed
     }
 
     private fun getMvp(): FloatArray {
@@ -359,14 +362,7 @@ class VideoEncoder(
 
     override fun close() {
         // Use extra second to finalize all that might be still happening on other threads
-        pause(1000)
-        var tries = 0
-        while (isProcessing.get() && tries++ < 10) {
-            Timber.d("Waiting for processing to finish ($tries)...")
-            pause(500)
-        }
-
-        Timber.d("Releasing encoder")
+        Timber.d("Releasing VideoEncoder")
         encoder.stop()
         encoder.release()
 
@@ -383,6 +379,9 @@ class VideoEncoder(
 
         trackIndex = -1
         presentationTimeUs = 0L
+
+//        singleThread.closeQuietly()
+        sgt?.close()
     }
 
     private fun releaseEgl() {

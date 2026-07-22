@@ -1,20 +1,18 @@
 package me.devsaki.hentoid.util.video
 
-import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Point
 import android.media.MediaMetadataRetriever
-import android.net.Uri
 import android.os.Build
 import androidx.annotation.RequiresApi
 import kotlinx.coroutines.DelicateCoroutinesApi
 import timber.log.Timber
+import java.io.FileDescriptor
 import kotlin.math.roundToInt
 
 
 @RequiresApi(Build.VERSION_CODES.P)
-class MediaFrameStreamer(context: Context, uri: Uri) : FrameStreamer {
-
+class MediaFrameStreamer(fd: FileDescriptor) : FrameStreamer {
     val retriever = MediaMetadataRetriever()
 
     override val dims: Point
@@ -22,7 +20,7 @@ class MediaFrameStreamer(context: Context, uri: Uri) : FrameStreamer {
     override val durationMs: Int
 
     init {
-        retriever.setDataSource(context, uri)
+        retriever.setDataSource(fd)
         val width =
             retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_WIDTH)
                 ?.toInt() ?: 0
@@ -37,6 +35,10 @@ class MediaFrameStreamer(context: Context, uri: Uri) : FrameStreamer {
                 ?.toInt() ?: 0
     }
 
+    fun getFirstFrame(): Bitmap? {
+        return retriever.getFrameAtIndex(0)
+    }
+
     @OptIn(DelicateCoroutinesApi::class)
     override suspend fun streamFrames(
         isCanceled: () -> Boolean,
@@ -45,7 +47,7 @@ class MediaFrameStreamer(context: Context, uri: Uri) : FrameStreamer {
         for (i in 0..<totalFrames) {
             if (isCanceled.invoke()) break
             retriever.getFrameAtIndex(i)?.let { bmp ->
-                onFrameFound.invoke(Pair(bmp, (durationMs.toFloat() / totalFrames).roundToInt()))
+                onFrameFound(Pair(bmp, (durationMs.toFloat() / totalFrames).roundToInt()))
             } ?: run {
                 Timber.i("Couldn't find frame bitmap at $i")
             }

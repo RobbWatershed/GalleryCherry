@@ -135,12 +135,11 @@ class WebpMuxer(val writer: WebpContainerWriter) {
 
     @Throws(IOException::class)
     private fun writeAnmf(chunk: WebpChunk, payload: ByteArray, isLossless: Boolean) {
-        Timber.i("writeAnmf ${chunk.type}")
         val anmf = WebpChunk(WebpChunkType.ANMF)
         anmf.x = 0 // it was 0
         anmf.y = 0 // it was 0
-        anmf.width = _width - 1
-        anmf.height = _height - 1
+        anmf.width = _width/* - 1*/
+        anmf.height = _height/* - 1*/
         anmf.duration = _duration
 
         anmf.isLossless = isLossless

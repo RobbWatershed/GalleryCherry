@@ -281,6 +281,26 @@
             app:layout_constraintTop_toTopOf="@id/preview_header"
             tools:visibility="visible" />
 
+        <androidx.media3.ui.AspectRatioFrameLayout
+            android:id="@+id/video_thumb_frame"
+            android:layout_width="81dp"
+            android:layout_height="108dp"
+            android:clickable="true"
+            android:focusable="true"
+            app:layout_constraintBottom_toBottomOf="@id/img_thumb"
+            app:layout_constraintEnd_toEndOf="@id/img_thumb"
+            app:layout_constraintStart_toStartOf="@id/img_thumb"
+            app:layout_constraintTop_toTopOf="@id/img_thumb"
+            app:resize_mode="fit">
+
+            <SurfaceView
+                android:id="@+id/video_thumb"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@null"
+                tools:ignore="ContentDescription" />
+        </androidx.media3.ui.AspectRatioFrameLayout>
+
         <ImageView
             android:id="@+id/img_thumb"
             android:layout_width="81dp"
@@ -294,26 +314,6 @@
             app:layout_constraintTop_toBottomOf="@id/preview_header"
             tools:src="@drawable/ic_app"
             tools:tint="@color/medium_gray" />
-
-        <androidx.media3.ui.AspectRatioFrameLayout
-            android:id="@+id/video_thumb_frame"
-            android:layout_width="81dp"
-            android:layout_height="108dp"
-            android:clickable="true"
-            android:focusable="true"
-            app:layout_constraintBottom_toBottomOf="@id/img_thumb"
-            app:layout_constraintStart_toEndOf="@id/img_thumb"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="@id/img_thumb"
-            app:resize_mode="fit">
-
-            <SurfaceView
-                android:id="@+id/video_thumb"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="@null"
-                tools:ignore="ContentDescription" />
-        </androidx.media3.ui.AspectRatioFrameLayout>
 
         <TextView
             android:id="@+id/preview_name"
@@ -389,23 +389,10 @@
             app:layout_constraintTop_toBottomOf="@id/img_thumb" />
 
         <!-- Fullscreen previews that appears when tapping the thumb -->
-        <ImageView
-            android:id="@+id/img_preview"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:clickable="true"
-            android:focusable="true"
-            android:visibility="gone"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            tools:ignore="ContentDescription" />
-
         <androidx.media3.ui.AspectRatioFrameLayout
             android:id="@+id/video_preview_frame"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
             android:clickable="true"
             android:focusable="true"
             android:visibility="gone"
@@ -422,6 +409,19 @@
                 android:background="@null"
                 tools:ignore="ContentDescription" />
         </androidx.media3.ui.AspectRatioFrameLayout>
+
+        <ImageView
+            android:id="@+id/img_preview"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clickable="true"
+            android:focusable="true"
+            android:visibility="invisible"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:ignore="ContentDescription" />
 
         <androidx.constraintlayout.widget.Group
             android:id="@+id/preview_grp"

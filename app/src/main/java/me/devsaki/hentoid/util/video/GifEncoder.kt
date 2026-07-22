@@ -7,6 +7,7 @@ import android.net.Uri
 import com.shakster.gifkt.GifEncoder
 import me.devsaki.hentoid.util.file.getOutputStream
 import me.devsaki.hentoid.util.image.loadBitmap
+import me.devsaki.hentoid.util.pause
 import timber.log.Timber
 import java.io.OutputStream
 import kotlin.time.DurationUnit
@@ -14,9 +15,9 @@ import kotlin.time.toDuration
 
 class GifEncoder(val dims: Point) : AnimationEncoder {
 
-    var buffer = IntArray(dims.x * dims.y)
-    lateinit var outputStream: OutputStream
-    lateinit var encoder: GifEncoder
+    private var buffer = IntArray(dims.x * dims.y)
+    private lateinit var outputStream: OutputStream
+    private lateinit var encoder: GifEncoder
 
     override suspend fun init(context: Context, outUri: Uri) {
         outputStream =
@@ -28,16 +29,18 @@ class GifEncoder(val dims: Point) : AnimationEncoder {
         }
     }
 
-    override suspend fun addFrame(bitmap: Bitmap, durationMs: Int) {
-        bitmap.getPixels(buffer, 0, dims.x, 0, 0, dims.x, dims.y)
-        encoder.writeFrame(
-            buffer,
-            dims.x,
-            dims.y,
-            // Warning : if frame.second is <= 1ms, GIFs will be read slower on most readers
-            // (see https://android.googlesource.com/platform/frameworks/base/+/2be87bb707e2c6d75f668c4aff6697b85fbf5b15)
-            durationMs.toDuration(DurationUnit.MILLISECONDS)
-        )
+    override fun addFrame(bitmap: Bitmap, durationMs: Int) {
+        synchronized(buffer) {
+            bitmap.getPixels(buffer, 0, dims.x, 0, 0, dims.x, dims.y)
+            encoder.writeFrame(
+                buffer,
+                dims.x,
+                dims.y,
+                // Warning : if frame.second is <= 1ms, GIFs will be read slower on most readers
+                // (see https://android.googlesource.com/platform/frameworks/base/+/2be87bb707e2c6d75f668c4aff6697b85fbf5b15)
+                durationMs.toDuration(DurationUnit.MILLISECONDS)
+            )
+        }
     }
 
     /**
@@ -68,6 +71,7 @@ class GifEncoder(val dims: Point) : AnimationEncoder {
     }
 
     override fun close() {
+        Timber.d("Closing GifEncoder")
         encoder.close()
         outputStream.close()
     }

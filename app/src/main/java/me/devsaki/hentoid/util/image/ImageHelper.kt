@@ -12,6 +12,7 @@ import android.graphics.PorterDuffColorFilter
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Build
+import android.os.Build.VERSION.SDK_INT
 import androidx.annotation.ColorInt
 import androidx.annotation.DrawableRes
 import androidx.core.content.ContextCompat
@@ -26,7 +27,6 @@ import me.devsaki.hentoid.core.CHARSET_LATIN_1
 import me.devsaki.hentoid.enums.PictureEncoder
 import me.devsaki.hentoid.util.assertNonUiThread
 import me.devsaki.hentoid.util.byteArrayOfInts
-import me.devsaki.hentoid.util.duplicateInputStream
 import me.devsaki.hentoid.util.file.FILECHUNK_AUTHORITY
 import me.devsaki.hentoid.util.file.FileChunkInfo
 import me.devsaki.hentoid.util.file.NameFilter
@@ -40,7 +40,10 @@ import me.devsaki.hentoid.util.network.getExtensionFromUri
 import me.devsaki.hentoid.util.startsWith
 import me.devsaki.hentoid.util.video.MIME_VIDEO_MP4
 import me.devsaki.hentoid.util.video.MP4_SIGNATURE
+import me.devsaki.hentoid.util.video.MediaFrameStreamer
 import timber.log.Timber
+import java.io.FileDescriptor
+import java.io.FileInputStream
 import java.io.IOException
 import java.io.InputStream
 import kotlin.math.abs
@@ -348,7 +351,7 @@ private fun calculateInSampleSize(
 /**
  * Create a Bitmap from the given InputStream, optimizing resources according to the given required width and height
  *
- * @param stream       Stream to load the bitmap from
+ * @param input        Stream to load the bitmap from
  * @param targetWidth  Target picture width, in pixels
  * @param targetHeight Target picture height, in pixels
  * @return Bitmap created from the given InputStream
@@ -357,38 +360,27 @@ private fun calculateInSampleSize(
 @Throws(IOException::class)
 suspend fun decodeSampledBitmapFromStream(
     context: Context,
-    stream: InputStream,
+    input: InputStream,
     targetWidth: Int,
     targetHeight: Int
 ): Bitmap? {
-    val streams = duplicateInputStream(stream, 2)
-    val workStream1 = streams[0]
-    val workStream2 = streams[1]
+    val rawData = input.readBytes()
 
     // First decode with inJustDecodeBounds=true to check dimensions
-    val dimsAndMime = workStream1.use {
-        val rawData = it.readBytes()
-        val dims = getMediaDimensions(context, data = rawData)
-        val mime = getMimeTypeFromPictureBinary(rawData)
-        Pair(dims, mime)
-    }
-
-    val mime = dimsAndMime.second
+    val dims = getMediaDimensions(context, data = rawData)
+    val mime = getMimeTypeFromPictureBinary(rawData)
     if (mime == MIME_IMAGE_JXL || mime == MIME_IMAGE_AVIF) {
         // Can't optimize here; using basic load
-        return decodeBitmap(workStream2, mime)
+        return decodeBitmap(rawData)
     } else {
         // Calculate inSampleSize
-        val dims = dimsAndMime.first
         val options = BitmapFactory.Options()
         options.inSampleSize =
             calculateInSampleSize(dims.x, dims.y, targetWidth, targetHeight)
 
         // Decode final bitmap with inSampleSize set
         options.inJustDecodeBounds = false
-        return workStream2.use { workStream2 ->
-            BitmapFactory.decodeStream(workStream2, null, options)
-        }
+        return BitmapFactory.decodeByteArray(rawData, 0, rawData.size, options)
     }
 }
 
@@ -619,9 +611,9 @@ private fun getDimsFromThirdParty(ext: String, rawData: ByteArray): Point {
 suspend fun loadBitmap(context: Context, uri: Uri): Bitmap? = withContext(Dispatchers.IO) {
     if (!fileExists(context, uri)) return@withContext null
     return@withContext try {
-        getInputStream(context, uri).use { input ->
+        context.contentResolver.openFileDescriptor(uri, "r")?.use { pfs ->
             decodeBitmap(
-                input,
+                pfs.fileDescriptor,
                 getMimeTypeFromFileUri(uri.toString()),
                 Bitmap.Config.ARGB_8888
             )
@@ -632,16 +624,31 @@ suspend fun loadBitmap(context: Context, uri: Uri): Bitmap? = withContext(Dispat
     }
 }
 
-fun decodeBitmap(inputStream: InputStream, mime: String, config: Bitmap.Config? = null): Bitmap? {
+fun decodeBitmap(fd: FileDescriptor, mime: String, config: Bitmap.Config? = null): Bitmap? {
     return when (mime) {
-        MIME_IMAGE_JXL, MIME_IMAGE_AVIF -> inputStream.use { decodeBitmap(it.readBytes(), config) }
+        MIME_IMAGE_JXL, MIME_IMAGE_AVIF -> {
+            FileInputStream(fd).use {
+                decodeBitmap(it.readBytes(), config)
+            }
+        }
+
+        MIME_VIDEO_MP4 -> {
+            if (SDK_INT >= 28) {
+                MediaFrameStreamer(fd).use { it.getFirstFrame() }
+            } else {
+                null
+            }
+        }
+
         else -> {
             val options = BitmapFactory.Options()
             if (config != null) options.inPreferredConfig = config
             // If that is not set, some PNGs are read with a ColorSpace of code "Unknown" (-1),
             // which makes resizing buggy (generates a black picture)
             options.inPreferredColorSpace = ColorSpace.get(ColorSpace.Named.SRGB)
-            BitmapFactory.decodeStream(inputStream, null, options)
+            FileInputStream(fd).use {
+                BitmapFactory.decodeStream(it, null, options)
+            }
         }
     }
 }
@@ -667,7 +674,7 @@ private fun toAvifCfg(config: Bitmap.Config?): PreferredColorConfig {
         Bitmap.Config.ARGB_8888 -> PreferredColorConfig.RGBA_8888
         Bitmap.Config.RGB_565 -> PreferredColorConfig.RGB_565
         Bitmap.Config.RGBA_F16 -> PreferredColorConfig.RGBA_F16
-        Bitmap.Config.HARDWARE -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        Bitmap.Config.HARDWARE -> if (SDK_INT >= Build.VERSION_CODES.Q) {
             PreferredColorConfig.HARDWARE
         } else {
             PreferredColorConfig.DEFAULT
@@ -682,7 +689,7 @@ private fun toJxlCfg(config: Bitmap.Config?): com.awxkee.jxlcoder.PreferredColor
         Bitmap.Config.ARGB_8888 -> com.awxkee.jxlcoder.PreferredColorConfig.RGBA_8888
         Bitmap.Config.RGB_565 -> com.awxkee.jxlcoder.PreferredColorConfig.RGB_565
         Bitmap.Config.RGBA_F16 -> com.awxkee.jxlcoder.PreferredColorConfig.RGBA_F16
-        Bitmap.Config.HARDWARE -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        Bitmap.Config.HARDWARE -> if (SDK_INT >= Build.VERSION_CODES.Q) {
             com.awxkee.jxlcoder.PreferredColorConfig.HARDWARE
         } else {
             com.awxkee.jxlcoder.PreferredColorConfig.DEFAULT

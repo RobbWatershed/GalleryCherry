@@ -5,17 +5,15 @@ import android.graphics.Bitmap
 import android.graphics.Point
 import android.net.Uri
 import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import me.devsaki.hentoid.util.file.getOutputStream
 import me.devsaki.hentoid.util.image.loadBitmap
-import me.devsaki.hentoid.util.pause
 import me.devsaki.hentoid.webp_encoder.WebpBitmapEncoder
 import timber.log.Timber
 import java.io.OutputStream
 import kotlin.math.roundToInt
 
-class WebpEncoder(val dims : Point, val quality: Float, val frameDurationMs: Int) : AnimationEncoder {
+class WebpEncoder(val dims: Point, val quality: Float, val frameDurationMs: Int) :
+    AnimationEncoder {
 
     lateinit var outputStream: OutputStream
     lateinit var encoder: WebpBitmapEncoder
@@ -53,13 +51,11 @@ class WebpEncoder(val dims : Point, val quality: Float, val frameDurationMs: Int
         }
     }
 
-    override suspend fun addFrame(bitmap: Bitmap, durationMs: Int) = withContext(Dispatchers.IO) {
+    override fun addFrame(bitmap: Bitmap, durationMs: Int) {
         encoder.writeFrame(bitmap, (quality * 100).roundToInt())
     }
 
     override fun close() {
-        // Use extra second to finalize all that might be still happening on other threads
-        pause(1000)
         Timber.d("Closing WebpStreamedEncoder")
         encoder.close()
         outputStream.close()
