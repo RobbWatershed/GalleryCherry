@@ -380,11 +380,11 @@ fun parseDateToEpoch(date: String, pattern: String): Long {
     return 0
 }
 
-fun formatEpochToDate(epoch: Long, pattern: String?): String {
+fun formatEpochToDate(epoch: Long, pattern: String): String {
     return formatEpochToDate(epoch, DateTimeFormatter.ofPattern(pattern, Locale.ENGLISH))
 }
 
-fun formatEpochToDate(epoch: Long, formatter: DateTimeFormatter?): String {
+fun formatEpochToDate(epoch: Long, formatter: DateTimeFormatter): String {
     if (0L == epoch) return ""
     val i = Instant.ofEpochMilli(epoch)
     return i.atZone(ZoneId.systemDefault()).format(formatter)

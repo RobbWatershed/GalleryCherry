@@ -1,9 +1,10 @@
 package me.devsaki.hentoid.util.video
 
 import android.content.Context
-import android.media.MediaCodec
+import android.media.MediaCodecInfo
 import android.net.Uri
 import android.os.Build
+import android.os.Build.VERSION.SDK_INT
 import android.os.Handler
 import android.util.Size
 import androidx.media3.exoplayer.Renderer
@@ -48,15 +49,14 @@ val videoOnlyRenderersFactory =
 
 // Original idea from https://github.com/sixo/vid-proc/blob/master/app/src/main/java/eu/sisik/vidproc/Utils.kt
 fun getBestSupportedResolution(
-    mediaCodec: MediaCodec,
-    videoMime: String,
+    capabilities: MediaCodecInfo.CodecCapabilities,
     preferredResolution: Size
 ): Size {
-    val capabilities = mediaCodec.codecInfo.getCapabilitiesForType(videoMime).videoCapabilities
-        ?: throw RuntimeException("Unsupported size for MIME $videoMime : ${preferredResolution.width}x${preferredResolution.height}")
+    val videoCapabilities = capabilities.videoCapabilities
+        ?: throw RuntimeException("Unsupported size for MIME ${capabilities.mimeType} : ${preferredResolution.width}x${preferredResolution.height}")
 
     // First check if exact combination supported
-    if (capabilities.isSizeSupported(preferredResolution.width, preferredResolution.height))
+    if (videoCapabilities.isSizeSupported(preferredResolution.width, preferredResolution.height))
         return preferredResolution
 
     // Return adjusted size with every dimension a multiple of MULTIPLE (H264 constraints)
@@ -64,5 +64,15 @@ fun getBestSupportedResolution(
         ceil(preferredResolution.width.toFloat() / MULTIPLE.toFloat()).toInt() * MULTIPLE,
         ceil(preferredResolution.height.toFloat() / MULTIPLE.toFloat()).toInt() * MULTIPLE
     )
+}
 
+fun getQualityRange(
+    capabilities: MediaCodecInfo.CodecCapabilities
+): IntRange {
+    return if (SDK_INT >= 28) {
+        capabilities.encoderCapabilities?.qualityRange?.let {
+            if (it.lower >= it.upper) IntRange.EMPTY
+            else IntRange(it.lower, it.upper)
+        } ?: IntRange.EMPTY
+    } else IntRange.EMPTY
 }

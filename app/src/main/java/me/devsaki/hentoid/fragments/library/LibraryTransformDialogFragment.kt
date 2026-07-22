@@ -48,6 +48,7 @@ import me.devsaki.hentoid.util.file.getExtensionFromMimeType
 import me.devsaki.hentoid.util.file.getInputStream
 import me.devsaki.hentoid.util.file.getOrCreateCacheFolder
 import me.devsaki.hentoid.util.file.tryCleanDirectory
+import me.devsaki.hentoid.util.formatEpochToDate
 import me.devsaki.hentoid.util.image.ImageProperties
 import me.devsaki.hentoid.util.image.TransformParams
 import me.devsaki.hentoid.util.image.getImageProperties
@@ -62,6 +63,7 @@ import me.devsaki.hentoid.viewholders.DrawerItem
 import me.devsaki.hentoid.workers.TransformWorker
 import okio.use
 import timber.log.Timber
+import java.time.Instant
 import kotlin.math.floor
 import kotlin.math.log10
 import kotlin.math.max
@@ -257,7 +259,7 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
                 updatePreviewDebouncer.submit(Unit)
             }
             encoderAnimQuality.editText?.setOnTextChangedListener(lifecycleScope) { value ->
-                if (checkRange(encoderQuality, 75, 100)) {
+                if (checkRange(encoderAnimQuality, 50, 100)) {
                     Settings.transcodeAnimQuality = value.toInt()
                     updatePreviewDebouncer.submit(Unit)
                 }
@@ -428,7 +430,9 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
                     val tempFolder = getOrCreateCacheFolder(context, CACHE_PREVIEW)?.toUri()
                         ?: return@withContext BitmapInfo(sourceBmp.rawData)
                     val tempFile = createFile(
-                        context, tempFolder, "temp",
+                        context, tempFolder, "temp_" + formatEpochToDate(
+                            Instant.now().toEpochMilli(), "yyyyMMdd-hhmmss-nnnnnnnnn"
+                        ),
                         params.transcodeAnim.mimeType
                     )
                     if (transformAnimated(
@@ -437,7 +441,7 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
                             sourceProps.mime,
                             tempFile,
                             params,
-                            { false }
+                            { false } // TODO interrupt previous encoding process when running a new one
                         ) {
                             lifecycleScope.launch(Dispatchers.Main) {
                                 binding?.previewProgress?.progress = (it * 100).roundToInt()

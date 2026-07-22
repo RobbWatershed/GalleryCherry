@@ -17,6 +17,7 @@ import android.opengl.EGLExt
 import android.opengl.EGLSurface
 import android.opengl.GLUtils
 import android.opengl.Matrix
+import android.os.Build.VERSION.SDK_INT
 import android.os.ParcelFileDescriptor
 import android.util.Size
 import android.view.Surface
@@ -84,14 +85,17 @@ class VideoEncoder(
 
     override suspend fun init(context: Context, outUri: Uri) = withContext(singleThread) {
         encoder = MediaCodec.createEncoderByType(videoMime)
+        val capabilities = encoder.codecInfo.getCapabilitiesForType(videoMime)
 
         // Try to find supported size by checking the resolution of first supplied image
-        outSize = getBestSupportedResolution(encoder, videoMime, Size(dims.x, dims.y))
+        outSize = getBestSupportedResolution(capabilities, Size(dims.x, dims.y))
         Timber.d("Using size ${outSize.width}x${outSize.height}")
+
+        val qualityRange = getQualityRange(capabilities)
 
         // Calculate max FPS given input frame values
         Timber.d("Using maxFps=$maxFps; quality=$quality")
-        val format = createFormat(outSize, maxFps, quality)
+        val format = createFormat(outSize, maxFps, qualityRange, quality)
 
         encoder.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
 
@@ -127,13 +131,30 @@ class VideoEncoder(
         encodeImages(context, frames, isCanceled, onProgress)
     }
 
-    private fun createFormat(size: Size, maxFps: Float, quality: Float): MediaFormat {
+    private fun createFormat(
+        size: Size,
+        maxFps: Float,
+        qualityRange: IntRange,
+        quality: Float
+    ): MediaFormat {
         val format = MediaFormat.createVideoFormat(videoMime, size.width, size.height)
         format.setInteger(
             MediaFormat.KEY_COLOR_FORMAT,
             MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface
         )
-        format.setInteger(MediaFormat.KEY_BIT_RATE, (3000000f * quality).roundToInt())
+        if (qualityRange.isEmpty() || SDK_INT < 28) {
+            // Approximate a quality setting by leveraging the bitrate setting
+            // assuming the max size would be 2 bits/pixel/s
+            val bitrate = (size.width * size.height * maxFps * 2 * quality).roundToInt()
+            Timber.d("Suggesting bitrate $bitrate")
+            format.setInteger(MediaFormat.KEY_BIT_RATE, bitrate)
+        } else {
+            format.setInteger(
+                MediaFormat.KEY_QUALITY,
+                qualityRange.first + ((qualityRange.last - qualityRange.first) * quality).roundToInt()
+            )
+        }
+
         format.setInteger(MediaFormat.KEY_FRAME_RATE, maxFps.roundToInt())
         format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, (maxFps / 2).roundToInt())
 
