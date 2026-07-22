@@ -3,6 +3,7 @@ package me.devsaki.hentoid.webp_encoder
 import android.content.ContentResolver
 import android.graphics.Bitmap
 import android.graphics.Bitmap.CompressFormat
+import android.graphics.Point
 import android.net.Uri
 import android.os.Build
 import me.devsaki.hentoid.webp_encoder.stream.FileSeekableOutputStream
@@ -17,7 +18,6 @@ class WebpBitmapEncoder(uri: Uri, resolver: ContentResolver) : Closeable {
     private val _outputStream = FileSeekableOutputStream(uri, resolver)
     private val _writer = WebpContainerWriter(_outputStream)
     private val _muxer: WebpMuxer = WebpMuxer(_writer)
-    private var _isFirstFrame = true
 
     /**
      * Sets the loops
@@ -34,10 +34,15 @@ class WebpBitmapEncoder(uri: Uri, resolver: ContentResolver) : Closeable {
         _muxer.setDuration(duration)
     }
 
+    fun setDims(dims: Point) {
+        _muxer.setWidth(dims.x)
+        _muxer.setHeight(dims.y)
+        Timber.i("W ->${dims.x}, H->${dims.y}")
+    }
+
     fun setBg(bg: Int) {
         _muxer.setBg(bg)
     }
-
 
 
     /**
@@ -45,13 +50,6 @@ class WebpBitmapEncoder(uri: Uri, resolver: ContentResolver) : Closeable {
      */
     @Throws(IOException::class)
     fun writeFrame(frame: Bitmap, compress: Int) {
-        if (_isFirstFrame) {
-            _isFirstFrame = false
-            _muxer.setWidth(frame.getWidth())
-            _muxer.setHeight(frame.getHeight())
-            Timber.i("W ->${frame.width}, H->${frame.height}")
-        }
-
         val outBuffer = ByteArrayOutputStream()
 
         val format = if (Build.VERSION.SDK_INT == Build.VERSION_CODES.R) {

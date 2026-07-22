@@ -2,6 +2,7 @@ package me.devsaki.hentoid.util.video
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Point
 import android.net.Uri
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -14,7 +15,7 @@ import timber.log.Timber
 import java.io.OutputStream
 import kotlin.math.roundToInt
 
-class WebpEncoder(val quality: Float, val frameDurationMs: Int) : AnimationEncoder {
+class WebpEncoder(val dims : Point, val quality: Float, val frameDurationMs: Int) : AnimationEncoder {
 
     lateinit var outputStream: OutputStream
     lateinit var encoder: WebpBitmapEncoder
@@ -25,6 +26,7 @@ class WebpEncoder(val quality: Float, val frameDurationMs: Int) : AnimationEncod
         encoder = WebpBitmapEncoder(outUri, context.contentResolver)
         encoder.setLoops(0) // Infinite looping
         encoder.setDuration(frameDurationMs)
+        encoder.setDims(dims)
     }
 
     @OptIn(DelicateCoroutinesApi::class)

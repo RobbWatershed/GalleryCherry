@@ -1542,6 +1542,7 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
 
             val animEncoder = when (Settings.downloadAnimationFormat) {
                 PictureEncoder.WEBP_LOSSLESS.value, PictureEncoder.WEBP_LOSSY.value -> WebpEncoder(
+                    dims,
                     quality,
                     avgFrameDuration
                 )

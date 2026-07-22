@@ -24,7 +24,7 @@ val MP4_SIGNATURE = "ftyp".toByteArray(CHARSET_LATIN_1)
 
 const val MULTIPLE = 4
 
-fun instanciateFrameStreamer(context: Context, uri: Uri, mime: String): FrameStreamer? {
+fun newFrameStreamer(context: Context, uri: Uri, mime: String): FrameStreamer? {
     return if (mime.startsWith("video/") && Build.VERSION.SDK_INT >= 28)
         MediaFrameStreamer(context, uri)
     else getPenfeiFrameStreamer(uri, mime)
