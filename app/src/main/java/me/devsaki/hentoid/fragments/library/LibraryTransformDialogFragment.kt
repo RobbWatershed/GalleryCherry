@@ -406,6 +406,7 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
 
         binding?.apply {
             previewGrp.visibility = View.INVISIBLE
+            player?.stop()
             previewProgress.isIndeterminate = true
             previewProgress.isVisible = true
         }
@@ -488,13 +489,15 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
                 if (targetMime.contains("video/")) {
                     videoThumbFrame.setAspectRatio(targetDims.x.toFloat() / targetDims.y)
                     videoPreviewFrame.setAspectRatio(targetDims.x.toFloat() / targetDims.y)
-                    ExoPlayer.Builder(requireContext(), videoOnlyRenderersFactory).build().apply {
-                        player = this
-                        setVideoSurfaceView(videoThumb)
+                    if (null == player) {
+                        player =
+                            ExoPlayer.Builder(requireContext(), videoOnlyRenderersFactory).build()
+                        player?.setVideoSurfaceView(videoThumb)
+                        player?.repeatMode = REPEAT_MODE_ONE
+                    }
+                    player?.apply {
                         // Those are only available through Uris
-                        val mediaItem = MediaItem.fromUri(displayData.uri)
-                        setMediaItem(mediaItem)
-                        repeatMode = REPEAT_MODE_ONE
+                        setMediaItem(MediaItem.fromUri(displayData.uri))
                         prepare()
                         play()
                     }
