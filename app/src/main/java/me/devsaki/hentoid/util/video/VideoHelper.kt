@@ -1,13 +1,9 @@
 package me.devsaki.hentoid.util.video
 
-import android.content.Context
 import android.media.MediaCodecInfo
-import android.net.Uri
-import android.os.Build
 import android.os.Build.VERSION.SDK_INT
 import android.os.Handler
 import android.util.Size
-import androidx.core.net.toUri
 import androidx.media3.exoplayer.Renderer
 import androidx.media3.exoplayer.RenderersFactory
 import androidx.media3.exoplayer.audio.AudioRendererEventListener
