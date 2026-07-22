@@ -135,6 +135,12 @@
         <item>WEBP (lossless)</item>
         <item>AVC (MP4)</item>
     </string-array>
+    <string-array name="pref_dl_animation_format_values" translatable="false">
+        <item>8</item>
+        <item>1</item>
+        <item>0</item>
+        <item>9</item>
+    </string-array>
     <string-array name="pref_dl_skip_large_size_threshold_entries" translatable="false">
         <item>@string/pref_dl_skip_large_size_threshold_entries_1</item>
         <item>@string/pref_dl_skip_large_size_threshold_entries_2</item>

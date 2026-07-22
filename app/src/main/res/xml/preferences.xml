@@ -607,7 +607,7 @@
             <ListPreference
                 android:defaultValue="@string/pref_dl_animation_format_default"
                 android:entries="@array/pref_dl_animation_format_entries"
-                android:entryValues="@array/int_three"
+                android:entryValues="@array/pref_dl_animation_format_values"
                 android:key="pref_dl_animation_format"
                 android:summary="@string/pref_generic_summary"
                 android:title="@string/pref_dl_animation_format_title"

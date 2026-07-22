@@ -163,7 +163,7 @@
     <string name="pref_range_download_title">Range download</string>
     <string name="pref_browser_range_download_summary">Additional button to set which gallery pages to download</string>
     <string name="pref_dl_animation_format_title">Encoder for animations</string>
-    <string name="pref_dl_animation_quality_title">Quality for animations (%%)</string>
+    <string name="pref_dl_animation_quality_title">Quality for animations (%)</string>
 
     <!-- Downloader -->
     <string name="pref_screen_downloader">Downloader</string>
