@@ -94,6 +94,7 @@ import me.devsaki.hentoid.util.file.listFiles
 import me.devsaki.hentoid.util.file.listFoldersFilter
 import me.devsaki.hentoid.util.file.removeDocument
 import me.devsaki.hentoid.util.file.removeFile
+import me.devsaki.hentoid.util.image.MIME_IMAGE_JPEG
 import me.devsaki.hentoid.util.image.clearCoilKey
 import me.devsaki.hentoid.util.image.decodeBitmap
 import me.devsaki.hentoid.util.image.getScaledDownBitmap
@@ -726,13 +727,13 @@ suspend fun createFolderStreamedCover(context: Context, content: Content): List<
         val parentFolder = content.getContainingFolder(context)
             ?: throw IOException("Can't locate containing folder for ${content.title} @ ${content.storageUri}")
 
-        context.contentResolver.openFileDescriptor(coverUri.toUri(), "r")?.use { pfs ->
-            decodeBitmap(pfs.fileDescriptor, getMimeTypeFromFileUri(coverUri))?.let { b ->
+        context.contentResolver.openFileDescriptor(coverUri.toUri(), "r")?.use { pfd ->
+            decodeBitmap(pfd.fileDescriptor, getMimeTypeFromFileUri(coverUri))?.let { b ->
                 val target = createFile(
                     context,
                     parentFolder,
                     THUMB_FILE_NAME,
-                    getMimeTypeFromFileUri(coverUri)
+                    MIME_IMAGE_JPEG
                 )
                 getOutputStream(context, target)?.use { os ->
                     val resizedBitmap =
@@ -741,8 +742,11 @@ suspend fun createFolderStreamedCover(context: Context, content: Content): List<
                             dpToPx(context, libraryGridCardWidthDP),
                             false
                         )
-                    resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 85, os)
-                    resizedBitmap.recycle()
+                    try {
+                        resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 85, os)
+                    } finally {
+                        resizedBitmap.recycle()
+                    }
                 }
                 thumb.fileUri = target.toString()
             }
