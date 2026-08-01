@@ -664,7 +664,7 @@
     </PreferenceScreen>
 
     <PreferenceScreen
-        android:icon="@drawable/ic_lock"
+        android:icon="@drawable/ic_lock_closed"
         android:key="privacy"
         android:title="@string/pref_screen_privacy">
         <PreferenceCategory

@@ -629,8 +629,6 @@
     <string name="meta_rule_target">변경</string>
     <string name="meta_rule_wildcard">변경할 문자에 와일드카드 문자가 있을 경우 변경될 대상에도 와일드카드를 사용해야 합니다</string>
     <string name="transform_pics">이미지 변환</string>
-    <string name="transform_resizing">크기 조정</string>
-    <string name="transform_resize_pics">이미지 크기 조정</string>
     <string name="method">방법</string>
     <string name="resize_method_1">최대 화면 크기의 %</string>
     <string name="resize_method_2">지정된 최대 크기</string>
@@ -640,7 +638,6 @@
     <string name="resize_method_2_prompt_max_height">최대 높이 (mangas)</string>
     <string name="resize_method_2_prompt_max_width">최대 넓이 (manhwas, webtoons)</string>
     <string name="resize_method_3_prompt">원본 크기의 %</string>
-    <string name="transform_transcoding">트랜스코딩 (%s)</string>
     <string name="transcode_method_1">모든 이미지에 같은 인코더 사용</string>
     <string name="transcode_method_2">손실과 무손실 이미지를 구분</string>
     <string name="encoder">인코더</string>

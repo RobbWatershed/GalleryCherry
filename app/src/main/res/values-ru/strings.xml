@@ -861,8 +861,6 @@
     <string name="meta_rule_target">Цель</string>
     <string name="meta_rule_wildcard">Если целевой объект имеет подстановочный знак, исходный объект также должен иметь подстановочный знак.</string>
     <string name="transform_pics">Преобразовать изображения</string>
-    <string name="transform_resizing">Изменение размера</string>
-    <string name="transform_resize_pics">Изменить размер изображений</string>
     <string name="method">Метод</string>
     <string name="resize_method_1">Максимальный размер экрана (%)</string>
     <string name="resize_method_2">Абсолютные максимальные размеры</string>
@@ -872,7 +870,6 @@
     <string name="resize_method_2_prompt_max_height">Максимальная высота (манга)</string>
     <string name="resize_method_2_prompt_max_width">Максимальная ширина (манхва, вебтун)</string>
     <string name="resize_method_3_prompt">% от исходного размера</string>
-    <string name="transform_transcoding">Транскодирование (%s)</string>
     <string name="transcode_method_1">Один и тот же энкодер для всех изображений</string>
     <string name="transcode_method_2">Различие сжатых с потерями и без потерь изображений</string>
     <string name="encoder">Энкодер</string>

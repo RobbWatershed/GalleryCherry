@@ -686,8 +686,6 @@
     <string name="meta_rule_target">ターゲット</string>
     <string name="meta_rule_wildcard">ターゲットにワイルドカードがある場合、ソースにもワイルドカードが必要です</string>
     <string name="transform_pics">写真を変換</string>
-    <string name="transform_resizing">サイズ変更</string>
-    <string name="transform_resize_pics">写真のサイズを変更する</string>
     <string name="method">メソッド</string>
     <string name="resize_method_1">画面サイズの最大 %</string>
     <string name="resize_method_2">絶対最大寸法</string>
@@ -697,7 +695,6 @@
     <string name="resize_method_2_prompt_max_height">最大の高さ（マンガ）</string>
     <string name="resize_method_2_prompt_max_width">横幅の最大（漫画、ウェブトゥーン）</string>
     <string name="resize_method_3_prompt">元のサイズ %</string>
-    <string name="transform_transcoding">トランスコーディング (%s)</string>
     <string name="transcode_method_1">全ての画像に同じエンコーダー</string>
     <string name="transcode_method_2">可逆画像とロスレス画像を区別する</string>
     <string name="encoder">エンコーダー</string>

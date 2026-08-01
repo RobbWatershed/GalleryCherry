@@ -53,11 +53,13 @@ import me.devsaki.hentoid.activities.LibraryActivity
 import me.devsaki.hentoid.activities.MetadataEditActivity
 import me.devsaki.hentoid.activities.QueueActivity
 import me.devsaki.hentoid.activities.SearchActivity
+import me.devsaki.hentoid.activities.TransformActivity
 import me.devsaki.hentoid.activities.bundles.ContentItemBundle
 import me.devsaki.hentoid.activities.bundles.MetaEditActivityBundle
 import me.devsaki.hentoid.activities.bundles.SearchActivityBundle
 import me.devsaki.hentoid.activities.bundles.SearchActivityBundle.Companion.buildSearchUri
 import me.devsaki.hentoid.activities.bundles.SearchActivityBundle.Companion.parseSearchUri
+import me.devsaki.hentoid.activities.bundles.TransformActivityBundle
 import me.devsaki.hentoid.core.Consumer
 import me.devsaki.hentoid.database.domains.Chapter
 import me.devsaki.hentoid.database.domains.Content
@@ -70,7 +72,6 @@ import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.events.CommunicationEvent
 import me.devsaki.hentoid.events.ProcessEvent
 import me.devsaki.hentoid.fragments.SelectSiteDialogFragment
-import me.devsaki.hentoid.fragments.library.LibraryTransformDialogFragment.Companion.invoke
 import me.devsaki.hentoid.fragments.library.MergeDialogFragment.Companion.invoke
 import me.devsaki.hentoid.fragments.library.RatingDialogFragment.Companion.invoke
 import me.devsaki.hentoid.fragments.library.SplitDialogFragment.Companion.invoke
@@ -131,7 +132,6 @@ class LibraryContentFragment : Fragment(), ChangeGroupDialogFragment.Parent,
     MergeDialogFragment.Parent,
     SplitDialogFragment.Parent,
     RatingDialogFragment.Parent,
-    LibraryTransformDialogFragment.Parent,
     SelectSiteDialogFragment.Parent,
     ChangeStorageDialogFragment.Parent,
     PopupTextProvider,
@@ -510,7 +510,7 @@ class LibraryContentFragment : Fragment(), ChangeGroupDialogFragment.Parent,
             R.id.action_merge -> {
                 invoke(
                     this,
-                    selectExtension!!.selectedItems.mapNotNull { ci -> ci.content },
+                    selectExtension!!.selectedItems.mapNotNull { it.content },
                     false
                 )
                 keepToolbar = true
@@ -523,7 +523,7 @@ class LibraryContentFragment : Fragment(), ChangeGroupDialogFragment.Parent,
             }
 
             R.id.action_transform -> {
-                val contents = selectExtension!!.selectedItems.mapNotNull { ci -> ci.content }
+                val contents = selectExtension!!.selectedItems.mapNotNull { it.content }
                 if (contents.size > 1000) {
                     snack(R.string.transform_limit)
                     return false
@@ -532,7 +532,11 @@ class LibraryContentFragment : Fragment(), ChangeGroupDialogFragment.Parent,
                     snack(R.string.invalid_selection_generic)
                     return false
                 }
-                invoke(this, contents)
+                val transformIntent = Intent(this.context, TransformActivity::class.java)
+                val builder = TransformActivityBundle()
+                builder.contentIds = contents.map { it.id }.toLongArray()
+                transformIntent.putExtras(builder.bundle)
+                requireContext().startActivity(transformIntent)
                 keepToolbar = true
             }
 
@@ -845,7 +849,7 @@ class LibraryContentFragment : Fragment(), ChangeGroupDialogFragment.Parent,
             }
 
             CommunicationEvent.Type.SEARCH -> onSubmitSearch()
-            CommunicationEvent.Type.SEARCH_NO_HISTORY -> onSubmitSearch( false)
+            CommunicationEvent.Type.SEARCH_NO_HISTORY -> onSubmitSearch(false)
             CommunicationEvent.Type.ADVANCED_SEARCH -> onAdvancedSearchButtonClick()
             CommunicationEvent.Type.UNSELECT -> leaveSelectionMode()
             CommunicationEvent.Type.UPDATE_EDIT_MODE -> setPagingMethod(
@@ -928,8 +932,8 @@ class LibraryContentFragment : Fragment(), ChangeGroupDialogFragment.Parent,
         }
     }
 
-    private fun onSubmitSearch(recordHistory : Boolean = true) {
-        val act = activity.get()?:return
+    private fun onSubmitSearch(recordHistory: Boolean = true) {
+        val act = activity.get() ?: return
         val query = act.getQuery()
         val criteria = act.getSearchCriteria()
         if (query.startsWith("http")) { // Quick-open a page

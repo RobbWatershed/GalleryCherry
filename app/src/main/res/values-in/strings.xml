@@ -1029,10 +1029,7 @@
   <string name="transform_limit">Tidak dapat mentransformasi lebih dari 1000 buku sekaligus</string>
   <string name="transform_pics">Transformasi gambar</string>
   <string name="transform_progress">Mentransformasi gambar</string>
-  <string name="transform_resize_pics">Ubah ukuran gambar</string>
-  <string name="transform_resizing">Ubah ukuran</string>
   <string name="transform_start">Mentransformasi gambar</string>
-  <string name="transform_transcoding">Transkode (%s)</string>
   <string name="transform_unsupported">Transformasi tidak didukung</string>
   <string name="u_byte">bytes</string>
   <string name="u_gigabyte">GB</string>

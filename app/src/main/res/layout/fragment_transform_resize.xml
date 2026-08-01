@@ -1,0 +1,122 @@
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/fragment_errors_queue"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="8dp"
+    tools:context=".activities.TransformActivity">
+
+    <com.google.android.material.materialswitch.MaterialSwitch
+        android:id="@+id/resize_switch"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/transform_resize_enable"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <me.devsaki.hentoid.views.ListPickerView
+        android:id="@+id/resize_method"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        app:entries="@array/resize_method_entries"
+        app:layout_constraintTop_toBottomOf="@id/resize_switch"
+        app:title="@string/method"
+        tools:visibility="visible" />
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/resize_method_1_ratio"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/resize_method_1_prompt"
+        android:visibility="gone"
+        app:counterMaxLength="3"
+        app:layout_constraintTop_toBottomOf="@id/resize_method"
+        tools:visibility="visible">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:imeOptions="flagNoPersonalizedLearning"
+            android:inputType="number"
+            android:textCursorDrawable="@null" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/resize_method_2_max_height"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/resize_method_2_prompt_max_height"
+        android:visibility="gone"
+        app:counterMaxLength="3"
+        app:layout_constraintTop_toBottomOf="@id/resize_method_1_ratio"
+        tools:visibility="visible">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:imeOptions="flagNoPersonalizedLearning"
+            android:inputType="number"
+            android:textCursorDrawable="@null" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/resize_method_2_max_width"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/resize_method_2_prompt_max_width"
+        android:visibility="gone"
+        app:counterMaxLength="3"
+        app:layout_constraintTop_toBottomOf="@id/resize_method_2_max_height"
+        tools:visibility="visible">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:imeOptions="flagNoPersonalizedLearning"
+            android:inputType="number"
+            android:textCursorDrawable="@null" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/resize_method_3_ratio"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/resize_method_3_prompt"
+        android:visibility="gone"
+        app:counterMaxLength="3"
+        app:layout_constraintTop_toBottomOf="@id/resize_method_2_max_width"
+        tools:visibility="visible">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:imeOptions="flagNoPersonalizedLearning"
+            android:inputType="number"
+            android:textCursorDrawable="@null" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/resize_method_5_images"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/resize_method_5_prompt"
+        android:visibility="gone"
+        app:counterMaxLength="3"
+        app:layout_constraintTop_toBottomOf="@id/resize_method_3_ratio"
+        tools:visibility="visible">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:imeOptions="flagNoPersonalizedLearning"
+            android:inputType="number"
+            android:textCursorDrawable="@null" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

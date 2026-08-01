@@ -1030,10 +1030,7 @@
     <string name="transform_limit">Kan inte transformera fler än 1000 böcker samtidigt</string>
     <string name="transform_pics">Transformera bilder</string>
     <string name="transform_progress">Transformerar bilder</string>
-    <string name="transform_resize_pics">Storleksändra bilder</string>
-    <string name="transform_resizing">Storleksändring</string>
     <string name="transform_start">Transformera bilder</string>
-    <string name="transform_transcoding">Omkodning (%s)</string>
     <string name="transform_unsupported">Transformation stöds ej</string>
     <string name="u_byte">bitar</string>
     <string name="u_gigabyte">GB</string>

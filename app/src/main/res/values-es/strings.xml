@@ -1087,10 +1087,7 @@
     <string name="transform_limit">No se pueden transformar más de 1000 libros a la vez</string>
     <string name="transform_pics">Transformar imágenes</string>
     <string name="transform_progress">Transformando imágenes</string>
-    <string name="transform_resize_pics">Redimensionar imágenes</string>
-    <string name="transform_resizing">Redimensionando</string>
     <string name="transform_start">Transformando imágenes</string>
-    <string name="transform_transcoding">Transcodificación (%s)</string>
     <string name="transform_unsupported">Transformación no soportada</string>
     <string name="u_byte">bytes</string>
     <string name="u_gigabyte">GB</string>

@@ -236,13 +236,8 @@
             tools:ignore="UnusedAttribute" />
         <activity
             android:name=".activities.UnlockActivity"
-            android:noHistory="true"
-            android:resizeableActivity="false"
-            android:screenOrientation="portrait" />
-        <activity
-            android:name=".activities.settings.SettingsPinActivity"
-            android:resizeableActivity="false"
-            android:screenOrientation="portrait" />
+            android:noHistory="true" />
+        <activity android:name=".activities.settings.SettingsPinActivity" />
         <activity
             android:name=".activities.MetadataEditActivity"
             android:label="@string/title_activity_meta_edit"
@@ -254,6 +249,10 @@
         <activity
             android:name=".activities.settings.SettingsStorageActivity"
             android:label="@string/title_activity_storage"
+            tools:ignore="UnusedAttribute" />
+        <activity
+            android:name=".activities.TransformActivity"
+            android:label="@string/transform"
             tools:ignore="UnusedAttribute" />
         <activity
             android:name=".activities.TextIntentActivity"
@@ -767,11 +766,13 @@
         </provider>
 
         <provider
+            android:name=".util.file.FileChunkProvider"
             android:authorities="me.violet.chunk"
             android:exported="false"
-            android:multiprocess="true"
-            android:name=".util.file.FileChunkProvider">
-            <meta-data android:name="mainVersion" android:value="1"/>
+            android:multiprocess="true">
+            <meta-data
+                android:name="mainVersion"
+                android:value="1" />
         </provider>
 
     </application>

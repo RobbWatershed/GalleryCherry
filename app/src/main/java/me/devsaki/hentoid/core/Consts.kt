@@ -68,5 +68,6 @@ const val URL_WIKI_STORAGE = "https://codeberg.org/VioletKnight/Hentoid/wiki/Sto
 const val URL_WIKI_DOWNLOAD = "https://codeberg.org/VioletKnight/Hentoid/wiki/Downloading"
 const val URL_WIKI_EDIT_METADATA = "https://codeberg.org/VioletKnight/Hentoid/wiki/Editing-metadata"
 const val URL_WIKI_EDIT_CHAPTER = "https://codeberg.org/VioletKnight/Hentoid/wiki/Editing-chapters"
+const val URL_WIKI_TRANSFORM = "https://codeberg.org/VioletKnight/Hentoid/wiki/The-Transform-screen-o-Redimensioning-books"
 
 const val URL_DISCORD = "https://discord.gg/TNCwwUw"

@@ -145,125 +145,125 @@ class LibraryTransformDialogFragment : BaseDialogFragment<LibraryTransformDialog
         super.onViewCreated(rootView, savedInstanceState)
 
         // Populate values
-        binding?.apply {
-            val stillEncoders = PictureEncoder.entries.filter { it.isImage }
-            encoderAll.entries = stillEncoders.map { it.description }
-            encoderAll.values = stillEncoders.map { it.value.toString() }
-            encoderLossless.entries = stillEncoders.filter { it.isLossless }.map { it.description }
-            encoderLossless.values =
-                stillEncoders.filter { it.isLossless }.map { it.value.toString() }
-            encoderLossy.entries = stillEncoders.filter { !it.isLossless }.map { it.description }
-            encoderLossy.values =
-                stillEncoders.filter { !it.isLossless }.map { it.value.toString() }
+            binding?.apply {
+                val stillEncoders = PictureEncoder.entries.filter { it.isImage }
+                encoderAll.entries = stillEncoders.map { it.description }
+                encoderAll.values = stillEncoders.map { it.value.toString() }
+                encoderLossless.entries = stillEncoders.filter { it.isLossless }.map { it.description }
+                encoderLossless.values =
+                    stillEncoders.filter { it.isLossless }.map { it.value.toString() }
+                encoderLossy.entries = stillEncoders.filter { !it.isLossless }.map { it.description }
+                encoderLossy.values =
+                    stillEncoders.filter { !it.isLossless }.map { it.value.toString() }
 
-            val animEncoders = PictureEncoder.entries.filter { it.isAnimation }
-            encoderAnim.entries = animEncoders.map { it.description }
-            encoderAnim.values = animEncoders.map { it.value.toString() }
-        }
-
-        // Refresh before triggers are set
-        refreshControls(true)
-        updatePreviewDebouncer.submit(Unit)
-
-        // Set triggers
-        binding?.apply {
-            resizeSwitch.setOnCheckedChangeListener { _, isChecked ->
-                Settings.isResizeEnabled = isChecked
-                refreshControls()
-                updatePreviewDebouncer.submit(Unit)
-            }
-            resizeMethod.setOnIndexChangeListener { index ->
-                Settings.resizeMethod = index
-                refreshControls()
-                updatePreviewDebouncer.submit(Unit)
-            }
-            resizeMethod1Ratio.editText?.setOnTextChangedListener(lifecycleScope) { value ->
-                if (checkRange(resizeMethod1Ratio, 100, 200)) {
-                    Settings.resizeMethod1Ratio = value.toInt()
-                    updatePreviewDebouncer.submit(Unit)
-                }
-            }
-            resizeMethod2MaxWidth.editText?.setOnTextChangedListener(lifecycleScope) { value ->
-                if (checkRange(
-                        resizeMethod2MaxWidth,
-                        screenWidth,
-                        screenWidth * 10
-                    )
-                ) {
-                    Settings.resizeMethod2Width = value.toInt()
-                    updatePreviewDebouncer.submit(Unit)
-                }
-            }
-            resizeMethod2MaxHeight.editText?.setOnTextChangedListener(lifecycleScope) { value ->
-                if (checkRange(
-                        resizeMethod2MaxHeight,
-                        screenHeight,
-                        screenHeight * 10
-                    )
-                ) {
-                    Settings.resizeMethod2Height = value.toInt()
-                    updatePreviewDebouncer.submit(Unit)
-                }
-            }
-            resizeMethod3Ratio.editText?.setOnTextChangedListener(lifecycleScope) { value ->
-                if (checkRange(resizeMethod3Ratio, 10, 100)) {
-                    Settings.resizeMethod3Ratio = value.toInt()
-                    updatePreviewDebouncer.submit(Unit)
-                }
-            }
-            resizeMethod5Images.editText?.setOnTextChangedListener(lifecycleScope) { value ->
-                if (checkRange(resizeMethod5Images, 1, 200)) {
-                    Settings.resizeMethod5Images = value.toInt()
-                    updatePreviewDebouncer.submit(Unit)
-                }
+                val animEncoders = PictureEncoder.entries.filter { it.isAnimation }
+                encoderAnim.entries = animEncoders.map { it.description }
+                encoderAnim.values = animEncoders.map { it.value.toString() }
             }
 
-            // Images
-            transcodeImgHeader.text = resources.getString(
-                R.string.transform_transcoding,
-                resources.getString(R.string.transform_images)
-            )
-            transcodeMethod.setOnIndexChangeListener { index ->
-                Settings.transcodeMethod = index
-                refreshControls()
-                updatePreviewDebouncer.submit(Unit)
-            }
-            encoderAll.setOnValueChangeListener { value ->
-                Settings.transcodeEncoderAll = value.toInt()
-                refreshControls()
-                updatePreviewDebouncer.submit(Unit)
-            }
-            encoderLossless.setOnValueChangeListener { value ->
-                Settings.transcodeEncoderLossless = value.toInt()
-                updatePreviewDebouncer.submit(Unit)
-            }
-            encoderLossy.setOnValueChangeListener { value ->
-                Settings.transcodeEncoderLossy = value.toInt()
-                updatePreviewDebouncer.submit(Unit)
-            }
-            encoderQuality.editText?.setOnTextChangedListener(lifecycleScope) { value ->
-                if (checkRange(encoderQuality, 75, 100)) {
-                    Settings.transcodeQuality = value.toInt()
-                    updatePreviewDebouncer.submit(Unit)
-                }
-            }
+            // Refresh before triggers are set
+            refreshControls(true)
+            updatePreviewDebouncer.submit(Unit)
 
-            // Animations
-            transcodeAnimHeader.text = resources.getString(
-                R.string.transform_transcoding,
-                resources.getString(R.string.transform_animations)
-            )
-            encoderAnim.setOnValueChangeListener { value ->
-                Settings.transcodeEncoderAnim = value.toInt()
-                refreshControls()
-                updatePreviewDebouncer.submit(Unit)
-            }
-            encoderAnimQuality.editText?.setOnTextChangedListener(lifecycleScope) { value ->
-                if (checkRange(encoderAnimQuality, 50, 100)) {
-                    Settings.transcodeAnimQuality = value.toInt()
+            // Set triggers
+            binding?.apply {
+                resizeSwitch.setOnCheckedChangeListener { _, isChecked ->
+                    Settings.isResizeEnabled = isChecked
+                    refreshControls()
                     updatePreviewDebouncer.submit(Unit)
                 }
-            }
+                resizeMethod.setOnIndexChangeListener { index ->
+                    Settings.resizeMethod = index
+                    refreshControls()
+                    updatePreviewDebouncer.submit(Unit)
+                }
+                resizeMethod1Ratio.editText?.setOnTextChangedListener(lifecycleScope) { value ->
+                    if (checkRange(resizeMethod1Ratio, 100, 200)) {
+                        Settings.resizeMethod1Ratio = value.toInt()
+                        updatePreviewDebouncer.submit(Unit)
+                    }
+                }
+                resizeMethod2MaxWidth.editText?.setOnTextChangedListener(lifecycleScope) { value ->
+                    if (checkRange(
+                            resizeMethod2MaxWidth,
+                            screenWidth,
+                            screenWidth * 10
+                        )
+                    ) {
+                        Settings.resizeMethod2Width = value.toInt()
+                        updatePreviewDebouncer.submit(Unit)
+                    }
+                }
+                resizeMethod2MaxHeight.editText?.setOnTextChangedListener(lifecycleScope) { value ->
+                    if (checkRange(
+                            resizeMethod2MaxHeight,
+                            screenHeight,
+                            screenHeight * 10
+                        )
+                    ) {
+                        Settings.resizeMethod2Height = value.toInt()
+                        updatePreviewDebouncer.submit(Unit)
+                    }
+                }
+                resizeMethod3Ratio.editText?.setOnTextChangedListener(lifecycleScope) { value ->
+                    if (checkRange(resizeMethod3Ratio, 10, 100)) {
+                        Settings.resizeMethod3Ratio = value.toInt()
+                        updatePreviewDebouncer.submit(Unit)
+                    }
+                }
+                resizeMethod5Images.editText?.setOnTextChangedListener(lifecycleScope) { value ->
+                    if (checkRange(resizeMethod5Images, 1, 200)) {
+                        Settings.resizeMethod5Images = value.toInt()
+                        updatePreviewDebouncer.submit(Unit)
+                    }
+                }
+
+                // Images
+                transcodeImgHeader.text = resources.getString(
+                    R.string.transform_encoder,
+                    resources.getString(R.string.transform_images)
+                )
+                transcodeMethod.setOnIndexChangeListener { index ->
+                    Settings.transcodeMethod = index
+                    refreshControls()
+                    updatePreviewDebouncer.submit(Unit)
+                }
+                encoderAll.setOnValueChangeListener { value ->
+                    Settings.transcodeEncoderAll = value.toInt()
+                    refreshControls()
+                    updatePreviewDebouncer.submit(Unit)
+                }
+                encoderLossless.setOnValueChangeListener { value ->
+                    Settings.transcodeEncoderLossless = value.toInt()
+                    updatePreviewDebouncer.submit(Unit)
+                }
+                encoderLossy.setOnValueChangeListener { value ->
+                    Settings.transcodeEncoderLossy = value.toInt()
+                    updatePreviewDebouncer.submit(Unit)
+                }
+                encoderQuality.editText?.setOnTextChangedListener(lifecycleScope) { value ->
+                    if (checkRange(encoderQuality, 75, 100)) {
+                        Settings.transcodeQuality = value.toInt()
+                        updatePreviewDebouncer.submit(Unit)
+                    }
+                }
+
+                // Animations
+                transcodeAnimHeader.text = resources.getString(
+                    R.string.transform_encoder,
+                    resources.getString(R.string.transform_animations)
+                )
+                encoderAnim.setOnValueChangeListener { value ->
+                    Settings.transcodeEncoderAnim = value.toInt()
+                    refreshControls()
+                    updatePreviewDebouncer.submit(Unit)
+                }
+                encoderAnimQuality.editText?.setOnTextChangedListener(lifecycleScope) { value ->
+                    if (checkRange(encoderAnimQuality, 50, 100)) {
+                        Settings.transcodeAnimQuality = value.toInt()
+                        updatePreviewDebouncer.submit(Unit)
+                    }
+                }
 
             // Preview
             prevPageBtn.setOnClickListener {
