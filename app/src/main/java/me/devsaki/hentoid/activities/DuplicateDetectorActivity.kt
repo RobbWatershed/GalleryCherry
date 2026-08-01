@@ -17,7 +17,6 @@ import me.devsaki.hentoid.events.CommunicationEvent
 import me.devsaki.hentoid.fragments.tools.DuplicateDetailsFragment
 import me.devsaki.hentoid.fragments.tools.DuplicateMainFragment
 import me.devsaki.hentoid.util.Settings
-import me.devsaki.hentoid.util.applyTheme
 import me.devsaki.hentoid.viewmodels.DuplicateViewModel
 import me.devsaki.hentoid.viewmodels.ViewModelFactory
 import org.greenrobot.eventbus.EventBus
@@ -195,8 +194,8 @@ class DuplicateDetectorActivity : BaseActivity() {
     /**
      * ============================== SUBCLASS
      */
-    private class DuplicatePagerAdapter constructor(fa: FragmentActivity?) :
-        FragmentStateAdapter(fa!!) {
+    private class DuplicatePagerAdapter(fa: FragmentActivity) :
+        FragmentStateAdapter(fa) {
         override fun createFragment(position: Int): Fragment {
             return if (0 == position) {
                 DuplicateMainFragment()

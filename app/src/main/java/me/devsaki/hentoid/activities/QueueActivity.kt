@@ -329,8 +329,8 @@ class QueueActivity : BaseActivity(), SelectSiteDialogFragment.Parent {
         }
     }
 
-    private class ScreenSlidePagerAdapter(fa: FragmentActivity?) :
-        FragmentStateAdapter(fa!!) {
+    private class ScreenSlidePagerAdapter(fa: FragmentActivity) :
+        FragmentStateAdapter(fa) {
         override fun createFragment(position: Int): Fragment {
             return if (0 == position) QueueFragment() else ErrorsFragment()
         }

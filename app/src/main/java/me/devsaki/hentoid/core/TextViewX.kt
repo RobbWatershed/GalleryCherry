@@ -4,7 +4,11 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.widget.TextView
 import androidx.lifecycle.LifecycleCoroutineScope
+import com.google.android.material.textfield.TextInputLayout
+import me.devsaki.hentoid.R
 import me.devsaki.hentoid.util.Debouncer
+import kotlin.math.floor
+import kotlin.math.log10
 import kotlin.math.max
 import kotlin.math.min
 
@@ -56,4 +60,25 @@ fun TextView.setMiddleEllipsis() {
             }
         }
     }
+}
+
+fun TextInputLayout.checkRange(minValue: Int, maxValue: Int): Boolean {
+    val editTxt = this.editText
+    require(editTxt != null)
+    val errMsg = resources.getString(R.string.range_check, minValue, maxValue)
+    val nbMaxDigits = floor(log10(maxValue.toDouble())) + 1
+    if (editTxt.text.toString().isEmpty() || editTxt.text.toString().length > nbMaxDigits) {
+        this.isErrorEnabled = true
+        this.error = errMsg
+        return false
+    }
+    val intValue = editTxt.text.toString().toInt()
+    if (intValue !in minValue..maxValue) {
+        this.isErrorEnabled = true
+        this.error = errMsg
+        return false
+    }
+    this.isErrorEnabled = false
+    this.error = null
+    return true
 }

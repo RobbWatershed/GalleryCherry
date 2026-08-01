@@ -180,7 +180,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
     // === COMMUNICATION
     private lateinit var webClient: CustomWebViewClient
 
-    private var callback: OnBackPressedCallback? = null
+    private var backCallback: OnBackPressedCallback? = null
 
     private val settingsListener =
         OnSharedPreferenceChangeListener { _, key: String? ->
@@ -375,8 +375,8 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
     }
 
     private fun addCustomBackControl() {
-        callback?.remove()
-        callback = object : OnBackPressedCallback(true) {
+        backCallback?.remove()
+        backCallback = object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 // Close drawers
                 binding?.apply {
@@ -394,11 +394,11 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
                 }
 
                 // Other cases
-                callback?.remove()
+                backCallback?.remove()
                 onBackPressedDispatcher.onBackPressed()
             }
         }
-        onBackPressedDispatcher.addCallback(this, callback!!)
+        onBackPressedDispatcher.addCallback(this, backCallback!!)
     }
 
     override fun onDestroy() {
