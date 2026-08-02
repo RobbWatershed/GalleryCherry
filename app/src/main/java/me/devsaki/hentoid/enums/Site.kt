@@ -88,7 +88,7 @@ enum class Site(val code: Int, val description: String, val url: String, val ico
     TMO(36, "TMOHentai", "https://tmohentai.com/", R.drawable.ic_site_tmo),
     KEMONO(37, "Kemono.cr", "https://kemono.cr/", R.drawable.ic_site_kemono),
     EROMANGA(38, "Eromanga-Sora", "https://eromanga-sora.com/", R.drawable.ic_site_sora),
-    YIFFER(39, "Yiffer", "https://yiffer.xyz/", R.drawable.ic_site_yiffer),
+    YIFFER(39, "Tailspace", "https://tailspace.com/", R.drawable.ic_site_yiffer),
     PAWCHIVE(40, "Pawchive", "https://pawchive.pw/", R.drawable.ic_site_pawchive),
 
     MAL(96, "MyAnimeList", "", R.drawable.ic_app),

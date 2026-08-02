@@ -14,7 +14,7 @@ import me.devsaki.hentoid.util.network.fetchBodyFast
 import timber.log.Timber
 import java.io.IOException
 
-private const val DOMAIN_FILTER = "yiffer.xyz"
+private const val DOMAIN_FILTER = "tailspace.com"
 private const val YIFFER_NAME = "[%'\\w\\-_\\.\\!\\,\\+\\(\\)&:]+"
 private val GALLERY_FILTER = arrayOf(
     "$DOMAIN_FILTER/c/$YIFFER_NAME$",
