@@ -1719,6 +1719,13 @@ object ObjectBoxDB {
         return qb.order(SiteBookmark_.order).build()
     }
 
+    fun selectBookmarksContainsQ(str: String, s: Site?): Query<SiteBookmark> {
+        val qb = store.boxFor(SiteBookmark::class.java).query()
+        if (s != null) qb.equal(SiteBookmark_.site, s.code.toLong())
+        qb.contains(SiteBookmark_.url, str, StringOrder.CASE_INSENSITIVE)
+        return qb.order(SiteBookmark_.order).build()
+    }
+
     fun selectHomepage(s: Site): SiteBookmark? {
         val qb = store.boxFor(SiteBookmark::class.java).query()
         qb.equal(SiteBookmark_.site, s.code.toLong())

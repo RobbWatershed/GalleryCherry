@@ -1,0 +1,7 @@
+/* Custom style to hide ad space */
+
+/* element containing ad space */
+a[target='_blank'][rel='noreferrer'] {
+    display:none;
+    height:0px;
+}

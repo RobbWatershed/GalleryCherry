@@ -2017,6 +2017,9 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
             )
             if (getStartSite() == Site.PIXIV && Settings.isBrowserAugmented(getStartSite()))
                 getAssetAsString(assets, "pixiv.css", sb)
+            if (getStartSite() == Site.YIFFER) getAssetAsString(
+                assets, "yiffer.css", sb
+            )
             internalCustomCss = sb.toString()
         }
         return internalCustomCss!!
