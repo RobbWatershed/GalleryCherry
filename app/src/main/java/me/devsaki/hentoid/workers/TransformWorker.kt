@@ -115,12 +115,12 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
     }
 
     private suspend fun transform(contentIds: LongArray, params: TransformParams) {
-        // Flag contents as "being deleted" (triggers blink animation; lock operations)
+        // Flag contents as "being processed" (triggers blink animation; lock operations)
         // +count the total number of images to convert
         dao.updateContentsProcessedFlagById(contentIds.filter { it > 0 }, true)
 
         contentIds.forEach { c ->
-            totalItems += dao.selectImagesFromContent(c, true).count { it.isReadable }
+            totalItems += dao.selectImagesFromContent(c, true).count { it.isTransformable(params) }
             if (isStopped) return
         }
 
@@ -177,8 +177,8 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
             // Don't scan new folder when it's being populated
             Beholder.ignoreFolder(targetFolder)
 
-            // Transfer 'unreadable pics' (i.e. separate cover)
-            sourceImages.filter { !it.isReadable }.forEach { img ->
+            // Transfer 'untransformable pics' (i.e. separate cover, already transformed pics)
+            sourceImages.filter { !it.isTransformable(params) }.forEach { img ->
                 val name = UriParts(img.fileUri).fileNameFull
                 copyFile(
                     ctx,
@@ -195,7 +195,7 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
 
         var isKO = false
         val imagesWithoutChapters =
-            sourceImages.filter { null == it.linkedChapter }.filter { it.isReadable }
+            sourceImages.filter { null == it.linkedChapter }.filter { it.isTransformable(params) }
         if (imagesWithoutChapters.isNotEmpty()) {
             val newImgs = transformChapter(
                 imagesWithoutChapters,
@@ -209,7 +209,7 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
         }
 
         val chapteredImgs =
-            sourceImages.filterNot { null == it.linkedChapter }.filter { it.isReadable }
+            sourceImages.filterNot { null == it.linkedChapter }.filter { it.isTransformable(params) }
                 .groupBy { it.linkedChapter!!.id }
 
         chapteredImgs.filter { it.value.isNotEmpty() }.forEach { chImgs ->
@@ -236,7 +236,7 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
             withContext(Dispatchers.IO) {
                 content.setImageFiles(transformedImages)
                 dao.insertImageFiles(transformedImages)
-                content.qtyPages = transformedImages.count { it.isReadable }
+                content.qtyPages = transformedImages.count { it.isTransformable(params) }
                 content.computeSize()
                 content.lastEditDate = Instant.now().toEpochMilli()
                 content.isBeingProcessed = false
@@ -263,7 +263,7 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
                 Settings.nbAIRescale += 1
                 if (Settings.nbAIRescale >= 2) AchievementsManager.trigger(20)
             }
-            val pagesTotal = sourceImages.count { it.isReadable }
+            val pagesTotal = sourceImages.count { it.isTransformable(params) }
             if (pagesTotal >= 50) AchievementsManager.trigger(27)
             if (pagesTotal >= 100) AchievementsManager.trigger(28)
         }
@@ -493,6 +493,10 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
         getInputStream(applicationContext, outputFile.toUri()).use { input ->
             return input.readBytes()
         }
+    }
+
+    private fun ImageFile.isTransformable(params: TransformParams): Boolean {
+        return this.isReadable && !(params.skipTransformedPics && this.isTransformed)
     }
 
     private fun nextOK() {

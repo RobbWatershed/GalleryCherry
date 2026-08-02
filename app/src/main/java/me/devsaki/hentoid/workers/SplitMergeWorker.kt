@@ -280,7 +280,7 @@ abstract class BaseSplitMergeWorker(
         val contentList = dao.selectContent(contentIds)
         if (contentList.isEmpty()) return
 
-        // Flag the content as "being deleted" (triggers blink animation)
+        // Flag the content as "being processed" (triggers blink animation)
         if (deleteAfterOperation) dao.updateContentsProcessedFlag(contentList, true)
 
         val removedContents: MutableSet<Long> = HashSet()

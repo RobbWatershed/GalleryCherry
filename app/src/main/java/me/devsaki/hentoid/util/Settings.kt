@@ -245,6 +245,7 @@ object Settings {
     )
     var transcodeQuality: Int by IntSettingStr("TRANSFORM_TRANSCODE_QUALITY", 90)
     var transcodeAnimQuality: Int by IntSettingStr("TRANSFORM_TRANSCODE_ANIM_QUALITY", 90)
+    var skipTransformedPics: Boolean by BoolSetting("TRANSFORM_SKIP_TRANSFORMED_PICS", false)
 
     // ARCHIVES
     var archiveTargetFolder: String by StringSetting(
@@ -390,7 +391,10 @@ object Settings {
     var isAppThumbSeparateFile: Boolean by BoolSetting("pref_dl_separate_thumb", true)
     val download404Mode: Int by IntSettingStr("pref_dl_404", 0)
     val isKemonoHiRes: Boolean by BoolSetting("pref_dl_kemono_hires", false)
-    val downloadAnimationFormat: Int by IntSettingStr("pref_dl_animation_format", PictureEncoder.WEBP_LOSSY.value)
+    val downloadAnimationFormat: Int by IntSettingStr(
+        "pref_dl_animation_format",
+        PictureEncoder.WEBP_LOSSY.value
+    )
     val downloadAnimationQuality: Int by IntSettingStr("pref_dl_animation_quality", 80)
 
 

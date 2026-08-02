@@ -66,6 +66,7 @@ data class TransformParams(
     val transcodeAnim: PictureEncoder,
     val transcodeAnimQuality: Int,
     val allowUpscale: Boolean = false,
+    val skipTransformedPics: Boolean = false,
     @Transient var forceManhwa: Boolean = false
 )
 

@@ -113,7 +113,7 @@ class DuplicateViewModel(
     fun applyChoices(onComplete: Runnable) {
         val selectedDupes = selectedDuplicates.value ?: return
 
-        // Mark as "is being deleted" to trigger blink animation
+        // Mark as "is being processed" to trigger blink animation
         val deleteList = ArrayList<Long>()
         val updateDisplayList = selectedDupes.toMutableList()
         for (entry in updateDisplayList) {
@@ -182,7 +182,7 @@ class DuplicateViewModel(
                         this@DuplicateViewModel::onMergeComplete
                     )
 
-                    // Mark as "is being deleted" to trigger blink animation
+                    // Mark as "is being processed" to trigger blink animation
                     if (deleteAfterMerging) {
                         val toRemove = selectedDupes.toMutableList()
                         for (entry in toRemove) entry.isBeingDeleted = true

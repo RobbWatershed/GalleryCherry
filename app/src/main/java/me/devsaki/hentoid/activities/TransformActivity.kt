@@ -149,6 +149,11 @@ class TransformActivity : BaseActivity() {
                 }
             }.attach()
 
+            skipTransformedSwitch.setOnCheckedChangeListener { _, isChecked ->
+                Settings.skipTransformedPics = isChecked
+                refreshUI()
+            }
+
             warningsList.adapter = fastAdapter
         }
 
@@ -224,7 +229,6 @@ class TransformActivity : BaseActivity() {
             actionButton.setOnClickListener { onActionClick(buildParams()) }
         }
 
-        // TODO skip transformed
         // TODO actual / transformed image toggle
     }
 
@@ -245,14 +249,16 @@ class TransformActivity : BaseActivity() {
         if (targetDimsWarning) allWarnings.add(resources.getString(R.string.dimensions_warning))
 
         // Check if content contains transformed pages already
-        content?.apply {
-            val retransformedPics = imageList.count { it.isTransformed }
-            if (retransformedPics > 0) allWarnings.add(
-                resources.getString(
-                    R.string.retransform_warning,
-                    retransformedPics
+        if (!Settings.skipTransformedPics) {
+            content?.apply {
+                val retransformedPics = imageList.count { it.isTransformed }
+                if (retransformedPics > 0) allWarnings.add(
+                    resources.getString(
+                        R.string.retransform_warning,
+                        retransformedPics
+                    )
                 )
-            )
+            }
         }
 
         binding?.warningsList?.isVisible = allWarnings.isNotEmpty()
@@ -441,24 +447,23 @@ class TransformActivity : BaseActivity() {
     }
 
     private fun buildParams(): TransformParams {
-        binding!!.apply {
-            return TransformParams(
-                Settings.isResizeEnabled,
-                Settings.resizeMethod,
-                Settings.resizeMethod1Ratio.toFloat() / 100f,
-                Settings.resizeMethod2Height,
-                Settings.resizeMethod2Width,
-                Settings.resizeMethod3Ratio.toFloat() / 100f,
-                Settings.resizeMethod5Images,
-                Settings.transcodeMethod,
-                PictureEncoder.fromValue(Settings.transcodeEncoderAll)!!,
-                PictureEncoder.fromValue(Settings.transcodeEncoderLossy)!!,
-                PictureEncoder.fromValue(Settings.transcodeEncoderLossless)!!,
-                Settings.transcodeQuality,
-                PictureEncoder.fromValue(Settings.transcodeEncoderAnim)!!,
-                Settings.transcodeAnimQuality
-            )
-        }
+        return TransformParams(
+            Settings.isResizeEnabled,
+            Settings.resizeMethod,
+            Settings.resizeMethod1Ratio.toFloat() / 100f,
+            Settings.resizeMethod2Height,
+            Settings.resizeMethod2Width,
+            Settings.resizeMethod3Ratio.toFloat() / 100f,
+            Settings.resizeMethod5Images,
+            Settings.transcodeMethod,
+            PictureEncoder.fromValue(Settings.transcodeEncoderAll)!!,
+            PictureEncoder.fromValue(Settings.transcodeEncoderLossy)!!,
+            PictureEncoder.fromValue(Settings.transcodeEncoderLossless)!!,
+            Settings.transcodeQuality,
+            PictureEncoder.fromValue(Settings.transcodeEncoderAnim)!!,
+            Settings.transcodeAnimQuality,
+            skipTransformedPics = Settings.skipTransformedPics
+        )
     }
 
     private fun onActionClick(params: TransformParams) {
