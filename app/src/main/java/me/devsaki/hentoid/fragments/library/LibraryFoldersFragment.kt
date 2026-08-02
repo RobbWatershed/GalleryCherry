@@ -35,7 +35,6 @@ import com.mikepenz.fastadapter.utils.DragDropUtil.onMove
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import me.devsaki.hentoid.BuildConfig
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.activities.LibraryActivity
 import me.devsaki.hentoid.activities.ReaderActivity
@@ -43,10 +42,8 @@ import me.devsaki.hentoid.activities.bundles.FileItemBundle
 import me.devsaki.hentoid.activities.bundles.ReaderActivityBundle
 import me.devsaki.hentoid.databinding.FragmentLibraryFoldersBinding
 import me.devsaki.hentoid.enums.StorageLocation
-import me.devsaki.hentoid.events.AppUpdatedEvent
 import me.devsaki.hentoid.events.CommunicationEvent
 import me.devsaki.hentoid.events.ProcessEvent
-import me.devsaki.hentoid.fragments.library.UpdateSuccessDialogFragment.Companion.invoke
 import me.devsaki.hentoid.util.Debouncer
 import me.devsaki.hentoid.util.PickFolderContract
 import me.devsaki.hentoid.util.PickerResult
@@ -397,7 +394,7 @@ class LibraryFoldersFragment : Fragment(),
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     fun onCommunicationEvent(event: CommunicationEvent) {
-        if (event.recipient != CommunicationEvent.Recipient.FOLDERS && event.recipient != CommunicationEvent.Recipient.ALL) return
+        if (event.recipient != CommunicationEvent.Recipient.LIBRARY_FOLDERS && event.recipient != CommunicationEvent.Recipient.ALL) return
         when (event.type) {
             CommunicationEvent.Type.UPDATE_TOOLBAR -> {
                 addCustomBackControl()

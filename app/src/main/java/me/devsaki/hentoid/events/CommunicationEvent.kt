@@ -6,6 +6,7 @@ class CommunicationEvent(val type: Type, val recipient: Recipient = Recipient.AL
         SEARCH,
         SEARCH_NO_HISTORY,
         ADVANCED_SEARCH,
+        UPDATE,
         UPDATE_TOOLBAR,
         CLOSE_DRAWER,
         CLOSED,
@@ -23,16 +24,17 @@ class CommunicationEvent(val type: Type, val recipient: Recipient = Recipient.AL
 
     enum class Recipient {
         ALL,
-        LIBRARY,
-        GROUPS,
-        CONTENTS,
-        FOLDERS,
-        QUEUE,
-        ERRORS,
+        LIBRARY_LIST,
+        LIBRARY_GROUPS,
+        LIBRARY_CONTENTS,
+        LIBRARY_FOLDERS,
+        QUEUE_QUEUE,
+        QUEUE_ERRORS,
         DRAWER,
         DUPLICATE_MAIN,
         DUPLICATE_DETAILS,
         SETTINGS,
-        UPDATE_WORKER
+        UPDATE_WORKER,
+        TRANSFORM_ALL
     }
 }

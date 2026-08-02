@@ -10,10 +10,15 @@ import androidx.lifecycle.lifecycleScope
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.activities.TransformActivity
 import me.devsaki.hentoid.core.checkRange
+import me.devsaki.hentoid.core.resubmit
 import me.devsaki.hentoid.core.setOnTextChangedListener
 import me.devsaki.hentoid.databinding.FragmentTransformEncodeImgBinding
 import me.devsaki.hentoid.enums.PictureEncoder
+import me.devsaki.hentoid.events.CommunicationEvent
 import me.devsaki.hentoid.util.Settings
+import org.greenrobot.eventbus.EventBus
+import org.greenrobot.eventbus.Subscribe
+import org.greenrobot.eventbus.ThreadMode
 import java.lang.ref.WeakReference
 
 /**
@@ -32,13 +37,19 @@ class EncodeImgFragment : Fragment(R.layout.fragment_transform_encode_img) {
 
         check(requireActivity() is TransformActivity) { "Parent activity has to be a TransformActivity" }
         activity = WeakReference(requireActivity() as TransformActivity)
+        if (!EventBus.getDefault().isRegistered(this)) EventBus.getDefault().register(this)
+    }
+
+    override fun onDestroy() {
+        if (EventBus.getDefault().isRegistered(this)) EventBus.getDefault().unregister(this)
+        binding = null
+        super.onDestroy()
     }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View? {
         binding = FragmentTransformEncodeImgBinding.inflate(inflater, container, false)
-
         return binding?.root
     }
 
@@ -84,7 +95,8 @@ class EncodeImgFragment : Fragment(R.layout.fragment_transform_encode_img) {
                 activity.get()?.updatePreview()
             }
             encoderQuality.editText?.setOnTextChangedListener(lifecycleScope) { value ->
-                if (encoderQuality.checkRange(75, 100)) {
+                val minQ = if (Settings.unlockTransformCaps) 1 else 50
+                if (encoderQuality.checkRange(minQ, 100)) {
                     Settings.transcodeQuality = value.toInt()
                     activity.get()?.updatePreview()
                 }
@@ -115,10 +127,24 @@ class EncodeImgFragment : Fragment(R.layout.fragment_transform_encode_img) {
     }
 
     private fun refreshWarnings() {
-        if ( (0 == Settings.transcodeMethod && (Settings.transcodeEncoderAll == PictureEncoder.WEBP_LOSSY.value || Settings.transcodeEncoderAll == PictureEncoder.WEBP_LOSSLESS.value))
-                || (1 == Settings.transcodeMethod && (Settings.transcodeEncoderLossy == PictureEncoder.WEBP_LOSSY.value || Settings.transcodeEncoderLossless == PictureEncoder.WEBP_LOSSLESS.value))
+        if ((0 == Settings.transcodeMethod && (Settings.transcodeEncoderAll == PictureEncoder.WEBP_LOSSY.value || Settings.transcodeEncoderAll == PictureEncoder.WEBP_LOSSLESS.value))
+            || (1 == Settings.transcodeMethod && (Settings.transcodeEncoderLossy == PictureEncoder.WEBP_LOSSY.value || Settings.transcodeEncoderLossless == PictureEncoder.WEBP_LOSSLESS.value))
         ) {
             activity.get()?.setWarnings(1, setOf(R.string.encoder_warning))
+        }
+    }
+
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    fun onCommunicationEvent(event: CommunicationEvent) {
+        if (event.recipient != CommunicationEvent.Recipient.TRANSFORM_ALL && event.recipient != CommunicationEvent.Recipient.ALL) return
+        when (event.type) {
+            CommunicationEvent.Type.UPDATE -> {
+                // Small hack to force input validation
+                binding?.encoderQuality?.resubmit()
+                refreshUI()
+            }
+
+            else -> {}
         }
     }
 }

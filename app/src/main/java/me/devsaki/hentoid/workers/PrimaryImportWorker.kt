@@ -500,7 +500,7 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
             )
             notificationManager.notify(ImportCompleteNotification(booksOK, booksKO))
             EventBus.getDefault()
-                .postSticky(CommunicationEvent(Type.RELOAD, CommunicationEvent.Recipient.LIBRARY))
+                .postSticky(CommunicationEvent(Type.RELOAD, CommunicationEvent.Recipient.LIBRARY_LIST))
         }
     }
 

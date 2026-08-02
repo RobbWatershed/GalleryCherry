@@ -652,7 +652,7 @@ class LibraryGroupsFragment : Fragment(),
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     fun onCommunicationEvent(event: CommunicationEvent) {
-        if (event.recipient != CommunicationEvent.Recipient.GROUPS && event.recipient != CommunicationEvent.Recipient.ALL) return
+        if (event.recipient != CommunicationEvent.Recipient.LIBRARY_GROUPS && event.recipient != CommunicationEvent.Recipient.ALL) return
         when (event.type) {
             CommunicationEvent.Type.UPDATE_TOOLBAR -> {
                 updateArtistGroupingFilter()

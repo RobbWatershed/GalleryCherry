@@ -246,6 +246,7 @@ object Settings {
     var transcodeQuality: Int by IntSettingStr("TRANSFORM_TRANSCODE_QUALITY", 90)
     var transcodeAnimQuality: Int by IntSettingStr("TRANSFORM_TRANSCODE_ANIM_QUALITY", 90)
     var skipTransformedPics: Boolean by BoolSetting("TRANSFORM_SKIP_TRANSFORMED_PICS", false)
+    var unlockTransformCaps: Boolean by BoolSetting("TRANSFORM_UNLOCK_CAPS", false)
 
     // ARCHIVES
     var archiveTargetFolder: String by StringSetting(

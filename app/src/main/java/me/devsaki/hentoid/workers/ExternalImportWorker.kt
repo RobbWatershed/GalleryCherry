@@ -205,7 +205,7 @@ class ExternalImportWorker(context: Context, parameters: WorkerParameters) :
         StorageCache.clear(applicationContext, READER_CACHE)
         clearCoilCache(applicationContext)
         EventBus.getDefault()
-            .postSticky(CommunicationEvent(Type.RELOAD, CommunicationEvent.Recipient.LIBRARY))
+            .postSticky(CommunicationEvent(Type.RELOAD, CommunicationEvent.Recipient.LIBRARY_LIST))
     }
 
     // Write JSON file for every found book and persist it in the DB

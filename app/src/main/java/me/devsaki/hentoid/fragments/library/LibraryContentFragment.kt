@@ -838,7 +838,7 @@ class LibraryContentFragment : Fragment(), ChangeGroupDialogFragment.Parent,
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     fun onCommunicationEvent(event: CommunicationEvent) {
-        if (event.recipient != CommunicationEvent.Recipient.CONTENTS && event.recipient != CommunicationEvent.Recipient.ALL) return
+        if (event.recipient != CommunicationEvent.Recipient.LIBRARY_CONTENTS && event.recipient != CommunicationEvent.Recipient.ALL) return
         when (event.type) {
             CommunicationEvent.Type.UPDATE_TOOLBAR -> {
                 addCustomBackControl()

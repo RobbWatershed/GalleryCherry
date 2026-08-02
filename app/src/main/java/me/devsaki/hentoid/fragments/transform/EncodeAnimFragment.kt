@@ -10,10 +10,15 @@ import androidx.lifecycle.lifecycleScope
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.activities.TransformActivity
 import me.devsaki.hentoid.core.checkRange
+import me.devsaki.hentoid.core.resubmit
 import me.devsaki.hentoid.core.setOnTextChangedListener
 import me.devsaki.hentoid.databinding.FragmentTransformEncodeAnimBinding
 import me.devsaki.hentoid.enums.PictureEncoder
+import me.devsaki.hentoid.events.CommunicationEvent
 import me.devsaki.hentoid.util.Settings
+import org.greenrobot.eventbus.EventBus
+import org.greenrobot.eventbus.Subscribe
+import org.greenrobot.eventbus.ThreadMode
 import java.lang.ref.WeakReference
 
 /**
@@ -32,6 +37,13 @@ class EncodeAnimFragment : Fragment(R.layout.fragment_transform_encode_anim) {
 
         check(requireActivity() is TransformActivity) { "Parent activity has to be a TransformActivity" }
         activity = WeakReference(requireActivity() as TransformActivity)
+        if (!EventBus.getDefault().isRegistered(this)) EventBus.getDefault().register(this)
+    }
+
+    override fun onDestroy() {
+        if (EventBus.getDefault().isRegistered(this)) EventBus.getDefault().unregister(this)
+        binding = null
+        super.onDestroy()
     }
 
     override fun onCreateView(
@@ -63,7 +75,8 @@ class EncodeAnimFragment : Fragment(R.layout.fragment_transform_encode_anim) {
                 activity.get()?.updatePreview()
             }
             encoderAnimQuality.editText?.setOnTextChangedListener(lifecycleScope) { value ->
-                if (encoderAnimQuality.checkRange(50, 100)) {
+                val minQ = if (Settings.unlockTransformCaps) 1 else 50
+                if (encoderAnimQuality.checkRange(minQ, 100)) {
                     Settings.transcodeAnimQuality = value.toInt()
                     activity.get()?.updatePreview()
                 }
@@ -83,6 +96,20 @@ class EncodeAnimFragment : Fragment(R.layout.fragment_transform_encode_anim) {
                 encoderAnim.value = Settings.transcodeEncoderAnim.toString()
                 encoderAnimQuality.editText?.setText(Settings.transcodeAnimQuality.toString())
             }
+        }
+    }
+
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    fun onCommunicationEvent(event: CommunicationEvent) {
+        if (event.recipient != CommunicationEvent.Recipient.TRANSFORM_ALL && event.recipient != CommunicationEvent.Recipient.ALL) return
+        when (event.type) {
+            CommunicationEvent.Type.UPDATE -> {
+                // Small hack to force input validation
+                binding?.encoderAnimQuality?.resubmit()
+                refreshUI()
+            }
+
+            else -> {}
         }
     }
 }

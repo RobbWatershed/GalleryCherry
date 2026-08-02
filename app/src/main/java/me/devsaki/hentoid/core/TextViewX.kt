@@ -62,6 +62,10 @@ fun TextView.setMiddleEllipsis() {
     }
 }
 
+fun TextInputLayout.resubmit() {
+    this.editText?.setText(this.editText?.text.toString())
+}
+
 fun TextInputLayout.checkRange(minValue: Int, maxValue: Int): Boolean {
     val editTxt = this.editText
     require(editTxt != null)

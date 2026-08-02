@@ -1260,7 +1260,7 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
     }
 
     private fun processCommunicationEvent(event: CommunicationEvent) {
-        if (event.recipient != CommunicationEvent.Recipient.ALL && event.recipient != CommunicationEvent.Recipient.LIBRARY) return
+        if (event.recipient != CommunicationEvent.Recipient.ALL && event.recipient != CommunicationEvent.Recipient.LIBRARY_LIST) return
         if (CommunicationEvent.Type.CLOSE_DRAWER == event.type) closeNavigationDrawer()
         if (CommunicationEvent.Type.RELOAD == event.type) {
             viewModel.searchContent()
@@ -1303,9 +1303,9 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
             CommunicationEvent(
                 eventType,
                 when (fragmentIndex) {
-                    1 -> CommunicationEvent.Recipient.CONTENTS
-                    2 -> CommunicationEvent.Recipient.FOLDERS
-                    else -> CommunicationEvent.Recipient.GROUPS
+                    1 -> CommunicationEvent.Recipient.LIBRARY_CONTENTS
+                    2 -> CommunicationEvent.Recipient.LIBRARY_FOLDERS
+                    else -> CommunicationEvent.Recipient.LIBRARY_GROUPS
                 },
                 message
             )

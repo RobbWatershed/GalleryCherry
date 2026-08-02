@@ -632,7 +632,7 @@ class QueueFragment : Fragment(R.layout.fragment_queue), ItemTouchCallback,
     @Suppress("unused")
     @Subscribe(threadMode = ThreadMode.MAIN)
     fun onActivityEvent(event: CommunicationEvent) {
-        if (event.recipient != CommunicationEvent.Recipient.QUEUE && event.recipient != CommunicationEvent.Recipient.ALL) return
+        if (event.recipient != CommunicationEvent.Recipient.QUEUE_QUEUE && event.recipient != CommunicationEvent.Recipient.ALL) return
         when (event.type) {
             CommunicationEvent.Type.SEARCH -> searchQueue(event.message)
             CommunicationEvent.Type.ADVANCED_SEARCH -> onFilterSourcesClick()

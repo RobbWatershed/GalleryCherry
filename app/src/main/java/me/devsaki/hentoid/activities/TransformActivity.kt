@@ -41,6 +41,7 @@ import me.devsaki.hentoid.database.ObjectBoxDAO
 import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.databinding.ActivityTransformBinding
 import me.devsaki.hentoid.enums.PictureEncoder
+import me.devsaki.hentoid.events.CommunicationEvent
 import me.devsaki.hentoid.fragments.library.LibraryTransformDialogFragment.BitmapInfo
 import me.devsaki.hentoid.fragments.transform.EncodeAnimFragment
 import me.devsaki.hentoid.fragments.transform.EncodeImgFragment
@@ -63,6 +64,7 @@ import me.devsaki.hentoid.util.video.videoOnlyRenderersFactory
 import me.devsaki.hentoid.viewholders.DrawerItem
 import me.devsaki.hentoid.workers.TransformWorker
 import okio.use
+import org.greenrobot.eventbus.EventBus
 import timber.log.Timber
 import java.time.Instant
 import kotlin.math.roundToInt
@@ -76,6 +78,7 @@ class TransformActivity : BaseActivity() {
 
     // == UI
     private var binding: ActivityTransformBinding? = null
+    private lateinit var unlockMenu: MenuItem
     private lateinit var resizeTab: TabLayout.Tab
     private lateinit var encodePicTab: TabLayout.Tab
     private lateinit var encodeAnimTab: TabLayout.Tab
@@ -118,6 +121,7 @@ class TransformActivity : BaseActivity() {
             toolbar.setOnMenuItemClickListener(this@TransformActivity::onToolbarItemClicked)
             toolbar.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
             tryShowMenuIcons(this@TransformActivity, toolbar.menu)
+            unlockMenu = toolbar.menu.findItem(R.id.action_unlock)
 
             // Instantiate a ViewPager and a PagerAdapter.
             val pagerAdapter: FragmentStateAdapter = ScreenSlidePagerAdapter(this@TransformActivity)
@@ -171,7 +175,18 @@ class TransformActivity : BaseActivity() {
     @Suppress("SameReturnValue")
     private fun onToolbarItemClicked(menuItem: MenuItem): Boolean {
         when (menuItem.itemId) {
-            R.id.action_unlock -> startBrowserActivity(URL_WIKI_TRANSFORM) // TODO
+            R.id.action_unlock -> {
+                Settings.unlockTransformCaps = !Settings.unlockTransformCaps
+                if (Settings.unlockTransformCaps) {
+                    unlockMenu.setIcon(R.drawable.ic_lock_open)
+                    unlockMenu.setTitle(R.string.transform_lock_values)
+                } else {
+                    unlockMenu.setIcon(R.drawable.ic_lock_closed)
+                    unlockMenu.setTitle(R.string.transform_unlock_values)
+                }
+                refreshAllTabs()
+            }
+
             R.id.help -> startBrowserActivity(URL_WIKI_TRANSFORM)
             else -> return true
         }
@@ -194,8 +209,8 @@ class TransformActivity : BaseActivity() {
     }
 
     override fun onDestroy() {
-        super.onDestroy()
         binding = null
+        super.onDestroy()
     }
 
     override fun onResume() {
@@ -234,6 +249,15 @@ class TransformActivity : BaseActivity() {
 
     fun updatePreview() {
         updatePreviewDebouncer.submit(Unit)
+    }
+
+    fun refreshAllTabs() {
+        EventBus.getDefault().post(
+            CommunicationEvent(
+                CommunicationEvent.Type.UPDATE,
+                CommunicationEvent.Recipient.TRANSFORM_ALL
+            )
+        )
     }
 
     /**
