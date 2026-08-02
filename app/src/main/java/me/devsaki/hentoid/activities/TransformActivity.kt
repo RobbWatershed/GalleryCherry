@@ -189,11 +189,13 @@ class TransformActivity : BaseActivity() {
                                 true
                             )
                         ) { // Video
+                            Timber.v("Displaying video")
+                            // TODO known issue : fullscreen video is not centered
                             val dims = it.getDimensions(this@TransformActivity)
                             withContext(Dispatchers.Main) {
-                                imgFullscreen.isVisible = false
-                                videoFullscreenFrame.isVisible = true
                                 videoFullscreenFrame.setAspectRatio(dims.x.toFloat() / dims.y)
+                                imgFullscreen.visibility = View.INVISIBLE
+                                videoFullscreenFrame.isVisible = true
                                 getPlayer(this@TransformActivity).apply {
                                     setMediaItem(MediaItem.fromUri(data.uri))
                                     setVideoSurfaceView(videoFullscreen)
@@ -202,6 +204,7 @@ class TransformActivity : BaseActivity() {
                                 }
                             }
                         } else { // Other formats
+                            Timber.v("Displaying still picture")
                             withContext(Dispatchers.Main) {
                                 videoFullscreenFrame.isVisible = false
                                 imgFullscreen.isVisible = true
@@ -266,8 +269,9 @@ class TransformActivity : BaseActivity() {
                 // Close fullscreen preview
                 binding?.apply {
                     if (imgFullscreen.isVisible) {
-                        imgFullscreen.isVisible = false
+                        imgFullscreen.visibility = View.INVISIBLE
                         switchFullscreenBtn.isVisible = false
+                        fullscreenBg.isVisible = false
                         return
                     }
                     if (videoFullscreenFrame.isVisible) {
@@ -282,6 +286,7 @@ class TransformActivity : BaseActivity() {
                         }
                         videoFullscreenFrame.isVisible = false
                         switchFullscreenBtn.isVisible = false
+                        fullscreenBg.isVisible = false
                         return
                     }
                 }
@@ -324,16 +329,19 @@ class TransformActivity : BaseActivity() {
             imgThumb.setOnClickListener {
                 imgFullscreen.isVisible = true
                 switchFullscreenBtn.isVisible = true
+                fullscreenBg.isVisible = true
                 isFullscreenTransformed = true
             }
             imgFullscreen.setOnClickListener {
-                imgFullscreen.isVisible = false
+                imgFullscreen.visibility = View.INVISIBLE
                 switchFullscreenBtn.isVisible = false
+                fullscreenBg.isVisible = false
             }
             videoThumbFrame.setOnClickListener {
                 getPlayer(this@TransformActivity).setVideoSurfaceView(videoFullscreen)
                 videoFullscreenFrame.isVisible = true
                 switchFullscreenBtn.isVisible = true
+                fullscreenBg.isVisible = true
                 isFullscreenTransformed = true
             }
             videoFullscreenFrame.setOnClickListener {
@@ -348,6 +356,7 @@ class TransformActivity : BaseActivity() {
                 }
                 videoFullscreenFrame.isVisible = false
                 switchFullscreenBtn.isVisible = false
+                fullscreenBg.isVisible = false
             }
             actionButton.setOnClickListener { onActionClick(buildParams()) }
         }
@@ -507,6 +516,7 @@ class TransformActivity : BaseActivity() {
 
                 if (videoThumbFrame.isVisible) {
                     videoThumbFrame.setAspectRatio(targetDims.x.toFloat() / targetDims.y)
+                    // TODO known issue : fullscreen video is not centered
                     videoFullscreenFrame.setAspectRatio(targetDims.x.toFloat() / targetDims.y)
                     getPlayer(context).apply {
                         setVideoSurfaceView(videoThumb)

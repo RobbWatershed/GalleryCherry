@@ -216,17 +216,24 @@
         app:layout_constraintTop_toBottomOf="@id/img_thumb" />
 
     <!-- Fullscreen previews that appears when tapping the thumb -->
-    <androidx.media3.ui.AspectRatioFrameLayout
-        android:id="@+id/video_fullscreen_frame"
+    <FrameLayout
+        android:id="@+id/fullscreen_bg"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:background="@color/black_opacity_50"
+        android:visibility="gone" />
+
+    <androidx.media3.ui.AspectRatioFrameLayout
+        android:id="@+id/video_fullscreen_frame"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
         android:clickable="true"
         android:focusable="true"
         android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="@id/img_fullscreen"
+        app:layout_constraintEnd_toEndOf="@id/img_fullscreen"
+        app:layout_constraintStart_toStartOf="@id/img_fullscreen"
+        app:layout_constraintTop_toTopOf="@id/img_fullscreen"
         app:resize_mode="fit">
 
         <SurfaceView
@@ -255,13 +262,13 @@
         style="?attr/materialButtonTonalStyle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginBottom="8dp"
         android:hint="@string/transformed"
-        android:tooltipText="@string/transformed"
         android:text="@string/transformed"
         android:textSize="@dimen/caption"
-        android:layout_marginStart="8dp"
+        android:tooltipText="@string/transformed"
         android:visibility="gone"
-        android:layout_marginBottom="8dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         tools:ignore="ContentDescription" />
