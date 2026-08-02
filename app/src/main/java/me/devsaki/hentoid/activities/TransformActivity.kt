@@ -2,12 +2,14 @@ package me.devsaki.hentoid.activities
 
 import android.annotation.SuppressLint
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.MenuItem
 import android.view.View
 import android.view.WindowManager
 import androidx.activity.OnBackPressedCallback
 import androidx.core.net.toUri
-import androidx.core.view.children
+import androidx.core.view.descendants
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
@@ -105,6 +107,7 @@ class TransformActivity : BaseActivity() {
     private var targetDimsWarning = false
     private var warnings = HashMap<Int, Set<Int>>()
 
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -170,6 +173,10 @@ class TransformActivity : BaseActivity() {
 
         updatePreviewDebouncer = Debouncer(lifecycleScope, 300) { refreshPreview() }
         addCustomBackControl()
+
+        Handler(Looper.getMainLooper()).postDelayed({
+            updateUnlockMenu()
+        }, 100)
     }
 
     @Suppress("SameReturnValue")
@@ -177,20 +184,24 @@ class TransformActivity : BaseActivity() {
         when (menuItem.itemId) {
             R.id.action_unlock -> {
                 Settings.unlockTransformCaps = !Settings.unlockTransformCaps
-                if (Settings.unlockTransformCaps) {
-                    unlockMenu.setIcon(R.drawable.ic_lock_open)
-                    unlockMenu.setTitle(R.string.transform_lock_values)
-                } else {
-                    unlockMenu.setIcon(R.drawable.ic_lock_closed)
-                    unlockMenu.setTitle(R.string.transform_unlock_values)
-                }
-                refreshAllTabs()
+                updateUnlockMenu()
             }
 
             R.id.help -> startBrowserActivity(URL_WIKI_TRANSFORM)
             else -> return true
         }
         return true
+    }
+
+    private fun updateUnlockMenu() {
+        if (Settings.unlockTransformCaps) {
+            unlockMenu.setIcon(R.drawable.ic_lock_open)
+            unlockMenu.setTitle(R.string.transform_lock_values)
+        } else {
+            unlockMenu.setIcon(R.drawable.ic_lock_closed)
+            unlockMenu.setTitle(R.string.transform_unlock_values)
+        }
+        refreshAllTabs()
     }
 
     private fun addCustomBackControl() {
@@ -305,6 +316,11 @@ class TransformActivity : BaseActivity() {
     @Suppress("ReplaceArrayEqualityOpWithArraysEquals")
     @SuppressLint("SetTextI18n")
     private fun refreshPreview() {
+        if (areInputErrors()) {
+            binding?.actionButton?.isEnabled = false
+            return
+        } else binding?.actionButton?.isEnabled = true
+
         val context = this
         val sourceBmp = getCurrentBitmap() ?: return
         val sourceProps = sourceBmp.getProperties(context)
@@ -490,36 +506,37 @@ class TransformActivity : BaseActivity() {
         )
     }
 
+    // Check if no control is in error state
+    private fun areInputErrors(): Boolean {
+        binding ?: return true
+        return binding!!.pager.descendants
+            .filter { it is TextInputLayout }
+            .map { it as TextInputLayout }
+            .any { it.isErrorEnabled }
+    }
+
     private fun onActionClick(params: TransformParams) {
-        // Check if no dialog is in error state
-        binding?.apply {
-            val nbError = pager.children
-                .filter { it is TextInputLayout }
-                .map { it as TextInputLayout }
-                .count { it.isErrorEnabled }
+        if (areInputErrors()) return
 
-            if (nbError > 0) return
+        val moshi = Moshi.Builder()
+            .addLast(KotlinJsonAdapterFactory())
+            .build()
 
-            val moshi = Moshi.Builder()
-                .addLast(KotlinJsonAdapterFactory())
-                .build()
+        val serializedParams = moshi.adapter(TransformParams::class.java).toJson(params)
 
-            val serializedParams = moshi.adapter(TransformParams::class.java).toJson(params)
+        val myData: Data = workDataOf(
+            "IDS" to contentIds,
+            "PARAMS" to serializedParams
+        )
 
-            val myData: Data = workDataOf(
-                "IDS" to contentIds,
-                "PARAMS" to serializedParams
-            )
-
-            val workManager = WorkManager.getInstance(this@TransformActivity)
-            workManager.enqueueUniqueWork(
-                R.id.transform_service.toString(),
-                ExistingWorkPolicy.APPEND_OR_REPLACE,
-                OneTimeWorkRequest.Builder(TransformWorker::class.java)
-                    .setInputData(myData)
-                    .addTag(WORK_CLOSEABLE).build()
-            )
-        }
+        val workManager = WorkManager.getInstance(this@TransformActivity)
+        workManager.enqueueUniqueWork(
+            R.id.transform_service.toString(),
+            ExistingWorkPolicy.APPEND_OR_REPLACE,
+            OneTimeWorkRequest.Builder(TransformWorker::class.java)
+                .setInputData(myData)
+                .addTag(WORK_CLOSEABLE).build()
+        )
         // TODO display progress?
     }
 
