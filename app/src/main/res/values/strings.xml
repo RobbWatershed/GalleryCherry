@@ -1127,6 +1127,8 @@
     <string name="range_check">Value must be between %1$d and %2$d</string>
     <string name="previous_page">Previous page</string>
     <string name="next_page">Next page</string>
+    <string name="original">Original</string>
+    <string name="transformed">Transformed</string>
 
     <!-- Archive dialog -->
     <string name="target_folder">Target folder</string>

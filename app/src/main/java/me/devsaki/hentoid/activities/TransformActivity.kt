@@ -11,6 +11,7 @@ import android.view.MenuItem
 import android.view.View
 import android.view.WindowManager
 import androidx.activity.OnBackPressedCallback
+import androidx.annotation.OptIn
 import androidx.core.net.toUri
 import androidx.core.view.descendants
 import androidx.core.view.isVisible
@@ -19,6 +20,7 @@ import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player.REPEAT_MODE_ONE
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.work.Data
@@ -113,7 +115,13 @@ class TransformActivity : BaseActivity() {
     private var targetDimsWarning = false
     private var warnings = HashMap<Int, Set<Int>>()
 
+    // Previews
+    private var rawData: BitmapInfo? = null
+    private var transformedData: BitmapInfo? = null
+    private var isFullscreenTransformed = true
 
+
+    @OptIn(UnstableApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -167,6 +175,47 @@ class TransformActivity : BaseActivity() {
                 refreshUI()
             }
 
+            // Switch between original and transformed
+            switchFullscreenBtn.setOnClickListener {
+                isFullscreenTransformed = !isFullscreenTransformed
+                switchFullscreenBtn.text = resources.getString(
+                    if (isFullscreenTransformed) R.string.transformed else R.string.original
+                )
+                val data = if (isFullscreenTransformed) transformedData else rawData
+                data?.let {
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        if (it.getProperties(this@TransformActivity).mime.startsWith(
+                                "video/",
+                                true
+                            )
+                        ) { // Video
+                            val dims = it.getDimensions(this@TransformActivity)
+                            withContext(Dispatchers.Main) {
+                                imgFullscreen.isVisible = false
+                                videoFullscreenFrame.isVisible = true
+                                videoFullscreenFrame.setAspectRatio(dims.x.toFloat() / dims.y)
+                                getPlayer(this@TransformActivity).apply {
+                                    setMediaItem(MediaItem.fromUri(data.uri))
+                                    setVideoSurfaceView(videoFullscreen)
+                                    prepare()
+                                    play()
+                                }
+                            }
+                        } else { // Other formats
+                            withContext(Dispatchers.Main) {
+                                videoFullscreenFrame.isVisible = false
+                                imgFullscreen.isVisible = true
+                                if (data.rawData.isEmpty()) {
+                                    imgFullscreen.load(data.uri.toString())
+                                } else {
+                                    imgFullscreen.load(data.rawData)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             warningsList.adapter = fastAdapter
         }
 
@@ -215,7 +264,27 @@ class TransformActivity : BaseActivity() {
         backCallback = object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 // Close fullscreen preview
-                // TODO
+                binding?.apply {
+                    if (imgFullscreen.isVisible) {
+                        imgFullscreen.isVisible = false
+                        switchFullscreenBtn.isVisible = false
+                        return
+                    }
+                    if (videoFullscreenFrame.isVisible) {
+                        // Revert player to transformed data
+                        getPlayer(this@TransformActivity).apply {
+                            setVideoSurfaceView(videoThumb)
+                            transformedData?.let {
+                                setMediaItem(MediaItem.fromUri(it.uri))
+                                prepare()
+                                play()
+                            }
+                        }
+                        videoFullscreenFrame.isVisible = false
+                        switchFullscreenBtn.isVisible = false
+                        return
+                    }
+                }
 
                 // Other cases
                 backCallback?.remove()
@@ -226,6 +295,8 @@ class TransformActivity : BaseActivity() {
     }
 
     override fun onDestroy() {
+        player?.stop()
+        player = null
         binding = null
         super.onDestroy()
     }
@@ -237,31 +308,49 @@ class TransformActivity : BaseActivity() {
         // Set triggers
         binding?.apply {
             prevPageBtn.setOnClickListener {
-                if (pageIndex > 0) pageIndex--
-                updatePreviewDebouncer.submit(Unit)
+                if (pageIndex > 0) {
+                    rawData = null
+                    pageIndex--
+                    updatePreviewDebouncer.submit(Unit)
+                }
             }
             nextPageBtn.setOnClickListener {
-                if (pageIndex < maxPages - 1) pageIndex++
-                updatePreviewDebouncer.submit(Unit)
+                if (pageIndex < maxPages - 1) {
+                    rawData = null
+                    pageIndex++
+                    updatePreviewDebouncer.submit(Unit)
+                }
             }
             imgThumb.setOnClickListener {
-                imgPreview.isVisible = true
+                imgFullscreen.isVisible = true
+                switchFullscreenBtn.isVisible = true
+                isFullscreenTransformed = true
             }
-            imgPreview.setOnClickListener {
-                imgPreview.isVisible = false
+            imgFullscreen.setOnClickListener {
+                imgFullscreen.isVisible = false
+                switchFullscreenBtn.isVisible = false
             }
             videoThumbFrame.setOnClickListener {
-                player?.setVideoSurfaceView(videoPreview)
-                videoPreviewFrame.isVisible = true
+                getPlayer(this@TransformActivity).setVideoSurfaceView(videoFullscreen)
+                videoFullscreenFrame.isVisible = true
+                switchFullscreenBtn.isVisible = true
+                isFullscreenTransformed = true
             }
-            videoPreviewFrame.setOnClickListener {
-                player?.setVideoSurfaceView(videoThumb)
-                videoPreviewFrame.isVisible = false
+            videoFullscreenFrame.setOnClickListener {
+                getPlayer(this@TransformActivity).apply {
+                    setVideoSurfaceView(videoThumb)
+                    // Revert player to transformed data
+                    transformedData?.let {
+                        setMediaItem(MediaItem.fromUri(it.uri))
+                        prepare()
+                        play()
+                    }
+                }
+                videoFullscreenFrame.isVisible = false
+                switchFullscreenBtn.isVisible = false
             }
             actionButton.setOnClickListener { onActionClick(buildParams()) }
         }
-
-        // TODO actual / transformed image toggle
     }
 
     fun updatePreview() {
@@ -319,6 +408,7 @@ class TransformActivity : BaseActivity() {
         }
     }
 
+    @OptIn(UnstableApi::class)
     @Suppress("ReplaceArrayEqualityOpWithArraysEquals")
     @SuppressLint("SetTextI18n")
     private fun refreshPreview() {
@@ -338,7 +428,6 @@ class TransformActivity : BaseActivity() {
             previewProgress.isVisible = true
         }
 
-        @androidx.media3.common.util.UnstableApi
         lifecycleScope.launch {
             val sourceSize = formatHumanReadableSize(sourceBmp.rawData.size.toLong(), resources)
             val sourceDims = sourceBmp.getDimensions(context)
@@ -413,30 +502,25 @@ class TransformActivity : BaseActivity() {
                 imgThumb.visibility =
                     if (videoThumbFrame.isVisible) View.INVISIBLE else View.VISIBLE
 
+                transformedData = displayData
                 Timber.d("target : $targetMime / ${displayData.uri}")
 
                 if (videoThumbFrame.isVisible) {
                     videoThumbFrame.setAspectRatio(targetDims.x.toFloat() / targetDims.y)
-                    videoPreviewFrame.setAspectRatio(targetDims.x.toFloat() / targetDims.y)
-                    if (null == player) {
-                        player =
-                            ExoPlayer.Builder(context, videoOnlyRenderersFactory).build()
-                        player?.setVideoSurfaceView(videoThumb)
-                        player?.repeatMode = REPEAT_MODE_ONE
-                    }
-                    player?.apply {
-                        // Those are only available through Uris
-                        setMediaItem(MediaItem.fromUri(displayData.uri))
+                    videoFullscreenFrame.setAspectRatio(targetDims.x.toFloat() / targetDims.y)
+                    getPlayer(context).apply {
+                        setVideoSurfaceView(videoThumb)
+                        setMediaItem(MediaItem.fromUri(displayData.uri)) // Only available through Uris
                         prepare()
                         play()
                     }
                 } else {
                     if (displayData.rawData.isEmpty()) {
                         imgThumb.load(displayData.uri.toString())
-                        imgPreview.load(displayData.uri.toString())
+                        imgFullscreen.load(displayData.uri.toString())
                     } else {
                         imgThumb.load(displayData.rawData)
-                        imgPreview.load(displayData.rawData)
+                        imgFullscreen.load(displayData.rawData)
                     }
                 }
 
@@ -474,22 +558,35 @@ class TransformActivity : BaseActivity() {
         return ByteArray(0)
     }
 
+    @Synchronized
     private fun getCurrentBitmap(): BitmapInfo? {
+        if (rawData != null) return rawData
         content?.apply {
-            // Get bitmap for display
             val pages = imageList.filter { it.isReadable }
             if (pages.isEmpty()) return null
             maxPages = pages.size
             val page = pages[pageIndex]
             try {
                 getInputStream(this@TransformActivity, page.fileUri.toUri()).use {
-                    return BitmapInfo(page.fileUri.toUri(), page.name, it.readBytes())
+                    rawData = BitmapInfo(page.fileUri.toUri(), page.name, it.readBytes())
+                    return rawData
                 }
             } catch (t: Throwable) {
                 Timber.w(t)
             }
         }
         return null
+    }
+
+    @OptIn(UnstableApi::class)
+    @Synchronized
+    private fun getPlayer(context: Context): ExoPlayer {
+        if (player != null) return player!!
+
+        val p = ExoPlayer.Builder(context, videoOnlyRenderersFactory).build()
+        p.repeatMode = REPEAT_MODE_ONE
+        player = p
+        return p
     }
 
     private fun buildParams(): TransformParams {
@@ -543,7 +640,7 @@ class TransformActivity : BaseActivity() {
                 .setInputData(myData)
                 .addTag(WORK_CLOSEABLE).build()
         )
-        // TODO display progress?
+        finish()
     }
 
     private class ScreenSlidePagerAdapter(fa: FragmentActivity) :
@@ -570,7 +667,14 @@ class TransformActivity : BaseActivity() {
         constructor(uri: Uri) : this(uri, "", ByteArray(0))
         constructor(rawData: ByteArray) : this(Uri.EMPTY, "", rawData)
 
+        private var mProps: ImageProperties? = null
+        private var mSize: Long? = null
+        private var mDims: Point? = null
+
+        @Synchronized
         fun getProperties(context: Context): ImageProperties {
+            if (mProps != null) return mProps!!
+
             return if (rawData.isNotEmpty()) getImageProperties(rawData)
             else getImageProperties(context, uri) ?: ImageProperties(
                 "",
@@ -579,12 +683,16 @@ class TransformActivity : BaseActivity() {
             )
         }
 
+        @Synchronized
         fun getSize(context: Context): Long {
+            if (mSize != null) return mSize!!
+
             return if (rawData.isNotEmpty()) rawData.size.toLong()
             else fileSizeFromUri(context, uri)
         }
 
         suspend fun getDimensions(context: Context): Point {
+            if (mDims != null) return mDims!!
             return getMediaDimensions(context, uri, rawData)
         }
     }

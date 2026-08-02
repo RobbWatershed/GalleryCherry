@@ -11,7 +11,6 @@
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:elevation="@dimen/toolbar_layout_elevation"
         android:minHeight="?android:attr/actionBarSize"
         app:layout_constraintTop_toTopOf="parent"
         app:menu="@menu/transform_menu"
@@ -218,7 +217,7 @@
 
     <!-- Fullscreen previews that appears when tapping the thumb -->
     <androidx.media3.ui.AspectRatioFrameLayout
-        android:id="@+id/video_preview_frame"
+        android:id="@+id/video_fullscreen_frame"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:clickable="true"
@@ -231,7 +230,7 @@
         app:resize_mode="fit">
 
         <SurfaceView
-            android:id="@+id/video_preview"
+            android:id="@+id/video_fullscreen"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:background="@null"
@@ -239,7 +238,7 @@
     </androidx.media3.ui.AspectRatioFrameLayout>
 
     <ImageView
-        android:id="@+id/img_preview"
+        android:id="@+id/img_fullscreen"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:clickable="true"
@@ -249,6 +248,22 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
+        tools:ignore="ContentDescription" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/switch_fullscreen_btn"
+        style="?attr/materialButtonTonalStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:hint="@string/transformed"
+        android:tooltipText="@string/transformed"
+        android:text="@string/transformed"
+        android:textSize="@dimen/caption"
+        android:layout_marginStart="8dp"
+        android:visibility="gone"
+        android:layout_marginBottom="8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
         tools:ignore="ContentDescription" />
 
     <androidx.constraintlayout.widget.Group
