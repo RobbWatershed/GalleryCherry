@@ -1,6 +1,9 @@
 package me.devsaki.hentoid.activities
 
 import android.annotation.SuppressLint
+import android.content.Context
+import android.graphics.Point
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -44,20 +47,23 @@ import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.databinding.ActivityTransformBinding
 import me.devsaki.hentoid.enums.PictureEncoder
 import me.devsaki.hentoid.events.CommunicationEvent
-import me.devsaki.hentoid.fragments.library.LibraryTransformDialogFragment.BitmapInfo
 import me.devsaki.hentoid.fragments.transform.EncodeAnimFragment
 import me.devsaki.hentoid.fragments.transform.EncodeImgFragment
 import me.devsaki.hentoid.fragments.transform.ResizeFragment
 import me.devsaki.hentoid.util.Debouncer
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.file.createFile
+import me.devsaki.hentoid.util.file.fileSizeFromUri
 import me.devsaki.hentoid.util.file.formatHumanReadableSize
 import me.devsaki.hentoid.util.file.getBinary
 import me.devsaki.hentoid.util.file.getExtensionFromMimeType
 import me.devsaki.hentoid.util.file.getInputStream
 import me.devsaki.hentoid.util.file.getOrCreateCacheFolder
 import me.devsaki.hentoid.util.formatEpochToDate
+import me.devsaki.hentoid.util.image.ImageProperties
 import me.devsaki.hentoid.util.image.TransformParams
+import me.devsaki.hentoid.util.image.getImageProperties
+import me.devsaki.hentoid.util.image.getMediaDimensions
 import me.devsaki.hentoid.util.image.transformAnimated
 import me.devsaki.hentoid.util.image.transformManhwaChapter
 import me.devsaki.hentoid.util.image.transformStill
@@ -552,6 +558,34 @@ class TransformActivity : BaseActivity() {
 
         override fun getItemCount(): Int {
             return 3
+        }
+    }
+
+    @Suppress("ArrayInDataClass")
+    data class BitmapInfo(
+        val uri: Uri,
+        val name: String,
+        val rawData: ByteArray
+    ) {
+        constructor(uri: Uri) : this(uri, "", ByteArray(0))
+        constructor(rawData: ByteArray) : this(Uri.EMPTY, "", rawData)
+
+        fun getProperties(context: Context): ImageProperties {
+            return if (rawData.isNotEmpty()) getImageProperties(rawData)
+            else getImageProperties(context, uri) ?: ImageProperties(
+                "",
+                isLossless = false,
+                isAnimated = false
+            )
+        }
+
+        fun getSize(context: Context): Long {
+            return if (rawData.isNotEmpty()) rawData.size.toLong()
+            else fileSizeFromUri(context, uri)
+        }
+
+        suspend fun getDimensions(context: Context): Point {
+            return getMediaDimensions(context, uri, rawData)
         }
     }
 }
