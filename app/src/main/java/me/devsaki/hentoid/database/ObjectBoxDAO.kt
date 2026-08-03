@@ -914,7 +914,7 @@ class ObjectBoxDAO : CollectionDAO {
         noArtistGroup.setItems(items)
         noArtistLive.postValue(listOf(noArtistGroup))
 
-        // Flagged groups
+        // Flagged (i.e. favourited or starred) groups
         val flaggedLive: LiveData<List<Group>> = ObjectBoxLiveData(
             ObjectBoxDB.selectGroupsByGroupingQ(Grouping.ARTIST.id, false)
         )

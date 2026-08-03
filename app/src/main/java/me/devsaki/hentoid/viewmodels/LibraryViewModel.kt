@@ -1172,7 +1172,8 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
         viewModelScope.launch(Dispatchers.IO) {
             groupIds.forEach {
                 try {
-                    doRateGroup(it, targetRating)
+                    val parts = splitUniqueStr(it)
+                    doRateGroup(parts.first, parts.second, parts.third, targetRating)
                 } catch (t: Throwable) {
                     Timber.w(t)
                 } finally {
@@ -1182,23 +1183,29 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
         }
     }
 
-    /**
-     * Set the rating to the given value for the given group ID
-     *
-     * @param uniqueStr    Group unique String to set the rating for
-     * @param targetRating Rating to set
-     */
-    private suspend fun doRateGroup(uniqueStr: String, targetRating: Int): Group {
+    private suspend fun doRateGroup(
+        groupingName: String,
+        groupName: String,
+        subType: Int,
+        targetRating: Int
+    ): Group {
         // Check if given group still exists in DB
-        val parts = splitUniqueStr(uniqueStr)
-        val grouping = Grouping.searchByName(parts.first)
-        var theGroup = dao.selectGroupByName(grouping.id, parts.second)
-        if (null == theGroup && Settings.groupingDisplay == Grouping.ARTIST.id) {
-            // Create flagged group
-            theGroup = Group(Grouping.ARTIST, parts.second, -1)
-            theGroup.subtype = parts.third
+        val grouping = when (Settings.groupingDisplay) {
+            Grouping.ARTIST.id -> Grouping.ARTIST
+            Grouping.SERIES.id -> Grouping.SERIES
+            else -> Grouping.searchByName(groupingName)
         }
-        theGroup ?: throw InvalidParameterException("Invalid uniqueStr : $uniqueStr")
+        var theGroup = dao.selectGroupByName(grouping.id, groupName)
+        if (null == theGroup) {
+            val targetGrouping = Grouping.searchById(Settings.groupingDisplay)
+            if (targetGrouping != Grouping.NONE) {
+                // Create flagged group
+                theGroup = Group(targetGrouping, groupName, -1)
+                theGroup.subtype = subType
+            }
+        }
+        theGroup
+            ?: throw InvalidParameterException("Invalid params : $groupingName $groupingName $subType")
 
         if (!theGroup.isBeingProcessed) {
             theGroup.rating = targetRating
