@@ -182,7 +182,7 @@ class LibraryFoldersFragment : Fragment(),
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         register(SelectExtensionFactory())
-        EventBus.getDefault().register(this)
+        if (!EventBus.getDefault().isRegistered(this)) EventBus.getDefault().register(this)
     }
 
     override fun onCreateView(
@@ -413,7 +413,7 @@ class LibraryFoldersFragment : Fragment(),
     }
 
     override fun onDestroy() {
-        EventBus.getDefault().unregister(this)
+        if (EventBus.getDefault().isRegistered(this)) EventBus.getDefault().unregister(this)
         callback?.remove()
         super.onDestroy()
     }

@@ -44,7 +44,7 @@ class UpdateDownloadWorker(context: Context, parameters: WorkerParameters) :
     }
 
     init {
-        EventBus.getDefault().register(this)
+        if (!EventBus.getDefault().isRegistered(this)) EventBus.getDefault().register(this)
     }
 
     override fun getStartNotification(): BaseNotification {
@@ -56,7 +56,7 @@ class UpdateDownloadWorker(context: Context, parameters: WorkerParameters) :
     }
 
     override suspend fun onClear(logFile: DocumentFile?) {
-        EventBus.getDefault().unregister(this)
+        if (EventBus.getDefault().isRegistered(this)) EventBus.getDefault().unregister(this)
     }
 
     override suspend fun getToWork(input: Data) {

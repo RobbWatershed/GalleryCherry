@@ -24,7 +24,6 @@ import me.devsaki.hentoid.util.SearchCriteria
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.Settings.Value
 import me.devsaki.hentoid.util.Type
-import me.devsaki.hentoid.util.applyTheme
 import me.devsaki.hentoid.util.capitalizeString
 import me.devsaki.hentoid.viewmodels.SearchViewModel
 import me.devsaki.hentoid.viewmodels.ViewModelFactory
@@ -148,7 +147,8 @@ class SearchActivity : BaseActivity() {
             typePicker.setOnIndexChangeListener { index -> viewModel.setContentType(Type.entries.first { it.value == index }) }
 
             viewModel.setCombinationMode(Settings.searchCombinationMode)
-            if (Value.SEARCH_COMBINATION_AND == Settings.searchCombinationMode) andChoice.isChecked = true
+            if (Value.SEARCH_COMBINATION_AND == Settings.searchCombinationMode) andChoice.isChecked =
+                true
             else orChoice.isChecked = true
 
             andOrChoice.addOnButtonCheckedListener { _, checkedId, isChecked ->
@@ -202,7 +202,8 @@ class SearchActivity : BaseActivity() {
                     typePicker.index = contentType.value
                 }
                 viewModel.setCombinationMode(Settings.searchCombinationMode)
-                if (Value.SEARCH_COMBINATION_AND == Settings.searchCombinationMode) andChoice.isChecked = true
+                if (Value.SEARCH_COMBINATION_AND == Settings.searchCombinationMode) andChoice.isChecked =
+                    true
                 else orChoice.isChecked = true
             }
         }

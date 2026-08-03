@@ -1,10 +1,8 @@
 package me.devsaki.hentoid.fragments
 
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener
-import android.os.Build
 import android.os.Bundle
 import android.text.SpannableString
 import android.text.SpannableStringBuilder
@@ -32,6 +30,7 @@ import me.devsaki.hentoid.activities.bundles.ToolsBundle
 import me.devsaki.hentoid.activities.settings.SettingsActivity
 import me.devsaki.hentoid.activities.settings.SettingsSourceSelectActivity
 import me.devsaki.hentoid.activities.sources.WelcomeActivity
+import me.devsaki.hentoid.core.launchActivity
 import me.devsaki.hentoid.core.requireById
 import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.databinding.FragmentNavigationDrawerBinding
@@ -322,8 +321,10 @@ class NavigationDrawerFragment : Fragment(R.layout.fragment_navigation_drawer),
                 isSelected = origin == NavItem.BROWSER && this@NavigationDrawerFragment.site == Site.NONE
             )
 
-            val txt = SpannableStringBuilder.valueOf(resources.getText(R.string.title_activity_queue))
-            if (totalQueue > 0) txt.append("  ").append(formatCountBadge(requireContext(), totalQueue))
+            val txt =
+                SpannableStringBuilder.valueOf(resources.getText(R.string.title_activity_queue))
+            if (totalQueue > 0) txt.append("  ")
+                .append(formatCountBadge(requireContext(), totalQueue))
             addMenu(
                 submenu2,
                 txt,
@@ -399,29 +400,19 @@ class NavigationDrawerFragment : Fragment(R.layout.fragment_navigation_drawer),
         return badgeDrawable.toSpannable()
     }
 
-    @Suppress("DEPRECATION")
-    private fun launchActivity(
+    fun launchActivity(
         activityClass: Class<*>,
         bundle: Bundle? = null,
         clearTop: Boolean = false,
         reorderToFront: Boolean = false
     ) {
-        val intent = Intent(requireActivity(), activityClass)
-        // If FLAG_ACTIVITY_CLEAR_TOP is not set,
-        // it can interfere with Double-Back (press back twice) to exit
-        if (clearTop) intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
-        //if (reorderToFront) intent.flags = intent.flags or Intent.FLAG_ACTIVITY_PREVIOUS_IS_TOP
-        if (bundle != null) intent.putExtras(bundle)
-        requireContext().startActivity(intent)
-        activity?.apply {
-            if (Build.VERSION.SDK_INT >= 34) {
-                overrideActivityTransition(Activity.OVERRIDE_TRANSITION_OPEN, 0, 0)
-            } else {
-                overridePendingTransition(0, 0)
-            }
-            EventBus.getDefault().post(CommunicationEvent(CommunicationEvent.Type.CLOSE_DRAWER))
-        }
-        if (reorderToFront) activity?.finish()
+        requireContext().launchActivity(
+            requireActivity(),
+            activityClass,
+            bundle,
+            clearTop,
+            reorderToFront
+        )
     }
 
     private fun launchFavBook() {

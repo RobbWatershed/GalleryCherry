@@ -5,6 +5,8 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.content.res.Resources
+import android.os.Build
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.webkit.WebView
@@ -15,6 +17,7 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import me.devsaki.hentoid.R
+import me.devsaki.hentoid.events.CommunicationEvent
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.file.removeFile
 import me.devsaki.hentoid.util.getFixedContext
@@ -23,6 +26,7 @@ import me.devsaki.hentoid.util.toast
 import me.devsaki.hentoid.views.NestedScrollWebView
 import me.devsaki.hentoid.workers.UpdateDownloadWorker
 import me.devsaki.hentoid.workers.data.UpdateDownloadData
+import org.greenrobot.eventbus.EventBus
 import timber.log.Timber
 import java.util.Locale
 
@@ -43,6 +47,32 @@ fun Context.startBrowserActivity(url: String) {
 
 inline fun <reified T : Activity> Context.startLocalActivity() {
     startActivity(Intent(this, T::class.java))
+}
+
+@Suppress("DEPRECATION")
+fun Context.launchActivity(
+    origin : Activity,
+    activityClass: Class<*>,
+    bundle: Bundle? = null,
+    clearTop: Boolean = false,
+    reorderToFront: Boolean = false
+) {
+    val intent = Intent(origin, activityClass)
+    // If FLAG_ACTIVITY_CLEAR_TOP is not set,
+    // it can interfere with Double-Back (press back twice) to exit
+    if (clearTop) intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
+    //if (reorderToFront) intent.flags = intent.flags or Intent.FLAG_ACTIVITY_PREVIOUS_IS_TOP
+    if (bundle != null) intent.putExtras(bundle)
+    this.startActivity(intent)
+    origin.apply {
+        if (Build.VERSION.SDK_INT >= 34) {
+            overrideActivityTransition(Activity.OVERRIDE_TRANSITION_OPEN, 0, 0)
+        } else {
+            overridePendingTransition(0, 0)
+        }
+        EventBus.getDefault().post(CommunicationEvent(CommunicationEvent.Type.CLOSE_DRAWER))
+    }
+    if (reorderToFront) origin.finish()
 }
 
 fun Context.clearWebviewCache(callback: Consumer<Boolean>?) {

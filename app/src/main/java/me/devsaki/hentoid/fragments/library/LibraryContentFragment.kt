@@ -286,7 +286,7 @@ class LibraryContentFragment : Fragment(), ChangeGroupDialogFragment.Parent,
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         register(SelectExtensionFactory())
-        EventBus.getDefault().register(this)
+        if (!EventBus.getDefault().isRegistered(this)) EventBus.getDefault().register(this)
     }
 
     override fun onCreateView(
@@ -867,7 +867,7 @@ class LibraryContentFragment : Fragment(), ChangeGroupDialogFragment.Parent,
 
     override fun onDestroy() {
         Settings.unregisterPrefsChangedListener(prefsListener)
-        EventBus.getDefault().unregister(this)
+        if (EventBus.getDefault().isRegistered(this)) EventBus.getDefault().unregister(this)
         binding = null
         callback?.remove()
         super.onDestroy()
@@ -957,7 +957,7 @@ class LibraryContentFragment : Fragment(), ChangeGroupDialogFragment.Parent,
         if (!advancedSearchCriteria.isEmpty()) {
             builder.uri = buildSearchUri(advancedSearchCriteria, "").toString()
         }
-        if (group != null) builder.groupId = group!!.id
+        group?.let { builder.groupId = it.id }
         builder.excludeMode = excludeClicked
         search.putExtras(builder.bundle)
         advancedSearchReturnLauncher.launch(search)

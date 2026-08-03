@@ -59,6 +59,7 @@ import me.devsaki.hentoid.core.BiConsumer
 import me.devsaki.hentoid.core.Consumer
 import me.devsaki.hentoid.core.URL_WIKI_DOWNLOAD
 import me.devsaki.hentoid.core.initDrawerLayout
+import me.devsaki.hentoid.core.launchActivity
 import me.devsaki.hentoid.core.startBrowserActivity
 import me.devsaki.hentoid.database.CollectionDAO
 import me.devsaki.hentoid.database.ObjectBoxDAO
@@ -1010,20 +1011,8 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
     /**
      * Handler for the "Home" navigation button
      */
-    @Suppress("DEPRECATION")
     private fun onLibraryClick() {
-        val intent = Intent(this, LibraryActivity::class.java)
-        // If FLAG_ACTIVITY_CLEAR_TOP is not set,
-        // it can interfere with Double-Back (press back twice) to exit
-        intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TASK
-        startActivity(intent)
-        if (Build.VERSION.SDK_INT >= 34) {
-            overrideActivityTransition(OVERRIDE_TRANSITION_OPEN, 0, 0)
-        } else {
-            overridePendingTransition(0, 0)
-        }
-        Timber.d("BaseBrowserActivity finishing")
-        finish()
+        this.launchActivity(this, LibraryActivity::class.java, clearTop = true)
     }
 
     /**

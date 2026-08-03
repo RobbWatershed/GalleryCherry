@@ -19,6 +19,7 @@ import me.devsaki.hentoid.core.HentoidApp.Companion.getLockInstant
 import me.devsaki.hentoid.core.HentoidApp.Companion.isUnlocked
 import me.devsaki.hentoid.core.HentoidApp.Companion.setUnlocked
 import me.devsaki.hentoid.core.convertLocaleToEnglish
+import me.devsaki.hentoid.core.launchActivity
 import me.devsaki.hentoid.database.domains.Achievement
 import me.devsaki.hentoid.events.AchievementEvent
 import me.devsaki.hentoid.events.CommunicationEvent

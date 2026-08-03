@@ -58,13 +58,13 @@ abstract class BaseChapteredImageListParser : BaseImageListParser() {
         processedUrl = onlineContent.galleryUrl
         require(URLUtil.isValidUrl(readerUrl)) { "Invalid gallery URL : $readerUrl" }
         Timber.d("Gallery URL: %s", readerUrl)
-        EventBus.getDefault().register(this)
+        if (!EventBus.getDefault().isRegistered(this)) EventBus.getDefault().register(this)
         val result: List<ImageFile>
         try {
             result = parseImageFiles(onlineContent, storedContent)
             setDownloadParams(result, onlineContent.site.url)
         } finally {
-            EventBus.getDefault().unregister(this)
+            if (EventBus.getDefault().isRegistered(this)) EventBus.getDefault().unregister(this)
         }
         return result
     }
@@ -134,7 +134,7 @@ abstract class BaseChapteredImageListParser : BaseImageListParser() {
         require(URLUtil.isValidUrl(url)) { "Invalid gallery URL : $url" }
         if (processedUrl.isEmpty()) processedUrl = url
         Timber.d("Chapter URL: $url")
-        EventBus.getDefault().register(this)
+        if (!EventBus.getDefault().isRegistered(this)) EventBus.getDefault().register(this)
         val result: List<ImageFile>
         try {
             val ch = Chapter(name = content.title, url = url, order = 1)
@@ -143,7 +143,7 @@ abstract class BaseChapteredImageListParser : BaseImageListParser() {
                 content.coverImageUrl = result[0].url
             setDownloadParams(result, content.site.url)
         } finally {
-            EventBus.getDefault().unregister(this)
+            if (EventBus.getDefault().isRegistered(this)) EventBus.getDefault().unregister(this)
         }
         return result
     }

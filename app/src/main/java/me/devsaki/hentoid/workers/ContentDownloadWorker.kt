@@ -182,7 +182,7 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
 
 
     init {
-        EventBus.getDefault().register(this)
+        if (!EventBus.getDefault().isRegistered(this)) EventBus.getDefault().register(this)
         userActionNotificationManager = NotificationManager(context, R.id.user_action_notification)
         setSpeedLimitKbps(prefsSpeedCapToKbps(Settings.dlSpeedCap))
 
@@ -206,7 +206,7 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
     }
 
     override suspend fun onClear(logFile: DocumentFile?) {
-        EventBus.getDefault().unregister(this)
+        if (EventBus.getDefault().isRegistered(this)) EventBus.getDefault().unregister(this)
         dao.cleanup()
     }
 

@@ -110,12 +110,12 @@ class LibRefreshDialogFragment : BaseDialogFragment<LibRefreshDialogFragment.Par
             )]
         }
 
-        EventBus.getDefault().register(this)
+        if (!EventBus.getDefault().isRegistered(this)) EventBus.getDefault().register(this)
         return binding1?.root
     }
 
     override fun onDestroyView() {
-        EventBus.getDefault().unregister(this)
+        if (EventBus.getDefault().isRegistered(this)) EventBus.getDefault().unregister(this)
         binding1 = null
         binding2 = null
         super.onDestroyView()
