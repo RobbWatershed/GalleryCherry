@@ -664,6 +664,7 @@ class LibraryGroupsFragment : Fragment(),
             }
 
             CommunicationEvent.Type.SEARCH -> onSubmitSearch(event.message)
+            CommunicationEvent.Type.SEARCH_NO_HISTORY -> onSubmitSearch(event.message, false)
             CommunicationEvent.Type.SCROLL_TOP -> llm?.scrollToPositionWithOffset(0, 0)
             else -> {}
         }
@@ -921,7 +922,7 @@ class LibraryGroupsFragment : Fragment(),
     }
 
     // TODO doc
-    private fun onSubmitSearch(query: String) {
+    private fun onSubmitSearch(query: String, recordHistory: Boolean = true) {
         if (query.startsWith("http")) { // Quick-open a page
             when (Site.searchByUrl(query)) {
                 null -> snack(R.string.malformed_url)
@@ -929,7 +930,7 @@ class LibraryGroupsFragment : Fragment(),
                 else -> launchBrowserFor(requireContext(), query)
             }
         } else {
-            viewModel.setGroupQuery(query)
+            viewModel.setGroupQuery(query, recordHistory)
         }
     }
 

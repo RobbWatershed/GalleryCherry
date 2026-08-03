@@ -404,7 +404,9 @@ class LibraryFoldersFragment : Fragment(),
                 }
             }
 
-            CommunicationEvent.Type.SEARCH -> onSubmitSearch(event.message)
+            CommunicationEvent.Type.SEARCH, CommunicationEvent.Type.SEARCH_NO_HISTORY ->
+                onSubmitSearch(event.message)
+
             CommunicationEvent.Type.ENABLE -> onEnable()
             CommunicationEvent.Type.DISABLE -> onDisable()
             CommunicationEvent.Type.SCROLL_TOP -> llm?.scrollToPositionWithOffset(0, 0)

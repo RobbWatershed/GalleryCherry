@@ -780,7 +780,7 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
                             val query = getQuery()
                             if (SearchRecord.EntityType.CONTENT == it.entityType)
                                 viewModel.searchContent(query, getSearchCriteria())
-                            else if (query.isNotEmpty()) viewModel.setGroupQuery(query)
+                            else if (query.isNotEmpty()) viewModel.setGroupQuery(query, false)
                         }
                     } else { // Clear history
                         val builder = MaterialAlertDialogBuilder(this@LibraryActivity)

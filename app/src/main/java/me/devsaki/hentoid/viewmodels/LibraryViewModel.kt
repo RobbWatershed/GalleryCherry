@@ -435,8 +435,8 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
         viewModelScope.launch { doSearchGroup() }
     }
 
-    fun setGroupQuery(value: String) {
-        if (value.isNotEmpty()) {
+    fun setGroupQuery(value: String, recordHistory: Boolean) {
+        if (value.isNotEmpty() && recordHistory) {
             val searchUri = buildSearchUri(null, query = value)
             dao.insertSearchRecord(SearchRecord.groupSearch(searchUri), 10)
             dao.cleanup()
