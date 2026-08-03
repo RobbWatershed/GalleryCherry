@@ -24,6 +24,7 @@ import me.devsaki.hentoid.util.file.findFolder
 import me.devsaki.hentoid.util.file.getArchiveEntries
 import me.devsaki.hentoid.util.file.getDocumentFromTreeUri
 import me.devsaki.hentoid.util.file.getOrCreateCacheFolder
+import me.devsaki.hentoid.util.file.isArchiveEncrypted
 import me.devsaki.hentoid.util.file.removeDocument
 import me.devsaki.hentoid.util.file.removeFile
 import me.devsaki.hentoid.util.file.tryCleanDirectory
@@ -295,6 +296,16 @@ class StorageDownloadManager {
             if (downloadMode == DownloadMode.DOWNLOAD_ARCHIVE_FILE) {
                 content.imageList.firstOrNull()?.let { archive ->
                     var uri = archive.fileUri.toUri()
+
+                    // Stop there if the archive is encrypted
+                    if (context.isArchiveEncrypted(uri)) {
+                        // Clear cache
+                        getOrCreateCacheFolder(context, DOWNLOAD_CACHE_FOLDER)?.let {
+                            if (!tryCleanDirectory(it)) Timber.d("Failed to clean download cache")
+                        }
+                        throw ArchiveException("Archive is protected by a password")
+                    }
+
                     val uriParts = UriParts(uri)
                     getDocumentFromTreeUri(context, uri)?.let { doc ->
                         if (doc.renameTo(formatFolderName(content).first + "." + uriParts.extension)) {

@@ -9,6 +9,7 @@ import androidx.core.net.toUri
 import me.devsaki.hentoid.core.READER_CACHE
 import me.devsaki.hentoid.util.assertNonUiThread
 import me.devsaki.hentoid.util.byteArrayOfInts
+import me.devsaki.hentoid.util.isNumeric
 import me.devsaki.hentoid.util.network.UriParts
 import me.devsaki.hentoid.util.pause
 import me.devsaki.hentoid.util.startsWith
@@ -174,6 +175,66 @@ fun Context.getArchiveEntries(uri: Uri): List<ArchiveEntry> {
         ArchiveFormat.ZIP -> ZipReader(this, uri).records
         else -> getArchiveEntries(format, uri)
     }
+}
+
+/**
+ * Returns if a given archive is encrypted
+ *
+ * @param uri    Archive file to read
+ * @return True if the given archive is encrypted; false if not
+ * @throws IOException If something horrible happens during I/O
+ */
+@Throws(IOException::class)
+fun Context.isArchiveEncrypted(uri: Uri): Boolean {
+    assertNonUiThread()
+    var format: ArchiveFormat?
+    getInputStream(this, uri).use { fi ->
+        val header = ByteArray(8)
+        if (fi.read(header) < header.size) return false
+        format = getTypeFromArchiveHeader(header)
+    }
+    return when (format) {
+        null -> false
+        else -> isArchiveEncrypted(format, uri)
+    }
+}
+
+/**
+ * Returns if a given archive is encrypted
+ */
+@Throws(IOException::class)
+private fun Context.isArchiveEncrypted(format: ArchiveFormat, uri: Uri): Boolean {
+    assertNonUiThread()
+    var result = false
+    try {
+        DocumentFileRandomInStream(this, uri).use { stream ->
+            initSevenZip()
+            SevenZip.openInArchive(format, stream).use { inArchive ->
+                val encrypted = inArchive.getArchiveProperty(PropID.ENCRYPTED)
+                if (null == encrypted) {
+                    // Look on individual entries
+                    val itemCount = inArchive.numberOfItems
+                    for (i in 0 until itemCount) {
+                        if (strToBool(inArchive.getStringProperty(i, PropID.ENCRYPTED))) {
+                            result = true
+                            break
+                        }
+                    }
+                } else {
+                    result = strToBool(encrypted.toString())
+                }
+            }
+        }
+    } catch (e: SevenZipException) {
+        Timber.w(e)
+    }
+    return result
+}
+
+private fun strToBool(value: String): Boolean {
+    if ("+" == value) return true
+    if (isNumeric(value)) return (value.toLong() > 0)
+    return false
 }
 
 /**
