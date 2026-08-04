@@ -1,6 +1,6 @@
 {
-  "updateURL": "https://codeberg.org/VioletKnight/Hentoid/releases/download/v1.22.6/hentoid12206-944.apk",
-  "versionCode": "944",
+  "updateURL": "https://codeberg.org/VioletKnight/Hentoid/releases/download/v1.23.1/hentoid12301-950.apk",
+  "versionCode": "950",
   "updateURL.beta": "https://codeberg.org/VioletKnight/Hentoid/releases/download/v1.21.11/hentoid12111-917.apk",
   "versionCode.beta": "999",
   "sourceAlerts":[
@@ -44,9 +44,8 @@
       {"sourceName":"MULTPORN", "status":"ORANGE", "fixedByBuild":"931"},
       {"sourceName":"HIPERDEX", "status":"RED", "fixedByBuild":"944"},
       {"sourceName":"KEMONO", "status":"RED", "fixedByBuild":"944"},
+      {"sourceName":"YIFFER", "status":"RED", "fixedByBuild":"950"},
       {"sourceName":"IMHENTAI", "status":"GREY"},
-      {"sourceName":"PAWCHIVE", "status":"GREY"},
-      {"sourceName":"MANHWA", "status":"BLACK"},
 	  {"sourceName":"MANHWA", "status":"BLACK"},
       {"sourceName":"TMO", "status":"BLACK"},
       {"sourceName":"ANCHIRA", "status":"BLACK"},
