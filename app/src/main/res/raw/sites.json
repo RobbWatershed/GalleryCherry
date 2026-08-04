@@ -57,7 +57,8 @@
     "IMHENTAI": {
       "requestsCapPerSecond": 1,
       "parallelDownloadCap": 2,
-      "hasUniqueBookId": true
+      "hasUniqueBookId": true,
+      "useManagedRequests" : true
     },
     "PURURIN": {
       "bookCardDepth": 1,
