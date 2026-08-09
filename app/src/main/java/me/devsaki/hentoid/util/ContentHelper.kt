@@ -537,7 +537,7 @@ suspend fun getPictureFilesFromContent(context: Context, content: Content): List
     withContext(Dispatchers.IO) {
         val storageUri = content.storageUri
 
-        Timber.d("Opening: %s from: %s", content.title, storageUri)
+        Timber.d("Opening: ${content.title} from: $storageUri")
         val folder = getDocumentFromTreeUriString(context, storageUri)
         if (null == folder) {
             Timber.d("File not found!! Exiting method.")

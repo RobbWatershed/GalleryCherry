@@ -75,7 +75,10 @@ private val IMAGE_DIFF_CALLBACK: DiffUtil.ItemCallback<ImageFile> =
         override fun areContentsTheSame(
             oldItem: ImageFile, newItem: ImageFile
         ): Boolean {
-            return (oldItem == newItem)
+            return (oldItem.imageType == newItem.imageType)
+                    && (oldItem.displayUri == newItem.displayUri)
+                    && (oldItem.favourite == newItem.favourite)
+                    && !newItem.isForceRefresh
         }
     }
 
@@ -405,6 +408,11 @@ class ImagePagerAdapter(context: Context) :
                 imgView?.layoutParams = it
             }
 
+            // Visibility
+            ssiv.isVisible = activeView == ActiveView.SSIV
+            imageView.isVisible = activeView == ActiveView.IMAGEVIEW
+            videoView.isVisible = activeView == ActiveView.VIDEOVIEW
+
             var imageAvailable = true
             var preloadingFailed = false
             if (img != null && img.displayUri.isNotEmpty()) setImage(img, imgType)
@@ -495,7 +503,7 @@ class ImagePagerAdapter(context: Context) :
                     loadVideoView(uri)
                 }
             }
-            Timber.d("Picture $absoluteAdapterPosition : binding viewholder END $imgType $uri")
+            Timber.d("Picture $absoluteAdapterPosition : binding viewholder END")
         }
 
         suspend fun loadImageView(view: View, uri: Uri, imgType: ImageType) {
@@ -665,11 +673,6 @@ class ImagePagerAdapter(context: Context) :
 
         private fun setActiveView(view: ActiveView, isClickThrough: Boolean = false) {
             Timber.d("Picture $absoluteAdapterPosition : using $view ($isClickThrough)")
-
-            // Visibility
-            ssiv.isVisible = view == ActiveView.SSIV
-            imageView.isVisible = view == ActiveView.IMAGEVIEW
-            videoView.isVisible = view == ActiveView.VIDEOVIEW
 
             imgView = when (view) {
                 ActiveView.SSIV -> ssiv

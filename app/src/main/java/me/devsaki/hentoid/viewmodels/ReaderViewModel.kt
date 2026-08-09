@@ -663,8 +663,21 @@ class ReaderViewModel(
                 }
             }
             if (hasDiff) {
+                // Save all URLs if there are pageURLs set, as they could have been set at runtime,
+                // after parsing pageURL
+                val urls = viewerImagesInternal
+                    .filter { it.pageUrl.isNotBlank() && it.url.isNotBlank() }
+                    .associateBy({ it.id }, { it.url })
+
                 viewerImagesInternal.clear()
                 viewerImagesInternal.addAll(imgs)
+
+                // Remap URLs
+                if (urls.isNotEmpty()) {
+                    viewerImagesInternal.forEach {
+                        urls[it.id]?.let { url -> it.url = url }
+                    }
+                }
 
                 if (startIndex > -1) onPageChange(startIndex - 1, 1, true)
                 else {
@@ -1319,7 +1332,7 @@ class ReaderViewModel(
                     viewerImagesInternal[idx].let { img ->
                         val key = formatCacheKey(img)
                         if (StorageCache.peekFile(READER_CACHE, key)) {
-                            updateImgWithExtractedUri(
+                            updateImgWithDisplayUri(
                                 img,
                                 idx,
                                 StorageCache.getFile(READER_CACHE, key)!!,
@@ -1488,7 +1501,7 @@ class ReaderViewModel(
 
                 val existingUri = StorageCache.getFile(READER_CACHE, formatCacheKey(img))
                 if (existingUri != null) {
-                    updateImgWithExtractedUri(img, index, existingUri, false)
+                    updateImgWithDisplayUri(img, index, existingUri, false)
                     hasExistingUris = true
                 } else {
                     extractInstructions.add(
@@ -1603,27 +1616,29 @@ class ReaderViewModel(
         if (img != null && idx != null) {
             indexExtractInProgress.remove(idx)
             // Instanciate a new list to trigger an actual Adapter UI refresh every 4 iterations
-            updateImgWithExtractedUri(
+            updateImgWithDisplayUri(
                 img, idx, uri, 0 == nbProcessed.get() % 4 || nbProcessed.get() == maxElements
             )
         }
         dao.cleanup()
     }
 
-    private fun updateImgWithExtractedUri(
+    private fun updateImgWithDisplayUri(
         img: ImageFile,
         idx: Int,
         uri: Uri,
         refresh: Boolean
     ) {
-        // Instanciate a new ImageFile not to modify the one used by the UI
-        val extractedPic = ImageFile(img)
-        extractedPic.displayUri = uri.toString()
         synchronized(viewerImagesInternal) {
+            if (viewerImagesInternal[idx].displayUri == uri.toString()) return
             viewerImagesInternal.removeAt(idx)
+
+            // Instanciate a new ImageFile not to modify the one used by the UI
+            val extractedPic = ImageFile(img)
+            extractedPic.displayUri = uri.toString()
             viewerImagesInternal.add(idx, extractedPic)
             Timber.v(
-                "Extracting : replacing index $idx - order ${extractedPic.order} -> ${extractedPic.displayUri}"
+                "Replacing index $idx - order ${extractedPic.order} -> ${extractedPic.displayUri}"
             )
             preloadImageTypes(listOf(idx)) {
                 if (refresh) viewerImages.postValue(ArrayList(viewerImagesInternal))
@@ -2090,6 +2105,7 @@ class ReaderViewModel(
 
     private fun preloadImageTypes(indexes: List<Int>, onDone: KRunnable? = null) {
         if (indexes.isEmpty()) return
+
         var canProcessOne = false
         indexes.forEach {
             while (preloadKillSwitches.size >= PRELOAD_RANGE) {

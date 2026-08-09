@@ -157,6 +157,7 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
     private var isFoldersMode = false
 
     private lateinit var indexRefreshDebouncer: Debouncer<Int>
+    private lateinit var imagesRefreshDebouncer: Debouncer<List<ImageFile>>
     private lateinit var processPositionDebouncer: Debouncer<Pair<Int, Int>>
     private lateinit var rescaleDebouncer: Debouncer<Float>
     private lateinit var adapterRescaleDebouncer: Debouncer<Float>
@@ -203,6 +204,9 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
         super.onCreate(savedInstanceState)
         indexRefreshDebouncer = Debouncer(lifecycleScope, 75) { startingIndex ->
             applyStartingIndexInternal(startingIndex)
+        }
+        imagesRefreshDebouncer = Debouncer(lifecycleScope, 150) { imgs ->
+            onImagesChangedInternal(imgs)
         }
         processPositionDebouncer = Debouncer(lifecycleScope, 75) { pair ->
             onPageChanged(pair.first, pair.second)
@@ -326,6 +330,7 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
 
     override fun onDestroyView() {
         indexRefreshDebouncer.clear()
+        imagesRefreshDebouncer.clear()
         processPositionDebouncer.clear()
         rescaleDebouncer.clear()
         adapterRescaleDebouncer.clear()
@@ -760,12 +765,19 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
      */
     private fun onImagesChanged(images: List<ImageFile>) {
         if (BuildConfig.DEBUG) {
-            Timber.v("IMAGES CHANGED (total : ${images.size})")
+            Timber.v("IMAGES CHANGED (total : ${images.size}, ordered using 1-based page number)")
+        }
+        imagesRefreshDebouncer.submit(images)
+    }
+
+    private fun onImagesChangedInternal(images: List<ImageFile>) {
+        if (BuildConfig.DEBUG) {
             images.forEach {
-                if (it.displayUri.isNotEmpty()) Timber.v("[%d] %s", it.order, it.displayUri)
+                if (it.displayUri.isNotEmpty()) Timber.v(
+                    "[${it.order}] ${it.displayUri} (${it.imageType}) ${System.identityHashCode(it)}"
+                )
             }
         }
-
         isComputingImageList = true
         binding?.apply {
             adapter.reset()
