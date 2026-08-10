@@ -68,7 +68,7 @@ suspend fun updateGroupsJson(context: Context, dao: CollectionDAO): Boolean =
  * NB : A Content can only be affected to one single custom group; moving it to multiple groups will only remember the last one
  *
  * @param content Content to move (must have an ID already)
- * @param group   Custom group to move the content to
+ * @param group   Custom group to move the content to; null to remove the content from its current group
  * @param dao     DAO to use
  * @return Updated Content
  */

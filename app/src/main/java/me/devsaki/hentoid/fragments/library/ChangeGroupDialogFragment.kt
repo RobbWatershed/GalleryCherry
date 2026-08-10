@@ -5,6 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.CompoundButton
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import me.devsaki.hentoid.R
@@ -17,6 +18,7 @@ import me.devsaki.hentoid.fragments.BaseDialogFragment
 import me.devsaki.hentoid.util.toast
 import me.devsaki.hentoid.viewmodels.LibraryViewModel
 import me.devsaki.hentoid.viewmodels.ViewModelFactory
+import kotlin.math.roundToInt
 
 /**
  * Dialog to select or create a custom group
@@ -145,6 +147,14 @@ class ChangeGroupDialogFragment : BaseDialogFragment<ChangeGroupDialogFragment.P
         }
     }
 
+    private fun onProgress(pg: Float) {
+        binding?.apply {
+            actionButton.isVisible = false
+            progressBar.isVisible = true
+            progressBar.progress = (pg * 100).roundToInt()
+        }
+    }
+
     private fun onOkClick() {
         val vmFactory = ViewModelFactory(requireActivity().application)
         val viewModel =
@@ -154,7 +164,8 @@ class ChangeGroupDialogFragment : BaseDialogFragment<ChangeGroupDialogFragment.P
                 if (existingList.index > -1) {
                     viewModel.moveContentsToCustomGroup(
                         contentIds,
-                        customGroups[existingList.index]
+                        customGroups[existingList.index].name,
+                        { onProgress(it) }
                     ) { nbProcessed ->
                         parent?.onChangeGroupSuccess(nbProcessed, contentIds.size)
                         dismissAllowingStateLoss()
@@ -163,17 +174,23 @@ class ChangeGroupDialogFragment : BaseDialogFragment<ChangeGroupDialogFragment.P
                     toast(R.string.group_not_selected)
                 }
             } else if (detachRadio.isChecked) {
-                viewModel.moveContentsToCustomGroup(contentIds, null) { nbProcessed ->
+                viewModel.moveContentsToCustomGroup(
+                    contentIds,
+                    null,
+                    { onProgress(it) }) { nbProcessed ->
                     parent?.onChangeGroupSuccess(nbProcessed, contentIds.size)
                     dismissAllowingStateLoss()
                 }
             } else newNameTxt.editText?.let { edit -> // New group
-                val newNameStr = edit.text.toString().trim { it <= ' ' }
+                val newNameStr = edit.text.toString().trim()
                 if (newNameStr.isNotEmpty()) {
                     val groupMatchingName =
-                        customGroups.filter { g -> g.name.equals(newNameStr, ignoreCase = true) }
+                        customGroups.filter { it.name.equals(newNameStr, ignoreCase = true) }
                     if (groupMatchingName.isEmpty()) { // No existing group with same name -> OK
-                        viewModel.moveContentsToNewCustomGroup(contentIds, newNameStr)
+                        viewModel.moveContentsToCustomGroup(
+                            contentIds,
+                            newNameStr,
+                            { onProgress(it) })
                         { nbProcessed ->
                             parent?.onChangeGroupSuccess(nbProcessed, contentIds.size)
                             dismissAllowingStateLoss()
@@ -189,6 +206,6 @@ class ChangeGroupDialogFragment : BaseDialogFragment<ChangeGroupDialogFragment.P
     }
 
     interface Parent {
-        fun onChangeGroupSuccess(nbProcessed : Int, nbTotal: Int)
+        fun onChangeGroupSuccess(nbProcessed: Int, nbTotal: Int)
     }
 }
