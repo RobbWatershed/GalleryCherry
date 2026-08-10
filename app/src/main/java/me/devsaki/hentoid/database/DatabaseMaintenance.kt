@@ -26,7 +26,7 @@ import me.devsaki.hentoid.workers.data.UpdateJsonData
 import timber.log.Timber
 
 // TODO update when adding tasks to "oneShot" functions
-const val DB_UPDATE_VERSION = 5
+const val DB_UPDATE_VERSION = 7
 
 @Suppress("UNUSED_PARAMETER")
 object DatabaseMaintenance {
@@ -209,7 +209,7 @@ object DatabaseMaintenance {
 
                 // Fix NH URLs from v1.21.13
                 Timber.i("Fixing NH URLs : start")
-                val ids = db.selectDownloadedNHBooksIncompleteUrls()
+                var ids = db.selectDownloadedNHBooksIncompleteUrls()
                 Timber.i("Fixing NH URLs : %s books detected", ids.size)
                 max = ids.size
                 pos = 1f
@@ -221,6 +221,21 @@ object DatabaseMaintenance {
                     }
                 }
                 Timber.i("Fixing NH URLs : done")
+
+                // Fix Hiperdex URLs from v1.23.2
+                Timber.i("Fixing Hiperdex URLs : start")
+                ids = db.selectDownloadedHiperdexBooksObsoleteUrls()
+                Timber.i("Fixing Hiperdex URLs : %s books detected", ids.size)
+                max = ids.size
+                pos = 1f
+                for (id in ids) {
+                    db.selectContent(id)?.let { c ->
+                        c.dbUrl = c.dbUrl.replaceFirst("manhwa/", "manga/")
+                        db.insertContentCore(c)
+                        withContext(Dispatchers.Main) { emitter(pos++ / max) }
+                    }
+                }
+                Timber.i("Fixing Hiperdex URLs : done")
             } finally {
                 db.cleanup()
             }
