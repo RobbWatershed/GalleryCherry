@@ -35,13 +35,19 @@ data class Manhwa18BookMetadata(
         @Json(name = "updated_at")
         val updatedAt: String?,
         val artists: List<Manhwa18Attribute>,
-        val characters: List<Manhwa18Attribute>
+        val characters: List<Manhwa18Character>
     )
 
     @JsonClass(generateAdapter = true)
     data class Manhwa18Attribute(
         val name: String,
         val slug: String
+    )
+
+    @JsonClass(generateAdapter = true)
+    data class Manhwa18Character(
+        val id : Int,
+        val name: String
     )
 
     @JsonClass(generateAdapter = true)
@@ -74,7 +80,7 @@ data class Manhwa18BookMetadata(
 
         props.manga.characters.forEach { a ->
             val attribute =
-                Attribute(AttributeType.CHARACTER, a.name, "/character/${a.slug}", Site.MANHWA18)
+                Attribute(AttributeType.CHARACTER, a.name, "/character/${a.id}", Site.MANHWA18)
             attributes.add(attribute)
         }
 
