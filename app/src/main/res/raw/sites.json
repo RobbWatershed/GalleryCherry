@@ -37,7 +37,8 @@
       "hasUniqueBookId": true
     },
     "HENTAIFOX": {
-      "hasUniqueBookId": true
+      "hasUniqueBookId": true,
+      "useManagedRequests" : true
     },
     "MANHWA": {
       "hasCoverBasedPageUpdates": true,
