@@ -47,7 +47,7 @@ data class HiperContent(
         content.title = hcj.title
         if (chapterId.isNotEmpty()) content.title += " $chapterStr $chapterId"
         content.coverImageUrl = hcj.coverUrl
-        var url = "https://$DOMAIN_FILTER/${hcj.type}/${hcj.slug}"
+        var url = "https://$DOMAIN_FILTER/manga/${hcj.slug}"
         if (chapterId.isNotEmpty()) url += "/$chapterId"
         content.setRawUrl(url)
         content.uniqueSiteId = hcj.id.toString()

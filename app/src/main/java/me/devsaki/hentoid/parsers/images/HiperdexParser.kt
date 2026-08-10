@@ -14,9 +14,6 @@ import org.jsoup.nodes.Document
 
 class HiperdexParser : BaseChapteredImageListParser() {
 
-    // Key : chapter number; Value : number of pages
-//    var chaptersPages: MutableMap<Int, Int> = HashMap()
-
     companion object {
         fun getUrlParts(url: String): Pair<String, String> {
             val urlParts = url.split('/')
@@ -151,12 +148,7 @@ class HiperdexParser : BaseChapteredImageListParser() {
 
     override fun getChapters(content: Content, galleryPage: Document): List<Chapter> {
         val chps = parseChapters(content.galleryUrl)
-        /*
-        chaptersPages.clear()
-        chps.forEach {
-            chaptersPages[it.order] = it.nbPages
-        }
-         */
+        chps.forEach { it.setContentId(content.id) }
         return chps
     }
 
@@ -169,11 +161,7 @@ class HiperdexParser : BaseChapteredImageListParser() {
         fireProgressEvents: Boolean
     ): List<ImageFile> {
         // pause(1000) // Rate-limited but only on site pages
-        /*
-        if (chaptersPages.isEmpty()) // Cache number of pages for each chapter
-            getChapters(content, Document("bogus", ""))
-         */
-        val imgUrls = parseChapterPages(chp.url/*, headers, chaptersPages[chp.order] ?: 0*/)
+        val imgUrls = parseChapterPages(chp.url)
         if (imgUrls.isEmpty()) throw EmptyResultException("No images detected for ${chp.url}")
         return urlsToImageFiles(
             imgUrls,

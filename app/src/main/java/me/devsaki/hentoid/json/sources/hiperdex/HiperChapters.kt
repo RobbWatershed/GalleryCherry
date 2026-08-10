@@ -2,6 +2,7 @@ package me.devsaki.hentoid.json.sources.hiperdex
 
 import com.squareup.moshi.JsonClass
 import me.devsaki.hentoid.database.domains.Chapter
+import me.devsaki.hentoid.util.chapterStr
 import kotlin.math.roundToInt
 
 @JsonClass(generateAdapter = true)
@@ -28,8 +29,9 @@ data class HiperChapters(
         val dirHash: String?
     )
 
-    val chaptersPages : Map<Int, Int>
-        get() = result.data.json.groupingBy { (it.number*10).roundToInt() }.aggregate { key, accumulator, element, first -> element.pagesCount }
+    val chaptersPages: Map<Int, Int>
+        get() = result.data.json.groupingBy { (it.number * 10).roundToInt() }
+            .aggregate { key, accumulator, element, first -> element.pagesCount }
 
     fun toChapters(galleryUrl: String): List<Chapter> {
         val chapList = result.data.json
@@ -37,9 +39,9 @@ data class HiperChapters(
 
         return chapList.sortedBy { it.number }.map {
             val ch = Chapter(
-                (it.number*10).roundToInt(),
+                (it.number * 10).roundToInt(),
                 "$galleryUrl/${it.number}",
-                it.title ?: "",
+                it.title ?: "$chapterStr ${it.number}",
                 it.id.toString()
             )
             ch.nbPages = it.pagesCount
