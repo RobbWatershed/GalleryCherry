@@ -256,7 +256,6 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
     private var alert: UpdateInfo.SourceAlert? = null
 
     // Handler for fetch interceptor
-    protected var isManagedFetch = false
     protected var fetchHandler: BiConsumer<String, String>? = null
     protected var fetchResponseHandler: BiConsumer<String, String>? = null
     protected var xhrHandler: BiConsumer<String, String>? = null
@@ -711,17 +710,6 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         fetchResponseHandler?.let {
             webView.addJavascriptInterface(FetchResponseHandler(it), "fetchResponseHandler")
         }
-        // TODO remove is still unused on v1.23.x
-        if (isManagedFetch) {
-            /*
-            val responseHandler =
-                { responseBody: String -> fetchResponseCallback?.invoke(responseBody) ?: Unit }
-            webView.addJavascriptInterface(
-                FetchResponseHandler(responseHandler),
-                "fetchResponseHandler"
-            )
-             */
-        }
         xhrHandler?.let { webView.addJavascriptInterface(XhrHandler(it), "xhrHandler") }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             webSettings.isAlgorithmicDarkeningAllowed =
@@ -893,7 +881,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         }
 
         // Activate fetch handler
-        if (fetchHandler != null || fetchResponseHandler != null || isManagedFetch) {
+        if (fetchHandler != null || fetchResponseHandler != null) {
             if (null == fetchInterceptorScript) fetchInterceptorScript =
                 webClient.getAssetJsScript(this, "fetch_override.js", null)
             webView.loadUrl(fetchInterceptorScript!!)
