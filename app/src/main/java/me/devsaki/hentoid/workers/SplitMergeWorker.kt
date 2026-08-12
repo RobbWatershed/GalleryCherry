@@ -91,7 +91,7 @@ abstract class BaseSplitMergeWorker(
 
     private var nbMax = 0
     private var nbProgress = 0
-    private var nbError = 0
+    private var nbErrors = 0
     private var errorMsg = ""
     private var bookTitle = ""
     private lateinit var progressNotification: SplitMergeProgressNotification
@@ -128,7 +128,7 @@ abstract class BaseSplitMergeWorker(
 
     override suspend fun getToWork(input: Data) {
         nbProgress = 0
-        nbError = 0
+        nbErrors = 0
 
         when (operationType) {
             SplitMergeType.SPLIT -> split(contentIds.first())
@@ -173,6 +173,7 @@ abstract class BaseSplitMergeWorker(
             val splitContentImages =
                 splitContent.imageList.filter { it.status == StatusContent.DOWNLOADED || it.status == StatusContent.EXTERNAL }
                     .distinctBy { it.fileUri }
+            var nbErrors = 0
             withContext(Dispatchers.IO) {
                 try {
                     if (content.isArchive || content.isPdf) {
@@ -233,7 +234,10 @@ abstract class BaseSplitMergeWorker(
                                     // Map new, copied files Uris
                                     splitContentImages.firstOrNull { it.fileUri == oldUri.toString() }?.fileUri =
                                         newUri.toString()
-                                } else Timber.w("Could not move file $oldUri")
+                                } else {
+                                    Timber.w("Could not move file $oldUri")
+                                    nbErrors++
+                                }
                                 bookTitle = chap.name
                                 launchProgressNotification()
                             }
@@ -270,7 +274,7 @@ abstract class BaseSplitMergeWorker(
         }
 
         // If we're here, no exception has been triggered -> cleanup if needed
-        if (deleteAfterOperation && !isStopped) {
+        if (deleteAfterOperation && (0 == nbErrors) && !isStopped) {
             deleteChapters(applicationContext, dao, chapterSplitIds.toList())
         }
     }
@@ -300,13 +304,13 @@ abstract class BaseSplitMergeWorker(
                 }
             ) { isError, errorMsg ->
                 if (isError) {
-                    nbError = contentList.size
+                    nbErrors = contentList.size
                     this.errorMsg = errorMsg
                 }
                 progressDone(contentList.size)
             }
             // If we're here, no exception has been triggered -> cleanup if asked
-            if (deleteAfterOperation && !isStopped) {
+            if (deleteAfterOperation && (0 == nbErrors) && !isStopped) {
                 contentList.forEach { c ->
                     try {
                         removeContent(applicationContext, dao, c)
@@ -446,7 +450,7 @@ abstract class BaseSplitMergeWorker(
 
         // If any operation hasn't been mapped to a permutation group, we can't continue
         if (operations.values.any { it.sequenceNumber < 0 }) {
-            nbError = nbMax
+            nbErrors = nbMax
             progressDone(nbMax)
             return
         }
@@ -638,12 +642,12 @@ abstract class BaseSplitMergeWorker(
         if (!this::progressNotification.isInitialized) {
             progressNotification = SplitMergeProgressNotification(
                 bookTitle,
-                nbProgress + nbError,
+                nbProgress + nbErrors,
                 nbMax,
                 operationType
             )
         } else {
-            progressNotification.progress = nbProgress + nbError
+            progressNotification.progress = nbProgress + nbErrors
         }
         if (isStopped) return
         notificationManager.notify(progressNotification)
@@ -657,7 +661,7 @@ abstract class BaseSplitMergeWorker(
                 },
                 0,
                 nbProgress,
-                nbError,
+                nbErrors,
                 nbMax
             )
         )
@@ -668,7 +672,7 @@ abstract class BaseSplitMergeWorker(
         notificationManager.notifyLast(
             SplitMergeCompleteNotification(
                 nbBooksDone,
-                nbError,
+                nbErrors,
                 operationType,
                 errorMsg
             )
@@ -683,7 +687,7 @@ abstract class BaseSplitMergeWorker(
                 },
                 0,
                 nbProgress,
-                nbError,
+                nbErrors,
                 nbBooksDone
             )
         )
