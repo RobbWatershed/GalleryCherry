@@ -81,4 +81,18 @@
         app:icon="@drawable/ic_folder_edit"
         app:layout_constraintTop_toBottomOf="@id/detach_radio" />
 
+    <com.google.android.material.progressindicator.LinearProgressIndicator
+        android:id="@+id/progress_bar"
+        style="@style/Widget.Material3.LinearProgressIndicator"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:visibility="gone"
+        android:layout_marginTop="8dp"
+        android:max="100"
+        app:layout_constraintTop_toBottomOf="@id/detach_radio"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        tools:visibility="visible" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

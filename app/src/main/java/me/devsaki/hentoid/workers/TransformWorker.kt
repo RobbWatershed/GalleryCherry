@@ -178,7 +178,9 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
             Beholder.ignoreFolder(targetFolder)
 
             // Transfer 'untransformable pics' (i.e. separate cover, already transformed pics)
-            sourceImages.filter { !it.isTransformable(params) }.forEach { img ->
+            sourceImages
+                .filter { !it.isTransformable(params) }
+                .forEach { img ->
                 val name = UriParts(img.fileUri).fileNameFull
                 copyFile(
                     ctx,
@@ -187,6 +189,9 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
                     name,
                     getMimeTypeFromFileName(name)
                 )?.let { newUri ->
+                    // Sever link to content as it still has the properties of the source book
+                    // (creates issues when simplifying ImageFile.fileUri)
+                    img.content.target = null
                     img.fileUri = newUri.toString()
                     transformedImages.add(img)
                 }

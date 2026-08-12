@@ -120,6 +120,7 @@ import me.devsaki.hentoid.util.network.fixUrl
 import me.devsaki.hentoid.util.network.getCookies
 import me.devsaki.hentoid.util.network.getOnlineResourceFast
 import me.devsaki.hentoid.util.network.simplifyUrl
+import me.devsaki.hentoid.util.network.webkitRequestHeadersToOkHttpHeaders
 import me.devsaki.hentoid.util.openReader
 import me.devsaki.hentoid.util.parseDownloadParams
 import me.devsaki.hentoid.util.setMargins
@@ -255,7 +256,6 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
     private var alert: UpdateInfo.SourceAlert? = null
 
     // Handler for fetch interceptor
-    protected var isManagedFetch = false
     protected var fetchHandler: BiConsumer<String, String>? = null
     protected var fetchResponseHandler: BiConsumer<String, String>? = null
     protected var xhrHandler: BiConsumer<String, String>? = null
@@ -710,17 +710,6 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         fetchResponseHandler?.let {
             webView.addJavascriptInterface(FetchResponseHandler(it), "fetchResponseHandler")
         }
-        // TODO remove is still unused on v1.23.x
-        if (isManagedFetch) {
-            /*
-            val responseHandler =
-                { responseBody: String -> fetchResponseCallback?.invoke(responseBody) ?: Unit }
-            webView.addJavascriptInterface(
-                FetchResponseHandler(responseHandler),
-                "fetchResponseHandler"
-            )
-             */
-        }
         xhrHandler?.let { webView.addJavascriptInterface(XhrHandler(it), "xhrHandler") }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             webSettings.isAlgorithmicDarkeningAllowed =
@@ -892,7 +881,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         }
 
         // Activate fetch handler
-        if (fetchHandler != null || fetchResponseHandler != null || isManagedFetch) {
+        if (fetchHandler != null || fetchResponseHandler != null) {
             if (null == fetchInterceptorScript) fetchInterceptorScript =
                 webClient.getAssetJsScript(this, "fetch_override.js", null)
             webView.loadUrl(fetchInterceptorScript!!)
@@ -1519,23 +1508,29 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
                     // Index the content's cover picture
                     var pHash = Long.MIN_VALUE
                     try {
-                        val requestHeadersList: List<Pair<String, String>> = ArrayList()
                         val downloadParams =
                             parseDownloadParams(onlineContent.downloadParams).toMutableMap()
-                        downloadParams[HEADER_COOKIE_KEY] =
-                            getCookies(onlineContent.coverImageUrl)
-                        downloadParams[HEADER_REFERER_KEY] = onlineContent.site.url
+                        val coverUrl = fixUrl(onlineContent.coverImageUrl, onlineContent.site.url)
+                        var cookies = getCookies(coverUrl)
+                        if (cookies.isEmpty()) cookies = getCookies(onlineContent.galleryUrl)
+                        downloadParams[HEADER_COOKIE_KEY] = cookies
+                        downloadParams[HEADER_REFERER_KEY] = onlineContent.galleryUrl
                         getOnlineResourceFast(
-                            fixUrl(onlineContent.coverImageUrl, onlineContent.site.url),
-                            requestHeadersList,
+                            coverUrl,
+                            webkitRequestHeadersToOkHttpHeaders(downloadParams, coverUrl),
                             getStartSite().useMobileAgent,
                             getStartSite().useHentoidAgent,
                             getStartSite().useWebviewAgent
                         ).use { onlineCover ->
                             val coverBody = onlineCover.body
                             val bodyStream = coverBody.byteStream()
-                            val b = getCoverBitmapFromStream(baseContext, bodyStream)
-                            pHash = calcPhash(getHashEngine(), b)
+                            getCoverBitmapFromStream(baseContext, bodyStream)?.let { b ->
+                                try {
+                                    pHash = calcPhash(getHashEngine(), b)
+                                } finally {
+                                    b.recycle()
+                                }
+                            }
                         }
                     } catch (e: IOException) {
                         Timber.w(e)

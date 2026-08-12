@@ -2015,7 +2015,7 @@ open class CustomSubsamplingScaleImageView(context: Context, attr: AttributeSet?
 
         if (this.bitmap != null && this.bitmapIsCached) onImageEventListener?.onPreviewReleased()
 
-        Timber.v("imageLoaded $imageScale")
+        Timber.v("imageLoaded $imageScale @ $uri")
         synchronized(singleImage) {
             this.bitmapIsCached = bitmapIsCached
             singleImage.scale = imageScale
@@ -2033,7 +2033,7 @@ open class CustomSubsamplingScaleImageView(context: Context, attr: AttributeSet?
         val ready = checkReady()
         val imageLoaded = checkImageLoaded()
         if (ready || imageLoaded) {
-            Timber.v("imageLoaded 2 $imageScale")
+            Timber.v("imageLoaded 2 $imageScale @ $uri")
             invalidate()
             requestLayout()
         }

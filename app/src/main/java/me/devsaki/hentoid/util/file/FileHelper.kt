@@ -1357,7 +1357,7 @@ class MemoryUsageFigures(context: Context, fUri: Uri) {
         }
     }
 
-    val hasStats : Boolean
+    val hasStats: Boolean
         get() = totalSpaceBytes > 0
 
     /**
@@ -1420,7 +1420,11 @@ fun persistNewUriPermission(context: Context, newUri: Uri, keepUris: List<Uri>?)
         // Release previous access permissions, if different than the new one
         val keepList = keepUris?.toMutableList() ?: mutableListOf()
         keepList.add(newUri)
-        revokePreviousPermissions(contentResolver, keepList)
+        try {
+            revokePreviousPermissions(contentResolver, keepList)
+        } catch (e: Exception) {
+            Timber.w(e)
+        }
         // Persist new access permission
         contentResolver.takePersistableUriPermission(
             newUri,

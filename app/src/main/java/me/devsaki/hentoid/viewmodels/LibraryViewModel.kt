@@ -1218,33 +1218,36 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
         return theGroup
     }
 
-    fun moveContentsToNewCustomGroup(
-        contentIds: LongArray,
-        newGroupName: String,
-        onProcessed: Consumer<Int>
-    ) {
-        val newGroup = Group(Grouping.CUSTOM, newGroupName.trim(), -1)
-        newGroup.id = dao.insertGroup(newGroup)
-        moveContentsToCustomGroup(contentIds, newGroup, onProcessed)
-        dao.cleanup()
-    }
-
     fun moveContentsToCustomGroup(
         contentIds: LongArray,
-        group: Group?,
+        groupName: String?,
+        onProgress: Consumer<Float>,
         onProcessed: Consumer<Int>
     ) {
+        var targetGroup: Group? = null
+        if (groupName != null) {
+            val name = groupName.trim()
+            targetGroup = dao.selectGroupByName(Grouping.CUSTOM.id, name)
+            if (null == targetGroup) {
+                targetGroup = Group(Grouping.CUSTOM, name, -1)
+                targetGroup.id = dao.insertGroup(targetGroup)
+                dao.cleanup()
+            }
+        }
         var nbProcessed = 0
         viewModelScope.launch {
             try {
                 withContext(Dispatchers.IO) {
-                    contentIds.forEach {
-                        dao.selectContent(it)?.let { c ->
-                            moveContentToCustomGroup(c, group, dao)
+                    contentIds.forEachIndexed { index, id ->
+                        dao.selectContent(id)?.let { c ->
+                            moveContentToCustomGroup(c, targetGroup, dao)
                             updateJson(getApplication(), c)
                             nbProcessed++
                         } ?: run {
-                            Timber.w("Book couldn't be added to group")
+                            Timber.w("Book couldn't be added to group $groupName")
+                        }
+                        withContext(Dispatchers.Main) {
+                            onProgress.invoke(index * 1f / contentIds.size)
                         }
                     }
                     refreshAvailableGroupings()
@@ -1255,7 +1258,7 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
                     onProcessed.invoke(nbProcessed)
                 }
             } catch (t: Throwable) {
-                Timber.e(t, "Book couldn't be added to group")
+                Timber.e(t, "Book couldn't be added to group $groupName")
             }
         }
     }

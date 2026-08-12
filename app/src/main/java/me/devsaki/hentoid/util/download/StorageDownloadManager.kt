@@ -325,9 +325,13 @@ class StorageDownloadManager {
                         .filter { !it.isFolder && isSupportedMedia(it.path) }
                         .sortedWith(InnerNameNumberArchiveComparator())
                         .mapIndexed { i, e ->
+                            // Make sure fileUri follows the proper convention
+                            var filePath = e.path
+                            if (!filePath.startsWith('/'))
+                                filePath = "/$filePath"
                             ImageFile(
                                 dbOrder = i,
-                                dbFileUri = e.path,
+                                dbFileUri = filePath,
                                 dbUrl = uri.toString() + File.separator + e.path,
                                 size = e.size,
                                 status = StatusContent.DOWNLOADED

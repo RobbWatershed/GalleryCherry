@@ -78,11 +78,13 @@ class ScrollPositionListener(
         (recyclerView.layoutManager as LinearLayoutManager?)?.let { llm ->
             val firstVisibleItemPosition = llm.findFirstVisibleItemPosition()
             val lastCompletelyVisibleItemPosition = llm.findLastCompletelyVisibleItemPosition()
+            // NB : Vertical and horizontal scrolling aren't necessarily exclusive, but Hentoid doesn't have any control with both
+            val delta = if (llm.canScrollVertically()) dy else dx
             onPositionChangeListener.invoke(
                 firstVisibleItemPosition.coerceAtLeast(lastCompletelyVisibleItemPosition)
             )
-            if (dy >= 0) onPositionReachedListener?.invoke(llm.findLastVisibleItemPosition())
-            if (dy <= 0) onPositionReachedListener?.invoke(llm.findFirstVisibleItemPosition())
+            if (delta >= 0) onPositionReachedListener?.invoke(llm.findLastVisibleItemPosition())
+            else onPositionReachedListener?.invoke(llm.findFirstVisibleItemPosition())
         }
     }
 
