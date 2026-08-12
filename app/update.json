@@ -1,6 +1,6 @@
 {
-  "updateURL": "https://codeberg.org/VioletKnight/Hentoid/releases/download/v1.23.1/hentoid12301-950.apk",
-  "versionCode": "950",
+  "updateURL": "https://codeberg.org/VioletKnight/Hentoid/releases/download/v1.23.2/hentoid12302-953.apk",
+  "versionCode": "953",
   "updateURL.beta": "https://codeberg.org/VioletKnight/Hentoid/releases/download/v1.21.11/hentoid12111-917.apk",
   "versionCode.beta": "999",
   "sourceAlerts":[
@@ -45,7 +45,7 @@
       {"sourceName":"HIPERDEX", "status":"RED", "fixedByBuild":"944"},
       {"sourceName":"KEMONO", "status":"RED", "fixedByBuild":"944"},
       {"sourceName":"YIFFER", "status":"RED", "fixedByBuild":"950"},
-      {"sourceName":"MANHWA18", "status":"ORANGE"},
+      {"sourceName":"MANHWA18", "status":"ORANGE", "fixedByBuild":"953"},
       {"sourceName":"IMHENTAI", "status":"GREY"},
 	  {"sourceName":"MANHWA", "status":"BLACK"},
       {"sourceName":"TMO", "status":"BLACK"},
