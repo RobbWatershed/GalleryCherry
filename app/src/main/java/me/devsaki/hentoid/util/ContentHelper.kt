@@ -127,6 +127,7 @@ import java.net.URL
 import java.time.Instant
 import java.util.Locale
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 
 // == Used for queue management
@@ -739,7 +740,7 @@ suspend fun createFolderStreamedCover(context: Context, content: Content): List<
                     val resizedBitmap =
                         getScaledDownBitmap(
                             b,
-                            dpToPx(context, libraryGridCardWidthDP),
+                            context.resources.getDimension(R.dimen.thumb_max_dim).roundToInt(),
                             false
                         )
                     try {
@@ -777,7 +778,7 @@ fun createArchivePdfCover(
     getPictureThumbCached(
         context,
         content.storageUri.toUri(),
-        libraryGridCardWidthDP,
+        context.resources.getDimension(R.dimen.thumb_max_dim).roundToInt(),
         null,
         { fileName -> findFile(targetFolder, fileName)?.toUri() },
         { fileName ->
@@ -808,7 +809,7 @@ fun getArchivePdfThumbFileName(archivePdfUri: Uri): String {
 fun getPictureThumbCached(
     context: Context,
     archivePdfUri: Uri,
-    maxDimDp: Int,
+    maxDimPx: Int,
     resource: String? = null,
     cacheFinder: (String) -> Uri?,
     cacheCreator: (String) -> Uri?
@@ -882,7 +883,7 @@ fun getPictureThumbCached(
                             ?: throw IOException("Can't create file $targetFileName")
                         getOutputStream(context, target)?.use { os ->
                             val resizedBitmap =
-                                getScaledDownBitmap(b, dpToPx(context, maxDimDp), false)
+                                getScaledDownBitmap(b, maxDimPx, false)
                             resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 85, os)
                             resizedBitmap.recycle()
                         }
@@ -976,7 +977,7 @@ suspend fun setContentCover(
         getPictureThumbCached(
             context,
             archivePdfUri,
-            libraryGridCardWidthDP,
+            context.resources.getDimension(R.dimen.thumb_max_dim).roundToInt(),
             newCover.url,
             { _ -> null }, // Force creation of new file
             { fileName ->

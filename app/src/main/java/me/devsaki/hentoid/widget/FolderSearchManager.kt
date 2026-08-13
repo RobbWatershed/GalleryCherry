@@ -15,7 +15,6 @@ import me.devsaki.hentoid.R
 import me.devsaki.hentoid.core.THUMBS_CACHE
 import me.devsaki.hentoid.util.InnerNameNumberDisplayFileComparator
 import me.devsaki.hentoid.util.Settings
-import me.devsaki.hentoid.util.Settings.libraryGridCardWidthDP
 import me.devsaki.hentoid.util.boolean
 import me.devsaki.hentoid.util.file.DisplayFile
 import me.devsaki.hentoid.util.file.FileExplorer
@@ -27,6 +26,7 @@ import me.devsaki.hentoid.util.int
 import me.devsaki.hentoid.util.isSupportedArchivePdf
 import me.devsaki.hentoid.util.string
 import timber.log.Timber
+import kotlin.math.roundToInt
 
 class FolderSearchManager() {
 
@@ -155,7 +155,10 @@ class FolderSearchManager() {
                         val archiveCover =
                             if (isSupportedArchivePdf(fileName)) {
                                 getPictureThumbCached(
-                                    context, it.uri, libraryGridCardWidthDP, null,
+                                    context, it.uri,
+                                    context.resources.getDimension(R.dimen.thumb_max_dim)
+                                        .roundToInt(),
+                                    null,
                                     StorageCache.createFinder(THUMBS_CACHE),
                                     StorageCache.createCreator(THUMBS_CACHE)
                                 ) ?: Uri.EMPTY
