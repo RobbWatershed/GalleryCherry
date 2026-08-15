@@ -49,6 +49,7 @@ import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.databinding.ActivityTransformBinding
 import me.devsaki.hentoid.enums.PictureEncoder
 import me.devsaki.hentoid.events.CommunicationEvent
+import me.devsaki.hentoid.fragments.RangeDialogFragment
 import me.devsaki.hentoid.fragments.transform.EncodeAnimFragment
 import me.devsaki.hentoid.fragments.transform.EncodeImgFragment
 import me.devsaki.hentoid.fragments.transform.ResizeFragment
@@ -84,7 +85,7 @@ private const val CACHE_TRANSFORM_MANHWA = "transform-manhwa"
 private const val CACHE_PREVIEW = "preview"
 private const val DIMS_LIMIT = 20000
 
-class TransformActivity : BaseActivity() {
+class TransformActivity : BaseActivity(), RangeDialogFragment.Parent {
 
     // == UI
     private var binding: ActivityTransformBinding? = null
@@ -114,6 +115,9 @@ class TransformActivity : BaseActivity() {
     private val fastAdapter = FastAdapter.with(itemAdapter)
     private var targetDimsWarning = false
     private var warnings = HashMap<Int, Set<Int>>()
+
+    private var isRangeChapters = false
+    private var range = ""
 
     // Previews
     private var rawData: BitmapInfo? = null
@@ -169,6 +173,24 @@ class TransformActivity : BaseActivity() {
                     }
                 }
             }.attach()
+
+            rangeTxt.isVisible = (1 == contentIds.size) // Nonsensical for multiple books
+            rangeTxt.text = String.format(
+                "%s : %s",
+                resources.getString(R.string.transform_range),
+                resources.getString(R.string.transform_all_pages)
+            )
+
+            rangeButton.setOnClickListener {
+                RangeDialogFragment.invoke(
+                    this@TransformActivity,
+                    resources.getString(R.string.range_process_prompt),
+                    "",
+                    content?.chaptersList?.isNotEmpty() ?: false
+                )
+            }
+
+            // TODO visibility only if there actually are transformed pics
 
             skipTransformedSwitch.setOnCheckedChangeListener { _, isChecked ->
                 Settings.skipTransformedPics = isChecked
@@ -381,6 +403,19 @@ class TransformActivity : BaseActivity() {
     fun setWarnings(tab: Int, warnings: Set<Int>) {
         this.warnings[tab] = warnings
         refreshUI()
+    }
+
+    override fun onRangeSelected(isChapters: Boolean, value: String) {
+        val unit = if (isChapters) R.plurals.chapter else R.plurals.page
+        binding?.apply {
+            isRangeChapters = isChapters
+            range = value
+            rangeTxt.text = String.format(
+                "%s : %s",
+                resources.getString(R.string.transform_range),
+                String.format("%s %s", resources.getQuantityString(unit, 2), value)
+            )
+        }
     }
 
     private fun refreshUI() {
@@ -615,7 +650,9 @@ class TransformActivity : BaseActivity() {
             Settings.transcodeQuality,
             PictureEncoder.fromValue(Settings.transcodeEncoderAnim)!!,
             Settings.transcodeAnimQuality,
-            skipTransformedPics = Settings.skipTransformedPics
+            skipTransformedPics = Settings.skipTransformedPics,
+            isRangeChapters = isRangeChapters,
+            range = range
         )
     }
 

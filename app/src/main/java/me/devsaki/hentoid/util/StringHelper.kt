@@ -318,7 +318,8 @@ fun isTransposition(referenceCleanup: String, comparisonCleanup: String): Boolea
  * Syntax : "1-5", "1;3;8", "1-2;3-4" (also works with a comma as a separator)
  */
 fun rangeToNumbers(range: String): List<Int> {
-    val parts = range
+    val value = if (range.startsWith('c')) range.substring(1) else range
+    val parts = value
         .replace(",", ";")
         .split(';')
         .map { it.trim() }

@@ -1081,7 +1081,6 @@
   <string name="web_gallery">Kembali ke halaman galeri terakhir</string>
   <string name="web_home">Kembali ke perpustakaan</string>
   <string name="web_open_ext_browser">Peramban eksternal</string>
-  <string name="web_range_download_prompt">Rentang halaman galeri untuk di unduh  (e.g. 1-5 / 1;3;8 / 1-2;5-7)</string>
   <string name="web_refresh_stop">Segarkan/hentikan</string>
   <string name="web_storage_permission_denied">Izin penyimpanan ditolak, tidak dapat menggunakan pengunduh</string>
   <string name="web_target_page_outside_restricted_domains">Host %s di luar domain yang dibatasi</string>

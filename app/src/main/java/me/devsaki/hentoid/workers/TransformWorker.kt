@@ -181,21 +181,21 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
             sourceImages
                 .filter { !it.isTransformable(params) }
                 .forEach { img ->
-                val name = UriParts(img.fileUri).fileNameFull
-                copyFile(
-                    ctx,
-                    img.fileUri.toUri(),
-                    targetFolder,
-                    name,
-                    getMimeTypeFromFileName(name)
-                )?.let { newUri ->
-                    // Sever link to content as it still has the properties of the source book
-                    // (creates issues when simplifying ImageFile.fileUri)
-                    img.content.target = null
-                    img.fileUri = newUri.toString()
-                    transformedImages.add(img)
+                    val name = UriParts(img.fileUri).fileNameFull
+                    copyFile(
+                        ctx,
+                        img.fileUri.toUri(),
+                        targetFolder,
+                        name,
+                        getMimeTypeFromFileName(name)
+                    )?.let { newUri ->
+                        // Sever link to content as it still has the properties of the source book
+                        // (creates issues when simplifying ImageFile.fileUri)
+                        img.content.target = null
+                        img.fileUri = newUri.toString()
+                        transformedImages.add(img)
+                    }
                 }
-            }
         }
 
         var isKO = false
@@ -214,7 +214,8 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
         }
 
         val chapteredImgs =
-            sourceImages.filterNot { null == it.linkedChapter }.filter { it.isTransformable(params) }
+            sourceImages.filterNot { null == it.linkedChapter }
+                .filter { it.isTransformable(params) }
                 .groupBy { it.linkedChapter!!.id }
 
         chapteredImgs.filter { it.value.isNotEmpty() }.forEach { chImgs ->
@@ -501,7 +502,10 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
     }
 
     private fun ImageFile.isTransformable(params: TransformParams): Boolean {
-        return this.isReadable && !(params.skipTransformedPics && this.isTransformed)
+        val first = this.isReadable && !(params.skipTransformedPics && this.isTransformed)
+        val order = if (params.isRangeChapters) this.linkedChapter?.order ?: -1 else this.order
+        val second = params.rangeList.isEmpty() || params.rangeList.contains(order)
+        return first && second
     }
 
     private fun nextOK() {

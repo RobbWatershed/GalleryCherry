@@ -36,6 +36,7 @@ import me.devsaki.hentoid.util.file.saveBinary
 import me.devsaki.hentoid.util.formatIntAsStr
 import me.devsaki.hentoid.util.getScreenDimensionsPx
 import me.devsaki.hentoid.util.network.UriParts
+import me.devsaki.hentoid.util.rangeToNumbers
 import me.devsaki.hentoid.util.video.GifEncoder
 import me.devsaki.hentoid.util.video.MediaFrameStreamer
 import me.devsaki.hentoid.util.video.VideoEncoder
@@ -67,8 +68,12 @@ data class TransformParams(
     val transcodeAnimQuality: Int,
     val allowUpscale: Boolean = false,
     val skipTransformedPics: Boolean = false,
+    val isRangeChapters: Boolean = false,
+    val range: String = "",
     @Transient var forceManhwa: Boolean = false
-)
+) {
+    val rangeList by lazy { rangeToNumbers(range) }
+}
 
 private const val MAX_WEBP_DIMENSION = 16383 // As per WEBP specifications
 private const val MANHWA_MIN_HEIGHT = 4 // Multiple of screen height

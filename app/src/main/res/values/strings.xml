@@ -18,6 +18,10 @@
         <item quantity="one">book</item>
         <item quantity="other">books</item>
     </plurals>
+    <plurals name="chapter" tools:ignore="ImpliedQuantity">
+        <item quantity="one">chapter</item>
+        <item quantity="other">chapters</item>
+    </plurals>
     <plurals name="page" tools:ignore="ImpliedQuantity">
         <item quantity="one">page</item>
         <item quantity="other">pages</item>
@@ -842,11 +846,13 @@
     <string name="web_all_sites">All sites</string>
     <string name="web_target_page_unavailable">Webpage not available%s; loading welcome page instead</string>
     <string name="web_target_page_outside_restricted_domains">Host %s outside restricted domains</string>
-    <string name="web_range_download_prompt" tools:ignore="TypographyDashes">Range of gallery pages to download (e.g. 1-5 / 1;3;8 / 1-2;5-7)</string>
     <string name="web_download_image">Download single image</string>
     <string name="web_long_tap_actions_title">Choose long tap actions</string>
     <string name="web_long_tap_actions_notice">NB : These settings can be changed later using the settings screen</string>
     <string name="disable_long_tap">Disable long tap</string>
+    <string name="range_download_prompt">Range to download</string>
+    <string name="range_process_prompt">Range to process</string>
+    <string name="range_caption" tools:ignore="TypographyDashes">Available syntax : 1-5 / 1;3;8 / 1-2;5-7</string>
 
     <!-- Web browser (site specifics) -->
     <string name="help_web_exh_account">Please use or create an exHentai account</string>
@@ -1114,6 +1120,9 @@
     <string name="ai_rescale_warning">Upscaling pictures with AI will use your GPU intensively. The whole operation may take a few minutes.</string>
     <string name="dimensions_warning">The settings you\'ve chosen will create images with very large dimensions. Are you certain that\'s what you want?</string>
     <string name="transform_skip_transformed_pics">Skip transformed images</string>
+    <string name="transform_range">Range</string>
+    <string name="transform_all_pages">All pages</string>
+    <string name="transform_range_change">Change</string>
     <string name="preview">Preview</string>
     <string name="transform">Transform</string>
     <string name="transform_unsupported">Transformation unsupported</string>

@@ -1139,7 +1139,6 @@
     <string name="web_gallery">Regresar a la última página de la galería</string>
     <string name="web_home">Volver a la biblioteca</string>
     <string name="web_open_ext_browser">Navegador externo</string>
-    <string name="web_range_download_prompt">Rango de páginas de la galería para descargar (por ejemplo, 1-5 / 1;3;8 / 1-2;5-7)</string>
     <string name="web_refresh_stop">Actualizar/detener</string>
     <string name="web_storage_permission_denied">Permisos de almacenamiento denegados - no se puede usar el sistema de descargas</string>
     <string name="web_target_page_outside_restricted_domains">Host %s fuera de dominios restringidos</string>

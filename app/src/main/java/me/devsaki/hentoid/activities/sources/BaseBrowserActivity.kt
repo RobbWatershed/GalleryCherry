@@ -80,13 +80,13 @@ import me.devsaki.hentoid.events.CommunicationEvent
 import me.devsaki.hentoid.events.DownloadCommandEvent
 import me.devsaki.hentoid.events.DownloadEvent
 import me.devsaki.hentoid.events.DownloadPreparationEvent
+import me.devsaki.hentoid.fragments.RangeDialogFragment
 import me.devsaki.hentoid.fragments.browser.BookmarksDrawerFragment
 import me.devsaki.hentoid.fragments.browser.DuplicateDialogFragment
 import me.devsaki.hentoid.fragments.browser.LongTapActionsDialogFragment
 import me.devsaki.hentoid.fragments.browser.UrlDialogFragment
 import me.devsaki.hentoid.json.core.UpdateInfo
 import me.devsaki.hentoid.parsers.ContentParserFactory
-import me.devsaki.hentoid.ui.invokeInputDialog
 import me.devsaki.hentoid.ui.invokeNumberInputDialog
 import me.devsaki.hentoid.util.QueuePosition
 import me.devsaki.hentoid.util.Settings
@@ -154,7 +154,7 @@ private val GALLERY_REGEX by lazy { "\\b|/galleries|/gallery|/g|/entry\\b".toReg
 private const val SIMILARITY_MIN_THRESHOLD = 0.85f
 
 abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.BrowserActivity,
-    DuplicateDialogFragment.Parent, BookmarksDrawerFragment.Parent {
+    DuplicateDialogFragment.Parent, BookmarksDrawerFragment.Parent, RangeDialogFragment.Parent {
 
     protected enum class ActionMode {
         // Download book
@@ -1151,20 +1151,24 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
     }
 
     private fun onRangeDownload() {
-        invokeInputDialog(
+        RangeDialogFragment.invoke(
             this,
-            R.string.web_range_download_prompt,
+            resources.getString(R.string.range_download_prompt),
             currentContent?.downloadRange ?: "",
-            {
-                currentContent?.apply {
-                    downloadRange = it
-                    setImageFiles(emptyList())
-                    qtyPages = 0
-                }
-                onActionClick()
-            }
+            false // TODO make that dynamic
         )
     }
+
+    override fun onRangeSelected(isChapters: Boolean, value: String) {
+        currentContent?.apply {
+            val prefix = if (isChapters) "c" else ""
+            downloadRange = prefix + value
+            setImageFiles(emptyList())
+            qtyPages = 0
+        }
+        onActionClick()
+    }
+
 
     /**
      * Switch the action button to either of the available modes

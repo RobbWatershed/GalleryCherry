@@ -1143,7 +1143,6 @@
     <string name="web_gallery">Torna all’ultima pagina della galleria</string>
     <string name="web_home">Torna alla libreria</string>
     <string name="web_open_ext_browser">Browser esterno</string>
-    <string name="web_range_download_prompt">Pagine della galleria da scaricare (es. 1-5 / 1;3;8 / 1-2;5-7)</string>
     <string name="web_refresh_stop">Aggiorna/ferma</string>
     <string name="web_storage_permission_denied">Autorizzazione di archiviazione negata - impossibile utilizzare il downloader</string>
     <string name="web_target_page_outside_restricted_domains">Il sito %s è fuori dai domini circoscritti</string>
