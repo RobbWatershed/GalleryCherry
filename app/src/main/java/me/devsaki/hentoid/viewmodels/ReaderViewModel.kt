@@ -522,19 +522,20 @@ class ReaderViewModel(
     }
 
     private fun adjustPageIndex(index: Int, imageFiles: List<ImageFile>): Int {
-        var result = index
-
-        // Correct offset with the thumb index
+        // Correct offset according to the thumb index
+        var delta = 0
         thumbIndex = -1
         for (i in imageFiles.indices) if (!imageFiles[i].isReadable) {
             thumbIndex = i
             break
         }
-        // Ignore if it doesn't intervene
-        if (thumbIndex == result) result += 1
-        else if (thumbIndex > result) thumbIndex = 0
 
-        return 0.coerceAtLeast(result - thumbIndex - 1)
+        if (thumbIndex > -1) {
+            if (thumbIndex == index) delta = 1 // Skip
+            else if (thumbIndex < index) delta = -1 // Fix index
+        }
+
+        return coerceIn(index + delta, 0, imageFiles.size - 1)
     }
 
     private fun computeStartingIndex(

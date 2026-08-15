@@ -122,6 +122,11 @@ fun coerceIn(value: Float, min: Float, max: Float): Float {
     else min(value, max)
 }
 
+fun coerceIn(value: Int, min: Int, max: Int): Int {
+    return if (value < min) min
+    else min(value, max)
+}
+
 /**
  * Duplicate the given InputStream as many times as given
  *
