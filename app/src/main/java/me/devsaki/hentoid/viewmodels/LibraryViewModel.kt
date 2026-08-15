@@ -807,6 +807,9 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
                                 isQueueActive(getApplication())
                             )
 
+                            // TODO purge can't happen as the content is saved with an empty storageUri after calling reparseFromScratch with keepUris = false
+                            // + why are we doing that _and_ purging ?
+                            // the fact that we're just purging instead of wiping the folder means we should keep its Uri intact
                             if (reparseImages) purgeContent(
                                 // Non-blocking performance bottleneck; run in a dedicated worker
                                 getApplication(),
