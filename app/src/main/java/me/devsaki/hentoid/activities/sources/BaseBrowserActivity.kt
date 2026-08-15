@@ -687,7 +687,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         if (BuildConfig.DEBUG) WebView.setWebContentsDebuggingEnabled(true)
         webClient = createWebClient()
         webView.webViewClient = webClient
-        if (getStartSite().useManagedRequests || Settings.proxy.isNotEmpty() || Settings.dnsOverHttps > -1) {
+        if (webClient.hasManagedUrls() || Settings.proxy.isNotEmpty() || Settings.dnsOverHttps > -1) {
             xhrHandler = { url, body -> webClient.recordDynamicPostRequests(url, body) }
             enableStandardFetchHandler()
         }

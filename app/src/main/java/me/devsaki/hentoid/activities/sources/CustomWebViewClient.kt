@@ -116,10 +116,13 @@ open class CustomWebViewClient : WebViewClient {
     private val galleryUrlPattern: MutableList<Pattern> = ArrayList()
 
     // List of the URL patterns identifying a parsable book gallery page
-    private val resultsUrlPattern: MutableList<Pattern> = ArrayList()
+    private val resultsUrlPatterns: MutableList<Pattern> = ArrayList()
 
     // Results URL rewriter to insert page to seek to
     private var resultsUrlRewriter: ((Uri, Int) -> String)? = null
+
+    // List of the URL patterns identifying a managed URL
+    private val managedUrlPatterns: MutableList<Pattern> = ArrayList()
 
     // Adapter used to parse the HTML code of book gallery pages
     private val htmlAdapter: HtmlAdapter<out ContentParser>
@@ -319,7 +322,7 @@ open class CustomWebViewClient : WebViewClient {
      * @param patterns Patterns to detect URLs where result paging can be applied
      */
     fun setResultsUrlPatterns(vararg patterns: String) {
-        for (s in patterns) resultsUrlPattern.add(Pattern.compile(s))
+        for (s in patterns) resultsUrlPatterns.add(Pattern.compile(s))
     }
 
     /**
@@ -357,6 +360,10 @@ open class CustomWebViewClient : WebViewClient {
 
     fun isIgnored(url: String): Boolean {
         return ignoredUrls.any { url.contains(it, true) }
+    }
+
+    fun addManagedUrls(vararg patterns: String) {
+        for (s in patterns) managedUrlPatterns.add(Pattern.compile(s))
     }
 
     /**
@@ -397,6 +404,20 @@ open class CustomWebViewClient : WebViewClient {
         return false
     }
 
+    fun isManagedUrl(url: String): Boolean {
+        if (site.useManagedRequests) return true
+        if (managedUrlPatterns.isEmpty()) return false
+        for (p in managedUrlPatterns) {
+            val matcher = p.matcher(url)
+            if (matcher.find()) return true
+        }
+        return false
+    }
+
+    fun hasManagedUrls(): Boolean {
+        return site.useManagedRequests || managedUrlPatterns.isNotEmpty()
+    }
+
     /**
      * Indicates if the given URL is a results page
      *
@@ -404,8 +425,8 @@ open class CustomWebViewClient : WebViewClient {
      * @return True if the given URL represents a results page
      */
     fun isResultsPage(url: String): Boolean {
-        if (resultsUrlPattern.isEmpty()) return false
-        for (p in resultsUrlPattern) {
+        if (resultsUrlPatterns.isEmpty()) return false
+        for (p in resultsUrlPatterns) {
             val matcher = p.matcher(url)
             if (matcher.find()) return true
         }
@@ -655,9 +676,9 @@ open class CustomWebViewClient : WebViewClient {
     }
 
     fun sendRequest(request: WebResourceRequest, postBody: String = ""): WebResourceResponse? {
-        if (dnsOverHttpsEnabled.get() || proxyEnabled.get() || site.useManagedRequests) {
+        val urlStr = request.url.toString()
+        if (dnsOverHttpsEnabled.get() || proxyEnabled.get() || isManagedUrl(urlStr)) {
             // Query resource using OkHttp
-            val urlStr = request.url.toString()
             val requestHeadersList =
                 webkitRequestHeadersToOkHttpHeaders(request.requestHeaders, urlStr)
             try {
