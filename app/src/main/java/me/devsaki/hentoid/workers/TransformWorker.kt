@@ -196,6 +196,9 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
                         transformedImages.add(img)
                     }
                 }
+        } else {
+            // Transfer 'untransformable pics' (i.e. separate cover, already transformed pics)
+            transformedImages.addAll(sourceImages.filter { !it.isTransformable(params) })
         }
 
         var isKO = false
@@ -240,14 +243,18 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
         if (!isKO && !isStopped) {
             // Update Content
             withContext(Dispatchers.IO) {
-                content.setImageFiles(transformedImages)
-                dao.insertImageFiles(transformedImages)
                 content.qtyPages = transformedImages.count { it.isTransformable(params) }
                 content.computeSize()
                 content.lastEditDate = Instant.now().toEpochMilli()
                 content.isBeingProcessed = false
                 targetFolder?.let { content.storageUri = it.uri.toString() }
+
+                transformedImages.forEach { it.contentId = content.id }
+                content.setImageFiles(transformedImages)
+
                 dao.insertContentCore(content)
+                dao.insertImageFiles(transformedImages)
+
                 if (targetFolder != null) createJson(ctx, content)
                 else updateJson(ctx, content)
                 dao.cleanup()

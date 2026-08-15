@@ -246,6 +246,8 @@ interface CollectionDAO {
 
     fun selectExternalMemoryUsagePerSource(): Map<Site, Pair<Int, Long>>
 
+    fun countTransformedPages(contentIds : LongArray): Long
+
 
     // QUEUE
     fun selectQueue(): List<QueueRecord>

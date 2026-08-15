@@ -1227,6 +1227,10 @@ class ObjectBoxDAO : CollectionDAO {
         return ObjectBoxDB.selectExternalMemoryUsagePerSource()
     }
 
+    override fun countTransformedPages(contentIds : LongArray): Long {
+        return ObjectBoxDB.countTransformedPages(contentIds)
+    }
+
     override fun addContentToQueue(
         content: Content,
         sourceImageStatus: StatusContent?,

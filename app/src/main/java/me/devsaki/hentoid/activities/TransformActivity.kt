@@ -108,6 +108,14 @@ class TransformActivity : BaseActivity(), RangeDialogFragment.Parent {
             dao.cleanup()
         }
     }
+    private val nbTransformed: Long by lazy {
+        val dao = ObjectBoxDAO()
+        try {
+            dao.countTransformedPages(contentIds)
+        } finally {
+            dao.cleanup()
+        }
+    }
     private var contentIndex = 0
     private var pageIndex = 0
     private var maxPages = -1
@@ -190,8 +198,7 @@ class TransformActivity : BaseActivity(), RangeDialogFragment.Parent {
                 )
             }
 
-            // TODO visibility only if there actually are transformed pics
-
+            skipTransformedSwitch.isVisible = (nbTransformed > 0)
             skipTransformedSwitch.setOnCheckedChangeListener { _, isChecked ->
                 Settings.skipTransformedPics = isChecked
                 refreshUI()
@@ -424,15 +431,12 @@ class TransformActivity : BaseActivity(), RangeDialogFragment.Parent {
 
         // Check if content contains transformed pages already
         if (!Settings.skipTransformedPics) {
-            content?.apply {
-                val retransformedPics = imageList.count { it.isTransformed }
-                if (retransformedPics > 0) allWarnings.add(
-                    resources.getString(
-                        R.string.retransform_warning,
-                        retransformedPics
-                    )
+            if (nbTransformed > 0) allWarnings.add(
+                resources.getString(
+                    R.string.retransform_warning,
+                    nbTransformed
                 )
-            }
+            )
         }
 
         binding?.warningsList?.isVisible = allWarnings.isNotEmpty()

@@ -1612,6 +1612,13 @@ object ObjectBoxDB {
         return result
     }
 
+    fun countTransformedPages(contentIds : LongArray): Long {
+        return store.boxFor(ImageFile::class.java).query()
+            .equal(ImageFile_.isTransformed, true)
+            .`in`(ImageFile_.contentId, contentIds)
+            .safeCount()
+    }
+
     fun insertErrorRecord(record: ErrorRecord) {
         store.boxFor(ErrorRecord::class.java).put(record)
     }
