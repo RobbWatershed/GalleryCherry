@@ -813,7 +813,7 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
      * @param startingIndex Book's starting image index
      */
     private fun onStartingIndexChanged(startingIndex: Int) {
-        if (!isComputingImageList) applyStartingIndex(startingIndex) // Returning from gallery screen
+        if (!isComputingImageList && adapter.itemCount > 0) applyStartingIndex(startingIndex) // Returning from gallery screen
         else targetStartingIndex = startingIndex // Loading a new book
     }
 
