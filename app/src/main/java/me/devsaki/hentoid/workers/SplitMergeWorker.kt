@@ -17,6 +17,7 @@ import me.devsaki.hentoid.database.CollectionDAO
 import me.devsaki.hentoid.database.ObjectBoxDAO
 import me.devsaki.hentoid.database.domains.Chapter
 import me.devsaki.hentoid.database.domains.Content
+import me.devsaki.hentoid.database.domains.DownloadMode
 import me.devsaki.hentoid.database.domains.ImageFile
 import me.devsaki.hentoid.enums.Grouping
 import me.devsaki.hentoid.enums.Site
@@ -150,6 +151,7 @@ abstract class BaseSplitMergeWorker(
         for (chap in chapters) {
             if (isStopped) break
             val splitContent = createContentFromChapter(content, chap)
+            splitContent.downloadMode = DownloadMode.DOWNLOAD // Force DOWNLOAD as we're creating flat folders
 
             // Create a new folder for the split content
             val location = getLocation(content)
@@ -222,7 +224,7 @@ abstract class BaseSplitMergeWorker(
                         }
                         Timber.d("Mapping done for ${splitContent.title}")
                     } else {
-                        // TODO split target should be an archive if split origin is an archive
+                        // TODO split target should be an archive if split origin is an archive; downloadMode should be ARCHIVE if applicable
                         // TODO split target should be a PDF if split origin is a PDF (requires working on a better layout - see #1322)
                         copyFiles(
                             applicationContext,

@@ -51,7 +51,6 @@ import me.devsaki.hentoid.json.JsonContentCollection
 import me.devsaki.hentoid.parsers.ContentParserFactory.getContentParserClass
 import me.devsaki.hentoid.util.AchievementsManager.trigger
 import me.devsaki.hentoid.util.LanguageHelper.getFlagFromLanguage
-import me.devsaki.hentoid.util.Settings.libraryGridCardWidthDP
 import me.devsaki.hentoid.util.download.StorageDownloadManager
 import me.devsaki.hentoid.util.download.downloadPic
 import me.devsaki.hentoid.util.exception.ContentNotProcessedException
@@ -2005,6 +2004,8 @@ suspend fun mergeContents(
         // Destination is an archive when all source contents are archives
         if (contentList.all { it.isArchive })
             mergedContent.downloadMode = DownloadMode.DOWNLOAD_ARCHIVE
+        else
+            mergedContent.downloadMode = DownloadMode.DOWNLOAD
 
         // TODO destination is a PDF when all source contents are PDFs (requires working on a better layout - see #1322)
 

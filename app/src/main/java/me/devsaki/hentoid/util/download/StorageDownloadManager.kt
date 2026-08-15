@@ -179,7 +179,7 @@ class StorageDownloadManager {
                 archiveStreamer = ArchiveStreamer(
                     context, uri,
                     append = false,
-                    removeArchivedFiles = true
+                    removeArchivedFiles = false
                 )
             }
         } else {
