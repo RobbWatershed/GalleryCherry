@@ -37,8 +37,8 @@
       "hasUniqueBookId": true
     },
     "HENTAIFOX": {
-      "hasUniqueBookId": true,
-      "useManagedRequests" : true
+      "useWebviewAgent": false,
+      "hasUniqueBookId": true
     },
     "MANHWA": {
       "hasCoverBasedPageUpdates": true,
@@ -56,10 +56,10 @@
       "hasUniqueBookId": true
     },
     "IMHENTAI": {
+      "useWebviewAgent": false,
       "requestsCapPerSecond": 1,
       "parallelDownloadCap": 2,
-      "hasUniqueBookId": true,
-      "useManagedRequests" : true
+      "hasUniqueBookId": true
     },
     "PURURIN": {
       "bookCardDepth": 1,
