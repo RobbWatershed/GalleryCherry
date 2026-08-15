@@ -131,7 +131,8 @@ class ResizeFragment : Fragment(R.layout.fragment_transform_resize) {
             if (applyValues) resizeMethod5Images.editText?.setText(Settings.resizeMethod5Images.toString())
 
             val isAiUpscale = (3 == Settings.resizeMethod) && Settings.isResizeEnabled
-            if (isAiUpscale) activity.get()?.setWarnings(1, setOf(R.string.ai_rescale_warning))
+            if (isAiUpscale) activity.get()?.setWarnings(0, setOf(R.string.ai_rescale_warning))
+            else activity.get()?.setWarnings(0, setOf())
         }
     }
 

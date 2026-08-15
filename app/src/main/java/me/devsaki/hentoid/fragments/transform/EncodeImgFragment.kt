@@ -131,6 +131,8 @@ class EncodeImgFragment : Fragment(R.layout.fragment_transform_encode_img) {
             || (1 == Settings.transcodeMethod && (Settings.transcodeEncoderLossy == PictureEncoder.WEBP_LOSSY.value || Settings.transcodeEncoderLossless == PictureEncoder.WEBP_LOSSLESS.value))
         ) {
             activity.get()?.setWarnings(1, setOf(R.string.encoder_warning))
+        } else {
+            activity.get()?.setWarnings(1, setOf())
         }
     }
 
