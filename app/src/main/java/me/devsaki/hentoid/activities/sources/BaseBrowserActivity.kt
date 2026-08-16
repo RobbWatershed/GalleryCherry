@@ -1593,7 +1593,8 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
             }
             if (null == currentContent) currentContent = onlineContent
             if (isInCollection) {
-                if (!quickDownload) searchForExtraImages(contentDB, onlineContent)
+                if (!quickDownload && Settings.isCheckExtraPages(getStartSite()))
+                    searchForExtraImages(contentDB, onlineContent)
                 return@withContext ContentStatus.IN_COLLECTION
             }
             return@withContext if (isInQueue) ContentStatus.IN_QUEUE else ContentStatus.UNKNOWN

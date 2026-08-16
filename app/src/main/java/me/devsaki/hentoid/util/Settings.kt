@@ -154,6 +154,7 @@ object Settings {
     )
     var isAutoImportExternal: Boolean by BoolSetting("import_external_library_auto", true)
 
+
     // LIBRARY
     var libraryDisplay: Int by IntSettingStr(Key.LIBRARY_DISPLAY, Default.LIBRARY_DISPLAY)
     var libraryDisplayGridFav: Boolean by BoolSetting(Key.LIBRARY_DISPLAY_GRID_FAV, true)
@@ -197,6 +198,7 @@ object Settings {
     var libraryFoldersRoots: List<String> by ListStringSetting("library_folders_roots")
     var libraryFoldersRoot: String by StringSetting("library_folders_current_root", "")
 
+
     // ADV SEARCH
     val searchAttributesSortOrder: Int by IntSettingStr(
         "pref_order_attribute_lists",
@@ -208,15 +210,18 @@ object Settings {
         Value.SEARCH_COMBINATION_AND
     )
 
+
     // LOCK
     var lockType: Int by IntSettingStr(Key.LOCK_TYPE, 0)
     var appLockPin: String by StringSetting(Key.APP_LOCK, "")
     var lockOnAppRestore: Boolean by BoolSetting("pref_lock_on_app_restore", false)
     var lockTimer: Int by IntSettingStr("pref_lock_timer", Value.LOCK_TIMER_30S)
 
+
     // MASS OPERATIONS
     var massOperation: Int by IntSettingStr("MASS_OPERATION", 0)
     var massOperationScope: Int by IntSettingStr("MASS_SCOPE", 0)
+
 
     // TRANSFORM
     var isResizeEnabled: Boolean by BoolSetting("TRANSFORM_RESIZE_ENABLED", false)
@@ -248,6 +253,7 @@ object Settings {
     var skipTransformedPics: Boolean by BoolSetting("TRANSFORM_SKIP_TRANSFORMED_PICS", false)
     var unlockTransformCaps: Boolean by BoolSetting("TRANSFORM_UNLOCK_CAPS", false)
 
+
     // ARCHIVES
     var archiveTargetFolder: String by StringSetting(
         "ARCHIVE_TARGET_FOLDER",
@@ -258,6 +264,7 @@ object Settings {
     var pdfBackgroundColor: Int by IntSettingStr("ARCHIVE_PDF_BGCOLOR", 0)
     var isArchiveOverwrite: Boolean by BoolSetting("ARCHIVE_OVERWRITE", true)
     var isArchiveDeleteOnSuccess: Boolean by BoolSetting("ARCHIVE_DELETE_ON_SUCCESS", false)
+
 
     // BROWSER
     fun isBrowserAugmented(site: Site): Boolean {
@@ -334,6 +341,25 @@ object Settings {
 
     private var topAlertClosed: List<Site> by ListSiteSetting("browser_topalert_closed", "")
 
+    fun isRangeDownloadOn(site: Site): Boolean {
+        return sharedPreferences.getBoolean(
+            makeSiteKey(Key.BROWSER_RANGE_DOWNLOAD, site),
+            isAppRangeDownloadOn
+        )
+    }
+
+    var isAppRangeDownloadOn: Boolean by BoolSetting(Key.BROWSER_RANGE_DOWNLOAD, false)
+
+    fun isCheckExtraPages(site: Site): Boolean {
+        return sharedPreferences.getBoolean(
+            makeSiteKey(Key.BROWSER_CHECK_EXTRA, site),
+            isAppCheckExtraPages
+        )
+    }
+
+    var isAppCheckExtraPages: Boolean by BoolSetting(Key.BROWSER_CHECK_EXTRA, true)
+
+
     // QUEUE / DOWNLOADER
     val isDownloadEhHires: Boolean by BoolSetting("pref_dl_eh_hires", false)
     val isDownloadHitomiAvif: Boolean by BoolSetting("pref_dl_hitomi_avif", false)
@@ -374,14 +400,7 @@ object Settings {
     var downloadScheduleSummary: String by StringSetting("download_schedule", disabledStr)
     var downloadScheduleStart: Int by IntSetting("download_schedule_start", 0)
     var downloadScheduleEnd: Int by IntSetting("download_schedule_end", 0)
-    fun isRangeDownloadOn(site: Site): Boolean {
-        return sharedPreferences.getBoolean(
-            makeSiteKey(Key.BROWSER_RANGE_DOWNLOAD, site),
-            isAppRangeDownloadOn
-        )
-    }
 
-    var isAppRangeDownloadOn: Boolean by BoolSetting(Key.BROWSER_RANGE_DOWNLOAD, false)
     fun isThumbSeparateFile(site: Site): Boolean {
         return sharedPreferences.getBoolean(
             makeSiteKey("pref_dl_separate_thumb", site),
@@ -820,6 +839,7 @@ object Settings {
         const val BROWSER_NHENTAI_INVISIBLE_BLACKLIST = "pref_nhentai_invisible_blacklist"
         const val DL_HTTP_429_DEFAULT_DELAY = "pref_dl_http_429_default_delay"
         const val BROWSER_RANGE_DOWNLOAD = "browser_range_download"
+        const val BROWSER_CHECK_EXTRA = "browser_check_extra_pages"
 
         const val TEXT_SELECT_MENU = "TEXT_SELECT_MENU"
         const val APP_LOCK = "pref_app_lock"

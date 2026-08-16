@@ -165,6 +165,8 @@
     <string name="pref_browser_range_download_summary">Additional button to set which gallery pages to download</string>
     <string name="pref_dl_animation_format_title">Encoder for animations</string>
     <string name="pref_dl_animation_quality_title">Quality for animations (%)</string>
+    <string name="pref_check_extra_pages_title">Check for extra pages</string>
+    <string name="pref_browser_check_extra_pages_summary">Check for extra pages when opening a gallery from a book you already downloaded</string>
 
     <!-- Downloader -->
     <string name="pref_screen_downloader">Downloader</string>

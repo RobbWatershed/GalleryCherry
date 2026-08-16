@@ -288,6 +288,13 @@
                 app:iconSpaceReserved="false"
                 app:sites="ANY" />
             <CheckBoxPreference
+                android:defaultValue="@string/pref_browser_check_extra_pages_default"
+                android:key="browser_check_extra_pages"
+                android:summary="@string/pref_browser_check_extra_pages_summary"
+                android:title="@string/pref_check_extra_pages_title"
+                app:iconSpaceReserved="false"
+                app:sites="ANY" />
+            <CheckBoxPreference
                 android:defaultValue="@string/pref_browser_resume_last_default"
                 android:key="pref_browser_resume_last"
                 android:summaryOff="@string/pref_browser_resume_last_off"
