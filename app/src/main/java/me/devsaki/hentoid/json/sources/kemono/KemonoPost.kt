@@ -59,12 +59,12 @@ data class KemonoPost(
 
     fun toChapter(
         userId: String,
-        chapterOrder: AtomicInteger,
+        chapterOrder: Int,
         pageOrder: AtomicInteger
     ): Chapter {
         // One result = one chapter, if it contains at least an usable picture (i.e. not exclusively MEGA links)
         val chapter = Chapter(
-            chapterOrder.andIncrement,
+            chapterOrder,
             "https://$KEMONO_DOMAIN_FILTER/${service}/user/${userId}/post/${id}",
             title,
             id
