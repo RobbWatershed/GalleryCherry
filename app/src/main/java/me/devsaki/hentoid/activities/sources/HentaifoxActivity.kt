@@ -15,7 +15,7 @@ class HentaifoxActivity : BaseBrowserActivity() {
     override fun createWebClient(): CustomWebViewClient {
         val client = CustomWebViewClient(getStartSite(), GALLERY_FILTER, this)
         client.restrictTo(DOMAIN_FILTER)
-        //client.addManagedUrls(*MANAGED_URLS)
+        client.addManagedUrls(*MANAGED_URLS)
         client.addRemovableElements(*REMOVABLE_ELEMENTS)
         client.adBlocker.addToJsUrlWhitelist(DOMAIN_FILTER)
         return client
