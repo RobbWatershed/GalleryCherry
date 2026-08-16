@@ -13,6 +13,7 @@ import me.devsaki.hentoid.util.network.getOnlineDocument
 import me.devsaki.hentoid.util.network.getOnlineResourceFast
 import org.jsoup.nodes.Document
 import timber.log.Timber
+import kotlin.math.roundToInt
 
 class MrmParser : BaseChapteredImageListParser() {
     override fun isChapterUrl(url: String): Boolean {
@@ -46,7 +47,8 @@ class MrmParser : BaseChapteredImageListParser() {
                     else if (e.text() == "…") {
                         val previousElts = previousLink.split('/')
                         if (previousElts.size > 2)
-                            ellipsisFrom = previousElts[previousElts.size - 2].toInt() + 1
+                            ellipsisFrom =
+                                previousElts[previousElts.size - 2].toFloat().roundToInt() + 1
                         ""
                     } else ""
 
@@ -55,7 +57,8 @@ class MrmParser : BaseChapteredImageListParser() {
                             // Close the "..." gap by guessing chapter URLs
                             // NB : Fails when the site provides "subchapters" (e.g. 4.6, 2.5), hence the sanity check
                             val curElts = link.split('/')
-                            val ellipsisTo = curElts[curElts.size - 2].toInt()
+                            val ellipsisTo = curElts[curElts.size - 2].toFloat()
+                                .roundToInt() // Don't crash when parsing subchapters
                             val template = link.replace("/${ellipsisTo}/", "/$$$/")
                             for (i in ellipsisFrom..ellipsisTo) {
                                 val chpUrl = template.replace("$$$", i.toString())
