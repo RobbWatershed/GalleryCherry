@@ -10,7 +10,9 @@ import me.devsaki.hentoid.parsers.getImgSrc
 import me.devsaki.hentoid.parsers.urlsToImageFiles
 import me.devsaki.hentoid.util.chapterStr
 import me.devsaki.hentoid.util.network.getOnlineDocument
+import me.devsaki.hentoid.util.network.getOnlineResourceFast
 import org.jsoup.nodes.Document
+import timber.log.Timber
 
 class MrmParser : BaseChapteredImageListParser() {
     override fun isChapterUrl(url: String): Boolean {
@@ -21,32 +23,59 @@ class MrmParser : BaseChapteredImageListParser() {
         return ChapterSelector(listOf("div.entry-pagination"))
     }
 
-    /*
-    override fun parseImageFiles(onlineContent: Content, storedContent: Content?): List<ImageFile> {
-        return urlsToImageFiles(
-            parseContentImages(onlineContent),
-            onlineContent.downloadRange,
-            StatusContent.SAVED,
-            Site.MRM,
-            onlineContent.coverImageUrl
-        )
-    }
-     */
-
     override fun getChapters(
         content: Content,
         galleryPage: Document
     ): List<Chapter> {
         processedUrl = content.galleryUrl
 
+        val headers = fetchHeaders(content)
+
         // 1. Scan the gallery page for chapter URLs
         // NB : We can't just guess the URLs by starting to 1 and increment them
         // because the site provides "subchapters" (e.g. 4.6, 2.5)
         val chapterUrls: MutableList<String> = ArrayList()
         galleryPage.select("div.entry-pagination").first()?.let { chapterContainer ->
-            for (e in chapterContainer.children()) {
-                if (e.hasClass("current")) chapterUrls.add(content.galleryUrl) // current chapter
-                else if (e.hasAttr("href")) chapterUrls.add(e.attr("href"))
+            var previousLink = ""
+            var ellipsisFrom = -1
+            chapterContainer.children().forEach { e ->
+                val skip = e.hasClass("next") || e.hasClass("prev")
+                if (!skip) {
+                    val link = if (e.hasClass("current")) content.galleryUrl // current chapter
+                    else if (e.hasAttr("href")) e.attr("href")
+                    else if (e.text() == "…") {
+                        val previousElts = previousLink.split('/')
+                        if (previousElts.size > 2)
+                            ellipsisFrom = previousElts[previousElts.size - 2].toInt() + 1
+                        ""
+                    } else ""
+
+                    if (link.isNotBlank()) {
+                        if (ellipsisFrom > -1) {
+                            // Close the "..." gap by guessing chapter URLs
+                            // NB : Fails when the site provides "subchapters" (e.g. 4.6, 2.5), hence the sanity check
+                            val curElts = link.split('/')
+                            val ellipsisTo = curElts[curElts.size - 2].toInt()
+                            val template = link.replace("/${ellipsisTo}/", "/$$$/")
+                            for (i in ellipsisFrom..ellipsisTo) {
+                                val chpUrl = template.replace("$$$", i.toString())
+                                // Sanity check
+                                getOnlineResourceFast(
+                                    chpUrl,
+                                    headers,
+                                    Site.MRM.useMobileAgent,
+                                    Site.MRM.useHentoidAgent,
+                                    Site.MRM.useWebviewAgent
+                                ).use {
+                                    if (it.code >= 400) Timber.d("Failed to guess chapter URL (${it.code}) : $chpUrl")
+                                    else chapterUrls.add(chpUrl)
+                                }
+                            }
+                            ellipsisFrom = -1
+                        } else chapterUrls.add(link)
+                    }
+                    previousLink = link
+                }
             }
         }
         if (chapterUrls.isEmpty()) chapterUrls.add(content.galleryUrl) // "one-shot" book
@@ -63,54 +92,6 @@ class MrmParser : BaseChapteredImageListParser() {
         }
         return result
     }
-
-    /*
-    private fun parseContentImages(content: Content): List<String> {
-        val result: MutableList<String> = ArrayList()
-        processedUrl = content.galleryUrl
-
-        val headers = fetchHeaders(content)
-
-        // 1. Scan the gallery page for chapter URLs
-        // NB : We can't just guess the URLs by starting to 1 and increment them
-        // because the site provides "subchapters" (e.g. 4.6, 2.5)
-        val chapterUrls: MutableList<String> = ArrayList()
-        getOnlineDocument(
-            content.galleryUrl,
-            headers,
-            Site.MRM.useMobileAgent, Site.MRM.useHentoidAgent, Site.MRM.useWebviewAgent
-        )?.let { doc ->
-            doc.select("div.entry-pagination").first()?.let { chapterContainer ->
-                for (e in chapterContainer.children()) {
-                    if (e.hasClass("current")) chapterUrls.add(content.galleryUrl) // current chapter; this is the reason why MrmParser still has its own parseImageFiles override
-                    else if (e.hasAttr("href")) chapterUrls.add(e.attr("href"))
-                }
-            }
-        }
-        if (chapterUrls.isEmpty()) chapterUrls.add(content.galleryUrl) // "one-shot" book
-
-        progressStart(content)
-
-        // 2. Open each chapter URL and get the image data until all images are found
-        val isRangeChapters = isRangeChapters(content.downloadRange)
-        val range =
-            if (isRangeChapters) rangeToNumbers(content.downloadRange) else emptyList()
-
-        chapterUrls.forEachIndexed { index, url ->
-            if (processHalted.get()) return@forEachIndexed
-            result.addAll(parseChapterImages(url, headers))
-            progressPlus((index + 1f) / chapterUrls.size)
-        }
-        // If the process has been halted manually, the result is incomplete and should not be returned as is
-        if (processHalted.get()) throw PreparationInterruptedException()
-
-        if (result.isNotEmpty()) content.coverImageUrl = result[0]
-
-        progressComplete()
-        return result
-    }
-
-     */
 
     override fun parseChapterImageFiles(
         content: Content,

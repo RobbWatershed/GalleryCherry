@@ -1152,7 +1152,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
     }
 
     private fun onRangeDownload() {
-        val url = webView.url ?: return
+        val url = currentContent?.galleryUrl ?: return
         if (!webClient.isDownloadable(url)) return // Double check; shouldn't happen
 
         val parser = ContentParserFactory.getImageListParser(getStartSite())
