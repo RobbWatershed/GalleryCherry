@@ -5,7 +5,9 @@
 'adsdomain'
 'closead'
 'plu_slider_frame'
+'getPsid'
 _usenativead
+'adblockCounteraction'
 ad-provider
 adMoxyCtrl
 ad_popup_force
