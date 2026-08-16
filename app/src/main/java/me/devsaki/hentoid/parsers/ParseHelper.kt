@@ -340,6 +340,9 @@ fun getChaptersFromLinks(
     val urls: MutableSet<String> = HashSet()
 
     // First extract data and filter URL duplicates
+    //  first : url
+    //  second : name
+    //  third : upload date
     val chapterData: MutableList<Triple<String, String, Long>> = ArrayList()
     for (e in chapterLinks) {
         val url = fixUrl(e.attr("href").trim(), site.url)

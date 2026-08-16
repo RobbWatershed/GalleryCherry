@@ -8,8 +8,9 @@ import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.parsers.fetchHeaders
 import me.devsaki.hentoid.parsers.getImgSrc
 import me.devsaki.hentoid.parsers.urlsToImageFiles
-import me.devsaki.hentoid.util.exception.PreparationInterruptedException
+import me.devsaki.hentoid.util.chapterStr
 import me.devsaki.hentoid.util.network.getOnlineDocument
+import org.jsoup.nodes.Document
 
 class MrmParser : BaseChapteredImageListParser() {
     override fun isChapterUrl(url: String): Boolean {
@@ -20,6 +21,7 @@ class MrmParser : BaseChapteredImageListParser() {
         return ChapterSelector(listOf("div.entry-pagination"))
     }
 
+    /*
     override fun parseImageFiles(onlineContent: Content, storedContent: Content?): List<ImageFile> {
         return urlsToImageFiles(
             parseContentImages(onlineContent),
@@ -29,7 +31,40 @@ class MrmParser : BaseChapteredImageListParser() {
             onlineContent.coverImageUrl
         )
     }
+     */
 
+    override fun getChapters(
+        content: Content,
+        galleryPage: Document
+    ): List<Chapter> {
+        processedUrl = content.galleryUrl
+
+        // 1. Scan the gallery page for chapter URLs
+        // NB : We can't just guess the URLs by starting to 1 and increment them
+        // because the site provides "subchapters" (e.g. 4.6, 2.5)
+        val chapterUrls: MutableList<String> = ArrayList()
+        galleryPage.select("div.entry-pagination").first()?.let { chapterContainer ->
+            for (e in chapterContainer.children()) {
+                if (e.hasClass("current")) chapterUrls.add(content.galleryUrl) // current chapter
+                else if (e.hasAttr("href")) chapterUrls.add(e.attr("href"))
+            }
+        }
+        if (chapterUrls.isEmpty()) chapterUrls.add(content.galleryUrl) // "one-shot" book
+
+        val result: MutableList<Chapter> = ArrayList()
+        for ((order, chpUrl) in chapterUrls.withIndex()) {
+            val chp = Chapter(
+                order = order + 1,
+                url = chpUrl,
+                name = "$chapterStr ${order + 1}"
+            )
+            chp.setContentId(content.id)
+            result.add(chp)
+        }
+        return result
+    }
+
+    /*
     private fun parseContentImages(content: Content): List<String> {
         val result: MutableList<String> = ArrayList()
         processedUrl = content.galleryUrl
@@ -47,7 +82,7 @@ class MrmParser : BaseChapteredImageListParser() {
         )?.let { doc ->
             doc.select("div.entry-pagination").first()?.let { chapterContainer ->
                 for (e in chapterContainer.children()) {
-                    if (e.hasClass("current")) chapterUrls.add(content.galleryUrl) // current chapter; this is the reason why MrmParser still has its own parseImages function
+                    if (e.hasClass("current")) chapterUrls.add(content.galleryUrl) // current chapter; this is the reason why MrmParser still has its own parseImageFiles override
                     else if (e.hasAttr("href")) chapterUrls.add(e.attr("href"))
                 }
             }
@@ -57,6 +92,10 @@ class MrmParser : BaseChapteredImageListParser() {
         progressStart(content)
 
         // 2. Open each chapter URL and get the image data until all images are found
+        val isRangeChapters = isRangeChapters(content.downloadRange)
+        val range =
+            if (isRangeChapters) rangeToNumbers(content.downloadRange) else emptyList()
+
         chapterUrls.forEachIndexed { index, url ->
             if (processHalted.get()) return@forEachIndexed
             result.addAll(parseChapterImages(url, headers))
@@ -70,6 +109,8 @@ class MrmParser : BaseChapteredImageListParser() {
         progressComplete()
         return result
     }
+
+     */
 
     override fun parseChapterImageFiles(
         content: Content,
@@ -85,7 +126,7 @@ class MrmParser : BaseChapteredImageListParser() {
         )
     }
 
-    fun parseChapterImages(
+    private fun parseChapterImages(
         chapterUrl: String,
         headers: List<Pair<String, String>>? = null
     ): List<String> {
