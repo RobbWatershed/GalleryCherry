@@ -55,6 +55,7 @@ import me.devsaki.hentoid.fragments.transform.EncodeImgFragment
 import me.devsaki.hentoid.fragments.transform.ResizeFragment
 import me.devsaki.hentoid.util.Debouncer
 import me.devsaki.hentoid.util.Settings
+import me.devsaki.hentoid.util.createExceptionLogFile
 import me.devsaki.hentoid.util.file.createFile
 import me.devsaki.hentoid.util.file.fileSizeFromUri
 import me.devsaki.hentoid.util.file.formatHumanReadableSize
@@ -70,6 +71,7 @@ import me.devsaki.hentoid.util.image.getMediaDimensions
 import me.devsaki.hentoid.util.image.transformAnimated
 import me.devsaki.hentoid.util.image.transformManhwaChapter
 import me.devsaki.hentoid.util.image.transformStill
+import me.devsaki.hentoid.util.toast
 import me.devsaki.hentoid.util.tryShowMenuIcons
 import me.devsaki.hentoid.util.video.videoOnlyRenderersFactory
 import me.devsaki.hentoid.viewholders.DrawerItem
@@ -482,40 +484,47 @@ class TransformActivity : BaseActivity(), RangeDialogFragment.Parent {
             val sourceName =
                 sourceBmp.name + "." + getExtensionFromMimeType(sourceProps.mime)
             val params = buildParams()
-            val targetData: BitmapInfo = withContext(Dispatchers.IO) {
-                return@withContext if (params.resizeEnabled && 4 == params.resizeMethod) {
-                    // Manhwa resize
-                    val res = transformManhwa(params, pageIndex)
-                    BitmapInfo(if (res.isEmpty()) sourceBmp.rawData else res)
-                } else if (sourceProps.isAnimated) {
-                    withContext(Dispatchers.Main) {
-                        binding?.previewProgress?.isIndeterminate = false
-                        binding?.previewProgress?.max = 100
-                    }
-                    val tempFolder = getOrCreateCacheFolder(context, CACHE_PREVIEW)?.toUri()
-                        ?: return@withContext BitmapInfo(sourceBmp.rawData)
-                    val tempFile = createFile(
-                        context, tempFolder, "temp_" + formatEpochToDate(
-                            Instant.now().toEpochMilli(), "yyyyMMdd-hhmmss-nnnnnnnnn"
-                        ),
-                        params.transcodeAnim.mimeType
-                    )
-                    if (transformAnimated(
-                            context,
-                            sourceBmp.uri,
-                            sourceProps.mime,
-                            tempFile,
-                            params,
-                            { false } // TODO interrupt previous encoding process when running a new one
-                        ) {
-                            lifecycleScope.launch(Dispatchers.Main) {
-                                binding?.previewProgress?.progress = (it * 100).roundToInt()
-                            }
+            val targetData: BitmapInfo? = withContext(Dispatchers.IO) {
+                try {
+                    return@withContext if (params.resizeEnabled && 4 == params.resizeMethod) {
+                        // Manhwa resize
+                        val res = transformManhwa(params, pageIndex)
+                        BitmapInfo(if (res.isEmpty()) sourceBmp.rawData else res)
+                    } else if (sourceProps.isAnimated) {
+                        withContext(Dispatchers.Main) {
+                            binding?.previewProgress?.isIndeterminate = false
+                            binding?.previewProgress?.max = 100
                         }
-                    ) BitmapInfo(tempFile)
-                    else BitmapInfo(sourceBmp.rawData)
-                } else BitmapInfo(transformStill(context, sourceBmp.rawData, params, true))
+                        val tempFolder = getOrCreateCacheFolder(context, CACHE_PREVIEW)?.toUri()
+                            ?: return@withContext BitmapInfo(sourceBmp.rawData)
+                        val tempFile = createFile(
+                            context, tempFolder, "temp_" + formatEpochToDate(
+                                Instant.now().toEpochMilli(), "yyyyMMdd-hhmmss-nnnnnnnnn"
+                            ),
+                            params.transcodeAnim.mimeType
+                        )
+                        if (transformAnimated(
+                                context,
+                                sourceBmp.uri,
+                                sourceProps.mime,
+                                tempFile,
+                                params,
+                                { false } // TODO interrupt previous encoding process when running a new one
+                            ) {
+                                lifecycleScope.launch(Dispatchers.Main) {
+                                    binding?.previewProgress?.progress = (it * 100).roundToInt()
+                                }
+                            }
+                        ) BitmapInfo(tempFile)
+                        else BitmapInfo(sourceBmp.rawData)
+                    } else BitmapInfo(transformStill(context, sourceBmp.rawData, params, true))
+                } catch (e: Exception) {
+                    toast(R.string.error)
+                    createExceptionLogFile(e, context)
+                    return@withContext null
+                }
             }
+            targetData ?: return@launch
 
             @Suppress("ARRAY_EQUALITY_OPERATOR_CAN_BE_REPLACED_WITH_CONTENT_EQUALS")
             val unchanged = targetData.rawData == sourceBmp.rawData
