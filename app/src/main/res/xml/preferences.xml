@@ -637,6 +637,16 @@
                 android:key="pref_dl_animation_quality"
                 android:title="@string/pref_dl_animation_quality_title"
                 app:iconSpaceReserved="false" />
+            <CheckBoxPreference
+                android:defaultValue="@string/pref_dl_pixiv_hires"
+                android:key="pref_dl_pixiv_hires"
+                android:summaryOff="@string/pref_dl_paw_hires_off"
+                android:summaryOn="@string/pref_dl_paw_hires_on"
+                android:title="@string/download_kemono_hires_title"
+                app:iconSpaceReserved="false"
+                app:isGlobal="true"
+                app:sites="PIXIV" />
+
         </PreferenceCategory>
         <PreferenceCategory
             android:title="@string/pref_cat_advanced"

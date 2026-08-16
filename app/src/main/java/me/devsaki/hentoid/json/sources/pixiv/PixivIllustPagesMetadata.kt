@@ -1,6 +1,7 @@
 package me.devsaki.hentoid.json.sources.pixiv
 
 import com.squareup.moshi.JsonClass
+import me.devsaki.hentoid.util.Settings
 
 /**
  * Data structure for Pixiv's "illust pages" desktop endpoint
@@ -22,9 +23,15 @@ data class PixivIllustPagesMetadata(
         val pageUrl: String
             get() {
                 if (null == urls) return ""
-                var result = urls["original"]
-                if (null == result) result = urls["regular"]
-                return result ?: ""
+                if (Settings.isPixivHiRes) {
+                    var result = urls["original"]
+                    if (null == result) result = urls["regular"]
+                    return result ?: ""
+                } else {
+                    var result = urls["regular"]
+                    if (null == result) result = urls["small"]
+                    return result ?: ""
+                }
             }
     }
 }

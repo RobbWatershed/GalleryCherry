@@ -12,8 +12,8 @@ import me.devsaki.hentoid.parsers.cleanup
 import me.devsaki.hentoid.parsers.urlToImageFile
 import me.devsaki.hentoid.util.KEY_DL_PARAMS_UGOIRA_FRAMES
 import me.devsaki.hentoid.util.MAP_STRINGS
+import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.isNumeric
-import me.devsaki.hentoid.util.rangeToNumbers
 import me.devsaki.hentoid.util.serializeToJson
 import java.lang.reflect.Type
 
@@ -86,6 +86,7 @@ data class PixivIllustMetadata(
         val urlS: String?,
         @Json(name = "url_big")
         val urlBig: String?,
+        val url: String?,
         @Json(name = "ugoira_meta")
         val ugoiraMeta: UgoiraData?,
     ) {
@@ -100,14 +101,16 @@ data class PixivIllustMetadata(
 
         fun getImageFiles(): List<ImageFile> {
             var pageCount = 0
-            if (this.pageCount != null && isNumeric(this.pageCount)) pageCount =
-                this.pageCount.toInt()
+            if (this.pageCount != null && isNumeric(this.pageCount))
+                pageCount = this.pageCount.toInt()
 
             // TODO include cover in the page list (getThumbUrl) ?
             return if (1 == pageCount) {
                 val img: ImageFile
                 if (null == ugoiraMeta) { // One single page
-                    img = urlToImageFile(urlBig!!, 1, 1, StatusContent.SAVED)
+                    val theUrl =
+                        if (Settings.isPixivHiRes) urlBig ?: url ?: "" else url ?: urlS ?: ""
+                    img = urlToImageFile(theUrl, 1, 1, StatusContent.SAVED)
                 } else { // One single ugoira
                     img = urlToImageFile(ugoiraMeta.src, 1, 1, StatusContent.SAVED)
                     val downloadParams: MutableMap<String, String> = HashMap()
@@ -158,9 +161,15 @@ data class PixivIllustMetadata(
         private val urlBig: String?
     ) {
         fun getUrl(): String {
-            var result = urlBig
-            if (null == result) result = url
-            return result ?: ""
+            if (Settings.isPixivHiRes) {
+                var result = urlBig
+                if (null == result) result = url
+                return result ?: ""
+            } else {
+                var result = url
+                if (null == result) result = urlSmall
+                return result ?: ""
+            }
         }
     }
 
