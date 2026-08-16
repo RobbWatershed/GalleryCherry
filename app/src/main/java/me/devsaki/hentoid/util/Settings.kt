@@ -392,6 +392,7 @@ object Settings {
     var isAppThumbSeparateFile: Boolean by BoolSetting("pref_dl_separate_thumb", true)
     val download404Mode: Int by IntSettingStr("pref_dl_404", 0)
     val isKemonoHiRes: Boolean by BoolSetting("pref_dl_kemono_hires", false)
+    val isPawHiRes: Boolean by BoolSetting("pref_dl_paw_hires", true)
     val downloadAnimationFormat: Int by IntSettingStr(
         "pref_dl_animation_format",
         PictureEncoder.WEBP_LOSSY.value

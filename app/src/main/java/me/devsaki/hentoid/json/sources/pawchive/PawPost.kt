@@ -8,6 +8,7 @@ import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.parsers.cleanup
 import me.devsaki.hentoid.parsers.urlsToImageFiles
+import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.image.isSupportedMedia
 import me.devsaki.hentoid.util.parseDatetimeToEpoch
 import java.net.URLEncoder
@@ -28,26 +29,32 @@ data class PawPost(
     val attachments: List<PawAttachment>
 ) {
     fun getImageUrls(): List<String> {
-        // Try using attachments
-        var result = attachments
-            .filter { isSupportedMedia(it.path ?: "") }
-            .distinct()
-            .map {
-                val server = "https://file.$PAW_DOMAIN_FILTER"
-                val origin = URLEncoder.encode(it.name ?: "Attachment", "UTF-8")
-                "$server/data${it.path}?f=$origin"
+        if (Settings.isPawHiRes) {
+            // Try using attachments
+            var result = attachments
+                .filter { isSupportedMedia(it.path ?: "") }
+                .distinct()
+                .map {
+                    val server = "https://file.$PAW_DOMAIN_FILTER"
+                    val origin = URLEncoder.encode(it.name ?: "Attachment", "UTF-8")
+                    "$server/data${it.path}?f=$origin"
+                }
+            // Add file as the sole attached image
+            if (result.isEmpty()) {
+                file?.path?.let {
+                    if (isSupportedMedia(it))
+                        result = listOf(
+                            "https://img.$PAW_DOMAIN_FILTER/thumbnail/data/${it}"
+                                .replace("//", "/")
+                        )
+                }
             }
-        // Add file as the sole attached image
-        if (result.isEmpty()) {
-            file?.path?.let {
-                if (isSupportedMedia(it))
-                    result = listOf(
-                        "https://img.$PAW_DOMAIN_FILTER/thumbnail/data/${it}"
-                            .replace("//", "/")
-                    )
-            }
+            return result
+        } else {
+            return attachments.filter { isSupportedMedia(it.path ?: "") }
+                .distinct()
+                .map { "https://img.$PAW_DOMAIN_FILTER/thumbnail/data${it.path}" }
         }
-        return result
     }
 
     fun toChapter(
