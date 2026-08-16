@@ -1094,6 +1094,7 @@
     <string name="transform_animations">animations</string>
     <string name="transform_unlock_values">Unlock value caps</string>
     <string name="transform_lock_values">Lock value caps</string>
+    <string name="transform_download_settings">Download settings</string>
 
     <string name="transform_resize_enable">Resize media</string>
     <string name="method">Method</string>

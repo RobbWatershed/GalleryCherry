@@ -56,6 +56,7 @@ import me.devsaki.hentoid.fragments.transform.ResizeFragment
 import me.devsaki.hentoid.util.Debouncer
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.createExceptionLogFile
+import me.devsaki.hentoid.util.exportToDownloadsFolder
 import me.devsaki.hentoid.util.file.createFile
 import me.devsaki.hentoid.util.file.fileSizeFromUri
 import me.devsaki.hentoid.util.file.formatHumanReadableSize
@@ -71,6 +72,7 @@ import me.devsaki.hentoid.util.image.getMediaDimensions
 import me.devsaki.hentoid.util.image.transformAnimated
 import me.devsaki.hentoid.util.image.transformManhwaChapter
 import me.devsaki.hentoid.util.image.transformStill
+import me.devsaki.hentoid.util.serializeToJson
 import me.devsaki.hentoid.util.toast
 import me.devsaki.hentoid.util.tryShowMenuIcons
 import me.devsaki.hentoid.util.video.videoOnlyRenderersFactory
@@ -79,6 +81,7 @@ import me.devsaki.hentoid.workers.TransformWorker
 import okio.use
 import org.greenrobot.eventbus.EventBus
 import timber.log.Timber
+import java.nio.charset.StandardCharsets
 import java.time.Instant
 import kotlin.math.roundToInt
 
@@ -275,6 +278,8 @@ class TransformActivity : BaseActivity(), RangeDialogFragment.Parent {
                 Settings.unlockTransformCaps = !Settings.unlockTransformCaps
                 updateUnlockMenu()
             }
+
+            R.id.action_download_settings -> downloadSettings()
 
             R.id.help -> startBrowserActivity(URL_WIKI_TRANSFORM)
             else -> return true
@@ -676,6 +681,24 @@ class TransformActivity : BaseActivity(), RangeDialogFragment.Parent {
             .filter { it is TextInputLayout }
             .map { it as TextInputLayout }
             .any { it.isErrorEnabled }
+    }
+
+    private fun downloadSettings() {
+        val params = buildParams()
+
+        val json = serializeToJson(
+            params,
+            TransformParams::class.java
+        )
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            exportToDownloadsFolder(
+                this@TransformActivity,
+                json.toByteArray(StandardCharsets.UTF_8),
+                "transform-settings.json",
+                binding?.root
+            )
+        }
     }
 
     private fun onActionClick(params: TransformParams) {
