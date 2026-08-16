@@ -66,7 +66,7 @@ class Hentai2ReadParser : BaseChapteredImageListParser() {
         )?.let { doc ->
             val scripts: List<Element> = doc.select("script")
             getDataFromScripts(scripts)?.let { info ->
-                val imageUrls = info.images.map { s -> IMAGE_PATH + s }
+                val imageUrls = info.images.map { IMAGE_PATH + it }
                 if (imageUrls.isNotEmpty()) return urlsToImageFiles(
                     imageUrls,
                     content.downloadRange,

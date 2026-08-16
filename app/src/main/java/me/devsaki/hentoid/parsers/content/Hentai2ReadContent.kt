@@ -43,10 +43,9 @@ class Hentai2ReadContent : BaseContentParser() {
         content.site = Site.HENTAI2READ
         if (url.isEmpty()) return Content(status = StatusContent.IGNORED)
         content.setRawUrl(url)
-        return if (galleryPattern.matcher(url).find()) updateGallery(
-            content,
-            updateImages
-        ) else updateSingleChapter(content, url, updateImages)
+        return if (galleryPattern.matcher(url).find())
+            updateGallery(content, updateImages)
+        else updateSingleChapter(content, url, updateImages)
     }
 
     private fun updateSingleChapter(
@@ -58,11 +57,9 @@ class Hentai2ReadContent : BaseContentParser() {
         if (urlParts.size > 1) content.uniqueSiteId = urlParts[urlParts.size - 2]
         else content.uniqueSiteId = urlParts[0]
         try {
-            val info = Hentai2ReadParser.getDataFromScripts(scripts)
-            if (info != null) {
+            Hentai2ReadParser.getDataFromScripts(scripts)?.let { info ->
                 content.title = cleanup(info.title)
-                val chapterImgs =
-                    info.images.map { s -> IMAGE_PATH + s }
+                val chapterImgs = info.images.map { IMAGE_PATH + it }
                 if (updateImages && chapterImgs.isNotEmpty()) {
                     val imgs = urlsToImageFiles(
                         chapterImgs,
