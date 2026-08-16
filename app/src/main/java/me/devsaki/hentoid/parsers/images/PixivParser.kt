@@ -20,6 +20,7 @@ import me.devsaki.hentoid.util.download.DownloadRateLimiter.take
 import me.devsaki.hentoid.util.exception.EmptyResultException
 import me.devsaki.hentoid.util.exception.PreparationInterruptedException
 import me.devsaki.hentoid.util.isNumeric
+import me.devsaki.hentoid.util.isRangeChapters
 import me.devsaki.hentoid.util.network.ACCEPT_ALL
 import me.devsaki.hentoid.util.network.getCookies
 import me.devsaki.hentoid.util.network.waitBlocking429
@@ -122,7 +123,7 @@ class PixivParser : BaseImageListParser() {
         val pages = galleryMetadata.getImageFiles()
 
         val range = content.downloadRange
-        val rangeIndexes = if (range.isBlank()) IntRange(1, pages.size)
+        val rangeIndexes = if (range.isBlank() || isRangeChapters(range)) IntRange(1, pages.size)
         else rangeToNumbers(range).filter { it in 1..<pages.size + 1 }
 
         result.addAll(pages.filter { it.order in rangeIndexes })
@@ -151,8 +152,12 @@ class PixivParser : BaseImageListParser() {
         val nbChapters = nbChaptersStr.toInt()
 
         val range = onlineContent.downloadRange
-        val rangeIndexes = if (range.isBlank()) IntRange(1, MAX_PAGE_RANGE)
-        else rangeToNumbers(range).filter { it > 0 }.map { it + 1 }
+        val pageRangeIndexes =
+            if (range.isBlank() || isRangeChapters(range)) IntRange(1, MAX_PAGE_RANGE)
+            else rangeToNumbers(range).filter { it > 0 }.map { it + 1 }
+        val chpRangeIndexes =
+            if (range.isBlank() || !isRangeChapters(range)) IntRange(1, nbChapters)
+            else rangeToNumbers(range)
 
         // List all Illust IDs (API is paged, hence the loop)
         val chapters: MutableList<Chapter> = ArrayList()
@@ -201,6 +206,8 @@ class PixivParser : BaseImageListParser() {
         val attrs: MutableSet<Attribute> = HashSet()
         extraChapters.forEachIndexed { index, ch ->
             if (processHalted.get()) return@forEachIndexed
+            if (!chpRangeIndexes.contains(ch.order)) return@forEachIndexed
+
             take()
             val illustMetadata =
                 PixivServer.api.getIllustMetadata(ch.uniqueId, cookieStr, ACCEPT_ALL, userAgent)
@@ -214,7 +221,7 @@ class PixivParser : BaseImageListParser() {
             attrs.addAll(chapterAttrs)
             val chapterImages = illustMetadata.getImageFiles()
             for (img in chapterImages) {
-                if (imgOffset in rangeIndexes) {
+                if (imgOffset in pageRangeIndexes) {
                     img.order = imgOffset
                     img.setChapter(ch)
                     result.add(img)
@@ -252,10 +259,6 @@ class PixivParser : BaseImageListParser() {
             call = { PixivServer.api.getUserIllusts(userId, cookieStr, ACCEPT_ALL, userAgent) }
         )
 
-        val range = onlineContent.downloadRange
-        val rangeIndexes = if (range.isBlank()) IntRange(1, MAX_PAGE_RANGE)
-        else rangeToNumbers(range).filter { it > 0 }.map { it + 1 }
-
         val userIllustsMetadata = userIllustResp.body()
         if (null == userIllustsMetadata || userIllustsMetadata.isError()) {
             var message = "Unreachable user illusts"
@@ -267,6 +270,14 @@ class PixivParser : BaseImageListParser() {
         var illustIds = userIllustsMetadata.getIllustIds()
         val storedChapters = storedContent?.chaptersList ?: emptyList()
         if (storedChapters.isNotEmpty()) illustIds = getExtraChaptersbyId(storedChapters, illustIds)
+
+        val range = onlineContent.downloadRange
+        val pageRangeIndexes =
+            if (range.isBlank() || isRangeChapters(range)) IntRange(1, MAX_PAGE_RANGE)
+            else rangeToNumbers(range).filter { it > 0 }.map { it + 1 }
+        val chpRangeIndexes =
+            if (range.isBlank() || !isRangeChapters(range)) IntRange(1, illustIds.size)
+            else rangeToNumbers(range)
 
         // Work on detected extra chapters
         progressStart(onlineContent, storedContent)
@@ -282,6 +293,8 @@ class PixivParser : BaseImageListParser() {
         val attrs: MutableSet<Attribute> = HashSet()
         illustIds.reversed().forEachIndexed { index, illustId ->
             if (processHalted.get()) return@forEachIndexed
+            if (!chpRangeIndexes.contains(chpOffset++)) return@forEachIndexed
+
             val illustResp = call429(
                 id = illustId,
                 call = {
@@ -297,7 +310,7 @@ class PixivParser : BaseImageListParser() {
             val chapterAttrs = illustMetadata.getAttributes()
             attrs.addAll(chapterAttrs)
             val chp = Chapter(
-                order = chpOffset++,
+                order = chpOffset,
                 url = illustMetadata.getUrl(),
                 name = illustMetadata.getTitle(),
                 uniqueId = illustMetadata.getId()
@@ -305,7 +318,7 @@ class PixivParser : BaseImageListParser() {
             chp.setContentId(onlineContent.id)
             val chapterImages = illustMetadata.getImageFiles()
             for (img in chapterImages) {
-                if (imgOffset in rangeIndexes) {
+                if (imgOffset in pageRangeIndexes) {
                     img.order = imgOffset
                     img.setChapter(chp)
                     result.add(img)
@@ -351,10 +364,6 @@ class PixivParser : BaseImageListParser() {
             throw IllegalArgumentException(message)
         }
 
-        val range = onlineContent.downloadRange
-        val rangeIndexes = if (range.isBlank()) IntRange(1, MAX_PAGE_RANGE)
-        else rangeToNumbers(range).filter { it > 0 }.map { it + 1 }
-
         // Ignore downloaded or queued Content
         // TODO refactor not to instanciate a DAO inside an ImageListParser
         val dao = ObjectBoxDAO()
@@ -368,6 +377,15 @@ class PixivParser : BaseImageListParser() {
         // Detect extra chapters
         val storedChapters = storedContent?.chaptersList ?: emptyList()
         if (storedChapters.isNotEmpty()) illustIds = getExtraChaptersbyId(storedChapters, illustIds)
+
+        val range = onlineContent.downloadRange
+        val pageRangeIndexes =
+            if (range.isBlank() || isRangeChapters(range)) IntRange(1, MAX_PAGE_RANGE)
+            else rangeToNumbers(range).filter { it > 0 }.map { it + 1 }
+        val chpRangeIndexes =
+            if (range.isBlank() || !isRangeChapters(range)) IntRange(1, illustIds.size)
+            else rangeToNumbers(range)
+
 
         // Work on detected extra chapters
         progressStart(onlineContent, storedContent)
@@ -383,6 +401,8 @@ class PixivParser : BaseImageListParser() {
         val attrs: MutableSet<Attribute> = HashSet()
         illustIds.forEachIndexed { index, illustId ->
             if (processHalted.get()) return@forEachIndexed
+            if (!chpRangeIndexes.contains(chpOffset++)) return@forEachIndexed
+
             val illustResp = call429(
                 id = illustId,
                 call = {
@@ -398,7 +418,7 @@ class PixivParser : BaseImageListParser() {
             val chapterAttrs = illustMetadata.getAttributes()
             attrs.addAll(chapterAttrs)
             val chp = Chapter(
-                order = chpOffset++,
+                order = chpOffset,
                 url = illustMetadata.getUrl(),
                 name = illustMetadata.getTitle(),
                 uniqueId = illustMetadata.getId()
@@ -406,7 +426,7 @@ class PixivParser : BaseImageListParser() {
             chp.setContentId(onlineContent.id)
             val chapterImages = illustMetadata.getImageFiles()
             for (img in chapterImages) {
-                if (imgOffset in rangeIndexes) {
+                if (imgOffset in pageRangeIndexes) {
                     img.order = imgOffset
                     img.setChapter(chp)
                     result.add(img)

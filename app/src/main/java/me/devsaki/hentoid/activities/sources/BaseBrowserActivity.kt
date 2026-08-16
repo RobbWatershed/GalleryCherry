@@ -152,6 +152,9 @@ import kotlin.math.round
  */
 private val GALLERY_REGEX by lazy { "\\b|/galleries|/gallery|/g|/entry\\b".toRegex() }
 
+// List of sources that support chapters but whose parser doesn't implement BaseChapteredImageListParser
+private val CHAPTERED_SITES = listOf(Site.PIXIV, Site.KEMONO, Site.PAWCHIVE)
+
 private const val SIMILARITY_MIN_THRESHOLD = 0.85f
 
 abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.BrowserActivity,
@@ -1157,7 +1160,9 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
 
         val parser = ContentParserFactory.getImageListParser(getStartSite())
         val supportsChapters = (parser is BaseChapteredImageListParser)
-        val hasChapters = if (supportsChapters) !parser.isChapterUrl(url) else false
+        val hasChapters =
+            if (supportsChapters) !parser.isChapterUrl(url)
+            else CHAPTERED_SITES.contains(getStartSite()) // TODO that's a dirty trick :(
 
         RangeDialogFragment.invoke(
             this,
