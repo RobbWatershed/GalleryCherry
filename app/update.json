@@ -46,6 +46,7 @@
       {"sourceName":"KEMONO", "status":"RED", "fixedByBuild":"944"},
       {"sourceName":"YIFFER", "status":"RED", "fixedByBuild":"950"},
       {"sourceName":"MANHWA18", "status":"ORANGE", "fixedByBuild":"953"},
+      {"sourceName":"PORNCOMIX", "status":"BLACK"},
       {"sourceName":"IMHENTAI", "status":"GREY"},
 	  {"sourceName":"MANHWA", "status":"BLACK"},
       {"sourceName":"TMO", "status":"BLACK"},
