@@ -3,8 +3,12 @@ package me.devsaki.hentoid.util
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.content.Intent.ACTION_OPEN_DOCUMENT
+import android.content.Intent.ACTION_OPEN_DOCUMENT_TREE
+import android.content.Intent.CATEGORY_OPENABLE
 import android.net.Uri
-import android.provider.DocumentsContract
+import android.provider.DocumentsContract.EXTRA_INITIAL_URI
+import android.provider.DocumentsContract.EXTRA_PROMPT
 import android.util.Log
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.core.net.toUri
@@ -88,11 +92,11 @@ private const val EXTERNAL_LIB_TAG = "external-library"
 val ENDS_WITH_NUMBER: Pattern by lazy { Pattern.compile(".*\\d+(\\.\\d+)?$") }
 val BRACKETS by lazy { "\\[[^(\\[\\])]*]".toRegex() }
 
-enum class PickerResult {
-    OK,  // OK - Returned a valid URI
-    KO_NO_URI,  // No URI selected
-    KO_CANCELED, // Operation canceled
-    KO_OTHER // Any other issue
+sealed interface PickUriResult {
+    class Success(val uri: Uri) : PickUriResult
+    object NoUri : PickUriResult
+    object Cancelled : PickUriResult
+    object Unknown : PickUriResult
 }
 
 enum class ProcessFolderResult {
@@ -146,81 +150,54 @@ fun isHentoidFolderName(folderName: String): Boolean {
 }
 
 
-class PickFolderContract : ActivityResultContract<StorageLocation, Pair<PickerResult, Uri>>() {
+class PickFolderContract : ActivityResultContract<StorageLocation, PickUriResult>() {
     override fun createIntent(context: Context, input: StorageLocation): Intent {
         disable() // Prevents the app from displaying the PIN lock when returning from the SAF dialog
-        return getFolderPickerIntent(context, input)
+
+        // http://stackoverflow.com/a/31334967/1615876
+        return Intent(ACTION_OPEN_DOCUMENT_TREE)
+            .putExtra(EXTRA_PROMPT, context.getString(R.string.dialog_prompt))
+            .putExtra("android.content.extra.SHOW_ADVANCED", true)
+            .putInitialUriExtra(context, input)
     }
 
-    override fun parseResult(resultCode: Int, intent: Intent?): Pair<PickerResult, Uri> {
+    override fun parseResult(resultCode: Int, intent: Intent?): PickUriResult {
         disable() // Restores autolock on app going to background
-        return parsePickerResult(resultCode, intent)
+        return wrapResult(resultCode, intent)
     }
-}
-
-
-class PickFileContract : ActivityResultContract<Int, Pair<PickerResult, Uri>>() {
-    override fun createIntent(context: Context, input: Int): Intent {
-        disable() // Prevents the app from displaying the PIN lock when returning from the SAF dialog
-        return getFilePickerIntent()
-    }
-
-    override fun parseResult(resultCode: Int, intent: Intent?): Pair<PickerResult, Uri> {
-        disable() // Restores autolock on app going to background
-        return parsePickerResult(resultCode, intent)
-    }
-}
-
-
-private fun parsePickerResult(resultCode: Int, intent: Intent?): Pair<PickerResult, Uri> {
-    // Return from the SAF picker
-    if (resultCode == Activity.RESULT_OK && intent != null) {
-        // Get Uri from Storage Access Framework
-        val uri = intent.data
-        return if (uri != null) Pair(PickerResult.OK, uri)
-        else Pair(PickerResult.KO_NO_URI, Uri.EMPTY)
-    } else if (resultCode == Activity.RESULT_CANCELED) {
-        return Pair(PickerResult.KO_CANCELED, Uri.EMPTY)
-    }
-    return Pair(PickerResult.KO_OTHER, Uri.EMPTY)
-}
-
-/**
- * Get the intent for the SAF folder picker properly set up, positioned on the Hentoid primary folder
- *
- * @param context Context to be used
- * @return Intent for the SAF folder picker
- */
-private fun getFolderPickerIntent(context: Context, location: StorageLocation): Intent {
-    val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
-    intent.putExtra(DocumentsContract.EXTRA_PROMPT, context.getString(R.string.dialog_prompt))
-    // http://stackoverflow.com/a/31334967/1615876
-    intent.putExtra("android.content.extra.SHOW_ADVANCED", true)
 
     // Start the SAF at the specified location
-    if (Settings.getStorageUri(location).isNotEmpty()) {
-        val file = getDocumentFromTreeUriString(
-            context,
-            Settings.getStorageUri(location)
-        )
-        if (file != null) intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, file.uri)
+    private fun Intent.putInitialUriExtra(context: Context, storageLocation: StorageLocation): Intent {
+        val treeUriStr = Settings.getStorageUri(storageLocation)
+        if (treeUriStr.isNotEmpty()) {
+            val file = getDocumentFromTreeUriString(context, treeUriStr)
+            if (file != null) putExtra(EXTRA_INITIAL_URI, file.uri)
+        }
+        return this
     }
-    return intent
 }
 
-/**
- * Get the intent for the SAF file picker properly set up
- *
- * @return Intent for the SAF folder picker
- */
-private fun getFilePickerIntent(): Intent {
-    val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
-    intent.addCategory(Intent.CATEGORY_OPENABLE)
-    intent.setType("*/*")
-    // http://stackoverflow.com/a/31334967/1615876
-    intent.putExtra("android.content.extra.SHOW_ADVANCED", true)
-    disable() // Prevents the app from displaying the PIN lock when returning from the SAF dialog
-    return intent
+class PickFileContract : ActivityResultContract<Int, PickUriResult>() {
+    override fun createIntent(context: Context, input: Int): Intent {
+        disable() // Prevents the app from displaying the PIN lock when returning from the SAF dialog
+
+        // http://stackoverflow.com/a/31334967/1615876
+        return Intent(ACTION_OPEN_DOCUMENT)
+            .addCategory(CATEGORY_OPENABLE)
+            .setType("*/*")
+            .putExtra("android.content.extra.SHOW_ADVANCED", true)
+    }
+
+    override fun parseResult(resultCode: Int, intent: Intent?): PickUriResult {
+        disable() // Restores autolock on app going to background
+        return wrapResult(resultCode, intent)
+    }
+}
+
+private fun wrapResult(resultCode: Int, intent: Intent?) = when (resultCode) {
+    Activity.RESULT_OK -> intent?.data?.let(PickUriResult::Success) ?: PickUriResult.NoUri
+    Activity.RESULT_CANCELED -> PickUriResult.Cancelled
+    else -> PickUriResult.Unknown
 }
 
 /**

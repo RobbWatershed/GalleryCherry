@@ -1,6 +1,5 @@
 package me.devsaki.hentoid.fragments.tools
 
-import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -21,7 +20,7 @@ import me.devsaki.hentoid.databinding.DialogToolsSettingsImportBinding
 import me.devsaki.hentoid.fragments.BaseDialogFragment
 import me.devsaki.hentoid.json.JsonSettings
 import me.devsaki.hentoid.util.PickFileContract
-import me.devsaki.hentoid.util.PickerResult
+import me.devsaki.hentoid.util.PickUriResult
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.importRenamingRules
 import me.devsaki.hentoid.util.jsonToObject
@@ -42,8 +41,7 @@ class SettingsImportDialogFragment : BaseDialogFragment<Nothing>() {
     private var dismissHandler: Handler? = null
 
 
-    private val pickFile = registerForActivityResult(PickFileContract())
-    { result -> onFilePickerResult(result.first, result.second) }
+    private val pickFile = registerForActivityResult(PickFileContract(), ::onFilePickerResult)
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -66,29 +64,29 @@ class SettingsImportDialogFragment : BaseDialogFragment<Nothing>() {
         super.onDestroyView()
     }
 
-    private fun onFilePickerResult(resultCode: PickerResult, uri: Uri) {
+    private fun onFilePickerResult(result: PickUriResult) {
         binding?.apply {
-            when (resultCode) {
-                PickerResult.OK -> {
+            when (result) {
+                is PickUriResult.Success -> {
                     // File selected
-                    val doc = DocumentFile.fromSingleUri(requireContext(), uri) ?: return
+                    val doc = DocumentFile.fromSingleUri(requireContext(), result.uri) ?: return
                     selectFileBtn.visibility = View.GONE
                     checkFile(doc)
                 }
 
-                PickerResult.KO_CANCELED -> Snackbar.make(
+                PickUriResult.Cancelled -> Snackbar.make(
                     root,
                     R.string.import_canceled,
                     BaseTransientBottomBar.LENGTH_LONG
                 ).show()
 
-                PickerResult.KO_NO_URI -> Snackbar.make(
+                PickUriResult.NoUri -> Snackbar.make(
                     root,
                     R.string.import_invalid,
                     BaseTransientBottomBar.LENGTH_LONG
                 ).show()
 
-                PickerResult.KO_OTHER -> Snackbar.make(
+                PickUriResult.Unknown -> Snackbar.make(
                     root,
                     R.string.import_other,
                     BaseTransientBottomBar.LENGTH_LONG

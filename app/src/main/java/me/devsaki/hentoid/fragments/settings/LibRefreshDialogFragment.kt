@@ -1,6 +1,5 @@
 package me.devsaki.hentoid.fragments.settings
 
-import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -29,7 +28,7 @@ import me.devsaki.hentoid.events.ServiceDestroyedEvent
 import me.devsaki.hentoid.fragments.BaseDialogFragment
 import me.devsaki.hentoid.util.ImportOptions
 import me.devsaki.hentoid.util.PickFolderContract
-import me.devsaki.hentoid.util.PickerResult
+import me.devsaki.hentoid.util.PickUriResult
 import me.devsaki.hentoid.util.ProcessFolderResult
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.file.RQST_STORAGE_PERMISSION
@@ -91,10 +90,7 @@ class LibRefreshDialogFragment : BaseDialogFragment<LibRefreshDialogFragment.Par
     }
 
 
-    private val pickFolder =
-        registerForActivityResult(PickFolderContract()) { result: Pair<PickerResult, Uri> ->
-            onFolderPickerResult(result.first, result.second)
-        }
+    private val pickFolder = registerForActivityResult(PickFolderContract(), ::onFolderPickerResult)
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedState: Bundle?
@@ -323,20 +319,26 @@ class LibRefreshDialogFragment : BaseDialogFragment<LibRefreshDialogFragment.Par
         }
     }
 
-    private fun onFolderPickerResult(resultCode: PickerResult, uri: Uri) {
-        when (resultCode) {
-            PickerResult.OK -> {
+    private fun onFolderPickerResult(result: PickUriResult) {
+        when (result) {
+            is PickUriResult.Success -> {
                 lifecycleScope.launch {
                     val res = withContext(Dispatchers.IO) {
                         return@withContext if (location == StorageLocation.EXTERNAL)
-                            setAndScanExternalFolder(requireContext(), uri)
-                        else setAndScanPrimaryFolder(requireContext(), uri, location, true, null)
+                            setAndScanExternalFolder(requireContext(), result.uri)
+                        else setAndScanPrimaryFolder(
+                            requireContext(),
+                            result.uri,
+                            location,
+                            true,
+                            null
+                        )
                     }
                     onScanHentoidFolderResult(res.first, res.second)
                 }
             }
 
-            PickerResult.KO_CANCELED -> {
+            PickUriResult.Cancelled -> {
                 binding2?.apply {
                     Snackbar.make(
                         root,
@@ -346,7 +348,7 @@ class LibRefreshDialogFragment : BaseDialogFragment<LibRefreshDialogFragment.Par
                 }
             }
 
-            PickerResult.KO_OTHER, PickerResult.KO_NO_URI -> {
+            PickUriResult.NoUri, PickUriResult.Unknown -> {
                 binding2?.apply {
                     Snackbar.make(root, R.string.import_other, BaseTransientBottomBar.LENGTH_LONG)
                         .show()
