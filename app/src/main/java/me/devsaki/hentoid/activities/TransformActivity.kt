@@ -519,7 +519,7 @@ class TransformActivity : BaseActivity(), RangeDialogFragment.Parent {
                         else BitmapInfo(sourceBmp.rawData)
                     } else BitmapInfo(transformStill(context, sourceBmp.rawData, params, true))
                 } catch (e: Exception) {
-                    toast(R.string.error)
+                    toast(R.string.transform_error)
                     createExceptionLogFile(e, context)
                     return@withContext null
                 }

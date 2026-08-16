@@ -1138,7 +1138,7 @@
     <string name="next_page">Next page</string>
     <string name="original">Original</string>
     <string name="transformed">Transformed</string>
-    <string name="error">Error - Can't transform with the current settings and files</string>
+    <string name="transform_error">Error - Can\'t transform with the current settings and files</string>
 
     <!-- Archive dialog -->
     <string name="target_folder">Target folder</string>
