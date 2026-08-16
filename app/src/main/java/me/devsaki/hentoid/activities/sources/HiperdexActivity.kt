@@ -63,7 +63,7 @@ class HiperdexActivity : BaseBrowserActivity() {
             if (!isReload) {
                 scope.launch(Dispatchers.Default) {
                     pause(150)
-                    parseResponse(url, null, isGalleryPage(url), false)
+                    parseResponse(url, null, isDownloadable(url), false)
                 }
             }
         }

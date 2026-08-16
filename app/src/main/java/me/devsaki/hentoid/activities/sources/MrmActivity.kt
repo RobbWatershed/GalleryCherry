@@ -28,7 +28,7 @@ class MrmActivity : BaseBrowserActivity() {
         filter: Array<String>,
         activity: BrowserActivity
     ) : CustomWebViewClient(site, filter, activity) {
-        override fun isGalleryPage(url: String): Boolean {
+        override fun isDownloadable(url: String): Boolean {
             if (url.endsWith("/upload/")) return false
             if (url.endsWith("/whats-that-book/")) return false
             if (url.endsWith("/video-movie/")) return false
@@ -39,7 +39,7 @@ class MrmActivity : BaseBrowserActivity() {
             if (url.endsWith("/my-bookmark/")) return false
             if (url.endsWith("/privacy-policy/")) return false
             if (url.endsWith("/dmca-notice/")) return false
-            return if (url.contains("?relatedposts")) false else super.isGalleryPage(url)
+            return if (url.contains("?relatedposts")) false else super.isDownloadable(url)
         }
     }
 }

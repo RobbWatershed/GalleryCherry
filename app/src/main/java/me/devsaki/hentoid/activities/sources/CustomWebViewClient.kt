@@ -390,12 +390,12 @@ open class CustomWebViewClient : WebViewClient {
     }
 
     /**
-     * Indicates if the given URL is a book gallery page
+     * Indicates if the given URL is page with downloadable content
      *
      * @param url URL to test
-     * @return True if the given URL represents a book gallery page
+     * @return True if the given URL represents a page with downloadable content
      */
-    open fun isGalleryPage(url: String): Boolean {
+    open fun isDownloadable(url: String): Boolean {
         if (galleryUrlPattern.isEmpty()) return false
         for (p in galleryUrlPattern) {
             val matcher = p.matcher(url)
@@ -441,7 +441,7 @@ open class CustomWebViewClient : WebViewClient {
      * @return Given URL to be rewritten
      */
     fun seekResultsUrl(url: String, pageNum: Int): String {
-        return if (null == resultsUrlRewriter || !isResultsPage(url) || isGalleryPage(url)) url
+        return if (null == resultsUrlRewriter || !isResultsPage(url) || isDownloadable(url)) url
         else resultsUrlRewriter!!.invoke(url.toUri(), pageNum)
     }
 
@@ -559,14 +559,14 @@ open class CustomWebViewClient : WebViewClient {
 
         // Activate startup JS
         for (s in jsStartupScripts) view.loadUrl(getAssetJsScript(view.context, s, jsReplacements))
-        activity?.onPageStarted(url, isGalleryPage(url), isHtmlLoaded.get(), true)
+        activity?.onPageStarted(url, isDownloadable(url), isHtmlLoaded.get(), true)
     }
 
     override fun onPageFinished(view: WebView?, url: String) {
         if (BuildConfig.DEBUG) Timber.v("WebView : page finished $url")
         isPageLoading.set(false)
         isHtmlLoaded.set(false) // Reset for the next page
-        activity?.onPageFinished(url, isResultsPage(url), isGalleryPage(url))
+        activity?.onPageFinished(url, isResultsPage(url), isDownloadable(url))
     }
 
     override fun doUpdateVisitedHistory(
@@ -579,7 +579,7 @@ open class CustomWebViewClient : WebViewClient {
             scope.launch(Dispatchers.Default) {
                 pause(150)
                 withContext(Dispatchers.Main) {
-                    activity?.onPageFinished(url, isResultsPage(url), isGalleryPage(url))
+                    activity?.onPageFinished(url, isResultsPage(url), isDownloadable(url))
                 }
             }
         }
@@ -646,7 +646,7 @@ open class CustomWebViewClient : WebViewClient {
                 MIME_IMAGE_WEBP, "utf-8", ByteArrayInputStream(BLOCKED_MARK)
             )
         } else {
-            if (isGalleryPage(url)) return parseResponse(
+            if (isDownloadable(url)) return parseResponse(
                 url,
                 headers,
                 analyzeForDownload = true,

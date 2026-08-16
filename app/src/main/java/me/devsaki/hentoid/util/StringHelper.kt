@@ -313,12 +313,16 @@ fun isTransposition(referenceCleanup: String, comparisonCleanup: String): Boolea
     return true
 }
 
+fun isRangeChapters(range : String) : Boolean {
+    return range.startsWith('c')
+}
+
 /**
  * Convert the given number range to the corresponding list of numbers
  * Syntax : "1-5", "1;3;8", "1-2;3-4" (also works with a comma as a separator)
  */
 fun rangeToNumbers(range: String): List<Int> {
-    val value = if (range.startsWith('c')) range.substring(1) else range
+    val value = if (isRangeChapters(range)) range.substring(1) else range
     val parts = value
         .replace(",", ";")
         .split(';')

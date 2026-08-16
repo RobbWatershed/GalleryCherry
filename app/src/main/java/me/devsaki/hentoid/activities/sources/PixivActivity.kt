@@ -114,7 +114,7 @@ class PixivActivity : BaseBrowserActivity() {
                 handler.post {
                     activity?.onPageStarted(
                         url,
-                        isGalleryPage(url),
+                        isDownloadable(url),
                         isHtmlLoaded = false,
                         isBrowsable = false
                     )

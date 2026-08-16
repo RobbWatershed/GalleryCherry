@@ -87,6 +87,7 @@ import me.devsaki.hentoid.fragments.browser.LongTapActionsDialogFragment
 import me.devsaki.hentoid.fragments.browser.UrlDialogFragment
 import me.devsaki.hentoid.json.core.UpdateInfo
 import me.devsaki.hentoid.parsers.ContentParserFactory
+import me.devsaki.hentoid.parsers.images.BaseChapteredImageListParser
 import me.devsaki.hentoid.ui.invokeNumberInputDialog
 import me.devsaki.hentoid.util.QueuePosition
 import me.devsaki.hentoid.util.Settings
@@ -497,7 +498,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
 
         webView.url?.let { url ->
             Timber.i(">> WebActivity resume : $url ${currentContent != null} ${currentContent?.title ?: ""}")
-            if (!webClient.isGalleryPage(url)) return
+            if (!webClient.isDownloadable(url)) return
 
             // TODO Cancel whichever process was happening before
             currentContent?.let { cc ->
@@ -791,7 +792,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
 
         // Priority to quick download if activated and possible
         if (Settings.isBrowserQuickDl && !Settings.isBrowserMode
-            && !linkUrl.isNullOrEmpty() && webClient.isGalleryPage(linkUrl)
+            && !linkUrl.isNullOrEmpty() && webClient.isDownloadable(linkUrl)
         ) {
             binding?.apply {
                 quickDlFeedback.setMargins(
@@ -1151,11 +1152,18 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
     }
 
     private fun onRangeDownload() {
+        val url = webView.url ?: return
+        if (!webClient.isDownloadable(url)) return // Double check; shouldn't happen
+
+        val parser = ContentParserFactory.getImageListParser(getStartSite())
+        val supportsChapters = (parser is BaseChapteredImageListParser)
+        val hasChapters = if (supportsChapters) !parser.isChapterUrl(url) else false
+
         RangeDialogFragment.invoke(
             this,
             resources.getString(R.string.range_download_prompt),
             currentContent?.downloadRange ?: "",
-            false // TODO make that dynamic
+            hasChapters
         )
     }
 
@@ -1922,7 +1930,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
     private fun backListContainsGallery(backForwardList: WebBackForwardList): Int {
         for (i in backForwardList.currentIndex - 1 downTo 0) {
             val item = backForwardList.getItemAtIndex(i)
-            if (webClient.isGalleryPage(item.url)) return i
+            if (webClient.isDownloadable(item.url)) return i
         }
         return -1
     }

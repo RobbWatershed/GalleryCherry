@@ -44,8 +44,7 @@
         android:ems="10"
         android:hint="@string/range_download_prompt"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/selection"
-        tools:visibility="visible">
+        app:layout_constraintTop_toBottomOf="@id/selection">
 
         <com.google.android.material.textfield.TextInputEditText
             android:layout_width="match_parent"
@@ -60,15 +59,14 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
         android:maxLines="2"
+        android:text="@string/range_caption"
         android:textSize="@dimen/text_body_2"
-        app:layout_constraintTop_toBottomOf="@id/range_txt"
-        tools:text="@string/range_caption" />
+        app:layout_constraintTop_toBottomOf="@id/range_txt" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/action_button"
         style="@style/Widget.Material3.Button.TonalButton"
         android:layout_width="match_parent"
-        android:layout_height="?android:attr/actionBarSize"
         android:layout_marginTop="8dp"
         android:text="@string/ok"
         app:layout_constraintTop_toBottomOf="@id/caption" />

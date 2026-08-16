@@ -10,6 +10,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.databinding.DialogSelectRangeBinding
+import me.devsaki.hentoid.util.isRangeChapters
 import me.devsaki.hentoid.util.rangeToNumbers
 
 /**
@@ -84,7 +85,7 @@ class RangeDialogFragment : BaseDialogFragment<RangeDialogFragment.Parent>() {
             pages.text = resources.getQuantityString(R.plurals.page, 2)
             chapters.text = resources.getQuantityString(R.plurals.chapter, 2)
 
-            val isChapters = range.startsWith('c')
+            val isChapters = isRangeChapters(range)
             chapters.isChecked = isChapters && hasChapters
             pages.isChecked = !chapters.isChecked
             selection.isVisible = hasChapters

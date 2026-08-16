@@ -13,6 +13,7 @@ import me.devsaki.hentoid.util.MAP_STRINGS
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.completedStr
 import me.devsaki.hentoid.util.isNumeric
+import me.devsaki.hentoid.util.isRangeChapters
 import me.devsaki.hentoid.util.network.HEADER_COOKIE_KEY
 import me.devsaki.hentoid.util.network.HEADER_REFERER_KEY
 import me.devsaki.hentoid.util.network.fixUrl
@@ -212,7 +213,7 @@ fun urlsToImageFiles(
     // Remove duplicates and MACOSX indexes (yes, it does happen!) before creating the ImageFiles
     val imgUrlsUnique = imgUrls.distinct().filterNot { it.contains("__MACOSX") || it.isEmpty() }
     val rangeIndexes =
-        if (range.isBlank()) imgUrlsUnique.indices
+        if (range.isBlank() || isRangeChapters(range)) imgUrlsUnique.indices
         else rangeToNumbers(range)
             .filter { it >= initialOrder && it < initialOrder + imgUrlsUnique.count() }
             .map { it - initialOrder }

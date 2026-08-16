@@ -53,7 +53,7 @@ class Manhwa18Activity : BaseBrowserActivity() {
         }
 
         fun onFetchCall(url: String, body: String) {
-            if (!isGalleryPage(url)) return
+            if (!isDownloadable(url)) return
             try {
                 lifecycleScope.launch {
                     var skip = false

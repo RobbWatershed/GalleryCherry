@@ -51,7 +51,7 @@ class DeviantArtActivity : BaseBrowserActivity() {
         }
 
         fun onXhrCall(url: String) {
-            if (!isGalleryPage(url)) return
+            if (!isDownloadable(url)) return
             try {
                 lifecycleScope.launch {
                     var skip = false

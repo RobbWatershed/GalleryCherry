@@ -14,7 +14,9 @@ import me.devsaki.hentoid.parsers.setDownloadParams
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.exception.EmptyResultException
 import me.devsaki.hentoid.util.exception.PreparationInterruptedException
+import me.devsaki.hentoid.util.isRangeChapters
 import me.devsaki.hentoid.util.network.getOnlineDocument
+import me.devsaki.hentoid.util.rangeToNumbers
 import org.greenrobot.eventbus.EventBus
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
@@ -24,7 +26,7 @@ const val GALLERY_URL_PLACEHOLDER = $$"$galleryUrl"
 
 abstract class BaseChapteredImageListParser : BaseImageListParser() {
 
-    protected abstract fun isChapterUrl(url: String): Boolean
+    abstract fun isChapterUrl(url: String): Boolean
 
     protected abstract fun getChapterSelector(): ChapterSelector
 
@@ -98,21 +100,29 @@ abstract class BaseChapteredImageListParser : BaseImageListParser() {
         // 2. Open each chapter URL and get the image data until all images are found
         var minEpoch = Long.MAX_VALUE
         var storedOrderOffset = getMaxChapterOrder(storedChapters)
-        extraChapters.forEach { chp ->
-            if (processHalted.get()) return@forEach
-            chp.order = ++storedOrderOffset
-            if (chp.uploadDate > 0) minEpoch = minEpoch.coerceAtMost(chp.uploadDate)
-            result.addAll(
-                parseChapterImageFiles(
-                    onlineContent,
-                    chp,
-                    imgOffset + result.size + 1,
-                    headers,
-                    false
+        val isRangeChapters = isRangeChapters(onlineContent.downloadRange)
+        val range =
+            if (isRangeChapters) rangeToNumbers(onlineContent.downloadRange) else emptyList()
+        extraChapters
+            .map {
+                it.order = ++storedOrderOffset
+                it
+            }
+            .filter { range.isEmpty() || range.contains(it.order) }
+            .forEach { chp ->
+                if (processHalted.get()) return@forEach
+                if (chp.uploadDate > 0) minEpoch = minEpoch.coerceAtMost(chp.uploadDate)
+                result.addAll(
+                    parseChapterImageFiles(
+                        onlineContent,
+                        chp,
+                        imgOffset + result.size + 1,
+                        headers,
+                        false
+                    )
                 )
-            )
-            progressNext()
-        }
+                progressNext()
+            }
         // If the process has been halted manually, the result is incomplete and should not be returned as is
         if (processHalted.get()) throw PreparationInterruptedException()
         progressComplete()

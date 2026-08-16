@@ -46,17 +46,11 @@ class HentaifoxContent : BaseContentParser() {
         information?.let { info ->
             if (info.children().isEmpty()) return content
 
-//            var qtyPages = 0
             val attributes = AttributeMap()
             for (e in info.children()) {
                 // Flat info (pages, posted date)
                 if (e.children().isEmpty() && e.hasText()) {
-                    /*
-                    if (e.text().lowercase(Locale.getDefault()).startsWith("pages")) {
-                        qtyPages = e.text().lowercase(Locale.getDefault()).replace(" ", "")
-                            .replace("pages:", "").toInt()
-                    }
-                     */
+                    // Nothing
                 } else if (e.children().size > 1) { // Tags
                     val metaType = e.child(0).text().replace(":", "").trim()
                     val tagLinks: List<Element> = e.select("a")
