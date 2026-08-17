@@ -530,10 +530,8 @@ class ReaderViewModel(
             break
         }
 
-        if (thumbIndex > -1) {
-            if (thumbIndex == index) delta = 1 // Skip
-            else if (thumbIndex < index) delta = -1 // Fix index
-        }
+        // Fix index
+        if (thumbIndex > -1 && thumbIndex < index) delta = -1
 
         return coerceIn(index + delta, 0, imageFiles.size - 1)
     }
