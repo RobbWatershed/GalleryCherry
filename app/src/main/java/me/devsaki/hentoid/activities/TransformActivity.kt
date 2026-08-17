@@ -526,6 +526,7 @@ class TransformActivity : BaseActivity(), RangeDialogFragment.Parent {
                 } catch (e: Exception) {
                     withContext(Dispatchers.Main) {
                         toast(R.string.transform_error)
+                        binding?.previewProgress?.isVisible = false
                     }
                     createExceptionLogFile(e, context)
                     return@withContext null

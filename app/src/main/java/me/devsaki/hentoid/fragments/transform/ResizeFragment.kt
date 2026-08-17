@@ -58,6 +58,9 @@ class ResizeFragment : Fragment(R.layout.fragment_transform_resize) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        if (0 == Settings.resizeMethod2Width) Settings.resizeMethod2Width = screenWidth
+        if (0 == Settings.resizeMethod2Height) Settings.resizeMethod2Height = screenHeight
+
         // Refresh before triggers are set
         refreshUI(true)
 
