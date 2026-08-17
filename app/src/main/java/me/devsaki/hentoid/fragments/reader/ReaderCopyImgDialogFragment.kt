@@ -1,6 +1,5 @@
 package me.devsaki.hentoid.fragments.reader
 
-import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -16,7 +15,7 @@ import me.devsaki.hentoid.databinding.DialogReaderSaveImgBinding
 import me.devsaki.hentoid.enums.StorageLocation
 import me.devsaki.hentoid.fragments.BaseDialogFragment
 import me.devsaki.hentoid.util.PickFolderContract
-import me.devsaki.hentoid.util.PickerResult
+import me.devsaki.hentoid.util.PickUriResult
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.copy
 import me.devsaki.hentoid.util.file.DEFAULT_MIME_TYPE
@@ -61,10 +60,7 @@ class ReaderCopyImgDialogFragment : BaseDialogFragment<ReaderCopyImgDialogFragme
     // === VARIABLES
     private var imageId = 0L
 
-    private val pickFolder =
-        registerForActivityResult(PickFolderContract()) {
-            onFolderPickerResult(it.first, it.second)
-        }
+    private val pickFolder = registerForActivityResult(PickFolderContract(), ::onFolderPickerResult)
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -148,17 +144,13 @@ class ReaderCopyImgDialogFragment : BaseDialogFragment<ReaderCopyImgDialogFragme
         }
     }
 
-    private fun onFolderPickerResult(resultCode: PickerResult, uri: Uri) {
-        when (resultCode) {
-            PickerResult.OK -> {
-                // Persist I/O permissions; keep existing ones if present
-                persistLocationCredentials(requireContext(), uri)
-                Settings.latestReaderTargetFolderUri = uri.toString()
-                Settings.readerTargetFolder = uri.toString()
-                refreshControls(true)
-            }
-
-            else -> {}
+    private fun onFolderPickerResult(result: PickUriResult) {
+        if (result is PickUriResult.Success) {
+            // Persist I/O permissions; keep existing ones if present
+            persistLocationCredentials(requireContext(), result.uri)
+            Settings.latestReaderTargetFolderUri = result.uri.toString()
+            Settings.readerTargetFolder = result.uri.toString()
+            refreshControls(true)
         }
     }
 

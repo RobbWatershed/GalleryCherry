@@ -1,6 +1,5 @@
 package me.devsaki.hentoid.fragments.library
 
-import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -24,7 +23,7 @@ import me.devsaki.hentoid.databinding.DialogLibraryExportBinding
 import me.devsaki.hentoid.enums.StorageLocation
 import me.devsaki.hentoid.fragments.BaseDialogFragment
 import me.devsaki.hentoid.util.PickFolderContract
-import me.devsaki.hentoid.util.PickerResult
+import me.devsaki.hentoid.util.PickUriResult
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.file.RQST_STORAGE_PERMISSION
 import me.devsaki.hentoid.util.file.getDocumentFromTreeUriString
@@ -57,10 +56,7 @@ class LibraryExportDialogFragment : BaseDialogFragment<LibraryExportDialogFragme
     // === VARIABLES
     private lateinit var contentIds: LongArray
 
-    private val pickFolder =
-        registerForActivityResult(PickFolderContract()) {
-            onFolderPickerResult(it.first, it.second)
-        }
+    private val pickFolder = registerForActivityResult(PickFolderContract(), ::onFolderPickerResult)
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -170,17 +166,13 @@ class LibraryExportDialogFragment : BaseDialogFragment<LibraryExportDialogFragme
         }
     }
 
-    private fun onFolderPickerResult(resultCode: PickerResult, uri: Uri) {
-        when (resultCode) {
-            PickerResult.OK -> {
-                // Persist I/O permissions; keep existing ones if present
-                persistLocationCredentials(requireContext(), uri)
-                Settings.latestArchiveTargetFolderUri = uri.toString()
-                Settings.archiveTargetFolder = uri.toString()
-                refreshControls(true)
-            }
-
-            else -> {}
+    private fun onFolderPickerResult(result: PickUriResult) {
+        if (result is PickUriResult.Success) {
+            // Persist I/O permissions; keep existing ones if present
+            persistLocationCredentials(requireContext(), result.uri)
+            Settings.latestArchiveTargetFolderUri = result.uri.toString()
+            Settings.archiveTargetFolder = result.uri.toString()
+            refreshControls(true)
         }
     }
 

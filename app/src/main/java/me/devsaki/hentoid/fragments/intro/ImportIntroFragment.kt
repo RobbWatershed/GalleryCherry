@@ -1,7 +1,6 @@
 package me.devsaki.hentoid.fragments.intro
 
 import android.content.DialogInterface
-import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -25,7 +24,7 @@ import me.devsaki.hentoid.enums.StorageLocation
 import me.devsaki.hentoid.events.ProcessEvent
 import me.devsaki.hentoid.ui.BlinkAnimation
 import me.devsaki.hentoid.util.PickFolderContract
-import me.devsaki.hentoid.util.PickerResult
+import me.devsaki.hentoid.util.PickUriResult
 import me.devsaki.hentoid.util.ProcessFolderResult
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.file.getFullPathFromUri
@@ -46,9 +45,7 @@ class ImportIntroFragment : Fragment(R.layout.intro_slide_04) {
     // True when that screen has been validated once
     private var isDone = false
 
-    private val pickFolder = registerForActivityResult(PickFolderContract()) { res ->
-        onFolderPickerResult(res.first, res.second)
-    }
+    private val pickFolder = registerForActivityResult(PickFolderContract(), ::onFolderPickerResult)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -116,10 +113,9 @@ class ImportIntroFragment : Fragment(R.layout.intro_slide_04) {
             if (Settings.isBrowserMode) View.INVISIBLE else View.VISIBLE
     }
 
-    private fun onFolderPickerResult(resultCode: PickerResult, treeUri: Uri?) {
-        when (resultCode) {
-            PickerResult.OK -> {
-                if (null == treeUri) return
+    private fun onFolderPickerResult(result: PickUriResult) {
+        when (result) {
+            is PickUriResult.Success -> {
                 binding?.apply {
                     waitTxt.visibility = View.VISIBLE
                     val animation = BlinkAnimation(750, 20)
@@ -129,7 +125,7 @@ class ImportIntroFragment : Fragment(R.layout.intro_slide_04) {
                         val result = withContext(Dispatchers.IO) {
                             setAndScanPrimaryFolder(
                                 requireContext(),
-                                treeUri,
+                                result.uri,
                                 StorageLocation.PRIMARY_1,
                                 true,
                                 null
@@ -142,7 +138,7 @@ class ImportIntroFragment : Fragment(R.layout.intro_slide_04) {
                 }
             }
 
-            PickerResult.KO_CANCELED -> {
+            PickUriResult.Cancelled -> {
                 binding?.apply {
                     Snackbar.make(
                         root,
@@ -153,7 +149,7 @@ class ImportIntroFragment : Fragment(R.layout.intro_slide_04) {
                 }
             }
 
-            PickerResult.KO_OTHER, PickerResult.KO_NO_URI -> {
+            PickUriResult.NoUri, PickUriResult.Unknown -> {
                 binding?.apply {
                     Snackbar.make(
                         root,

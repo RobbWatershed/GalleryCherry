@@ -46,7 +46,7 @@ import me.devsaki.hentoid.events.CommunicationEvent
 import me.devsaki.hentoid.events.ProcessEvent
 import me.devsaki.hentoid.util.Debouncer
 import me.devsaki.hentoid.util.PickFolderContract
-import me.devsaki.hentoid.util.PickerResult
+import me.devsaki.hentoid.util.PickUriResult
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.dpToPx
 import me.devsaki.hentoid.util.file.DisplayFile
@@ -105,9 +105,7 @@ class LibraryFoldersFragment : Fragment(),
     private var mDragSelectTouchListener: DragSelectTouchListener? = null
 
     private val pickRootFolder =
-        registerForActivityResult(PickFolderContract()) {
-            onRootFolderPickerResult(it.first, it.second)
-        }
+        registerForActivityResult(PickFolderContract(), ::onRootFolderPickerResult)
 
 
     // ======== VARIABLES
@@ -654,15 +652,13 @@ class LibraryFoldersFragment : Fragment(),
         return true
     }
 
-    private fun onRootFolderPickerResult(resultCode: PickerResult, uri: Uri) {
-        when (resultCode) {
-            PickerResult.OK -> {
-                if (!viewModel.attachFolderRoot(uri)) activity.get()?.toast(R.string.add_root_fail)
-            }
-
-            else -> {
+    private fun onRootFolderPickerResult(result: PickUriResult) {
+        if (result is PickUriResult.Success) {
+            if (!viewModel.attachFolderRoot(result.uri))
                 activity.get()?.toast(R.string.add_root_fail)
-            }
+        }
+        else {
+            activity.get()?.toast(R.string.add_root_fail)
         }
     }
 
