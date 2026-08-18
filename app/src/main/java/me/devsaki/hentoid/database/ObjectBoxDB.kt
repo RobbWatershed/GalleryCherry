@@ -764,17 +764,56 @@ object ObjectBoxDB {
         return store.boxFor(Content::class.java).query().equal(Content_.id, -1).build()
     }
 
-    fun selectContentQ(
+    // Wrap selectContentQ around ORDER BY GroupItem.order; can only use Ids as output
+    // see https://github.com/objectbox/objectbox-java/issues/141#issuecomment-696558296
+    fun selectContentGroupOrderIds(
         searchBundle: ContentSearchBundle,
         dynamicGroupContentIds: LongArray,
         metadata: Set<Attribute>?,
         statuses: IntArray = libraryStatus,
         additionalIds: LongArray = LongArray(0),
         exclusionIds: LongArray = LongArray(0)
-    ): Query<Content> {
-        if (Settings.Value.ORDER_FIELD_CUSTOM == searchBundle.sortField)
-            return store.boxFor(Content::class.java).query().build()
+    ): LongArray {
+        if (searchBundle.sortField != Settings.Value.ORDER_FIELD_CUSTOM)
+            throw Exception("Call reserved for CUSTOM ordering")
 
+        // Pre-filter and order on GroupItem
+        val query = store.boxFor(
+            GroupItem::class.java
+        ).query()
+        if (searchBundle.groupId > 0) {
+            if (dynamicGroupContentIds.isEmpty()) query.equal(
+                GroupItem_.groupId,
+                searchBundle.groupId
+            ) else query.`in`(GroupItem_.contentId, dynamicGroupContentIds)
+        }
+        if (searchBundle.sortDesc) query.orderDesc(GroupItem_.order) else query.order(GroupItem_.order)
+
+        val contentQuery = query.link(GroupItem_.content)
+
+        selectContentQ(
+            searchBundle,
+            dynamicGroupContentIds,
+            metadata,
+            statuses,
+            additionalIds,
+            exclusionIds,
+            contentQuery
+        )
+
+        // Yes, we have to do that
+        return query.safeFind().map { it.contentId }.toLongArray()
+    }
+
+    fun selectContentQ(
+        searchBundle: ContentSearchBundle,
+        dynamicGroupContentIds: LongArray,
+        metadata: Set<Attribute>?,
+        statuses: IntArray = libraryStatus,
+        additionalIds: LongArray = LongArray(0),
+        exclusionIds: LongArray = LongArray(0),
+        baseBuilder: QueryBuilder<Content>? = null
+    ): Query<Content> {
         val metadataMap = AttributeMap()
         metadata?.let { metadataMap.addAll(it) }
         val hasFullTextQuery = searchBundle.query.isNotEmpty()
@@ -852,6 +891,9 @@ object ObjectBoxDB {
             Type.entries.first { it.value == searchBundle.contentType })
 
         val query = store.boxFor(Content::class.java).query(qcFinal)
+
+        baseBuilder?.apply(qcFinal) // We actually just care about that line when supplying baseBuilder
+
         if (searchBundle.filterPageFavourites) filterWithPageFavs(query)
         applySortOrder(query, searchBundle.sortField, searchBundle.sortDesc)
         return query.build()
@@ -922,6 +964,32 @@ object ObjectBoxDB {
         // Search content taking attributes into account
         val metadata: Set<Attribute> = parseSearchUri(searchBundle.attributes).attributes
         return selectContentQ(searchBundle, dynamicGroupContentIds, metadata, status, ids)
+    }
+
+    /**
+     * Full-text search on content _and_ attributes
+     */
+    fun selectContentFullTextIds(
+        searchBundle: ContentSearchBundle,
+        dynamicGroupContentIds: LongArray,
+        status: IntArray = libraryStatus
+    ): LongArray {
+        // Due to objectBox limitations (see https://github.com/objectbox/objectbox-java/issues/497)
+        // querying Content and attributes have to be done separately
+
+        // Full-text search on attributes if applicable
+        val ids = if (searchBundle.query.isNotEmpty())
+            selectContentFullTextAttributesQ(
+                searchBundle,
+                dynamicGroupContentIds,
+                status
+            )
+        else LongArray(0)
+
+        // Search content taking attributes into account
+        val metadata: Set<Attribute> = parseSearchUri(searchBundle.attributes).attributes
+
+        return selectContentGroupOrderIds(searchBundle, dynamicGroupContentIds, metadata, status, ids)
     }
 
     fun getShuffledIds(): List<Long> {
@@ -1612,7 +1680,7 @@ object ObjectBoxDB {
         return result
     }
 
-    fun countTransformedPages(contentIds : LongArray): Long {
+    fun countTransformedPages(contentIds: LongArray): Long {
         return store.boxFor(ImageFile::class.java).query()
             .equal(ImageFile_.isTransformed, true)
             .`in`(ImageFile_.contentId, contentIds)

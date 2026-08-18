@@ -242,9 +242,10 @@ class ObjectBoxDAO : CollectionDAO {
     private fun searchContentPaged(searchBundle: ContentSearchBundle): LiveData<PagedList<Content>> {
         val isCustomOrder = searchBundle.sortField == Settings.Value.ORDER_FIELD_CUSTOM
         val isDynamicCriteria =
-            searchBundle.sortField == Settings.Value.ORDER_FIELD_AVG_SIZE // To be extended
+            searchBundle.sortField == Settings.Value.ORDER_FIELD_AVG_SIZE // To be extended when needed
         val contentRetrieval: Pair<Long, DataSource.Factory<Int, Content>> =
-            if (isCustomOrder || isDynamicCriteria) getPagedContentByList(searchBundle)
+            if (isDynamicCriteria) getPagedContentByList(searchBundle)
+            else if (isCustomOrder) getPagedContentByListGroupOrder(searchBundle)
             else getPagedContentByQuery(searchBundle)
         val nbPages = Settings.contentPageQuantity
         var initialLoad = nbPages * 3
@@ -278,6 +279,20 @@ class ObjectBoxDAO : CollectionDAO {
             val shuffledIds = ObjectBoxDB.getShuffledIds()
             Pair(query.count(), RandomDataSourceFactory(query, shuffledIds))
         } else Pair(query.count(), ObjectBoxDataSource.Factory(query))
+    }
+
+    private fun getPagedContentByListGroupOrder(searchBundle: ContentSearchBundle): Pair<Long, DataSource.Factory<Int, Content>> {
+        // TODO implement exclusion search within a group ordered by custom order
+        val ids = ObjectBoxDB.selectContentFullTextIds(
+            searchBundle,
+            getDynamicGroupContent(searchBundle.groupId)
+        )
+
+        return Pair(
+            ids.size.toLong(), PredeterminedDataSourceFactory(
+                { ObjectBoxDB.selectContentById(it) }, ids
+            )
+        )
     }
 
     private fun getPagedContentByList(searchBundle: ContentSearchBundle): Pair<Long, DataSource.Factory<Int, Content>> {
@@ -1227,7 +1242,7 @@ class ObjectBoxDAO : CollectionDAO {
         return ObjectBoxDB.selectExternalMemoryUsagePerSource()
     }
 
-    override fun countTransformedPages(contentIds : LongArray): Long {
+    override fun countTransformedPages(contentIds: LongArray): Long {
         return ObjectBoxDB.countTransformedPages(contentIds)
     }
 
