@@ -7,7 +7,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ProgressBar
-import androidx.annotation.StringRes
 import androidx.core.net.toUri
 import androidx.core.view.isVisible
 import androidx.fragment.app.FragmentManager
@@ -26,10 +25,10 @@ import me.devsaki.hentoid.events.CommunicationEvent
 import me.devsaki.hentoid.events.ProcessEvent
 import me.devsaki.hentoid.events.ServiceDestroyedEvent
 import me.devsaki.hentoid.fragments.BaseDialogFragment
+import me.devsaki.hentoid.util.FolderScanResult
 import me.devsaki.hentoid.util.ImportOptions
 import me.devsaki.hentoid.util.PickFolderContract
 import me.devsaki.hentoid.util.PickUriResult
-import me.devsaki.hentoid.util.ProcessFolderResult
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.file.RQST_STORAGE_PERMISSION
 import me.devsaki.hentoid.util.file.getFullPathFromUri
@@ -188,26 +187,21 @@ class LibRefreshDialogFragment : BaseDialogFragment<LibRefreshDialogFragment.Par
             lifecycleScope.launch {
                 val res = withContext(Dispatchers.IO) {
                     try {
-                        val res = setAndScanExternalFolder(requireContext(), externalUri, quickScan)
-                        return@withContext res.first
+                        setAndScanExternalFolder(requireContext(), externalUri, quickScan)
                     } catch (e: Exception) {
                         Timber.w(e)
-                        return@withContext ProcessFolderResult.KO_OTHER
+                        FolderScanResult.KoOther
                     }
                 }
-                if (ProcessFolderResult.KO_INVALID_FOLDER == res
-                    || ProcessFolderResult.KO_CREATE_FAIL == res
-                    || ProcessFolderResult.KO_APP_FOLDER == res
-                    || ProcessFolderResult.KO_DOWNLOAD_FOLDER == res
-                    || ProcessFolderResult.KO_ALREADY_RUNNING == res
-                    || ProcessFolderResult.KO_OTHER == res
+                if (FolderScanResult.KoInvalidFolder == res
+                    || FolderScanResult.KoCreateFail == res
+                    || FolderScanResult.KoAppFolder == res
+                    || FolderScanResult.KoDownloadFolder == res
+                    || FolderScanResult.KoAlreadyRunning == res
+                    || FolderScanResult.KoOther == res
                 ) {
                     binding1?.apply {
-                        Snackbar.make(
-                            root,
-                            getMessage(res),
-                            BaseTransientBottomBar.LENGTH_LONG
-                        ).show()
+                        root.showSnackbarFromResult(res)
                         delay(3000)
                     }
                     dismissAllowingStateLoss()
@@ -233,32 +227,28 @@ class LibRefreshDialogFragment : BaseDialogFragment<LibRefreshDialogFragment.Par
             lifecycleScope.launch {
                 val res = withContext(Dispatchers.IO) {
                     try {
-                        val res = setAndScanPrimaryFolder(
-                            requireContext(), rootUri, location, false, options
-                        )
-                        return@withContext res.first
+                        setAndScanPrimaryFolder(requireContext(), rootUri, location, false, options)
                     } catch (e: Exception) {
                         Timber.w(e)
-                        return@withContext ProcessFolderResult.KO_OTHER
+                        FolderScanResult.KoOther
                     }
                 }
 
-                if (ProcessFolderResult.KO_INVALID_FOLDER == res
-                    || ProcessFolderResult.KO_CREATE_FAIL == res
-                    || ProcessFolderResult.KO_APP_FOLDER == res
-                    || ProcessFolderResult.KO_DOWNLOAD_FOLDER == res
-                    || ProcessFolderResult.KO_ALREADY_RUNNING == res
-                    || ProcessFolderResult.KO_OTHER_PRIMARY == res
-                    || ProcessFolderResult.KO_PRIMARY_EXTERNAL == res
-                    || ProcessFolderResult.OK_EMPTY_FOLDER == res
-                    || ProcessFolderResult.KO_OTHER == res
+                if (FolderScanResult.KoInvalidFolder == res
+                    || FolderScanResult.KoCreateFail == res
+                    || FolderScanResult.KoAppFolder == res
+                    || FolderScanResult.KoDownloadFolder == res
+                    || FolderScanResult.KoAlreadyRunning == res
+                    || FolderScanResult.KoOtherPrimary == res
+                    || FolderScanResult.KoPrimaryExternal == res
+                    || FolderScanResult.OkEmptyFolder == res
+                    || FolderScanResult.KoOther == res
                 ) {
                     binding1?.apply {
-                        Snackbar.make(root, getMessage(res), BaseTransientBottomBar.LENGTH_LONG)
-                            .show()
+                        root.showSnackbarFromResult(res)
                         delay(3000)
                     }
-                    if (ProcessFolderResult.OK_EMPTY_FOLDER == res) parent?.onFolderSuccess()
+                    if (FolderScanResult.OkEmptyFolder == res) parent?.onFolderSuccess()
                     dismissAllowingStateLoss()
                 }
             }
@@ -334,7 +324,7 @@ class LibRefreshDialogFragment : BaseDialogFragment<LibRefreshDialogFragment.Par
                             null
                         )
                     }
-                    onScanHentoidFolderResult(res.first, res.second)
+                    onScanHentoidFolderResult(res)
                 }
             }
 
@@ -358,58 +348,54 @@ class LibRefreshDialogFragment : BaseDialogFragment<LibRefreshDialogFragment.Par
         }
     }
 
-    private fun onScanHentoidFolderResult(resultCode: ProcessFolderResult, rootUri: String) {
-        when (resultCode) {
-            ProcessFolderResult.OK_EMPTY_FOLDER -> {
+    private fun onScanHentoidFolderResult(result: FolderScanResult) {
+        when (result) {
+            FolderScanResult.OkEmptyFolder -> {
                 parent?.onFolderSuccess()
                 dismissAllowingStateLoss()
             }
 
-            ProcessFolderResult.OK_LIBRARY_DETECTED ->                 // Hentoid folder is finally selected at this point -> Update UI
+            FolderScanResult.OkLibraryDetected -> {
+                // Hentoid folder is finally selected at this point -> Update UI
                 updateOnSelectFolder()
+            }
 
-            ProcessFolderResult.OK_LIBRARY_DETECTED_ASK -> {
+            is FolderScanResult.OkLibraryDetectedAsk -> {
                 updateOnSelectFolder()
                 showExistingLibraryDialog(
                     requireContext(),
                     location,
-                    rootUri
+                    result.rootUri.toString()
                 ) { onCancelExistingLibraryDialog() }
             }
 
-            ProcessFolderResult.KO_INVALID_FOLDER,
-            ProcessFolderResult.KO_APP_FOLDER,
-            ProcessFolderResult.KO_DOWNLOAD_FOLDER,
-            ProcessFolderResult.KO_CREATE_FAIL,
-            ProcessFolderResult.KO_ALREADY_RUNNING,
-            ProcessFolderResult.KO_OTHER_PRIMARY,
-            ProcessFolderResult.KO_PRIMARY_EXTERNAL,
-            ProcessFolderResult.KO_OTHER -> {
+            else -> {
                 binding2?.apply {
-                    Snackbar.make(root, getMessage(resultCode), BaseTransientBottomBar.LENGTH_LONG)
-                        .show()
+                    root.showSnackbarFromResult(result)
                 }
                 isCancelable = true
             }
         }
     }
 
-    @StringRes
-    private fun getMessage(resultCode: ProcessFolderResult): Int {
-        return when (resultCode) {
-            ProcessFolderResult.KO_INVALID_FOLDER -> R.string.import_invalid
-            ProcessFolderResult.KO_APP_FOLDER -> R.string.import_app_folder
-            ProcessFolderResult.KO_DOWNLOAD_FOLDER -> R.string.import_download_folder
-            ProcessFolderResult.KO_CREATE_FAIL -> R.string.import_create_fail
-            ProcessFolderResult.KO_ALREADY_RUNNING -> R.string.service_running
-            ProcessFolderResult.KO_OTHER_PRIMARY -> R.string.import_other_primary
-            ProcessFolderResult.KO_PRIMARY_EXTERNAL -> R.string.import_other_external_inside_primary
-            ProcessFolderResult.OK_EMPTY_FOLDER -> R.string.import_empty
-            ProcessFolderResult.KO_OTHER -> R.string.import_other
-            ProcessFolderResult.OK_LIBRARY_DETECTED,
-            ProcessFolderResult.OK_LIBRARY_DETECTED_ASK -> R.string.none
+    private fun View.showSnackbarFromResult(result: FolderScanResult) {
+        val message = when (result) {
+            FolderScanResult.KoInvalidFolder -> R.string.import_invalid
+            FolderScanResult.KoAppFolder -> R.string.import_app_folder
+            FolderScanResult.KoDownloadFolder -> R.string.import_download_folder
+            FolderScanResult.KoCreateFail -> R.string.import_create_fail
+            FolderScanResult.KoAlreadyRunning -> R.string.service_running
+            FolderScanResult.KoOtherPrimary -> R.string.import_other_primary
+            FolderScanResult.KoPrimaryExternal -> R.string.import_other_external_inside_primary
+            FolderScanResult.OkEmptyFolder -> R.string.import_empty
+            FolderScanResult.KoOther -> R.string.import_other
+            FolderScanResult.OkLibraryDetected,
+            is FolderScanResult.OkLibraryDetectedAsk -> R.string.none
             // Nothing should happen here
         }
+
+        Snackbar.make(this, message, BaseTransientBottomBar.LENGTH_LONG)
+            .show()
     }
 
     private fun onCancelExistingLibraryDialog() {

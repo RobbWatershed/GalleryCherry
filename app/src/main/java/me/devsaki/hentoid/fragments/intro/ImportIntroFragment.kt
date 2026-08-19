@@ -23,9 +23,9 @@ import me.devsaki.hentoid.databinding.IntroSlide04Binding
 import me.devsaki.hentoid.enums.StorageLocation
 import me.devsaki.hentoid.events.ProcessEvent
 import me.devsaki.hentoid.ui.BlinkAnimation
+import me.devsaki.hentoid.util.FolderScanResult
 import me.devsaki.hentoid.util.PickFolderContract
 import me.devsaki.hentoid.util.PickUriResult
-import me.devsaki.hentoid.util.ProcessFolderResult
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.file.getFullPathFromUri
 import me.devsaki.hentoid.util.setAndScanPrimaryFolder
@@ -133,7 +133,7 @@ class ImportIntroFragment : Fragment(R.layout.intro_slide_04) {
                         }
                         waitTxt.clearAnimation()
                         waitTxt.visibility = View.GONE
-                        onScanHentoidFolderResult(result.first, result.second)
+                        onScanHentoidFolderResult(result)
                     }
                 }
             }
@@ -162,62 +162,64 @@ class ImportIntroFragment : Fragment(R.layout.intro_slide_04) {
         }
     }
 
-    private fun onScanHentoidFolderResult(resultCode: ProcessFolderResult, rootUri: String) {
+    private fun onScanHentoidFolderResult(result: FolderScanResult) {
         binding?.apply {
-            when (resultCode) {
-                ProcessFolderResult.OK_EMPTY_FOLDER -> nextStep()
-                ProcessFolderResult.OK_LIBRARY_DETECTED -> { // Import service is already launched by the Helper; nothing else to do
+            when (result) {
+                FolderScanResult.OkEmptyFolder -> nextStep()
+                FolderScanResult.OkLibraryDetected -> {
+                    // Import service is already launched by the Helper; nothing else to do
                     updateOnSelectFolder()
                     return
                 }
 
-                ProcessFolderResult.OK_LIBRARY_DETECTED_ASK -> {
+                is FolderScanResult.OkLibraryDetectedAsk -> {
                     updateOnSelectFolder()
                     showExistingLibraryDialog(
                         requireContext(),
                         StorageLocation.PRIMARY_1,
-                        rootUri
+                        result.rootUri.toString()
                     ) { onCancelExistingLibraryDialog() }
                     return
                 }
 
-                ProcessFolderResult.KO_INVALID_FOLDER -> Snackbar.make(
+                FolderScanResult.KoInvalidFolder -> Snackbar.make(
                     root,
                     R.string.import_invalid,
                     BaseTransientBottomBar.LENGTH_LONG
                 ).show()
 
-                ProcessFolderResult.KO_APP_FOLDER -> Snackbar.make(
+                FolderScanResult.KoAppFolder -> Snackbar.make(
                     root,
                     R.string.import_invalid,
                     BaseTransientBottomBar.LENGTH_LONG
                 ).show()
 
-                ProcessFolderResult.KO_DOWNLOAD_FOLDER -> Snackbar.make(
+                FolderScanResult.KoDownloadFolder -> Snackbar.make(
                     root,
                     R.string.import_download_folder,
                     BaseTransientBottomBar.LENGTH_LONG
                 ).show()
 
-                ProcessFolderResult.KO_CREATE_FAIL -> Snackbar.make(
+                FolderScanResult.KoCreateFail -> Snackbar.make(
                     root,
                     R.string.import_create_fail,
                     BaseTransientBottomBar.LENGTH_LONG
                 ).show()
 
-                ProcessFolderResult.KO_ALREADY_RUNNING -> Snackbar.make(
+                FolderScanResult.KoAlreadyRunning -> Snackbar.make(
                     root,
                     R.string.service_running,
                     BaseTransientBottomBar.LENGTH_LONG
                 ).show()
 
-                ProcessFolderResult.KO_OTHER -> Snackbar.make(
+                FolderScanResult.KoOther -> Snackbar.make(
                     root,
                     R.string.import_other,
                     BaseTransientBottomBar.LENGTH_LONG
                 ).show()
 
-                else -> { /* Nothing*/
+                else -> {
+                    // do nothing
                 }
             }
             skipBtn.visibility = View.VISIBLE
