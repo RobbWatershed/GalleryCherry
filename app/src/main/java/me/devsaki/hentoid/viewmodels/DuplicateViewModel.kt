@@ -189,7 +189,7 @@ class DuplicateViewModel(
                         selectedDuplicates.postValue(toRemove)
 
                         // Remove old contents
-                        remove(contentList.map { c -> c.id })
+                        remove(contentList.map { it.id })
 
                         // Remove duplicate entries (update UI)
                         for (dupeEntry in selectedDupes) {
@@ -226,7 +226,7 @@ class DuplicateViewModel(
         )
     }
 
-    private fun onMergeComplete(isError: Boolean, errorMsg : String) {
+    private fun onMergeComplete(isError: Boolean, errorMsg: String) {
         EventBus.getDefault().postSticky(
             ProcessEvent(
                 if (isError) ProcessEvent.Type.COMPLETE else ProcessEvent.Type.FAILURE,

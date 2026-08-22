@@ -4,12 +4,17 @@ import android.os.Bundle
 import android.view.View
 import android.view.WindowManager
 import androidx.appcompat.widget.Toolbar
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import androidx.viewpager2.widget.ViewPager2.OnPageChangeCallback
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.launch
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.databinding.ActivityDuplicateDetectorBinding
@@ -19,12 +24,13 @@ import me.devsaki.hentoid.fragments.tools.DuplicateMainFragment
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.viewmodels.DuplicateViewModel
 import me.devsaki.hentoid.viewmodels.ViewModelFactory
-import org.greenrobot.eventbus.EventBus
 
 class DuplicateDetectorActivity : BaseActivity() {
 
     private var binding: ActivityDuplicateDetectorBinding? = null
     private lateinit var viewPager: ViewPager2
+    val duplicateDetectorEvents =
+        MutableSharedFlow<CommunicationEvent>(2, 2, BufferOverflow.DROP_OLDEST)
 
     // Viewmodel
     private lateinit var viewModel: DuplicateViewModel
@@ -33,9 +39,10 @@ class DuplicateDetectorActivity : BaseActivity() {
         super.onCreate(savedInstanceState)
 
         binding = ActivityDuplicateDetectorBinding.inflate(layoutInflater)
-        binding?.let {
-            setContentView(it.root)
-            it.toolbar.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
+        binding?.apply {
+            setContentView(root)
+            toolbar.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
+            selectionToolbar.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
         }
 
         val vmFactory = ViewModelFactory(application)
@@ -52,8 +59,7 @@ class DuplicateDetectorActivity : BaseActivity() {
 //        WorkManager.getInstance(application).cancelAllWorkByTag(DuplicateDetectorWorker.WORKER_TAG)
 
         initUI()
-        updateToolbar(0, 0, 0)
-        initSelectionToolbar()
+        updateToolbar()
     }
 
     override fun onPause() {
@@ -77,15 +83,13 @@ class DuplicateDetectorActivity : BaseActivity() {
         viewPager.registerOnPageChangeCallback(object : OnPageChangeCallback() {
             override fun onPageSelected(position: Int) {
                 enableCurrentFragment()
-                hideSettingsBar()
-                updateToolbar(0, 0, 0)
+                updateToolbar()
                 viewModel.allDuplicates.observe(
                     this@DuplicateDetectorActivity
                 ) { entry ->
                     updateTitle(entry.groupBy { it.referenceContent }
                         .mapValues { it.value.sumOf { 1L } }.size * -1)
                 }
-                updateSelectionToolbar()
             }
         })
 
@@ -107,10 +111,7 @@ class DuplicateDetectorActivity : BaseActivity() {
 
     fun goBackToMain() {
         enableFragment(0)
-//        if (isGroupDisplayed()) return
-//        viewModel.searchGroup(Preferences.getGroupingDisplay(), query, Preferences.getGroupSortField(), Preferences.isGroupSortDesc(), Preferences.getArtistGroupVisibility(), isGroupFavsChecked)
         viewPager.currentItem = 0
-//        if (titles.containsKey(0)) toolbar.setTitle(titles.get(0))
     }
 
     fun showDetailsFor(content: Content) {
@@ -124,18 +125,20 @@ class DuplicateDetectorActivity : BaseActivity() {
     }
 
     private fun enableFragment(fragmentIndex: Int) {
-        EventBus.getDefault().post(
-            CommunicationEvent(
-                CommunicationEvent.Type.ENABLE,
-                if (0 == fragmentIndex) CommunicationEvent.Recipient.DUPLICATE_MAIN else CommunicationEvent.Recipient.DUPLICATE_DETAILS
+        lifecycleScope.launch {
+            duplicateDetectorEvents.emit(
+                CommunicationEvent(
+                    CommunicationEvent.Type.ENABLE,
+                    if (0 == fragmentIndex) CommunicationEvent.Recipient.DUPLICATE_MAIN else CommunicationEvent.Recipient.DUPLICATE_DETAILS
+                )
             )
-        )
-        EventBus.getDefault().post(
-            CommunicationEvent(
-                CommunicationEvent.Type.DISABLE,
-                if (0 == fragmentIndex) CommunicationEvent.Recipient.DUPLICATE_DETAILS else CommunicationEvent.Recipient.DUPLICATE_MAIN
+            duplicateDetectorEvents.emit(
+                CommunicationEvent(
+                    CommunicationEvent.Type.DISABLE,
+                    if (0 == fragmentIndex) CommunicationEvent.Recipient.DUPLICATE_DETAILS else CommunicationEvent.Recipient.DUPLICATE_MAIN
+                )
             )
-        )
+        }
     }
 
     /**
@@ -159,37 +162,37 @@ class DuplicateDetectorActivity : BaseActivity() {
         ) else resources.getString(R.string.title_activity_duplicate_detector)
     }
 
-    fun updateToolbar(localCount: Int, externalCount: Int, streamedCount: Int) {
-        if (null == binding) return
-
-        binding!!.toolbar.menu.findItem(R.id.action_settings).isVisible =
-            (0 == viewPager.currentItem)
-        binding!!.toolbar.menu.findItem(R.id.action_merge).isVisible = (
-                1 == viewPager.currentItem
-                        && (
-                        (localCount > 1 && 0 == streamedCount && 0 == externalCount)
-                                || (streamedCount > 1 && 0 == localCount && 0 == externalCount)
-                                || (externalCount > 1 && 0 == localCount && 0 == streamedCount)
-                        )
-                )
+    fun updateToolbar() {
+        binding?.apply {
+            toolbar.menu.findItem(R.id.action_settings).isVisible =
+                (0 == viewPager.currentItem)
+        }
     }
 
-    fun getToolbarView(): View {
-        return binding!!.toolbar
+    fun updateSelectionToolbar(
+        visible: Boolean,
+        localCount: Int,
+        externalCount: Int,
+        streamedCount: Int
+    ) {
+        binding?.selectionToolbar?.apply {
+            isVisible = visible
+            menu.findItem(R.id.action_merge).isVisible =
+                (localCount > 1 && 0 == streamedCount && 0 == externalCount)
+                        || (streamedCount > 1 && 0 == localCount && 0 == externalCount)
+                        || (externalCount > 1 && 0 == localCount && 0 == streamedCount)
+        }
     }
 
-    private fun initSelectionToolbar() {
-        // TODO
+    // === PUBLIC ACCESSORS (to be used by fragments)
+
+    fun getToolbarView(): View? {
+        return binding?.toolbar
     }
 
-    private fun hideSettingsBar() {
-        // TODO
+    fun getSelectionToolbar(): Toolbar? {
+        return binding?.selectionToolbar
     }
-
-    private fun updateSelectionToolbar() {
-        // TODO
-    }
-
 
     /**
      * ============================== SUBCLASS

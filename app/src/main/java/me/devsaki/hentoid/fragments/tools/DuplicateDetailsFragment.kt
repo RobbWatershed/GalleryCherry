@@ -11,13 +11,17 @@ import android.view.ViewGroup
 import androidx.activity.OnBackPressedCallback
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.mikepenz.fastadapter.FastAdapter
+import com.mikepenz.fastadapter.ISelectionListener
 import com.mikepenz.fastadapter.adapters.ItemAdapter
 import com.mikepenz.fastadapter.diff.DiffCallback
 import com.mikepenz.fastadapter.diff.FastAdapterDiffUtil.set
 import com.mikepenz.fastadapter.listeners.ClickEventHook
+import com.mikepenz.fastadapter.select.SelectExtension
+import kotlinx.coroutines.launch
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.activities.DuplicateDetectorActivity
 import me.devsaki.hentoid.activities.bundles.DuplicateItemBundle
@@ -35,10 +39,8 @@ import me.devsaki.hentoid.util.viewContentGalleryPage
 import me.devsaki.hentoid.viewholders.DuplicateItem
 import me.devsaki.hentoid.viewmodels.DuplicateViewModel
 import me.devsaki.hentoid.viewmodels.ViewModelFactory
+import me.devsaki.hentoid.widget.FastAdapterPreClickSelectHelper
 import me.zhanghai.android.fastscroll.FastScrollerBuilder
-import org.greenrobot.eventbus.EventBus
-import org.greenrobot.eventbus.Subscribe
-import org.greenrobot.eventbus.ThreadMode
 import timber.log.Timber
 import java.lang.ref.WeakReference
 
@@ -56,6 +58,7 @@ class DuplicateDetailsFragment : Fragment(R.layout.fragment_duplicate_details),
     // UI
     private val itemAdapter = ItemAdapter<DuplicateItem>()
     private val fastAdapter = FastAdapter.with(itemAdapter)
+    private var selectExtension: SelectExtension<DuplicateItem>? = null
 
     // Vars
     private var enabled = true
@@ -109,18 +112,7 @@ class DuplicateDetailsFragment : Fragment(R.layout.fragment_duplicate_details),
     ): View? {
         binding = FragmentDuplicateDetailsBinding.inflate(inflater, container, false)
         addCustomBackControl()
-        activity.get()?.initFragmentToolbars(this::onToolbarItemClicked)
         return binding?.root
-    }
-
-    override fun onStart() {
-        super.onStart()
-        if (!EventBus.getDefault().isRegistered(this)) EventBus.getDefault().register(this)
-    }
-
-    override fun onStop() {
-        if (EventBus.getDefault().isRegistered(this)) EventBus.getDefault().unregister(this)
-        super.onStop()
     }
 
     override fun onDestroyView() {
@@ -132,6 +124,8 @@ class DuplicateDetailsFragment : Fragment(R.layout.fragment_duplicate_details),
         val vmFactory = ViewModelFactory(requireActivity().application)
         viewModel = ViewModelProvider(requireActivity(), vmFactory)[DuplicateViewModel::class.java]
 
+        initSelectionToolbar()
+
         // List
         binding?.list?.apply {
             layoutManager =
@@ -140,9 +134,7 @@ class DuplicateDetailsFragment : Fragment(R.layout.fragment_duplicate_details),
             adapter = fastAdapter
         }
 
-        viewModel.selectedDuplicates.observe(
-            viewLifecycleOwner
-        ) { l: List<DuplicateEntry>? -> this.onDuplicatesChanged(l) }
+        viewModel.selectedDuplicates.observe(viewLifecycleOwner) { this.onDuplicatesChanged(it) }
 
         // Item click listener
         fastAdapter.onClickListener = { _, _, item, _ ->
@@ -158,8 +150,9 @@ class DuplicateDetailsFragment : Fragment(R.layout.fragment_duplicate_details),
                 fastAdapter: FastAdapter<DuplicateItem>,
                 item: DuplicateItem
             ) {
-                val c = item.content
-                if (c != null) viewContentGalleryPage(requireContext(), c)
+                item.content?.let {
+                    viewContentGalleryPage(requireContext(), it)
+                }
             }
 
             override fun onBind(viewHolder: RecyclerView.ViewHolder): View? {
@@ -168,6 +161,32 @@ class DuplicateDetailsFragment : Fragment(R.layout.fragment_duplicate_details),
                 } else super.onBind(viewHolder)
             }
         })
+
+        selectExtension = fastAdapter.requireOrCreateExtension()
+        selectExtension?.apply {
+            isSelectable = true
+            multiSelect = true
+            selectOnLongClick = true
+            selectWithItemUpdate = true
+            selectionListener =
+                object : ISelectionListener<DuplicateItem> {
+                    override fun onSelectionChanged(item: DuplicateItem, selected: Boolean) {
+                        onSelectionChanged()
+                    }
+                }
+            val helper = FastAdapterPreClickSelectHelper(fastAdapter, this)
+            fastAdapter.onPreClickListener =
+                { _, _, _, position -> helper.onPreClickListener(position) }
+            fastAdapter.onPreLongClickListener =
+                { _, _, _, p ->
+                    // Warning : specific code for drag selection
+                    helper.onPreLongClickListener(p)
+                }
+        }
+
+        lifecycleScope.launch {
+            activity.get()?.duplicateDetectorEvents?.collect(this@DuplicateDetailsFragment::onActivityEvent)
+        }
 
         binding?.applyBtn?.apply {
             setOnClickListener {
@@ -180,6 +199,38 @@ class DuplicateDetailsFragment : Fragment(R.layout.fragment_duplicate_details),
         }
     }
 
+    private fun initSelectionToolbar() {
+        activity.get()?.getSelectionToolbar()?.apply {
+            setNavigationOnClickListener { _ ->
+                selectExtension.apply { leaveSelectionMode() }
+                visibility = View.GONE
+            }
+            setOnMenuItemClickListener { onSelectionToolbarItemClicked(it) }
+        }
+    }
+
+    /**
+     * Callback for any selection change (item added to or removed from selection)
+     */
+    private fun onSelectionChanged() {
+        val selectedItems = selectExtension?.selectedItems ?: return
+        val selectedCount = selectedItems.size
+
+        val externalCount = selectedItems.mapNotNull { it.content }
+            .count { it.status == StatusContent.EXTERNAL }
+        val streamedCount = selectedItems.mapNotNull { it.content }
+            .count { it.downloadMode == DownloadMode.STREAM }
+        val localCount = selectedCount - externalCount - streamedCount
+
+        // streamed, external
+        activity.get()
+            ?.updateSelectionToolbar(selectedCount > 0, localCount, externalCount, streamedCount)
+
+        if (0 == selectedCount) {
+            selectExtension?.selectOnLongClick = true
+        }
+    }
+
     private fun addCustomBackControl() {
         if (callback != null) callback?.remove()
         callback = object : OnBackPressedCallback(true) {
@@ -187,7 +238,9 @@ class DuplicateDetailsFragment : Fragment(R.layout.fragment_duplicate_details),
                 onCustomBackPress()
             }
         }
-        activity.get()!!.onBackPressedDispatcher.addCallback(activity.get()!!, callback!!)
+        activity.get()?.let { a ->
+            a.onBackPressedDispatcher.addCallback(a, callback!!)
+        }
     }
 
     private fun onCustomBackPress() {
@@ -216,20 +269,9 @@ class DuplicateDetailsFragment : Fragment(R.layout.fragment_duplicate_details),
 
         Timber.i(">> New selected duplicates ! Size=%s", duplicates.size)
 
+        if (duplicates.isEmpty()) activity.get()?.goBackToMain()
+
         // TODO update UI title
-
-        activity.get()?.updateTitle(duplicates.size)
-        val externalCount =
-            duplicates.asSequence()
-                .mapNotNull(DuplicateEntry::duplicateContent)
-                .map { c -> c.status }.count { s -> s == StatusContent.EXTERNAL }
-        val streamedCount = duplicates.asSequence()
-            .mapNotNull(DuplicateEntry::duplicateContent)
-            .map { c -> c.downloadMode }.count { mode -> mode == DownloadMode.STREAM }
-        val localCount = duplicates.size - externalCount - streamedCount
-
-        // streamed, external
-        activity.get()?.updateToolbar(localCount, externalCount, streamedCount)
 
         // Order by relevance desc and transforms to DuplicateItem
         val items = duplicates.sortedByDescending { it.calcTotalScore() }
@@ -238,22 +280,23 @@ class DuplicateDetailsFragment : Fragment(R.layout.fragment_duplicate_details),
         set(itemAdapter, items, ITEM_DIFF_CALLBACK)
     }
 
-    @Subscribe(threadMode = ThreadMode.MAIN)
-    fun onActivityEvent(event: CommunicationEvent) {
+    private fun onActivityEvent(event: CommunicationEvent) {
         if (event.recipient != CommunicationEvent.Recipient.DUPLICATE_DETAILS) return
         when (event.type) {
             CommunicationEvent.Type.ENABLE -> onEnable()
             CommunicationEvent.Type.DISABLE -> onDisable()
+            CommunicationEvent.Type.UNSELECT -> leaveSelectionMode()
             else -> {}
         }
     }
 
-    private fun onToolbarItemClicked(menuItem: MenuItem): Boolean {
+    private fun onSelectionToolbarItemClicked(menuItem: MenuItem): Boolean {
+        val items = selectExtension?.selectedItems ?: return true
         when (menuItem.itemId) {
             R.id.action_merge -> {
                 MergeDialogFragment.invoke(
                     this,
-                    itemAdapter.adapterItems.mapNotNull { di -> di.content },
+                    items.mapNotNull { it.content },
                     true
                 )
             }
@@ -263,7 +306,6 @@ class DuplicateDetailsFragment : Fragment(R.layout.fragment_duplicate_details),
 
     private fun onEnable() {
         enabled = true
-        activity.get()?.initFragmentToolbars(this::onToolbarItemClicked)
         callback?.isEnabled = true
     }
 
@@ -286,7 +328,6 @@ class DuplicateDetailsFragment : Fragment(R.layout.fragment_duplicate_details),
             deleteAfterMerging,
         ) {
             toast(R.string.merge_success)
-            activity.get()?.goBackToMain()
         }
         ProgressDialogFragment.invoke(
             this,
@@ -296,6 +337,14 @@ class DuplicateDetailsFragment : Fragment(R.layout.fragment_duplicate_details),
     }
 
     override fun leaveSelectionMode() {
-        // Not applicable to this screen
+        selectExtension?.let {
+            it.selectOnLongClick = true
+            // Warning : next line makes FastAdapter cycle through all items,
+            // which has a side effect of calling TiledPageList.onPagePlaceholderInserted,
+            // flagging the end of the list as being the last displayed position
+            val selection = it.selections
+            if (selection.isNotEmpty()) it.deselect(selection.toMutableSet())
+        }
+        activity.get()?.getSelectionToolbar()?.visibility = View.GONE
     }
 }
