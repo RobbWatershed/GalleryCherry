@@ -354,7 +354,7 @@ fun setAndScanPrimaryFolder(
                 Success.LibraryDetectedAsk(hentoidFolder.uri)
             }
         } else {
-            // Create a new library or import an Hentoid folder without books
+            // Create a new library or import a Hentoid folder without books
             // => Don't run the import worker and settle things here
 
             // In case that Location was previously populated, drop all books
@@ -454,7 +454,7 @@ fun persistLocationCredentials(
     treeUri: Uri,
     override: StorageLocation? = null
 ) {
-    // Keep library roots to the exception of the one we're overrriding
+    // Keep library roots to the exception of the one we're overriding
     val locations = mutableListOf(
         StorageLocation.PRIMARY_1,
         StorageLocation.PRIMARY_2,
@@ -1307,7 +1307,7 @@ private fun loadAsChapters(
  * @param doc           Archive file to scan
  * @param parentNames   Names of parent folders, for formatting purposes; last of the list is the immediate parent of parentFolder
  * @param targetStatus  Target status of the Content to create
- * @param content       Content metadata to use; null if has to be created from scratch
+ * @param content       Content metadata to use; null if it has to be created from scratch
  * @return Pair containing
  *  Key : Return code
  *      0 = success
@@ -1684,9 +1684,9 @@ fun jsonToContent(
 }
 
 /**
- * Build a [NameFilter] only accepting Content json files
+ * Build a [NameFilter] only accepting Content JSON files
  *
- * @return [NameFilter] only accepting Content json files
+ * @return [NameFilter] only accepting Content JSON files
  */
 fun getContentJsonNamesFilter(): NameFilter {
     return hentoidContentJson
