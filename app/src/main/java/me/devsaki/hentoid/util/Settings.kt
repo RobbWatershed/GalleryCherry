@@ -907,11 +907,8 @@ object Settings {
             Site.NHENTAI,
             Site.HITOMI,
             Site.ASMHENTAI,
-            Site.TSUMINO,
             Site.PURURIN,
             Site.EHENTAI,
-            Site.FAKKU2,
-            Site.NEXUS,
             Site.MUSES,
             Site.DOUJINS
         )
