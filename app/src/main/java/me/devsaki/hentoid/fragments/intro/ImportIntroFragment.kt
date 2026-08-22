@@ -184,39 +184,11 @@ class ImportIntroFragment : Fragment(R.layout.intro_slide_04) {
                     return
                 }
 
-                Failure.InvalidFolder -> Snackbar.make(
+                is Failure -> Snackbar.make(
                     root,
-                    R.string.import_invalid,
+                    result.errorMessageRes,
                     BaseTransientBottomBar.LENGTH_LONG
                 ).show()
-
-                Failure.DownloadFolder -> Snackbar.make(
-                    root,
-                    R.string.import_download_folder,
-                    BaseTransientBottomBar.LENGTH_LONG
-                ).show()
-
-                Failure.CreateFail -> Snackbar.make(
-                    root,
-                    R.string.import_create_fail,
-                    BaseTransientBottomBar.LENGTH_LONG
-                ).show()
-
-                Failure.AlreadyRunning -> Snackbar.make(
-                    root,
-                    R.string.service_running,
-                    BaseTransientBottomBar.LENGTH_LONG
-                ).show()
-
-                Failure.Unknown -> Snackbar.make(
-                    root,
-                    R.string.import_other,
-                    BaseTransientBottomBar.LENGTH_LONG
-                ).show()
-
-                else -> {
-                    // do nothing
-                }
             }
             skipBtn.visibility = View.VISIBLE
         }

@@ -47,6 +47,7 @@ import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
 import kotlin.math.roundToInt
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Launcher dialog for the following features :
@@ -196,8 +197,9 @@ class LibRefreshDialogFragment : BaseDialogFragment<LibRefreshDialogFragment.Par
                     || Failure.Unknown == res
                 ) {
                     binding1?.apply {
-                        root.showSnackbarFromResult(res)
-                        delay(3000)
+                        Snackbar.make(root, res.errorMessageRes, BaseTransientBottomBar.LENGTH_LONG)
+                            .show()
+                        delay(3000.milliseconds)
                     }
                     dismissAllowingStateLoss()
                 }
@@ -224,20 +226,20 @@ class LibRefreshDialogFragment : BaseDialogFragment<LibRefreshDialogFragment.Par
                     setAndScanPrimaryFolder(requireContext(), rootUri, location, false, options)
                 }
 
-                if (Failure.InvalidFolder == res
-                    || Failure.CreateFail == res
-                    || Failure.DownloadFolder == res
-                    || Failure.AlreadyRunning == res
-                    || Failure.OtherPrimary == res
-                    || Failure.PrimaryExternal == res
-                    || Success.EmptyFolder == res
-                    || Failure.Unknown == res
-                ) {
+                if (res is Failure) {
                     binding1?.apply {
-                        root.showSnackbarFromResult(res)
-                        delay(3000)
+                        Snackbar.make(root, res.errorMessageRes, BaseTransientBottomBar.LENGTH_LONG)
+                            .show()
                     }
-                    if (Success.EmptyFolder == res) parent?.onFolderSuccess()
+                    delay(3000.milliseconds)
+                    dismissAllowingStateLoss()
+                } else if (res == Success.EmptyFolder) {
+                    binding1?.apply {
+                        Snackbar.make(root, R.string.import_empty, BaseTransientBottomBar.LENGTH_LONG)
+                            .show()
+                    }
+                    delay(3000.milliseconds)
+                    parent?.onFolderSuccess()
                     dismissAllowingStateLoss()
                 }
             }
@@ -358,32 +360,14 @@ class LibRefreshDialogFragment : BaseDialogFragment<LibRefreshDialogFragment.Par
                 ) { onCancelExistingLibraryDialog() }
             }
 
-            else -> {
+            is Failure -> {
                 binding2?.apply {
-                    root.showSnackbarFromResult(result)
+                    Snackbar.make(root, result.errorMessageRes, BaseTransientBottomBar.LENGTH_LONG)
+                        .show()
                 }
                 isCancelable = true
             }
         }
-    }
-
-    private fun View.showSnackbarFromResult(result: FolderScanResult) {
-        val message = when (result) {
-            Failure.InvalidFolder -> R.string.import_invalid
-            Failure.DownloadFolder -> R.string.import_download_folder
-            Failure.CreateFail -> R.string.import_create_fail
-            Failure.AlreadyRunning -> R.string.service_running
-            Failure.OtherPrimary -> R.string.import_other_primary
-            Failure.PrimaryExternal -> R.string.import_other_external_inside_primary
-            Success.EmptyFolder -> R.string.import_empty
-            Failure.Unknown -> R.string.import_other
-            Success.LibraryDetected,
-            is Success.LibraryDetectedAsk -> R.string.none
-            // Nothing should happen here
-        }
-
-        Snackbar.make(this, message, BaseTransientBottomBar.LENGTH_LONG)
-            .show()
     }
 
     private fun onCancelExistingLibraryDialog() {

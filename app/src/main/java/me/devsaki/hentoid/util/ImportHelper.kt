@@ -11,6 +11,7 @@ import android.provider.DocumentsContract.EXTRA_INITIAL_URI
 import android.provider.DocumentsContract.EXTRA_PROMPT
 import android.util.Log
 import androidx.activity.result.contract.ActivityResultContract
+import androidx.annotation.StringRes
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import androidx.work.ExistingWorkPolicy
@@ -113,20 +114,43 @@ sealed interface FolderScanResult {
     }
 
     sealed interface Failure : FolderScanResult {
+        @get:StringRes
+        val errorMessageRes: Int
+
         /** File or folder is invalid, cannot be found */
-        object InvalidFolder : Failure
+        object InvalidFolder : Failure {
+            override val errorMessageRes = R.string.import_invalid
+        }
+
         /** Selected folder is the device's download folder and can't be used as a primary folder */
-        object DownloadFolder : Failure
+        object DownloadFolder : Failure {
+            override val errorMessageRes = R.string.import_download_folder
+        }
+
         /** Hentoid folder could not be created */
-        object CreateFail : Failure
+        object CreateFail : Failure {
+            override val errorMessageRes = R.string.import_create_fail
+        }
+
         /** Import is already running */
-        object AlreadyRunning : Failure
+        object AlreadyRunning : Failure {
+            override val errorMessageRes = R.string.service_running
+        }
+
         /** Selected folder is inside or contains the other primary location */
-        object OtherPrimary : Failure
-        /** Selected folder is inside or contains the external location */
-        object PrimaryExternal : Failure
+        object OtherPrimary : Failure {
+            override val errorMessageRes = R.string.import_other_primary
+        }
+
+        /** Selected folder is separate from Hentoid's external location */
+        object PrimaryExternal : Failure {
+            override val errorMessageRes = R.string.import_other_external_inside_primary
+        }
+
         /** Any other issue */
-        object Unknown : Failure
+        object Unknown : Failure {
+            override val errorMessageRes: Int = R.string.import_other
+        }
     }
 }
 
