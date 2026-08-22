@@ -112,9 +112,6 @@ sealed interface FolderScanResult {
     // File or folder is invalid, cannot be found
     object KoInvalidFolder : FolderScanResult
 
-    // Selected folder is the primary location and can't be used as an external location
-    object KoAppFolder : FolderScanResult
-
     // Selected folder is the device's download folder and can't be used as a primary folder (downloads visibility + storage calculation issues)
     object KoDownloadFolder : FolderScanResult
 

@@ -195,7 +195,6 @@ class LibRefreshDialogFragment : BaseDialogFragment<LibRefreshDialogFragment.Par
                 }
                 if (FolderScanResult.KoInvalidFolder == res
                     || FolderScanResult.KoCreateFail == res
-                    || FolderScanResult.KoAppFolder == res
                     || FolderScanResult.KoDownloadFolder == res
                     || FolderScanResult.KoAlreadyRunning == res
                     || FolderScanResult.KoOther == res
@@ -236,7 +235,6 @@ class LibRefreshDialogFragment : BaseDialogFragment<LibRefreshDialogFragment.Par
 
                 if (FolderScanResult.KoInvalidFolder == res
                     || FolderScanResult.KoCreateFail == res
-                    || FolderScanResult.KoAppFolder == res
                     || FolderScanResult.KoDownloadFolder == res
                     || FolderScanResult.KoAlreadyRunning == res
                     || FolderScanResult.KoOtherPrimary == res
@@ -381,7 +379,6 @@ class LibRefreshDialogFragment : BaseDialogFragment<LibRefreshDialogFragment.Par
     private fun View.showSnackbarFromResult(result: FolderScanResult) {
         val message = when (result) {
             FolderScanResult.KoInvalidFolder -> R.string.import_invalid
-            FolderScanResult.KoAppFolder -> R.string.import_app_folder
             FolderScanResult.KoDownloadFolder -> R.string.import_download_folder
             FolderScanResult.KoCreateFail -> R.string.import_create_fail
             FolderScanResult.KoAlreadyRunning -> R.string.service_running

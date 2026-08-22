@@ -188,12 +188,6 @@ class ImportIntroFragment : Fragment(R.layout.intro_slide_04) {
                     BaseTransientBottomBar.LENGTH_LONG
                 ).show()
 
-                FolderScanResult.KoAppFolder -> Snackbar.make(
-                    root,
-                    R.string.import_invalid,
-                    BaseTransientBottomBar.LENGTH_LONG
-                ).show()
-
                 FolderScanResult.KoDownloadFolder -> Snackbar.make(
                     root,
                     R.string.import_download_folder,
