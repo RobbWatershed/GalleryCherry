@@ -26,6 +26,8 @@ import me.devsaki.hentoid.events.ProcessEvent
 import me.devsaki.hentoid.events.ServiceDestroyedEvent
 import me.devsaki.hentoid.fragments.BaseDialogFragment
 import me.devsaki.hentoid.util.FolderScanResult
+import me.devsaki.hentoid.util.FolderScanResult.Failure
+import me.devsaki.hentoid.util.FolderScanResult.Success
 import me.devsaki.hentoid.util.ImportOptions
 import me.devsaki.hentoid.util.PickFolderContract
 import me.devsaki.hentoid.util.PickUriResult
@@ -187,11 +189,11 @@ class LibRefreshDialogFragment : BaseDialogFragment<LibRefreshDialogFragment.Par
                 val res = withContext(Dispatchers.IO) {
                     setAndScanExternalFolder(requireContext(), externalUri, quickScan)
                 }
-                if (FolderScanResult.KoInvalidFolder == res
-                    || FolderScanResult.KoCreateFail == res
-                    || FolderScanResult.KoDownloadFolder == res
-                    || FolderScanResult.KoAlreadyRunning == res
-                    || FolderScanResult.KoOther == res
+                if (Failure.InvalidFolder == res
+                    || Failure.CreateFail == res
+                    || Failure.DownloadFolder == res
+                    || Failure.AlreadyRunning == res
+                    || Failure.Unknown == res
                 ) {
                     binding1?.apply {
                         root.showSnackbarFromResult(res)
@@ -222,20 +224,20 @@ class LibRefreshDialogFragment : BaseDialogFragment<LibRefreshDialogFragment.Par
                     setAndScanPrimaryFolder(requireContext(), rootUri, location, false, options)
                 }
 
-                if (FolderScanResult.KoInvalidFolder == res
-                    || FolderScanResult.KoCreateFail == res
-                    || FolderScanResult.KoDownloadFolder == res
-                    || FolderScanResult.KoAlreadyRunning == res
-                    || FolderScanResult.KoOtherPrimary == res
-                    || FolderScanResult.KoPrimaryExternal == res
-                    || FolderScanResult.OkEmptyFolder == res
-                    || FolderScanResult.KoOther == res
+                if (Failure.InvalidFolder == res
+                    || Failure.CreateFail == res
+                    || Failure.DownloadFolder == res
+                    || Failure.AlreadyRunning == res
+                    || Failure.OtherPrimary == res
+                    || Failure.PrimaryExternal == res
+                    || Success.EmptyFolder == res
+                    || Failure.Unknown == res
                 ) {
                     binding1?.apply {
                         root.showSnackbarFromResult(res)
                         delay(3000)
                     }
-                    if (FolderScanResult.OkEmptyFolder == res) parent?.onFolderSuccess()
+                    if (Success.EmptyFolder == res) parent?.onFolderSuccess()
                     dismissAllowingStateLoss()
                 }
             }
@@ -337,17 +339,17 @@ class LibRefreshDialogFragment : BaseDialogFragment<LibRefreshDialogFragment.Par
 
     private fun onScanHentoidFolderResult(result: FolderScanResult) {
         when (result) {
-            FolderScanResult.OkEmptyFolder -> {
+            Success.EmptyFolder -> {
                 parent?.onFolderSuccess()
                 dismissAllowingStateLoss()
             }
 
-            FolderScanResult.OkLibraryDetected -> {
+            Success.LibraryDetected -> {
                 // Hentoid folder is finally selected at this point -> Update UI
                 updateOnSelectFolder()
             }
 
-            is FolderScanResult.OkLibraryDetectedAsk -> {
+            is Success.LibraryDetectedAsk -> {
                 updateOnSelectFolder()
                 showExistingLibraryDialog(
                     requireContext(),
@@ -367,16 +369,16 @@ class LibRefreshDialogFragment : BaseDialogFragment<LibRefreshDialogFragment.Par
 
     private fun View.showSnackbarFromResult(result: FolderScanResult) {
         val message = when (result) {
-            FolderScanResult.KoInvalidFolder -> R.string.import_invalid
-            FolderScanResult.KoDownloadFolder -> R.string.import_download_folder
-            FolderScanResult.KoCreateFail -> R.string.import_create_fail
-            FolderScanResult.KoAlreadyRunning -> R.string.service_running
-            FolderScanResult.KoOtherPrimary -> R.string.import_other_primary
-            FolderScanResult.KoPrimaryExternal -> R.string.import_other_external_inside_primary
-            FolderScanResult.OkEmptyFolder -> R.string.import_empty
-            FolderScanResult.KoOther -> R.string.import_other
-            FolderScanResult.OkLibraryDetected,
-            is FolderScanResult.OkLibraryDetectedAsk -> R.string.none
+            Failure.InvalidFolder -> R.string.import_invalid
+            Failure.DownloadFolder -> R.string.import_download_folder
+            Failure.CreateFail -> R.string.import_create_fail
+            Failure.AlreadyRunning -> R.string.service_running
+            Failure.OtherPrimary -> R.string.import_other_primary
+            Failure.PrimaryExternal -> R.string.import_other_external_inside_primary
+            Success.EmptyFolder -> R.string.import_empty
+            Failure.Unknown -> R.string.import_other
+            Success.LibraryDetected,
+            is Success.LibraryDetectedAsk -> R.string.none
             // Nothing should happen here
         }
 

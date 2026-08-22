@@ -24,6 +24,8 @@ import me.devsaki.hentoid.enums.StorageLocation
 import me.devsaki.hentoid.events.ProcessEvent
 import me.devsaki.hentoid.ui.BlinkAnimation
 import me.devsaki.hentoid.util.FolderScanResult
+import me.devsaki.hentoid.util.FolderScanResult.Failure
+import me.devsaki.hentoid.util.FolderScanResult.Success
 import me.devsaki.hentoid.util.PickFolderContract
 import me.devsaki.hentoid.util.PickUriResult
 import me.devsaki.hentoid.util.Settings
@@ -165,14 +167,14 @@ class ImportIntroFragment : Fragment(R.layout.intro_slide_04) {
     private fun onScanHentoidFolderResult(result: FolderScanResult) {
         binding?.apply {
             when (result) {
-                FolderScanResult.OkEmptyFolder -> nextStep()
-                FolderScanResult.OkLibraryDetected -> {
+                Success.EmptyFolder -> nextStep()
+                Success.LibraryDetected -> {
                     // Import service is already launched by the Helper; nothing else to do
                     updateOnSelectFolder()
                     return
                 }
 
-                is FolderScanResult.OkLibraryDetectedAsk -> {
+                is Success.LibraryDetectedAsk -> {
                     updateOnSelectFolder()
                     showExistingLibraryDialog(
                         requireContext(),
@@ -182,31 +184,31 @@ class ImportIntroFragment : Fragment(R.layout.intro_slide_04) {
                     return
                 }
 
-                FolderScanResult.KoInvalidFolder -> Snackbar.make(
+                Failure.InvalidFolder -> Snackbar.make(
                     root,
                     R.string.import_invalid,
                     BaseTransientBottomBar.LENGTH_LONG
                 ).show()
 
-                FolderScanResult.KoDownloadFolder -> Snackbar.make(
+                Failure.DownloadFolder -> Snackbar.make(
                     root,
                     R.string.import_download_folder,
                     BaseTransientBottomBar.LENGTH_LONG
                 ).show()
 
-                FolderScanResult.KoCreateFail -> Snackbar.make(
+                Failure.CreateFail -> Snackbar.make(
                     root,
                     R.string.import_create_fail,
                     BaseTransientBottomBar.LENGTH_LONG
                 ).show()
 
-                FolderScanResult.KoAlreadyRunning -> Snackbar.make(
+                Failure.AlreadyRunning -> Snackbar.make(
                     root,
                     R.string.service_running,
                     BaseTransientBottomBar.LENGTH_LONG
                 ).show()
 
-                FolderScanResult.KoOther -> Snackbar.make(
+                Failure.Unknown -> Snackbar.make(
                     root,
                     R.string.import_other,
                     BaseTransientBottomBar.LENGTH_LONG

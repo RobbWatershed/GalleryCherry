@@ -49,6 +49,8 @@ import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.enums.StorageLocation
 import me.devsaki.hentoid.json.JsonContent
 import me.devsaki.hentoid.json.JsonContentCollection
+import me.devsaki.hentoid.util.FolderScanResult.Failure
+import me.devsaki.hentoid.util.FolderScanResult.Success
 import me.devsaki.hentoid.util.file.ArchiveEntry
 import me.devsaki.hentoid.util.file.FileExplorer
 import me.devsaki.hentoid.util.file.InnerNameNumberFileComparator
@@ -100,35 +102,32 @@ sealed interface PickUriResult {
 }
 
 sealed interface FolderScanResult {
-    // OK - Existing, empty Hentoid folder
-    object OkEmptyFolder : FolderScanResult
 
-    // OK - An existing Hentoid folder with books
-    object OkLibraryDetected : FolderScanResult
+    sealed interface Success : FolderScanResult {
+        /** Success - Existing, empty Hentoid folder */
+        object EmptyFolder : Success
+        /** Success - An existing Hentoid folder with books */
+        object LibraryDetected : Success
+        /** Success - Existing Hentoid folder with books + we need to ask the user if he wants to import them */
+        data class LibraryDetectedAsk(val rootUri: Uri) : Success
+    }
 
-    // OK - Existing Hentoid folder with books + we need to ask the user if he wants to import them
-    data class OkLibraryDetectedAsk(val rootUri: Uri) : FolderScanResult
-
-    // File or folder is invalid, cannot be found
-    object KoInvalidFolder : FolderScanResult
-
-    // Selected folder is the device's download folder and can't be used as a primary folder (downloads visibility + storage calculation issues)
-    object KoDownloadFolder : FolderScanResult
-
-    // Hentoid folder could not be created
-    object KoCreateFail : FolderScanResult
-
-    // Import is already running
-    object KoAlreadyRunning : FolderScanResult
-
-    // Selected folder is inside or contains the other primary location
-    object KoOtherPrimary : FolderScanResult
-
-    // Selected folder is inside or contains the external location
-    object KoPrimaryExternal : FolderScanResult
-
-    // Any other issue
-    object KoOther : FolderScanResult
+    sealed interface Failure : FolderScanResult {
+        /** File or folder is invalid, cannot be found */
+        object InvalidFolder : Failure
+        /** Selected folder is the device's download folder and can't be used as a primary folder */
+        object DownloadFolder : Failure
+        /** Hentoid folder could not be created */
+        object CreateFail : Failure
+        /** Import is already running */
+        object AlreadyRunning : Failure
+        /** Selected folder is inside or contains the other primary location */
+        object OtherPrimary : Failure
+        /** Selected folder is inside or contains the external location */
+        object PrimaryExternal : Failure
+        /** Any other issue */
+        object Unknown : Failure
+    }
 }
 
 private val hentoidFolderNames =
@@ -246,7 +245,7 @@ fun setAndScanPrimaryFolder(
         val docFile = DocumentFile.fromTreeUri(context, treeUri)
         if (null == docFile || !docFile.exists()) {
             Timber.e("Could not find the selected file %s", treeUri.toString())
-            return FolderScanResult.KoInvalidFolder
+            return Failure.InvalidFolder
         }
 
         // Check if the folder is not the device's Download folder
@@ -258,7 +257,7 @@ fun setAndScanPrimaryFolder(
                     .toTypedArray()[0]
             if (firstSegment.startsWith("download") || firstSegment.startsWith("primary:download")) {
                 Timber.e("Device's download folder detected : %s", treeUri.toString())
-                return FolderScanResult.KoDownloadFolder
+                return Failure.DownloadFolder
             }
         }
 
@@ -276,14 +275,14 @@ fun setAndScanPrimaryFolder(
                     "Selected folder is inside the other primary location : %s",
                     treeUri.toString()
                 )
-                return FolderScanResult.KoOtherPrimary
+                return Failure.OtherPrimary
             }
             if (otherLocationFullPath.startsWith(treeFullPath)) {
                 Timber.e(
                     "Selected folder contains the other primary location : %s",
                     treeUri.toString()
                 )
-                return FolderScanResult.KoOtherPrimary
+                return Failure.OtherPrimary
             }
         }
 
@@ -294,11 +293,11 @@ fun setAndScanPrimaryFolder(
             val extFullPath = getFullPathFromUri(context, extLocationStr.toUri())
             if (treeFullPath.startsWith(extFullPath)) {
                 Timber.e("Selected folder is inside the external location : %s", treeUri.toString())
-                return FolderScanResult.KoPrimaryExternal
+                return Failure.PrimaryExternal
             }
             if (extFullPath.startsWith(treeFullPath)) {
                 Timber.e("Selected folder contains the external location : %s", treeUri.toString())
-                return FolderScanResult.KoPrimaryExternal
+                return Failure.PrimaryExternal
             }
         }
 
@@ -306,7 +305,7 @@ fun setAndScanPrimaryFolder(
         val hentoidFolder = getOrCreateHentoidFolder(context, docFile)
         if (null == hentoidFolder) {
             Timber.e("Could not create Primary folder in folder %s", docFile.uri.toString())
-            return FolderScanResult.KoCreateFail
+            return Failure.CreateFail
         }
 
         // Set the folder as the app's downloads folder
@@ -317,18 +316,18 @@ fun setAndScanPrimaryFolder(
                 result,
                 hentoidFolder.uri.toString()
             )
-            return FolderScanResult.KoInvalidFolder
+            return Failure.InvalidFolder
         }
 
         // Scan the folder for an existing library; start the import
         if (hasBooks(context, hentoidFolder)) {
             if (!askScanExisting) {
                 if (runPrimaryImport(context, location, hentoidFolder.uri.toString(), options))
-                    FolderScanResult.OkLibraryDetected
+                    Success.LibraryDetected
                 else
-                    FolderScanResult.KoAlreadyRunning
+                    Failure.AlreadyRunning
             } else {
-                FolderScanResult.OkLibraryDetectedAsk(hentoidFolder.uri)
+                Success.LibraryDetectedAsk(hentoidFolder.uri)
             }
         } else {
             // Create a new library or import an Hentoid folder without books
@@ -344,11 +343,11 @@ fun setAndScanPrimaryFolder(
                 }
             }
             Settings.setStorageUri(location, hentoidFolder.uri.toString())
-            FolderScanResult.OkEmptyFolder
+            Success.EmptyFolder
         }
     } catch (e: Exception) {
         Timber.w(e)
-        FolderScanResult.KoOther
+        Failure.Unknown
     }
 }
 
@@ -374,7 +373,7 @@ fun setAndScanExternalFolder(
         val docFile = DocumentFile.fromTreeUri(context, treeUri)
         if (null == docFile || !docFile.exists()) {
             Timber.e("Could not find the selected file %s", treeUri.toString())
-            return FolderScanResult.KoInvalidFolder
+            return Failure.InvalidFolder
         }
 
         // Check if selected folder is separate from one of Hentoid's primary locations
@@ -392,7 +391,7 @@ fun setAndScanExternalFolder(
                 "Trying to set the external library inside a primary library location %s",
                 treeUri.toString()
             )
-            return FolderScanResult.KoPrimaryExternal
+            return Failure.PrimaryExternal
         }
         if (primaryUri1.isNotEmpty() && primaryUri1.startsWith(selectedFullPath)
             || primaryUri2.isNotEmpty() && primaryUri2.startsWith(selectedFullPath)
@@ -401,7 +400,7 @@ fun setAndScanExternalFolder(
                 "Trying to set the external library over a primary library location %s",
                 treeUri.toString()
             )
-            return FolderScanResult.KoPrimaryExternal
+            return Failure.PrimaryExternal
         }
 
         // Set the folder as the app's external library folder
@@ -410,12 +409,12 @@ fun setAndScanExternalFolder(
 
         // Start the import
         if (runExternalImport(context, quickScan))
-            FolderScanResult.OkLibraryDetected
+            Success.LibraryDetected
         else
-            FolderScanResult.KoAlreadyRunning
+            Failure.AlreadyRunning
     } catch (e: Exception) {
         Timber.w(e)
-        FolderScanResult.KoOther
+        Failure.Unknown
     }
 }
 
