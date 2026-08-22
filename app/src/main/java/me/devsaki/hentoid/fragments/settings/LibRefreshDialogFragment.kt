@@ -44,7 +44,6 @@ import me.devsaki.hentoid.workers.STEP_4_QUEUE_FINAL
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
-import timber.log.Timber
 import kotlin.math.roundToInt
 
 /**
@@ -186,12 +185,7 @@ class LibRefreshDialogFragment : BaseDialogFragment<LibRefreshDialogFragment.Par
 
             lifecycleScope.launch {
                 val res = withContext(Dispatchers.IO) {
-                    try {
-                        setAndScanExternalFolder(requireContext(), externalUri, quickScan)
-                    } catch (e: Exception) {
-                        Timber.w(e)
-                        FolderScanResult.KoOther
-                    }
+                    setAndScanExternalFolder(requireContext(), externalUri, quickScan)
                 }
                 if (FolderScanResult.KoInvalidFolder == res
                     || FolderScanResult.KoCreateFail == res
@@ -225,12 +219,7 @@ class LibRefreshDialogFragment : BaseDialogFragment<LibRefreshDialogFragment.Par
 
             lifecycleScope.launch {
                 val res = withContext(Dispatchers.IO) {
-                    try {
-                        setAndScanPrimaryFolder(requireContext(), rootUri, location, false, options)
-                    } catch (e: Exception) {
-                        Timber.w(e)
-                        FolderScanResult.KoOther
-                    }
+                    setAndScanPrimaryFolder(requireContext(), rootUri, location, false, options)
                 }
 
                 if (FolderScanResult.KoInvalidFolder == res

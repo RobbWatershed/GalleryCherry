@@ -238,112 +238,117 @@ fun setAndScanPrimaryFolder(
     askScanExisting: Boolean,
     options: ImportOptions?
 ): FolderScanResult {
-    // Persist I/O permissions; keep existing ones if present
-    persistLocationCredentials(context, treeUri, location)
+    return try {
+        // Persist I/O permissions; keep existing ones if present
+        persistLocationCredentials(context, treeUri, location)
 
-    // Check if the folder exists
-    val docFile = DocumentFile.fromTreeUri(context, treeUri)
-    if (null == docFile || !docFile.exists()) {
-        Timber.e("Could not find the selected file %s", treeUri.toString())
-        return FolderScanResult.KoInvalidFolder
-    }
-
-    // Check if the folder is not the device's Download folder
-    val pathSegments = treeUri.pathSegments
-    if (pathSegments.size > 1) {
-        var firstSegment = pathSegments[1].lowercase(Locale.getDefault())
-        firstSegment =
-            firstSegment.split(File.separator.toRegex()).dropLastWhile { it.isEmpty() }
-                .toTypedArray()[0]
-        if (firstSegment.startsWith("download") || firstSegment.startsWith("primary:download")) {
-            Timber.e("Device's download folder detected : %s", treeUri.toString())
-            return FolderScanResult.KoDownloadFolder
+        // Check if the folder exists
+        val docFile = DocumentFile.fromTreeUri(context, treeUri)
+        if (null == docFile || !docFile.exists()) {
+            Timber.e("Could not find the selected file %s", treeUri.toString())
+            return FolderScanResult.KoInvalidFolder
         }
-    }
 
-    // Check if selected folder is separate from Hentoid's other primary location
-    val otherLocationUriStr: String =
-        if (location == StorageLocation.PRIMARY_1) Settings.getStorageUri(StorageLocation.PRIMARY_2)
-        else Settings.getStorageUri(StorageLocation.PRIMARY_1)
-
-    if (otherLocationUriStr.isNotEmpty()) {
-        val treeFullPath = getFullPathFromUri(context, treeUri)
-        val otherLocationFullPath =
-            getFullPathFromUri(context, otherLocationUriStr.toUri())
-        if (treeFullPath.startsWith(otherLocationFullPath)) {
-            Timber.e(
-                "Selected folder is inside the other primary location : %s",
-                treeUri.toString()
-            )
-            return FolderScanResult.KoOtherPrimary
-        }
-        if (otherLocationFullPath.startsWith(treeFullPath)) {
-            Timber.e(
-                "Selected folder contains the other primary location : %s",
-                treeUri.toString()
-            )
-            return FolderScanResult.KoOtherPrimary
-        }
-    }
-
-    // Check if selected folder is separate from Hentoid's external location
-    val extLocationStr = Settings.getStorageUri(StorageLocation.EXTERNAL)
-    if (extLocationStr.isNotEmpty()) {
-        val treeFullPath = getFullPathFromUri(context, treeUri)
-        val extFullPath = getFullPathFromUri(context, extLocationStr.toUri())
-        if (treeFullPath.startsWith(extFullPath)) {
-            Timber.e("Selected folder is inside the external location : %s", treeUri.toString())
-            return FolderScanResult.KoPrimaryExternal
-        }
-        if (extFullPath.startsWith(treeFullPath)) {
-            Timber.e("Selected folder contains the external location : %s", treeUri.toString())
-            return FolderScanResult.KoPrimaryExternal
-        }
-    }
-
-    // Retrieve or create the Hentoid folder
-    val hentoidFolder = getOrCreateHentoidFolder(context, docFile)
-    if (null == hentoidFolder) {
-        Timber.e("Could not create Primary folder in folder %s", docFile.uri.toString())
-        return FolderScanResult.KoCreateFail
-    }
-
-    // Set the folder as the app's downloads folder
-    val result = createNoMedia(context, hentoidFolder)
-    if (result < 0) {
-        Timber.e(
-            "Could not set the selected root folder (error = %d) %s",
-            result,
-            hentoidFolder.uri.toString()
-        )
-        return FolderScanResult.KoInvalidFolder
-    }
-
-    // Scan the folder for an existing library; start the import
-    return if (hasBooks(context, hentoidFolder)) {
-        if (!askScanExisting) {
-            if (runPrimaryImport(context, location, hentoidFolder.uri.toString(), options))
-                FolderScanResult.OkLibraryDetected
-            else
-                FolderScanResult.KoAlreadyRunning
-        } else {
-            FolderScanResult.OkLibraryDetectedAsk(hentoidFolder.uri)
-        }
-    } else {
-        // Create a new library or import an Hentoid folder without books
-        // => Don't run the import worker and settle things here
-
-        // In case that Location was previously populated, drop all books
-        if (Settings.getStorageUri(location).isNotEmpty()) {
-            val dao: CollectionDAO = ObjectBoxDAO()
-            try {
-                detachAllPrimaryContent(dao, location)
-            } finally {
-                dao.cleanup()
+        // Check if the folder is not the device's Download folder
+        val pathSegments = treeUri.pathSegments
+        if (pathSegments.size > 1) {
+            var firstSegment = pathSegments[1].lowercase(Locale.getDefault())
+            firstSegment =
+                firstSegment.split(File.separator.toRegex()).dropLastWhile { it.isEmpty() }
+                    .toTypedArray()[0]
+            if (firstSegment.startsWith("download") || firstSegment.startsWith("primary:download")) {
+                Timber.e("Device's download folder detected : %s", treeUri.toString())
+                return FolderScanResult.KoDownloadFolder
             }
         }
-        Settings.setStorageUri(location, hentoidFolder.uri.toString())
-        FolderScanResult.OkEmptyFolder
+
+        // Check if selected folder is separate from Hentoid's other primary location
+        val otherLocationUriStr: String =
+            if (location == StorageLocation.PRIMARY_1) Settings.getStorageUri(StorageLocation.PRIMARY_2)
+            else Settings.getStorageUri(StorageLocation.PRIMARY_1)
+
+        if (otherLocationUriStr.isNotEmpty()) {
+            val treeFullPath = getFullPathFromUri(context, treeUri)
+            val otherLocationFullPath =
+                getFullPathFromUri(context, otherLocationUriStr.toUri())
+            if (treeFullPath.startsWith(otherLocationFullPath)) {
+                Timber.e(
+                    "Selected folder is inside the other primary location : %s",
+                    treeUri.toString()
+                )
+                return FolderScanResult.KoOtherPrimary
+            }
+            if (otherLocationFullPath.startsWith(treeFullPath)) {
+                Timber.e(
+                    "Selected folder contains the other primary location : %s",
+                    treeUri.toString()
+                )
+                return FolderScanResult.KoOtherPrimary
+            }
+        }
+
+        // Check if selected folder is separate from Hentoid's external location
+        val extLocationStr = Settings.getStorageUri(StorageLocation.EXTERNAL)
+        if (extLocationStr.isNotEmpty()) {
+            val treeFullPath = getFullPathFromUri(context, treeUri)
+            val extFullPath = getFullPathFromUri(context, extLocationStr.toUri())
+            if (treeFullPath.startsWith(extFullPath)) {
+                Timber.e("Selected folder is inside the external location : %s", treeUri.toString())
+                return FolderScanResult.KoPrimaryExternal
+            }
+            if (extFullPath.startsWith(treeFullPath)) {
+                Timber.e("Selected folder contains the external location : %s", treeUri.toString())
+                return FolderScanResult.KoPrimaryExternal
+            }
+        }
+
+        // Retrieve or create the Hentoid folder
+        val hentoidFolder = getOrCreateHentoidFolder(context, docFile)
+        if (null == hentoidFolder) {
+            Timber.e("Could not create Primary folder in folder %s", docFile.uri.toString())
+            return FolderScanResult.KoCreateFail
+        }
+
+        // Set the folder as the app's downloads folder
+        val result = createNoMedia(context, hentoidFolder)
+        if (result < 0) {
+            Timber.e(
+                "Could not set the selected root folder (error = %d) %s",
+                result,
+                hentoidFolder.uri.toString()
+            )
+            return FolderScanResult.KoInvalidFolder
+        }
+
+        // Scan the folder for an existing library; start the import
+        if (hasBooks(context, hentoidFolder)) {
+            if (!askScanExisting) {
+                if (runPrimaryImport(context, location, hentoidFolder.uri.toString(), options))
+                    FolderScanResult.OkLibraryDetected
+                else
+                    FolderScanResult.KoAlreadyRunning
+            } else {
+                FolderScanResult.OkLibraryDetectedAsk(hentoidFolder.uri)
+            }
+        } else {
+            // Create a new library or import an Hentoid folder without books
+            // => Don't run the import worker and settle things here
+
+            // In case that Location was previously populated, drop all books
+            if (Settings.getStorageUri(location).isNotEmpty()) {
+                val dao: CollectionDAO = ObjectBoxDAO()
+                try {
+                    detachAllPrimaryContent(dao, location)
+                } finally {
+                    dao.cleanup()
+                }
+            }
+            Settings.setStorageUri(location, hentoidFolder.uri.toString())
+            FolderScanResult.OkEmptyFolder
+        }
+    } catch (e: Exception) {
+        Timber.w(e)
+        FolderScanResult.KoOther
     }
 }
 
@@ -361,52 +366,57 @@ fun setAndScanExternalFolder(
     treeUri: Uri,
     quickScan: Boolean = false
 ): FolderScanResult {
-    // Persist I/O permissions; keep existing ones if present
-    persistLocationCredentials(context, treeUri, StorageLocation.EXTERNAL)
+    return try {
+        // Persist I/O permissions; keep existing ones if present
+        persistLocationCredentials(context, treeUri, StorageLocation.EXTERNAL)
 
-    // Check if the folder exists
-    val docFile = DocumentFile.fromTreeUri(context, treeUri)
-    if (null == docFile || !docFile.exists()) {
-        Timber.e("Could not find the selected file %s", treeUri.toString())
-        return FolderScanResult.KoInvalidFolder
+        // Check if the folder exists
+        val docFile = DocumentFile.fromTreeUri(context, treeUri)
+        if (null == docFile || !docFile.exists()) {
+            Timber.e("Could not find the selected file %s", treeUri.toString())
+            return FolderScanResult.KoInvalidFolder
+        }
+
+        // Check if selected folder is separate from one of Hentoid's primary locations
+        var primaryUri1 = Settings.getStorageUri(StorageLocation.PRIMARY_1)
+        var primaryUri2 = Settings.getStorageUri(StorageLocation.PRIMARY_2)
+        if (primaryUri1.isNotEmpty()) primaryUri1 =
+            getFullPathFromUri(context, primaryUri1.toUri())
+        if (primaryUri2.isNotEmpty()) primaryUri2 =
+            getFullPathFromUri(context, primaryUri2.toUri())
+        val selectedFullPath = getFullPathFromUri(context, treeUri)
+        if (primaryUri1.isNotEmpty() && selectedFullPath.startsWith(primaryUri1)
+            || primaryUri2.isNotEmpty() && selectedFullPath.startsWith(primaryUri2)
+        ) {
+            Timber.w(
+                "Trying to set the external library inside a primary library location %s",
+                treeUri.toString()
+            )
+            return FolderScanResult.KoPrimaryExternal
+        }
+        if (primaryUri1.isNotEmpty() && primaryUri1.startsWith(selectedFullPath)
+            || primaryUri2.isNotEmpty() && primaryUri2.startsWith(selectedFullPath)
+        ) {
+            Timber.w(
+                "Trying to set the external library over a primary library location %s",
+                treeUri.toString()
+            )
+            return FolderScanResult.KoPrimaryExternal
+        }
+
+        // Set the folder as the app's external library folder
+        val folderUri = docFile.uri.toString()
+        Settings.externalLibraryUri = folderUri
+
+        // Start the import
+        if (runExternalImport(context, quickScan))
+            FolderScanResult.OkLibraryDetected
+        else
+            FolderScanResult.KoAlreadyRunning
+    } catch (e: Exception) {
+        Timber.w(e)
+        FolderScanResult.KoOther
     }
-
-    // Check if selected folder is separate from one of Hentoid's primary locations
-    var primaryUri1 = Settings.getStorageUri(StorageLocation.PRIMARY_1)
-    var primaryUri2 = Settings.getStorageUri(StorageLocation.PRIMARY_2)
-    if (primaryUri1.isNotEmpty()) primaryUri1 =
-        getFullPathFromUri(context, primaryUri1.toUri())
-    if (primaryUri2.isNotEmpty()) primaryUri2 =
-        getFullPathFromUri(context, primaryUri2.toUri())
-    val selectedFullPath = getFullPathFromUri(context, treeUri)
-    if (primaryUri1.isNotEmpty() && selectedFullPath.startsWith(primaryUri1)
-        || primaryUri2.isNotEmpty() && selectedFullPath.startsWith(primaryUri2)
-    ) {
-        Timber.w(
-            "Trying to set the external library inside a primary library location %s",
-            treeUri.toString()
-        )
-        return FolderScanResult.KoPrimaryExternal
-    }
-    if (primaryUri1.isNotEmpty() && primaryUri1.startsWith(selectedFullPath)
-        || primaryUri2.isNotEmpty() && primaryUri2.startsWith(selectedFullPath)
-    ) {
-        Timber.w(
-            "Trying to set the external library over a primary library location %s",
-            treeUri.toString()
-        )
-        return FolderScanResult.KoPrimaryExternal
-    }
-
-    // Set the folder as the app's external library folder
-    val folderUri = docFile.uri.toString()
-    Settings.externalLibraryUri = folderUri
-
-    // Start the import
-    return if (runExternalImport(context, quickScan))
-        FolderScanResult.OkLibraryDetected
-    else
-        FolderScanResult.KoAlreadyRunning
 }
 
 /**
