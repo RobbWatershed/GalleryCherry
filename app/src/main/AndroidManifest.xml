@@ -219,10 +219,6 @@
                 android:value=".activities.LibraryActivity" />
         </activity>
         <activity
-            android:name=".activities.settings.SettingsSourceSelectActivity"
-            android:label="@string/pref_drawer_sources_title"
-            tools:ignore="UnusedAttribute" />
-        <activity
             android:name=".activities.settings.SettingsSourceSpecificsActivity"
             android:label="@string/title_activity_source_specifics"
             tools:ignore="UnusedAttribute" />
