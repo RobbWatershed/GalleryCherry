@@ -268,7 +268,7 @@ fun setAndScanPrimaryFolder(
         // Check if the folder exists
         val docFile = DocumentFile.fromTreeUri(context, treeUri)
         if (null == docFile || !docFile.exists()) {
-            Timber.e("Could not find the selected file %s", treeUri.toString())
+            Timber.e("Could not find the selected file $treeUri")
             return Failure.InvalidFolder
         }
 
@@ -280,7 +280,7 @@ fun setAndScanPrimaryFolder(
                 firstSegment.split(File.separator.toRegex()).dropLastWhile { it.isEmpty() }
                     .toTypedArray()[0]
             if (firstSegment.startsWith("download") || firstSegment.startsWith("primary:download")) {
-                Timber.e("Device's download folder detected : %s", treeUri.toString())
+                Timber.e("Device's download folder detected : $treeUri")
                 return Failure.DownloadFolder
             }
         }
@@ -295,17 +295,11 @@ fun setAndScanPrimaryFolder(
             val otherLocationFullPath =
                 getFullPathFromUri(context, otherLocationUriStr.toUri())
             if (treeFullPath.startsWith(otherLocationFullPath)) {
-                Timber.e(
-                    "Selected folder is inside the other primary location : %s",
-                    treeUri.toString()
-                )
+                Timber.e("Selected folder is inside the other primary location : $treeUri")
                 return Failure.OtherPrimary
             }
             if (otherLocationFullPath.startsWith(treeFullPath)) {
-                Timber.e(
-                    "Selected folder contains the other primary location : %s",
-                    treeUri.toString()
-                )
+                Timber.e("Selected folder contains the other primary location : $treeUri")
                 return Failure.OtherPrimary
             }
         }
@@ -316,11 +310,11 @@ fun setAndScanPrimaryFolder(
             val treeFullPath = getFullPathFromUri(context, treeUri)
             val extFullPath = getFullPathFromUri(context, extLocationStr.toUri())
             if (treeFullPath.startsWith(extFullPath)) {
-                Timber.e("Selected folder is inside the external location : %s", treeUri.toString())
+                Timber.e("Selected folder is inside the external location : $treeUri")
                 return Failure.PrimaryExternal
             }
             if (extFullPath.startsWith(treeFullPath)) {
-                Timber.e("Selected folder contains the external location : %s", treeUri.toString())
+                Timber.e("Selected folder contains the external location : $treeUri")
                 return Failure.PrimaryExternal
             }
         }
@@ -328,18 +322,14 @@ fun setAndScanPrimaryFolder(
         // Retrieve or create the Hentoid folder
         val hentoidFolder = getOrCreateHentoidFolder(context, docFile)
         if (null == hentoidFolder) {
-            Timber.e("Could not create Primary folder in folder %s", docFile.uri.toString())
+            Timber.e("Could not create Primary folder in folder ${docFile.uri}")
             return Failure.CreateFail
         }
 
         // Set the folder as the app's downloads folder
         val result = createNoMedia(context, hentoidFolder)
         if (result < 0) {
-            Timber.e(
-                "Could not set the selected root folder (error = %d) %s",
-                result,
-                hentoidFolder.uri.toString()
-            )
+            Timber.e("Could not set the selected root folder (error = $result) ${hentoidFolder.uri}")
             return Failure.InvalidFolder
         }
 
@@ -396,7 +386,7 @@ fun setAndScanExternalFolder(
         // Check if the folder exists
         val docFile = DocumentFile.fromTreeUri(context, treeUri)
         if (null == docFile || !docFile.exists()) {
-            Timber.e("Could not find the selected file %s", treeUri.toString())
+            Timber.e("Could not find the selected file $treeUri")
             return Failure.InvalidFolder
         }
 
@@ -411,19 +401,13 @@ fun setAndScanExternalFolder(
         if (primaryUri1.isNotEmpty() && selectedFullPath.startsWith(primaryUri1)
             || primaryUri2.isNotEmpty() && selectedFullPath.startsWith(primaryUri2)
         ) {
-            Timber.w(
-                "Trying to set the external library inside a primary library location %s",
-                treeUri.toString()
-            )
+            Timber.w("Trying to set the external library inside a primary library location $treeUri")
             return Failure.PrimaryExternal
         }
         if (primaryUri1.isNotEmpty() && primaryUri1.startsWith(selectedFullPath)
             || primaryUri2.isNotEmpty() && primaryUri2.startsWith(selectedFullPath)
         ) {
-            Timber.w(
-                "Trying to set the external library over a primary library location %s",
-                treeUri.toString()
-            )
+            Timber.w("Trying to set the external library over a primary library location $treeUri")
             return Failure.PrimaryExternal
         }
 
@@ -844,7 +828,7 @@ fun scanBookFolder(
     files: List<DocumentFile>? = null,
     jsonFile: DocumentFile? = null
 ): Content {
-    Timber.d(">>>> scan book folder %s", bookFolder.uri)
+    Timber.d(">>>> scan book folder ${bookFolder.uri}")
     val now = Instant.now().toEpochMilli()
     val isExternal = (targetStatus == StatusContent.EXTERNAL)
 
@@ -944,7 +928,7 @@ fun scanChapterFolders(
     dao: CollectionDAO,
     jsonFile: DocumentFile?
 ): Content {
-    Timber.d(">>>> scan chapter folder %s", parent.uri)
+    Timber.d(">>>> scan chapter folder ${parent.uri}")
     val now = Instant.now().toEpochMilli()
 
     var result: Content? = null
