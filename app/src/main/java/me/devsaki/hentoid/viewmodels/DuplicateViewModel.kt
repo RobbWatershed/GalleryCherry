@@ -19,6 +19,7 @@ import me.devsaki.hentoid.database.CollectionDAO
 import me.devsaki.hentoid.database.DuplicatesDAO
 import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.database.domains.DuplicateEntry
+import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.events.ProcessEvent
 import me.devsaki.hentoid.util.exception.ContentNotProcessedException
 import me.devsaki.hentoid.workers.BaseDeleteWorker
@@ -58,7 +59,8 @@ class DuplicateViewModel(
         useArtist: Boolean,
         sameLanguageOnly: Boolean,
         ignoreChapters: Boolean,
-        sensitivity: Int
+        sensitivity: Int,
+        duplicateSites: List<Site>
     ) {
         val builder = DuplicateData.Builder()
         builder.setUseTitle(useTitle)
@@ -67,6 +69,7 @@ class DuplicateViewModel(
         builder.setUseSameLanguage(sameLanguageOnly)
         builder.setIgnoreChapters(ignoreChapters)
         builder.setSensitivity(sensitivity)
+        builder.setSites(duplicateSites)
 
         me.devsaki.hentoid.notification.duplicates.init(getApplication())
         val workManager = WorkManager.getInstance(getApplication())

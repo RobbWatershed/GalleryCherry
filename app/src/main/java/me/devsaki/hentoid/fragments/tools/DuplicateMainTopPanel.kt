@@ -196,7 +196,8 @@ class DuplicateMainTopPanel(activity: DuplicateDetectorActivity) : DefaultLifecy
             binding.useArtist.isChecked,
             binding.useSameLanguage.isChecked,
             binding.ignoreChapters.isChecked,
-            binding.useSensitivity.index
+            binding.useSensitivity.index,
+            Settings.duplicateSites
         )
     }
 

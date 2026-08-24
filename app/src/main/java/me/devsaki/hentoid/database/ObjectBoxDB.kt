@@ -989,7 +989,13 @@ object ObjectBoxDB {
         // Search content taking attributes into account
         val metadata: Set<Attribute> = parseSearchUri(searchBundle.attributes).attributes
 
-        return selectContentGroupOrderIds(searchBundle, dynamicGroupContentIds, metadata, status, ids)
+        return selectContentGroupOrderIds(
+            searchBundle,
+            dynamicGroupContentIds,
+            metadata,
+            status,
+            ids
+        )
     }
 
     fun getShuffledIds(): List<Long> {
@@ -2161,19 +2167,29 @@ object ObjectBoxDB {
     fun selectStoredContentQ(
         includeQueued: Boolean,
         orderField: Int,
-        orderDesc: Boolean
+        orderDesc: Boolean,
+        sitesFilter: Set<Site>? = null
     ): QueryBuilder<Content> {
         val query = store.boxFor(Content::class.java).query()
+
         if (includeQueued) query.`in`(
             Content_.status,
             libraryQueueStatus
         ) else query.`in`(Content_.status, libraryStatus)
+
+        if (!sitesFilter.isNullOrEmpty()) {
+            query.`in`(
+                Content_.site, sitesFilter.map { it.code * 1L }.toLongArray()
+            )
+        }
+
         if (orderField > -1) {
             val field = getPropertyFromField(orderField)
             if (null != field) {
                 if (orderDesc) query.orderDesc(field) else query.order(field)
             }
         }
+
         return query
     }
 

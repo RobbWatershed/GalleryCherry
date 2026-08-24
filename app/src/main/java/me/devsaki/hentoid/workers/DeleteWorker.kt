@@ -635,7 +635,7 @@ abstract class BaseDeleteWorker(
             try {
                 val nonStreamableContentIds = HashSet<Long>()
                 var allCount = 0
-                dao.streamStoredContent(false, -1, false) {
+                dao.streamStoredContent(false) {
                     if (!it.site.shouldBeStreamed) nonStreamableContentIds.add(it.id)
                     allCount++
                 }
@@ -645,8 +645,11 @@ abstract class BaseDeleteWorker(
 
                 scope = if (invertScope) {
                     val processedContentIds: MutableSet<Long> = HashSet()
-                    dao.streamStoredContent(false, -1, false)
-                    { if (!scope.contains(it.id)) processedContentIds.add(it.id) }
+                    dao.streamStoredContent(false) {
+                        if (!scope.contains(it.id)) processedContentIds.add(
+                            it.id
+                        )
+                    }
                     processedContentIds
                 } else {
                     scope

@@ -78,11 +78,12 @@ class ObjectBoxDAO : CollectionDAO {
 
     override fun streamStoredContent(
         includeQueued: Boolean,
+        sitesFilter: Set<Site>,
         orderField: Int,
         orderDesc: Boolean,
         consumer: Consumer<Content>
     ) {
-        ObjectBoxDB.selectStoredContentQ(includeQueued, orderField, orderDesc).build()
+        ObjectBoxDB.selectStoredContentQ(includeQueued, orderField, orderDesc, sitesFilter).build()
             .use { query -> query.forEach { consumer(it) } }
     }
 

@@ -172,8 +172,9 @@ interface CollectionDAO {
 
     fun streamStoredContent(
         includeQueued: Boolean,
-        orderField: Int,
-        orderDesc: Boolean,
+        sitesFilter : Set<Site> = emptySet(),
+        orderField: Int = -1,
+        orderDesc: Boolean = false,
         consumer: Consumer<Content>
     )
 
