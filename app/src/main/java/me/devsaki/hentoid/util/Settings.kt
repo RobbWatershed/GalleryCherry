@@ -655,6 +655,7 @@ object Settings {
     var duplicateUseSameLanguage: Boolean by BoolSetting("duplicate_use_same_language", false)
     var duplicateIgnoreChapters: Boolean by BoolSetting("duplicate_ignore_chapters", true)
     var duplicateLastIndex: Int by IntSettingStr("last_index", -1)
+    var duplicateSites: List<Site> by ListSiteSetting("duplicate_sites", "")
 
     val duplicateBrowserSensitivity: Int by IntSettingStr("duplicate_browser_sensitivity", 2)
     val duplicateBrowserUseTitle: Boolean by BoolSetting("duplicate_browser_use_title", true)

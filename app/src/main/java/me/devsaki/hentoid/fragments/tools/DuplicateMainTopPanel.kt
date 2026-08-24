@@ -1,6 +1,7 @@
 package me.devsaki.hentoid.fragments.tools
 
 import android.content.Context
+import android.text.TextUtils
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -16,7 +17,9 @@ import me.devsaki.hentoid.R
 import me.devsaki.hentoid.activities.DuplicateDetectorActivity
 import me.devsaki.hentoid.core.isFinishing
 import me.devsaki.hentoid.databinding.IncludeDuplicateControlsBinding
+import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.events.ProcessEvent
+import me.devsaki.hentoid.fragments.settings.SelectSitesDialogFragment
 import me.devsaki.hentoid.ui.BlinkAnimation
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.viewmodels.DuplicateViewModel
@@ -108,27 +111,38 @@ class DuplicateMainTopPanel(activity: DuplicateDetectorActivity) : DefaultLifecy
         }
     }
 
-    private fun initUI(context: Context) {
-        binding.scanFab.setOnClickListener {
-            this.onScanClick()
-        }
-        binding.stopFab.setOnClickListener {
-            this.onStopClick()
-        }
+    private fun initUI(activity: DuplicateDetectorActivity) {
+        binding.apply {
+            scanFab.setOnClickListener {
+                this@DuplicateMainTopPanel.onScanClick()
+            }
+            stopFab.setOnClickListener {
+                this@DuplicateMainTopPanel.onStopClick()
+            }
 
-        binding.useTitle.setOnCheckedChangeListener { _, _ -> onMainCriteriaChanged() }
-        binding.useCover.setOnCheckedChangeListener { _, _ -> onMainCriteriaChanged() }
+            useTitle.setOnCheckedChangeListener { _, _ -> onMainCriteriaChanged() }
+            useCover.setOnCheckedChangeListener { _, _ -> onMainCriteriaChanged() }
 
-        binding.useTitle.isChecked = Settings.duplicateUseTitle
-        binding.useCover.isChecked = Settings.duplicateUseCover
-        binding.useArtist.isChecked = Settings.duplicateUseArtist
-        binding.useSameLanguage.isChecked = Settings.duplicateUseSameLanguage
-        binding.ignoreChapters.isChecked = Settings.duplicateIgnoreChapters
-        binding.useSensitivity.index = Settings.duplicateSensitivity
-        updateUI(context)
+            useTitle.isChecked = Settings.duplicateUseTitle
+            useCover.isChecked = Settings.duplicateUseCover
+            useArtist.isChecked = Settings.duplicateUseArtist
+            useSameLanguage.isChecked = Settings.duplicateUseSameLanguage
+            ignoreChapters.isChecked = Settings.duplicateIgnoreChapters
+            useSensitivity.index = Settings.duplicateSensitivity
+
+            sourcesButton.setOnClickListener {
+                val allSources = Site.entries.filter { it.isVisible }
+                val sources =
+                    if (Settings.duplicateSites.isEmpty()) allSources else Settings.duplicateSites.filter { it.isVisible }
+                SelectSitesDialogFragment.invoke(activity, sources, true)
+            }
+
+            updateUI(activity)
+        }
     }
 
-    private fun updateUI(context: Context) {
+
+    fun updateUI(context: Context) {
         if (DuplicateDetectorWorker.isRunning(context)) {
             binding.scanFab.visibility = View.INVISIBLE
             binding.stopFab.visibility = View.VISIBLE
@@ -151,6 +165,18 @@ class DuplicateMainTopPanel(activity: DuplicateDetectorActivity) : DefaultLifecy
             binding.detectBooksPb.visibility = View.GONE
             binding.detectBooksPbTxt.visibility = View.GONE
         }
+
+        val allSources = Site.entries.filter { it.isVisible }
+        val sources =
+            if (Settings.duplicateSites.isEmpty()) allSources else Settings.duplicateSites.filter { it.isVisible }
+        val sourcesStr =
+            if (sources.size == allSources.size)
+                context.resources.getString(R.string.duplicate_sources_all)
+            else if (sources.size < 8) TextUtils.join(", ", sources.map { it.name })
+            else context.resources.getString(R.string.duplicate_sources_many, sources.size)
+
+        binding.sourcesTxt.text =
+            context.resources.getString(R.string.duplicate_sources, sourcesStr)
     }
 
     private fun onScanClick() {

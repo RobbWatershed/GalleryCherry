@@ -18,14 +18,16 @@ import kotlinx.coroutines.launch
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.databinding.ActivityDuplicateDetectorBinding
+import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.events.CommunicationEvent
+import me.devsaki.hentoid.fragments.settings.SelectSitesDialogFragment
 import me.devsaki.hentoid.fragments.tools.DuplicateDetailsFragment
 import me.devsaki.hentoid.fragments.tools.DuplicateMainFragment
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.viewmodels.DuplicateViewModel
 import me.devsaki.hentoid.viewmodels.ViewModelFactory
 
-class DuplicateDetectorActivity : BaseActivity() {
+class DuplicateDetectorActivity : BaseActivity(), SelectSitesDialogFragment.Parent {
 
     private var binding: ActivityDuplicateDetectorBinding? = null
     private lateinit var viewPager: ViewPager2
@@ -183,6 +185,19 @@ class DuplicateDetectorActivity : BaseActivity() {
                         || (externalCount > 1 && 0 == localCount && 0 == streamedCount)
         }
     }
+
+    override fun onSitesSelected(sites: List<Site>) {
+        Settings.duplicateSites = sites
+        lifecycleScope.launch {
+            duplicateDetectorEvents.emit(
+                CommunicationEvent(
+                    CommunicationEvent.Type.UPDATE_TOOLBAR,
+                    if (0 == viewPager.currentItem) CommunicationEvent.Recipient.DUPLICATE_MAIN else CommunicationEvent.Recipient.DUPLICATE_DETAILS
+                )
+            )
+        }
+    }
+
 
     // === PUBLIC ACCESSORS (to be used by fragments)
 

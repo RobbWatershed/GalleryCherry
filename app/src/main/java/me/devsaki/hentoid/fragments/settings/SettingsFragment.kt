@@ -34,7 +34,6 @@ import kotlinx.coroutines.withContext
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.activities.bundles.SettingsSourceSpecificsBundle
 import me.devsaki.hentoid.activities.settings.SettingsPinActivity
-import me.devsaki.hentoid.activities.settings.SettingsSourceSelectActivity
 import me.devsaki.hentoid.activities.settings.SettingsSourceSpecificsActivity
 import me.devsaki.hentoid.activities.settings.SettingsStorageActivity
 import me.devsaki.hentoid.core.startLocalActivity
@@ -42,7 +41,6 @@ import me.devsaki.hentoid.core.withArguments
 import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.enums.Theme
 import me.devsaki.hentoid.events.DownloadCommandEvent
-import me.devsaki.hentoid.parsers.images.PawParser
 import me.devsaki.hentoid.retrofit.BergServer
 import me.devsaki.hentoid.retrofit.BergUpdateServer
 import me.devsaki.hentoid.retrofit.DeviantArtServer
@@ -74,7 +72,7 @@ private const val EXTERNAL_LIBRARY_DETACH = "pref_detach_external_library"
 private const val STORAGE_MANAGEMENT = "storage_mgt"
 
 class SettingsFragment : PreferenceFragmentCompat(),
-    SharedPreferences.OnSharedPreferenceChangeListener {
+    SharedPreferences.OnSharedPreferenceChangeListener, SelectSitesDialogFragment.Parent {
 
     lateinit var viewModel: SettingsViewModel
     lateinit var root: View
@@ -199,7 +197,7 @@ class SettingsFragment : PreferenceFragmentCompat(),
     override fun onPreferenceTreeClick(preference: Preference): Boolean =
         when (preference.key) {
             DRAWER_SOURCES -> {
-                requireContext().startLocalActivity<SettingsSourceSelectActivity>()
+                SelectSitesDialogFragment.invoke(this, Settings.activeSites)
                 true
             }
 
@@ -375,5 +373,9 @@ class SettingsFragment : PreferenceFragmentCompat(),
 
     private fun onAugmentedBrowserChanged() {
         Settings.isAppAdBlockerOn = Settings.isAppBrowserAugmented
+    }
+
+    override fun onSitesSelected(sites: List<Site>) {
+        Settings.activeSites = sites
     }
 }

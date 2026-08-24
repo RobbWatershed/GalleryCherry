@@ -231,6 +231,7 @@ class DuplicateMainFragment : Fragment(R.layout.fragment_duplicate_main) {
         when (event.type) {
             CommunicationEvent.Type.ENABLE -> onEnable()
             CommunicationEvent.Type.DISABLE -> onDisable()
+            CommunicationEvent.Type.UPDATE_TOOLBAR -> topPanel.updateUI(requireActivity())
             else -> {}
         }
     }

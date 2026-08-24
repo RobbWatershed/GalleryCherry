@@ -28,7 +28,6 @@ import me.devsaki.hentoid.activities.ToolsActivity
 import me.devsaki.hentoid.activities.bundles.ReaderActivityBundle
 import me.devsaki.hentoid.activities.bundles.ToolsBundle
 import me.devsaki.hentoid.activities.settings.SettingsActivity
-import me.devsaki.hentoid.activities.settings.SettingsSourceSelectActivity
 import me.devsaki.hentoid.activities.sources.WelcomeActivity
 import me.devsaki.hentoid.core.launchActivity
 import me.devsaki.hentoid.core.requireById
@@ -38,6 +37,7 @@ import me.devsaki.hentoid.enums.Grouping
 import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.events.AppRepoInfoEvent
 import me.devsaki.hentoid.events.CommunicationEvent
+import me.devsaki.hentoid.fragments.settings.SelectSitesDialogFragment
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.getRandomInt
 import me.devsaki.hentoid.util.getTextColorForBackground
@@ -54,7 +54,7 @@ import kotlin.math.floor
 private const val MENU_FACTOR = 1000
 
 class NavigationDrawerFragment : Fragment(R.layout.fragment_navigation_drawer),
-    SelectSiteDialogFragment.Parent {
+    SelectSiteDialogFragment.Parent, SelectSitesDialogFragment.Parent {
 
     enum class NavItem {
         LIBRARY, FAV_BOOK, BROWSER, EDIT_SOURCES, QUEUE, ABOUT
@@ -131,7 +131,11 @@ class NavigationDrawerFragment : Fragment(R.layout.fragment_navigation_drawer),
                         }
                     }
 
-                    NavItem.EDIT_SOURCES.ordinal -> launchActivity(SettingsSourceSelectActivity::class.java)
+                    NavItem.EDIT_SOURCES.ordinal -> SelectSitesDialogFragment.invoke(
+                        this@NavigationDrawerFragment,
+                        Settings.activeSites
+                    )
+
                     NavItem.QUEUE.ordinal -> launchActivity(QueueActivity::class.java)
                 }
 
@@ -467,5 +471,9 @@ class NavigationDrawerFragment : Fragment(R.layout.fragment_navigation_drawer),
 
     override fun onSiteSelected(site: Site, altCode: Int) {
         launchBrowserFor(requireContext(), site)
+    }
+
+    override fun onSitesSelected(sites: List<Site>) {
+        Settings.activeSites = sites
     }
 }

@@ -7,40 +7,36 @@
     android:background="?subbar_1"
     android:clickable="true"
     android:focusable="true"
-    android:padding="16dp">
-
-    <androidx.constraintlayout.widget.Guideline
-        android:id="@+id/guideline_middle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        app:layout_constraintGuide_percent="0.3" />
+    android:padding="8dp">
 
     <CheckBox
         android:id="@+id/use_title"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:text="@string/duplicate_use_title"
+        app:layout_constraintEnd_toStartOf="@id/use_cover"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <CheckBox
         android:id="@+id/use_cover"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:checked="true"
         android:text="@string/duplicate_use_cover"
-        app:layout_constraintStart_toEndOf="@id/guideline_middle"
+        app:layout_constraintEnd_toStartOf="@id/use_artist"
+        app:layout_constraintStart_toEndOf="@id/use_title"
         app:layout_constraintTop_toTopOf="parent" />
 
     <CheckBox
         android:id="@+id/use_artist"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:checked="true"
         android:text="@string/duplicate_use_artist"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/use_cover" />
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/use_cover"
+        app:layout_constraintTop_toTopOf="@id/use_cover" />
 
     <CheckBox
         android:id="@+id/use_same_language"
@@ -48,7 +44,7 @@
         android:layout_height="wrap_content"
         android:checked="true"
         android:text="@string/duplicate_use_same_language"
-        app:layout_constraintStart_toEndOf="@id/guideline_middle"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/use_cover" />
 
     <CheckBox
@@ -61,14 +57,35 @@
         app:layout_constraintTop_toBottomOf="@id/use_same_language" />
 
     <TextView
+        android:id="@+id/sources_txt"
+        android:layout_width="0dp"
+        android:layout_height="48dp"
+        android:gravity="center|start"
+        android:text="@string/duplicate_sources"
+        app:layout_constraintEnd_toStartOf="@id/sources_button"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/ignore_chapters"
+        tools:ignore="ContentDescription" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/sources_button"
+        style="@style/Widget.Material3.Button.TonalButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/transform_range_change"
+        app:layout_constraintBottom_toBottomOf="@id/sources_txt"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="@id/sources_txt" />
+
+    <TextView
         android:id="@+id/use_sensitivity_txt"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
         android:checked="true"
         android:text="@string/duplicate_use_sensitivity"
+        app:layout_constraintBottom_toBottomOf="@id/use_sensitivity"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/ignore_chapters" />
+        app:layout_constraintTop_toTopOf="@id/use_sensitivity" />
 
     <me.devsaki.hentoid.views.ListPickerView
         android:id="@+id/use_sensitivity"
@@ -76,35 +93,34 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
         app:entries="@array/duplicate_use_sensitivities"
-        app:layout_constraintBottom_toBottomOf="@id/use_sensitivity_txt"
         app:layout_constraintStart_toEndOf="@id/use_sensitivity_txt"
-        app:layout_constraintTop_toTopOf="@id/use_sensitivity_txt" />
+        app:layout_constraintTop_toBottomOf="@id/sources_txt" />
 
     <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
         android:id="@+id/scan_fab"
         android:layout_width="wrap_content"
-        app:icon="@drawable/ic_search"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
         android:layout_gravity="bottom|center"
+        android:layout_margin="16dp"
         android:contentDescription="@string/duplicate_find_action"
         android:text="@string/duplicate_find_action"
+        app:icon="@drawable/ic_search"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/use_sensitivity"/>
+        app:layout_constraintTop_toBottomOf="@id/use_sensitivity" />
 
     <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
         android:id="@+id/stop_fab"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
         android:layout_gravity="bottom|center"
-        android:visibility="invisible"
+        android:layout_margin="16dp"
         android:contentDescription="@string/stop"
         android:text="@string/stop"
+        android:visibility="invisible"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/use_sensitivity"/>
+        app:layout_constraintTop_toBottomOf="@id/use_sensitivity" />
 
     <TextView
         android:id="@+id/index_pictures_txt"
