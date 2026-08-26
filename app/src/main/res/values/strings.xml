@@ -1035,6 +1035,10 @@
     <string name="duplicate_cover_score_nodata">Cover: no data</string>
     <string name="duplicate_artist_score">Artist: <x:g example="50%" id="similarity_percentage">%.0f%%</x:g></string>
     <string name="duplicate_artist_score_nodata">Artist: no data</string>
+    <string name="duplicate_metadata">Metadata: </string>
+    <string name="duplicate_metadata_popup_minus">Missing entries: %s</string>
+    <string name="duplicate_metadata_popup_same">Idential entries: %s</string>
+    <string name="duplicate_metadata_popup_plus">Additional entries: %s</string>
     <string name="apply_final">Apply choices</string>
     <string name="duplicate_notif_start">Starting duplicate detection</string>
     <string name="duplicate_notif_complete_title">Duplicate detection complete</string>

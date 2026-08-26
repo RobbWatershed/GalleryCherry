@@ -52,8 +52,8 @@
             android:tooltipText="@string/external_help"
             android:visibility="gone"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/ivCover"
             app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/ivCover"
             app:tint="@color/medium_gray"
             tools:ignore="ContentDescription"
             tools:visibility="visible" />
@@ -63,13 +63,14 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
-            android:layout_marginEnd="8dp"
+            android:layout_marginEnd="4dp"
             android:ellipsize="middle"
+            android:hint="@string/book_title"
             android:singleLine="true"
             android:textColor="?card_title"
             android:textSize="@dimen/text_subtitle_2"
             android:textStyle="bold"
-            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/total_score"
             app:layout_constraintStart_toEndOf="@id/ivCover"
             app:layout_constraintTop_toTopOf="parent"
             tools:text="@string/book_title" />
@@ -213,7 +214,7 @@
             android:textSize="@dimen/caption"
             app:layout_constraintStart_toStartOf="@id/guideline_middle"
             app:layout_constraintTop_toBottomOf="@id/tvTitle"
-            tools:text="Title : 96%" />
+            tools:text="Title: 96%" />
 
         <TextView
             android:id="@+id/cover_score"
@@ -226,7 +227,7 @@
             android:textSize="@dimen/caption"
             app:layout_constraintStart_toStartOf="@id/guideline_middle"
             app:layout_constraintTop_toBottomOf="@id/title_score"
-            tools:text="Cover : No data" />
+            tools:text="Cover: No data" />
 
         <TextView
             android:id="@+id/artist_score"
@@ -239,20 +240,83 @@
             android:textSize="@dimen/caption"
             app:layout_constraintStart_toStartOf="@id/guideline_middle"
             app:layout_constraintTop_toBottomOf="@id/cover_score"
-            tools:text="Artist : No data" />
+            tools:text="Artist: No data" />
+
+        <TextView
+            android:id="@+id/metadata_caption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:text="@string/duplicate_metadata"
+            android:textColor="@color/medium_gray"
+            android:textSize="@dimen/caption"
+            app:layout_constraintStart_toStartOf="@id/guideline_middle"
+            app:layout_constraintTop_toBottomOf="@id/artist_score" />
+
+        <TextView
+            android:id="@+id/metadata_minus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text=""
+            android:textColor="@color/medium_gray"
+            android:textSize="@dimen/text_body_2"
+            android:textStyle="bold"
+            app:layout_constraintStart_toStartOf="@id/guideline_middle"
+            app:layout_constraintTop_toBottomOf="@id/metadata_caption"
+            tools:text="-1" />
+
+        <TextView
+            android:id="@+id/metadata_same"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:text=""
+            android:textColor="@color/medium_gray"
+            android:textSize="@dimen/text_body_2"
+            android:textStyle="bold"
+            app:layout_constraintStart_toEndOf="@id/metadata_minus"
+            app:layout_constraintTop_toBottomOf="@id/metadata_caption"
+            tools:text="/ 0 /" />
+
+        <TextView
+            android:id="@+id/metadata_plus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:text=""
+            android:textColor="@color/medium_gray"
+            android:textSize="@dimen/text_body_2"
+            android:textStyle="bold"
+            app:layout_constraintStart_toEndOf="@id/metadata_same"
+            app:layout_constraintTop_toBottomOf="@id/metadata_caption"
+            tools:text="+2" />
+
+        <FrameLayout
+            android:id="@+id/metadata_tap_zone"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:clickable="true"
+            android:focusable="true"
+            app:layout_constraintBottom_toBottomOf="@id/metadata_same"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="@id/metadata_caption"
+            app:layout_constraintTop_toTopOf="@id/metadata_caption"
+            tools:ignore="UselessLeaf" />
 
         <TextView
             android:id="@+id/total_score"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:layout_marginEnd="8dp"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="4dp"
             android:text="@string/percent_no_digits"
             android:textColor="@color/medium_gray"
             android:textSize="@dimen/text_subtitle_1"
             android:textStyle="bold"
-            app:layout_constraintStart_toStartOf="@id/guideline_middle"
-            app:layout_constraintTop_toBottomOf="@id/artist_score"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
             tools:text="96%" />
 
         <androidx.constraintlayout.widget.Group
@@ -260,7 +324,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:visibility="visible"
-            app:constraint_referenced_ids="title_score,cover_score,artist_score,total_score" />
+            app:constraint_referenced_ids="title_score,cover_score,artist_score,total_score, metadata_caption, metadata_minus, metadata_same, metadata_plus, metadata_tap_zone" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </FrameLayout>

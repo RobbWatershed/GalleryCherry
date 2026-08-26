@@ -1,15 +1,24 @@
 package me.devsaki.hentoid.viewholders
 
+import android.annotation.SuppressLint
+import android.graphics.Typeface
 import android.os.Bundle
+import android.text.TextUtils
 import android.view.View
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.annotation.DrawableRes
 import androidx.constraintlayout.widget.Group
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.findViewTreeLifecycleOwner
 import coil3.dispose
 import com.google.android.material.button.MaterialButtonToggleGroup
 import com.mikepenz.fastadapter.FastAdapter
 import com.mikepenz.fastadapter.items.AbstractItem
+import com.skydoves.powermenu.MenuAnimation
+import com.skydoves.powermenu.PowerMenu
+import com.skydoves.powermenu.PowerMenuItem
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.activities.bundles.DuplicateItemBundle
 import me.devsaki.hentoid.core.Consumer
@@ -20,6 +29,7 @@ import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.ui.BlinkAnimation
 import me.devsaki.hentoid.util.Settings
+import me.devsaki.hentoid.util.dimensAsDp
 import me.devsaki.hentoid.util.formatArtistForDisplay
 import me.devsaki.hentoid.util.getFlagResourceId
 import me.devsaki.hentoid.util.getRatingResourceId
@@ -34,6 +44,9 @@ class DuplicateItem(result: DuplicateEntry, private val viewType: ViewType) :
     }
 
     var content: Content? = null
+        private set
+
+    var referenceContent: Content? = null
         private set
 
     private var isReferenceItem = false
@@ -55,8 +68,10 @@ class DuplicateItem(result: DuplicateEntry, private val viewType: ViewType) :
         identifier = result.uniqueHash()
         if (viewType == ViewType.MAIN) {
             content = result.referenceContent
+            referenceContent = null
         } else {
             content = result.duplicateContent
+            referenceContent = result.referenceContent
             titleScore = result.titleScore
             coverScore = result.coverScore
             artistScore = result.artistScore
@@ -93,6 +108,12 @@ class DuplicateItem(result: DuplicateEntry, private val viewType: ViewType) :
         private val ivSite: ImageView = itemView.requireById(R.id.ivSite)
         private val tvArtist: TextView? = itemView.findViewById(R.id.tvArtist)
         private val tvPages: TextView? = itemView.findViewById(R.id.tvPages)
+
+        private val metaMinus: TextView? = itemView.findViewById(R.id.metadata_minus)
+        private val metaSame: TextView? = itemView.findViewById(R.id.metadata_same)
+        private val metaPlus: TextView? = itemView.findViewById(R.id.metadata_plus)
+        private val metaTap: FrameLayout? = itemView.findViewById(R.id.metadata_tap_zone)
+
         private var ivRating: ImageView? = view.findViewById(R.id.iv_rating)
         private val ivFavourite: ImageView = itemView.findViewById(R.id.ivFavourite)
         private val ivExternal: ImageView = itemView.findViewById(R.id.ivExternal)
@@ -154,8 +175,8 @@ class DuplicateItem(result: DuplicateEntry, private val viewType: ViewType) :
         }
 
         private fun attachTitle(content: Content) {
-            val title: CharSequence = content.title
-            tvTitle.text = title
+            tvTitle.text = content.title
+            tvTitle.hint = content.title
             tvTitle.setTextColor(tvTitle.context.getThemedColor(R.color.card_title_light))
         }
 
@@ -180,14 +201,15 @@ class DuplicateItem(result: DuplicateEntry, private val viewType: ViewType) :
             tvPages?.text = template
         }
 
+        @SuppressLint("SetTextI18n")
         private fun attachScores(item: DuplicateItem) {
-            titleScore?.let {
-                val res = it.context.resources
+            titleScore?.let { ts ->
+                val res = ts.context.resources
                 if (!item.isReferenceItem) {
                     scores?.visibility = View.VISIBLE
-                    if (item.titleScore > -1.0) it.text = res.getString(
+                    if (item.titleScore > -1.0) ts.text = res.getString(
                         R.string.duplicate_title_score, item.titleScore * 100
-                    ) else it.setText(R.string.duplicate_title_score_nodata)
+                    ) else ts.setText(R.string.duplicate_title_score_nodata)
                     if (item.coverScore > -1.0) coverScore?.text = res.getString(
                         R.string.duplicate_cover_score, item.coverScore * 100
                     ) else coverScore?.setText(R.string.duplicate_cover_score_nodata)
@@ -196,6 +218,74 @@ class DuplicateItem(result: DuplicateEntry, private val viewType: ViewType) :
                     ) else artistScore?.setText(R.string.duplicate_artist_score_nodata)
                     totalScore?.text =
                         res.getString(R.string.percent_no_digits, item.totalScore * 100)
+
+                    // Metadata
+                    val refContent = item.referenceContent ?: return
+                    val content = item.content ?: return
+
+                    // Just take labels to handle correct metadata in the incorrect AttributeType (shouldn't be a +1/-1)
+                    val refMeta = refContent.attributeList.map { it.name }.toSet()
+                    val meta = content.attributeList.map { it.name }.toSet()
+
+                    val minus = refMeta.subtract(meta)
+                    val plus = meta.subtract(refMeta)
+                    val same = meta.intersect(refMeta)
+
+                    metaPlus?.text = "+${plus.size}"
+                    metaMinus?.text = "-${minus.size}"
+                    metaSame?.text = "/ ${same.size} /"
+
+                    val minusCaption = if (minus.isEmpty()) res.getString(R.string.none)
+                    else TextUtils.join(", ", minus)
+
+                    val sameCaption = if (same.isEmpty()) res.getString(R.string.none)
+                    else TextUtils.join(", ", same)
+
+                    val plusCaption = if (plus.isEmpty()) res.getString(R.string.none)
+                    else TextUtils.join(", ", plus)
+
+                    metaTap?.setOnClickListener {
+                        val powerMenu = PowerMenu.Builder(ts.context)
+                            .addItem(
+                                PowerMenuItem(
+                                    res.getString(
+                                        R.string.duplicate_metadata_popup_minus,
+                                        minusCaption
+                                    )
+                                )
+                            )
+                            .addItem(
+                                PowerMenuItem(
+                                    res.getString(
+                                        R.string.duplicate_metadata_popup_same,
+                                        sameCaption
+                                    )
+                                )
+                            )
+                            .addItem(
+                                PowerMenuItem(
+                                    res.getString(
+                                        R.string.duplicate_metadata_popup_plus,
+                                        plusCaption
+                                    )
+                                )
+                            )
+                            .setAnimation(MenuAnimation.SHOW_UP_CENTER).setMenuRadius(10f)
+                            .setBackgroundAlpha(0f)
+                            .setTextColor(
+                                ContextCompat.getColor(ts.context, R.color.white_opacity_87)
+                            )
+                            .setTextTypeface(Typeface.DEFAULT)
+                            .setMenuColor(ts.context.getThemedColor(R.color.subbar_1_light))
+                            .setTextSize(dimensAsDp(ts.context, R.dimen.text_subtitle_1))
+                            .setWidth(res.getDimension(R.dimen.popup_menu_width).toInt())
+                            .setAutoDismiss(true)
+
+                        ts.findViewTreeLifecycleOwner()?.let { powerMenu.setLifecycleOwner(it) }
+
+                        val builder = powerMenu.build()
+                        builder.showAtCenter(baseLayout)
+                    }
                 } else { // Reference item
                     scores?.visibility = View.GONE
                 }
