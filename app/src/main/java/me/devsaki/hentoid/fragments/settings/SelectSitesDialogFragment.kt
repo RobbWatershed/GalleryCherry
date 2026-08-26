@@ -28,29 +28,37 @@ class SelectSitesDialogFragment : BaseDialogFragment<SelectSitesDialogFragment.P
     companion object {
         private const val SELECTED_SITES = "sites"
         private const val FILTER_VISIBLE = "filter_visible"
+        private const val INCLUDE_NONE = "include_none"
 
         fun invoke(
             parentFragment: Fragment,
             activeSites: List<Site>,
-            filterVisible: Boolean = false
+            filterVisible: Boolean = false,
+            includeNone: Boolean = false
         ) {
-            val args = getArgs(activeSites, filterVisible)
+            val args = getArgs(activeSites, filterVisible, includeNone)
             invoke(parentFragment, SelectSitesDialogFragment(), args)
         }
 
         fun invoke(
             activity: FragmentActivity,
             activeSites: List<Site>,
-            filterVisible: Boolean = false
+            filterVisible: Boolean = false,
+            includeNone: Boolean = false
         ): DialogFragment {
-            val args = getArgs(activeSites, filterVisible)
+            val args = getArgs(activeSites, filterVisible, includeNone)
             return invoke(activity, SelectSitesDialogFragment(), args, isCancelable = true)
         }
 
-        private fun getArgs(activeSites: List<Site>, filterVisible: Boolean): Bundle {
+        private fun getArgs(
+            activeSites: List<Site>,
+            filterVisible: Boolean,
+            includeNone: Boolean
+        ): Bundle {
             val args = Bundle()
             args.putIntArray(SELECTED_SITES, activeSites.map { it.code }.toIntArray())
             args.putBoolean(FILTER_VISIBLE, filterVisible)
+            args.putBoolean(INCLUDE_NONE, includeNone)
             return args
         }
     }
@@ -84,6 +92,7 @@ class SelectSitesDialogFragment : BaseDialogFragment<SelectSitesDialogFragment.P
         val selectedSites =
             bundle.getIntArray(SELECTED_SITES)?.map { Site.searchByCode(it) } ?: emptyList()
         val filterVisible = bundle.getBoolean(FILTER_VISIBLE, false)
+        val includeNone = bundle.getBoolean(INCLUDE_NONE, false)
 
         binding?.apply {
             // Toolbar
@@ -110,7 +119,7 @@ class SelectSitesDialogFragment : BaseDialogFragment<SelectSitesDialogFragment.P
         // First add active sites
         items.addAll(
             selectedSites.filter {
-                if (filterVisible) it.isVisible else it.isUsable
+                filterSite(it, filterVisible, includeNone)
             }.map {
                 SiteItem(it, true, touchHelper)
             }
@@ -120,7 +129,7 @@ class SelectSitesDialogFragment : BaseDialogFragment<SelectSitesDialogFragment.P
         items.addAll(
             Site.entries.filter {
                 !selectedSites.contains(it) &&
-                        if (filterVisible) it.isVisible else it.isUsable
+                        filterSite(it, filterVisible, includeNone)
             }.map {
                 SiteItem(it, false, touchHelper)
             }
@@ -130,6 +139,11 @@ class SelectSitesDialogFragment : BaseDialogFragment<SelectSitesDialogFragment.P
         recyclerView.adapter = fastAdapter
         recyclerView.setHasFixedSize(true)
         touchHelper.attachToRecyclerView(recyclerView)
+    }
+
+    private fun filterSite(site: Site, filterVisible: Boolean, includeNone: Boolean): Boolean {
+        return if (site == Site.NONE && includeNone) true
+        else if (filterVisible) site.isVisible else site.isUsable
     }
 
     private fun onCheckAll() {

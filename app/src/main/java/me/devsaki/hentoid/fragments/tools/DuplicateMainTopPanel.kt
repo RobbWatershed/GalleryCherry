@@ -131,10 +131,11 @@ class DuplicateMainTopPanel(activity: DuplicateDetectorActivity) : DefaultLifecy
             useSensitivity.index = Settings.duplicateSensitivity
 
             sourcesButton.setOnClickListener {
-                val allSources = Site.entries.filter { it.isVisible }
+                // NONE is the site given to titles from the external library that have no metadata
+                val allSources = Site.entries.filter { it.isVisible || it == Site.NONE }
                 val sources =
-                    if (Settings.duplicateSites.isEmpty()) allSources else Settings.duplicateSites.filter { it.isVisible }
-                SelectSitesDialogFragment.invoke(activity, sources, true)
+                    if (Settings.duplicateSites.isEmpty()) allSources else Settings.duplicateSites.filter { it.isVisible || it == Site.NONE }
+                SelectSitesDialogFragment.invoke(activity, sources, true, includeNone = true)
             }
 
             updateUI(activity)
@@ -166,12 +167,12 @@ class DuplicateMainTopPanel(activity: DuplicateDetectorActivity) : DefaultLifecy
             binding.detectBooksPbTxt.visibility = View.GONE
         }
 
-        val allSources = Site.entries.filter { it.isVisible }
+        // NONE is the site given to titles from the external library that have no metadata
+        val allSources = Site.entries.filter { it.isVisible || it == Site.NONE }
         val sources =
-            if (Settings.duplicateSites.isEmpty()) allSources else Settings.duplicateSites.filter { it.isVisible }
+            if (Settings.duplicateSites.isEmpty()) allSources else Settings.duplicateSites.filter { it.isVisible || it == Site.NONE }
         val sourcesStr =
-            if (sources.size == allSources.size)
-                context.resources.getString(R.string.duplicate_sources_all)
+            if (sources.size == allSources.size) context.resources.getString(R.string.duplicate_sources_all)
             else if (sources.size < 8) TextUtils.join(", ", sources.map { it.name })
             else context.resources.getString(R.string.duplicate_sources_many, sources.size)
 
