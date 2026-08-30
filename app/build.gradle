@@ -189,8 +189,8 @@ dependencies {
     implementation "com.itextpdf:bouncy-castle-adapter:$iTextPdf_version"
 
     // Video support (other than broken VideoView)
-    implementation("androidx.media3:media3-exoplayer:1.10.1")
-    implementation("androidx.media3:media3-ui:1.10.1")
+    implementation("androidx.media3:media3-exoplayer:1.11.0")
+    implementation("androidx.media3:media3-ui:1.11.0")
 
 
     /**
