@@ -7,10 +7,16 @@ import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.parsers.urlsToImageFiles
 import me.devsaki.hentoid.retrofit.sources.HiperdexServer
+import me.devsaki.hentoid.util.Settings
+import me.devsaki.hentoid.util.download.DownloadRateLimiter.take
 import me.devsaki.hentoid.util.exception.EmptyResultException
 import me.devsaki.hentoid.util.isNumeric
 import me.devsaki.hentoid.util.network.getCookies
+import me.devsaki.hentoid.util.network.waitBlocking429
 import org.jsoup.nodes.Document
+import retrofit2.Call
+import retrofit2.Response
+import timber.log.Timber
 
 class HiperdexParser : BaseChapteredImageListParser() {
 
@@ -93,44 +99,44 @@ class HiperdexParser : BaseChapteredImageListParser() {
             val parts = getUrlParts(chapterUrl)
             val contentSlug = parts.first
             val chapterNumber = parts.second
-            val response = HiperdexServer.api.getChapterPages(
-                cookieStr,
-                chapterUrl,
-                "{\"0\":{\"json\":{\"seriesSlug\":\"$contentSlug\",\"chapterNumber\":$chapterNumber}}}"
-            ).execute()
-            if (!response.isSuccessful) return emptyList()
-            response.body()?.let {
-                if (it.isNotEmpty()) return it[0].toPages()
+            val response = call429(call = {
+                HiperdexServer.api.getChapterPages(
+                    cookieStr,
+                    chapterUrl,
+                    "{\"0\":{\"json\":{\"seriesSlug\":\"$contentSlug\",\"chapterNumber\":$chapterNumber}}}"
+                )
+            })
+            if (!response.isSuccessful) {
+                Timber.i("chapter $chapterNumber for $contentSlug : couldn't get pages (bad response : ${response.code()} ${response.message()})")
+                return emptyList()
             }
-            return emptyList()
-            /*
-                        val result: MutableList<String> = ArrayList()
-                        getOnlineDocument(
-                            chapterUrl,
-                            headers ?: fetchHeaders(chapterUrl),
-                            Site.HIPERDEX.useMobileAgent,
-                            Site.HIPERDEX.useHentoidAgent,
-                            Site.HIPERDEX.useWebviewAgent
-                        )?.let { doc ->
-                            doc.select("head [property=og:image]").first()?.let { ogImg ->
-                                val imgUrl = ogImg.attr("content")
-                                val parts = UriParts(imgUrl)
-                                val firstImg = parts.fileNameNoExt
-                                try {
-                                    val firstNum = firstImg.toInt()
-                                    val lastNum = firstNum + pagesCount - 1
-                                    for (i in firstNum..lastNum) {
-                                        parts.fileNameNoExt = formatIntAsStr(i, firstImg.length)
-                                        result.add(parts.toUri())
-                                    }
-                                } catch (e: Exception) {
-                                    Timber.w(e, "An error occured while parsing chapter $chapterUrl")
-                                }
-                            }
-                        }
-                        return result
-                    }
-             */
+            val body = response.body()
+            if (body.isNullOrEmpty()) {
+                Timber.i("chapter $chapterNumber for $contentSlug : couldn't get pages (empty body)")
+                return emptyList()
+            }
+
+            return body[0].toPages()
+        }
+
+        private fun <T> call429(call: () -> Call<T>, id: String = ""): Response<T> {
+            var waited = 0
+            take()
+            var resp = call.invoke().execute()
+            while (
+                waitBlocking429(resp, Settings.http429DefaultDelaySecs * 1000)
+                && waited < 2
+            ) {
+                waited++
+                take()
+                resp = call.invoke().execute()
+            }
+            require(resp.code() < 400) {
+                String.format(
+                    "Unreachable illust : code=${resp.code()} (${resp.message()}) [$id - $waited]",
+                )
+            }
+            return resp
         }
     }
 
@@ -160,7 +166,6 @@ class HiperdexParser : BaseChapteredImageListParser() {
         headers: List<Pair<String, String>>?,
         fireProgressEvents: Boolean
     ): List<ImageFile> {
-        // pause(1000) // Rate-limited but only on site pages
         val imgUrls = parseChapterPages(chp.url)
         if (imgUrls.isEmpty()) throw EmptyResultException("No images detected for ${chp.url}")
         return urlsToImageFiles(

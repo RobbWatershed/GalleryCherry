@@ -812,12 +812,20 @@ private fun waitBlocking429(
 ): Boolean {
     if (429 == httpCode) {
         var delay = defaultDelayMs
+        headers.forEach { (string, string1) -> Timber.v("429 headers $string $string1") }
         var retryDelay = headers["Retry-After"]
-        if (null == retryDelay) retryDelay = headers["retry-after"]
-        if (retryDelay != null && isNumeric(retryDelay)) {
-            delay = retryDelay.toInt() + 1000 // 1s extra margin
+        if (retryDelay.isNullOrBlank()) retryDelay = headers["retry-after"]
+        if (retryDelay.isNullOrBlank()) retryDelay = headers["RateLimit-Reset"]
+        if (retryDelay.isNullOrBlank()) retryDelay = headers["X-RateLimit-Reset"]
+        if (retryDelay.isNullOrBlank()) retryDelay = headers["ratelimit-reset"]
+        if (retryDelay.isNullOrBlank()) retryDelay = headers["x-ratelimit-reset"]
+
+        if (!retryDelay.isNullOrBlank() && isNumeric(retryDelay)) {
+            delay = retryDelay.toInt()
+            if (delay < 1000) delay *= 1000 // In case the value is expressed in seconds (may happen; those aren't standard headers)
+            delay += 1000 // 1 second extra margin
         }
-        Timber.d("HTTP 429 caught; waiting for $delay")
+        Timber.d("HTTP 429 caught; waiting for $delay ms")
         pause(delay)
         return true
     }
