@@ -325,7 +325,7 @@ dependencies {
      * ANALYTICS
      */
     // Import the BoM for the Firebase platform
-    implementation platform('com.google.firebase:firebase-bom:34.15.0')
+    implementation platform('com.google.firebase:firebase-bom:34.18.0')
 
     // Crashlytics
     implementation 'com.google.firebase:firebase-crashlytics'
