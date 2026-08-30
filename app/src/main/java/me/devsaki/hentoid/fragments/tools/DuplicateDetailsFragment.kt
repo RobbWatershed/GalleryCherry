@@ -1,6 +1,7 @@
 package me.devsaki.hentoid.fragments.tools
 
 import android.content.Context
+import android.graphics.Point
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -9,6 +10,7 @@ import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import androidx.activity.OnBackPressedCallback
+import androidx.core.net.toUri
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
@@ -21,10 +23,13 @@ import com.mikepenz.fastadapter.diff.DiffCallback
 import com.mikepenz.fastadapter.diff.FastAdapterDiffUtil.set
 import com.mikepenz.fastadapter.listeners.ClickEventHook
 import com.mikepenz.fastadapter.select.SelectExtension
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.activities.DuplicateDetectorActivity
 import me.devsaki.hentoid.activities.bundles.DuplicateItemBundle
+import me.devsaki.hentoid.customssiv.util.FILECHUNK_AUTHORITY
 import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.database.domains.DownloadMode
 import me.devsaki.hentoid.database.domains.DuplicateEntry
@@ -33,6 +38,7 @@ import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.events.CommunicationEvent
 import me.devsaki.hentoid.fragments.ProgressDialogFragment
 import me.devsaki.hentoid.fragments.library.MergeDialogFragment
+import me.devsaki.hentoid.util.image.getMediaDimensions
 import me.devsaki.hentoid.util.openReader
 import me.devsaki.hentoid.util.toast
 import me.devsaki.hentoid.util.viewContentGalleryPage
@@ -43,6 +49,7 @@ import me.devsaki.hentoid.widget.FastAdapterPreClickSelectHelper
 import me.zhanghai.android.fastscroll.FastScrollerBuilder
 import timber.log.Timber
 import java.lang.ref.WeakReference
+import kotlin.math.roundToInt
 
 @Suppress("PrivatePropertyName")
 class DuplicateDetailsFragment : Fragment(R.layout.fragment_duplicate_details),
@@ -267,17 +274,105 @@ class DuplicateDetailsFragment : Fragment(R.layout.fragment_duplicate_details),
     private fun onDuplicatesChanged(duplicates: List<DuplicateEntry>?) {
         if (null == duplicates) return
 
-        Timber.i(">> New selected duplicates ! Size=%s", duplicates.size)
+        Timber.i(">> New selected duplicates ! Size=${duplicates.size}")
 
         if (duplicates.isEmpty()) activity.get()?.goBackToMain()
 
-        // TODO update UI title
+        lifecycleScope.launch(Dispatchers.Main) {
+            // Auto-suggest action = detect books to keep according to multiple criteria
+            // See https://codeberg.org/VioletKnight/Hentoid/issues/53#issuecomment-21987356
+            val kept: MutableSet<Content> = HashSet()
 
-        // Order by relevance desc and transforms to DuplicateItem
-        val items = duplicates.sortedByDescending { it.calcTotalScore() }
-            .map { DuplicateItem(it, DuplicateItem.ViewType.DETAILS) }.toMutableList()
-        items.forEach { it.onKeepChange = { b -> onBookChoice(it.content, b) } }
-        set(itemAdapter, items, ITEM_DIFF_CALLBACK)
+            // Number of pages (keep the highest; no tolerance)
+            val critPagesMap = duplicates.groupBy { it.duplicateContent?.qtyPages ?: 0 }
+            val bestPages = critPagesMap.getValue(critPagesMap.keys.max())
+            kept.addAll(bestPages.mapNotNull { it.duplicateContent })
+
+            // Make sure we can directly read files (no PDFs or exotic archives)
+            val readableKept = kept.filter { hasAccessibleFiles(it) }
+
+            // Resolution
+            if (readableKept.size == kept.size && kept.size > 1) {
+                try {
+                    val qtyPages = kept.first().qtyPages
+                    // Select 3 pages for reference (based on the same number of pages => indexes should match)
+                    val indexes = listOf(
+                        (qtyPages * 0.25).roundToInt(),
+                        (qtyPages * 0.50).roundToInt(),
+                        (qtyPages * 0.75).roundToInt()
+                    )
+                    // Get resolution for selected pages
+                    val resPerBook = HashMap<Long, List<Point>>()
+                    withContext(Dispatchers.IO) {
+                        kept.forEach { b ->
+                            val imgList = b.imageList
+                            val bookRes = ArrayList<Point>()
+                            indexes.forEach { i ->
+                                bookRes.add(
+                                    getMediaDimensions(requireContext(), imgList[i].fileUri.toUri())
+                                )
+                            }
+                            resPerBook[b.id] = bookRes
+                        }
+                    }
+                    // Best book is the one with the larger surface on all selected pages
+                    // NB : Equivalent surfaces (<=2% variation) can select multiple books
+                    var bestBooks = kept.map { it.id }.toSet()
+                    repeat(3) { i ->
+                        val idxSurface = ArrayList<Pair<Long, Int>>()
+                        resPerBook.keys.forEach { b ->
+                            idxSurface.add(
+                                Pair(
+                                    b,
+                                    resPerBook.getValue(b)[i].x * resPerBook.getValue(b)[i].y
+                                )
+                            )
+                        }
+                        val bestSurface = idxSurface.maxOf { it.second }
+                        val idxBestBooks = idxSurface
+                            .filter { it.second >= bestSurface * 0.98 }
+                            .map { it.first }.toSet()
+                        bestBooks = bestBooks.intersect(idxBestBooks)
+                        if (bestBooks.isEmpty()) return@repeat
+                    }
+                    if (bestBooks.isNotEmpty()) {
+                        kept.clear()
+                        kept.addAll(
+                            duplicates
+                                .filter { bestBooks.contains(it.duplicateId) }
+                                .mapNotNull { it.duplicateContent }
+                        )
+                    }
+                } catch (e: Throwable) {
+                    Timber.w(e)
+                }
+            }
+
+            // Size (keep largest; multiple books if identical size)
+            if (kept.size > 1) {
+                val maxSize = kept.maxOf { it.size }
+                val largest = kept.filter { it.size == maxSize }
+                kept.clear()
+                kept.addAll(largest)
+            }
+
+            // Flag them
+            val keptIds = kept.map { it.id }
+            duplicates.forEach { it.keep = keptIds.contains(it.duplicateContent?.id ?: 0) }
+
+            // Order by relevance desc and transform to DuplicateItem
+            val items = duplicates.sortedByDescending { it.calcTotalScore() }
+                .map { DuplicateItem(it, DuplicateItem.ViewType.DETAILS, it.keep) }.toMutableList()
+            items.forEach { it.onKeepChange = { b -> onBookChoice(it.content, b) } }
+            set(itemAdapter, items, ITEM_DIFF_CALLBACK)
+        }
+    }
+
+    private fun hasAccessibleFiles(c: Content): Boolean {
+        if (c.isPdf) return false
+        if (c.isArchive)
+            return c.imageList.all { it.fileUri.toUri().authority == FILECHUNK_AUTHORITY }
+        return c.imageList.none { it.isOnline }
     }
 
     private fun onActivityEvent(event: CommunicationEvent) {

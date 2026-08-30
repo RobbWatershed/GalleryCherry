@@ -36,7 +36,11 @@ import me.devsaki.hentoid.util.getRatingResourceId
 import me.devsaki.hentoid.util.getThemedColor
 import me.devsaki.hentoid.util.image.loadCover
 
-class DuplicateItem(result: DuplicateEntry, private val viewType: ViewType) :
+class DuplicateItem(
+    result: DuplicateEntry,
+    private val viewType: ViewType,
+    defaultKeep: Boolean = true
+) :
     AbstractItem<DuplicateItem.ViewHolder>() {
 
     enum class ViewType {
@@ -57,7 +61,7 @@ class DuplicateItem(result: DuplicateEntry, private val viewType: ViewType) :
     private var coverScore = -1f
     private var artistScore = -1f
     private var totalScore = -1f
-    var keep = true
+    var keep = defaultKeep
         private set
     var isBeingDeleted = false
         private set
