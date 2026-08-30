@@ -92,7 +92,7 @@ abstract class BaseChapteredImageListParser : BaseImageListParser() {
 
         // Use chapter folder as a differentiator (as the whole URL may evolve)
         val extraChapters = getExtraChaptersbyUrl(storedChapters, chapters, this::getLastPartIndex)
-        progressStart(onlineContent, storedContent, extraChapters.size)
+        progressStart(onlineContent, storedContent)
 
         // Start numbering extra images right after the last position of stored and chaptered images
         val imgOffset = getMaxImageOrder(storedChapters)
@@ -109,8 +109,8 @@ abstract class BaseChapteredImageListParser : BaseImageListParser() {
                 it
             }
             .filter { range.isEmpty() || range.contains(it.order) }
-            .forEach { chp ->
-                if (processHalted.get()) return@forEach
+            .forEachIndexed { index, chp ->
+                if (processHalted.get()) return@forEachIndexed
                 if (chp.uploadDate > 0) minEpoch = minEpoch.coerceAtMost(chp.uploadDate)
                 result.addAll(
                     parseChapterImageFiles(
@@ -121,7 +121,7 @@ abstract class BaseChapteredImageListParser : BaseImageListParser() {
                         false
                     )
                 )
-                progressNext()
+                progressPlus((index + 1) * 1f / extraChapters.size)
             }
         // If the process has been halted manually, the result is incomplete and should not be returned as is
         if (processHalted.get()) throw PreparationInterruptedException()
