@@ -12,6 +12,7 @@ import retrofit2.http.GET
 import retrofit2.http.Path
 import retrofit2.http.Query
 
+// Jikan is the API for MyAnimeList (https://jikan.moe/)
 object JikanServer {
     private const val SERVER_URL = "https://api.jikan.moe/v4/"
 

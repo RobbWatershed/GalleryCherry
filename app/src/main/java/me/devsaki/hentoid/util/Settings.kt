@@ -197,6 +197,10 @@ object Settings {
     var isFolderSortDesc: Boolean by BoolSetting("pref_order_folder_desc", false)
     var libraryFoldersRoots: List<String> by ListStringSetting("library_folders_roots")
     var libraryFoldersRoot: String by StringSetting("library_folders_current_root", "")
+    val lrrEndpoint: String by StringSetting(Key.LRR_ENDPOINT, "")
+    val lrrApiKey: String by StringSetting(Key.LRR_API_KEY, "")
+    var lrrSortField: Int by IntSetting("pref_order_lrr_field", Default.ORDER_FOLDER_FIELD)
+    var isLrrSortDesc: Boolean by BoolSetting("pref_order_lrr_desc", false)
 
 
     // ADV SEARCH
@@ -819,6 +823,10 @@ object Settings {
         const val LIBRARY_DISPLAY_GRID_LANG = "LIBRARY_DISPLAY_GRID_LANG"
         const val LIBRARY_GRID_CARD_WIDTH = "grid_card_width"
         const val LIBRARY_DISPLAY_GROUP_FIGURE = "library_display_group_figure"
+
+        const val LRR_ENDPOINT = "lrr_endpoint"
+        const val LRR_API_KEY = "lrr_api_key"
+
         const val ACHIEVEMENTS = "achievements"
         const val ACHIEVEMENTS_NB_AI_RESCALE = "ach_nb_ai_rescale"
 

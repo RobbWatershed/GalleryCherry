@@ -6,6 +6,9 @@
         android:icon="@drawable/ic_attribute_source"
         android:key="sources"
         android:title="@string/pref_screen_sources">
+        <PreferenceCategory
+            android:title="@string/pref_cat_sources_web"
+            app:iconSpaceReserved="false">
         <Preference
             android:key="pref_drawer_sources"
             android:summary="@string/pref_drawer_sources_summary"
@@ -16,6 +19,21 @@
             android:summary="@string/title_activity_source_specifics"
             android:title="@string/title_activity_source_specifics"
             app:iconSpaceReserved="false" />
+        </PreferenceCategory>
+        <PreferenceCategory
+            android:title="@string/pref_cat_sources_lrr"
+            app:iconSpaceReserved="false">
+        <EditTextPreference
+            android:key="lrr_endpoint"
+            android:title="@string/pref_lrr_url_title"
+            android:summary="@string/pref_attributes_list_order_summary"
+            app:iconSpaceReserved="false" />
+        <EditTextPreference
+            android:key="lrr_api_key"
+            android:title="@string/pref_lrr_api_title"
+            android:summary="@string/pref_attributes_list_order_summary"
+            app:iconSpaceReserved="false" />
+        </PreferenceCategory>
     </PreferenceScreen>
     <PreferenceScreen
         android:icon="@drawable/ic_ui"

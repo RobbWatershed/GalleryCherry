@@ -28,6 +28,7 @@ class CommunicationEvent(val type: Type, val recipient: Recipient = Recipient.AL
         LIBRARY_GROUPS,
         LIBRARY_CONTENTS,
         LIBRARY_FOLDERS,
+        LIBRARY_LRR,
         QUEUE_QUEUE,
         QUEUE_ERRORS,
         DRAWER,

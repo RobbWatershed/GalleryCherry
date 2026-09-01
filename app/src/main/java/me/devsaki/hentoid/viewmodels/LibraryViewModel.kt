@@ -46,6 +46,7 @@ import me.devsaki.hentoid.database.domains.SearchRecord
 import me.devsaki.hentoid.enums.Grouping
 import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.enums.StorageLocation
+import me.devsaki.hentoid.retrofit.sources.LrrServer
 import me.devsaki.hentoid.util.JSON_MIME_TYPE
 import me.devsaki.hentoid.util.Location
 import me.devsaki.hentoid.util.MergerLiveData
@@ -57,6 +58,7 @@ import me.devsaki.hentoid.util.Type
 import me.devsaki.hentoid.util.download.ContentQueueManager.isQueueActive
 import me.devsaki.hentoid.util.download.ContentQueueManager.resumeQueue
 import me.devsaki.hentoid.util.download.selectDownloadLocation
+import me.devsaki.hentoid.util.encode64
 import me.devsaki.hentoid.util.exception.EmptyResultException
 import me.devsaki.hentoid.util.file.DisplayFile
 import me.devsaki.hentoid.util.file.copyFile
@@ -80,6 +82,7 @@ import me.devsaki.hentoid.util.updateJson
 import me.devsaki.hentoid.widget.ContentSearchManager
 import me.devsaki.hentoid.widget.FolderSearchManager
 import me.devsaki.hentoid.widget.GroupSearchManager
+import me.devsaki.hentoid.widget.LrrSearchManager
 import me.devsaki.hentoid.workers.ArchiveWorker
 import me.devsaki.hentoid.workers.BaseDeleteWorker
 import me.devsaki.hentoid.workers.DeleteWorker
@@ -104,6 +107,7 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
     private val contentSearchManager = ContentSearchManager()
     private val groupSearchManager = GroupSearchManager()
     private val folderSearchManager = FolderSearchManager()
+    private val lrrSearchManager = LrrSearchManager()
 
     // Cleanup for all work observers
     private val workObservers: MutableList<Pair<UUID, Observer<WorkInfo?>>> = ArrayList()
@@ -129,14 +133,16 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
     val parentsCache = HashMap<Uri, Uri>() // Key = child folder, Value = parent folder
     val detailsFlowKillSwitch = AtomicBoolean(true)
 
+    // LRR data
+    val lrrArchives = MediatorLiveData<List<Content>>()
+    val lrrSearchBundle = MutableLiveData<Bundle>()
+
+    // Other data
     // True if there's at least one existing custom group; false instead
     val isCustomGroupingAvailable = MutableLiveData<Boolean>()
 
     // True if there's at least one existing dynamic group; false instead
     val isDynamicGroupingAvailable = MutableLiveData<Boolean>()
-
-
-    // Other data
     val searchRecords: LiveData<List<SearchRecord>> = dao.selectSearchRecordsLive()
     val totalQueue: LiveData<Int> = dao.countAllQueueBooksLive()
     val favPages: LiveData<Int> = dao.countAllFavouritePagesLive()
@@ -482,6 +488,7 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
             when (groupingId) {
                 Grouping.FLAT.id -> viewModelScope.launch { doSearchContent(true) }
                 Grouping.FOLDERS.id -> viewModelScope.launch { doSearchFolders() }
+                Grouping.LRR.id -> viewModelScope.launch { doSearchLrr() }
                 else -> viewModelScope.launch { doSearchGroup() }
             }
         }
@@ -500,6 +507,11 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
     fun clearFolderFilters() {
         folderSearchManager.clearFilters()
         viewModelScope.launch { doSearchFolders() }
+    }
+
+    fun clearLrrFilters() {
+        lrrSearchManager.clearFilters()
+        viewModelScope.launch { doSearchLrr() }
     }
 
     /**
@@ -550,6 +562,38 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
         // Don't search now as the UI will inevitably search as well upon switching to books view
         // TODO only useful when browsing custom groups ?
         viewModelScope.launch { doSearchContent(Settings.getGroupingDisplayG() == Grouping.FLAT) }
+    }
+
+    private suspend fun doSearchLrr() {
+        if (!Settings.lrrEndpoint.startsWith("http", true)) return
+
+        // TODO search title and category
+        lrrSearchManager.setSortField(Settings.lrrSortField)
+        lrrSearchManager.setSortDesc(Settings.isLrrSortDesc)
+
+        withContext(Dispatchers.IO) {
+            val queryMap = HashMap<String, String>()
+            // TODO add filter, category
+            val apiCall = LrrServer.api.search(queryMap, "Bearer: ${encode64(Settings.lrrApiKey)}")
+            val response = apiCall.execute()
+            if (response.isSuccessful) {
+                response.body()?.let {
+                    lrrArchives.postValue(it.contentList)
+                }
+            } else {
+                Timber.w("Failed when querying LRR server @ ${Settings.lrrEndpoint}")
+            }
+        }
+        lrrSearchBundle.postValue(lrrSearchManager.toBundle())
+    }
+
+    fun searchLrr() {
+        viewModelScope.launch { doSearchLrr() }
+    }
+
+    fun setLrrQuery(value: String) {
+        lrrSearchManager.setQuery(value)
+        viewModelScope.launch { doSearchLrr() }
     }
 
     // =========================

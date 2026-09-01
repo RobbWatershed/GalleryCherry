@@ -1,4 +1,4 @@
-package me.devsaki.hentoid.retrofit
+package me.devsaki.hentoid.retrofit.sources
 
 import me.devsaki.hentoid.json.sources.deviantart.DeviantArtDeviation
 import me.devsaki.hentoid.json.sources.deviantart.DeviantArtGallection

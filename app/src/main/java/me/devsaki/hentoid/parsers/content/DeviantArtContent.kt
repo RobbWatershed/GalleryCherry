@@ -13,7 +13,7 @@ import me.devsaki.hentoid.parsers.cleanup
 import me.devsaki.hentoid.parsers.getUserAgent
 import me.devsaki.hentoid.parsers.images.DeviantArtParser
 import me.devsaki.hentoid.parsers.parseAttributes
-import me.devsaki.hentoid.retrofit.DeviantArtServer
+import me.devsaki.hentoid.retrofit.sources.DeviantArtServer
 import me.devsaki.hentoid.util.exception.ParseException
 import me.devsaki.hentoid.util.network.getCookies
 import me.devsaki.hentoid.util.parseDatetimeToEpoch

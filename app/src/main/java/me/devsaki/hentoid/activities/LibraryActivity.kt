@@ -58,6 +58,7 @@ import me.devsaki.hentoid.fragments.library.LibraryContentFragment
 import me.devsaki.hentoid.fragments.library.LibraryExportDialogFragment
 import me.devsaki.hentoid.fragments.library.LibraryFoldersFragment
 import me.devsaki.hentoid.fragments.library.LibraryGroupsFragment
+import me.devsaki.hentoid.fragments.library.LibraryLrrFragment
 import me.devsaki.hentoid.fragments.library.UpdateSuccessDialogFragment.Companion.invoke
 import me.devsaki.hentoid.ui.invokeInputDialog
 import me.devsaki.hentoid.util.AchievementsManager
@@ -560,10 +561,18 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
 
     private fun updateDisplay(targetGroupingId: Int) {
         pagerAdapter?.notifyDataSetChanged()
-        if (targetGroupingId == Grouping.FLAT.id) { // Display books right away
-            binding?.libraryPager?.currentItem = 1
-        } else if (targetGroupingId == Grouping.FOLDERS.id) { // Display folders
-            binding?.libraryPager?.currentItem = 2
+        when (targetGroupingId) {
+            Grouping.FLAT.id -> { // Display books right away
+                binding?.libraryPager?.currentItem = 1
+            }
+
+            Grouping.FOLDERS.id -> { // Display folders
+                binding?.libraryPager?.currentItem = 2
+            }
+
+            Grouping.LRR.id -> { // Display Lanraragi panel
+                binding?.libraryPager?.currentItem = 3
+            }
         }
     }
 
@@ -1026,6 +1035,10 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
         return 2 == binding?.libraryPager?.currentItem
     }
 
+    fun isLrrDisplayed(): Boolean {
+        return 3 == binding?.libraryPager?.currentItem
+    }
+
     fun goBackToGroups() {
         if (isGroupDisplayed()) return
         setEditMode(false)
@@ -1305,6 +1318,7 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
                 when (fragmentIndex) {
                     1 -> CommunicationEvent.Recipient.LIBRARY_CONTENTS
                     2 -> CommunicationEvent.Recipient.LIBRARY_FOLDERS
+                    3 -> CommunicationEvent.Recipient.LIBRARY_LRR
                     else -> CommunicationEvent.Recipient.LIBRARY_GROUPS
                 },
                 message
@@ -1371,12 +1385,13 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
             return when (position) {
                 1 -> LibraryContentFragment()
                 2 -> LibraryFoldersFragment()
+                3 -> LibraryLrrFragment()
                 else -> LibraryGroupsFragment()
             }
         }
 
         override fun getItemCount(): Int {
-            return 3
+            return 4
         }
     }
 }

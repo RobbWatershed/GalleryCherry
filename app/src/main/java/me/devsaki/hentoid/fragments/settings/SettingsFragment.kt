@@ -43,11 +43,12 @@ import me.devsaki.hentoid.enums.Theme
 import me.devsaki.hentoid.events.DownloadCommandEvent
 import me.devsaki.hentoid.retrofit.BergServer
 import me.devsaki.hentoid.retrofit.BergUpdateServer
-import me.devsaki.hentoid.retrofit.DeviantArtServer
 import me.devsaki.hentoid.retrofit.JikanServer
+import me.devsaki.hentoid.retrofit.sources.DeviantArtServer
 import me.devsaki.hentoid.retrofit.sources.EHentaiServer
 import me.devsaki.hentoid.retrofit.sources.HiperdexServer
 import me.devsaki.hentoid.retrofit.sources.KemonoServer
+import me.devsaki.hentoid.retrofit.sources.LrrServer
 import me.devsaki.hentoid.retrofit.sources.LusciousServer
 import me.devsaki.hentoid.retrofit.sources.PawServer
 import me.devsaki.hentoid.retrofit.sources.PixivServer
@@ -182,6 +183,7 @@ class SettingsFragment : PreferenceFragmentCompat(),
             Settings.Key.BROWSER_DNS_OVER_HTTPS -> onDoHChanged()
             Settings.Key.BROWSER_PROXY -> onProxyChanged()
             Settings.Key.WEB_AUGMENTED_BROWSER -> onAugmentedBrowserChanged()
+            Settings.Key.LRR_API_KEY, Settings.Key.LRR_ENDPOINT -> onLrrChanged()
         }
     }
 
@@ -306,52 +308,37 @@ class SettingsFragment : PreferenceFragmentCompat(),
 
     private fun onDoHChanged() {
         if (Settings.dnsOverHttps > -1) showSnackbar(R.string.doh_warning)
-        lifecycleScope.launch {
-            withContext(Dispatchers.IO) {
-                // Reset OkHttp instance
-                OkHttpClientManager.reset()
-                // Reset connection pool used by the downloader
-                EventBus.getDefault().post(
-                    DownloadCommandEvent(DownloadCommandEvent.Type.EV_RESET_REQUEST_QUEUE)
-                )
-                // Reset all retrofit clients
-                BergServer.init()
-                EHentaiServer.init()
-                LusciousServer.init()
-                PixivServer.init()
-                DeviantArtServer.init()
-                KemonoServer.init()
-                JikanServer.init()
-                BergUpdateServer.init()
-                PawServer.init()
-                HiperdexServer.init()
-            }
-        }
+        lifecycleScope.launch { resetHttp() }
     }
 
     private fun onProxyChanged() {
         if (Settings.proxy.isNotEmpty()) showSnackbar(R.string.proxy_warning)
-        lifecycleScope.launch {
-            withContext(Dispatchers.IO) {
-                // Reset OkHttp instance
-                OkHttpClientManager.reset()
-                // Reset connection pool used by the downloader
-                EventBus.getDefault().post(
-                    DownloadCommandEvent(DownloadCommandEvent.Type.EV_RESET_REQUEST_QUEUE)
-                )
-                // Reset all retrofit clients
-                BergServer.init()
-                EHentaiServer.init()
-                LusciousServer.init()
-                PixivServer.init()
-                DeviantArtServer.init()
-                KemonoServer.init()
-                JikanServer.init()
-                BergUpdateServer.init()
-                PawServer.init()
-                HiperdexServer.init()
-            }
-        }
+        lifecycleScope.launch { resetHttp() }
+    }
+
+    private suspend fun resetHttp() = withContext(Dispatchers.IO) {
+        // Reset OkHttp instance
+        OkHttpClientManager.reset()
+        // Reset connection pool used by the downloader
+        EventBus.getDefault().post(
+            DownloadCommandEvent(DownloadCommandEvent.Type.EV_RESET_REQUEST_QUEUE)
+        )
+        // Reset all retrofit clients
+        BergServer.init()
+        EHentaiServer.init()
+        LusciousServer.init()
+        PixivServer.init()
+        DeviantArtServer.init()
+        KemonoServer.init()
+        JikanServer.init()
+        BergUpdateServer.init()
+        PawServer.init()
+        HiperdexServer.init()
+        LrrServer.init()
+    }
+
+    private fun onLrrChanged() {
+        LrrServer.init()
     }
 
     private fun showSnackbar(strRes: Int) {
