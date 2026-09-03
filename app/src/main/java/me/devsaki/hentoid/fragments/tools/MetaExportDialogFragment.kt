@@ -68,6 +68,7 @@ class MetaExportDialogFragment : BaseDialogFragment<Nothing>() {
         super.onViewCreated(rootView, savedInstanceState)
         dao = ObjectBoxDAO()
         val nbLibraryBooks = dao.countAllInternalBooks("", false)
+        val nbExternalBooks = dao.countAllExternalBooks()
         val nbQueueBooks = dao.countAllQueueBooks()
         val nbBookmarks = dao.countAllBookmarks()
         binding?.apply {
@@ -115,6 +116,15 @@ class MetaExportDialogFragment : BaseDialogFragment<Nothing>() {
                 exportFileLibraryChk.setOnCheckedChangeListener { _, _ -> refreshDisplay() }
                 exportGroupNo.addView(exportFileLibraryChk)
             }
+            if (nbExternalBooks > 0) {
+                exportFileLibraryChk.text = resources.getQuantityString(
+                    R.plurals.export_external_library,
+                    nbExternalBooks.toInt(),
+                    nbExternalBooks.toInt()
+                )
+                exportExternalLibraryChk.setOnCheckedChangeListener { _, _ -> refreshDisplay() }
+                exportGroupNo.addView(exportExternalLibraryChk)
+            }
             if (nbQueueBooks > 0) {
                 exportFileQueueChk.text = resources.getQuantityString(
                     R.plurals.export_file_queue,
@@ -144,6 +154,7 @@ class MetaExportDialogFragment : BaseDialogFragment<Nothing>() {
             else exportRunBtn.setOnClickListener {
                 runExport(
                     exportFileLibraryChk.isChecked,
+                    exportExternalLibraryChk.isChecked,
                     exportFavsOnly.isChecked,
                     exportGroups.isChecked,
                     exportFileQueueChk.isChecked,
@@ -157,7 +168,7 @@ class MetaExportDialogFragment : BaseDialogFragment<Nothing>() {
     private fun refreshDisplay() {
         binding?.apply {
             exportRunBtn.isEnabled =
-                exportFileQueueChk.isChecked || exportFileLibraryChk.isChecked || exportFileBookmarksChk.isChecked
+                exportFileQueueChk.isChecked || exportFileLibraryChk.isChecked || exportFileBookmarksChk.isChecked || exportExternalLibraryChk.isChecked
             exportLocation.isVisible = exportFileLibraryChk.isChecked
             exportFavsOnly.isVisible = exportFileLibraryChk.isChecked
             exportGroups.isVisible = exportFileLibraryChk.isChecked
@@ -190,6 +201,7 @@ class MetaExportDialogFragment : BaseDialogFragment<Nothing>() {
 
     private fun runExport(
         exportLibrary: Boolean,
+        exportExternal: Boolean,
         exportFavsOnly: Boolean,
         exportCustomGroups: Boolean,
         exportQueue: Boolean,
@@ -197,6 +209,7 @@ class MetaExportDialogFragment : BaseDialogFragment<Nothing>() {
     ) {
         binding?.let {
             it.exportFileLibraryChk.isEnabled = false
+            it.exportExternalLibraryChk.isEnabled = false
             it.exportFileQueueChk.isEnabled = false
             it.exportFileBookmarksChk.isEnabled = false
             it.exportRunBtn.visibility = View.GONE
@@ -209,6 +222,7 @@ class MetaExportDialogFragment : BaseDialogFragment<Nothing>() {
                     try {
                         val collection = getExportedCollection(
                             exportLibrary,
+                            exportExternal,
                             exportFavsOnly,
                             exportCustomGroups,
                             exportQueue,
@@ -238,6 +252,7 @@ class MetaExportDialogFragment : BaseDialogFragment<Nothing>() {
                     onJsonSerialized(
                         result,
                         exportLibrary,
+                        exportExternal,
                         exportFavsOnly,
                         exportQueue,
                         exportBookmarks
@@ -250,6 +265,7 @@ class MetaExportDialogFragment : BaseDialogFragment<Nothing>() {
 
     private fun getExportedCollection(
         exportLibrary: Boolean,
+        exportExternal: Boolean,
         exportFavsOnly: Boolean,
         exportCustomgroups: Boolean,
         exportQueue: Boolean,
@@ -261,6 +277,9 @@ class MetaExportDialogFragment : BaseDialogFragment<Nothing>() {
             getSelectedRootPath(locationIndex),
             exportFavsOnly
         ) { content: Content ->
+            jsonContentCollection.addToLibrary(content)
+        } // Using streaming here to support large collections
+        if (exportExternal) dao.streamAllExternalBooks { content: Content ->
             jsonContentCollection.addToLibrary(content)
         } // Using streaming here to support large collections
         if (exportQueue) {
@@ -293,6 +312,7 @@ class MetaExportDialogFragment : BaseDialogFragment<Nothing>() {
     private suspend fun onJsonSerialized(
         json: String,
         exportLibrary: Boolean,
+        exportExternal: Boolean,
         exportFavsOnly: Boolean,
         exportQueue: Boolean,
         exportBookmarks: Boolean
@@ -300,8 +320,8 @@ class MetaExportDialogFragment : BaseDialogFragment<Nothing>() {
         var targetFileName = "export-"
         if (exportBookmarks) targetFileName += "bkmks"
         if (exportQueue) targetFileName += "queue"
-        if (exportLibrary && !exportFavsOnly) targetFileName += "library"
-        else if (exportLibrary) targetFileName += "favs"
+        targetFileName += if (exportLibrary && exportFavsOnly) "favs"
+        else "library"
         targetFileName += ".json"
 
         exportToDownloadsFolder(

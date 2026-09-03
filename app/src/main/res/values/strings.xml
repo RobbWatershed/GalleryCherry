@@ -441,6 +441,10 @@
         <item quantity="one">Export primary library (<x:g example="1" id="number">%d</x:g> book)</item>
         <item quantity="other">Export primary library (<x:g example="2" id="number">%d</x:g> books)</item>
     </plurals>
+    <plurals name="export_external_library">
+        <item quantity="one">Export external library (<x:g example="1" id="number">%d</x:g> book)</item>
+        <item quantity="other">Export external library (<x:g example="2" id="number">%d</x:g> books)</item>
+    </plurals>
     <string name="export_location">Location : %s</string>
     <string name="export_favs_only">Only export favourites</string>
     <string name="export_groups">Export custom groups</string>

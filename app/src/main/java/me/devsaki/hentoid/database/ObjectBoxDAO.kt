@@ -495,6 +495,12 @@ class ObjectBoxDAO : CollectionDAO {
         }
     }
 
+    override fun streamAllExternalBooks(consumer: Consumer<Content>) {
+        ObjectBoxDB.selectAllExternalContentsQ().use { query ->
+            query.forEach { consumer(it) }
+        }
+    }
+
     override fun countAllExternalBooks(): Long {
         return ObjectBoxDB.selectAllExternalContentsQ().safeCount()
     }

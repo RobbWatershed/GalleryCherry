@@ -90,6 +90,8 @@ interface CollectionDAO {
 
     fun streamAllInternalBooks(rootPath: String, favsOnly: Boolean, consumer: Consumer<Content>)
 
+    fun streamAllExternalBooks(consumer: Consumer<Content>)
+
     fun flagAllInternalBooks(rootPath: String, includePlaceholders: Boolean)
 
     fun deleteAllInternalContents(rootPath: String, resetRemainingImagesStatus: Boolean)
