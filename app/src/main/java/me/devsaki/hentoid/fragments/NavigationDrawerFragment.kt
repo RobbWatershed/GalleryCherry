@@ -300,7 +300,7 @@ class NavigationDrawerFragment : Fragment(R.layout.fragment_navigation_drawer),
                 addMenu(
                     submenu1,
                     R.string.groups_lrr,
-                    R.drawable.ic_folder, // TODO
+                    R.drawable.ic_lrr,
                     NavItem.LIBRARY,
                     Grouping.LRR.id,
                     Settings.groupingDisplay == Grouping.LRR.id
