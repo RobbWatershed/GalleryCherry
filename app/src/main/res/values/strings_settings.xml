@@ -60,6 +60,11 @@
     <string name="pref_force_english_summary_on">Use English</string>
     <string name="use_app_prefs">App settings (<x:g example="Left to right" id="app_default">%s</x:g>)</string>
     <string name="use_source_prefs">Source settings (<x:g example="Left to right" id="source_default">%s</x:g>)</string>
+    <string name="pref_library_search">Library Search</string>
+    <string name="pref_library_search_delay_threshold_title">Input delay threshold(general)</string>
+    <string name="pref_library_search_delay_threshold_summary"><x:g example="1.5s" id="delay">%s</x:g></string>
+    <string name="pref_library_search_long_delay_threshold_title">Input delay threshold(number, URL)</string>
+    <string name="pref_library_search_long_delay_threshold_summary"><x:g example="1.5s" id="delay">%s</x:g></string>
 
     <!-- Storage -->
     <string name="pref_screen_storage">Storage</string>

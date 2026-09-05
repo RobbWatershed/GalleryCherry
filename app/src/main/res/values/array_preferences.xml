@@ -136,4 +136,14 @@
     <string name="pref_lock_timer_entries_3">30 s (default)</string>
     <string name="pref_lock_timer_entries_4" tools:ignore="MissingTranslation">1 min</string>
     <string name="pref_lock_timer_entries_5">2 mins</string>
+    <!-- Choice for "Library search input delay threshold(general)" setting -->
+    <string name="pref_library_search_delay_threshold_entries_1">0.25 s (default)</string>
+    <string name="pref_library_search_delay_threshold_entries_2" tools:ignore="MissingTranslation">0.5 s</string>
+    <string name="pref_library_search_delay_threshold_entries_3" tools:ignore="MissingTranslation">1 s</string>
+    <string name="pref_library_search_delay_threshold_entries_4">Infinity</string>
+    <!-- Choice for "Library search input delay threshold(number, URL)" setting -->
+    <string name="pref_library_search_long_delay_threshold_entries_1" tools:ignore="MissingTranslation">1 s</string>
+    <string name="pref_library_search_long_delay_threshold_entries_2">1.5 s (default)</string>
+    <string name="pref_library_search_long_delay_threshold_entries_3" tools:ignore="MissingTranslation">3 s</string>
+    <string name="pref_library_search_long_delay_threshold_entries_4">Infinity</string>
 </resources>

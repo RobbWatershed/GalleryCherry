@@ -259,11 +259,11 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
         setContentView(activityBinding?.root)
 
         searchClearDebouncer = Debouncer(this.lifecycleScope, 1500) { clearSearch() }
-        searchLongSubmitDebouncer = Debouncer(this.lifecycleScope, 1500) {
+        searchLongSubmitDebouncer = Debouncer(this.lifecycleScope, Settings.librarySearchLongDelayThreshold) {
             setQuery(it)
             signalCurrentFragment(CommunicationEvent.Type.SEARCH_NO_HISTORY, it)
         }
-        searchSubmitDebouncer = Debouncer(this.lifecycleScope, 250) {
+        searchSubmitDebouncer = Debouncer(this.lifecycleScope, Settings.librarySearchDelayThreshold) {
             setQuery(it)
             signalCurrentFragment(CommunicationEvent.Type.SEARCH_NO_HISTORY, it)
         }
@@ -905,7 +905,9 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
             Settings.Key.LIBRARY_DISPLAY_GRID_SOURCE,
             Settings.Key.LIBRARY_DISPLAY_GRID_TITLE,
             Settings.Key.LIBRARY_GRID_CARD_WIDTH,
-            Settings.Key.LIBRARY_DISPLAY_GROUP_FIGURE
+            Settings.Key.LIBRARY_DISPLAY_GROUP_FIGURE,
+            Settings.Key.LIBRARY_SEARCH_DELAY_THRESHOLD,
+            Settings.Key.LIBRARY_SEARCH_LONG_DELAY_THRESHOLD
                 -> {
                 hasChangedDisplaySettings = true
             }

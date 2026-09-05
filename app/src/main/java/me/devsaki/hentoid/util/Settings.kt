@@ -202,6 +202,9 @@ object Settings {
     var lrrSortField: Int by IntSetting("pref_order_lrr_field", Default.ORDER_LRR_FIELD)
     var isLrrSortDesc: Boolean by BoolSetting("pref_order_lrr_desc", false)
 
+    // Library Search
+    val librarySearchDelayThreshold: Long by LongSetting(Key.LIBRARY_SEARCH_DELAY_THRESHOLD, 250)
+    val librarySearchLongDelayThreshold: Long by LongSetting(Key.LIBRARY_SEARCH_LONG_DELAY_THRESHOLD, 1500)
 
     // ADV SEARCH
     val searchAttributesSortOrder: Int by IntSettingStr(
@@ -866,6 +869,8 @@ object Settings {
         const val PRIMARY_STORAGE_SWITCH_THRESHOLD_PC = "pref_storage_switch_threshold_pc"
         const val EXTERNAL_LIBRARY_DELETE = "pref_external_library_delete"
         const val MEMORY_ALERT_THRESHOLD = "pref_memory_alert"
+        const val LIBRARY_SEARCH_DELAY_THRESHOLD = "pref_library_search_delay_threshold"
+        const val LIBRARY_SEARCH_LONG_DELAY_THRESHOLD = "pref_library_search_long_delay_threshold"
 
         const val DL_THREADS_QUANTITY_LISTS = "pref_dl_threads_quantity_lists"
         const val DL_SPEED_CAP = "dl_speed_cap"

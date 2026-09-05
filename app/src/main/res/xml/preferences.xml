@@ -138,7 +138,26 @@
                 android:title="@string/pref_grid_card_width_title"
                 app:iconSpaceReserved="false" />
         </PreferenceCategory>
-
+        <PreferenceCategory
+            android:title="@string/pref_library_search"
+            app:iconSpaceReserved="false">
+            <ListPreference
+                android:defaultValue="@string/pref_library_search_delay_threshold_default"
+                android:entries="@array/pref_library_search_delay_threshold_entries"
+                android:entryValues="@array/pref_library_search_delay_threshold_values"
+                android:key="pref_library_search_delay_threshold"
+                android:summary="@string/pref_library_search_delay_threshold_summary"
+                android:title="@string/pref_library_search_delay_threshold_title"
+                app:iconSpaceReserved="false" />
+            <ListPreference
+                android:defaultValue="@string/pref_library_search_long_delay_threshold_default"
+                android:entries="@array/pref_library_search_long_delay_threshold_entries"
+                android:entryValues="@array/pref_library_search_long_delay_threshold_values"
+                android:key="pref_library_search_long_delay_threshold"
+                android:summary="@string/pref_library_search_long_delay_threshold_summary"
+                android:title="@string/pref_library_search_long_delay_threshold_title"
+                app:iconSpaceReserved="false" />
+        </PreferenceCategory>
         <PreferenceCategory
             android:title="@string/pref_cat_search"
             app:iconSpaceReserved="false">
