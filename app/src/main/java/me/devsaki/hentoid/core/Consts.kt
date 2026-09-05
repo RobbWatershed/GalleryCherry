@@ -10,6 +10,7 @@ typealias KRunnable = () -> Unit
 typealias SuspendRunnable = suspend () -> Unit
 
 typealias Consumer<T> = (T) -> Unit
+typealias SuspendConsumer<T> = suspend (T) -> Unit
 
 typealias BiConsumer<T, U> = (T, U) -> Unit
 typealias SuspendBiConsumer<T, U> = suspend (T, U) -> Unit

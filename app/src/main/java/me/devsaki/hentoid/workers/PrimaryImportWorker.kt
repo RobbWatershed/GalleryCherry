@@ -500,7 +500,12 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
             )
             notificationManager.notify(ImportCompleteNotification(booksOK, booksKO))
             EventBus.getDefault()
-                .postSticky(CommunicationEvent(Type.RELOAD, CommunicationEvent.Recipient.LIBRARY_LIST))
+                .postSticky(
+                    CommunicationEvent(
+                        Type.RELOAD,
+                        CommunicationEvent.Recipient.LIBRARY_LIST
+                    )
+                )
         }
     }
 
@@ -525,7 +530,7 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
         }
     }
 
-    private fun importArchives(
+    private suspend fun importArchives(
         context: Context,
         parent: DocumentFile,
         subFolders: List<DocumentFile>,
@@ -571,8 +576,7 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
         }
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
-    private fun onArchiveFound(
+    private suspend fun onArchiveFound(
         context: Context,
         c: Content,
         parent: DocumentFile,
@@ -601,12 +605,14 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
             return
         }
 
-        GlobalScope.launch(Dispatchers.IO) {
+        withContext(Dispatchers.IO) {
             // If content has an external-library tag or an EXTERNAL status, remove it because we're importing for the primary library now
             removeExternalAttributes(c)
             addContent(context, dao, c)
-
-            // Logging
+        }
+        
+        // Logging
+        withContext(Dispatchers.Default) {
             val customGroups =
                 c.getGroupItems(Grouping.CUSTOM)
                     .mapNotNull { it.linkedGroup }
@@ -1334,7 +1340,7 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
     }
 
     @Throws(ParseException::class)
-    private fun importJson(
+    private suspend fun importJson(
         context: Context,
         folder: DocumentFile,
         bookFiles: List<DocumentFile>,
@@ -1488,10 +1494,9 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
         }
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
     @CheckResult
     @Throws(ParseException::class)
-    private fun importJsonV2(
+    private suspend fun importJsonV2(
         context: Context,
         json: DocumentFile,
         parentFolder: DocumentFile,
@@ -1509,9 +1514,7 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
                     val now = Instant.now().toEpochMilli()
                     result.downloadDate = now
                     result.downloadCompletionDate = now
-                    GlobalScope.launch(Dispatchers.Default) {
-                        updateJson(context, result)
-                    }
+                    updateJson(context, result)
                 }
                 return result
             }

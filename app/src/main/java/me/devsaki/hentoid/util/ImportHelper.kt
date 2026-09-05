@@ -24,7 +24,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import me.devsaki.hentoid.R
-import me.devsaki.hentoid.core.Consumer
 import me.devsaki.hentoid.core.DEFAULT_PRIMARY_FOLDER
 import me.devsaki.hentoid.core.DEFAULT_PRIMARY_FOLDER_OLD
 import me.devsaki.hentoid.core.HentoidApp.LifeCycleListener.Companion.disable
@@ -32,6 +31,7 @@ import me.devsaki.hentoid.core.JSON_ARCHIVE_SUFFIX
 import me.devsaki.hentoid.core.JSON_FILE_NAME
 import me.devsaki.hentoid.core.JSON_FILE_NAME_OLD
 import me.devsaki.hentoid.core.JSON_FILE_NAME_V2
+import me.devsaki.hentoid.core.SuspendConsumer
 import me.devsaki.hentoid.core.THUMB_FILE_NAME
 import me.devsaki.hentoid.core.WORK_CLOSEABLE
 import me.devsaki.hentoid.database.CollectionDAO
@@ -107,8 +107,10 @@ sealed interface FolderScanResult {
     sealed interface Success : FolderScanResult {
         /** Success - Existing, empty Hentoid folder */
         object EmptyFolder : Success
+
         /** Success - An existing Hentoid folder with books */
         object LibraryDetected : Success
+
         /** Success - Existing Hentoid folder with books + we need to ask the user if he wants to import them */
         data class LibraryDetectedAsk(val rootUri: Uri) : Success
     }
@@ -208,7 +210,10 @@ class PickFolderContract : ActivityResultContract<StorageLocation, PickUriResult
     }
 
     // Start the SAF at the specified location
-    private fun Intent.putInitialUriExtra(context: Context, storageLocation: StorageLocation): Intent {
+    private fun Intent.putInitialUriExtra(
+        context: Context,
+        storageLocation: StorageLocation
+    ): Intent {
         val treeUriStr = Settings.getStorageUri(storageLocation)
         if (treeUriStr.isNotEmpty()) {
             val file = getDocumentFromTreeUriString(context, treeUriStr)
@@ -642,7 +647,7 @@ fun runExternalImport(
  * @param onFolderFound Callback when a folder has been found
  * @param onContentFound Callback when a Content has been found
  */
-fun scanFolderRecursive(
+suspend fun scanFolderRecursive(
     context: Context,
     dao: CollectionDAO,
     parent: Uri?,
@@ -652,8 +657,8 @@ fun scanFolderRecursive(
     parentNames: List<String>,
     log: MutableList<LogEntry>? = null,
     isCanceled: (() -> Boolean)? = null,
-    onFolderFound: (DocumentFile) -> Unit,
-    onContentFound: (Content) -> Unit,
+    onFolderFound: SuspendConsumer<DocumentFile>,
+    onContentFound: SuspendConsumer<Content>,
 ) {
     assertNonUiThread()
     if (isCanceled?.invoke() == true) return
@@ -1122,7 +1127,7 @@ private fun parentNamesAsTags(parentNames: List<String>): AttributeMap {
  * @param requiresJson  True to skip any archive that doesn't have a matching JSON file; false to read all archives
  * @return List of Content created from every archive inside the given subfolders
  */
-fun scanForArchivesPdf(
+suspend fun scanForArchivesPdf(
     context: Context,
     parent: DocumentFile,
     subFolders: List<DocumentFile>,
@@ -1133,7 +1138,7 @@ fun scanForArchivesPdf(
     log: MutableList<LogEntry>? = null,
     chaptered: Boolean = false,
     requiresJson: Boolean = false,
-    onProgress: Consumer<Content?>
+    onProgress: SuspendConsumer<Content?>
 ): List<Content> {
     val result: MutableList<Content> = ArrayList()
     for (subfolder in subFolders) {
