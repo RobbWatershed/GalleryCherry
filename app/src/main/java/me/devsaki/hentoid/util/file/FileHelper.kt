@@ -166,7 +166,7 @@ private fun getFullPathFromTreeUri(context: Context, uri: Uri): String {
 
     // Chunk file Uri
     val usedUri =
-        if (uri.authority.equals(FILECHUNK_AUTHORITY)) FileChunkInfo.fromUri(uri).mainFileUri
+        if (uri.authority.equals(BuildConfig.FILECHUNK_AUTHORITY)) FileChunkInfo.fromUri(uri).mainFileUri
         else uri
 
     var volumePath = getVolumePath(context, getVolumeIdFromUri(usedUri)) ?: "UnknownVolume"
@@ -176,7 +176,7 @@ private fun getFullPathFromTreeUri(context: Context, uri: Uri): String {
     if (documentPath.endsWith(File.separator)) documentPath = documentPath.dropLast(1)
     if (documentPath.startsWith(File.separator)) documentPath = documentPath.drop(1)
 
-    val chunkName = if (uri.authority.equals(FILECHUNK_AUTHORITY))
+    val chunkName = if (uri.authority.equals(BuildConfig.FILECHUNK_AUTHORITY))
         File.separator + FileChunkInfo.fromUri(uri).displayName
     else ""
 

@@ -23,9 +23,21 @@ android {
         consumerProguardFiles 'consumer-rules.pro'
     }
 
+    buildFeatures {
+        buildConfig = true
+    }
+
     buildTypes {
+        debug {
+            def fileChunkAuthority = "me.violet.chunk-DEBUG"
+            buildConfigField "String", "FILECHUNK_AUTHORITY", '"'+fileChunkAuthority+'"'
+        }
         release {
             minifyEnabled false
+
+            def fileChunkAuthority = "me.violet.chunk"
+            buildConfigField "String", "FILECHUNK_AUTHORITY", '"'+fileChunkAuthority+'"'
+
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }

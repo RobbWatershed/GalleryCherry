@@ -23,11 +23,11 @@ import com.radzivon.bartoshyk.avif.coder.HeifCoder
 import com.radzivon.bartoshyk.avif.coder.PreferredColorConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import me.devsaki.hentoid.BuildConfig
 import me.devsaki.hentoid.core.CHARSET_LATIN_1
 import me.devsaki.hentoid.enums.PictureEncoder
 import me.devsaki.hentoid.util.assertNonUiThread
 import me.devsaki.hentoid.util.byteArrayOfInts
-import me.devsaki.hentoid.util.file.FILECHUNK_AUTHORITY
 import me.devsaki.hentoid.util.file.FileChunkInfo
 import me.devsaki.hentoid.util.file.NameFilter
 import me.devsaki.hentoid.util.file.fileExists
@@ -516,7 +516,7 @@ suspend fun getMediaDimensions(
     val isDataUsable = !(null == data || data.isEmpty())
     if (!isDataUsable && !fileExists(context, uri)) return@withContext Point(0, 0)
 
-    val fileName = if (uri.authority == FILECHUNK_AUTHORITY) FileChunkInfo.fromUri(uri).displayName
+    val fileName = if (uri.authority == BuildConfig.FILECHUNK_AUTHORITY) FileChunkInfo.fromUri(uri).displayName
     else uri.lastPathSegment ?: ""
 
     val ext = if (uri != Uri.EMPTY || !isDataUsable) getExtensionFromUri(fileName)

@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import androidx.fragment.app.Fragment
+import me.devsaki.hentoid.BuildConfig
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.database.CollectionDAO
 import me.devsaki.hentoid.database.ObjectBoxDAO
@@ -19,7 +20,6 @@ import me.devsaki.hentoid.util.PickUriResult
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.copy
 import me.devsaki.hentoid.util.file.DEFAULT_MIME_TYPE
-import me.devsaki.hentoid.util.file.FILECHUNK_AUTHORITY
 import me.devsaki.hentoid.util.file.FileChunkInfo
 import me.devsaki.hentoid.util.file.RQST_STORAGE_PERMISSION
 import me.devsaki.hentoid.util.file.createNewDownloadFile
@@ -166,7 +166,7 @@ class ReaderCopyImgDialogFragment : BaseDialogFragment<ReaderCopyImgDialogFragme
         img?.let {
             val prefix = it.linkedContent?.uniqueSiteId ?: it.contentId.toString()
             val fileUri = it.fileUri.toUri()
-            val extension = if (fileUri.authority == FILECHUNK_AUTHORITY)
+            val extension = if (fileUri.authority == BuildConfig.FILECHUNK_AUTHORITY)
                 getExtension(FileChunkInfo.fromUri(fileUri).displayName)
             else getExtension(it.fileUri)
 

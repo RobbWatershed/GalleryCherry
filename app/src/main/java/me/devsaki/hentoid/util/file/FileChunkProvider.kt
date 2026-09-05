@@ -11,13 +11,11 @@ import android.net.Uri
 import android.os.ParcelFileDescriptor
 import android.provider.OpenableColumns
 import androidx.core.net.toUri
+import me.devsaki.hentoid.BuildConfig
 import me.devsaki.hentoid.util.network.UriParts
 import timber.log.Timber
 import java.io.FileNotFoundException
 
-
-// Must match what is declared in the Zip content provider in the AndroidManifest.xml file
-const val FILECHUNK_AUTHORITY = "me.violet.chunk"
 
 // Inspired by https://github.com/googlearchive/play-apk-expansion/tree/master
 // and https://github.com/Babay88/AndroidCodeSamplesB/blob/master/ShareZipped/src/main/java/ru/babay/codesamples/sharezip/ZipFilesProvider.java
@@ -129,7 +127,7 @@ class FileChunkInfo(
     fun toUri(): Uri {
         return Uri.Builder()
             .scheme(ContentResolver.SCHEME_CONTENT)
-            .authority(FILECHUNK_AUTHORITY)
+            .authority(BuildConfig.FILECHUNK_AUTHORITY)
             .path(mainFileUri.toString().replace("content://com", "content:/com"))
             .appendQueryParameter("n", displayName)
             .appendQueryParameter("o", chunkOffset.toString())

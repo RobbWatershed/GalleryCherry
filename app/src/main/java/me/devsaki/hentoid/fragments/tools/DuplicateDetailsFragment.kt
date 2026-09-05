@@ -26,10 +26,10 @@ import com.mikepenz.fastadapter.select.SelectExtension
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import me.devsaki.hentoid.BuildConfig
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.activities.DuplicateDetectorActivity
 import me.devsaki.hentoid.activities.bundles.DuplicateItemBundle
-import me.devsaki.hentoid.customssiv.util.FILECHUNK_AUTHORITY
 import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.database.domains.DownloadMode
 import me.devsaki.hentoid.database.domains.DuplicateEntry
@@ -371,7 +371,7 @@ class DuplicateDetailsFragment : Fragment(R.layout.fragment_duplicate_details),
     private fun hasAccessibleFiles(c: Content): Boolean {
         if (c.isPdf) return false
         if (c.isArchive)
-            return c.imageList.all { it.fileUri.toUri().authority == FILECHUNK_AUTHORITY }
+            return c.imageList.all { it.fileUri.toUri().authority == BuildConfig.FILECHUNK_AUTHORITY }
         return c.imageList.none { it.isOnline }
     }
 

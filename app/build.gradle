@@ -55,7 +55,14 @@ android {
             applicationIdSuffix ".debug"
             versionNameSuffix "-DEBUG"
 
+            def fileChunkAuthority = "me.violet.chunk-DEBUG"
+
             buildConfigField 'String', 'UPDATE_URL', '"https://codeberg.org/VioletKnight/Hentoid/raw/branch/dev/app/"'
+            buildConfigField "String", "FILECHUNK_AUTHORITY", '"'+fileChunkAuthority+'"'
+
+            manifestPlaceholders = [
+                    fileChunkAuthority: fileChunkAuthority
+            ]
 
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro', 'proguard-rules-debug.pro'
 
@@ -66,7 +73,14 @@ android {
             debuggable false
             minifyEnabled true
 
+            def fileChunkAuthority = "me.violet.chunk"
+
             buildConfigField 'String', 'UPDATE_URL', '"https://codeberg.org/VioletKnight/Hentoid/raw/branch/master/app/"'
+            buildConfigField "String", "FILECHUNK_AUTHORITY", '"'+fileChunkAuthority+'"'
+
+            manifestPlaceholders = [
+                    fileChunkAuthority: fileChunkAuthority
+            ]
 
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro', 'proguard-rules-release.pro'
             testProguardFile 'proguard-rules-test.pro'

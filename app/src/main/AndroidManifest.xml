@@ -763,7 +763,7 @@
 
         <provider
             android:name=".util.file.FileChunkProvider"
-            android:authorities="me.violet.chunk"
+            android:authorities="${fileChunkAuthority}"
             android:exported="false"
             android:multiprocess="true">
             <meta-data

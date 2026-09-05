@@ -13,6 +13,7 @@ import com.radzivon.bartoshyk.avif.coder.HeifCoder
 import com.radzivon.bartoshyk.avif.coder.PreferredColorConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import me.devsaki.hentoid.customssiv.BuildConfig
 import timber.log.Timber
 import java.io.IOException
 import java.io.InputStream
@@ -161,7 +162,7 @@ suspend fun getImageDimensions(context: Context, uri: Uri, data: ByteArray? = nu
         if (null == data && !fileExists(context, uri)) return@withContext Point(0, 0)
 
         // Hentoid-specific hack
-        val fileName = if (uri.authority == FILECHUNK_AUTHORITY) {
+        val fileName = if (uri.authority == BuildConfig.FILECHUNK_AUTHORITY) {
             uri.getQueryParameter("n")
         } else uri.lastPathSegment
         if (null == fileName) return@withContext Point(0, 0)

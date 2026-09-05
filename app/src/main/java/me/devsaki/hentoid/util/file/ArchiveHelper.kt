@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.ParcelFileDescriptor
 import android.util.Log
 import androidx.core.net.toUri
+import me.devsaki.hentoid.BuildConfig
 import me.devsaki.hentoid.core.READER_CACHE
 import me.devsaki.hentoid.util.assertNonUiThread
 import me.devsaki.hentoid.util.byteArrayOfInts
@@ -747,7 +748,7 @@ private class SequentialOutStream(private val out: OutputStream) : ISequentialOu
 
 fun getArchivedFileName(archiveUri: String, fileUri: String): String {
     val uri = fileUri.toUri()
-    return if (uri.authority == FILECHUNK_AUTHORITY) {
+    return if (uri.authority == BuildConfig.FILECHUNK_AUTHORITY) {
         FileChunkInfo.fromUri(uri).displayName
     } else {
         fileUri.replace(archiveUri + File.separator, "")
