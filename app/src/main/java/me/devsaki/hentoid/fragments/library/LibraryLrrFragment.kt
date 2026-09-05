@@ -1,6 +1,7 @@
 package me.devsaki.hentoid.fragments.library
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.os.SystemClock
 import android.view.LayoutInflater
@@ -9,7 +10,6 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.activity.OnBackPressedCallback
 import androidx.core.content.ContextCompat
-import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
@@ -23,19 +23,30 @@ import com.mikepenz.fastadapter.diff.FastAdapterDiffUtil.set
 import com.mikepenz.fastadapter.drag.ItemTouchCallback
 import com.mikepenz.fastadapter.drag.SimpleDragCallback
 import com.mikepenz.fastadapter.extensions.ExtensionsFactories.register
+import com.mikepenz.fastadapter.listeners.ClickEventHook
 import com.mikepenz.fastadapter.select.SelectExtension
 import com.mikepenz.fastadapter.select.SelectExtensionFactory
 import com.mikepenz.fastadapter.swipe.SimpleSwipeCallback
 import com.mikepenz.fastadapter.swipe_drag.SimpleSwipeDragCallback
 import com.mikepenz.fastadapter.utils.DragDropUtil.onMove
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.activities.LibraryActivity
+import me.devsaki.hentoid.activities.ReaderActivity
+import me.devsaki.hentoid.activities.bundles.ReaderActivityBundle
+import me.devsaki.hentoid.database.ObjectBoxDAO
 import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.databinding.FragmentLibraryLrrBinding
+import me.devsaki.hentoid.enums.Site
+import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.events.CommunicationEvent
 import me.devsaki.hentoid.events.ProcessEvent
+import me.devsaki.hentoid.parsers.urlsToImageFiles
+import me.devsaki.hentoid.retrofit.sources.LrrServer
 import me.devsaki.hentoid.util.Debouncer
 import me.devsaki.hentoid.util.Settings
+import me.devsaki.hentoid.util.addContent
 import me.devsaki.hentoid.util.dpToPx
 import me.devsaki.hentoid.util.toast
 import me.devsaki.hentoid.viewholders.ContentItem
@@ -381,6 +392,24 @@ class LibraryLrrFragment : Fragment(),
         // Item click listener
         fastAdapter.onClickListener = { _, _, i: ContentItem, _ -> onItemClick(i) }
 
+        // Favourite button click listener
+        fastAdapter.addEventHook(object : ClickEventHook<ContentItem>() {
+            override fun onClick(
+                v: View,
+                position: Int,
+                fastAdapter: FastAdapter<ContentItem>,
+                item: ContentItem
+            ) {
+                if (item.content != null) onFavouriteClick(item.content)
+            }
+
+            override fun onBind(viewHolder: RecyclerView.ViewHolder): View? {
+                return if (viewHolder is ContentItem.ViewHolder) {
+                    viewHolder.favouriteButton
+                } else super.onBind(viewHolder)
+            }
+        })
+
         fastAdapter.stateRestorationPolicy =
             RecyclerView.Adapter.StateRestorationPolicy.PREVENT_WHEN_EMPTY
 
@@ -439,8 +468,56 @@ class LibraryLrrFragment : Fragment(),
         context: Context,
         lrrArchive: Content
     ): Boolean {
-        // TODO forge a streamed content
+        // Forge a streamed book from LRR
+        lifecycleScope.launch(Dispatchers.IO) {
+            // TODO display waiting popup
+            LrrServer.api.extract(lrrArchive.uniqueSiteId).execute().let { extraction ->
+                if (extraction.isSuccessful) {
+                    extraction.body()?.let { eb ->
+                        lrrArchive.setImageFiles(
+                            urlsToImageFiles(
+                                eb.pages
+                                    .map {
+                                        it.replace(
+                                            "/api/",
+                                            "${Settings.lrrEndpoint}/api/".replace("//a", "/a")
+                                        )
+                                    },
+                                "",
+                                StatusContent.ONLINE,
+                                Site.LRR
+                            )
+                        )
+
+                        // Save content as temp material and open it with the reader
+                        val dao = ObjectBoxDAO()
+                        try {
+                            lrrArchive.status = StatusContent.SAVED
+                            val contentId = addContent(context, dao, lrrArchive)
+                            val builder = ReaderActivityBundle()
+                            builder.contentId = contentId
+
+                            val intent = Intent(context, ReaderActivity::class.java)
+                            intent.putExtras(builder.bundle)
+
+                            context.startActivity(intent)
+                        } finally {
+                            dao.cleanup()
+                        }
+                    }
+                }
+            }
+        }
         return true
+    }
+
+    /**
+     * Callback for the "favourite" button of the book holder
+     *
+     * @param content Content whose "favourite" button has been clicked on
+     */
+    private fun onFavouriteClick(content: Content) {
+        viewModel.toggleContentFavourite(content)
     }
 
     /**

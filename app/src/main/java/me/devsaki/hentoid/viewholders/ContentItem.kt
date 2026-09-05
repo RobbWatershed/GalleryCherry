@@ -615,6 +615,7 @@ class ContentItem : AbstractItem<ContentItem.ViewHolder>,
 
                 ivRating?.apply {
                     isVisible = (!isGrid || Settings.libraryDisplayGridRating)
+                    if (Site.LRR == content.site) isVisible = false
                     setIconResource(getRatingResourceId(content.rating))
                 }
             }

@@ -180,9 +180,9 @@ class FolderSearchManager() {
 
         var query by bundle.string(default = "")
 
-        var sortField by bundle.int(default = Settings.groupSortField)
+        var sortField by bundle.int(default = Settings.folderSortField)
 
-        var sortDesc by bundle.boolean(default = Settings.isGroupSortDesc)
+        var sortDesc by bundle.boolean(default = Settings.isFolderSortDesc)
 
         fun isFilterActive(): Boolean {
             return query.isNotEmpty()

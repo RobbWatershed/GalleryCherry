@@ -467,6 +467,9 @@ data class Content(
                     return result
                 }
 
+                Site.LRR -> return "${Settings.lrrEndpoint}/reader?id=$uniqueSiteId"
+                    .replace("//r", "/r")
+
                 Site.MANGAGO -> galleryConst = "read-manga/"
                 else -> galleryConst = ""
             }
@@ -506,7 +509,7 @@ data class Content(
     var url: String
         get() = dbUrl
         set(value) {
-            dbUrl = if (value.startsWith("http")) transformRawUrl(site, value)
+            dbUrl = if (value.startsWith("http", true)) transformRawUrl(site, value)
             else value
             populateUniqueSiteId()
         }

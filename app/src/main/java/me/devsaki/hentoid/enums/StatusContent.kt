@@ -19,7 +19,8 @@ enum class StatusContent(val code: Int, val description: String) {
     UNHANDLED_ERROR(7, "Unhandled Error"), // Default status for image files
     CANCELED(8, "Canceled"), // Unused value; kept for retrocompatibility
 
-    // Used for ImageFiles only : image can be viewed on-demand (streamed content; undownloaded covers)
+    // For Content : Undownloaded content absent from the database (LRR)
+    // For ImageFiles : image can be viewed on-demand (streamed content; undownloaded covers)
     ONLINE(9, "Online"),
 
     // Content is accessible in the external library

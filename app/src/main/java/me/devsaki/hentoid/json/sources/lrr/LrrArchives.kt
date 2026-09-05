@@ -2,7 +2,9 @@ package me.devsaki.hentoid.json.sources.lrr
 
 import com.squareup.moshi.JsonClass
 import me.devsaki.hentoid.database.domains.Content
+import me.devsaki.hentoid.database.domains.DownloadMode
 import me.devsaki.hentoid.enums.Site
+import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.util.Settings
 
 @JsonClass(generateAdapter = true)
@@ -23,11 +25,13 @@ data class LrrArchives(
     ) {
         fun toContent(): Content {
             val result = Content(
-                site = Site.NONE,
+                site = Site.LRR,
+                status = StatusContent.ONLINE,
                 uniqueSiteId = arcid,
                 title = title,
                 qtyPages = pagecount,
-                coverImageUrl = thumbUrl
+                coverImageUrl = thumbUrl,
+                downloadMode = DownloadMode.STREAM
             )
             // TODO tags
 
@@ -35,6 +39,6 @@ data class LrrArchives(
         }
 
         val thumbUrl
-            get() = "${Settings.lrrEndpoint}/api/archives/$arcid/thumbnail"
+            get() = "${Settings.lrrEndpoint}/api/archives/$arcid/thumbnail".replace("//", "/")
     }
 }

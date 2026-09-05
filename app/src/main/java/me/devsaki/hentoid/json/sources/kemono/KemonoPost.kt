@@ -44,7 +44,7 @@ data class KemonoPost(
                 file?.path?.let {
                     if (isSupportedMedia(it))
                         result = listOf(
-                            "https://img.${KEMONO_DOMAIN_FILTER}/thumbnail/data/${it}"
+                            "https://"+"img.${KEMONO_DOMAIN_FILTER}/thumbnail/data/${it}"
                                 .replace("//", "/")
                         )
                 }

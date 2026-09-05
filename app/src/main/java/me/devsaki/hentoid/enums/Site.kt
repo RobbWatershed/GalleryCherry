@@ -3,6 +3,7 @@ package me.devsaki.hentoid.enums
 import io.objectbox.converter.PropertyConverter
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.json.core.JsonSiteSettings.JsonSite
+import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.network.getDesktopUserAgent
 import me.devsaki.hentoid.util.network.getDomainFromUri
 import me.devsaki.hentoid.util.network.getMobileUserAgent
@@ -22,6 +23,7 @@ private val RETIRED_SITES = setOf(
     Site.FAKKU,  // Old Fakku; kept for retrocompatibility
     Site.FAKKU2,  // Dropped after Fakku decided to flag downloading accounts and IPs
     Site.ASMHENTAI_COMICS,  // Does not work directly
+    Site.LRR // Don't show as a 'normal' source
 )
 
 private val INVISIBLE_SITES = setOf(
@@ -90,6 +92,7 @@ enum class Site(val code: Int, val description: String, val url: String, val ico
     EROMANGA(38, "Eromanga-Sora", "https://eromanga-sora.com/", R.drawable.ic_site_sora),
     YIFFER(39, "Tailspace", "https://tailspace.com/", R.drawable.ic_site_yiffer),
     PAWCHIVE(40, "Pawchive", "https://pawchive.pw/", R.drawable.ic_site_pawchive),
+    LRR(41, "Lanraragi", "LOCAL", R.drawable.ic_lrr),
 
     MAL(96, "MyAnimeList", "", R.drawable.ic_app),
 

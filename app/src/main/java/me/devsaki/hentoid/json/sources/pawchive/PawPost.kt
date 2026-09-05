@@ -44,7 +44,7 @@ data class PawPost(
                 file?.path?.let {
                     if (isSupportedMedia(it))
                         result = listOf(
-                            "https://img.$PAW_DOMAIN_FILTER/thumbnail/data/${it}"
+                            "https://"+"img.$PAW_DOMAIN_FILTER/thumbnail/data/${it}"
                                 .replace("//", "/")
                         )
                 }

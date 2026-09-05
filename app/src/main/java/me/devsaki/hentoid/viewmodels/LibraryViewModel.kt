@@ -44,6 +44,7 @@ import me.devsaki.hentoid.database.domains.DownloadMode
 import me.devsaki.hentoid.database.domains.Group
 import me.devsaki.hentoid.database.domains.SearchRecord
 import me.devsaki.hentoid.enums.Grouping
+import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.enums.StorageLocation
 import me.devsaki.hentoid.retrofit.sources.LrrServer
@@ -135,7 +136,9 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
 
     // LRR data
     val lrrArchives = MediatorLiveData<List<Content>>()
+    val lrrArchivesDetail = MediatorLiveData<List<Content>>()
     val lrrSearchBundle = MutableLiveData<Bundle>()
+    var lrrFavCatId: String = "" // Will be populated during 1st call
 
     // Other data
     // True if there's at least one existing custom group; false instead
@@ -347,7 +350,7 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
                 folderSearchManager.getFoldersDetails(ctx, root)
                     .takeWhile { !detailsFlowKillSwitch.get() }
                     .filterNot { it.type == DisplayFile.Type.OTHER }
-                    .map { enrichWithMetadata(it, dao) }
+                    .map { enrichFolderWithMetadata(it, dao) }
                     .transform {
                         // Fill parents cache
                         if (it.type == DisplayFile.Type.FOLDER) parentsCache[it.uri] = it.parent
@@ -363,7 +366,7 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
         }
     }
 
-    private fun enrichWithMetadata(f: DisplayFile, dao: CollectionDAO): DisplayFile {
+    private fun enrichFolderWithMetadata(f: DisplayFile, dao: CollectionDAO): DisplayFile {
         dao.selectContentByStorageUri(f.uri.toString(), false)?.let {
             Timber.d("Mapped metadata for ${it.title}")
             f.coverUri = it.cover.usableUri.ifBlank { it.coverImageUrl }.toUri()
@@ -572,20 +575,68 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
         lrrSearchManager.setSortDesc(Settings.isLrrSortDesc)
 
         withContext(Dispatchers.IO) {
+            val favs: MutableSet<String> = HashSet()
+            val favCall = LrrServer.api.getCategories()
+            favCall.execute().let { response ->
+                if (response.isSuccessful) {
+                    response.body()?.let { rb ->
+                        rb.firstOrNull { it.name == "favourite" }?.let {
+                            lrrFavCatId = it.id
+                            favs.addAll(it.archives)
+                        }
+                    }
+                } else {
+                    Timber.w("LRR server failed when querying favs @ ${Settings.lrrEndpoint}")
+                }
+            }
+
             val queryMap = HashMap<String, String>()
             // TODO add filter, category
-            val apiCall = LrrServer.api.search(queryMap, "Bearer: ${encode64(Settings.lrrApiKey)}")
-            val response = apiCall.execute()
-            if (response.isSuccessful) {
-                response.body()?.let {
-                    lrrArchives.postValue(it.contentList)
+            val archivesCall =
+                LrrServer.api.search(queryMap, "Bearer: ${encode64(Settings.lrrApiKey)}")
+            archivesCall.execute().let { response ->
+                if (response.isSuccessful) {
+                    response.body()?.let { rb ->
+                        val contents = rb.contentList
+                        contents.forEach { if (favs.contains(it.uniqueSiteId)) it.favourite = true }
+                        lrrArchives.postValue(contents)
+                    }
+                } else {
+                    Timber.w("LRR server failed when querying archives @ ${Settings.lrrEndpoint}")
                 }
-            } else {
-                Timber.w("Failed when querying LRR server @ ${Settings.lrrEndpoint}")
             }
         }
         lrrSearchBundle.postValue(lrrSearchManager.toBundle())
+
+        // Details
+        /*
+        withContext(Dispatchers.IO) {
+            // TODO
+            detailsFlowKillSwitch.set(false)
+            lrrArchives.value?.let { archives ->
+                lrrSearchManager.getArchiveDetails(archives)
+                    .takeWhile { !detailsFlowKillSwitch.get() }
+                    .map { enrichLrrArchiveWithMetadata(it) }
+                    .scan(ArrayList<Content>()) { accumulator, value ->
+                        accumulator.add(value)
+                        accumulator
+                    }
+                    .collect { lrrArchivesDetail.postValue(it) }
+            }
+            dao.cleanup()
+        }
+         */
     }
+    /*
+        private fun enrichLrrArchiveWithMetadata(f: Content): Content {
+            dao.selectContentByStorageUri(f, false)?.let {
+                Timber.d("Mapped metadata for ${it.title}")
+                f.coverUri = it.cover.usableUri.ifBlank { it.coverImageUrl }.toUri()
+                f.contentId = it.id
+            }
+            return f
+        }
+     */
 
     fun searchLrr() {
         viewModelScope.launch { doSearchLrr() }
@@ -672,16 +723,20 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
      *
      * @param content Content whose favourite state to toggle
      */
-    fun toggleContentFavourite(content: Content, onSuccess: Runnable) {
+    fun toggleContentFavourite(content: Content, onSuccess: Runnable? = null) {
         viewModelScope.launch {
             try {
-                doToggleContentFavourite(content.id)
+                if (content.status == StatusContent.ONLINE) {
+                    doToggleContentFavouriteOnline(content)
+                } else {
+                    doToggleContentFavourite(content.id)
+                }
             } catch (t: Throwable) {
                 Timber.e(t)
             } finally {
                 dao.cleanup()
             }
-            onSuccess.run()
+            onSuccess?.run()
         }
     }
 
@@ -689,18 +744,33 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
      * Toggle the "favourite" state of the given content
      *
      * @param contentId ID of the content whose favourite state to toggle
-     * @return Resulting content
      */
-    private suspend fun doToggleContentFavourite(contentId: Long) =
-        withContext(Dispatchers.IO) {
-            // Check if given content still exists in DB
-            val theContent = dao.selectContent(contentId)
-                ?: throw InvalidParameterException("Invalid ContentId : $contentId")
+    private suspend fun doToggleContentFavourite(contentId: Long) = withContext(Dispatchers.IO) {
+        // Check if given content still exists in DB
+        val theContent = dao.selectContent(contentId)
+            ?: throw InvalidParameterException("Invalid ContentId : $contentId")
 
-            theContent.favourite = !theContent.favourite
-            persistJson(getApplication(), theContent)
-            dao.insertContent(theContent)
-            dao.cleanup()
+        theContent.favourite = !theContent.favourite
+        persistJson(getApplication(), theContent)
+        dao.insertContent(theContent)
+        dao.cleanup()
+    }
+
+    /**
+     * Toggle the "favourite" state of the given online content
+     *
+     * @param content Content whose favourite state to toggle
+     */
+    private suspend fun doToggleContentFavouriteOnline(content: Content) =
+        withContext(Dispatchers.IO) {
+            if (content.site == Site.LRR) {
+                if (content.favourite) {
+                    LrrServer.api.removeFromCategory(lrrFavCatId, content.uniqueSiteId).execute()
+                } else {
+                    LrrServer.api.addToCategory(lrrFavCatId, content.uniqueSiteId).execute()
+                }
+                doSearchLrr()
+            }
         }
 
     /**
