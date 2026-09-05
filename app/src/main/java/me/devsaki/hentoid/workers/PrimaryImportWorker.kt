@@ -601,10 +601,12 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
             return
         }
 
-        // If content has an external-library tag or an EXTERNAL status, remove it because we're importing for the primary library now
         GlobalScope.launch(Dispatchers.IO) {
+            // If content has an external-library tag or an EXTERNAL status, remove it because we're importing for the primary library now
             removeExternalAttributes(c)
             addContent(context, dao, c)
+
+            // Logging
             val customGroups =
                 c.getGroupItems(Grouping.CUSTOM)
                     .mapNotNull { it.linkedGroup }
