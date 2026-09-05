@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import android.net.Uri
 import android.os.Bundle
+import android.util.Base64
 import androidx.core.net.toUri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
@@ -47,6 +48,7 @@ import me.devsaki.hentoid.enums.Grouping
 import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.enums.StorageLocation
+import me.devsaki.hentoid.retrofit.sources.LRR_FAV_CAT
 import me.devsaki.hentoid.retrofit.sources.LrrServer
 import me.devsaki.hentoid.util.JSON_MIME_TYPE
 import me.devsaki.hentoid.util.Location
@@ -135,10 +137,11 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
     val detailsFlowKillSwitch = AtomicBoolean(true)
 
     // LRR data
-    val lrrArchives = MediatorLiveData<List<Content>>()
-    val lrrArchivesDetail = MediatorLiveData<List<Content>>()
+    val lrrArchives = MediatorLiveData<Pair<List<Content>, Int>>()
     val lrrSearchBundle = MutableLiveData<Bundle>()
     var lrrFavCatId: String = "" // Will be populated during 1st call
+    var lrrMaxResult: Int = -1 // Max index of results; -1 if max has been reached
+    var lrrArchivesPerPage = -1 // Page size; will be populated during 1st call
 
     // Other data
     // True if there's at least one existing custom group; false instead
@@ -567,20 +570,61 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
         viewModelScope.launch { doSearchContent(Settings.getGroupingDisplayG() == Grouping.FLAT) }
     }
 
-    private suspend fun doSearchLrr() {
+    // Update a single element inside the loaded list (useful when editing any of its properties)
+    private suspend fun updateLrr(archiveId: String) {
         if (!Settings.lrrEndpoint.startsWith("http", true)) return
 
-        // TODO search title and category
+        withContext(Dispatchers.IO) {
+            var isArchiveFav = false
+            val favCall = LrrServer.api.getArchiveCategories(archiveId)
+            favCall.execute().let { response ->
+                if (response.isSuccessful) {
+                    response.body()?.let { rb ->
+                        isArchiveFav = rb.categories.any { it.name == LRR_FAV_CAT }
+                    }
+                } else {
+                    Timber.w("LRR server failed when querying favs @ ${Settings.lrrEndpoint}")
+                }
+            }
+
+            val archivesCall = LrrServer.api.getArchive(archiveId)
+            archivesCall.execute().let { response ->
+                if (response.isSuccessful) {
+                    response.body()?.let { rb ->
+                        val newArchive = rb.toContent()
+                        newArchive.favourite = isArchiveFav
+
+                        // Post result
+                        lrrArchives.value?.let { arcPair ->
+                            // Create a new instance of the collection for the UI update to work
+                            val arcs = arcPair.first.toMutableList()
+                            // Insert the updated archive
+                            val replaceIdx = arcs.indexOfFirst { it.uniqueSiteId == archiveId }
+                            if (replaceIdx > -1) arcs[replaceIdx] = newArchive
+                            lrrArchives.postValue(Pair(arcs, arcPair.second))
+                        }
+                    }
+                } else {
+                    Timber.w("LRR server failed when querying archives @ ${Settings.lrrEndpoint}")
+                }
+            }
+        }
+    }
+
+    private suspend fun doSearchLrr(resumeLoad: Boolean = false) {
+        if (!Settings.lrrEndpoint.startsWith("http", true)) return
+
+        // TODO search category
         lrrSearchManager.setSortField(Settings.lrrSortField)
         lrrSearchManager.setSortDesc(Settings.isLrrSortDesc)
 
         withContext(Dispatchers.IO) {
             val favs: MutableSet<String> = HashSet()
-            val favCall = LrrServer.api.getCategories()
+            val favCall = LrrServer.api.getAllCategories()
             favCall.execute().let { response ->
                 if (response.isSuccessful) {
                     response.body()?.let { rb ->
-                        rb.firstOrNull { it.name == "favourite" }?.let {
+                        rb.firstOrNull { it.name == LRR_FAV_CAT }?.let {
                             lrrFavCatId = it.id
                             favs.addAll(it.archives)
                         }
@@ -591,15 +635,35 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
             }
 
             val queryMap = HashMap<String, String>()
-            // TODO add filter, category
+            if (resumeLoad) lrrSearchManager.setResumeFrom(lrrMaxResult)
+            else lrrSearchManager.setResumeFrom(-1)
+            lrrSearchManager.populateSearchQuery(queryMap)
             val archivesCall =
-                LrrServer.api.search(queryMap, "Bearer: ${encode64(Settings.lrrApiKey)}")
+                LrrServer.api.search(
+                    queryMap,
+                    "Bearer ${encode64(Settings.lrrApiKey, Base64.NO_WRAP)}"
+                )
             archivesCall.execute().let { response ->
                 if (response.isSuccessful) {
                     response.body()?.let { rb ->
-                        val contents = rb.contentList
-                        contents.forEach { if (favs.contains(it.uniqueSiteId)) it.favourite = true }
-                        lrrArchives.postValue(contents)
+                        lrrMaxResult =
+                            if (rb.contentList.size == rb.recordsTotal) -1 else rb.contentList.size
+                        // Value is optional when querying server info API => get directly from the response
+                        if (-1 == lrrArchivesPerPage && lrrMaxResult > -1)
+                            lrrArchivesPerPage = rb.contentList.size
+                        val newArchives = rb.contentList
+                        newArchives.forEach {
+                            if (favs.contains(it.uniqueSiteId)) it.favourite = true
+                        }
+
+                        // Post result
+                        val targetArchives = if (resumeLoad) {
+                            val targetArchives = ArrayList<Content>()
+                            targetArchives.addAll(lrrArchives.value?.first ?: emptyList())
+                            targetArchives.addAll(newArchives)
+                            targetArchives
+                        } else newArchives
+                        lrrArchives.postValue(Pair(targetArchives, rb.recordsTotal))
                     }
                 } else {
                     Timber.w("LRR server failed when querying archives @ ${Settings.lrrEndpoint}")
@@ -607,36 +671,7 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
             }
         }
         lrrSearchBundle.postValue(lrrSearchManager.toBundle())
-
-        // Details
-        /*
-        withContext(Dispatchers.IO) {
-            // TODO
-            detailsFlowKillSwitch.set(false)
-            lrrArchives.value?.let { archives ->
-                lrrSearchManager.getArchiveDetails(archives)
-                    .takeWhile { !detailsFlowKillSwitch.get() }
-                    .map { enrichLrrArchiveWithMetadata(it) }
-                    .scan(ArrayList<Content>()) { accumulator, value ->
-                        accumulator.add(value)
-                        accumulator
-                    }
-                    .collect { lrrArchivesDetail.postValue(it) }
-            }
-            dao.cleanup()
-        }
-         */
     }
-    /*
-        private fun enrichLrrArchiveWithMetadata(f: Content): Content {
-            dao.selectContentByStorageUri(f, false)?.let {
-                Timber.d("Mapped metadata for ${it.title}")
-                f.coverUri = it.cover.usableUri.ifBlank { it.coverImageUrl }.toUri()
-                f.contentId = it.id
-            }
-            return f
-        }
-     */
 
     fun searchLrr() {
         viewModelScope.launch { doSearchLrr() }
@@ -645,6 +680,15 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
     fun setLrrQuery(value: String) {
         lrrSearchManager.setQuery(value)
         viewModelScope.launch { doSearchLrr() }
+    }
+
+    fun setLrrFavouriteFilter(value: Boolean) {
+        lrrSearchManager.setFilterBookFavourites(value)
+        viewModelScope.launch { doSearchLrr() }
+    }
+
+    fun loadMoreLrr() {
+        viewModelScope.launch { doSearchLrr(true) }
     }
 
     // =========================
@@ -726,15 +770,13 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
     fun toggleContentFavourite(content: Content, onSuccess: Runnable? = null) {
         viewModelScope.launch {
             try {
-                if (content.status == StatusContent.ONLINE) {
-                    doToggleContentFavouriteOnline(content)
+                if (content.site == Site.LRR) {
+                    doToggleContentFavouriteLrr(content)
                 } else {
                     doToggleContentFavourite(content.id)
                 }
             } catch (t: Throwable) {
                 Timber.e(t)
-            } finally {
-                dao.cleanup()
             }
             onSuccess?.run()
         }
@@ -761,16 +803,22 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
      *
      * @param content Content whose favourite state to toggle
      */
-    private suspend fun doToggleContentFavouriteOnline(content: Content) =
+    private suspend fun doToggleContentFavouriteLrr(content: Content) =
         withContext(Dispatchers.IO) {
-            if (content.site == Site.LRR) {
-                if (content.favourite) {
-                    LrrServer.api.removeFromCategory(lrrFavCatId, content.uniqueSiteId).execute()
-                } else {
-                    LrrServer.api.addToCategory(lrrFavCatId, content.uniqueSiteId).execute()
-                }
-                doSearchLrr()
+            if (content.favourite) {
+                LrrServer.api.removeFromCategory(
+                    lrrFavCatId,
+                    content.uniqueSiteId,
+                    "Bearer ${encode64(Settings.lrrApiKey, Base64.NO_WRAP)}"
+                ).execute()
+            } else {
+                LrrServer.api.addToCategory(
+                    lrrFavCatId,
+                    content.uniqueSiteId,
+                    "Bearer ${encode64(Settings.lrrApiKey, Base64.NO_WRAP)}"
+                ).execute()
             }
+            updateLrr(content.uniqueSiteId)
         }
 
     /**

@@ -1,8 +1,10 @@
 package me.devsaki.hentoid.json.sources.lrr
 
 import com.squareup.moshi.JsonClass
+import me.devsaki.hentoid.database.domains.Attribute
 import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.database.domains.DownloadMode
+import me.devsaki.hentoid.enums.AttributeType
 import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.util.Settings
@@ -21,7 +23,8 @@ data class LrrArchives(
         val arcid: String,
         val title: String,
         val pagecount: Int,
-        val tags: String,
+        val progress: Int,
+        val tags: String
     ) {
         fun toContent(): Content {
             val result = Content(
@@ -31,14 +34,36 @@ data class LrrArchives(
                 title = title,
                 qtyPages = pagecount,
                 coverImageUrl = thumbUrl,
-                downloadMode = DownloadMode.STREAM
+                downloadMode = DownloadMode.STREAM,
+                lastReadPageIndex = progress
             )
-            // TODO tags
+            val tagList = tags.split(',').map { it.trim() }
+            result.addAttributes(tagList.map { toAttr(it) })
 
             return result
         }
 
+        private fun toAttr(attrName: String): Attribute {
+            var name = attrName
+            var attrType = AttributeType.TAG
+
+            val sepIdx = attrName.indexOf(':')
+            if (sepIdx > -1) {
+                val typeStr = attrName.substring(0, sepIdx).trim()
+                name = attrName.substring(sepIdx + 1).trim()
+                attrType = when (typeStr) {
+                    "artist" -> AttributeType.ARTIST
+                    "parody", "series" -> AttributeType.SERIE
+                    "group", "circle" -> AttributeType.CIRCLE
+                    "language" -> AttributeType.LANGUAGE
+                    "character" -> AttributeType.CHARACTER
+                    else -> AttributeType.TAG
+                }
+            }
+            return Attribute(type = attrType, name = name)
+        }
+
         val thumbUrl
-            get() = "${Settings.lrrEndpoint}/api/archives/$arcid/thumbnail".replace("//", "/")
+            get() = "${Settings.lrrEndpoint}/api/archives/$arcid/thumbnail".replace("//a", "/a")
     }
 }

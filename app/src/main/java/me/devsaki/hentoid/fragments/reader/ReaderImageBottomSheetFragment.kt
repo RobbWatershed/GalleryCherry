@@ -26,8 +26,10 @@ import kotlinx.coroutines.withContext
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.activities.bundles.ReaderActivityBundle
 import me.devsaki.hentoid.core.fixBottomSheetLanscape
+import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.database.domains.ImageFile
 import me.devsaki.hentoid.databinding.IncludeReaderImageBottomPanelBinding
+import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.util.exception.ContentNotProcessedException
 import me.devsaki.hentoid.util.file.fileExists
 import me.devsaki.hentoid.util.file.fileSizeFromUri
@@ -107,9 +109,8 @@ class ReaderImageBottomSheetFragment : BottomSheetDialogFragment(),
         super.onViewCreated(view, savedInstanceState)
         view.fixBottomSheetLanscape(this)
 
-        viewModel.getViewerImages().observe(viewLifecycleOwner) { images ->
-            this.onImagesChanged(images)
-        }
+        viewModel.getViewerImages().observe(viewLifecycleOwner) { onImagesChanged(it) }
+        viewModel.getContent().observe(viewLifecycleOwner) { onContentChanged(it) }
     }
 
 
@@ -120,6 +121,7 @@ class ReaderImageBottomSheetFragment : BottomSheetDialogFragment(),
      */
     private fun onImagesChanged(images: List<ImageFile>) {
         val context = requireContext()
+
         // Might happen when deleting the last page
         if (imageIndex >= images.size) imageIndex = images.size - 1
 
@@ -216,6 +218,16 @@ class ReaderImageBottomSheetFragment : BottomSheetDialogFragment(),
                 scale * 100,
                 sizeStr
             )
+        }
+    }
+
+    private fun onContentChanged(content: Content?) {
+        content ?: return
+        val isTemporary = content.status == StatusContent.SAVED
+        val isFoldersMode = content.status == StatusContent.STORAGE_RESOURCE
+        binding?.apply {
+            imgActionDelete.isEnabled = !isTemporary && !isFoldersMode
+            imgActionFavourite.isEnabled = !isTemporary && !isFoldersMode
         }
     }
 

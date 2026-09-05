@@ -147,6 +147,9 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
     // True if current content is dynamic
     private var isContentDynamic = false
 
+    // True if current content is temporary
+    private var isContentTemporary = false
+
     // True if current page is favourited
     private var isPageFavourite = false
 
@@ -703,14 +706,16 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
                     )
                 )
             )
-            favMenu.addSubmarineItem(
-                SubmarineItem(
-                    ContextCompat.getDrawable(
-                        requireContext(),
-                        if (isPageFavourite) R.drawable.ic_page_fav else R.drawable.ic_page
+            if (!isContentTemporary) {
+                favMenu.addSubmarineItem(
+                    SubmarineItem(
+                        ContextCompat.getDrawable(
+                            requireContext(),
+                            if (isPageFavourite) R.drawable.ic_page_fav else R.drawable.ic_page
+                        )
                     )
                 )
-            )
+            }
             favMenu.floats()
         }
     }
@@ -854,6 +859,7 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
         isContentDynamic = content.isDynamic
         isContentFavourite = content.favourite
         isFoldersMode = content.status == StatusContent.STORAGE_RESOURCE
+        isContentTemporary = content.status == StatusContent.SAVED
         // Wait for starting index only if content actually changes
         if (content.id != contentId) {
             adjustDisplay(content.site, content.bookPreferences)
@@ -873,13 +879,13 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
         updateFavouriteButtonIcon()
         updateInformationMicroMenu()
 
-        showFavoritePagesMenu.isVisible = !isContentDynamic && !isFoldersMode
-        deleteMenu.isVisible = !isContentDynamic
+        showFavoritePagesMenu.isVisible = !isContentDynamic && !isFoldersMode && !isContentTemporary
+        deleteMenu.isVisible = !isContentDynamic && !isContentTemporary
 
         // Display "redownload images" button if folder no longer exists and is not external nor dynamic
         binding?.apply {
             viewerRedownloadBtn.isVisible =
-                (!content.folderExists && !content.isDynamic && content.status != StatusContent.EXTERNAL)
+                (!content.folderExists && !content.isDynamic && content.status != StatusContent.EXTERNAL && !isContentTemporary)
         }
     }
 

@@ -687,6 +687,7 @@
     <string name="add_root">Add root folder</string>
     <string name="add_root_fail">Couldn\'t add root folder</string>
     <string name="up_level">Up one level</string>
+    <string name="lrr_server_extracting">Server is extracting…</string>
 
     <!-- Merge & split -->
     <string name="notif_split_merge">Split / merge</string>

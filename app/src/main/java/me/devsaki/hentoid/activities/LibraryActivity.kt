@@ -87,6 +87,7 @@ import me.devsaki.hentoid.viewmodels.ViewModelFactory
 import me.devsaki.hentoid.widget.ContentSearchManager.ContentSearchBundle
 import me.devsaki.hentoid.widget.FolderSearchManager
 import me.devsaki.hentoid.widget.GroupSearchManager.GroupSearchBundle
+import me.devsaki.hentoid.widget.LrrSearchManager
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
@@ -180,6 +181,7 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
     private val searchCriteria = mutableListOf(
         SearchCriteria(),
         SearchCriteria(),
+        SearchCriteria(),
         SearchCriteria()
     )
 
@@ -201,8 +203,11 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
     // Current Group search query
     private var groupSearchBundle: Bundle? = null
 
-    // Current Folder  search query
+    // Current Folder search query
     private var folderSearchBundle: Bundle? = null
+
+    // Current LRR search query
+    private var lrrSearchBundle: Bundle? = null
 
     private lateinit var searchSubmitDebouncer: Debouncer<String>
     private lateinit var searchLongSubmitDebouncer: Debouncer<String>
@@ -279,6 +284,7 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
         viewModel.contentSearchBundle.observe(this) { contentSearchBundle = it }
         viewModel.groupSearchBundle.observe(this) { groupSearchBundle = it }
         viewModel.folderSearchBundle.observe(this) { folderSearchBundle = it }
+        viewModel.lrrSearchBundle.observe(this) { lrrSearchBundle = it }
 
         viewModel.group.observe(this) { g: Group? ->
             group = g
@@ -582,7 +588,7 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
             searchMenu?.setOnActionExpandListener(object : MenuItem.OnActionExpandListener {
                 override fun onMenuItemActionExpand(item: MenuItem): Boolean {
                     showSearchSubBar(
-                        !isGroupDisplayed() && !isFoldersDisplayed(),
+                        !isGroupDisplayed() && !isFoldersDisplayed() && !isLrrDisplayed(),
                         null,
                         null,
                         !preventShowSearchHistoryNextExpand
@@ -694,7 +700,7 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
                     collapseSearchMenu()
                 }
                 showSearchSubBar(
-                    !isGroupDisplayed() && !isFoldersDisplayed(),
+                    !isGroupDisplayed() && !isFoldersDisplayed() && !isLrrDisplayed(),
                     showClear = true,
                     showSaveSearch = !isFoldersDisplayed(),
                     showSearchHistory = false
@@ -729,7 +735,7 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
             R.id.action_sort_filter -> LibraryBottomSortFilterFragment.invoke(
                 this, this.supportFragmentManager, isGroupDisplayed(),
                 group != null && group!!.isUngroupedGroup,
-                isFoldersDisplayed()
+                isFoldersDisplayed(), isLrrDisplayed()
             )
 
             else -> return false
@@ -938,7 +944,7 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
             }
 
             when (targetGrouping) {
-                Grouping.FLAT, Grouping.FOLDERS -> updateDisplay(targetGroupingId)
+                Grouping.FLAT, Grouping.FOLDERS, Grouping.LRR -> updateDisplay(targetGroupingId)
                 else -> goBackToGroups()
             }
 
@@ -1075,6 +1081,9 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
         } else if (isFoldersDisplayed() && folderSearchBundle != null) {
             val bundle = FolderSearchManager.FolderSearchBundle(folderSearchBundle!!)
             return bundle.isFilterActive()
+        } else if (isLrrDisplayed() && lrrSearchBundle != null) {
+            val bundle = LrrSearchManager.LrrSearchBundle(lrrSearchBundle!!)
+            return bundle.isFilterActive()
         }
         return false
     }
@@ -1151,6 +1160,25 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
             exportMenu?.isVisible = false
             changeGroupMenu?.isVisible = false
             folderMenu?.isVisible = 1 == selectedTotalCount
+            redownloadMenu?.isVisible = false
+            storageMethodMenu?.isVisible = false
+            groupCoverMenu?.isVisible = false
+            mergeMenu?.isVisible = false
+            splitMenu?.isVisible = false
+            transformMenu?.isVisible = false
+            exportMetaMenu?.isVisible = false
+        } else if (isLrrDisplayed()) {
+            editMenu?.isVisible = false // Could be an option to consider
+            deleteMenu?.isVisible = false // Could be an option to consider
+            detachMenu?.isVisible = false
+            refreshMenu?.isVisible = false
+            shareMenu?.isVisible = false
+            completedMenu?.isVisible = false // Could be an option to consider
+            resetReadStatsMenu?.isVisible = false // Could be an option to consider
+            rateMenu?.isVisible = false
+            exportMenu?.isVisible = false // TODO
+            changeGroupMenu?.isVisible = false
+            folderMenu?.isVisible = false
             redownloadMenu?.isVisible = false
             storageMethodMenu?.isVisible = false
             groupCoverMenu?.isVisible = false
@@ -1327,7 +1355,7 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
     }
 
     private fun getCurrentFragmentIndex(): Int {
-        return if (isGroupDisplayed()) 0 else if (isFoldersDisplayed()) 2 else 1
+        return if (isGroupDisplayed()) 0 else if (isFoldersDisplayed()) 2 else if (isLrrDisplayed()) 3 else 1
     }
 
     private fun saveSearchAsGroup() {

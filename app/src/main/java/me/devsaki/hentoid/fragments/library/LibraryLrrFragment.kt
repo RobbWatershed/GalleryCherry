@@ -42,11 +42,13 @@ import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.events.CommunicationEvent
 import me.devsaki.hentoid.events.ProcessEvent
+import me.devsaki.hentoid.fragments.ProgressDialogFragment
 import me.devsaki.hentoid.parsers.urlsToImageFiles
 import me.devsaki.hentoid.retrofit.sources.LrrServer
 import me.devsaki.hentoid.util.Debouncer
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.addContent
+import me.devsaki.hentoid.util.contentItemDiffCallback
 import me.devsaki.hentoid.util.dpToPx
 import me.devsaki.hentoid.util.toast
 import me.devsaki.hentoid.viewholders.ContentItem
@@ -57,6 +59,7 @@ import me.devsaki.hentoid.widget.AutofitGridLayoutManager
 import me.devsaki.hentoid.widget.DragSelectTouchListener
 import me.devsaki.hentoid.widget.DragSelectionProcessor
 import me.devsaki.hentoid.widget.FastAdapterPreClickSelectHelper
+import me.devsaki.hentoid.widget.ScrollPositionListener
 import me.zhanghai.android.fastscroll.FastScrollerBuilder
 import me.zhanghai.android.fastscroll.PopupTextProvider
 import org.greenrobot.eventbus.EventBus
@@ -205,6 +208,13 @@ class LibraryLrrFragment : Fragment(),
                 android.R.color.holo_orange_light,
                 android.R.color.holo_red_light
             )
+
+            val scrollListener =
+                ScrollPositionListener(lifecycleScope) { _ -> /* Nothing */ }
+            scrollListener.setOnEndOutOfBoundScrollListener {
+                viewModel.loadMoreLrr()
+            }
+            recyclerView.addOnScrollListener(scrollListener)
         }
 
         // Pager
@@ -423,20 +433,26 @@ class LibraryLrrFragment : Fragment(),
      * LiveData callback when the archives change
      * Happens when navigating
      */
-    private fun onArchivesChanged(result: List<Content>) {
+    private fun onArchivesChanged(result: Pair<List<Content>, Int>) {
         val enabled = activity.get()?.isLrrDisplayed() == true
         callback?.isEnabled = enabled
         if (!enabled) return
 
-        val resSize = result.size
-        Timber.i(">> LRR archives changed [new] (LRR) ! Size=$resSize)")
+        val resSize = result.first.size
+        val maxItems = result.second
+        Timber.i(">> LRR archives changed [new] (LRR) ! Size=$resSize/$maxItems)")
 
         val isEmpty = 0 == resSize
-        activity.get()?.updateTitle(resSize, resSize)
+        activity.get()?.updateTitle(resSize, maxItems)
+
+        // Grid won't be used in edit mode
+        val viewType =
+            if (Settings.Value.LIBRARY_DISPLAY_LIST == Settings.libraryDisplay) ContentItem.ViewType.LIBRARY
+            else ContentItem.ViewType.LIBRARY_GRID
 
         // Copy result to new list to avoid concurrency issues when processing updated list
-        val archives = result.toList().map { ContentItem(it, null, ContentItem.ViewType.LIBRARY) }
-        set(itemAdapter, archives/*, FILEITEM_DIFF_CALLBACK*/)
+        val archives = result.first.toList().map { ContentItem(it, null, viewType) }
+        set(itemAdapter, archives, contentItemDiffCallback)
 
         // Update visibility and content of advanced search bar
         // - After getting results from a search
@@ -468,9 +484,14 @@ class LibraryLrrFragment : Fragment(),
         context: Context,
         lrrArchive: Content
     ): Boolean {
+        val dialog = ProgressDialogFragment.invoke(
+            this,
+            resources.getString(R.string.lrr_server_extracting),
+            -1
+        )
+
         // Forge a streamed book from LRR
         lifecycleScope.launch(Dispatchers.IO) {
-            // TODO display waiting popup
             LrrServer.api.extract(lrrArchive.uniqueSiteId).execute().let { extraction ->
                 if (extraction.isSuccessful) {
                     extraction.body()?.let { eb ->
@@ -507,6 +528,7 @@ class LibraryLrrFragment : Fragment(),
                     }
                 }
             }
+            dialog.dismissAllowingStateLoss()
         }
         return true
     }

@@ -199,7 +199,7 @@ object Settings {
     var libraryFoldersRoot: String by StringSetting("library_folders_current_root", "")
     val lrrEndpoint: String by StringSetting(Key.LRR_ENDPOINT, "")
     val lrrApiKey: String by StringSetting(Key.LRR_API_KEY, "")
-    var lrrSortField: Int by IntSetting("pref_order_lrr_field", Default.ORDER_FOLDER_FIELD)
+    var lrrSortField: Int by IntSetting("pref_order_lrr_field", Default.ORDER_LRR_FIELD)
     var isLrrSortDesc: Boolean by BoolSetting("pref_order_lrr_desc", false)
 
 
@@ -904,6 +904,7 @@ object Settings {
         const val ORDER_CONTENT_FIELD = Value.ORDER_FIELD_TITLE
         const val ORDER_GROUP_FIELD = Value.ORDER_FIELD_TITLE
         const val ORDER_FOLDER_FIELD = Value.ORDER_FIELD_TITLE
+        const val ORDER_LRR_FIELD = Value.ORDER_FIELD_TITLE
         const val LIBRARY_DISPLAY = Value.LIBRARY_DISPLAY_LIST
         const val QUEUE_NEW_DOWNLOADS_POSITION = Value.QUEUE_NEW_DOWNLOADS_POSITION_BOTTOM
         const val IMPORT_NAME_PATTERN = "%t"

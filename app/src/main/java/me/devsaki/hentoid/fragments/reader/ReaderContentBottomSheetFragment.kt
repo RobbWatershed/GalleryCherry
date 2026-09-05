@@ -20,6 +20,7 @@ import me.devsaki.hentoid.core.fixBottomSheetLanscape
 import me.devsaki.hentoid.database.ObjectBoxDAO
 import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.databinding.IncludeReaderContentBottomPanelBinding
+import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.util.formatArtistForDisplay
 import me.devsaki.hentoid.util.formatTagsForDisplay
 import me.devsaki.hentoid.util.openReader
@@ -135,6 +136,11 @@ class ReaderContentBottomSheetFragment : BottomSheetDialogFragment() {
                 contentLaunchCode.text =
                     resources.getString(R.string.book_launchcode, content.uniqueSiteId)
             contentLaunchCode.isVisible = content.site.hasUniqueBookId
+
+            // Controls visibility
+            val isTemporary = content.status == StatusContent.SAVED
+            val isFoldersMode = content.status == StatusContent.STORAGE_RESOURCE
+            stars.forEach { it?.isVisible = !isTemporary && !isFoldersMode }
         }
     }
 

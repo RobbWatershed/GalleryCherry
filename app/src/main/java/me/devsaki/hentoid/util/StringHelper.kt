@@ -286,8 +286,8 @@ fun decode64(encodedString: String?): ByteArray {
  * @param rawString Raw string to encode
  * @return Encoded string
  */
-fun encode64(rawString: String): String {
-    return Base64.encodeToString(rawString.toByteArray(), Base64.DEFAULT)
+fun encode64(rawString: String, flags : Int = Base64.DEFAULT): String {
+    return Base64.encodeToString(rawString.toByteArray(), flags)
 }
 
 /**

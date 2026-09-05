@@ -1,28 +1,15 @@
 package me.devsaki.hentoid.widget
 
-import android.net.Uri
 import android.os.Bundle
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.merge
-import kotlinx.coroutines.withContext
-import me.devsaki.hentoid.R
-import me.devsaki.hentoid.core.THUMBS_CACHE
-import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.util.Settings
+import me.devsaki.hentoid.util.Settings.Value.ORDER_FIELD_READ_DATE
 import me.devsaki.hentoid.util.boolean
-import me.devsaki.hentoid.util.file.DisplayFile
-import me.devsaki.hentoid.util.file.StorageCache
-import me.devsaki.hentoid.util.getPictureThumbCached
-import me.devsaki.hentoid.util.image.imageNamesFilter
 import me.devsaki.hentoid.util.int
-import me.devsaki.hentoid.util.isSupportedArchivePdf
 import me.devsaki.hentoid.util.string
-import kotlin.math.roundToInt
 
 class LrrSearchManager {
     private val values = LrrSearchBundle()
+    private var resumeFromIndex = -1
 
 
     fun toBundle(): Bundle {
@@ -51,48 +38,32 @@ class LrrSearchManager {
         values.sortDesc = value
     }
 
+    fun setFilterBookFavourites(value: Boolean) {
+        values.filterBookFavourites = value
+    }
+
+    fun setResumeFrom(value: Int) {
+        resumeFromIndex = value
+    }
+
     fun clearFilters() {
         setQuery("")
+        setFilterBookFavourites(false)
     }
 
     fun clear() {
         clearFilters()
     }
 
-    /*
-    suspend fun getArchiveDetails(archives: List<Content>): Flow<Content> = withContext(Dispatchers.IO) {
-            val flowFiles =
-                archives.map {
-                    // Count contents to see if we have a folder book
-                    val imgChildren = if (it.isDirectory) {
-                        theExplorer.listFiles(context, it, imageNamesFilter)
-                    } else emptyList()
-                    // TODO get number of images inside archives and PDFs
-                    // Extract archive and PDF covers using private storage (same as bona library books)
-                    val fileName = it.name ?: ""
-                    val archiveCover =
-                        if (isSupportedArchivePdf(fileName)) {
-                            getPictureThumbCached(
-                                context, it.uri,
-                                context.resources.getDimension(R.dimen.thumb_max_dim)
-                                    .roundToInt(),
-                                null,
-                                StorageCache.createFinder(THUMBS_CACHE),
-                                StorageCache.createCreator(THUMBS_CACHE)
-                            ) ?: Uri.EMPTY
-                        } else Uri.EMPTY
-                    val coverUri = imgChildren.firstOrNull()?.uri ?: archiveCover
-                    val res = DisplayFile(it, imgChildren.size > 1, root)
-                    res.coverUri = coverUri
-                    res.nbChildren = imgChildren.size
-                    res
-                }
-                    .flowOn(Dispatchers.IO)
-
-            return@withContext merge(flowUp, flowFiles)
+    fun populateSearchQuery(q: HashMap<String, String>) {
+        if (values.query.isNotBlank()) q["filter"] = values.query
+        q["sortby"] = when (values.sortField) {
+            ORDER_FIELD_READ_DATE -> "lastread"
+            else -> "title"
         }
-
-     */
+        q["order"] = if (values.sortDesc) "desc" else "asc"
+        if (resumeFromIndex > -1) q["start"] = resumeFromIndex.toString()
+    }
 
     class LrrSearchBundle(val bundle: Bundle = Bundle()) {
 
@@ -102,8 +73,11 @@ class LrrSearchManager {
 
         var sortDesc by bundle.boolean(default = Settings.isLrrSortDesc)
 
+        var filterBookFavourites by bundle.boolean(default = false)
+
         fun isFilterActive(): Boolean {
             return query.isNotEmpty()
+                    || filterBookFavourites
         }
     }
 }

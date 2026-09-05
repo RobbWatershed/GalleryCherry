@@ -438,6 +438,8 @@ class ContentItem : AbstractItem<ContentItem.ViewHolder>,
                 } else {
                     visibility = View.INVISIBLE
                 }
+                // TODO use the 'progress' attribute of the LRR API
+                if (Site.LRR == content.site) visibility = View.INVISIBLE
             }
         }
 
@@ -501,7 +503,9 @@ class ContentItem : AbstractItem<ContentItem.ViewHolder>,
                     )
                     ivPages?.visibility = phVisibility
                     tv.visibility = phVisibility
-                    tv.text = String.format(Locale.ENGLISH, "%d", content.getNbDownloadedPages())
+                    var nbPages = content.getNbDownloadedPages()
+                    if (0 == nbPages) nbPages = content.qtyPages
+                    tv.text = String.format(Locale.ENGLISH, "%d", nbPages)
                 }
                 tvChapters?.let { tv ->
                     val chapters = content.chaptersList
