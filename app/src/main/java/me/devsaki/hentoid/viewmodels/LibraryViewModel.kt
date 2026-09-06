@@ -572,7 +572,7 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
 
     // Update a single element inside the loaded list (useful when editing any of its properties)
     private suspend fun updateLrr(archiveId: String) {
-        if (!Settings.lrrEndpoint.startsWith("http", true)) return
+        if (!Settings.lrrEndpoint.startsWith("http")) return
 
         withContext(Dispatchers.IO) {
             val favArchives = getLrrCategoryArchiveIds(LRR_FAV_CAT)
@@ -603,7 +603,7 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
     }
 
     private suspend fun doSearchLrr(resumeLoad: Boolean = false) {
-        if (!Settings.lrrEndpoint.startsWith("http", true)) return
+        if (!Settings.lrrEndpoint.startsWith("http")) return
 
         lrrSearchManager.setSortField(Settings.lrrSortField)
         lrrSearchManager.setSortDesc(Settings.isLrrSortDesc)

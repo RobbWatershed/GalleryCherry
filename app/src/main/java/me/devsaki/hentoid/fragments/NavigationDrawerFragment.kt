@@ -296,7 +296,6 @@ class NavigationDrawerFragment : Fragment(R.layout.fragment_navigation_drawer),
                     Grouping.FOLDERS.id,
                     Settings.groupingDisplay == Grouping.FOLDERS.id
                 )
-                // TODO conditional
                 addMenu(
                     submenu1,
                     R.string.groups_lrr,
@@ -304,7 +303,7 @@ class NavigationDrawerFragment : Fragment(R.layout.fragment_navigation_drawer),
                     NavItem.LIBRARY,
                     Grouping.LRR.id,
                     Settings.groupingDisplay == Grouping.LRR.id
-                ).isVisible = Settings.lrrEndpoint.startsWith("http", true)
+                ).isVisible = Settings.lrrEndpoint.startsWith("http")
                 addMenu(
                     submenu1,
                     R.string.fav_pages,
