@@ -80,7 +80,6 @@ import me.devsaki.hentoid.util.persistLocationCredentials
 import me.devsaki.hentoid.util.purgeContent
 import me.devsaki.hentoid.util.reparseFromScratch
 import me.devsaki.hentoid.util.splitUniqueStr
-import me.devsaki.hentoid.util.toast
 import me.devsaki.hentoid.util.toastLong
 import me.devsaki.hentoid.util.updateGroupsJson
 import me.devsaki.hentoid.util.updateJson
@@ -143,7 +142,7 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
     val lrrArchives = MediatorLiveData<Pair<List<Content>, Int>>()
     val lrrSearchBundle = MutableLiveData<Bundle>()
     val lrrFavCatId: String by lazy { getLrrCategoryId(LRR_FAV_CAT) }
-    var lrrMaxResult: Int = -1 // Max index of results; -1 if max has been reached
+    var lrrMaxResult: Int = 0 // Max index of results; 0 if max has been reached
     val lrrCategoryIdCache: MutableMap<String, String> = LinkedHashMap()
 
     // Other data
@@ -577,30 +576,39 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
     private suspend fun updateLrr(archiveId: String) {
         if (!Settings.lrrEndpoint.startsWith("http")) return
 
-        withContext(Dispatchers.IO) {
-            val favArchives = getLrrCategoryArchiveIds(LRR_FAV_CAT)
-            val isArchiveFav = favArchives.contains(archiveId)
+        try {
+            withContext(Dispatchers.IO) {
+                val favArchives = getLrrCategoryArchiveIds(LRR_FAV_CAT)
+                val isArchiveFav = favArchives.contains(archiveId)
 
-            val archivesCall = LrrServer.api.getArchive(archiveId)
-            archivesCall.execute().let { response ->
-                if (response.isSuccessful) {
-                    response.body()?.let { rb ->
-                        val newArchive = rb.toContent()
-                        newArchive.favourite = isArchiveFav
+                val archivesCall = LrrServer.api.getArchive(archiveId)
+                archivesCall.execute().let { response ->
+                    if (response.isSuccessful) {
+                        response.body()?.let { rb ->
+                            val newArchive = rb.toContent()
+                            newArchive.favourite = isArchiveFav
 
-                        // Post result
-                        lrrArchives.value?.let { arcPair ->
-                            // Create a new instance of the collection for the UI update to work
-                            val arcs = arcPair.first.toMutableList()
-                            // Insert the updated archive
-                            val replaceIdx = arcs.indexOfFirst { it.uniqueSiteId == archiveId }
-                            if (replaceIdx > -1) arcs[replaceIdx] = newArchive
-                            lrrArchives.postValue(Pair(arcs, arcPair.second))
+                            // Post result
+                            lrrArchives.value?.let { arcPair ->
+                                // Create a new instance of the collection for the UI update to work
+                                val arcs = arcPair.first.toMutableList()
+                                // Insert the updated archive
+                                val replaceIdx = arcs.indexOfFirst { it.uniqueSiteId == archiveId }
+                                if (replaceIdx > -1) arcs[replaceIdx] = newArchive
+                                lrrArchives.postValue(Pair(arcs, arcPair.second))
+                            }
                         }
+                    } else {
+                        Timber.w("LRR server failed when querying archive @ ${Settings.lrrEndpoint}")
                     }
-                } else {
-                    Timber.w("LRR server failed when querying archives @ ${Settings.lrrEndpoint}")
                 }
+            }
+        } catch (e: Exception) {
+            Timber.w(e)
+            if (e is SocketTimeoutException) {
+                application.toastLong(
+                    e.message ?: "Couldn't connect to LRR server ${Settings.lrrEndpoint}"
+                )
             }
         }
     }
@@ -617,13 +625,14 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
 
                 val queryMap = HashMap<String, String>()
                 if (resumeLoad) lrrSearchManager.setResumeFrom(lrrMaxResult)
-                else lrrSearchManager.setResumeFrom(-1)
+                else lrrSearchManager.setResumeFrom(0)
                 lrrSearchManager.populateSearchQuery(queryMap)
                 val archivesCall =
                     LrrServer.api.search(
                         queryMap,
                         "Bearer ${encode64(Settings.lrrApiKey, Base64.NO_WRAP)}"
                     )
+                Timber.d("Searching LRR from $lrrMaxResult")
                 archivesCall.execute().let { response ->
                     if (response.isSuccessful) {
                         response.body()?.let { rb ->
@@ -633,15 +642,16 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
                             }
 
                             // Post result
-                            val targetArchives = if (resumeLoad && lrrMaxResult > -1) {
+                            val targetArchives = if (resumeLoad && lrrMaxResult > 0) {
                                 val targetArchives = ArrayList<Content>()
                                 targetArchives.addAll(lrrArchives.value?.first ?: emptyList())
                                 targetArchives.addAll(serverArchives)
                                 targetArchives
                             } else serverArchives
 
-                            lrrMaxResult =
-                                if (serverArchives.size == rb.recordsFiltered) -1 else serverArchives.size
+                            lrrMaxResult = if (serverArchives.size == rb.recordsFiltered) 0
+                            else lrrMaxResult + serverArchives.size
+
                             lrrArchives.postValue(Pair(targetArchives, rb.recordsTotal))
                         }
                     } else {
@@ -673,7 +683,7 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
                     }
                 }
             } else {
-                Timber.w("LRR server failed when querying categories @ ${Settings.lrrEndpoint}")
+                Timber.w("LRR server failed when querying CategoryId @ ${Settings.lrrEndpoint}")
             }
         }
         return ""
@@ -686,7 +696,7 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
             if (response.isSuccessful) {
                 response.body()?.let { return it.archives }
             } else {
-                Timber.w("LRR server failed when querying categories @ ${Settings.lrrEndpoint}")
+                Timber.w("LRR server failed when querying CategoryArchiveIds @ ${Settings.lrrEndpoint}")
             }
         }
 

@@ -9,7 +9,7 @@ import me.devsaki.hentoid.util.string
 
 class LrrSearchManager {
     private val values = LrrSearchBundle()
-    private var resumeFromIndex = -1
+    private var resumeFromIndex = 0
 
 
     fun toBundle(): Bundle {
