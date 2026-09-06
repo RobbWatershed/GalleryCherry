@@ -80,6 +80,8 @@ import me.devsaki.hentoid.util.persistLocationCredentials
 import me.devsaki.hentoid.util.purgeContent
 import me.devsaki.hentoid.util.reparseFromScratch
 import me.devsaki.hentoid.util.splitUniqueStr
+import me.devsaki.hentoid.util.toast
+import me.devsaki.hentoid.util.toastLong
 import me.devsaki.hentoid.util.updateGroupsJson
 import me.devsaki.hentoid.util.updateJson
 import me.devsaki.hentoid.widget.ContentSearchManager
@@ -98,6 +100,7 @@ import me.devsaki.hentoid.workers.data.SplitMergeData
 import me.devsaki.hentoid.workers.data.UpdateJsonData
 import timber.log.Timber
 import java.io.IOException
+import java.net.SocketTimeoutException
 import java.security.InvalidParameterException
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
@@ -608,41 +611,50 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
         lrrSearchManager.setSortField(Settings.lrrSortField)
         lrrSearchManager.setSortDesc(Settings.isLrrSortDesc)
 
-        withContext(Dispatchers.IO) {
-            val favs = getLrrCategoryArchiveIds(LRR_FAV_CAT).toSet()
+        try {
+            withContext(Dispatchers.IO) {
+                val favs = getLrrCategoryArchiveIds(LRR_FAV_CAT).toSet()
 
-            val queryMap = HashMap<String, String>()
-            if (resumeLoad) lrrSearchManager.setResumeFrom(lrrMaxResult)
-            else lrrSearchManager.setResumeFrom(-1)
-            lrrSearchManager.populateSearchQuery(queryMap)
-            val archivesCall =
-                LrrServer.api.search(
-                    queryMap,
-                    "Bearer ${encode64(Settings.lrrApiKey, Base64.NO_WRAP)}"
-                )
-            archivesCall.execute().let { response ->
-                if (response.isSuccessful) {
-                    response.body()?.let { rb ->
-                        val serverArchives = rb.contentList
-                        serverArchives.forEach {
-                            if (favs.contains(it.uniqueSiteId)) it.favourite = true
+                val queryMap = HashMap<String, String>()
+                if (resumeLoad) lrrSearchManager.setResumeFrom(lrrMaxResult)
+                else lrrSearchManager.setResumeFrom(-1)
+                lrrSearchManager.populateSearchQuery(queryMap)
+                val archivesCall =
+                    LrrServer.api.search(
+                        queryMap,
+                        "Bearer ${encode64(Settings.lrrApiKey, Base64.NO_WRAP)}"
+                    )
+                archivesCall.execute().let { response ->
+                    if (response.isSuccessful) {
+                        response.body()?.let { rb ->
+                            val serverArchives = rb.contentList
+                            serverArchives.forEach {
+                                if (favs.contains(it.uniqueSiteId)) it.favourite = true
+                            }
+
+                            // Post result
+                            val targetArchives = if (resumeLoad && lrrMaxResult > -1) {
+                                val targetArchives = ArrayList<Content>()
+                                targetArchives.addAll(lrrArchives.value?.first ?: emptyList())
+                                targetArchives.addAll(serverArchives)
+                                targetArchives
+                            } else serverArchives
+
+                            lrrMaxResult =
+                                if (serverArchives.size == rb.recordsFiltered) -1 else serverArchives.size
+                            lrrArchives.postValue(Pair(targetArchives, rb.recordsTotal))
                         }
-
-                        // Post result
-                        val targetArchives = if (resumeLoad && lrrMaxResult > -1) {
-                            val targetArchives = ArrayList<Content>()
-                            targetArchives.addAll(lrrArchives.value?.first ?: emptyList())
-                            targetArchives.addAll(serverArchives)
-                            targetArchives
-                        } else serverArchives
-
-                        lrrMaxResult =
-                            if (serverArchives.size == rb.recordsFiltered) -1 else serverArchives.size
-                        lrrArchives.postValue(Pair(targetArchives, rb.recordsTotal))
+                    } else {
+                        Timber.w("LRR server failed when querying archives @ ${Settings.lrrEndpoint}")
                     }
-                } else {
-                    Timber.w("LRR server failed when querying archives @ ${Settings.lrrEndpoint}")
                 }
+            }
+        } catch (e: Exception) {
+            Timber.w(e)
+            if (e is SocketTimeoutException) {
+                application.toastLong(
+                    e.message ?: "Couldn't connect to LRR server ${Settings.lrrEndpoint}"
+                )
             }
         }
         lrrSearchBundle.postValue(lrrSearchManager.toBundle())
@@ -677,6 +689,7 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
                 Timber.w("LRR server failed when querying categories @ ${Settings.lrrEndpoint}")
             }
         }
+
         return emptyList()
     }
 

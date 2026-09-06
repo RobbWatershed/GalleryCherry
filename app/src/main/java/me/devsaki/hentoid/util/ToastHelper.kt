@@ -34,7 +34,11 @@ fun Context.toastLong(@StringRes resource: Int, vararg args: Any) {
     toast(resource, Toast.LENGTH_LONG, *args)
 }
 
-fun Context.toast(
+fun Context.toastLong(message: String) {
+    toast(message, Toast.LENGTH_LONG)
+}
+
+private fun Context.toast(
     @StringRes resource: Int,
     duration: Int,
     vararg args: Any

@@ -23,6 +23,7 @@ import me.devsaki.hentoid.util.file.removeFile
 import me.devsaki.hentoid.util.getFixedContext
 import me.devsaki.hentoid.util.network.WebkitPackageHelper
 import me.devsaki.hentoid.util.toast
+import me.devsaki.hentoid.util.toastLong
 import me.devsaki.hentoid.views.NestedScrollWebView
 import me.devsaki.hentoid.workers.UpdateDownloadWorker
 import me.devsaki.hentoid.workers.data.UpdateDownloadData
@@ -41,7 +42,7 @@ fun Context.startBrowserActivity(url: String) {
         startActivity(intent)
     } catch (e: ActivityNotFoundException) {
         Timber.e(e, "No activity found to open $url")
-        toast(R.string.error_browser, Toast.LENGTH_LONG)
+        toastLong(R.string.error_browser)
     }
 }
 
