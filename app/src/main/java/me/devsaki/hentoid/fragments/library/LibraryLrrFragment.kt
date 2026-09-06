@@ -491,10 +491,7 @@ class LibraryLrrFragment : Fragment(),
                             urlsToImageFiles(
                                 eb.pages
                                     .map {
-                                        it.replace(
-                                            "/api/",
-                                            "${Settings.lrrEndpoint}/api/".replace("//a", "/a")
-                                        )
+                                        it.replace("/api/", "${Settings.lrrEndpoint}/api/")
                                     },
                                 "",
                                 StatusContent.ONLINE,

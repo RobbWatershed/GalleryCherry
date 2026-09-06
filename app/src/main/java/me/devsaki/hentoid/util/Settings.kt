@@ -197,7 +197,7 @@ object Settings {
     var isFolderSortDesc: Boolean by BoolSetting("pref_order_folder_desc", false)
     var libraryFoldersRoots: List<String> by ListStringSetting("library_folders_roots")
     var libraryFoldersRoot: String by StringSetting("library_folders_current_root", "")
-    val lrrEndpoint: String by StringSetting(Key.LRR_ENDPOINT, "")
+    var lrrEndpoint: String by StringSetting(Key.LRR_ENDPOINT, "")
     val lrrApiKey: String by StringSetting(Key.LRR_API_KEY, "")
     var lrrSortField: Int by IntSetting("pref_order_lrr_field", Default.ORDER_LRR_FIELD)
     var isLrrSortDesc: Boolean by BoolSetting("pref_order_lrr_desc", false)

@@ -64,6 +64,6 @@ data class LrrArchives(
         }
 
         val thumbUrl
-            get() = "${Settings.lrrEndpoint}/api/archives/$arcid/thumbnail".replace("//a", "/a")
+            get() = "${Settings.lrrEndpoint}/api/archives/$arcid/thumbnail"
     }
 }

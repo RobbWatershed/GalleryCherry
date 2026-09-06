@@ -23,7 +23,7 @@
         <PreferenceCategory
             android:title="@string/pref_cat_sources_lrr"
             app:iconSpaceReserved="false">
-        <EditTextPreference
+        <Preference
             android:key="lrr_endpoint"
             android:title="@string/pref_lrr_url_title"
             android:summary="@string/pref_attributes_list_order_summary"

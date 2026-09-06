@@ -52,6 +52,7 @@ import me.devsaki.hentoid.retrofit.sources.LrrServer
 import me.devsaki.hentoid.retrofit.sources.LusciousServer
 import me.devsaki.hentoid.retrofit.sources.PawServer
 import me.devsaki.hentoid.retrofit.sources.PixivServer
+import me.devsaki.hentoid.ui.invokeInputDialog
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.applyTheme
 import me.devsaki.hentoid.util.download.DownloadSpeedLimiter
@@ -249,6 +250,21 @@ class SettingsFragment : PreferenceFragmentCompat(),
 
             "viewer_color_filter_reset" -> {
                 Settings.readerColorFilter = 0
+                true
+            }
+
+            Settings.Key.LRR_ENDPOINT -> {
+                invokeInputDialog(
+                    requireActivity(),
+                    R.string.pref_lrr_url_prompt,
+                    Settings.lrrEndpoint,
+                    onResult = {
+                        var res = it.lowercase().replace(" ", "")
+                        if (!res.startsWith("http")) res = "http://$res"
+                        if (res.endsWith('/')) res = res.substringBeforeLast('/')
+                        Settings.lrrEndpoint = res
+                    }
+                )
                 true
             }
 
