@@ -30,6 +30,14 @@ class LrrSearchManager {
         values.query = value
     }
 
+    fun setFilterBooksFavourite(value: Boolean) {
+        values.filterBookFavourites = value
+    }
+
+    fun setCategory(value: String) {
+        values.categoryId = value
+    }
+
     fun setSortField(value: Int) {
         values.sortField = value
     }
@@ -38,17 +46,13 @@ class LrrSearchManager {
         values.sortDesc = value
     }
 
-    fun setFilterBookFavourites(value: Boolean) {
-        values.filterBookFavourites = value
-    }
-
     fun setResumeFrom(value: Int) {
         resumeFromIndex = value
     }
 
     fun clearFilters() {
         setQuery("")
-        setFilterBookFavourites(false)
+        setCategory("")
     }
 
     fun clear() {
@@ -57,6 +61,7 @@ class LrrSearchManager {
 
     fun populateSearchQuery(q: HashMap<String, String>) {
         if (values.query.isNotBlank()) q["filter"] = values.query
+        if (values.categoryId.isNotBlank()) q["category"] = values.categoryId
         q["sortby"] = when (values.sortField) {
             ORDER_FIELD_READ_DATE -> "lastread"
             else -> "title"
@@ -69,6 +74,8 @@ class LrrSearchManager {
 
         var query by bundle.string(default = "")
 
+        var categoryId by bundle.string(default = "")
+
         var sortField by bundle.int(default = Settings.lrrSortField)
 
         var sortDesc by bundle.boolean(default = Settings.isLrrSortDesc)
@@ -77,7 +84,7 @@ class LrrSearchManager {
 
         fun isFilterActive(): Boolean {
             return query.isNotEmpty()
-                    || filterBookFavourites
+                    || categoryId.isNotEmpty()
         }
     }
 }

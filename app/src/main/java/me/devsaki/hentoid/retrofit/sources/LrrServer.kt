@@ -59,6 +59,9 @@ object LrrServer {
         @GET("categories")
         fun getAllCategories(): Call<List<LrrCategories.LrrCategory>>
 
+        @GET("categories/{id}")
+        fun getCategory(@Path("id") catId: String): Call<LrrCategories.LrrCategory>
+
         @PUT("categories/{id}/{archive}")
         fun addToCategory(
             @Path("id") catId: String,

@@ -139,9 +139,9 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
     // LRR data
     val lrrArchives = MediatorLiveData<Pair<List<Content>, Int>>()
     val lrrSearchBundle = MutableLiveData<Bundle>()
-    var lrrFavCatId: String = "" // Will be populated during 1st call
+    val lrrFavCatId: String by lazy { getLrrCategoryId(LRR_FAV_CAT) }
     var lrrMaxResult: Int = -1 // Max index of results; -1 if max has been reached
-    var lrrArchivesPerPage = -1 // Page size; will be populated during 1st call
+    val lrrCategoryIdCache: MutableMap<String, String> = LinkedHashMap()
 
     // Other data
     // True if there's at least one existing custom group; false instead
@@ -575,17 +575,8 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
         if (!Settings.lrrEndpoint.startsWith("http", true)) return
 
         withContext(Dispatchers.IO) {
-            var isArchiveFav = false
-            val favCall = LrrServer.api.getArchiveCategories(archiveId)
-            favCall.execute().let { response ->
-                if (response.isSuccessful) {
-                    response.body()?.let { rb ->
-                        isArchiveFav = rb.categories.any { it.name == LRR_FAV_CAT }
-                    }
-                } else {
-                    Timber.w("LRR server failed when querying favs @ ${Settings.lrrEndpoint}")
-                }
-            }
+            val favArchives = getLrrCategoryArchiveIds(LRR_FAV_CAT)
+            val isArchiveFav = favArchives.contains(archiveId)
 
             val archivesCall = LrrServer.api.getArchive(archiveId)
             archivesCall.execute().let { response ->
@@ -614,25 +605,11 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
     private suspend fun doSearchLrr(resumeLoad: Boolean = false) {
         if (!Settings.lrrEndpoint.startsWith("http", true)) return
 
-        // TODO search category
         lrrSearchManager.setSortField(Settings.lrrSortField)
         lrrSearchManager.setSortDesc(Settings.isLrrSortDesc)
 
         withContext(Dispatchers.IO) {
-            val favs: MutableSet<String> = HashSet()
-            val favCall = LrrServer.api.getAllCategories()
-            favCall.execute().let { response ->
-                if (response.isSuccessful) {
-                    response.body()?.let { rb ->
-                        rb.firstOrNull { it.name == LRR_FAV_CAT }?.let {
-                            lrrFavCatId = it.id
-                            favs.addAll(it.archives)
-                        }
-                    }
-                } else {
-                    Timber.w("LRR server failed when querying favs @ ${Settings.lrrEndpoint}")
-                }
-            }
+            val favs = getLrrCategoryArchiveIds(LRR_FAV_CAT).toSet()
 
             val queryMap = HashMap<String, String>()
             if (resumeLoad) lrrSearchManager.setResumeFrom(lrrMaxResult)
@@ -646,23 +623,21 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
             archivesCall.execute().let { response ->
                 if (response.isSuccessful) {
                     response.body()?.let { rb ->
-                        lrrMaxResult =
-                            if (rb.contentList.size == rb.recordsTotal) -1 else rb.contentList.size
-                        // Value is optional when querying server info API => get directly from the response
-                        if (-1 == lrrArchivesPerPage && lrrMaxResult > -1)
-                            lrrArchivesPerPage = rb.contentList.size
-                        val newArchives = rb.contentList
-                        newArchives.forEach {
+                        val serverArchives = rb.contentList
+                        serverArchives.forEach {
                             if (favs.contains(it.uniqueSiteId)) it.favourite = true
                         }
 
                         // Post result
-                        val targetArchives = if (resumeLoad) {
+                        val targetArchives = if (resumeLoad && lrrMaxResult > -1) {
                             val targetArchives = ArrayList<Content>()
                             targetArchives.addAll(lrrArchives.value?.first ?: emptyList())
-                            targetArchives.addAll(newArchives)
+                            targetArchives.addAll(serverArchives)
                             targetArchives
-                        } else newArchives
+                        } else serverArchives
+
+                        lrrMaxResult =
+                            if (serverArchives.size == rb.recordsFiltered) -1 else serverArchives.size
                         lrrArchives.postValue(Pair(targetArchives, rb.recordsTotal))
                     }
                 } else {
@@ -671,6 +646,38 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
             }
         }
         lrrSearchBundle.postValue(lrrSearchManager.toBundle())
+    }
+
+    private fun getLrrCategoryId(name: String): String {
+        if (lrrCategoryIdCache.containsKey(name)) return lrrCategoryIdCache[name]!!
+
+        val catCall = LrrServer.api.getAllCategories()
+        catCall.execute().let { response ->
+            if (response.isSuccessful) {
+                response.body()?.let { rb ->
+                    rb.firstOrNull { it.name == name }?.let {
+                        lrrCategoryIdCache[name] = it.id
+                        return it.id
+                    }
+                }
+            } else {
+                Timber.w("LRR server failed when querying categories @ ${Settings.lrrEndpoint}")
+            }
+        }
+        return ""
+    }
+
+    private fun getLrrCategoryArchiveIds(name: String): List<String> {
+        val catId = getLrrCategoryId(name)
+        val catCall = LrrServer.api.getCategory(catId)
+        catCall.execute().let { response ->
+            if (response.isSuccessful) {
+                response.body()?.let { return it.archives }
+            } else {
+                Timber.w("LRR server failed when querying categories @ ${Settings.lrrEndpoint}")
+            }
+        }
+        return emptyList()
     }
 
     fun searchLrr() {
@@ -683,7 +690,9 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
     }
 
     fun setLrrFavouriteFilter(value: Boolean) {
-        lrrSearchManager.setFilterBookFavourites(value)
+        lrrSearchManager.setFilterBooksFavourite(value)
+        if (value) lrrSearchManager.setCategory(lrrFavCatId)
+        else lrrSearchManager.setCategory("")
         viewModelScope.launch { doSearchLrr() }
     }
 

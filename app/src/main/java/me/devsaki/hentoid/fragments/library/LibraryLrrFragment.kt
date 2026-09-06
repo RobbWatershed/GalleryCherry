@@ -201,19 +201,11 @@ class LibraryLrrFragment : Fragment(),
                 .setPopupTextProvider(this@LibraryLrrFragment)
                 .useMd2Style()
                 .build()
-            swipeContainer.setOnRefreshListener { viewModel.searchLrr() }
-            swipeContainer.setColorSchemeResources(
-                android.R.color.holo_blue_bright,
-                android.R.color.holo_green_light,
-                android.R.color.holo_orange_light,
-                android.R.color.holo_red_light
-            )
 
-            val scrollListener =
-                ScrollPositionListener(lifecycleScope) { _ -> /* Nothing */ }
-            scrollListener.setOnEndOutOfBoundScrollListener {
-                viewModel.loadMoreLrr()
-            }
+            swipeContainer.isEnabled = false // Shuffle mode isn't available for LRR
+
+            val scrollListener = ScrollPositionListener(lifecycleScope) { _ -> /* Nothing */ }
+            scrollListener.setOnEndOutOfBoundScrollListener { viewModel.loadMoreLrr() }
             recyclerView.addOnScrollListener(scrollListener)
         }
 
