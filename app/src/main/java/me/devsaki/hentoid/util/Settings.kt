@@ -259,6 +259,7 @@ object Settings {
 
 
     // ARCHIVES
+    var archiveDestination: Int by IntSettingStr("ARCHIVE_DESTINATION", Value.DESTINATION_DEVICE)
     var archiveTargetFolder: String by StringSetting(
         "ARCHIVE_TARGET_FOLDER",
         Value.TARGET_FOLDER_DOWNLOADS
@@ -961,6 +962,9 @@ object Settings {
 
         const val STORAGE_FILL_BALANCE_FREE = 0
         const val STORAGE_FILL_FALLOVER = 1
+
+        const val DESTINATION_DEVICE = 0
+        const val DESTINATION_LRR = 1
 
         const val FOLDER_NAMING_CONTENT_ID = 0
         const val FOLDER_NAMING_CONTENT_TITLE_ID = 1

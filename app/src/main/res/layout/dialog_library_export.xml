@@ -14,12 +14,41 @@
         android:clipToPadding="false"
         android:padding="16dp">
 
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/destination_choice"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:checkedButton="@id/dest_device"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:selectionRequired="true"
+            app:singleSelection="true">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/dest_device"
+                style="@style/HentoidCheckButtonOutlinedStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/device"
+                app:icon="@drawable/ic_devices" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/dest_lrr"
+                style="@style/HentoidCheckButtonOutlinedStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/lrr"
+                app:icon="@drawable/ic_lrr" />
+
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+
         <me.devsaki.hentoid.views.ListPickerView
             android:id="@+id/target_folder"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:entries="@array/target_folder_entries"
-            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/destination_choice"
             app:title="@string/target_folder" />
 
         <me.devsaki.hentoid.views.ListPickerView
@@ -71,6 +100,13 @@
             app:icon="@drawable/ic_action_export"
             app:iconSize="24dp"
             app:layout_constraintTop_toBottomOf="@id/delete_switch" />
+
+        <androidx.constraintlayout.widget.Group
+            android:id="@+id/device_grp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="visible"
+            app:constraint_referenced_ids="target_folder,target_format,background_color,overwrite_switch" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </ScrollView>

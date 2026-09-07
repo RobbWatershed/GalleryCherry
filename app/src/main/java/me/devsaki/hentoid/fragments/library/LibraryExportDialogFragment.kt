@@ -86,6 +86,21 @@ class LibraryExportDialogFragment : BaseDialogFragment<LibraryExportDialogFragme
         refreshControls(true)
 
         binding?.apply {
+            val lrrOn = Settings.lrrEndpoint.startsWith("http") && Settings.lrrApiKey.isNotBlank()
+            destinationChoice.addOnButtonCheckedListener { _, checkedId, isChecked ->
+                if (isChecked) {
+                    deviceGrp.isVisible = (checkedId == R.id.dest_device)
+                    Settings.archiveDestination =
+                        if (checkedId == R.id.dest_device) Settings.Value.DESTINATION_DEVICE
+                        else Settings.Value.DESTINATION_LRR
+                }
+            }
+            destinationChoice.check(
+                if (Settings.archiveDestination == Settings.Value.DESTINATION_LRR && lrrOn) R.id.dest_lrr
+                else R.id.dest_device
+            )
+            destinationChoice.isVisible = lrrOn
+
             targetFolder.setOnIndexChangeListener { index ->
                 when (index) {
                     0 -> Settings.archiveTargetFolder =
@@ -179,6 +194,7 @@ class LibraryExportDialogFragment : BaseDialogFragment<LibraryExportDialogFragme
     private fun buildWorkerParams(): ArchiveWorker.Params {
         binding!!.apply {
             return ArchiveWorker.Params(
+                Settings.archiveDestination,
                 Settings.archiveTargetFolder,
                 targetFormat.index,
                 backgroundColor.index,

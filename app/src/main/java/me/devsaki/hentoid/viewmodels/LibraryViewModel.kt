@@ -141,9 +141,8 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
     // LRR data
     val lrrArchives = MediatorLiveData<Pair<List<Content>, Int>>()
     val lrrSearchBundle = MutableLiveData<Bundle>()
-    val lrrFavCatId: String by lazy { getLrrCategoryId(LRR_FAV_CAT) }
+    val lrrFavCatId: String by lazy { LrrServer.getLrrCategoryId(LRR_FAV_CAT) }
     var lrrMaxResult: Int = 0 // Max index of results; 0 if max has been reached
-    val lrrCategoryIdCache: MutableMap<String, String> = LinkedHashMap()
 
     // Other data
     // True if there's at least one existing custom group; false instead
@@ -670,27 +669,8 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
         lrrSearchBundle.postValue(lrrSearchManager.toBundle())
     }
 
-    private fun getLrrCategoryId(name: String): String {
-        if (lrrCategoryIdCache.containsKey(name)) return lrrCategoryIdCache[name]!!
-
-        val catCall = LrrServer.api.getAllCategories()
-        catCall.execute().let { response ->
-            if (response.isSuccessful) {
-                response.body()?.let { rb ->
-                    rb.firstOrNull { it.name == name }?.let {
-                        lrrCategoryIdCache[name] = it.id
-                        return it.id
-                    }
-                }
-            } else {
-                Timber.w("LRR server failed when querying CategoryId @ ${Settings.lrrEndpoint}")
-            }
-        }
-        return ""
-    }
-
     private fun getLrrCategoryArchiveIds(name: String): List<String> {
-        val catId = getLrrCategoryId(name)
+        val catId = LrrServer.getLrrCategoryId(name)
         val catCall = LrrServer.api.getCategory(catId)
         catCall.execute().let { response ->
             if (response.isSuccessful) {
@@ -1523,6 +1503,7 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
         val contentIds = content.map { it.id }.toLongArray()
 
         val params = ArchiveWorker.Params(
+            0, // Device
             "",
             1, // CBZ
             0,

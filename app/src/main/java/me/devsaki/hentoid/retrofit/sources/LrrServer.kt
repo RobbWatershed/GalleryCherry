@@ -2,20 +2,26 @@ package me.devsaki.hentoid.retrofit.sources
 
 import me.devsaki.hentoid.json.sources.lrr.LrrArchives
 import me.devsaki.hentoid.json.sources.lrr.LrrCategories
+import me.devsaki.hentoid.json.sources.lrr.LrrCategorySuccess
 import me.devsaki.hentoid.json.sources.lrr.LrrExtraction
 import me.devsaki.hentoid.json.sources.lrr.LrrServerInfo
 import me.devsaki.hentoid.json.sources.lrr.LrrSuccess
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.network.OkHttpClientManager
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
 import retrofit2.Call
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Header
+import retrofit2.http.Multipart
 import retrofit2.http.PUT
+import retrofit2.http.Part
 import retrofit2.http.Path
 import retrofit2.http.QueryMap
+import timber.log.Timber
 
 // Lanraragi
 
@@ -24,6 +30,7 @@ const val LRR_FAV_CAT = "\uD83D\uDD16 Favorites"
 
 object LrrServer {
     lateinit var api: Api
+    val lrrCategoryIdCache: MutableMap<String, String> = LinkedHashMap()
 
     init {
         init()
@@ -76,7 +83,43 @@ object LrrServer {
             @Header("Authorization") apiKey: String
         ): Call<LrrSuccess>
 
+        @Multipart
+        @PUT("categories")
+        fun createCategory(
+            @Part("name") name: RequestBody,
+            @Header("Authorization") apiKey: String
+        ): Call<LrrCategorySuccess>
+
+        @Multipart
+        @PUT("archives/upload")
+        fun uploadArchive(
+            @Part file: MultipartBody.Part,
+            @Part("category_id") categoryId: RequestBody,
+            @Part("tags") tags: RequestBody,
+            @Part("title") title: RequestBody,
+            @Header("Authorization") apiKey: String
+        ): Call<LrrSuccess>
+
         @GET("info")
         fun info(): Call<LrrServerInfo>
+    }
+
+    fun getLrrCategoryId(name: String): String {
+        if (lrrCategoryIdCache.containsKey(name)) return lrrCategoryIdCache[name]!!
+
+        val catCall = api.getAllCategories()
+        catCall.execute().let { response ->
+            if (response.isSuccessful) {
+                response.body()?.let { rb ->
+                    rb.firstOrNull { it.name == name }?.let {
+                        lrrCategoryIdCache[name] = it.id
+                        return it.id
+                    }
+                }
+            } else {
+                Timber.w("LRR server failed when querying CategoryId @ ${Settings.lrrEndpoint}")
+            }
+        }
+        return ""
     }
 }

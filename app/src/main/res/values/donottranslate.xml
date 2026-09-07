@@ -524,6 +524,7 @@
     <string name="about_discord" translatable="false"><u>Discord</u></string>
     <string name="about_berg" translatable="false"><u>Codeberg</u></string>
     <string name="about_api" translatable="false"> / API %d</string>
+    <string name="lrr" translatable="false">LANraragi</string>
 
     <!-- Strings: Settings -->
     <string name="pref_generic_summary" translatable="false">%s</string>

@@ -3,6 +3,8 @@ package me.devsaki.hentoid.workers
 import android.content.Context
 import android.graphics.Color
 import android.net.Uri
+import android.text.TextUtils
+import android.util.Base64
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
@@ -16,23 +18,25 @@ import kotlinx.coroutines.withContext
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.database.CollectionDAO
 import me.devsaki.hentoid.database.ObjectBoxDAO
+import me.devsaki.hentoid.database.domains.Attribute
 import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.database.domains.DownloadMode
 import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.notification.archive.ArchiveCompleteNotification
 import me.devsaki.hentoid.notification.archive.ArchiveProgressNotification
 import me.devsaki.hentoid.notification.archive.ArchiveStartNotification
+import me.devsaki.hentoid.retrofit.sources.LrrServer
 import me.devsaki.hentoid.util.ProgressManager
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.canBeArchived
 import me.devsaki.hentoid.util.copy
 import me.devsaki.hentoid.util.createArchivePdfCover
 import me.devsaki.hentoid.util.download.selectDownloadLocation
+import me.devsaki.hentoid.util.encode64
 import me.devsaki.hentoid.util.file.ArchiveStreamer
 import me.devsaki.hentoid.util.file.Beholder
 import me.devsaki.hentoid.util.file.DEFAULT_MIME_TYPE
 import me.devsaki.hentoid.util.file.PdfManager
-import me.devsaki.hentoid.util.file.copyFile
 import me.devsaki.hentoid.util.file.createNewDownloadFile
 import me.devsaki.hentoid.util.file.findFile
 import me.devsaki.hentoid.util.file.findOrCreateDocumentFile
@@ -51,6 +55,10 @@ import me.devsaki.hentoid.util.notification.BaseNotification
 import me.devsaki.hentoid.util.pause
 import me.devsaki.hentoid.util.persistJson
 import me.devsaki.hentoid.util.removeContent
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import timber.log.Timber
 import java.io.IOException
 import java.time.Instant
@@ -61,6 +69,7 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
 
     @JsonClass(generateAdapter = true)
     data class Params(
+        val destination: Int,
         val targetFolderUri: String,
         val targetFormat: Int,
         val pdfBackgroundColor: Int,
@@ -68,6 +77,8 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
         val deleteOnSuccess: Boolean,
         val archivePrimaryContent: Boolean = false
     )
+
+    private var lrrHentoidCategoryId = ""
 
     private var nbItems = 0
     private var nbKO = 0
@@ -115,9 +126,15 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
                     if (isStopped) break
                     try {
                         dao.selectContent(contentId)?.let {
-                            if (it.isArchive || it.isPdf) moveContent(it, params, dao)
-                            else if (canBeArchived(it)) archiveContent(it, params, dao)
-                            else {
+                            val result =
+                                if (params.destination == Settings.Value.DESTINATION_LRR)
+                                    archiveLrr(it)
+                                else archiveDevice(it, params, dao)
+
+                            if (result && !isStopped && params.deleteOnSuccess)
+                                removeContent(applicationContext, dao, it)
+
+                            if (!result) {
                                 globalProgress.setProgress(contentId.toString(), 1f)
                                 nextKO()
                             }
@@ -137,7 +154,17 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
             }
         }
 
-    private suspend fun moveContent(content: Content, params: Params, dao : CollectionDAO) {
+    private suspend fun archiveDevice(
+        content: Content,
+        params: Params,
+        dao: CollectionDAO
+    ): Boolean {
+        return if (content.isArchive || content.isPdf) moveContent(content, params)
+        else if (canBeArchived(content)) archiveContent(content, params, dao)
+        else false
+    }
+
+    private fun moveContent(content: Content, params: Params): Boolean {
         Timber.i("Moving ${content.title}")
         val context = applicationContext
         val archiveUri = content.storageUri.toUri()
@@ -150,21 +177,23 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
                 .use { input -> copy(input, output) }
         }
 
-        if (!isStopped) {
-            if (params.deleteOnSuccess) removeContent(context, dao, content)
-        }
+        return true
     }
 
-    private suspend fun archiveContent(content: Content, params: Params, dao: CollectionDAO) {
+    private suspend fun archiveContent(
+        content: Content,
+        params: Params,
+        dao: CollectionDAO
+    ): Boolean {
         Timber.i("Archiving ${content.title}")
         val context = applicationContext
-        val bookFolder = getDocumentFromTreeUriString(context, content.storageUri) ?: return
+        val bookFolder = getDocumentFromTreeUriString(context, content.storageUri) ?: return false
 
         // Archive primary : Get images only
         // Else : Everything (incl. JSON and thumb) gets into the archive
         val filter = if (params.archivePrimaryContent) imageNamesFilter else null
         val files = listFiles(context, bookFolder, filter)
-        if (files.isEmpty()) return
+        if (files.isEmpty()) return false
 
         Timber.i("Archive ${content.storageUri} : ${files.size} files to process")
 
@@ -255,8 +284,71 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
                     createArchivePdfCover(context, content, dao)
                 }
             }
-            if (params.deleteOnSuccess) removeContent(context, dao, content)
+            return true
         }
+        return false
+    }
+
+    private fun archiveLrr(
+        content: Content
+    ): Boolean {
+        if (!content.isArchive && !content.isPdf) return false // TODO keep that but make sure no archive will be sent here (warning on the dialog?)
+        // TODO visual feedback when OK ? or KO ? (additional to notification)
+
+        if (lrrHentoidCategoryId.isBlank()) {
+            val appName = applicationContext.getString(R.string.app_name)
+            lrrHentoidCategoryId = LrrServer.getLrrCategoryId(appName)
+            if (lrrHentoidCategoryId.isBlank()) {
+                LrrServer.api.createCategory(
+                    appName.toRequestBody("multipart/form-data".toMediaType()),
+                    "Bearer ${encode64(Settings.lrrApiKey, Base64.NO_WRAP)}"
+                ).execute().let {
+                    if (it.isSuccessful) lrrHentoidCategoryId = it.body()?.catId ?: ""
+                    else Timber.w("${it.code()} : ${it.message()} ${it.errorBody()?.string()}")
+                }
+            }
+        }
+
+        val rTitle = content.title.toRequestBody("multipart/form-data".toMediaType())
+        val rTags =
+            attrsToLrrString(content.attributeList).toRequestBody("multipart/form-data".toMediaType())
+        val rCat = lrrHentoidCategoryId.toRequestBody("multipart/form-data".toMediaType())
+
+        LrrServer.api.uploadArchive(
+            uriToMultipart(applicationContext, content.storageUri.toUri(), "file"),
+            rCat,
+            rTags,
+            rTitle,
+            "Bearer ${encode64(Settings.lrrApiKey, Base64.NO_WRAP)}"
+        ).execute().let {
+            if (!it.isSuccessful) {
+                Timber.w("${it.code()} : ${it.message()} ${it.errorBody()?.string()}")
+                return false
+            }
+            return true
+        }
+    }
+
+    private fun uriToMultipart(context: Context, uri: Uri, partName: String): MultipartBody.Part {
+        val contentResolver = context.contentResolver
+        val mime = contentResolver.getType(uri) ?: DEFAULT_MIME_TYPE
+
+        getInputStream(context, uri).use {
+            val bytes = it.readBytes()
+            val requestBody = bytes.toRequestBody(mime.toMediaTypeOrNull())
+            val fileName = uri.lastPathSegment
+            return MultipartBody.Part.createFormData(partName, fileName, requestBody)
+        }
+    }
+
+    private fun attrsToLrrString(attrs: List<Attribute>): String {
+        return TextUtils.join(
+            ", ",
+            attrs.map {
+                applicationContext.resources.getString(it.type.displayName)
+                    .lowercase() + ":" + it.name.trim()
+            }
+        )
     }
 
     @Throws(IOException::class)
