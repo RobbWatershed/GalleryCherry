@@ -3,7 +3,6 @@ package me.devsaki.hentoid.workers
 import android.content.Context
 import android.graphics.Color
 import android.net.Uri
-import android.os.ParcelFileDescriptor
 import android.text.TextUtils
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
@@ -51,12 +50,12 @@ import me.devsaki.hentoid.util.formatFolderName
 import me.devsaki.hentoid.util.getOrCreateSiteDownloadDir
 import me.devsaki.hentoid.util.getStorageRoot
 import me.devsaki.hentoid.util.image.imageNamesFilter
+import me.devsaki.hentoid.util.network.UriFileRequestBody
 import me.devsaki.hentoid.util.notification.BaseNotification
 import me.devsaki.hentoid.util.pause
 import me.devsaki.hentoid.util.persistJson
 import me.devsaki.hentoid.util.removeContent
 import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import timber.log.Timber
@@ -312,7 +311,7 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
         }
 
         // Create temp archive if there's none
-        var tempFolder : File? = null
+        var tempFolder: File? = null
         val archiveUri = if (!content.isArchive && !content.isPdf) {
             val files = listDocumentFiles(context, content.storageUri.toUri(), imageNamesFilter)
             if (files.isEmpty()) return false
@@ -354,25 +353,24 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
         val rFile = uriToMultipart(context, archiveUri, "file")
 
         try {
-            Timber.d("LRR Archive : Sending ${content.title} to LRR server...")
+            Timber.i("LRR Archive : Sending ${content.title} to LRR server...")
             LrrServer.api.uploadArchive(
-                rFile.first,
+                rFile,
                 rCat,
                 rTags,
                 rTitle,
                 LrrServer.formatApiKey()
             ).execute().let {
                 if (!it.isSuccessful) {
-                    Timber.d("LRR Archive : Failure")
+                    Timber.w("LRR Archive : Failure")
                     Timber.w("${it.code()} : ${it.message()} ${it.errorBody()?.string()}")
                     return false
                 }
-                Timber.d("LRR Archive : Success")
+                Timber.i("LRR Archive : Success")
                 return true
             }
         } finally { // Catch happens upstream
             tempFolder?.deleteRecursively()
-            rFile.second.close() // Mandatory cleanup
         }
     }
 
@@ -380,28 +378,13 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
         context: Context,
         uri: Uri,
         partName: String
-    ): Pair<MultipartBody.Part, ParcelFileDescriptor> {
-        context.contentResolver.let { res ->
-            val mime = res.getType(uri) ?: DEFAULT_MIME_TYPE
-            val fileName = uri.lastPathSegment
-            res.openFileDescriptor(uri, "r")?.let { pfd ->
-                pfd.fileDescriptor.toRequestBody(mime.toMediaTypeOrNull()).let { rb ->
-                    return Pair(MultipartBody.Part.createFormData(partName, fileName, rb), pfd)
-                }
-            }
-        }
-        /*
-                val contentResolver = context.contentResolver
-                val mime = contentResolver.getType(uri) ?: DEFAULT_MIME_TYPE
-
-                getInputStream(context, uri).use {
-                    val bytes = it.readBytes()
-                    val requestBody = bytes.toRequestBody(mime.toMediaTypeOrNull())
-                    val fileName = uri.lastPathSegment
-                    return MultipartBody.Part.createFormData(partName, fileName, requestBody)
-                }
-         */
-        throw IOException("Couldn't find source file")
+    ): MultipartBody.Part {
+        val fileName = uri.lastPathSegment
+        return MultipartBody.Part.createFormData(
+            partName,
+            fileName,
+            UriFileRequestBody(context, uri)
+        )
     }
 
     private fun attrsToLrrString(attrs: List<Attribute>): String {
