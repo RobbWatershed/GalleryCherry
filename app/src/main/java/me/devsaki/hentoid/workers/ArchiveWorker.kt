@@ -3,8 +3,8 @@ package me.devsaki.hentoid.workers
 import android.content.Context
 import android.graphics.Color
 import android.net.Uri
+import android.os.ParcelFileDescriptor
 import android.text.TextUtils
-import android.util.Base64
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
@@ -32,20 +32,20 @@ import me.devsaki.hentoid.util.canBeArchived
 import me.devsaki.hentoid.util.copy
 import me.devsaki.hentoid.util.createArchivePdfCover
 import me.devsaki.hentoid.util.download.selectDownloadLocation
-import me.devsaki.hentoid.util.encode64
 import me.devsaki.hentoid.util.file.ArchiveStreamer
 import me.devsaki.hentoid.util.file.Beholder
 import me.devsaki.hentoid.util.file.DEFAULT_MIME_TYPE
 import me.devsaki.hentoid.util.file.PdfManager
 import me.devsaki.hentoid.util.file.createNewDownloadFile
-import me.devsaki.hentoid.util.file.findFile
+import me.devsaki.hentoid.util.file.findDocumentFile
 import me.devsaki.hentoid.util.file.findOrCreateDocumentFile
 import me.devsaki.hentoid.util.file.formatDisplay
 import me.devsaki.hentoid.util.file.getDocumentFromTreeUriString
 import me.devsaki.hentoid.util.file.getInputStream
+import me.devsaki.hentoid.util.file.getOrCreateCacheFolder
 import me.devsaki.hentoid.util.file.getOutputStream
 import me.devsaki.hentoid.util.file.getParent
-import me.devsaki.hentoid.util.file.listFiles
+import me.devsaki.hentoid.util.file.listDocumentFiles
 import me.devsaki.hentoid.util.file.removeDocument
 import me.devsaki.hentoid.util.formatFolderName
 import me.devsaki.hentoid.util.getOrCreateSiteDownloadDir
@@ -60,6 +60,7 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import timber.log.Timber
+import java.io.File
 import java.io.IOException
 import java.time.Instant
 
@@ -192,7 +193,7 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
         // Archive primary : Get images only
         // Else : Everything (incl. JSON and thumb) gets into the archive
         val filter = if (params.archivePrimaryContent) imageNamesFilter else null
-        val files = listFiles(context, bookFolder, filter)
+        val files = listDocumentFiles(context, bookFolder.uri, filter)
         if (files.isEmpty()) return false
 
         Timber.i("Archive ${content.storageUri} : ${files.size} files to process")
@@ -292,16 +293,17 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
     private fun archiveLrr(
         content: Content
     ): Boolean {
-        if (!content.isArchive && !content.isPdf) return false // TODO keep that but make sure no archive will be sent here (warning on the dialog?)
-        // TODO visual feedback when OK ? or KO ? (additional to notification)
+        if (content.downloadMode == DownloadMode.STREAM) return false
+        val context = applicationContext
+        // TODO logging
 
         if (lrrHentoidCategoryId.isBlank()) {
-            val appName = applicationContext.getString(R.string.app_name)
+            val appName = context.getString(R.string.app_name)
             lrrHentoidCategoryId = LrrServer.getLrrCategoryId(appName)
             if (lrrHentoidCategoryId.isBlank()) {
                 LrrServer.api.createCategory(
                     appName.toRequestBody("multipart/form-data".toMediaType()),
-                    "Bearer ${encode64(Settings.lrrApiKey, Base64.NO_WRAP)}"
+                    LrrServer.formatApiKey()
                 ).execute().let {
                     if (it.isSuccessful) lrrHentoidCategoryId = it.body()?.catId ?: ""
                     else Timber.w("${it.code()} : ${it.message()} ${it.errorBody()?.string()}")
@@ -309,36 +311,97 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
             }
         }
 
+        // Create temp archive if there's none
+        var tempFolder : File? = null
+        val archiveUri = if (!content.isArchive && !content.isPdf) {
+            val files = listDocumentFiles(context, content.storageUri.toUri(), imageNamesFilter)
+            if (files.isEmpty()) return false
+
+            tempFolder = getOrCreateCacheFolder(context, "tmp" + content.id) ?: return false
+            val file = File(
+                tempFolder.absolutePath + File.separator + formatFolderName(content) + ".zip"
+            )
+            if (!file.createNewFile()) throw IOException("Couldn't create file")
+
+            val archiveStreamer = ArchiveStreamer(
+                context, file.toUri(),
+                append = false,
+                removeArchivedFiles = false
+            ) {
+                globalProgress.setProgress(content.id.toString(), it)
+                launchProgressNotification()
+            }
+            try {
+                files.forEach {
+                    if (isStopped) return@forEach
+                    archiveStreamer.addFile(context, it.uri)
+                }
+
+                // Make sure all files have been processed before continuing
+                do {
+                    pause(500)
+                } while (archiveStreamer.queueActive)
+            } finally {
+                archiveStreamer.close()
+            }
+            file.toUri()
+        } else content.storageUri.toUri()
+
         val rTitle = content.title.toRequestBody("multipart/form-data".toMediaType())
         val rTags =
             attrsToLrrString(content.attributeList).toRequestBody("multipart/form-data".toMediaType())
         val rCat = lrrHentoidCategoryId.toRequestBody("multipart/form-data".toMediaType())
+        val rFile = uriToMultipart(context, archiveUri, "file")
 
-        LrrServer.api.uploadArchive(
-            uriToMultipart(applicationContext, content.storageUri.toUri(), "file"),
-            rCat,
-            rTags,
-            rTitle,
-            "Bearer ${encode64(Settings.lrrApiKey, Base64.NO_WRAP)}"
-        ).execute().let {
-            if (!it.isSuccessful) {
-                Timber.w("${it.code()} : ${it.message()} ${it.errorBody()?.string()}")
-                return false
+        try {
+            Timber.d("LRR Archive : Sending ${content.title} to LRR server...")
+            LrrServer.api.uploadArchive(
+                rFile.first,
+                rCat,
+                rTags,
+                rTitle,
+                LrrServer.formatApiKey()
+            ).execute().let {
+                if (!it.isSuccessful) {
+                    Timber.d("LRR Archive : Failure")
+                    Timber.w("${it.code()} : ${it.message()} ${it.errorBody()?.string()}")
+                    return false
+                }
+                Timber.d("LRR Archive : Success")
+                return true
             }
-            return true
+        } finally { // Catch happens upstream
+            tempFolder?.deleteRecursively()
+            rFile.second.close() // Mandatory cleanup
         }
     }
 
-    private fun uriToMultipart(context: Context, uri: Uri, partName: String): MultipartBody.Part {
-        val contentResolver = context.contentResolver
-        val mime = contentResolver.getType(uri) ?: DEFAULT_MIME_TYPE
-
-        getInputStream(context, uri).use {
-            val bytes = it.readBytes()
-            val requestBody = bytes.toRequestBody(mime.toMediaTypeOrNull())
+    private fun uriToMultipart(
+        context: Context,
+        uri: Uri,
+        partName: String
+    ): Pair<MultipartBody.Part, ParcelFileDescriptor> {
+        context.contentResolver.let { res ->
+            val mime = res.getType(uri) ?: DEFAULT_MIME_TYPE
             val fileName = uri.lastPathSegment
-            return MultipartBody.Part.createFormData(partName, fileName, requestBody)
+            res.openFileDescriptor(uri, "r")?.let { pfd ->
+                pfd.fileDescriptor.toRequestBody(mime.toMediaTypeOrNull()).let { rb ->
+                    return Pair(MultipartBody.Part.createFormData(partName, fileName, rb), pfd)
+                }
+            }
         }
+        /*
+                val contentResolver = context.contentResolver
+                val mime = contentResolver.getType(uri) ?: DEFAULT_MIME_TYPE
+
+                getInputStream(context, uri).use {
+                    val bytes = it.readBytes()
+                    val requestBody = bytes.toRequestBody(mime.toMediaTypeOrNull())
+                    val fileName = uri.lastPathSegment
+                    return MultipartBody.Part.createFormData(partName, fileName, requestBody)
+                }
+         */
+        throw IOException("Couldn't find source file")
     }
 
     private fun attrsToLrrString(attrs: List<Attribute>): String {
@@ -410,7 +473,7 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
             getDocumentFromTreeUriString(context, targetFolderUri)?.let { targetFolder ->
                 if (!overwrite) {
                     val existing =
-                        findFile(context, targetFolder, displayName)
+                        findDocumentFile(context, targetFolder.uri, displayName)
                     // If the target file is already there and we can't overwrite, skip archiving
                     if (existing != null) Uri.EMPTY
                 }

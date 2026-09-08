@@ -1,5 +1,6 @@
 package me.devsaki.hentoid.retrofit.sources
 
+import android.util.Base64
 import me.devsaki.hentoid.json.sources.lrr.LrrArchives
 import me.devsaki.hentoid.json.sources.lrr.LrrCategories
 import me.devsaki.hentoid.json.sources.lrr.LrrCategorySuccess
@@ -7,6 +8,7 @@ import me.devsaki.hentoid.json.sources.lrr.LrrExtraction
 import me.devsaki.hentoid.json.sources.lrr.LrrServerInfo
 import me.devsaki.hentoid.json.sources.lrr.LrrSuccess
 import me.devsaki.hentoid.util.Settings
+import me.devsaki.hentoid.util.encode64
 import me.devsaki.hentoid.util.network.OkHttpClientManager
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
@@ -102,6 +104,10 @@ object LrrServer {
 
         @GET("info")
         fun info(): Call<LrrServerInfo>
+    }
+
+    fun formatApiKey() : String {
+        return "Bearer ${encode64(Settings.lrrApiKey, Base64.NO_WRAP)}"
     }
 
     fun getLrrCategoryId(name: String): String {

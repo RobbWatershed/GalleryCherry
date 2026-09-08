@@ -149,9 +149,9 @@ class StorageDownloadManager {
             if (targetContent.status == StatusContent.EXTERNAL) {
                 val bookFolderName = formatFolderName(targetContent)
                 // First try finding the folder with new naming...
-                var targetFolder = findFolder(context, parentFolder, bookFolderName.first)
+                var targetFolder = findFolder(context, parentFolder.uri, bookFolderName.first)
                 if (null == targetFolder) { // ...then with old (sanitized) naming...
-                    targetFolder = findFolder(context, parentFolder, bookFolderName.second)
+                    targetFolder = findFolder(context, parentFolder.uri, bookFolderName.second)
                     if (null == targetFolder) { // ...if not, create a new folder with the new naming...
                         targetFolder = parentFolder.createDirectory(bookFolderName.first)
                         if (null == targetFolder) { // ...if it fails, create a new folder with the old naming

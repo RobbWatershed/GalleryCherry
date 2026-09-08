@@ -91,7 +91,7 @@ class FolderSearchManager() {
             val rootDoc =
                 theExplorer.getDocumentFromTreeUri(context, root) ?: return@withContext emptyList()
             val docs = theExplorer.listDocumentFiles(
-                context, rootDoc, nameFilter
+                context, rootDoc.uri, nameFilter
             )
 
             // Count contents to see if we have a folder book
@@ -143,11 +143,11 @@ class FolderSearchManager() {
                 )
             )
             val flowFiles =
-                theExplorer.listDocumentFilesFw(context, rootDoc, nameFilter)
+                theExplorer.listDocumentFilesFw(context, rootDoc.uri, nameFilter)
                     .map {
                         // Count contents to see if we have a folder book
                         val imgChildren = if (it.isDirectory) {
-                            theExplorer.listFiles(context, it, imageNamesFilter)
+                            theExplorer.listFiles(context, it.uri, imageNamesFilter)
                         } else emptyList()
                         // TODO get number of images inside archives and PDFs
                         // Extract archive and PDF covers using private storage (same as bona library books)

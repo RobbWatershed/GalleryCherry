@@ -33,7 +33,7 @@ import me.devsaki.hentoid.notification.import_.ImportStartNotification
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.addContent
 import me.devsaki.hentoid.util.createImageListFromFolder
-import me.devsaki.hentoid.util.file.findFile
+import me.devsaki.hentoid.util.file.findDocumentFile
 import me.devsaki.hentoid.util.file.getDocumentFromTreeUriString
 import me.devsaki.hentoid.util.file.getFileFromSingleUriString
 import me.devsaki.hentoid.util.file.listFolders
@@ -295,7 +295,7 @@ class MetadataImportWorker(val context: Context, val params: WorkerParameters) :
     private fun mapFilesToContent(context: Context, c: Content, siteFolder: DocumentFile): Boolean {
         val bookfolders: List<DocumentFile>?
         if (bookFoldersCache.containsKey(c.site)) bookfolders = bookFoldersCache[c.site] else {
-            bookfolders = listFolders(context, siteFolder)
+            bookfolders = listFolders(context, siteFolder.uri)
             bookFoldersCache[c.site] = bookfolders
         }
         var filesFound = false
@@ -307,10 +307,10 @@ class MetadataImportWorker(val context: Context, val params: WorkerParameters) :
                     // Cache folder Uri
                     c.setStorageDoc(f)
                     // Cache JSON Uri
-                    val json = findFile(context, f, JSON_FILE_NAME_V2)
+                    val json = findDocumentFile(context, f.uri, JSON_FILE_NAME_V2)
                     if (json != null) c.jsonUri = json.uri.toString()
                     // Create the images from detected files
-                    c.setImageFiles(createImageListFromFolder(context, f))
+                    c.setImageFiles(createImageListFromFolder(context, f.uri))
                     filesFound = true
                     break
                 }
@@ -336,7 +336,7 @@ class MetadataImportWorker(val context: Context, val params: WorkerParameters) :
     ) {
         val rootFolder = getDocumentFromTreeUriString(context, storageUri)
         if (null != rootFolder) {
-            val subfolders = listFolders(context, rootFolder)
+            val subfolders = listFolders(context, rootFolder.uri)
             var folderName: String
             for (f in subfolders) if (f.name != null) {
                 folderName = f.name!!.lowercase(Locale.getDefault())

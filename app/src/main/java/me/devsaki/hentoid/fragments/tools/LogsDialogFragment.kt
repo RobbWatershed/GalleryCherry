@@ -6,6 +6,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -24,8 +25,7 @@ import me.devsaki.hentoid.enums.StorageLocation
 import me.devsaki.hentoid.fragments.BaseDialogFragment
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.dimensAsDp
-import me.devsaki.hentoid.util.file.getDocumentFromTreeUriString
-import me.devsaki.hentoid.util.file.listFiles
+import me.devsaki.hentoid.util.file.listDocumentFiles
 import me.devsaki.hentoid.util.file.openFile
 import me.devsaki.hentoid.util.file.shareFile
 import me.devsaki.hentoid.util.formatEpochToDate
@@ -95,13 +95,10 @@ class LogsDialogFragment : BaseDialogFragment<Nothing>() {
     private suspend fun getLogs(): List<DocumentFile> {
         context?.let { ctx ->
             return withContext(Dispatchers.IO) {
-                val rootFolder =
-                    getDocumentFromTreeUriString(
-                        ctx,
-                        Settings.getStorageUri(StorageLocation.PRIMARY_1)
-                    ) ?: return@withContext emptyList<DocumentFile>()
+                val rootUri = Settings.getStorageUri(StorageLocation.PRIMARY_1)
+                if (rootUri.isBlank()) return@withContext emptyList()
 
-                val files = listFiles(ctx, rootFolder) {
+                val files = listDocumentFiles(ctx, rootUri.toUri()) {
                     it.lowercase(Locale.getDefault()).endsWith("_log.txt")
                 }
                 // Sort by date desc

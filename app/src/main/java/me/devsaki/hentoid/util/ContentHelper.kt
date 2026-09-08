@@ -89,7 +89,7 @@ import me.devsaki.hentoid.util.file.getOutputStream
 import me.devsaki.hentoid.util.file.getParent
 import me.devsaki.hentoid.util.file.isSupportedArchive
 import me.devsaki.hentoid.util.file.legacyFileFromUri
-import me.devsaki.hentoid.util.file.listFiles
+import me.devsaki.hentoid.util.file.listDocumentFiles
 import me.devsaki.hentoid.util.file.listFoldersFilter
 import me.devsaki.hentoid.util.file.removeDocument
 import me.devsaki.hentoid.util.file.removeFile
@@ -544,7 +544,7 @@ suspend fun getPictureFilesFromContent(context: Context, content: Content): List
             return@withContext emptyList()
         }
 
-        return@withContext listFoldersFilter(context, folder) {
+        return@withContext listFoldersFilter(context, folder.uri) {
             it.lowercase(Locale.getDefault()).startsWith(THUMB_FILE_NAME)
                     && isSupportedMedia(it)
         }
@@ -1054,9 +1054,9 @@ fun getOrCreateContentDownloadDir(
 
     // First try finding the folder with new naming...
     if (!createOnly || createFromScratch) {
-        var bookFolder = findFolder(context, parentFolder, bookFolderName.first)
+        var bookFolder = findFolder(context, parentFolder.uri, bookFolderName.first)
         if (null == bookFolder) { // ...then with old (sanitized) naming
-            bookFolder = findFolder(context, parentFolder, bookFolderName.second)
+            bookFolder = findFolder(context, parentFolder.uri, bookFolderName.second)
         }
         if (bookFolder != null) {
             if (createFromScratch) removeDocument(context, bookFolder)
@@ -1096,7 +1096,8 @@ fun formatFolderName(
 
 private fun formatFolderName(
     content: Content,
-    title: String, author: String
+    title: String,
+    author: String
 ): String {
     var result = ""
     when (Settings.folderNameFormat) {
@@ -1201,10 +1202,9 @@ fun getOrCreateSiteDownloadDir(
             val siteFolderName = site.folder
             var siteFolders =
                 explorer.listDocumentFiles(
-                    context, appFolder,
-                    { displayName ->
-                        displayName.startsWith(siteFolderName)
-                    }, listFolders = true, listFiles = false, stopFirst = false
+                    context, appFolder.uri,
+                    { displayName -> displayName.startsWith(siteFolderName) },
+                    listFolders = true, listFiles = false, stopFirst = false
                 )
             // Order by name (nhentai, nhentai1, ..., nhentai10)
             siteFolders = siteFolders.sortedWith(InnerNameNumberFileComparator())
@@ -1547,7 +1547,7 @@ private fun purgeFolderFiles(
             (!removeJson && name.endsWith("json"))
                     || (!removeCover && name.startsWith(THUMB_FILE_NAME))
         }
-        val filesToKeep = listFiles(context, bookFolder, namesToKeep)
+        val filesToKeep = listDocumentFiles(context, bookFolder.uri, namesToKeep)
 
         // If any, copy them to temp storage
         val tempFiles: MutableList<File> = ArrayList()

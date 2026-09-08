@@ -496,7 +496,7 @@ fun findOrCreateDocumentFile(
     displayName: String
 ): DocumentFile? {
     // Look for it first
-    val file = findFile(context, folder, displayName)
+    val file = findDocumentFile(context, folder.uri, displayName)
     if (null == file) { // Create it
         val localMime = if (mimeType.isNullOrEmpty()) DEFAULT_MIME_TYPE else mimeType
         return folder.createFile(localMime, displayName)
@@ -515,7 +515,7 @@ fun createNoMedia(context: Context, folder: DocumentFile): Int {
     if (!folder.exists() && !folder.isDirectory) return -1
 
     // Make sure the nomedia file is created
-    var nomedia = findFile(context, folder, NOMEDIA_FILE_NAME)
+    var nomedia = findDocumentFile(context, folder.uri, NOMEDIA_FILE_NAME)
     if (null == nomedia) {
         nomedia = folder.createFile(DEFAULT_MIME_TYPE, NOMEDIA_FILE_NAME)
         if (null == nomedia || !nomedia.exists()) return -3
@@ -538,7 +538,7 @@ fun createNoMedia(context: Context, folder: DocumentFile): Int {
  * @param subfolderName Name of the folder to find
  * @return Folder inside the given parent folder (non recursive) that has the given name; null if not found
  */
-fun findFolder(context: Context, parent: DocumentFile, subfolderName: String): DocumentFile? {
+fun findFolder(context: Context, parent: Uri, subfolderName: String): DocumentFile? {
     return findDocumentFile(context, parent, subfolderName, listFolders = true, listFiles = false)
 }
 
@@ -550,7 +550,7 @@ fun findFolder(context: Context, parent: DocumentFile, subfolderName: String): D
  * @param fileName Name of the file to find
  * @return File inside the given parent folder (non recursive) that has the given name; null if not found
  */
-fun findFile(context: Context, parent: DocumentFile, fileName: String): DocumentFile? {
+fun findDocumentFile(context: Context, parent: Uri, fileName: String): DocumentFile? {
     return findDocumentFile(context, parent, fileName, listFolders = false, listFiles = true)
 }
 
@@ -562,7 +562,7 @@ fun findFile(context: Context, parent: DocumentFile, fileName: String): Document
  * @return Subfolders of the given parent folder
  */
 // see https://stackoverflow.com/questions/5084896/using-contentproviderclient-vs-contentresolver-to-access-content-provider
-fun listFolders(context: Context, parent: DocumentFile): List<DocumentFile> {
+fun listFolders(context: Context, parent: Uri): List<DocumentFile> {
     return listFoldersFilter(context, parent, null)
 }
 
@@ -576,7 +576,7 @@ fun listFolders(context: Context, parent: DocumentFile): List<DocumentFile> {
  */
 fun listFoldersFilter(
     context: Context,
-    parent: DocumentFile,
+    parent: Uri,
     filter: NameFilter?
 ): List<DocumentFile> {
     var result = emptyList<DocumentFile>()
@@ -603,9 +603,9 @@ fun listFoldersFilter(
  * @param filter  Name filter to use to filter the files to list
  * @return Files of the given parent folder matching the given name filter
  */
-fun listFiles(
+fun listDocumentFiles(
     context: Context,
-    parent: DocumentFile,
+    parent: Uri,
     filter: NameFilter? = null
 ): List<DocumentFile> {
     var result = emptyList<DocumentFile>()
@@ -636,7 +636,7 @@ fun listFiles(
  */
 private fun findDocumentFile(
     context: Context,
-    parent: DocumentFile,
+    parent: Uri,
     nameFilter: String,
     listFolders: Boolean,
     listFiles: Boolean
@@ -684,9 +684,7 @@ fun findFile(
             return findFile(it, fileName)?.toUri()
         }
     } else {
-        getDocumentFromTreeUri(context, parent)?.let {
-            return findFile(context, it, fileName)?.uri
-        }
+        return findDocumentFile(context, parent, fileName)?.uri
     }
     return null
 }
@@ -700,11 +698,7 @@ fun listFiles(
             return p.listFiles()?.map { it.toUri() } ?: emptyList()
         }
     } else {
-        getDocumentFromTreeUri(context, parent)?.let {
-            getDocumentFromTreeUri(context, parent)?.let { p ->
-                return listFiles(context, p).map { it.uri }
-            }
-        }
+        return listDocumentFiles(context, parent).map { it.uri }
     }
     return emptyList()
 }
@@ -1053,7 +1047,7 @@ fun copyFiles(
         val targetFolder = DocumentFile.fromTreeUri(context, targetFolderUri)
         if (null == targetFolder || !targetFolder.exists()) return emptyList()
 
-        val existingFiles = listFiles(context, targetFolder)
+        val existingFiles = listDocumentFiles(context, targetFolder.uri)
             .groupBy { it.name ?: "" }
             .mapValues { it.value.first() }
 

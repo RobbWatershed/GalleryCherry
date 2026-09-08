@@ -188,9 +188,8 @@ abstract class BaseDeleteWorker(
                 else if (docsRoot != Uri.EMPTY && docsNames.isNotEmpty()) {
                     getDocumentFromTreeUri(applicationContext, docsRoot)?.let { root ->
                         FileExplorer(applicationContext, root).use { fe ->
-                            val docs = fe.listDocumentFiles(
-                                applicationContext, root
-                            ).filter { docsNames.contains(it.name) }
+                            val docs = fe.listDocumentFiles(applicationContext, root.uri)
+                                .filter { docsNames.contains(it.name) }
                             deleteMax += docs.size
                             removeDocuments(docs.map { it.uri })
                         }

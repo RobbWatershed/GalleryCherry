@@ -314,11 +314,7 @@ class ExternalImportWorker(context: Context, parameters: WorkerParameters) :
             explorer,
             parent.uri,
             usefulFiles.mapNotNull {
-                explorer.convertFromProperties(
-                    applicationContext,
-                    parent,
-                    it
-                )
+                explorer.convertFromProperties(applicationContext, parent.uri, it)
             },
             dao,
             libraryPathSize
@@ -479,7 +475,7 @@ class ExternalImportWorker(context: Context, parameters: WorkerParameters) :
     ) {
         val targetImgs = ArrayList<ImageFile>()
 
-        val imageFiles = explorer.listFiles(context, folder, imageNamesFilter)
+        val imageFiles = explorer.listFiles(context, folder.uri, imageNamesFilter)
             .associateBy({ it.uri.toString() }, { it })
         val contentImgKeys = content.imageList.associateBy({ it.fileUri }, { it })
 

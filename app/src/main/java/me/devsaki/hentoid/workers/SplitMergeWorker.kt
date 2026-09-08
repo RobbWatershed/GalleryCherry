@@ -41,7 +41,7 @@ import me.devsaki.hentoid.util.file.getExtension
 import me.devsaki.hentoid.util.file.getFileFromSingleUriString
 import me.devsaki.hentoid.util.file.getInputStream
 import me.devsaki.hentoid.util.file.getOutputStream
-import me.devsaki.hentoid.util.file.listFiles
+import me.devsaki.hentoid.util.file.listDocumentFiles
 import me.devsaki.hentoid.util.file.removeDocument
 import me.devsaki.hentoid.util.getLocation
 import me.devsaki.hentoid.util.getOrCreateContentDownloadDir
@@ -151,7 +151,8 @@ abstract class BaseSplitMergeWorker(
         for (chap in chapters) {
             if (isStopped) break
             val splitContent = createContentFromChapter(content, chap)
-            splitContent.downloadMode = DownloadMode.DOWNLOAD // Force DOWNLOAD as we're creating flat folders
+            splitContent.downloadMode =
+                DownloadMode.DOWNLOAD // Force DOWNLOAD as we're creating flat folders
 
             // Create a new folder for the split content
             val location = getLocation(content)
@@ -578,7 +579,7 @@ abstract class BaseSplitMergeWorker(
         if (ops.isEmpty()) return
 
         // Take a snapshot of the Content's current files to simulate operations as they're built
-        val files: Map<String, Pair<DocumentFile, String>> = listFiles(ctx, root, null)
+        val files: Map<String, Pair<DocumentFile, String>> = listDocumentFiles(ctx, root.uri)
             .associateBy({ it.uri.toString() }, { Pair(it, it.name ?: "") })
         if (files.isEmpty()) return
 

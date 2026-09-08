@@ -1197,14 +1197,14 @@ class ReaderViewModel(
             if (content.jsonUri.isNotEmpty() || content.isArchive) return@withContext
             val folder =
                 getDocumentFromTreeUriString(context, content.storageUri) ?: return@withContext
-            val foundFile = findFile(getApplication(), folder, JSON_FILE_NAME_V2)
-            if (null == foundFile) {
+            val foundFileUri = findFile(getApplication(), folder.uri, JSON_FILE_NAME_V2)
+            if (null == foundFileUri) {
                 Timber.e("JSON file not detected in %s", content.storageUri)
                 return@withContext
             }
 
             // Cache the URI of the JSON to the database
-            content.jsonUri = foundFile.uri.toString()
+            content.jsonUri = foundFileUri.toString()
             try {
                 dao.insertContent(content)
             } finally {

@@ -516,7 +516,7 @@ fun showExistingLibraryDialog(
 private fun hasBooks(context: Context, folder: DocumentFile): Boolean {
     try {
         FileExplorer(context, folder.uri).use { explorer ->
-            val folders = explorer.listFolders(context, folder)
+            val folders = explorer.listFolders(context, folder.uri)
 
             // Filter out download subfolders among listed subfolders
             for (subfolder in folders) {
@@ -568,7 +568,7 @@ fun getExistingHentoidDirFrom(context: Context, root: DocumentFile): DocumentFil
     if (isHentoidFolderName(root.name!!)) return root
 
     // If not, look for it in its children
-    val hentoidDirs = listFoldersFilter(context, root, hentoidFolderNames)
+    val hentoidDirs = listFoldersFilter(context, root.uri, hentoidFolderNames)
     return if (hentoidDirs.isNotEmpty()) hentoidDirs[0] else null
 }
 
@@ -667,7 +667,7 @@ suspend fun scanFolderRecursive(
 
     Timber.d(">>>> scan root ${toScan.formatDisplayUri()}")
     // Ignore syncthing subfolders
-    val files = explorer.listDocumentFiles(context, toScan)
+    val files = explorer.listDocumentFiles(context, toScan.uri)
         .filterNot { it.isDirectory && (it.name ?: "").startsWith(".st") }
 
     val subFolders: MutableList<DocumentFile> = ArrayList()
@@ -1017,7 +1017,7 @@ private fun scanFolderImages(
     startingOrder: Int,
     imgs: List<DocumentFile>? = null
 ): List<ImageFile> {
-    val imageFiles = imgs ?: explorer.listFiles(context, bookFolder, imageNamesFilter)
+    val imageFiles = imgs ?: explorer.listFiles(context, bookFolder.uri, imageNamesFilter)
     val folderName = bookFolder.name ?: ""
     val namePrefix = if (addFolderNametoImgName) "$folderName-" else ""
     val results = createImageListFromFiles(imageFiles, targetStatus, startingOrder, namePrefix)
@@ -1143,7 +1143,7 @@ suspend fun scanForArchivesPdf(
     val result: MutableList<Content> = ArrayList()
     for (subfolder in subFolders) {
         try {
-            val files = explorer.listFiles(context, subfolder, null)
+            val files = explorer.listFiles(context, subfolder.uri)
             val archives: MutableList<DocumentFile> = ArrayList()
             val jsons: MutableList<DocumentFile> = ArrayList()
 
@@ -1573,7 +1573,7 @@ private fun createJsonFileFor(
         JSON_FILE_NAME_V2
     }
 
-    val jsonFile = explorer.findFile(context, contentFolder, jsonName)
+    val jsonFile = explorer.findFile(context, contentFolder.uri, jsonName)
     return if (jsonFile != null && jsonFile.exists()) jsonFile.uri
     else jsonToFile(
         context,

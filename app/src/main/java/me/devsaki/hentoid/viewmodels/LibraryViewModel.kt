@@ -629,7 +629,7 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
                 val archivesCall =
                     LrrServer.api.search(
                         queryMap,
-                        "Bearer ${encode64(Settings.lrrApiKey, Base64.NO_WRAP)}"
+                        LrrServer.formatApiKey()
                     )
                 Timber.d("Searching LRR from $lrrMaxResult")
                 archivesCall.execute().let { response ->
@@ -821,13 +821,13 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
                 LrrServer.api.removeFromCategory(
                     lrrFavCatId,
                     content.uniqueSiteId,
-                    "Bearer ${encode64(Settings.lrrApiKey, Base64.NO_WRAP)}"
+                    LrrServer.formatApiKey()
                 ).execute()
             } else {
                 LrrServer.api.addToCategory(
                     lrrFavCatId,
                     content.uniqueSiteId,
-                    "Bearer ${encode64(Settings.lrrApiKey, Base64.NO_WRAP)}"
+                    LrrServer.formatApiKey()
                 ).execute()
             }
             updateLrr(content.uniqueSiteId)

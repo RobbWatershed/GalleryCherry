@@ -15,7 +15,7 @@ import me.devsaki.hentoid.util.detachAllPrimaryContent
 import me.devsaki.hentoid.util.file.Beholder
 import me.devsaki.hentoid.util.file.copyFiles
 import me.devsaki.hentoid.util.file.getDocumentFromTreeUriString
-import me.devsaki.hentoid.util.file.listFiles
+import me.devsaki.hentoid.util.file.listDocumentFiles
 import me.devsaki.hentoid.util.file.removeDocument
 import me.devsaki.hentoid.util.getOrCreateContentDownloadDir
 import me.devsaki.hentoid.util.getPathRoot
@@ -99,7 +99,7 @@ class SettingsViewModel(application: Application, val dao: CollectionDAO) :
                     val sourceFolder =
                         getDocumentFromTreeUriString(getApplication(), c.storageUri)
                     if (sourceFolder != null) {
-                        val files = listFiles(getApplication(), sourceFolder, null)
+                        val files = listDocumentFiles(getApplication(), sourceFolder.uri)
                         // TODO secondary progress for pages
                         copyFiles(
                             getApplication(),

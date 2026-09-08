@@ -169,7 +169,7 @@ object Beholder {
             try {
                 if (BuildConfig.DEBUG) Timber.d("  Folder found in storage")
                 val files = explorer.listDocumentProperties(
-                    root, null,
+                    root.uri, null,
                     listFolders = true,
                     listFiles = true,
                     stopFirst = false
@@ -295,7 +295,7 @@ object Beholder {
                 val explorer = inExplorer ?: FileExplorer(ctx, doc)
                 try {
                     val files = explorer.listDocumentProperties(
-                        doc, null,
+                        doc.uri, null,
                         listFolders = true,
                         listFiles = true,
                         stopFirst = false
@@ -304,7 +304,7 @@ object Beholder {
                     onNew?.invoke(doc, usefulEntries)
 
                     val usefulDocs = usefulEntries
-                        .mapNotNull { explorer.convertFromProperties(ctx, doc, it) }
+                        .mapNotNull { explorer.convertFromProperties(ctx, doc.uri, it) }
 
                     result.add(
                         FolderEntry(
