@@ -1156,6 +1156,9 @@
     <string name="transform_error">Error - Can\'t transform with the current settings and files</string>
 
     <!-- Archive dialog -->
+    <string name="lrr_pending">LRR Server : Status pending</string>
+    <string name="lrr_online">LRR Server ONLINE</string>
+    <string name="lrr_offline">LRR Server OFFLINE</string>
     <string name="target_folder">Target folder</string>
     <string name="archive_format">Archive format</string>
     <string name="background_color">Background color</string>
