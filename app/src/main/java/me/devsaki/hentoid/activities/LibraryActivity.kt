@@ -638,8 +638,9 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
                 // Change display when text query is typed
                 setOnQueryTextListener(object : SearchView.OnQueryTextListener {
                     override fun onQueryTextSubmit(s: String): Boolean {
-                        setQuery(s.trim())
-                        signalCurrentFragment(CommunicationEvent.Type.SEARCH)
+                        val q = s.trim()
+                        setQuery(q)
+                        signalCurrentFragment(CommunicationEvent.Type.SEARCH, q)
                         clearFocus()
                         return true
                     }
