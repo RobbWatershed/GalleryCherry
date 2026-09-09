@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Color
 import android.net.Uri
 import android.text.TextUtils
+import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
@@ -140,7 +141,7 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
                             }
                         }
                     } catch (t: Throwable) {
-                        Timber.w(t)
+                        trace(Log.WARN, t)
                         globalProgress.setProgress(contentId.toString(), 1f)
                         nextKO()
                     }
@@ -173,8 +174,7 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
         Timber.d("DestUri : ${destFileUri.formatDisplay()}")
 
         getOutputStream(context, destFileUri)?.use { output ->
-            getInputStream(context, archiveUri)
-                .use { input -> copy(input, output) }
+            getInputStream(context, archiveUri).use { input -> copy(input, output) }
         }
 
         return true
@@ -195,7 +195,7 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
         val files = listDocumentFiles(context, bookFolder.uri, filter)
         if (files.isEmpty()) return false
 
-        Timber.i("Archive ${content.storageUri} : ${files.size} files to process")
+        trace(Log.INFO, "Archive ${content.storageUri} : ${files.size} files to process")
 
         val destFileUri = getTargetFile(context, content, params)
         Timber.d("DestUri : ${destFileUri.formatDisplay()}")
@@ -261,7 +261,7 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
                         success = true
                     } // params.archivePrimaryContent
                 } catch (e: Exception) {
-                    Timber.w(e)
+                    trace(Log.WARN, e)
                     success = false
                 } finally {
                     archiveStreamer.close()
@@ -269,6 +269,7 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
             } // Target = Archive
         }
         if (success && !isStopped) {
+            trace(Log.INFO, "Archive ${content.storageUri} : Archiving successful")
             if (params.archivePrimaryContent) {
                 content.storageUri = destFileUri.toString()
                 val formerJsonLocation = content.jsonUri.toUri()
@@ -294,7 +295,6 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
     ): Boolean {
         if (content.downloadMode == DownloadMode.STREAM) return false
         val context = applicationContext
-        // TODO logging
 
         if (lrrHentoidCategoryId.isBlank()) {
             val appName = context.getString(R.string.app_name)
@@ -320,7 +320,7 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
             val file = File(
                 tempFolder.absolutePath + File.separator + formatFolderName(content) + ".zip"
             )
-            if (!file.createNewFile()) throw IOException("Couldn't create file")
+            if (!file.createNewFile()) throw IOException("Couldn't create temp archive file")
 
             val archiveStreamer = ArchiveStreamer(
                 context, file.toUri(),
@@ -353,7 +353,7 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
         val rFile = uriToMultipart(context, archiveUri, "file")
 
         try {
-            Timber.i("LRR Archive : Sending ${content.title} to LRR server...")
+            trace(Log.INFO, "LRR Archive : Sending ${content.title} to LRR server...")
             LrrServer.api.uploadArchive(
                 rFile,
                 rCat,
@@ -362,11 +362,11 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
                 LrrServer.formatApiKey()
             ).execute().let {
                 if (!it.isSuccessful) {
-                    Timber.w("LRR Archive : Failure")
-                    Timber.w("${it.code()} : ${it.message()} ${it.errorBody()?.string()}")
+                    trace(Log.WARN, "LRR Archive : Failure")
+                    trace(Log.WARN, "${it.code()} : ${it.message()} ${it.errorBody()?.string()}")
                     return false
                 }
-                Timber.i("LRR Archive : Success")
+                trace(Log.INFO, "LRR Archive : Success")
                 return true
             }
         } finally { // Catch happens upstream
