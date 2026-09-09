@@ -613,6 +613,9 @@ class ContentItem : AbstractItem<ContentItem.ViewHolder>,
 
                 ivFavourite?.apply {
                     isVisible = (!isGrid || Settings.libraryDisplayGridFav)
+
+                    isEnabled = !(Site.LRR == content.site && Settings.lrrApiKey.isBlank())
+
                     if (content.favourite) setIconResource(R.drawable.ic_fav_full)
                     else setIconResource(R.drawable.ic_fav_empty)
                 }
