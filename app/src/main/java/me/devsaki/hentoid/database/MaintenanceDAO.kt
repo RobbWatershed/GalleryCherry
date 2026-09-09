@@ -146,6 +146,14 @@ class MaintenanceDAO {
             .safeFindIds().toSet()
     }
 
+    fun selectContentIdsWithNullArchiveIds(): Set<Long> {
+        return store.boxFor(Content::class.java).query()
+            .isNull(Content_.downloadRange)
+            .or()
+            .equal(Content_.downloadRange, "", QueryBuilder.StringOrder.CASE_INSENSITIVE)
+            .safeFindIds().toSet()
+    }
+
     fun resetDownloadRangeForContentId(ids: Collection<Long>) {
         val store = store.boxFor(Content::class.java)
         val contents = store.get(ids)
@@ -166,6 +174,13 @@ class MaintenanceDAO {
         val chapters = store.get(ids)
         chapters.forEach { it.downloadRange = "" }
         store.put(chapters)
+    }
+
+    fun resetArchiveIdForContentId(ids: Collection<Long>) {
+        val store = store.boxFor(Content::class.java)
+        val contents = store.get(ids)
+        contents.forEach { it.archiveId = "" }
+        store.put(contents)
     }
 
     fun selectOrphanQueueRecordIds(): LongArray {

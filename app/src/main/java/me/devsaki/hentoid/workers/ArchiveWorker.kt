@@ -129,7 +129,7 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
                         dao.selectContent(contentId)?.let {
                             val result =
                                 if (params.destination == Settings.Value.DESTINATION_LRR)
-                                    archiveLrr(it)
+                                    archiveLrr(it, dao)
                                 else archiveDevice(it, params, dao)
 
                             if (result && !isStopped && params.deleteOnSuccess)
@@ -291,7 +291,8 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
     }
 
     private fun archiveLrr(
-        content: Content
+        content: Content,
+        dao : CollectionDAO
     ): Boolean {
         if (content.downloadMode == DownloadMode.STREAM) return false
         val context = applicationContext
@@ -366,11 +367,19 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
                     trace(Log.WARN, "${it.code()} : ${it.message()} ${it.errorBody()?.string()}")
                     return false
                 }
-                trace(Log.INFO, "LRR Archive : Success")
+                val arcId = it.body()?.id ?: ""
+
+                dao.selectContent(content.id)?.let { c->
+                    c.archiveId = arcId
+                    dao.insertContentCore(c)
+                }
+
+                trace(Log.INFO, "LRR Archive : Success ($arcId)")
                 return true
             }
         } finally { // Catch happens upstream
             tempFolder?.deleteRecursively()
+            dao.cleanup()
         }
     }
 

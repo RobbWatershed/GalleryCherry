@@ -35,7 +35,8 @@ data class LrrArchives(
                 qtyPages = pagecount,
                 coverImageUrl = thumbUrl,
                 downloadMode = DownloadMode.STREAM,
-                lastReadPageIndex = progress
+                lastReadPageIndex = progress,
+                archiveId = arcid
             )
             val tagList = tags.split(',').map { it.trim() }
             result.addAttributes(tagList.map { toAttr(it) })

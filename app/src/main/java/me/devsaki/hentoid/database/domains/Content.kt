@@ -137,7 +137,9 @@ data class Content(
     var isFlaggedForDeletion: Boolean = false,
     var lastEditDate: Long = 0,
     // Range of gallery pages/chapters to download (e.g. "1-5", "1;3;8", "1-2;3-4")
-    var downloadRange: String = ""
+    var downloadRange: String = "",
+    // External archive ID (e.g. LRR) for sync purposes
+    var archiveId: String = ""
 ) {
     lateinit var attributes: ToMany<Attribute>
 

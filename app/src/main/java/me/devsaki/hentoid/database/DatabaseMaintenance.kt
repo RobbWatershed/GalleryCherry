@@ -26,7 +26,7 @@ import me.devsaki.hentoid.workers.data.UpdateJsonData
 import timber.log.Timber
 
 // TODO update when adding tasks to "oneShot" functions
-const val DB_UPDATE_VERSION = 7
+const val DB_UPDATE_VERSION = 8
 
 @Suppress("UNUSED_PARAMETER")
 object DatabaseMaintenance {
@@ -397,7 +397,7 @@ object DatabaseMaintenance {
                     pos += it.size
                 }
 
-                val contentIds = db.selectContentIdsWithNullDownloadRanges()
+                var contentIds = db.selectContentIdsWithNullDownloadRanges()
                 Timber.i(
                     "Set default value for Content.downloadRange field : %s items detected",
                     contentIds.size
@@ -419,6 +419,19 @@ object DatabaseMaintenance {
                 pos = 1f
                 chapterIds.chunked(50).forEach {
                     db.resetDownloadRangeForChapterId(it)
+                    withContext(Dispatchers.Main) { emitter(pos / max) }
+                    pos += it.size
+                }
+
+                contentIds = db.selectContentIdsWithNullArchiveIds()
+                Timber.i(
+                    "Set default value for Content.archiveId field : %s items detected",
+                    contentIds.size
+                )
+                max = contentIds.size
+                pos = 1f
+                contentIds.chunked(50).forEach {
+                    db.resetArchiveIdForContentId(it)
                     withContext(Dispatchers.Main) { emitter(pos / max) }
                     pos += it.size
                 }

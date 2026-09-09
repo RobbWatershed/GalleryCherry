@@ -3,7 +3,6 @@ package me.devsaki.hentoid.retrofit.sources
 import android.util.Base64
 import me.devsaki.hentoid.json.sources.lrr.LrrArchives
 import me.devsaki.hentoid.json.sources.lrr.LrrCategories
-import me.devsaki.hentoid.json.sources.lrr.LrrCategorySuccess
 import me.devsaki.hentoid.json.sources.lrr.LrrExtraction
 import me.devsaki.hentoid.json.sources.lrr.LrrServerInfo
 import me.devsaki.hentoid.json.sources.lrr.LrrSuccess
@@ -90,7 +89,7 @@ object LrrServer {
         fun createCategory(
             @Part("name") name: RequestBody,
             @Header("Authorization") apiKey: String
-        ): Call<LrrCategorySuccess>
+        ): Call<LrrSuccess>
 
         @Multipart
         @PUT("archives/upload")
@@ -106,7 +105,7 @@ object LrrServer {
         fun info(): Call<LrrServerInfo>
     }
 
-    fun formatApiKey() : String {
+    fun formatApiKey(): String {
         return "Bearer ${encode64(Settings.lrrApiKey, Base64.NO_WRAP)}"
     }
 
