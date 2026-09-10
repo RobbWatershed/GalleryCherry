@@ -66,7 +66,7 @@ import java.time.Instant
 
 
 class ArchiveWorker(context: Context, parameters: WorkerParameters) :
-    BaseWorker(context, parameters, R.id.archive_service, "archive") {
+    BaseWorker(context, parameters, R.id.archive_service, "export") {
 
     @JsonClass(generateAdapter = true)
     data class Params(

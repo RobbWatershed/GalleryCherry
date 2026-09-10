@@ -734,13 +734,14 @@ class LibraryContentFragment : Fragment(), ChangeGroupDialogFragment.Parent,
         binding?.recyclerView?.let {
             showRedownloadMenu(
                 requireContext(),
+                false,
                 contentsToRedownload.isNotEmpty(),
                 contentsToUpdate.isNotEmpty(),
                 it,
                 this
             ) { _, i: PowerMenuItem ->
-                if (0 == i.tag) redownloadFromScratch(contentsToRedownload) // Redownload images
-                else viewModel.downloadContent( // Update metadata only
+                if (1 == i.tag) redownloadFromScratch(contentsToRedownload) // Redownload images
+                else if (2 == i.tag) viewModel.downloadContent( // Update metadata only
                     contentsToUpdate,
                     reparseContent = true,
                     reparseImages = false,

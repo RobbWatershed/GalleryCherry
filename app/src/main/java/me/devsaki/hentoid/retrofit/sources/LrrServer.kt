@@ -31,6 +31,7 @@ const val LRR_FAV_CAT = "\uD83D\uDD16 Favorites"
 
 object LrrServer {
     lateinit var api: Api
+    private lateinit var endpoint : String
     val lrrCategoryIdCache: MutableMap<String, String> = LinkedHashMap()
 
     init {
@@ -39,13 +40,17 @@ object LrrServer {
 
     // Must have a public init method to reset the connexion pool when updating DoH settings
     fun init() {
-        val endpoint = "${Settings.lrrEndpoint}/api/"
+        endpoint = "${Settings.lrrEndpoint}/api/"
         api = Retrofit.Builder()
             .baseUrl(endpoint)
             .client(OkHttpClientManager.getInstance())
             .addConverterFactory(MoshiConverterFactory.create().asLenient())
             .build()
             .create(Api::class.java)
+    }
+
+    fun getDlLink(arcId : String) : String {
+        return "${endpoint}archives/$arcId/download"
     }
 
     interface Api {

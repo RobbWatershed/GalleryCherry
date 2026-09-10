@@ -1462,10 +1462,10 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
                 null,
                 null,
                 position,
+                isQueueActive(this),
                 if (isReplaceDuplicate) duplicateId else -1,
                 replacementTitle,
-                archiveUrl,
-                isQueueActive(this)
+                archiveUrl
             )
         } finally {
             dao.cleanup()

@@ -4,7 +4,6 @@ import android.app.Application
 import android.content.Context
 import android.net.Uri
 import android.os.Bundle
-import android.util.Base64
 import androidx.core.net.toUri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
@@ -61,7 +60,6 @@ import me.devsaki.hentoid.util.Type
 import me.devsaki.hentoid.util.download.ContentQueueManager.isQueueActive
 import me.devsaki.hentoid.util.download.ContentQueueManager.resumeQueue
 import me.devsaki.hentoid.util.download.selectDownloadLocation
-import me.devsaki.hentoid.util.encode64
 import me.devsaki.hentoid.util.exception.EmptyResultException
 import me.devsaki.hentoid.util.file.DisplayFile
 import me.devsaki.hentoid.util.file.copyFile
@@ -877,6 +875,29 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
             dao.cleanup()
         }
 
+    fun downloadFromLrr(
+        contentList: List<Content>,
+        onSuccess: Consumer<Int>,
+        onError: Consumer<Throwable>
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                contentList.forEach {
+                    dao.addContentToQueue(
+                        it, null, null,
+                        QueuePosition.BOTTOM, isQueueActive(application),
+                        archiveUrl = LrrServer.getDlLink(it.archiveId)
+                    )
+                }
+                dao.cleanup()
+            } catch (t: Throwable) {
+                Timber.e(t)
+                onError.invoke(t)
+            }
+            onSuccess.invoke(contentList.size)
+        }
+    }
+
     /**
      * General purpose download/redownload
      * @param reparseContent    True to reparse Content metadata from the site
@@ -983,7 +1004,10 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
                             }
 
                             dao.addContentToQueue(
-                                it, sourceImageStatus, targetImageStatus, position, -1, null, null,
+                                it,
+                                sourceImageStatus,
+                                targetImageStatus,
+                                position,
                                 isQueueActive(getApplication())
                             )
 

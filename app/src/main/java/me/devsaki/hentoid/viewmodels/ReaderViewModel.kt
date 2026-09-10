@@ -1718,8 +1718,6 @@ class ReaderViewModel(
                         null,
                         StatusContent.SAVED,
                         QueuePosition.TOP,
-                        -1,
-                        null, null,
                         isQueueActive(getApplication())
                     )
                     if (Settings.isQueueAutostart) resumeQueue(getApplication())
@@ -1768,8 +1766,6 @@ class ReaderViewModel(
                             null,
                             targetImageStatus,
                             QueuePosition.TOP,
-                            -1,
-                            null, null,
                             isQueueActive(getApplication())
                         )
                     }

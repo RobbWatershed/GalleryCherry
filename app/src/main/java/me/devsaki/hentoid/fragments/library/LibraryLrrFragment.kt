@@ -16,6 +16,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.snackbar.BaseTransientBottomBar
+import com.google.android.material.snackbar.Snackbar
 import com.mikepenz.fastadapter.FastAdapter
 import com.mikepenz.fastadapter.ISelectionListener
 import com.mikepenz.fastadapter.adapters.ItemAdapter
@@ -29,10 +31,12 @@ import com.mikepenz.fastadapter.select.SelectExtensionFactory
 import com.mikepenz.fastadapter.swipe.SimpleSwipeCallback
 import com.mikepenz.fastadapter.swipe_drag.SimpleSwipeDragCallback
 import com.mikepenz.fastadapter.utils.DragDropUtil.onMove
+import com.skydoves.powermenu.PowerMenuItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.activities.LibraryActivity
+import me.devsaki.hentoid.activities.QueueActivity
 import me.devsaki.hentoid.activities.ReaderActivity
 import me.devsaki.hentoid.activities.bundles.ReaderActivityBundle
 import me.devsaki.hentoid.database.ObjectBoxDAO
@@ -50,6 +54,7 @@ import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.addContent
 import me.devsaki.hentoid.util.contentItemDiffCallback
 import me.devsaki.hentoid.util.dpToPx
+import me.devsaki.hentoid.util.snack
 import me.devsaki.hentoid.util.toast
 import me.devsaki.hentoid.viewholders.ContentItem
 import me.devsaki.hentoid.viewholders.IDraggableViewHolder
@@ -60,6 +65,7 @@ import me.devsaki.hentoid.widget.DragSelectTouchListener
 import me.devsaki.hentoid.widget.DragSelectionProcessor
 import me.devsaki.hentoid.widget.FastAdapterPreClickSelectHelper
 import me.devsaki.hentoid.widget.ScrollPositionListener
+import me.devsaki.hentoid.widget.showRedownloadMenu
 import me.zhanghai.android.fastscroll.FastScrollerBuilder
 import me.zhanghai.android.fastscroll.PopupTextProvider
 import org.greenrobot.eventbus.EventBus
@@ -236,6 +242,11 @@ class LibraryLrrFragment : Fragment(),
     private fun onSelectionToolbarItemClicked(menuItem: MenuItem): Boolean {
         var keepToolbar = false
         when (menuItem.itemId) {
+            R.id.action_redownload -> {
+                askDownloadSelectedItems()
+                keepToolbar = true
+            }
+
             R.id.action_select_all -> {
                 // Make certain _everything_ is properly selected (selectExtension.select() as doesn't get everything the 1st time it's called)
                 var count = 0
@@ -255,6 +266,68 @@ class LibraryLrrFragment : Fragment(),
         }
         if (!keepToolbar) activity.get()!!.getSelectionToolbar()?.visibility = View.GONE
         return true
+    }
+
+    /**
+     * Callback for the "redownload" action button
+     */
+    private fun askDownloadSelectedItems() {
+        val selectedItems: Set<ContentItem> = selectExtension!!.selectedItems
+        val contentsToTransfer: MutableList<Content> = ArrayList()
+        for (ci in selectedItems) {
+            val c = ci.content ?: continue
+            contentsToTransfer.add(c)
+        }
+        if (contentsToTransfer.isEmpty()) {
+            snack(R.string.redownload_nocando)
+            return
+        }
+        if (contentsToTransfer.size > 1000) {
+            snack(R.string.redownload_limit)
+            return
+        }
+        binding?.recyclerView?.let {
+            showRedownloadMenu(
+                requireContext(),
+                contentsToTransfer.isNotEmpty(),
+                showRedlScratch = false,
+                showUpdateMetadata = false,
+                anchor = it,
+                lifecycle = this
+            ) { _, i: PowerMenuItem ->
+                if (0 == i.tag) viewModel.downloadFromLrr(
+                    contentsToTransfer,
+                    onSuccess = { nbSuccess: Int? ->
+                        val message = resources.getQuantityString(
+                            R.plurals.add_to_queue,
+                            contentsToTransfer.size,
+                            nbSuccess,
+                            contentsToTransfer.size
+                        )
+                        val snackbar =
+                            Snackbar.make(
+                                it,
+                                message,
+                                BaseTransientBottomBar.LENGTH_LONG
+                            )
+                        snackbar.setAction(R.string.view_queue) { viewQueue() }
+                        snackbar.show()
+                    }
+                ) { t: Throwable? ->
+                    Timber.w(t)
+                    snack(R.string.redownloaded_error)
+                }
+                leaveSelectionMode()
+            }
+        }
+    }
+
+    /**
+     * Navigate to the queue screen
+     */
+    private fun viewQueue() {
+        val intent = Intent(requireContext(), QueueActivity::class.java)
+        requireContext().startActivity(intent)
     }
 
     @Subscribe(sticky = true, threadMode = ThreadMode.MAIN)

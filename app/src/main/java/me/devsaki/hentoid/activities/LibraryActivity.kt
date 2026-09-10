@@ -1177,10 +1177,10 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
             completedMenu?.isVisible = false // Could be an option to consider
             resetReadStatsMenu?.isVisible = false // Could be an option to consider
             rateMenu?.isVisible = false
-            exportMenu?.isVisible = false // TODO
+            exportMenu?.isVisible = false
             changeGroupMenu?.isVisible = false
             folderMenu?.isVisible = false
-            redownloadMenu?.isVisible = false
+            redownloadMenu?.isVisible = true
             storageMethodMenu?.isVisible = false
             groupCoverMenu?.isVisible = false
             mergeMenu?.isVisible = false

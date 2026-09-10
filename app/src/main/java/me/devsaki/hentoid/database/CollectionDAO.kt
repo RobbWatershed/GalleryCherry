@@ -266,10 +266,10 @@ interface CollectionDAO {
         sourceImageStatus: StatusContent?,
         targetImageStatus: StatusContent?,
         position: QueuePosition,
-        replacedContentId: Long,
-        replacementTitle: String?,
-        archiveUrl: String?,
-        isQueueActive: Boolean
+        isQueueActive: Boolean,
+        replacedContentId: Long = -1,
+        replacementTitle: String? = null,
+        archiveUrl: String? = null
     )
 
     fun updateQueue(queue: List<QueueRecord>)

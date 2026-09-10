@@ -1258,10 +1258,10 @@ class ObjectBoxDAO : CollectionDAO {
         sourceImageStatus: StatusContent?,
         targetImageStatus: StatusContent?,
         position: QueuePosition,
+        isQueueActive: Boolean,
         replacedContentId: Long,
         replacementTitle: String?,
-        archiveUrl: String?,
-        isQueueActive: Boolean
+        archiveUrl: String?
     ) {
         if (targetImageStatus != null) ObjectBoxDB.updateImageContentStatus(
             content.id,
