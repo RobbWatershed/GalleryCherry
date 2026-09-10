@@ -130,6 +130,7 @@ class LibraryBottomSortFilterFragment : BottomSheetDialogFragment() {
             if (!isLrrDisplayed) return@observe
             val searchBundle = LrrSearchManager.LrrSearchBundle(b!!)
             favouriteFilter = searchBundle.filterBookFavourites
+            notCompletedFilter = searchBundle.hideCompleted
             // TODO
             updateFilters()
         }
@@ -218,7 +219,8 @@ class LibraryBottomSortFilterFragment : BottomSheetDialogFragment() {
             filterNotCompletedBtn.setOnClickListener {
                 notCompletedFilter = !notCompletedFilter
                 updateFilters()
-                viewModel.setNotCompletedFilter(notCompletedFilter)
+                if (isLrrDisplayed) viewModel.setLrrNotCompletedFilter(notCompletedFilter)
+                else viewModel.setNotCompletedFilter(notCompletedFilter)
             }
             stars[0] = filterRatingNone
             stars[1] = filterRating1
@@ -260,10 +262,8 @@ class LibraryBottomSortFilterFragment : BottomSheetDialogFragment() {
         binding?.apply {
             filterFavsBtn.setColorFilter(if (favouriteFilter) selectedColor else greyColor)
             filterNonFavsBtn.setColorFilter(if (nonFavouriteFilter) selectedColor else greyColor)
-            val completeFiltersVisibility =
-                if (isGroupsDisplayed || isFoldersDisplayed || isLrrDisplayed) View.GONE else View.VISIBLE
-            filterCompletedBtn.visibility = completeFiltersVisibility
-            filterNotCompletedBtn.visibility = completeFiltersVisibility
+            filterCompletedBtn.visibility = if (isGroupsDisplayed || isFoldersDisplayed || isLrrDisplayed) View.GONE else View.VISIBLE
+            filterNotCompletedBtn.visibility = if (isGroupsDisplayed || isFoldersDisplayed) View.GONE else View.VISIBLE
             filterCompletedBtn.setColorFilter(if (completedFilter) selectedColor else greyColor)
             filterNotCompletedBtn.setColorFilter(if (notCompletedFilter) selectedColor else greyColor)
         }

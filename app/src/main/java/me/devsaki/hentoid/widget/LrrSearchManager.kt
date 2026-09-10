@@ -34,6 +34,10 @@ class LrrSearchManager {
         values.filterBookFavourites = value
     }
 
+    fun setFilterBooksNonCompleted(value: Boolean) {
+        values.hideCompleted = value
+    }
+
     fun setCategory(value: String) {
         values.categoryId = value
     }
@@ -68,6 +72,7 @@ class LrrSearchManager {
         }
         q["order"] = if (values.sortDesc) "desc" else "asc"
         if (resumeFromIndex > -1) q["start"] = resumeFromIndex.toString()
+        if (values.hideCompleted) q["hidecompleted"] = "true"
     }
 
     class LrrSearchBundle(val bundle: Bundle = Bundle()) {
@@ -81,6 +86,8 @@ class LrrSearchManager {
         var sortDesc by bundle.boolean(default = Settings.isLrrSortDesc)
 
         var filterBookFavourites by bundle.boolean(default = false)
+
+        var hideCompleted by bundle.boolean(default = false)
 
         fun isFilterActive(): Boolean {
             return query.isNotEmpty()

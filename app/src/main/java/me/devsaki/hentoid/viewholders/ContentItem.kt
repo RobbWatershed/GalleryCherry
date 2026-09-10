@@ -438,8 +438,6 @@ class ContentItem : AbstractItem<ContentItem.ViewHolder>,
                 } else {
                     visibility = View.INVISIBLE
                 }
-                // TODO use the 'progress' attribute of the LRR API
-                if (Site.LRR == content.site) visibility = View.INVISIBLE
             }
         }
 

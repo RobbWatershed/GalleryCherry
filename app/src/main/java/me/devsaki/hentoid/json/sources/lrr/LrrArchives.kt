@@ -30,12 +30,13 @@ data class LrrArchives(
             val result = Content(
                 site = Site.LRR,
                 status = StatusContent.ONLINE,
+                lastReadPageIndex = progress,
+                completed = (pagecount == progress),
                 uniqueSiteId = arcid,
                 title = title,
                 qtyPages = pagecount,
                 coverImageUrl = thumbUrl,
                 downloadMode = DownloadMode.STREAM,
-                lastReadPageIndex = progress,
                 archiveId = arcid
             )
             val tagList = tags.split(',').map { it.trim() }

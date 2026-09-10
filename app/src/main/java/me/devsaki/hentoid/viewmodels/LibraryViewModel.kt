@@ -397,6 +397,12 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
         viewModelScope.launch { doSearchContent() }
     }
 
+    fun setLrrNotCompletedFilter(value: Boolean) {
+        lrrSearchManager.setFilterBooksNonCompleted(value)
+        newContentSearch.value = true
+        viewModelScope.launch { doSearchLrr() }
+    }
+
     /**
      * Toggle the books favourite filter
      */
