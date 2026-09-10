@@ -12,7 +12,7 @@
     <string name="pref_screen_sources">Sources</string>
     <string name="pref_drawer_sources_title">Manage sources</string>
     <string name="title_activity_source_specifics">Source-specific settings</string>
-    <string name="pref_cat_sources_lrr">Lanraragi</string>
+    <string name="pref_cat_sources_lrr">LANraragi</string>
     <string name="pref_lrr_url_title">Server URL</string>
     <string name="pref_lrr_url_prompt">Type your LRR server\'s IP and port (IP:port)</string>
     <string name="pref_lrr_api_title">API key</string>
