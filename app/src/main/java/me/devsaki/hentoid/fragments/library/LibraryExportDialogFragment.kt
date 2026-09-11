@@ -151,25 +151,27 @@ class LibraryExportDialogFragment : BaseDialogFragment<LibraryExportDialogFragme
             }
             action.setOnClickListener { onActionClick(buildWorkerParams()) }
 
-            lifecycleScope.launch {
-                isLrrOnline = withContext(Dispatchers.IO) {
-                    try {
-                        LrrServer.api.info().execute().isSuccessful
-                    } catch (e : Exception) {
-                        Timber.v(e)
-                        false
+            if (lrrOn) {
+                lifecycleScope.launch {
+                    isLrrOnline = withContext(Dispatchers.IO) {
+                        try {
+                            LrrServer.api.info().execute().isSuccessful
+                        } catch (e: Exception) {
+                            Timber.v(e)
+                            false
+                        }
                     }
-                }
-                if (destinationChoice.checkedButtonId == R.id.dest_lrr)
-                    action.isEnabled = isLrrOnline
-                lrrStatus.text =
-                    resources.getString(if (isLrrOnline) R.string.lrr_online else R.string.lrr_offline)
-                lrrStatus.setTextColor(
-                    ContextCompat.getColor(
-                        requireContext(),
-                        if (isLrrOnline) R.color.green else R.color.red
+                    if (destinationChoice.checkedButtonId == R.id.dest_lrr)
+                        action.isEnabled = isLrrOnline
+                    lrrStatus.text =
+                        resources.getString(if (isLrrOnline) R.string.lrr_online else R.string.lrr_offline)
+                    lrrStatus.setTextColor(
+                        ContextCompat.getColor(
+                            requireContext(),
+                            if (isLrrOnline) R.color.green else R.color.red
+                        )
                     )
-                )
+                }
             }
         }
     }

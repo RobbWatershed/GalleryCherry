@@ -40,7 +40,10 @@ object LrrServer {
 
     // Must have a public init method to reset the connexion pool when updating DoH settings
     fun init() {
-        endpoint = "${Settings.lrrEndpoint}/api/"
+        endpoint = Settings.lrrEndpoint
+        if (endpoint.startsWith("http")) endpoint += "/api"
+        else endpoint = "http://bogus.com" // Make certain init doesn't crash
+
         api = Retrofit.Builder()
             .baseUrl(endpoint)
             .client(OkHttpClientManager.getInstance())
