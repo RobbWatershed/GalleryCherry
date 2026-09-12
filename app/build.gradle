@@ -173,7 +173,7 @@ dependencies {
      * MEDIA
      */
     // Image loader and animated pics support -> https://github.com/coil-kt/coil
-    def Coil_version = '3.4.0'
+    def Coil_version = '3.4.0' // 3.5+ requires Kotlin 2.4+
     implementation("io.coil-kt.coil3:coil:$Coil_version")
     implementation("io.coil-kt.coil3:coil-network-okhttp:$Coil_version")
     implementation("io.coil-kt.coil3:coil-gif:$Coil_version")
