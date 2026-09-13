@@ -204,7 +204,10 @@ object Settings {
 
     // Library Search
     val librarySearchDelayThreshold: Long by LongSetting(Key.LIBRARY_SEARCH_DELAY_THRESHOLD, 250)
-    val librarySearchLongDelayThreshold: Long by LongSetting(Key.LIBRARY_SEARCH_LONG_DELAY_THRESHOLD, 1500)
+    val librarySearchLongDelayThreshold: Long by LongSetting(
+        Key.LIBRARY_SEARCH_LONG_DELAY_THRESHOLD,
+        1500
+    )
 
     // ADV SEARCH
     val searchAttributesSortOrder: Int by IntSettingStr(
@@ -524,6 +527,7 @@ object Settings {
     val isReaderSwipeToTurn: Boolean by BoolSetting(Key.VIEWER_PAGE_TURN_SWIPE, true)
     val isReaderKeyboardToTurn: Boolean by BoolSetting("pref_viewer_page_turn_keyboard", true)
     val isReaderVolumeToSwitchBooks: Boolean by BoolSetting("pref_viewer_book_switch_volume", false)
+    var readerCustomKeys: Map<String, String> by StringMapSetting("viewer_custom_key_binding")
 
     fun isReaderOpenInGalleryMode(site: Site): Boolean {
         return sharedPreferences.getBoolean(
@@ -781,6 +785,20 @@ object Settings {
 
         operator fun setValue(thisRef: Any?, property: KProperty<*>, value: List<String>) {
             sharedPreferences.edit { putString(key, TextUtils.join(",", value)) }
+        }
+    }
+
+    private class StringMapSetting(val key: String) {
+        operator fun getValue(thisRef: Any?, property: KProperty<*>): Map<String, String> {
+            val str = sharedPreferences.getString(key, "") ?: ""
+            return if (str.isBlank()) emptyMap()
+            else jsonToObject(str, MAP_STRINGS) ?: emptyMap()
+        }
+
+        operator fun setValue(thisRef: Any?, property: KProperty<*>, value: Map<String, String>) {
+            val str = if (value.isEmpty()) ""
+            else serializeToJson(value, MAP_STRINGS)
+            sharedPreferences.edit { putString(key, str) }
         }
     }
 

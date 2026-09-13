@@ -9,30 +9,30 @@
         <PreferenceCategory
             android:title="@string/pref_cat_sources_web"
             app:iconSpaceReserved="false">
-        <Preference
-            android:key="pref_drawer_sources"
-            android:summary="@string/pref_drawer_sources_summary"
-            android:title="@string/pref_drawer_sources_title"
-            app:iconSpaceReserved="false" />
-        <Preference
-            android:key="pref_source_specifics"
-            android:summary="@string/title_activity_source_specifics"
-            android:title="@string/title_activity_source_specifics"
-            app:iconSpaceReserved="false" />
+            <Preference
+                android:key="pref_drawer_sources"
+                android:summary="@string/pref_drawer_sources_summary"
+                android:title="@string/pref_drawer_sources_title"
+                app:iconSpaceReserved="false" />
+            <Preference
+                android:key="pref_source_specifics"
+                android:summary="@string/title_activity_source_specifics"
+                android:title="@string/title_activity_source_specifics"
+                app:iconSpaceReserved="false" />
         </PreferenceCategory>
         <PreferenceCategory
             android:title="@string/pref_cat_sources_lrr"
             app:iconSpaceReserved="false">
-        <Preference
-            android:key="lrr_endpoint"
-            android:title="@string/pref_lrr_url_title"
-            android:summary="@string/pref_attributes_list_order_summary"
-            app:iconSpaceReserved="false" />
-        <EditTextPreference
-            android:key="lrr_api_key"
-            android:title="@string/pref_lrr_api_title"
-            android:summary="@string/pref_attributes_list_order_summary"
-            app:iconSpaceReserved="false" />
+            <Preference
+                android:key="lrr_endpoint"
+                android:summary="@string/pref_attributes_list_order_summary"
+                android:title="@string/pref_lrr_url_title"
+                app:iconSpaceReserved="false" />
+            <EditTextPreference
+                android:key="lrr_api_key"
+                android:summary="@string/pref_attributes_list_order_summary"
+                android:title="@string/pref_lrr_api_title"
+                app:iconSpaceReserved="false" />
         </PreferenceCategory>
     </PreferenceScreen>
     <PreferenceScreen
@@ -850,6 +850,15 @@
                     android:key="pref_viewer_cap_tap_zoom"
                     android:summary="@string/pref_generic_summary"
                     android:title="@string/pref_viewer_cap_tap_zoom"
+                    app:iconSpaceReserved="false" />
+            </PreferenceCategory>
+            <PreferenceCategory
+                android:title="@string/pref_cat_advanced"
+                app:iconSpaceReserved="false">
+                <Preference
+                    android:key="viewer_custom_key_binding"
+                    android:summary="@string/empty_string"
+                    android:title="@string/pref_viewer_key_bindings_title"
                     app:iconSpaceReserved="false" />
             </PreferenceCategory>
         </PreferenceScreen>

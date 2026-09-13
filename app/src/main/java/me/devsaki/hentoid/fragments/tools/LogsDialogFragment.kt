@@ -54,13 +54,13 @@ class LogsDialogFragment : BaseDialogFragment<Nothing>() {
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedState: Bundle?
-    ): View {
+    ): View? {
         binding = DialogToolsAppLogsBinding.inflate(inflater, container, false)
 
         binding?.logsList?.adapter = fastadapter
         fastadapter.onClickListener = { _, _, i, _ -> onItemClick(i) }
 
-        return binding!!.root
+        return binding?.root
     }
 
     override fun onDestroyView() {
@@ -88,7 +88,7 @@ class LogsDialogFragment : BaseDialogFragment<Nothing>() {
             fileName = fileName?.lowercase(Locale.getDefault()) ?: ""
             val timeStr = formatEpochToDate(file.lastModified(), formatter)
             val label = "$fileName ($timeStr)"
-            itemAdapter.add(TextItem(label, file, false))
+            itemAdapter.add(TextItem(label, file, centered = false))
         }
     }
 

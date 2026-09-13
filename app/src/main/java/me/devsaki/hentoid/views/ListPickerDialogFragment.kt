@@ -73,7 +73,7 @@ class ListPickerDialogFragment(val handler: Consumer<Int>) : BaseDialogFragment<
             recyclerView.adapter = fastAdapter
             fastAdapter.onClickListener = { _, _, i, _ -> onItemSelected(i.getObject() ?: "") }
         }
-        itemAdapter.add(entries.map { TextItem(it, it, false) })
+        itemAdapter.add(entries.map { TextItem(it, it, centered = false) })
     }
 
     override fun onDestroyView() {
@@ -86,7 +86,7 @@ class ListPickerDialogFragment(val handler: Consumer<Int>) : BaseDialogFragment<
         val filteredEntries =
             if (str.isBlank()) entries else entries.filter { it.contains(str, true) }
 
-        itemAdapter.add(filteredEntries.map { TextItem(it, it, false) })
+        itemAdapter.add(filteredEntries.map { TextItem(it, it, centered = false) })
     }
 
     private fun onItemSelected(s: String): Boolean {

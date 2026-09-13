@@ -253,6 +253,10 @@
             android:label="@string/transform"
             tools:ignore="UnusedAttribute" />
         <activity
+            android:name=".activities.settings.SettingsKeybindActivity"
+            android:label="@string/pref_viewer_key_bindings_title"
+            tools:ignore="UnusedAttribute" />
+        <activity
             android:name=".activities.TextIntentActivity"
             android:exported="true"
             android:icon="@drawable/ic_hentoid"

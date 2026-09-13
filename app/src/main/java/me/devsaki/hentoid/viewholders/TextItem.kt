@@ -34,28 +34,23 @@ class TextItem<T> : AbstractItem<TextItem.ViewHolder<T>>,
 
     override var touchHelper: ItemTouchHelper? = null
 
-
-    constructor(text: String, tag: T, centered: Boolean) : super() {
+    constructor(
+        text: String,
+        tag: T,
+        centered: Boolean = false,
+        reformatCase: Boolean = true,
+        selectable: Boolean = false,
+        selected: Boolean = false
+    ) : super() {
         this.text = text
         this.mTag = tag
         this.centered = centered
-        draggable = false
-        touchHelper = null
-        reformatCase = true
-        highlighted = false
-        isSelectable = false
-    }
-
-    constructor(text: String, tag: T, reformatCase: Boolean, isSelected: Boolean) : super() {
-        this.text = text
-        this.mTag = tag
-        centered = false
-        draggable = false
-        touchHelper = null
         this.reformatCase = reformatCase
+        draggable = false
+        touchHelper = null
         highlighted = false
-        this.isSelected = isSelected
-        isSelectable = true
+        this.isSelected = selected
+        isSelectable = selected || selectable
     }
 
     constructor(

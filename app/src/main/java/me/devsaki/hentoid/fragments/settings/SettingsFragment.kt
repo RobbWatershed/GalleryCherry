@@ -33,6 +33,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.activities.bundles.SettingsSourceSpecificsBundle
+import me.devsaki.hentoid.activities.settings.SettingsKeybindActivity
 import me.devsaki.hentoid.activities.settings.SettingsPinActivity
 import me.devsaki.hentoid.activities.settings.SettingsSourceSpecificsActivity
 import me.devsaki.hentoid.activities.settings.SettingsStorageActivity
@@ -255,6 +256,11 @@ class SettingsFragment : PreferenceFragmentCompat(),
                 true
             }
 
+            "viewer_custom_key_binding" -> {
+                requireContext().startLocalActivity<SettingsKeybindActivity>()
+                true
+            }
+
             Settings.Key.LRR_ENDPOINT -> {
                 invokeInputDialog(
                     requireActivity(),
@@ -266,7 +272,10 @@ class SettingsFragment : PreferenceFragmentCompat(),
                         if (res.endsWith('/')) res = res.substringBeforeLast('/')
                         if (res.lastIndexOf(':') < 7) res += ":3000" // Default port for LRR
                         Settings.lrrEndpoint = res
-                        if (!requireActivity().requestLocalNetworkPermission(RQST_LOCALNETWORK_PERMISSION))
+                        if (!requireActivity().requestLocalNetworkPermission(
+                                RQST_LOCALNETWORK_PERMISSION
+                            )
+                        )
                             showSnackbar(R.string.lrr_localnetwork_warning)
                     }
                 )

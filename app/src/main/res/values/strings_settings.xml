@@ -251,7 +251,7 @@
     <string name="pref_check_updates_summary_off">Enable automatic update checks over mobile data</string>
     <string name="pref_check_updates_summary_on">Note: Does not override manual update checks</string>
 
-    <!-- Viewer -->
+    <!-- Reader -->
     <string name="pref_screen_viewer">Reader</string>
     <string name="pref_viewer_controls">Controls</string>
     <string name="pref_viewer_browse_mode">Browse mode</string>
@@ -269,6 +269,11 @@
     <string name="pref_viewer_zoom_double_tap">Double tap to zoom</string>
     <string name="pref_viewer_zoom_holding">Temp zoom while holding</string>
     <string name="pref_viewer_cap_tap_zoom">Cap double &amp; long tap zoom</string>
+    <string name="pref_viewer_key_bindings_title">Additional keybindings</string>
+    <string name="pref_viewer_key_bindings_action">Action</string>
+    <string name="pref_viewer_key_bindings_record_key_off">Record key</string>
+    <string name="pref_viewer_key_bindings_record_key_on">Recording key…</string>
+    <string name="pref_viewer_key_bindings_no_binding">No keybinding</string>
     <string name="pref_viewer_visuals">Visuals</string>
     <string name="pref_viewer_horizontal_reader">Horizontal reader</string>
     <string name="pref_viewer_vertical_reader">Vertical reader</string>

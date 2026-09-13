@@ -226,7 +226,7 @@ class BookmarksDrawerFragment : Fragment(R.layout.fragment_browser_bookmarks),
                 isHighlighted = b.isHomepage,
                 centered = false,
                 touchHelper = touchHelper,
-                index > 0
+                selectable = index > 0
             )
         }
         itemAdapter.set(items)

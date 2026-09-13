@@ -162,12 +162,14 @@ class RuleBottomPanelFragment : BottomSheetDialogFragment() {
             TextItem(
                 context.resources.getString(R.string.meta_rule_source),
                 Settings.Value.ORDER_FIELD_SOURCE_NAME,
-                false, (Settings.Value.ORDER_FIELD_SOURCE_NAME == currentSortField)
+                reformatCase = false,
+                selected = (Settings.Value.ORDER_FIELD_SOURCE_NAME == currentSortField)
             ),
             TextItem(
                 context.resources.getString(R.string.meta_rule_target),
                 Settings.Value.ORDER_FIELD_TARGET_NAME,
-                false, (Settings.Value.ORDER_FIELD_TARGET_NAME == currentSortField)
+                reformatCase = false,
+                selected = (Settings.Value.ORDER_FIELD_TARGET_NAME == currentSortField)
             )
         )
     }

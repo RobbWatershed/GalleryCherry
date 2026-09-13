@@ -262,8 +262,10 @@ class LibraryBottomSortFilterFragment : BottomSheetDialogFragment() {
         binding?.apply {
             filterFavsBtn.setColorFilter(if (favouriteFilter) selectedColor else greyColor)
             filterNonFavsBtn.setColorFilter(if (nonFavouriteFilter) selectedColor else greyColor)
-            filterCompletedBtn.visibility = if (isGroupsDisplayed || isFoldersDisplayed || isLrrDisplayed) View.GONE else View.VISIBLE
-            filterNotCompletedBtn.visibility = if (isGroupsDisplayed || isFoldersDisplayed) View.GONE else View.VISIBLE
+            filterCompletedBtn.visibility =
+                if (isGroupsDisplayed || isFoldersDisplayed || isLrrDisplayed) View.GONE else View.VISIBLE
+            filterNotCompletedBtn.visibility =
+                if (isGroupsDisplayed || isFoldersDisplayed) View.GONE else View.VISIBLE
             filterCompletedBtn.setColorFilter(if (completedFilter) selectedColor else greyColor)
             filterNotCompletedBtn.setColorFilter(if (notCompletedFilter) selectedColor else greyColor)
         }
@@ -315,8 +317,8 @@ class LibraryBottomSortFilterFragment : BottomSheetDialogFragment() {
         return TextItem(
             resources.getString(getNameFromFieldCode(sortFieldCode)),
             sortFieldCode,
-            true,
-            currentPrefFieldCode == sortFieldCode
+            reformatCase = true,
+            selected = currentPrefFieldCode == sortFieldCode
         )
     }
 

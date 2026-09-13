@@ -88,6 +88,12 @@
     <string name="pref_viewer_read_threshold_entries_2">2 pages</string>
     <string name="pref_viewer_read_threshold_entries_3">5 pages</string>
     <string name="pref_viewer_read_threshold_entries_4">All pages</string>
+    <!-- Choice for "Custom keybindings" setting -->
+    <string name="pref_viewer_action_binding_entries_1">Previous book</string>
+    <string name="pref_viewer_action_binding_entries_2">Next book</string>
+    <string name="pref_viewer_action_binding_entries_3">Previous page</string>
+    <string name="pref_viewer_action_binding_entries_4">Next page</string>
+
     <!-- Choice for "Slideshow delay" setting for horizontal mode -->
     <string name="pref_viewer_slideshow_delay_entries_1" tools:ignore="MissingTranslation">500 ms</string>
     <string name="pref_viewer_slideshow_delay_entries_2" tools:ignore="MissingTranslation">1 s</string>
