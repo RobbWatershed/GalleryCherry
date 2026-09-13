@@ -1,5 +1,6 @@
 package me.devsaki.hentoid.util.file
 
+import android.Manifest.permission.ACCESS_LOCAL_NETWORK
 import android.Manifest.permission.POST_NOTIFICATIONS
 import android.Manifest.permission.READ_EXTERNAL_STORAGE
 import android.Manifest.permission.WRITE_EXTERNAL_STORAGE
@@ -12,6 +13,7 @@ import androidx.core.content.ContextCompat
 
 const val RQST_STORAGE_PERMISSION = 3
 const val RQST_NOTIFICATION_PERMISSION = 4
+const val RQST_LOCALNETWORK_PERMISSION = 5
 
 private fun Context.checkPermission(code: String): Boolean {
     return ContextCompat.checkSelfPermission(this, code) == PERMISSION_GRANTED
@@ -58,6 +60,25 @@ fun Activity.requestNotificationPermission(permissionRequestCode: Int): Boolean 
             ActivityCompat.requestPermissions(
                 this,
                 arrayOf(POST_NOTIFICATIONS),
+                permissionRequestCode
+            )
+            false
+        }
+    } else true
+}
+
+fun Context.checkLocalNetworkPermission(): Boolean {
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN) {
+        checkPermission(ACCESS_LOCAL_NETWORK)
+    } else true
+}
+
+fun Activity.requestLocalNetworkPermission(permissionRequestCode: Int): Boolean {
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN) {
+        if (checkLocalNetworkPermission()) true else {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(ACCESS_LOCAL_NETWORK),
                 permissionRequestCode
             )
             false

@@ -21,6 +21,8 @@
     <!-- Still required when targeting API34 for pre-API34 phones  -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <!-- Required to reach a local LRR server when targeting API 37 or higher -->
+    <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
 
     <application
         android:name=".core.HentoidApp"

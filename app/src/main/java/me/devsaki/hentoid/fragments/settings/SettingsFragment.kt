@@ -56,7 +56,9 @@ import me.devsaki.hentoid.ui.invokeInputDialog
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.applyTheme
 import me.devsaki.hentoid.util.download.DownloadSpeedLimiter
+import me.devsaki.hentoid.util.file.RQST_LOCALNETWORK_PERMISSION
 import me.devsaki.hentoid.util.file.getFullPathFromUri
+import me.devsaki.hentoid.util.file.requestLocalNetworkPermission
 import me.devsaki.hentoid.util.network.OkHttpClientManager
 import me.devsaki.hentoid.viewmodels.SettingsViewModel
 import me.devsaki.hentoid.viewmodels.ViewModelFactory
@@ -262,7 +264,10 @@ class SettingsFragment : PreferenceFragmentCompat(),
                         var res = it.lowercase().replace(" ", "")
                         if (!res.startsWith("http")) res = "http://$res"
                         if (res.endsWith('/')) res = res.substringBeforeLast('/')
+                        if (res.lastIndexOf(':') < 7) res += ":3000" // Default port for LRR
                         Settings.lrrEndpoint = res
+                        if (!requireActivity().requestLocalNetworkPermission(RQST_LOCALNETWORK_PERMISSION))
+                            showSnackbar(R.string.lrr_localnetwork_warning)
                     }
                 )
                 true
