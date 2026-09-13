@@ -293,7 +293,7 @@ data class ImageFile(
 
     val isReadable: Boolean
         get() {
-            if (null == name) return true
+            if (null == name) return true // Defensive; that may happen "thanks to" https://github.com/objectbox/objectbox-java/issues/157
             return !name.startsWith(THUMB_FILE_NAME) && !name.startsWith(EXT_THUMB_FILE_PREFIX)
         }
 

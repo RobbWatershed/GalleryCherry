@@ -1045,6 +1045,7 @@ object Settings {
         const val VIEWER_SLIDESHOW_DELAY_16 = 3
         const val VIEWER_SLIDESHOW_DELAY_1 = 4
         const val VIEWER_SLIDESHOW_DELAY_05 = 5
+        const val VIEWER_SLIDESHOW_DELAY_30 = 6
 
         const val VIEWER_SLIDESHOW_LOOP_NONE = 0
         const val VIEWER_SLIDESHOW_LOOP_CHAPTER = 1

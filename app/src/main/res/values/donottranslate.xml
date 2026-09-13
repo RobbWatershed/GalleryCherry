@@ -360,8 +360,10 @@
         <item>@string/pref_viewer_slideshow_delay_entries_4</item>
         <item>@string/pref_viewer_slideshow_delay_entries_5</item>
         <item>@string/pref_viewer_slideshow_delay_entries_6</item>
+        <item>@string/pref_viewer_slideshow_delay_entries_7</item>
     </string-array>
     <string-array name="pref_viewer_slideshow_delay_entries_vertical" translatable="false">
+        <item>@string/pref_viewer_slideshow_delay_entries_vertical_0</item>
         <item>@string/pref_viewer_slideshow_delay_entries_vertical_1</item>
         <item>@string/pref_viewer_slideshow_delay_entries_vertical_2</item>
         <item>@string/pref_viewer_slideshow_delay_entries_vertical_3</item>
@@ -376,6 +378,7 @@
         <item>1</item>
         <item>2</item>
         <item>3</item>
+        <item>6</item>
     </string-array>
     <string-array name="pref_viewer_slideshow_loop_entries" translatable="false">
         <item>@string/pref_viewer_slideshow_loop_entries_1</item>

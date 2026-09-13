@@ -1319,10 +1319,8 @@ class MemoryUsageFigures(context: Context, fUri: Uri) {
     // the "UUID" available for non-primary volumes is not acceptable to
     // StorageStatsManager. We must revert to statvfs(path) for non-primary volumes.
     private fun processSecondary(context: Context, volume: StorageVolume) {
-        val volumePath = getVolumePath(volume) ?: return
+        val volumePath = getVolumePath(volume)
         if (volumePath.isNotEmpty()) doStatvFs(volumePath)
-
-
     }
 
     private fun doStatFs(path: String) {
