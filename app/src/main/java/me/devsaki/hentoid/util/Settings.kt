@@ -199,6 +199,9 @@ object Settings {
     var libraryFoldersRoot: String by StringSetting("library_folders_current_root", "")
     var lrrEndpoint: String by StringSetting(Key.LRR_ENDPOINT, "")
     val lrrApiKey: String by StringSetting(Key.LRR_API_KEY, "")
+
+    // Yes, the LRR favorites category does have unicode emoji in its name in Atomica
+    val lrrFavCat: String by StringSetting(Key.LRR_FAV_CAT, "\uD83D\uDD16 Favorites")
     var lrrSortField: Int by IntSetting("pref_order_lrr_field", Default.ORDER_LRR_FIELD)
     var isLrrSortDesc: Boolean by BoolSetting("pref_order_lrr_desc", false)
 
@@ -848,6 +851,7 @@ object Settings {
 
         const val LRR_ENDPOINT = "lrr_endpoint"
         const val LRR_API_KEY = "lrr_api_key"
+        const val LRR_FAV_CAT = "lrr_fav_cat"
 
         const val ACHIEVEMENTS = "achievements"
         const val ACHIEVEMENTS_NB_AI_RESCALE = "ach_nb_ai_rescale"

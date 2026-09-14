@@ -26,9 +26,6 @@ import timber.log.Timber
 
 // Lanraragi
 
-// Yes, the LRR favorites category does have unicode emoji in its name
-const val LRR_FAV_CAT = "\uD83D\uDD16 Favorites"
-
 object LrrServer {
     lateinit var api: Api
     private lateinit var endpoint : String

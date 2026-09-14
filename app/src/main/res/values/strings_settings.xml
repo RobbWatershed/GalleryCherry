@@ -16,6 +16,7 @@
     <string name="pref_lrr_url_title">Server URL</string>
     <string name="pref_lrr_url_prompt">Type your LRR server\'s IP and port (IP:port)</string>
     <string name="pref_lrr_api_title">API key</string>
+    <string name="pref_lrr_fav_cat">Favourite category name</string>
 
     <!-- Interface -->
     <string name="pref_screen_interface">Interface &amp; Navigation</string>

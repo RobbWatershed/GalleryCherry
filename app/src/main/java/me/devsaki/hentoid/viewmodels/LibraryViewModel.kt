@@ -47,7 +47,6 @@ import me.devsaki.hentoid.enums.Grouping
 import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.enums.StorageLocation
-import me.devsaki.hentoid.retrofit.sources.LRR_FAV_CAT
 import me.devsaki.hentoid.retrofit.sources.LrrServer
 import me.devsaki.hentoid.util.JSON_MIME_TYPE
 import me.devsaki.hentoid.util.Location
@@ -139,7 +138,7 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
     // LRR data
     val lrrArchives = MediatorLiveData<Pair<List<Content>, Int>>()
     val lrrSearchBundle = MutableLiveData<Bundle>()
-    val lrrFavCatId: String by lazy { LrrServer.getLrrCategoryId(LRR_FAV_CAT) }
+    val lrrFavCatId: String by lazy { LrrServer.getLrrCategoryId(Settings.lrrFavCat) }
     var lrrMaxResult: Int = 0 // Max index of results; 0 if max has been reached
 
     // Other data
@@ -581,7 +580,7 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
 
         try {
             withContext(Dispatchers.IO) {
-                val favArchives = getLrrCategoryArchiveIds(LRR_FAV_CAT)
+                val favArchives = getLrrCategoryArchiveIds(Settings.lrrFavCat)
                 val isArchiveFav = favArchives.contains(archiveId)
 
                 val archivesCall = LrrServer.api.getArchive(archiveId)
@@ -624,7 +623,12 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
 
         try {
             withContext(Dispatchers.IO) {
-                val favs = getLrrCategoryArchiveIds(LRR_FAV_CAT).toSet()
+                val favs = try {
+                    getLrrCategoryArchiveIds(Settings.lrrFavCat).toSet()
+                } catch (e : Throwable) {
+                    Timber.w(e)
+                    emptyList()
+                }
 
                 val queryMap = HashMap<String, String>()
                 if (resumeLoad) lrrSearchManager.setResumeFrom(lrrMaxResult)
