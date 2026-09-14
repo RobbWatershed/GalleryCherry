@@ -114,11 +114,8 @@ open class ReaderActivity : BaseActivity() {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        return if (readerKeyListener != null) readerKeyListener!!.onKey(
-            null,
-            keyCode,
-            event
-        ) else super.onKeyDown(keyCode, event)
+        return if (readerKeyListener != null) readerKeyListener!!.onKey(keyCode, event)
+        else super.onKeyDown(keyCode, event)
     }
 
     override fun onStop() {

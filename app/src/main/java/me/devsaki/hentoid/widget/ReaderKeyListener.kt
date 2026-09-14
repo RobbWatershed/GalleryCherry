@@ -1,7 +1,6 @@
 package me.devsaki.hentoid.widget
 
 import android.view.KeyEvent
-import android.view.View
 import android.view.ViewConfiguration
 import kotlinx.coroutines.CoroutineScope
 import me.devsaki.hentoid.core.Consumer
@@ -11,16 +10,23 @@ import me.devsaki.hentoid.util.Settings
 const val COOLDOWN = 1000
 const val TURBO_COOLDOWN = 500
 
-class ReaderKeyListener(scope: CoroutineScope) : View.OnKeyListener {
+class ReaderKeyListener(scope: CoroutineScope) {
+
+    // Hardcoded (material) mappings
     private var onVolumeDownListener: Consumer<Boolean>? = null
-
     private var onVolumeUpListener: Consumer<Boolean>? = null
-
     private var onKeyLeftListener: Consumer<Boolean>? = null
-
     private var onKeyRightListener: Consumer<Boolean>? = null
 
     private var onBackListener: Consumer<Boolean>? = null
+
+
+    // Custom (feature) mappings
+    private var onPreviousChapterBook: Consumer<Boolean>? = null
+    private var onNextChapterBook: Consumer<Boolean>? = null
+    private var onPreviousPage: Consumer<Boolean>? = null
+    private var onNextPage: Consumer<Boolean>? = null
+
 
     // Internal variables
     private var nextNotifyTime = Long.MAX_VALUE
@@ -34,30 +40,52 @@ class ReaderKeyListener(scope: CoroutineScope) : View.OnKeyListener {
             }
     }
 
-    fun setOnVolumeDownListener(onVolumeDownListener: Consumer<Boolean>?): ReaderKeyListener {
-        this.onVolumeDownListener = onVolumeDownListener
+    fun setOnVolumeDownListener(listener: Consumer<Boolean>?): ReaderKeyListener {
+        this.onVolumeDownListener = listener
         return this
     }
 
-    fun setOnVolumeUpListener(onVolumeUpListener: Consumer<Boolean>?): ReaderKeyListener {
-        this.onVolumeUpListener = onVolumeUpListener
+    fun setOnVolumeUpListener(listener: Consumer<Boolean>?): ReaderKeyListener {
+        this.onVolumeUpListener = listener
         return this
     }
 
-    fun setOnKeyLeftListener(onKeyLeftListener: Consumer<Boolean>?): ReaderKeyListener {
-        this.onKeyLeftListener = onKeyLeftListener
+    fun setOnKeyLeftListener(listener: Consumer<Boolean>?): ReaderKeyListener {
+        this.onKeyLeftListener = listener
         return this
     }
 
-    fun setOnKeyRightListener(onKeyRightListener: Consumer<Boolean>?): ReaderKeyListener {
-        this.onKeyRightListener = onKeyRightListener
+    fun setOnKeyRightListener(listener: Consumer<Boolean>?): ReaderKeyListener {
+        this.onKeyRightListener = listener
         return this
     }
 
-    fun setOnBackListener(onBackListener: Consumer<Boolean>?): ReaderKeyListener {
-        this.onBackListener = onBackListener
+    fun setOnBackListener(listener: Consumer<Boolean>?): ReaderKeyListener {
+        this.onBackListener = listener
         return this
     }
+
+
+    fun setOnPreviousChapterBook(listener: Consumer<Boolean>?): ReaderKeyListener {
+        this.onPreviousChapterBook = listener
+        return this
+    }
+
+    fun setOnNextChapterBook(listener: Consumer<Boolean>?): ReaderKeyListener {
+        this.onNextChapterBook = listener
+        return this
+    }
+
+    fun setOnPreviousPage(listener: Consumer<Boolean>?): ReaderKeyListener {
+        this.onPreviousPage = listener
+        return this
+    }
+
+    fun setOnNextPage(listener: Consumer<Boolean>?): ReaderKeyListener {
+        this.onNextPage = listener
+        return this
+    }
+
 
     private fun isTurboEnabled(): Boolean {
         return !Settings.isReaderVolumeToSwitchBooks
@@ -76,21 +104,12 @@ class ReaderKeyListener(scope: CoroutineScope) : View.OnKeyListener {
         return keyCode == targetKeyCode
     }
 
-    override fun onKey(v: View?, keyCode: Int, event: KeyEvent): Boolean {
+    fun onKey(keyCode: Int, event: KeyEvent): Boolean {
         if (event.action != KeyEvent.ACTION_DOWN) return false
-        val listener: Consumer<Boolean>? = if (isVolumeKey(keyCode, KeyEvent.KEYCODE_VOLUME_DOWN)) {
-            onVolumeDownListener
-        } else if (isVolumeKey(keyCode, KeyEvent.KEYCODE_VOLUME_UP)) {
-            onVolumeUpListener
-        } else if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT && Settings.isReaderKeyboardToTurn) {
-            onKeyLeftListener
-        } else if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && Settings.isReaderKeyboardToTurn) {
-            onKeyRightListener
-        } else if (keyCode == KeyEvent.KEYCODE_BACK) {
-            onBackListener
-        } else {
-            return false
-        }
+
+        var listener = testHardcodedKeys(keyCode)
+        if (null == listener) listener = testCustomKeys(keyCode)
+
         if (null == listener) return false
         if (event.repeatCount == 0) { // Simple down
             nextNotifyTime = if (isDetectLongPress()) {
@@ -108,12 +127,64 @@ class ReaderKeyListener(scope: CoroutineScope) : View.OnKeyListener {
         return true
     }
 
+    private fun testHardcodedKeys(keyCode: Int): Consumer<Boolean>? {
+        return if (isVolumeKey(keyCode, KeyEvent.KEYCODE_VOLUME_DOWN)) {
+            onVolumeDownListener
+        } else if (isVolumeKey(keyCode, KeyEvent.KEYCODE_VOLUME_UP)) {
+            onVolumeUpListener
+        } else if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT && Settings.isReaderKeyboardToTurn) {
+            onKeyLeftListener
+        } else if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && Settings.isReaderKeyboardToTurn) {
+            onKeyRightListener
+        } else if (keyCode == KeyEvent.KEYCODE_BACK) {
+            onBackListener
+        } else {
+            null
+        }
+    }
+
+    private fun testCustomKeys(keyCode: Int): Consumer<Boolean>? {
+        val customKeys = Settings.readerCustomKeys.filterValues { it.startsWith("key|") }
+        if (customKeys.isEmpty()) return null
+
+        customKeys.forEach { (key, value) ->
+            val code = value.substringAfter('|')
+            if (code == keyCode.toString()) {
+                return when (key) {
+                    "0" -> onPreviousChapterBook
+                    "1" -> onNextChapterBook
+                    "2" -> onPreviousPage
+                    "3" -> onNextPage
+                    else -> null
+                }
+            }
+        }
+
+        return if (isVolumeKey(keyCode, KeyEvent.KEYCODE_VOLUME_DOWN)) {
+            onVolumeDownListener
+        } else if (isVolumeKey(keyCode, KeyEvent.KEYCODE_VOLUME_UP)) {
+            onVolumeUpListener
+        } else if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT && Settings.isReaderKeyboardToTurn) {
+            onKeyLeftListener
+        } else if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && Settings.isReaderKeyboardToTurn) {
+            onKeyRightListener
+        } else if (keyCode == KeyEvent.KEYCODE_BACK) {
+            onBackListener
+        } else {
+            null
+        }
+    }
+
     fun clear() {
         onVolumeDownListener = null
         onVolumeUpListener = null
         onKeyLeftListener = null
         onKeyRightListener = null
         onBackListener = null
+        onPreviousChapterBook = null
+        onNextChapterBook = null
+        onPreviousPage = null
+        onNextPage = null
         simpleTapDebouncer.clear()
     }
 }

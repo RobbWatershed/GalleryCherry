@@ -89,8 +89,8 @@
     <string name="pref_viewer_read_threshold_entries_3">5 pages</string>
     <string name="pref_viewer_read_threshold_entries_4">All pages</string>
     <!-- Choice for "Custom keybindings" setting -->
-    <string name="pref_viewer_action_binding_entries_1">Previous book</string>
-    <string name="pref_viewer_action_binding_entries_2">Next book</string>
+    <string name="pref_viewer_action_binding_entries_1">Previous chapter/book</string>
+    <string name="pref_viewer_action_binding_entries_2">Next chapter/book</string>
     <string name="pref_viewer_action_binding_entries_3">Previous page</string>
     <string name="pref_viewer_action_binding_entries_4">Next page</string>
 

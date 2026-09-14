@@ -392,7 +392,12 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
                     .setOnVolumeDownListener { b -> if (b && Settings.isReaderVolumeToSwitchBooks) navigator.previousContainer() else previousPage() }
                     .setOnVolumeUpListener { b -> if (b && Settings.isReaderVolumeToSwitchBooks) navigator.nextContainer() else nextPage() }
                     .setOnKeyLeftListener { onLeftTap() }.setOnKeyRightListener { onRightTap() }
-                    .setOnBackListener { onBackClick() })
+                    .setOnBackListener { onBackClick() }
+                    .setOnPreviousChapterBook { navigator.previousContainer() }
+                    .setOnNextChapterBook { navigator.nextContainer() }
+                    .setOnPreviousPage { previousPage() }
+                    .setOnNextPage { nextPage() }
+            )
     }
 
     override fun onResume() {
