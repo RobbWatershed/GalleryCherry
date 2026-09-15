@@ -3,7 +3,6 @@ package me.devsaki.hentoid.activities.settings
 import android.annotation.SuppressLint
 import android.graphics.Typeface
 import android.os.Bundle
-import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
 import androidx.core.content.ContextCompat
@@ -20,6 +19,7 @@ import me.devsaki.hentoid.databinding.ActivitySettingsCustomInputBinding
 import me.devsaki.hentoid.ui.BlinkAnimation
 import me.devsaki.hentoid.util.PreferencesParser
 import me.devsaki.hentoid.util.Settings
+import me.devsaki.hentoid.util.decodeMotionEvent
 import me.devsaki.hentoid.util.dimensAsDp
 import me.devsaki.hentoid.util.getThemedColor
 import me.devsaki.hentoid.util.isNumeric
@@ -172,56 +172,9 @@ class SettingsKeybindActivity : BaseActivity() {
     }
 
     override fun onGenericMotionEvent(event: MotionEvent): Boolean {
-        when (event.actionMasked) {
-            MotionEvent.ACTION_BUTTON_PRESS -> {
-                Timber.v("ACTIVITY motion press ${event.actionButton}")
-                onInputEvent("button", event.actionButton.toString())
-                return true
-            }
-
-            MotionEvent.ACTION_MOVE -> {
-                if (event.source and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD
-                    || event.source and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK
-                ) {
-                    val leftTrigger = event.getAxisValue(MotionEvent.AXIS_LTRIGGER)
-                    val rightTrigger = event.getAxisValue(MotionEvent.AXIS_RTRIGGER)
-                    val leftTriggerLegacy = event.getAxisValue(MotionEvent.AXIS_BRAKE)
-                    val rightTriggerLegacy = event.getAxisValue(MotionEvent.AXIS_THROTTLE)
-
-                    val left = if (leftTrigger > 0.0) leftTrigger else leftTriggerLegacy
-                    val right = if (rightTrigger > 0.0) rightTrigger else rightTriggerLegacy
-
-                    Timber.v("ACTIVITY trigger $left $right")
-                    if (left > 0.0) onInputEvent("trigger", "left")
-                    if (right > 0.0) onInputEvent("trigger", "right")
-
-                    val dpadX = event.getAxisValue(MotionEvent.AXIS_HAT_X)
-                    val dpadY = event.getAxisValue(MotionEvent.AXIS_HAT_Y)
-
-                    Timber.v("ACTIVITY dpad $dpadX $dpadY")
-                    if (dpadX > 0.0) onInputEvent("dpad", "right")
-                    if (dpadX < 0.0) onInputEvent("dpad", "left")
-                    if (dpadY < 0.0) onInputEvent("dpad", "up")
-                    if (dpadY > 0.0) onInputEvent("dpad", "down")
-                    return true
-                }
-            }
-
-            MotionEvent.ACTION_SCROLL -> {
-                // Mouse only
-                if (!event.isFromSource(InputDevice.SOURCE_CLASS_POINTER)) return false
-
-                val vScroll = event.getAxisValue(MotionEvent.AXIS_VSCROLL)
-                Timber.v("ACTIVITY mouse vertical scroll $vScroll")
-                if (vScroll > 0.0) onInputEvent("mouse", "scrollDown")
-                else onInputEvent("mouse", "scrollUp")
-
-                return true
-            }
-
-            else -> { /* Nothing */
-                Timber.v("unhandled motion action ${event.actionMasked}")
-            }
+        decodeMotionEvent(event)?.let { me ->
+            onInputEvent(me.first, me.second)
+            return true
         }
         return super.onGenericMotionEvent(event)
     }

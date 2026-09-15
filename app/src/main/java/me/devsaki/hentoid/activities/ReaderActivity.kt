@@ -3,6 +3,7 @@ package me.devsaki.hentoid.activities
 import android.os.Build
 import android.os.Bundle
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.WindowManager
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
@@ -116,6 +117,11 @@ open class ReaderActivity : BaseActivity() {
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         return if (readerKeyListener != null) readerKeyListener!!.onKey(keyCode, event)
         else super.onKeyDown(keyCode, event)
+    }
+
+    override fun onGenericMotionEvent(event: MotionEvent): Boolean {
+        return if (readerKeyListener != null) readerKeyListener!!.onMotionEvent(event)
+        else super.onGenericMotionEvent(event)
     }
 
     override fun onStop() {

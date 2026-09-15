@@ -1,11 +1,13 @@
 package me.devsaki.hentoid.widget
 
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.ViewConfiguration
 import kotlinx.coroutines.CoroutineScope
 import me.devsaki.hentoid.core.Consumer
 import me.devsaki.hentoid.util.Debouncer
 import me.devsaki.hentoid.util.Settings
+import me.devsaki.hentoid.util.decodeMotionEvent
 
 const val COOLDOWN = 1000
 const val TURBO_COOLDOWN = 500
@@ -104,6 +106,29 @@ class ReaderKeyListener(scope: CoroutineScope) {
         return keyCode == targetKeyCode
     }
 
+    fun onMotionEvent(event: MotionEvent): Boolean {
+        val me = decodeMotionEvent(event) ?: return false
+        val listener = testCustomEvents(me) ?: return false
+        listener.invoke(true)
+        return true
+    }
+
+    private fun testCustomEvents(me: Pair<String, String>): Consumer<Boolean>? {
+        val customKeys = Settings.readerCustomKeys
+        customKeys.forEach { (key, value) ->
+            if (value == "${me.first}|${me.second}") {
+                return when (key) {
+                    "0" -> onPreviousChapterBook
+                    "1" -> onNextChapterBook
+                    "2" -> onPreviousPage
+                    "3" -> onNextPage
+                    else -> null
+                }
+            }
+        }
+        return null
+    }
+
     fun onKey(keyCode: Int, event: KeyEvent): Boolean {
         if (event.action != KeyEvent.ACTION_DOWN) return false
 
@@ -159,20 +184,7 @@ class ReaderKeyListener(scope: CoroutineScope) {
                 }
             }
         }
-
-        return if (isVolumeKey(keyCode, KeyEvent.KEYCODE_VOLUME_DOWN)) {
-            onVolumeDownListener
-        } else if (isVolumeKey(keyCode, KeyEvent.KEYCODE_VOLUME_UP)) {
-            onVolumeUpListener
-        } else if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT && Settings.isReaderKeyboardToTurn) {
-            onKeyLeftListener
-        } else if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && Settings.isReaderKeyboardToTurn) {
-            onKeyRightListener
-        } else if (keyCode == KeyEvent.KEYCODE_BACK) {
-            onBackListener
-        } else {
-            null
-        }
+        return null
     }
 
     fun clear() {
