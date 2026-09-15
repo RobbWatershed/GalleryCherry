@@ -625,7 +625,7 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
             withContext(Dispatchers.IO) {
                 val favs = try {
                     getLrrCategoryArchiveIds(Settings.lrrFavCat).toSet()
-                } catch (e : Throwable) {
+                } catch (e: Throwable) {
                     Timber.w(e)
                     emptyList()
                 }
@@ -635,10 +635,7 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
                 else lrrSearchManager.setResumeFrom(0)
                 lrrSearchManager.populateSearchQuery(queryMap)
                 val archivesCall =
-                    LrrServer.api.search(
-                        queryMap,
-                        LrrServer.formatApiKey()
-                    )
+                    LrrServer.api.search(queryMap)
                 Timber.d("Searching LRR from $lrrMaxResult")
                 archivesCall.execute().let { response ->
                     if (response.isSuccessful) {
@@ -828,14 +825,12 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
             if (content.favourite) {
                 LrrServer.api.removeFromCategory(
                     lrrFavCatId,
-                    content.uniqueSiteId,
-                    LrrServer.formatApiKey()
+                    content.uniqueSiteId
                 ).execute()
             } else {
                 LrrServer.api.addToCategory(
                     lrrFavCatId,
-                    content.uniqueSiteId,
-                    LrrServer.formatApiKey()
+                    content.uniqueSiteId
                 ).execute()
             }
             updateLrr(content.uniqueSiteId)

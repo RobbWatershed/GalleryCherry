@@ -292,7 +292,7 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
 
     private fun archiveLrr(
         content: Content,
-        dao : CollectionDAO
+        dao: CollectionDAO
     ): Boolean {
         if (content.downloadMode == DownloadMode.STREAM) return false
         val context = applicationContext
@@ -302,8 +302,7 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
             lrrHentoidCategoryId = LrrServer.getLrrCategoryId(appName)
             if (lrrHentoidCategoryId.isBlank()) {
                 LrrServer.api.createCategory(
-                    appName.toRequestBody("multipart/form-data".toMediaType()),
-                    LrrServer.formatApiKey()
+                    appName.toRequestBody("multipart/form-data".toMediaType())
                 ).execute().let {
                     if (it.isSuccessful) lrrHentoidCategoryId = it.body()?.catId ?: ""
                     else Timber.w("${it.code()} : ${it.message()} ${it.errorBody()?.string()}")
@@ -359,8 +358,7 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
                 rFile,
                 rCat,
                 rTags,
-                rTitle,
-                LrrServer.formatApiKey()
+                rTitle
             ).execute().let {
                 if (!it.isSuccessful) {
                     trace(Log.WARN, "LRR Archive : Failure")
@@ -369,7 +367,7 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
                 }
                 val arcId = it.body()?.id ?: ""
 
-                dao.selectContent(content.id)?.let { c->
+                dao.selectContent(content.id)?.let { c ->
                     c.archiveId = arcId
                     dao.insertContentCore(c)
                 }

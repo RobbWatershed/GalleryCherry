@@ -28,7 +28,7 @@ import timber.log.Timber
 
 object LrrServer {
     lateinit var api: Api
-    private lateinit var endpoint : String
+    private lateinit var endpoint: String
     val lrrCategoryIdCache: MutableMap<String, String> = LinkedHashMap()
 
     init {
@@ -49,7 +49,7 @@ object LrrServer {
             .create(Api::class.java)
     }
 
-    fun getDlLink(arcId : String) : String {
+    fun getDlLink(arcId: String): String {
         return "${endpoint}archives/$arcId/download"
     }
 
@@ -57,43 +57,57 @@ object LrrServer {
         @GET("search")
         fun search(
             @QueryMap options: Map<String, String>,
-            @Header("Authorization") apiKey: String
+            @Header("Authorization") apiKey: String = formatApiKey()
         ): Call<LrrArchives>
 
         @GET("archives/{id}/files")
-        fun extract(@Path("id") archiveId: String): Call<LrrExtraction>
+        fun extract(
+            @Path("id") archiveId: String,
+            @Header("Authorization") apiKey: String = formatApiKey()
+        ): Call<LrrExtraction>
 
         @GET("archives/{id}/metadata")
-        fun getArchive(@Path("id") archiveId: String): Call<LrrArchives.LrrArchive>
+        fun getArchive(
+            @Path("id") archiveId: String,
+            @Header("Authorization") apiKey: String = formatApiKey()
+        ): Call<LrrArchives.LrrArchive>
 
         @GET("archives/{id}/categories")
-        fun getArchiveCategories(@Path("id") archiveId: String): Call<LrrCategories>
+        fun getArchiveCategories(
+            @Path("id") archiveId: String,
+            @Header("Authorization") apiKey: String = formatApiKey()
+        ): Call<LrrCategories>
 
         @GET("categories")
-        fun getAllCategories(): Call<List<LrrCategories.LrrCategory>>
+        fun getAllCategories(
+            @Header("Authorization") apiKey: String = formatApiKey()
+        ): Call<List<LrrCategories.LrrCategory>>
 
         @GET("categories/{id}")
-        fun getCategory(@Path("id") catId: String): Call<LrrCategories.LrrCategory>
+        fun getCategory(
+            @Path("id") catId: String,
+            @Header("Authorization") apiKey: String = formatApiKey()
+        ): Call<LrrCategories.LrrCategory>
 
         @PUT("categories/{id}/{archive}")
         fun addToCategory(
             @Path("id") catId: String,
             @Path("archive") archiveId: String,
-            @Header("Authorization") apiKey: String
+            @Header("Authorization") apiKey: String = formatApiKey()
         ): Call<LrrSuccess>
 
         @DELETE("categories/{id}/{archive}")
         fun removeFromCategory(
             @Path("id") catId: String,
             @Path("archive") archiveId: String,
-            @Header("Authorization") apiKey: String
+            @Header("Authorization") apiKey: String = formatApiKey()
         ): Call<LrrSuccess>
 
         @Multipart
         @PUT("categories")
         fun createCategory(
             @Part("name") name: RequestBody,
-            @Header("Authorization") apiKey: String
+            @Header("Authorization") apiKey: String = formatApiKey()
         ): Call<LrrSuccess>
 
         @Multipart
@@ -103,11 +117,13 @@ object LrrServer {
             @Part("category_id") categoryId: RequestBody,
             @Part("tags") tags: RequestBody,
             @Part("title") title: RequestBody,
-            @Header("Authorization") apiKey: String
+            @Header("Authorization") apiKey: String = formatApiKey()
         ): Call<LrrSuccess>
 
         @GET("info")
-        fun info(): Call<LrrServerInfo>
+        fun info(
+            @Header("Authorization") apiKey: String = formatApiKey()
+        ): Call<LrrServerInfo>
     }
 
     fun formatApiKey(): String {
