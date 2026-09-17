@@ -199,7 +199,7 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
 
         val destFileUri = getTargetFile(context, content, params)
         Timber.d("DestUri : ${destFileUri.formatDisplay()}")
-        var success = false
+        var success = true
         getOutputStream(context, destFileUri)?.use { os ->
             if (2 == params.targetFormat) { // PDF
                 val mgr = PdfManager()
@@ -258,7 +258,6 @@ class ArchiveWorker(context: Context, parameters: WorkerParameters) :
                         }
                         dao.insertImageFiles(imgs)
                         content.setImageFiles(imgs)
-                        success = true
                     } // params.archivePrimaryContent
                 } catch (e: Exception) {
                     trace(Log.WARN, e)
