@@ -318,6 +318,7 @@ class LibraryBottomSortFilterFragment : BottomSheetDialogFragment() {
             resources.getString(getNameFromFieldCode(sortFieldCode)),
             sortFieldCode,
             reformatCase = true,
+            selectable = true,
             selected = currentPrefFieldCode == sortFieldCode
         )
     }
