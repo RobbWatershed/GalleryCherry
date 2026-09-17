@@ -561,6 +561,10 @@ suspend fun getPictureFilesFromContent(context: Context, content: Content): List
 @Throws(ContentNotProcessedException::class)
 suspend fun removeContent(context: Context, dao: CollectionDAO, content: Content) =
     withContext(Dispatchers.IO) {
+        // Small hack to delete the archive and not the parent folder when removing an archive file before download is finalized
+        if (content.downloadMode == DownloadMode.DOWNLOAD_ARCHIVE_FILE) content.storageUri =
+            content.imageList.first().fileUri
+
         // Remove from DB
         // NB : start with DB to have a LiveData feedback, because file removal can take much time
         dao.deleteContent(content)
@@ -1502,19 +1506,10 @@ private fun purgeArchivePdfFiles(
         Timber.i("Archive removed : ${content.storageUri}")
         content.storageUri = ""
     } else {
-        // Trying to delete an archive file before download is finalized
-        if (DownloadMode.DOWNLOAD_ARCHIVE_FILE == content.downloadMode) {
-            content.imageList.forEach {
-                val fileUri = it.fileUri.toUri()
-                if (it.fileUri.isNotBlank() && fileExists(context, fileUri))
-                    removeDocument(context, fileUri)
-            }
-        } else {
-            throw FileNotProcessedException(
-                content,
-                "Failed to delete document ${content.storageUri}"
-            )
-        }
+        throw FileNotProcessedException(
+            content,
+            "Failed to delete document ${content.storageUri}"
+        )
     }
 
     // Remove the cover stored in the app's persistent folder
