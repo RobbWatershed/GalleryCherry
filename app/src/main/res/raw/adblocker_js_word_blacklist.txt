@@ -38,3 +38,6 @@ realsrv.com
 trackingurl
 zfgloadedbanner
 zfgloadedpopup
+"schemeClicks"
+e.situation = "banner init"
+popunderjs.com
