@@ -1,5 +1,7 @@
 package me.devsaki.hentoid.activities.sources
 
+import android.Manifest.permission.READ_EXTERNAL_STORAGE
+import android.Manifest.permission.WRITE_EXTERNAL_STORAGE
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener
@@ -24,6 +26,7 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebView.HitTestResult
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.coordinatorlayout.widget.CoordinatorLayout
@@ -98,12 +101,11 @@ import me.devsaki.hentoid.util.download.ContentQueueManager.isQueueActive
 import me.devsaki.hentoid.util.download.ContentQueueManager.resumeQueue
 import me.devsaki.hentoid.util.download.downloadToFile
 import me.devsaki.hentoid.util.exportToDownloadsFolder
-import me.devsaki.hentoid.util.file.RQST_STORAGE_PERMISSION
+import me.devsaki.hentoid.util.file.checkPermissions
 import me.devsaki.hentoid.util.file.getAssetAsString
 import me.devsaki.hentoid.util.file.getExtensionFromMimeType
 import me.devsaki.hentoid.util.file.getInputStream
 import me.devsaki.hentoid.util.file.removeFile
-import me.devsaki.hentoid.util.file.requestExternalStorageReadWritePermission
 import me.devsaki.hentoid.util.file.shareFile
 import me.devsaki.hentoid.util.findDuplicate
 import me.devsaki.hentoid.util.getBlockedTags
@@ -272,6 +274,16 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
     protected abstract fun createWebClient(): CustomWebViewClient
 
     abstract fun getStartSite(): Site
+
+    private val storageRequestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { isGranted: Map<String, Boolean> ->
+        if (2 == isGranted.size && isGranted.all { it.value }) {
+            Timber.i("Storage permissions granted")
+        } else {
+            toast(R.string.web_storage_permission_denied)
+        }
+    }
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -657,8 +669,15 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
     // Make sure permissions are set at resume time; if not, warn the user
     private fun checkPermissions() {
         if (Settings.isBrowserMode) return
-        if (!this.requestExternalStorageReadWritePermission(RQST_STORAGE_PERMISSION))
-            toast(R.string.web_storage_permission_denied)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
+            && !checkPermissions(READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE)
+        )
+            storageRequestPermissionLauncher.launch(
+                arrayOf(
+                    READ_EXTERNAL_STORAGE,
+                    WRITE_EXTERNAL_STORAGE
+                )
+            )
     }
 
     @SuppressLint("SetJavaScriptEnabled")

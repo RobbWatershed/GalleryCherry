@@ -1,5 +1,7 @@
 package me.devsaki.hentoid.fragments.library
 
+import android.Manifest.permission.READ_EXTERNAL_STORAGE
+import android.Manifest.permission.WRITE_EXTERNAL_STORAGE
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -10,6 +12,7 @@ import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.core.view.isVisible
@@ -52,11 +55,10 @@ import me.devsaki.hentoid.util.dpToPx
 import me.devsaki.hentoid.util.file.DisplayFile
 import me.devsaki.hentoid.util.file.DisplayFile.SubType
 import me.devsaki.hentoid.util.file.DisplayFile.Type
-import me.devsaki.hentoid.util.file.RQST_STORAGE_PERMISSION
+import me.devsaki.hentoid.util.file.checkExternalStorageReadWritePermission
 import me.devsaki.hentoid.util.file.fileExists
 import me.devsaki.hentoid.util.file.getDocumentFromTreeUri
 import me.devsaki.hentoid.util.file.openUri
-import me.devsaki.hentoid.util.file.requestExternalStorageReadWritePermission
 import me.devsaki.hentoid.util.runExternalImport
 import me.devsaki.hentoid.util.toast
 import me.devsaki.hentoid.viewholders.FileItem
@@ -116,6 +118,18 @@ class LibraryFoldersFragment : Fragment(),
 
     // Search and filtering criteria in the form of a Bundle (see FolderSearchManager.FolderSearchBundle)
     private var folderSearchBundle: Bundle? = null
+
+    private val storageRequestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { isGranted: Map<String, Boolean> ->
+        if (2 == isGranted.size && isGranted.all { it.value }) {
+            // Run folder picker
+            pickRootFolder.launch(StorageLocation.NONE)
+        } else {
+            Timber.i("Storage permissions not granted")
+        }
+    }
+
 
     companion object {
 
@@ -601,14 +615,15 @@ class LibraryFoldersFragment : Fragment(),
      */
     private fun onItemClick(item: FileItem): Boolean {
         if (selectExtension!!.selections.isEmpty()) {
-            val ctx = requireActivity()
             when (item.doc.type) {
                 Type.ADD_BUTTON -> {
                     // Make sure permissions are set
-                    if (ctx.requestExternalStorageReadWritePermission(RQST_STORAGE_PERMISSION)) {
-                        // Run folder picker
+                    if (requireActivity().checkExternalStorageReadWritePermission())
                         pickRootFolder.launch(StorageLocation.NONE)
-                    }
+                    else
+                        storageRequestPermissionLauncher.launch(
+                            arrayOf(READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE)
+                        )
                 }
 
                 Type.UP_BUTTON -> {
@@ -657,8 +672,7 @@ class LibraryFoldersFragment : Fragment(),
         if (result is PickUriResult.Success) {
             if (!viewModel.attachFolderRoot(result.uri))
                 activity.get()?.toast(R.string.add_root_fail)
-        }
-        else {
+        } else {
             activity.get()?.toast(R.string.add_root_fail)
         }
     }

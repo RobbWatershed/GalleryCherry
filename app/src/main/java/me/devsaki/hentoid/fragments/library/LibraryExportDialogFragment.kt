@@ -1,9 +1,12 @@
 package me.devsaki.hentoid.fragments.library
 
+import android.Manifest.permission.READ_EXTERNAL_STORAGE
+import android.Manifest.permission.WRITE_EXTERNAL_STORAGE
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.core.view.children
@@ -31,10 +34,9 @@ import me.devsaki.hentoid.retrofit.sources.LrrServer
 import me.devsaki.hentoid.util.PickFolderContract
 import me.devsaki.hentoid.util.PickUriResult
 import me.devsaki.hentoid.util.Settings
-import me.devsaki.hentoid.util.file.RQST_STORAGE_PERMISSION
+import me.devsaki.hentoid.util.file.checkExternalStorageReadWritePermission
 import me.devsaki.hentoid.util.file.getDocumentFromTreeUriString
 import me.devsaki.hentoid.util.file.getFullPathFromUri
-import me.devsaki.hentoid.util.file.requestExternalStorageReadWritePermission
 import me.devsaki.hentoid.util.persistLocationCredentials
 import me.devsaki.hentoid.workers.ArchiveWorker
 import timber.log.Timber
@@ -65,6 +67,18 @@ class LibraryExportDialogFragment : BaseDialogFragment<LibraryExportDialogFragme
     private var isLrrOnline = false
 
     private val pickFolder = registerForActivityResult(PickFolderContract(), ::onFolderPickerResult)
+
+
+    private val storageRequestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { isGranted: Map<String, Boolean> ->
+        if (2 == isGranted.size && isGranted.all { it.value }) {
+            // Run folder picker
+            pickFolder.launch(StorageLocation.NONE)
+        } else {
+            Timber.i("Storage permissions not granted")
+        }
+    }
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -120,13 +134,12 @@ class LibraryExportDialogFragment : BaseDialogFragment<LibraryExportDialogFragme
 
                     targetFolder.entries.size - 1 -> { // Last item => Pick a folder
                         // Make sure permissions are set
-                        if (requireActivity().requestExternalStorageReadWritePermission(
-                                RQST_STORAGE_PERMISSION
-                            )
-                        ) {
-                            // Run folder picker
+                        if (requireActivity().checkExternalStorageReadWritePermission())
                             pickFolder.launch(StorageLocation.NONE)
-                        }
+                        else
+                            storageRequestPermissionLauncher.launch(
+                                arrayOf(READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE)
+                            )
                     }
 
                     else -> Settings.archiveTargetFolder = Settings.latestArchiveTargetFolderUri

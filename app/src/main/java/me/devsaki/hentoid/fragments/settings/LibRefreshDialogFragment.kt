@@ -1,5 +1,7 @@
 package me.devsaki.hentoid.fragments.settings
 
+import android.Manifest.permission.READ_EXTERNAL_STORAGE
+import android.Manifest.permission.WRITE_EXTERNAL_STORAGE
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -7,6 +9,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ProgressBar
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.net.toUri
 import androidx.core.view.isVisible
 import androidx.fragment.app.FragmentManager
@@ -32,9 +35,8 @@ import me.devsaki.hentoid.util.ImportOptions
 import me.devsaki.hentoid.util.PickFolderContract
 import me.devsaki.hentoid.util.PickUriResult
 import me.devsaki.hentoid.util.Settings
-import me.devsaki.hentoid.util.file.RQST_STORAGE_PERMISSION
+import me.devsaki.hentoid.util.file.checkExternalStorageReadWritePermission
 import me.devsaki.hentoid.util.file.getFullPathFromUri
-import me.devsaki.hentoid.util.file.requestExternalStorageReadWritePermission
 import me.devsaki.hentoid.util.setAndScanExternalFolder
 import me.devsaki.hentoid.util.setAndScanPrimaryFolder
 import me.devsaki.hentoid.util.showExistingLibraryDialog
@@ -46,6 +48,7 @@ import me.devsaki.hentoid.workers.STEP_4_QUEUE_FINAL
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
+import timber.log.Timber
 import kotlin.math.roundToInt
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -92,6 +95,17 @@ class LibRefreshDialogFragment : BaseDialogFragment<LibRefreshDialogFragment.Par
 
 
     private val pickFolder = registerForActivityResult(PickFolderContract(), ::onFolderPickerResult)
+
+    private val storageRequestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { isGranted: Map<String, Boolean> ->
+        if (2 == isGranted.size && isGranted.all { it.value }) {
+            Settings.isBrowserMode = false
+            pickFolder.launch(location) // Run folder picker
+        } else {
+            Timber.i("Storage permissions not granted")
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedState: Bundle?
@@ -235,7 +249,11 @@ class LibRefreshDialogFragment : BaseDialogFragment<LibRefreshDialogFragment.Par
                     dismissAllowingStateLoss()
                 } else if (res == Success.EmptyFolder) {
                     binding1?.apply {
-                        Snackbar.make(root, R.string.import_empty, BaseTransientBottomBar.LENGTH_LONG)
+                        Snackbar.make(
+                            root,
+                            R.string.import_empty,
+                            BaseTransientBottomBar.LENGTH_LONG
+                        )
                             .show()
                     }
                     delay(3000.milliseconds)
@@ -294,10 +312,13 @@ class LibRefreshDialogFragment : BaseDialogFragment<LibRefreshDialogFragment.Par
 
     private fun pickFolder() {
         // Make sure permissions are set
-        if (requireActivity().requestExternalStorageReadWritePermission(RQST_STORAGE_PERMISSION)) {
+        if (requireActivity().checkExternalStorageReadWritePermission()) {
             Settings.isBrowserMode = false
             pickFolder.launch(location) // Run folder picker
-        }
+        } else
+            storageRequestPermissionLauncher.launch(
+                arrayOf(READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE)
+            )
     }
 
     private fun onFolderPickerResult(result: PickUriResult) {

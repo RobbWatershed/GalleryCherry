@@ -1,6 +1,5 @@
 package me.devsaki.hentoid.activities.settings
 
-import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.MenuItem
 import androidx.fragment.app.commit
@@ -12,13 +11,11 @@ import me.devsaki.hentoid.activities.bundles.SettingsBundle
 import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.events.CommunicationEvent
 import me.devsaki.hentoid.fragments.settings.SettingsFragment
-import me.devsaki.hentoid.util.file.RQST_LOCALNETWORK_PERMISSION
 import me.devsaki.hentoid.util.toast
 import me.devsaki.hentoid.util.useLegacyInsets
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
-import timber.log.Timber
 
 class SettingsActivity : BaseActivity(), SearchPreferenceResultListener {
 
@@ -108,21 +105,5 @@ class SettingsActivity : BaseActivity(), SearchPreferenceResultListener {
         }
         result.closeSearchPage(this)
         result.highlight(fragment)
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<String?>,
-        grantResults: IntArray
-    ) {
-        if (grantResults.isEmpty()) return
-
-        if (RQST_LOCALNETWORK_PERMISSION == requestCode) {
-            if (grantResults[0] == PackageManager.PERMISSION_GRANTED)
-                Timber.i("Local network access granted")
-            // Don't show rationales here; the alert still displayed on screen should be enough
-        }
-
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
     }
 }

@@ -1,5 +1,6 @@
 package me.devsaki.hentoid.fragments.settings
 
+import android.Manifest
 import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Build
@@ -7,6 +8,7 @@ import android.os.Bundle
 import android.text.InputType
 import android.view.View
 import android.widget.TextView
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.net.toUri
 import androidx.core.view.allViews
@@ -57,15 +59,15 @@ import me.devsaki.hentoid.ui.invokeInputDialog
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.applyTheme
 import me.devsaki.hentoid.util.download.DownloadSpeedLimiter
-import me.devsaki.hentoid.util.file.RQST_LOCALNETWORK_PERMISSION
+import me.devsaki.hentoid.util.file.checkLocalNetworkPermission
 import me.devsaki.hentoid.util.file.getFullPathFromUri
-import me.devsaki.hentoid.util.file.requestLocalNetworkPermission
 import me.devsaki.hentoid.util.network.OkHttpClientManager
 import me.devsaki.hentoid.viewmodels.SettingsViewModel
 import me.devsaki.hentoid.viewmodels.ViewModelFactory
 import me.devsaki.hentoid.workers.UpdateCheckWorker
 import me.devsaki.hentoid.workers.UpdateDownloadWorker
 import org.greenrobot.eventbus.EventBus
+import timber.log.Timber
 
 
 // Value of key elements on the preferences tree
@@ -98,6 +100,19 @@ class SettingsFragment : PreferenceFragmentCompat(),
             return fragment
         }
     }
+
+
+    // Ask for permissions
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            Timber.i("Local network permission granted")
+        } else {
+            Timber.i("Local network permission not granted")
+        }
+    }
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -272,11 +287,10 @@ class SettingsFragment : PreferenceFragmentCompat(),
                         if (res.endsWith('/')) res = res.substringBeforeLast('/')
                         if (res.lastIndexOf(':') < 7) res += ":3000" // Default port for LRR
                         Settings.lrrEndpoint = res
-                        if (!requireActivity().requestLocalNetworkPermission(
-                                RQST_LOCALNETWORK_PERMISSION
-                            )
-                        )
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN && !requireContext().checkLocalNetworkPermission()) {
                             showSnackbar(R.string.lrr_localnetwork_warning)
+                            requestPermissionLauncher.launch(Manifest.permission.ACCESS_LOCAL_NETWORK)
+                        }
                     }
                 )
                 true

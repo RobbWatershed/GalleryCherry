@@ -1,9 +1,12 @@
 package me.devsaki.hentoid.activities
 
+import android.Manifest.permission.POST_NOTIFICATIONS
+import android.Manifest.permission.READ_EXTERNAL_STORAGE
+import android.Manifest.permission.WRITE_EXTERNAL_STORAGE
 import android.content.Intent
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener
-import android.content.pm.PackageManager
 import android.graphics.Typeface
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -11,6 +14,7 @@ import android.text.InputType
 import android.view.MenuItem
 import android.view.View
 import android.view.WindowManager
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
@@ -66,13 +70,11 @@ import me.devsaki.hentoid.util.Debouncer
 import me.devsaki.hentoid.util.SearchCriteria
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.dimensAsDp
-import me.devsaki.hentoid.util.file.RQST_NOTIFICATION_PERMISSION
-import me.devsaki.hentoid.util.file.RQST_STORAGE_PERMISSION
 import me.devsaki.hentoid.util.file.checkExternalStorageReadWritePermission
 import me.devsaki.hentoid.util.file.checkNotificationPermission
+import me.devsaki.hentoid.util.file.checkPermission
+import me.devsaki.hentoid.util.file.checkPermissions
 import me.devsaki.hentoid.util.file.isLowDeviceStorage
-import me.devsaki.hentoid.util.file.requestExternalStorageReadWritePermission
-import me.devsaki.hentoid.util.file.requestNotificationPermission
 import me.devsaki.hentoid.util.getThemedColor
 import me.devsaki.hentoid.util.isNumeric
 import me.devsaki.hentoid.util.openReader
@@ -216,6 +218,28 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
     private lateinit var searchClearDebouncer: Debouncer<Int>
 
 
+    // Ask for permissions
+    private val notifRequestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            updateTopAlert()
+        } else {
+            Timber.i("Notification permission not granted")
+        }
+    }
+
+    private val storageRequestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { isGranted: Map<String, Boolean> ->
+        if (2 == isGranted.size && isGranted.all { it.value }) {
+            updateTopAlert()
+        } else {
+            Timber.i("Storage permissions not granted")
+        }
+    }
+
+
     // === PUBLIC ACCESSORS (to be used by fragments)
     fun getSelectionToolbar(): Toolbar? {
         return binding?.selectionToolbar
@@ -259,14 +283,16 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
         setContentView(activityBinding?.root)
 
         searchClearDebouncer = Debouncer(this.lifecycleScope, 1500) { clearSearch() }
-        searchLongSubmitDebouncer = Debouncer(this.lifecycleScope, Settings.librarySearchLongDelayThreshold) {
-            setQuery(it)
-            signalCurrentFragment(CommunicationEvent.Type.SEARCH_NO_HISTORY, it)
-        }
-        searchSubmitDebouncer = Debouncer(this.lifecycleScope, Settings.librarySearchDelayThreshold) {
-            setQuery(it)
-            signalCurrentFragment(CommunicationEvent.Type.SEARCH_NO_HISTORY, it)
-        }
+        searchLongSubmitDebouncer =
+            Debouncer(this.lifecycleScope, Settings.librarySearchLongDelayThreshold) {
+                setQuery(it)
+                signalCurrentFragment(CommunicationEvent.Type.SEARCH_NO_HISTORY, it)
+            }
+        searchSubmitDebouncer =
+            Debouncer(this.lifecycleScope, Settings.librarySearchDelayThreshold) {
+                setQuery(it)
+                signalCurrentFragment(CommunicationEvent.Type.SEARCH_NO_HISTORY, it)
+            }
 
         initDrawerLayout(activityBinding!!.drawerLayout, binding!!.toolbar)
 
@@ -989,11 +1015,19 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
     }
 
     private fun fixPermissions() {
-        if (this.requestExternalStorageReadWritePermission(RQST_STORAGE_PERMISSION)) updateTopAlert()
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
+            && !checkPermissions(READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE)
+        )
+            storageRequestPermissionLauncher.launch(
+                arrayOf(READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE)
+            )
     }
 
     private fun fixNotifications() {
-        if (this.requestNotificationPermission(RQST_NOTIFICATION_PERMISSION)) updateTopAlert()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+            && !checkPermission(POST_NOTIFICATIONS)
+        )
+            notifRequestPermissionLauncher.launch(POST_NOTIFICATIONS)
     }
 
     private fun isLowDatabaseStorage(): Boolean {
@@ -1003,25 +1037,6 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
         } finally {
             dao.cleanup()
         }
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<String?>,
-        grantResults: IntArray
-    ) {
-        if (grantResults.isEmpty()) return
-
-        if (RQST_STORAGE_PERMISSION == requestCode) {
-            if (permissions.size < 2) return
-            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) closeTopAlert()
-            // Don't show rationales here; the alert still displayed on screen should be enough
-        } else if (RQST_NOTIFICATION_PERMISSION == requestCode) {
-            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) closeTopAlert()
-            // Don't show rationales here; the alert still displayed on screen should be enough
-        }
-
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
     }
 
     fun closeNavigationDrawer() {

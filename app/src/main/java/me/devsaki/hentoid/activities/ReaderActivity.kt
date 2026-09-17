@@ -1,14 +1,17 @@
 package me.devsaki.hentoid.activities
 
+import android.Manifest.permission.READ_EXTERNAL_STORAGE
 import android.os.Build
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.WindowManager
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.devsaki.hentoid.R
@@ -17,13 +20,14 @@ import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.fragments.reader.ReaderGalleryFragment
 import me.devsaki.hentoid.fragments.reader.ReaderPagerFragment
 import me.devsaki.hentoid.util.Settings
-import me.devsaki.hentoid.util.file.RQST_STORAGE_PERMISSION
-import me.devsaki.hentoid.util.file.requestExternalStorageReadPermission
+import me.devsaki.hentoid.util.file.checkPermission
 import me.devsaki.hentoid.util.pause
 import me.devsaki.hentoid.util.toast
 import me.devsaki.hentoid.viewmodels.ReaderViewModel
 import me.devsaki.hentoid.viewmodels.ViewModelFactory
 import me.devsaki.hentoid.widget.ReaderKeyListener
+import timber.log.Timber
+import kotlin.time.Duration.Companion.milliseconds
 
 
 open class ReaderActivity : BaseActivity() {
@@ -32,6 +36,22 @@ open class ReaderActivity : BaseActivity() {
 
     private var bookPreferences: Map<String, String> = emptyMap()
     private var bookSite: Site = Site.NONE
+
+    // Ask for permissions
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            Timber.i("Read external storage permission granted")
+            lifecycleScope.launch(Dispatchers.Main) {
+                delay(200.milliseconds)
+                recreate()
+            }
+        } else {
+            toast(R.string.storage_permission_denied)
+        }
+    }
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -74,14 +94,14 @@ open class ReaderActivity : BaseActivity() {
             }
         }
 
-        if (!this.requestExternalStorageReadPermission(RQST_STORAGE_PERMISSION) &&
-            Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
+            && !checkPermission(READ_EXTERNAL_STORAGE)
         ) {
-            toast(R.string.storage_permission_denied)
+            requestPermissionLauncher.launch(READ_EXTERNAL_STORAGE)
             return
         }
 
-        // Allows an full recolor of the status bar with the custom color defined in the activity's theme
+        // Allows a full recolor of the status bar with the custom color defined in the activity's theme
         @Suppress("DEPRECATION")
         if (Build.VERSION.SDK_INT < 35) {
             window.statusBarColor = ContextCompat.getColor(this, R.color.black_opacity_50)

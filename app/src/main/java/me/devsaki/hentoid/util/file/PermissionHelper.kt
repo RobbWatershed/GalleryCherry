@@ -8,44 +8,19 @@ import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager.PERMISSION_GRANTED
 import android.os.Build
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
-const val RQST_STORAGE_PERMISSION = 3
-const val RQST_NOTIFICATION_PERMISSION = 4
-const val RQST_LOCALNETWORK_PERMISSION = 5
-
-private fun Context.checkPermission(code: String): Boolean {
+fun Context.checkPermission(code: String): Boolean {
     return ContextCompat.checkSelfPermission(this, code) == PERMISSION_GRANTED
 }
 
-fun Activity.requestExternalStorageReadPermission(permissionRequestCode: Int): Boolean {
-    return if (checkPermission(READ_EXTERNAL_STORAGE)) true
-    else {
-        ActivityCompat.requestPermissions(
-            this, arrayOf(READ_EXTERNAL_STORAGE),
-            permissionRequestCode
-        )
-        false
-    }
+fun Context.checkPermissions(vararg codes: String): Boolean {
+    return codes.all { checkPermission(it) }
 }
 
 fun Activity.checkExternalStorageReadWritePermission(): Boolean {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) return true
-    return checkPermission(READ_EXTERNAL_STORAGE) &&
-            checkPermission(WRITE_EXTERNAL_STORAGE)
-}
-
-fun Activity.requestExternalStorageReadWritePermission(permissionRequestCode: Int): Boolean {
-    return if (checkExternalStorageReadWritePermission() || Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) true else {
-        ActivityCompat.requestPermissions(
-            this, arrayOf(
-                READ_EXTERNAL_STORAGE,
-                WRITE_EXTERNAL_STORAGE
-            ), permissionRequestCode
-        )
-        false
-    }
+    return checkPermissions(READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE)
 }
 
 fun Context.checkNotificationPermission(): Boolean {
@@ -54,34 +29,8 @@ fun Context.checkNotificationPermission(): Boolean {
     } else true
 }
 
-fun Activity.requestNotificationPermission(permissionRequestCode: Int): Boolean {
-    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        if (checkNotificationPermission()) true else {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(POST_NOTIFICATIONS),
-                permissionRequestCode
-            )
-            false
-        }
-    } else true
-}
-
 fun Context.checkLocalNetworkPermission(): Boolean {
     return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN) {
         checkPermission(ACCESS_LOCAL_NETWORK)
-    } else true
-}
-
-fun Activity.requestLocalNetworkPermission(permissionRequestCode: Int): Boolean {
-    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN) {
-        if (checkLocalNetworkPermission()) true else {
-            ActivityCompat.requestPermissions(
-                this,
-                arrayOf(ACCESS_LOCAL_NETWORK),
-                permissionRequestCode
-            )
-            false
-        }
     } else true
 }
