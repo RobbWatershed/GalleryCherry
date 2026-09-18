@@ -267,16 +267,18 @@ class PixivParser : BaseImageListParser() {
         }
 
         // Detect extra chapters
-        var illustIds = userIllustsMetadata.getIllustIds()
+        val sourceIllustIds = userIllustsMetadata.getIllustIds()
         val storedChapters = storedContent?.chaptersList ?: emptyList()
-        if (storedChapters.isNotEmpty()) illustIds = getExtraChaptersbyId(storedChapters, illustIds)
+        val illustIds =
+            if (storedChapters.isNotEmpty()) getExtraChaptersbyId(storedChapters, sourceIllustIds)
+            else sourceIllustIds
 
         val range = onlineContent.downloadRange
         val pageRangeIndexes =
             if (range.isBlank() || isRangeChapters(range)) IntRange(1, MAX_PAGE_RANGE)
             else rangeToNumbers(range).filter { it > 0 }.map { it + 1 }
         val chpRangeIndexes =
-            if (range.isBlank() || !isRangeChapters(range)) IntRange(1, illustIds.size)
+            if (range.isBlank() || !isRangeChapters(range)) IntRange(1, sourceIllustIds.size)
             else rangeToNumbers(range)
 
         // Work on detected extra chapters
