@@ -29,6 +29,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import me.devsaki.hentoid.core.HentoidApp
 import me.devsaki.hentoid.database.domains.Content
+import me.devsaki.hentoid.enums.Site
+import me.devsaki.hentoid.retrofit.sources.LrrServer
 import me.devsaki.hentoid.util.getContentHeaders
 import okio.BufferedSource
 import okio.Path.Companion.toOkioPath
@@ -106,9 +108,11 @@ fun ImageView.loadCover(content: Content, disableAnimation: Boolean = false) {
     val isOnline = thumbLocation.startsWith("http")
     val networkHeaders = if (isOnline) {
         val headers = NetworkHeaders.Builder()
-        getContentHeaders(content).forEach {
-            headers.add(it.first, it.second)
-        }
+        getContentHeaders(content).forEach { headers.add(it.first, it.second) }
+
+        if (content.site == Site.LRR) // To work with no-fun mode
+            headers.add("Authorization", LrrServer.formatApiKey())
+
         headers.build()
     } else {
         NetworkHeaders.EMPTY
