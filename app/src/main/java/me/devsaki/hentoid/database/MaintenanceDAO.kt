@@ -148,9 +148,9 @@ class MaintenanceDAO {
 
     fun selectContentIdsWithNullArchiveIds(): Set<Long> {
         return store.boxFor(Content::class.java).query()
-            .isNull(Content_.downloadRange)
+            .isNull(Content_.archiveId)
             .or()
-            .equal(Content_.downloadRange, "", QueryBuilder.StringOrder.CASE_INSENSITIVE)
+            .equal(Content_.archiveId, "", QueryBuilder.StringOrder.CASE_INSENSITIVE)
             .safeFindIds().toSet()
     }
 
