@@ -13,6 +13,7 @@ import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.enums.StorageLocation
 import me.devsaki.hentoid.events.DownloadEvent
 import me.devsaki.hentoid.parsers.ContentParserFactory
+import me.devsaki.hentoid.retrofit.sources.LrrServer
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.download.DownloadSpeedLimiter.take
 import me.devsaki.hentoid.util.exception.DownloadInterruptedException
@@ -77,9 +78,12 @@ suspend fun downloadPic(
 
         // Prepare request headers
         val headers: MutableList<Pair<String, String>> = ArrayList()
-        headers.add(
-            Pair(HEADER_REFERER_KEY, content.readerUrl)
-        ) // Useful for Hitomi and Toonily
+        // Useful for Hitomi and Toonily
+        headers.add(Pair(HEADER_REFERER_KEY, content.readerUrl))
+        // To work with no-fun mode
+        if (content.site == Site.LRR)
+            headers.add(Pair("Authorization", LrrServer.formatApiKey()))
+
         val result: Uri?
         if (img.needsPageParsing) {
             val pageUrl = fixUrl(img.pageUrl, content.site.url)
