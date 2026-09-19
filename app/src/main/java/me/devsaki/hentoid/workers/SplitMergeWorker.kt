@@ -17,6 +17,7 @@ import me.devsaki.hentoid.database.CollectionDAO
 import me.devsaki.hentoid.database.ObjectBoxDAO
 import me.devsaki.hentoid.database.domains.Chapter
 import me.devsaki.hentoid.database.domains.Content
+import me.devsaki.hentoid.database.domains.DownloadMode
 import me.devsaki.hentoid.database.domains.ImageFile
 import me.devsaki.hentoid.enums.Grouping
 import me.devsaki.hentoid.enums.Site
@@ -40,7 +41,7 @@ import me.devsaki.hentoid.util.file.getExtension
 import me.devsaki.hentoid.util.file.getFileFromSingleUriString
 import me.devsaki.hentoid.util.file.getInputStream
 import me.devsaki.hentoid.util.file.getOutputStream
-import me.devsaki.hentoid.util.file.listFiles
+import me.devsaki.hentoid.util.file.listDocumentFiles
 import me.devsaki.hentoid.util.file.removeDocument
 import me.devsaki.hentoid.util.getLocation
 import me.devsaki.hentoid.util.getOrCreateContentDownloadDir
@@ -91,7 +92,7 @@ abstract class BaseSplitMergeWorker(
 
     private var nbMax = 0
     private var nbProgress = 0
-    private var nbError = 0
+    private var nbErrors = 0
     private var errorMsg = ""
     private var bookTitle = ""
     private lateinit var progressNotification: SplitMergeProgressNotification
@@ -128,7 +129,7 @@ abstract class BaseSplitMergeWorker(
 
     override suspend fun getToWork(input: Data) {
         nbProgress = 0
-        nbError = 0
+        nbErrors = 0
 
         when (operationType) {
             SplitMergeType.SPLIT -> split(contentIds.first())
@@ -150,6 +151,8 @@ abstract class BaseSplitMergeWorker(
         for (chap in chapters) {
             if (isStopped) break
             val splitContent = createContentFromChapter(content, chap)
+            splitContent.downloadMode =
+                DownloadMode.DOWNLOAD // Force DOWNLOAD as we're creating flat folders
 
             // Create a new folder for the split content
             val location = getLocation(content)
@@ -173,6 +176,7 @@ abstract class BaseSplitMergeWorker(
             val splitContentImages =
                 splitContent.imageList.filter { it.status == StatusContent.DOWNLOADED || it.status == StatusContent.EXTERNAL }
                     .distinctBy { it.fileUri }
+            var nbErrors = 0
             withContext(Dispatchers.IO) {
                 try {
                     if (content.isArchive || content.isPdf) {
@@ -221,7 +225,7 @@ abstract class BaseSplitMergeWorker(
                         }
                         Timber.d("Mapping done for ${splitContent.title}")
                     } else {
-                        // TODO split target should be an archive if split origin is an archive
+                        // TODO split target should be an archive if split origin is an archive; downloadMode should be ARCHIVE if applicable
                         // TODO split target should be a PDF if split origin is a PDF (requires working on a better layout - see #1322)
                         copyFiles(
                             applicationContext,
@@ -233,7 +237,10 @@ abstract class BaseSplitMergeWorker(
                                     // Map new, copied files Uris
                                     splitContentImages.firstOrNull { it.fileUri == oldUri.toString() }?.fileUri =
                                         newUri.toString()
-                                } else Timber.w("Could not move file $oldUri")
+                                } else {
+                                    Timber.w("Could not move file $oldUri")
+                                    nbErrors++
+                                }
                                 bookTitle = chap.name
                                 launchProgressNotification()
                             }
@@ -270,7 +277,7 @@ abstract class BaseSplitMergeWorker(
         }
 
         // If we're here, no exception has been triggered -> cleanup if needed
-        if (deleteAfterOperation && !isStopped) {
+        if (deleteAfterOperation && (0 == nbErrors) && !isStopped) {
             deleteChapters(applicationContext, dao, chapterSplitIds.toList())
         }
     }
@@ -280,7 +287,7 @@ abstract class BaseSplitMergeWorker(
         val contentList = dao.selectContent(contentIds)
         if (contentList.isEmpty()) return
 
-        // Flag the content as "being deleted" (triggers blink animation)
+        // Flag the content as "being processed" (triggers blink animation)
         if (deleteAfterOperation) dao.updateContentsProcessedFlag(contentList, true)
 
         val removedContents: MutableSet<Long> = HashSet()
@@ -300,13 +307,13 @@ abstract class BaseSplitMergeWorker(
                 }
             ) { isError, errorMsg ->
                 if (isError) {
-                    nbError = contentList.size
+                    nbErrors = contentList.size
                     this.errorMsg = errorMsg
                 }
                 progressDone(contentList.size)
             }
             // If we're here, no exception has been triggered -> cleanup if asked
-            if (deleteAfterOperation && !isStopped) {
+            if (deleteAfterOperation && (0 == nbErrors) && !isStopped) {
                 contentList.forEach { c ->
                     try {
                         removeContent(applicationContext, dao, c)
@@ -446,7 +453,7 @@ abstract class BaseSplitMergeWorker(
 
         // If any operation hasn't been mapped to a permutation group, we can't continue
         if (operations.values.any { it.sequenceNumber < 0 }) {
-            nbError = nbMax
+            nbErrors = nbMax
             progressDone(nbMax)
             return
         }
@@ -572,7 +579,7 @@ abstract class BaseSplitMergeWorker(
         if (ops.isEmpty()) return
 
         // Take a snapshot of the Content's current files to simulate operations as they're built
-        val files: Map<String, Pair<DocumentFile, String>> = listFiles(ctx, root, null)
+        val files: Map<String, Pair<DocumentFile, String>> = listDocumentFiles(ctx, root.uri)
             .associateBy({ it.uri.toString() }, { Pair(it, it.name ?: "") })
         if (files.isEmpty()) return
 
@@ -638,12 +645,12 @@ abstract class BaseSplitMergeWorker(
         if (!this::progressNotification.isInitialized) {
             progressNotification = SplitMergeProgressNotification(
                 bookTitle,
-                nbProgress + nbError,
+                nbProgress + nbErrors,
                 nbMax,
                 operationType
             )
         } else {
-            progressNotification.progress = nbProgress + nbError
+            progressNotification.progress = nbProgress + nbErrors
         }
         if (isStopped) return
         notificationManager.notify(progressNotification)
@@ -657,7 +664,7 @@ abstract class BaseSplitMergeWorker(
                 },
                 0,
                 nbProgress,
-                nbError,
+                nbErrors,
                 nbMax
             )
         )
@@ -668,7 +675,7 @@ abstract class BaseSplitMergeWorker(
         notificationManager.notifyLast(
             SplitMergeCompleteNotification(
                 nbBooksDone,
-                nbError,
+                nbErrors,
                 operationType,
                 errorMsg
             )
@@ -683,7 +690,7 @@ abstract class BaseSplitMergeWorker(
                 },
                 0,
                 nbProgress,
-                nbError,
+                nbErrors,
                 nbBooksDone
             )
         )

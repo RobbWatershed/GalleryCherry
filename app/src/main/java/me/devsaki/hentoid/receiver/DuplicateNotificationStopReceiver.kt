@@ -8,6 +8,7 @@ import me.devsaki.hentoid.R
 
 /**
  * Broadcast receiver for the stop button on duplicate detector notifications
+ * IMPORTANT : Every Received must be registered on the manifest!
  */
 class DuplicateNotificationStopReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {

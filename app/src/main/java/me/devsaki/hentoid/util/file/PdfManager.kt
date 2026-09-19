@@ -2,6 +2,7 @@ package me.devsaki.hentoid.util.file
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Point
 import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 import com.itextpdf.io.image.ImageDataFactory
@@ -31,10 +32,13 @@ import me.devsaki.hentoid.enums.PictureEncoder
 import me.devsaki.hentoid.util.copy
 import me.devsaki.hentoid.util.hash64
 import me.devsaki.hentoid.util.image.TransformParams
+import me.devsaki.hentoid.util.image.getMediaDimensions
 import me.devsaki.hentoid.util.image.getMimeTypeFromPictureBinary
-import me.devsaki.hentoid.util.image.isSupportedImage
+import me.devsaki.hentoid.util.image.isSupportedMedia
 import me.devsaki.hentoid.util.image.loadBitmap
-import me.devsaki.hentoid.util.image.transform
+import me.devsaki.hentoid.util.image.screenWidth
+import me.devsaki.hentoid.util.image.transformStill
+import me.devsaki.hentoid.util.median
 import me.devsaki.hentoid.util.network.UriParts
 import me.devsaki.hentoid.util.pause
 import timber.log.Timber
@@ -49,16 +53,20 @@ class PdfManager {
     private val extractedFiles = ArrayList<Uri>()
     private val currentPageIndex = AtomicInteger(0)
 
-    private fun processFile(context: Context, doc: DocumentFile, keepFormat: Boolean): ByteArray? {
+    private suspend fun processFile(context: Context, file: Uri, keepFormat: Boolean): ByteArray? {
         // TODO don't keep format when non-PNG/JPG/WEBP
         val stream = ByteArrayOutputStream()
         if (keepFormat) {
-            getInputStream(context, doc).use { copy(it, stream) }
+            getInputStream(context, file).use { copy(it, stream) }
             return stream.toByteArray()
         } else {
-            loadBitmap(context, doc)?.let { bmp ->
-                bmp.compress(Bitmap.CompressFormat.PNG, 100, stream)
-                return stream.toByteArray()
+            loadBitmap(context, file)?.let { bmp ->
+                try {
+                    bmp.compress(Bitmap.CompressFormat.PNG, 100, stream)
+                    return stream.toByteArray()
+                } finally {
+                    bmp.recycle()
+                }
             }
         }
         return null
@@ -73,6 +81,21 @@ class PdfManager {
         background: android.graphics.Color? = null,
         onProgressChange: ((Float) -> Unit)? = null
     ) {
+        val allDims = ArrayList<Point>()
+        val imgFiles = imageFiles
+            .filter { isSupportedMedia(it.name ?: "") }
+            .filterNot {
+                getFileNameWithoutExtension(it.name ?: "")
+                    .equals(THUMB_FILE_NAME, true)
+            }
+        imgFiles.forEach {
+            allDims.add(getMediaDimensions(context, it.uri))
+        }
+        val medianWidth = median(allDims.map { it.x }.toIntArray())
+        val minWidth = screenWidth * 0.75
+        val targetWidth = if (medianWidth < minWidth) minWidth else medianWidth
+        Timber.v("Target width : $targetWidth")
+
         PdfDocument(PdfWriter(out)).use { pdfDoc ->
             Document(pdfDoc, PageSize.A4).use { doc ->
                 doc.setMargins(0f, 0f, 0f, 0f)
@@ -88,41 +111,32 @@ class PdfManager {
                     val bgEventHandler = PageBackgroundEventHandler()
                     pdfDoc.addEventHandler(PdfDocumentEvent.START_PAGE, bgEventHandler)
                     bgEventHandler.setBackground(bgColor)
-                } ?: run {
+                } ?: run { // NO background
                     val bgColor =
                         Color.createColorWithColorSpace(arrayOf(0f, 0f, 0f).toFloatArray())
                     doc.setBackgroundColor(bgColor, 0f)
                 }
 
-                imageFiles
-                    .asSequence()
-                    .filter { isSupportedImage(it.name ?: "") }
-                    .filterNot {
-                        getFileNameWithoutExtension(it.name ?: "")
-                            .equals(THUMB_FILE_NAME, true)
-                    }
-                    .mapNotNull { processFile(context, it, keepImgFormat) }
-                    .forEachIndexed { index, data ->
-                        // Convert to PNG or JPEG if not supported
-                        val image = Image(
-                            ImageDataFactory.create(
-                                if (!ImageDataFactory.isSupportedType(data)) {
-                                    val params = TransformParams(
-                                        false, 0, 0, 0, 0, 0, 0, 1, PictureEncoder.PNG,
-                                        PictureEncoder.JPEG, PictureEncoder.PNG, 90
-                                    )
-                                    transform(context, data, params)
-                                } else data
-                            )
-                        )
+                imgFiles.forEachIndexed { index, file ->
+                    // Convert to PNG or JPEG; use proper ratio to reach target width
+                    val ratio = targetWidth / (allDims[index].x * 1.0)
+                    val data =
+                        processFile(context, file.uri, keepImgFormat) ?: return@forEachIndexed
+                    val params = TransformParams(
+                        true, 2, 0f, 0, 0, ratio.toFloat(), 0, 1, PictureEncoder.PNG,
+                        PictureEncoder.JPEG, PictureEncoder.PNG, 90, PictureEncoder.WEBP_LOSSY, 90, allowUpscale = true
+                    )
+                    val dataOut = transformStill(context, data, params)
+                    val image = Image(ImageDataFactory.create(dataOut))
 
-                        pdfDoc.addNewPage(PageSize(image.imageWidth, image.imageHeight))
-                        image.setFixedPosition(index + 1, 0f, 0f)
+                    Timber.d("Adding new page @ $index : ${image.imageWidth}x${image.imageHeight} (ratio : $ratio)")
+                    pdfDoc.addNewPage(PageSize(image.imageWidth, image.imageHeight))
+                    image.setFixedPosition(index + 1, 0f, 0f)
 
-                        doc.add(image)
+                    doc.add(image)
 
-                        onProgressChange?.invoke((index + 1) * 1f / imageFiles.size)
-                    }
+                    onProgressChange?.invoke((index + 1) * 1f / imgFiles.size)
+                }
                 doc.flush()
             }
         }

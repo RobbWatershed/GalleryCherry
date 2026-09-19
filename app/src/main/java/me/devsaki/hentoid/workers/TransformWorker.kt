@@ -1,8 +1,6 @@
 package me.devsaki.hentoid.workers
 
 import android.content.Context
-import android.graphics.BitmapFactory
-import android.graphics.Point
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import androidx.work.Data
@@ -20,14 +18,17 @@ import me.devsaki.hentoid.notification.transform.TransformCompleteNotification
 import me.devsaki.hentoid.notification.transform.TransformProgressNotification
 import me.devsaki.hentoid.util.AchievementsManager
 import me.devsaki.hentoid.util.ProgressManager
+import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.createJson
 import me.devsaki.hentoid.util.file.Beholder
 import me.devsaki.hentoid.util.file.copyFile
+import me.devsaki.hentoid.util.file.fileSizeFromUri
 import me.devsaki.hentoid.util.file.getDocumentFromTreeUri
 import me.devsaki.hentoid.util.file.getDocumentFromTreeUriString
 import me.devsaki.hentoid.util.file.getExtensionFromMimeType
 import me.devsaki.hentoid.util.file.getInputStream
 import me.devsaki.hentoid.util.file.getMimeTypeFromFileName
+import me.devsaki.hentoid.util.file.getOrCreateCacheFolder
 import me.devsaki.hentoid.util.file.getParent
 import me.devsaki.hentoid.util.file.removeDocument
 import me.devsaki.hentoid.util.file.saveBinary
@@ -35,15 +36,21 @@ import me.devsaki.hentoid.util.getStorageRoot
 import me.devsaki.hentoid.util.image.TransformParams
 import me.devsaki.hentoid.util.image.clearCoilCache
 import me.devsaki.hentoid.util.image.determineEncoder
-import me.devsaki.hentoid.util.image.getImageDimensions
+import me.devsaki.hentoid.util.image.getImageProperties
+import me.devsaki.hentoid.util.image.getMediaDimensions
 import me.devsaki.hentoid.util.image.isImageLossless
-import me.devsaki.hentoid.util.image.transform
+import me.devsaki.hentoid.util.image.transformAnimated
 import me.devsaki.hentoid.util.image.transformManhwaChapter
+import me.devsaki.hentoid.util.image.transformStill
 import me.devsaki.hentoid.util.network.UriParts
 import me.devsaki.hentoid.util.notification.BaseNotification
+import me.devsaki.hentoid.util.pause
 import me.devsaki.hentoid.util.updateJson
+import me.robb.ai_upscale.AiUpscaler
 import okio.IOException
 import timber.log.Timber
+import java.io.File
+import java.nio.ByteBuffer
 import java.time.Instant
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -52,7 +59,7 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
     BaseWorker(context, parameters, R.id.transform_service, null) {
 
     private val dao: CollectionDAO = ObjectBoxDAO()
-    //private var upscaler: AiUpscaler? = null
+    private var upscaler: AiUpscaler? = null
 
     private var totalItems = 0
     private var nbOK = 0
@@ -75,7 +82,7 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
             dao.updateContentsProcessedFlagById(contentIds.filter { it > 0 }, false)
         }
         dao.cleanup()
-        //upscaler?.cleanup()
+        upscaler?.cleanup()
 
         // Reset Coil cache as it gets confused by the resizing
         clearCoilCache(applicationContext)
@@ -93,7 +100,6 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
         val params = moshi.adapter(TransformParams::class.java).fromJson(paramsStr)
         require(params != null)
 
-        /*
         if (params.resizeEnabled && 3 == params.resizeMethod) { // AI upscale
             AiUpscaler().let {
                 upscaler = it
@@ -104,18 +110,17 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
                 )
             }
         }
-         */
 
         transform(contentIds, params)
     }
 
     private suspend fun transform(contentIds: LongArray, params: TransformParams) {
-        // Flag contents as "being deleted" (triggers blink animation; lock operations)
+        // Flag contents as "being processed" (triggers blink animation; lock operations)
         // +count the total number of images to convert
         dao.updateContentsProcessedFlagById(contentIds.filter { it > 0 }, true)
 
-        contentIds.forEach {
-            totalItems += dao.selectImagesFromContent(it, true).count { i -> i.isReadable }
+        contentIds.forEach { c ->
+            totalItems += dao.selectImagesFromContent(c, true).count { it.isTransformable(params) }
             if (isStopped) return
         }
 
@@ -172,25 +177,33 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
             // Don't scan new folder when it's being populated
             Beholder.ignoreFolder(targetFolder)
 
-            // Transfer 'unreadable pics' (i.e. separate cover)
-            sourceImages.filter { !it.isReadable }.forEach { img ->
-                val name = UriParts(img.fileUri).fileNameFull
-                copyFile(
-                    ctx,
-                    img.fileUri.toUri(),
-                    targetFolder,
-                    name,
-                    getMimeTypeFromFileName(name)
-                )?.let { newUri ->
-                    img.fileUri = newUri.toString()
-                    transformedImages.add(img)
+            // Transfer 'untransformable pics' (i.e. separate cover, already transformed pics)
+            sourceImages
+                .filter { !it.isTransformable(params) }
+                .forEach { img ->
+                    val name = UriParts(img.fileUri).fileNameFull
+                    copyFile(
+                        ctx,
+                        img.fileUri.toUri(),
+                        targetFolder,
+                        name,
+                        getMimeTypeFromFileName(name)
+                    )?.let { newUri ->
+                        // Sever link to content as it still has the properties of the source book
+                        // (creates issues when simplifying ImageFile.fileUri)
+                        img.content.target = null
+                        img.fileUri = newUri.toString()
+                        transformedImages.add(img)
+                    }
                 }
-            }
+        } else {
+            // Transfer 'untransformable pics' (i.e. separate cover, already transformed pics)
+            transformedImages.addAll(sourceImages.filter { !it.isTransformable(params) })
         }
 
         var isKO = false
         val imagesWithoutChapters =
-            sourceImages.filter { null == it.linkedChapter }.filter { it.isReadable }
+            sourceImages.filter { null == it.linkedChapter }.filter { it.isTransformable(params) }
         if (imagesWithoutChapters.isNotEmpty()) {
             val newImgs = transformChapter(
                 imagesWithoutChapters,
@@ -204,7 +217,8 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
         }
 
         val chapteredImgs =
-            sourceImages.filterNot { null == it.linkedChapter }.filter { it.isReadable }
+            sourceImages.filterNot { null == it.linkedChapter }
+                .filter { it.isTransformable(params) }
                 .groupBy { it.linkedChapter!!.id }
 
         chapteredImgs.filter { it.value.isNotEmpty() }.forEach { chImgs ->
@@ -229,14 +243,18 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
         if (!isKO && !isStopped) {
             // Update Content
             withContext(Dispatchers.IO) {
-                content.setImageFiles(transformedImages)
-                dao.insertImageFiles(transformedImages)
-                content.qtyPages = transformedImages.count { it.isReadable }
+                content.qtyPages = transformedImages.count { it.isTransformable(params) }
                 content.computeSize()
                 content.lastEditDate = Instant.now().toEpochMilli()
                 content.isBeingProcessed = false
                 targetFolder?.let { content.storageUri = it.uri.toString() }
+
+                transformedImages.forEach { it.contentId = content.id }
+                content.setImageFiles(transformedImages)
+
                 dao.insertContentCore(content)
+                dao.insertImageFiles(transformedImages)
+
                 if (targetFolder != null) createJson(ctx, content)
                 else updateJson(ctx, content)
                 dao.cleanup()
@@ -254,13 +272,11 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
 
         // Achievements
         if (!isStopped && !isKO) {
-            /*
             if (upscaler != null) { // AI upscale
                 Settings.nbAIRescale += 1
                 if (Settings.nbAIRescale >= 2) AchievementsManager.trigger(20)
             }
-             */
-            val pagesTotal = sourceImages.count { it.isReadable }
+            val pagesTotal = sourceImages.count { it.isTransformable(params) }
             if (pagesTotal >= 50) AchievementsManager.trigger(27)
             if (pagesTotal >= 100) AchievementsManager.trigger(28)
         }
@@ -317,27 +333,44 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
             nextKO()
             return img
         }
+
+        val props = getImageProperties(applicationContext, sourceFile.uri) ?: return img
+        return if (props.isAnimated) transformAnimatedImage(
+            img,
+            sourceFile,
+            props.mime,
+            contentFolder,
+            params
+        ) else transformStillImage(img, sourceFile, contentFolder, params, nbManhwa, nbPages)
+    }
+
+    private suspend fun transformStillImage(
+        img: ImageFile,
+        sourceFile: DocumentFile,
+        contentFolder: DocumentFile,
+        params: TransformParams,
+        nbManhwa: AtomicInteger,
+        nbPages: Int
+    ): ImageFile {
         val rawData = withContext(Dispatchers.IO) {
             getInputStream(applicationContext, sourceFile).use {
                 return@use it.readBytes()
             }
         }
-        val imageUri = img.fileUri
+        val progressId = img.fileUri
 
         val targetData: ByteArray
-        /*
         if (upscaler != null) { // AI upscale
-            targetData = upscale(imageUri, rawData)
+            targetData = upscale(progressId, rawData)
         } else { // regular resize
-         */
-        val sourceDims = getImageDimensions(applicationContext, data = rawData)
-        val isManhwa = sourceDims.y * 1.0 / sourceDims.x > 3
+            val sourceDims = getMediaDimensions(applicationContext, data = rawData)
+            val isManhwa = sourceDims.y * 1.0 / sourceDims.x > 3
 
-        if (isManhwa) nbManhwa.incrementAndGet()
-        params.forceManhwa = nbManhwa.get() * 1.0 / nbPages > 0.9
+            if (isManhwa) nbManhwa.incrementAndGet()
+            params.forceManhwa = nbManhwa.get() * 1.0 / nbPages > 0.9
 
-        targetData = transform(applicationContext, rawData, params)
-//        }
+            targetData = transformStill(applicationContext, rawData, params)
+        }
         if (isStopped) return img
         if (targetData == rawData) return img // Unchanged picture
 
@@ -345,12 +378,12 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
         val isLossless = isImageLossless(rawData)
         val sourceName = sourceFile.name ?: ""
 
-        val targetDims = getImageDimensions(applicationContext, data = targetData)
-        val targetMime = determineEncoder(isLossless, targetDims, params).mimeType
+        val targetDims = getMediaDimensions(applicationContext, data = targetData)
+        val targetMime = determineEncoder(isLossless, false, targetDims, params).mimeType
         val targetName = img.name + "." + getExtensionFromMimeType(targetMime)
-        val newFile = sourceName != targetName
+        val isSameFile = sourceName.equals(targetName, true)
 
-        val targetUri = if (!newFile) sourceFile.uri
+        val targetUri = if (isSameFile) sourceFile.uri
         else {
             val targetFile = contentFolder.createFile(targetMime, targetName)
             if (targetFile != null) sourceFile.delete()
@@ -364,7 +397,7 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
             img.isTransformed = true
 
             nextOK()
-            globalProgress.setProgress(imageUri, 1f)
+            globalProgress.setProgress(progressId, 1f)
             launchProgressNotification()
         } else {
             nextKO()
@@ -372,54 +405,115 @@ class TransformWorker(context: Context, parameters: WorkerParameters) :
         }
         return img
     }
-    /*
-        private fun upscale(imgId: String, rawData: ByteArray): ByteArray {
-            val cacheDir =
-                getOrCreateCacheFolder(applicationContext, "upscale") ?: return rawData
-            val outputFile = File(cacheDir, "upscale.png")
-            val progress = ByteBuffer.allocateDirect(1)
-            val killSwitch = ByteBuffer.allocateDirect(1)
-            val dataIn = ByteBuffer.allocateDirect(rawData.size)
-            dataIn.put(rawData)
 
-            upscaler?.let {
-                try {
-                    killSwitch.put(0, 0)
-                    val res = it.upscale(
-                        dataIn, outputFile.absolutePath, progress, killSwitch
-                    )
-                    // Fail => exit immediately
-                    if (res != 0) progress.put(0, 100)
+    private suspend fun transformAnimatedImage(
+        img: ImageFile,
+        sourceFile: DocumentFile,
+        sourceMime: String,
+        contentFolder: DocumentFile,
+        params: TransformParams
+    ): ImageFile {
+        val sourceName = sourceFile.name ?: ""
+        val targetMime = params.transcodeAnim.mimeType
+        val targetExt = getExtensionFromMimeType(targetMime)
 
-                    // Poll while processing
-                    val intervalSeconds = 3
-                    var iterations = 0
-                    while (iterations < 180 / intervalSeconds) { // max 3 minutes
-                        pause(intervalSeconds * 1000)
+        var targetName = img.name
+        while (sourceName.equals("$targetName.$targetExt", true)) {
+            targetName += "_"
+        }
+        targetName += ".$targetExt"
 
-                        if (isStopped) {
-                            Timber.d("Kill order sent")
-                            killSwitch.put(0, 1)
-                            return rawData
-                        }
+        val targetFile = contentFolder.createFile(targetMime, targetName) ?: run {
+            Timber.w("Couldn't create $targetName inside ${contentFolder.uri}")
+            nextKO()
+            return img
+        }
 
-                        val p = progress.get(0)
-                        globalProgress.setProgress(imgId, p / 100f)
-                        launchProgressNotification()
+        val progressId = img.fileUri
+        val isError = !transformAnimated(
+            applicationContext,
+            sourceFile.uri,
+            sourceMime,
+            targetFile.uri,
+            params,
+            this::isStopped,
+        ) {
+            globalProgress.setProgress(progressId, it)
+            launchProgressNotification()
+        }
 
-                        iterations++
-                        if (p >= 100) break
+        if (isError) {
+            targetFile.delete()
+            nextKO()
+            launchProgressNotification()
+        } else {
+            sourceFile.delete()
+
+            // Update image properties
+            img.fileUri = targetFile.uri.toString()
+            img.size = fileSizeFromUri(applicationContext, targetFile.uri)
+            img.isTransformed = true
+
+            nextOK()
+            globalProgress.setProgress(progressId, 1f)
+            launchProgressNotification()
+        }
+        return img
+    }
+
+    private fun upscale(progressId: String, rawData: ByteArray): ByteArray {
+        val cacheDir =
+            getOrCreateCacheFolder(applicationContext, "upscale") ?: return rawData
+        val outputFile = File(cacheDir, "upscale.png")
+        val progress = ByteBuffer.allocateDirect(1)
+        val killSwitch = ByteBuffer.allocateDirect(1)
+        val dataIn = ByteBuffer.allocateDirect(rawData.size)
+        dataIn.put(rawData)
+
+        upscaler?.let {
+            try {
+                killSwitch.put(0, 0)
+                val res = it.upscale(
+                    dataIn, outputFile.absolutePath, progress, killSwitch
+                )
+                // Fail => exit immediately
+                if (res != 0) progress.put(0, 100)
+
+                // Poll while processing
+                val intervalSeconds = 3
+                var iterations = 0
+                while (iterations < 180 / intervalSeconds) { // max 3 minutes
+                    pause(intervalSeconds * 1000)
+
+                    if (isStopped) {
+                        Timber.d("Kill order sent")
+                        killSwitch.put(0, 1)
+                        return rawData
                     }
-                } finally {
-                    // can't recycle ByteBuffer dataIn
-                }
-            }
 
-            getInputStream(applicationContext, outputFile.toUri()).use { input ->
-                return input.readBytes()
+                    val p = progress.get(0)
+                    globalProgress.setProgress(progressId, p / 100f)
+                    launchProgressNotification()
+
+                    iterations++
+                    if (p >= 100) break
+                }
+            } finally {
+                // can't recycle ByteBuffer dataIn
             }
         }
-     */
+
+        getInputStream(applicationContext, outputFile.toUri()).use { input ->
+            return input.readBytes()
+        }
+    }
+
+    private fun ImageFile.isTransformable(params: TransformParams): Boolean {
+        val first = this.isReadable && !(params.skipTransformedPics && this.isTransformed)
+        val order = if (params.isRangeChapters) this.linkedChapter?.order ?: -1 else this.order
+        val second = params.rangeList.isEmpty() || params.rangeList.contains(order)
+        return first && second
+    }
 
     private fun nextOK() {
         nbOK++

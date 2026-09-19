@@ -79,11 +79,12 @@ class ObjectBoxDAO : CollectionDAO {
 
     override fun streamStoredContent(
         includeQueued: Boolean,
+        sitesFilter: Set<Site>,
         orderField: Int,
         orderDesc: Boolean,
         consumer: Consumer<Content>
     ) {
-        ObjectBoxDB.selectStoredContentQ(includeQueued, orderField, orderDesc).build()
+        ObjectBoxDB.selectStoredContentQ(includeQueued, orderField, orderDesc, sitesFilter).build()
             .use { query -> query.forEach { consumer(it) } }
     }
 
@@ -243,9 +244,10 @@ class ObjectBoxDAO : CollectionDAO {
     private fun searchContentPaged(searchBundle: ContentSearchBundle): LiveData<PagedList<Content>> {
         val isCustomOrder = searchBundle.sortField == Settings.Value.ORDER_FIELD_CUSTOM
         val isDynamicCriteria =
-            searchBundle.sortField == Settings.Value.ORDER_FIELD_AVG_SIZE // To be extended
+            searchBundle.sortField == Settings.Value.ORDER_FIELD_AVG_SIZE // To be extended when needed
         val contentRetrieval: Pair<Long, DataSource.Factory<Int, Content>> =
-            if (isCustomOrder || isDynamicCriteria) getPagedContentByList(searchBundle)
+            if (isDynamicCriteria) getPagedContentByList(searchBundle)
+            else if (isCustomOrder) getPagedContentByListGroupOrder(searchBundle)
             else getPagedContentByQuery(searchBundle)
         val nbPages = Settings.contentPageQuantity
         var initialLoad = nbPages * 3
@@ -279,6 +281,20 @@ class ObjectBoxDAO : CollectionDAO {
             val shuffledIds = ObjectBoxDB.getShuffledIds()
             Pair(query.count(), RandomDataSourceFactory(query, shuffledIds))
         } else Pair(query.count(), ObjectBoxDataSource.Factory(query))
+    }
+
+    private fun getPagedContentByListGroupOrder(searchBundle: ContentSearchBundle): Pair<Long, DataSource.Factory<Int, Content>> {
+        // TODO implement exclusion search within a group ordered by custom order
+        val ids = ObjectBoxDB.selectContentFullTextIds(
+            searchBundle,
+            getDynamicGroupContent(searchBundle.groupId)
+        )
+
+        return Pair(
+            ids.size.toLong(), PredeterminedDataSourceFactory(
+                { ObjectBoxDB.selectContentById(it) }, ids
+            )
+        )
     }
 
     private fun getPagedContentByList(searchBundle: ContentSearchBundle): Pair<Long, DataSource.Factory<Int, Content>> {
@@ -486,6 +502,12 @@ class ObjectBoxDAO : CollectionDAO {
         consumer: Consumer<Content>
     ) {
         ObjectBoxDB.selectAllInternalContentsQ(rootPath, favsOnly, true).use { query ->
+            query.forEach { consumer(it) }
+        }
+    }
+
+    override fun streamAllExternalBooks(consumer: Consumer<Content>) {
+        ObjectBoxDB.selectAllExternalContentsQ().use { query ->
             query.forEach { consumer(it) }
         }
     }
@@ -925,7 +947,7 @@ class ObjectBoxDAO : CollectionDAO {
         noArtistGroup.setItems(items)
         noArtistLive.postValue(listOf(noArtistGroup))
 
-        // Flagged groups
+        // Flagged (i.e. favourited or starred) groups
         val flaggedLive: LiveData<List<Group>> = ObjectBoxLiveData(
             ObjectBoxDB.selectGroupsByGroupingQ(Grouping.ARTIST.id, false)
         )
@@ -1238,15 +1260,19 @@ class ObjectBoxDAO : CollectionDAO {
         return ObjectBoxDB.selectExternalMemoryUsagePerSource()
     }
 
+    override fun countTransformedPages(contentIds: LongArray): Long {
+        return ObjectBoxDB.countTransformedPages(contentIds)
+    }
+
     override fun addContentToQueue(
         content: Content,
         sourceImageStatus: StatusContent?,
         targetImageStatus: StatusContent?,
         position: QueuePosition,
+        isQueueActive: Boolean,
         replacedContentId: Long,
         replacementTitle: String?,
-        archiveUrl: String?,
-        isQueueActive: Boolean
+        archiveUrl: String?
     ) {
         if (targetImageStatus != null) ObjectBoxDB.updateImageContentStatus(
             content.id,

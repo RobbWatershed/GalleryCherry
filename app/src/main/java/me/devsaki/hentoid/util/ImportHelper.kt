@@ -3,10 +3,15 @@ package me.devsaki.hentoid.util
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.content.Intent.ACTION_OPEN_DOCUMENT
+import android.content.Intent.ACTION_OPEN_DOCUMENT_TREE
+import android.content.Intent.CATEGORY_OPENABLE
 import android.net.Uri
-import android.provider.DocumentsContract
+import android.provider.DocumentsContract.EXTRA_INITIAL_URI
+import android.provider.DocumentsContract.EXTRA_PROMPT
 import android.util.Log
 import androidx.activity.result.contract.ActivityResultContract
+import androidx.annotation.StringRes
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import androidx.work.ExistingWorkPolicy
@@ -19,12 +24,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import me.devsaki.hentoid.R
-import me.devsaki.hentoid.core.Consumer
 import me.devsaki.hentoid.core.DEFAULT_PRIMARY_FOLDER
 import me.devsaki.hentoid.core.DEFAULT_PRIMARY_FOLDER_OLD
 import me.devsaki.hentoid.core.HentoidApp.LifeCycleListener.Companion.disable
 import me.devsaki.hentoid.core.JSON_ARCHIVE_SUFFIX
 import me.devsaki.hentoid.core.JSON_FILE_NAME_V2
+import me.devsaki.hentoid.core.SuspendConsumer
 import me.devsaki.hentoid.core.THUMB_FILE_NAME
 import me.devsaki.hentoid.core.WORK_CLOSEABLE
 import me.devsaki.hentoid.database.CollectionDAO
@@ -43,6 +48,8 @@ import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.enums.StorageLocation
 import me.devsaki.hentoid.json.JsonContent
 import me.devsaki.hentoid.json.JsonContentCollection
+import me.devsaki.hentoid.util.FolderScanResult.Failure
+import me.devsaki.hentoid.util.FolderScanResult.Success
 import me.devsaki.hentoid.util.file.ArchiveEntry
 import me.devsaki.hentoid.util.file.FileExplorer
 import me.devsaki.hentoid.util.file.InnerNameNumberFileComparator
@@ -64,7 +71,7 @@ import me.devsaki.hentoid.util.file.isSupportedArchive
 import me.devsaki.hentoid.util.file.listFoldersFilter
 import me.devsaki.hentoid.util.file.persistNewUriPermission
 import me.devsaki.hentoid.util.image.imageNamesFilter
-import me.devsaki.hentoid.util.image.isSupportedImage
+import me.devsaki.hentoid.util.image.isSupportedMedia
 import me.devsaki.hentoid.workers.ExternalImportWorker
 import me.devsaki.hentoid.workers.PrimaryImportWorker
 import me.devsaki.hentoid.workers.STEP_3_BOOKS
@@ -86,25 +93,65 @@ private const val EXTERNAL_LIB_TAG = "external-library"
 val ENDS_WITH_NUMBER: Pattern by lazy { Pattern.compile(".*\\d+(\\.\\d+)?$") }
 val BRACKETS by lazy { "\\[[^(\\[\\])]*]".toRegex() }
 
-enum class PickerResult {
-    OK,  // OK - Returned a valid URI
-    KO_NO_URI,  // No URI selected
-    KO_CANCELED, // Operation canceled
-    KO_OTHER // Any other issue
+sealed interface PickUriResult {
+    class Success(val uri: Uri) : PickUriResult
+    object NoUri : PickUriResult
+    object Cancelled : PickUriResult
+    object Unknown : PickUriResult
 }
 
-enum class ProcessFolderResult {
-    OK_EMPTY_FOLDER, // OK - Existing, empty Hentoid folder
-    OK_LIBRARY_DETECTED, // OK - En existing Hentoid folder with books
-    OK_LIBRARY_DETECTED_ASK, // OK - Existing Hentoid folder with books + we need to ask the user if he wants to import them
-    KO_INVALID_FOLDER, // File or folder is invalid, cannot be found
-    KO_APP_FOLDER, // Selected folder is the primary location and can't be used as an external location
-    KO_DOWNLOAD_FOLDER, // Selected folder is the device's download folder and can't be used as a primary folder (downloads visibility + storage calculation issues)
-    KO_CREATE_FAIL, // Hentoid folder could not be created
-    KO_ALREADY_RUNNING, // Import is already running
-    KO_OTHER_PRIMARY, // Selected folder is inside or contains the other primary location
-    KO_PRIMARY_EXTERNAL, // Selected folder is inside or contains the external location
-    KO_OTHER // Any other issue
+sealed interface FolderScanResult {
+
+    sealed interface Success : FolderScanResult {
+        /** Success - Existing, empty Hentoid folder */
+        object EmptyFolder : Success
+
+        /** Success - An existing Hentoid folder with books */
+        object LibraryDetected : Success
+
+        /** Success - Existing Hentoid folder with books + we need to ask the user if he wants to import them */
+        data class LibraryDetectedAsk(val rootUri: Uri) : Success
+    }
+
+    sealed interface Failure : FolderScanResult {
+        @get:StringRes
+        val errorMessageRes: Int
+
+        /** File or folder is invalid, cannot be found */
+        object InvalidFolder : Failure {
+            override val errorMessageRes = R.string.import_invalid
+        }
+
+        /** Selected folder is the device's download folder and can't be used as a primary folder */
+        object DownloadFolder : Failure {
+            override val errorMessageRes = R.string.import_download_folder
+        }
+
+        /** Hentoid folder could not be created */
+        object CreateFail : Failure {
+            override val errorMessageRes = R.string.import_create_fail
+        }
+
+        /** Import is already running */
+        object AlreadyRunning : Failure {
+            override val errorMessageRes = R.string.service_running
+        }
+
+        /** Selected folder is inside or contains the other primary location */
+        object OtherPrimary : Failure {
+            override val errorMessageRes = R.string.import_other_primary
+        }
+
+        /** Selected folder is separate from Hentoid's external location */
+        object PrimaryExternal : Failure {
+            override val errorMessageRes = R.string.import_other_external_inside_primary
+        }
+
+        /** Any other issue */
+        object Unknown : Failure {
+            override val errorMessageRes: Int = R.string.import_other
+        }
+    }
 }
 
 private val hentoidFolderNames =
@@ -142,81 +189,57 @@ fun isHentoidFolderName(folderName: String): Boolean {
 }
 
 
-class PickFolderContract : ActivityResultContract<StorageLocation, Pair<PickerResult, Uri>>() {
+class PickFolderContract : ActivityResultContract<StorageLocation, PickUriResult>() {
     override fun createIntent(context: Context, input: StorageLocation): Intent {
         disable() // Prevents the app from displaying the PIN lock when returning from the SAF dialog
-        return getFolderPickerIntent(context, input)
+
+        // http://stackoverflow.com/a/31334967/1615876
+        return Intent(ACTION_OPEN_DOCUMENT_TREE)
+            .putExtra(EXTRA_PROMPT, context.getString(R.string.dialog_prompt))
+            .putExtra("android.content.extra.SHOW_ADVANCED", true)
+            .putInitialUriExtra(context, input)
     }
 
-    override fun parseResult(resultCode: Int, intent: Intent?): Pair<PickerResult, Uri> {
+    override fun parseResult(resultCode: Int, intent: Intent?): PickUriResult {
         disable() // Restores autolock on app going to background
-        return parsePickerResult(resultCode, intent)
+        return wrapResult(resultCode, intent)
     }
-}
-
-
-class PickFileContract : ActivityResultContract<Int, Pair<PickerResult, Uri>>() {
-    override fun createIntent(context: Context, input: Int): Intent {
-        disable() // Prevents the app from displaying the PIN lock when returning from the SAF dialog
-        return getFilePickerIntent()
-    }
-
-    override fun parseResult(resultCode: Int, intent: Intent?): Pair<PickerResult, Uri> {
-        disable() // Restores autolock on app going to background
-        return parsePickerResult(resultCode, intent)
-    }
-}
-
-
-private fun parsePickerResult(resultCode: Int, intent: Intent?): Pair<PickerResult, Uri> {
-    // Return from the SAF picker
-    if (resultCode == Activity.RESULT_OK && intent != null) {
-        // Get Uri from Storage Access Framework
-        val uri = intent.data
-        return if (uri != null) Pair(PickerResult.OK, uri)
-        else Pair(PickerResult.KO_NO_URI, Uri.EMPTY)
-    } else if (resultCode == Activity.RESULT_CANCELED) {
-        return Pair(PickerResult.KO_CANCELED, Uri.EMPTY)
-    }
-    return Pair(PickerResult.KO_OTHER, Uri.EMPTY)
-}
-
-/**
- * Get the intent for the SAF folder picker properly set up, positioned on the Hentoid primary folder
- *
- * @param context Context to be used
- * @return Intent for the SAF folder picker
- */
-private fun getFolderPickerIntent(context: Context, location: StorageLocation): Intent {
-    val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE)
-    intent.putExtra(DocumentsContract.EXTRA_PROMPT, context.getString(R.string.dialog_prompt))
-    // http://stackoverflow.com/a/31334967/1615876
-    intent.putExtra("android.content.extra.SHOW_ADVANCED", true)
 
     // Start the SAF at the specified location
-    if (Settings.getStorageUri(location).isNotEmpty()) {
-        val file = getDocumentFromTreeUriString(
-            context,
-            Settings.getStorageUri(location)
-        )
-        if (file != null) intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, file.uri)
+    private fun Intent.putInitialUriExtra(
+        context: Context,
+        storageLocation: StorageLocation
+    ): Intent {
+        val treeUriStr = Settings.getStorageUri(storageLocation)
+        if (treeUriStr.isNotEmpty()) {
+            val file = getDocumentFromTreeUriString(context, treeUriStr)
+            if (file != null) putExtra(EXTRA_INITIAL_URI, file.uri)
+        }
+        return this
     }
-    return intent
 }
 
-/**
- * Get the intent for the SAF file picker properly set up
- *
- * @return Intent for the SAF folder picker
- */
-private fun getFilePickerIntent(): Intent {
-    val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
-    intent.addCategory(Intent.CATEGORY_OPENABLE)
-    intent.setType("*/*")
-    // http://stackoverflow.com/a/31334967/1615876
-    intent.putExtra("android.content.extra.SHOW_ADVANCED", true)
-    disable() // Prevents the app from displaying the PIN lock when returning from the SAF dialog
-    return intent
+class PickFileContract : ActivityResultContract<Int, PickUriResult>() {
+    override fun createIntent(context: Context, input: Int): Intent {
+        disable() // Prevents the app from displaying the PIN lock when returning from the SAF dialog
+
+        // http://stackoverflow.com/a/31334967/1615876
+        return Intent(ACTION_OPEN_DOCUMENT)
+            .addCategory(CATEGORY_OPENABLE)
+            .setType("*/*")
+            .putExtra("android.content.extra.SHOW_ADVANCED", true)
+    }
+
+    override fun parseResult(resultCode: Int, intent: Intent?): PickUriResult {
+        disable() // Restores autolock on app going to background
+        return wrapResult(resultCode, intent)
+    }
+}
+
+private fun wrapResult(resultCode: Int, intent: Intent?) = when (resultCode) {
+    Activity.RESULT_OK -> intent?.data?.let(PickUriResult::Success) ?: PickUriResult.NoUri
+    Activity.RESULT_CANCELED -> PickUriResult.Cancelled
+    else -> PickUriResult.Unknown
 }
 
 /**
@@ -238,113 +261,108 @@ fun setAndScanPrimaryFolder(
     location: StorageLocation,
     askScanExisting: Boolean,
     options: ImportOptions?
-): Pair<ProcessFolderResult, String> {
-    // Persist I/O permissions; keep existing ones if present
-    persistLocationCredentials(context, treeUri, location)
+): FolderScanResult {
+    return try {
+        // Persist I/O permissions; keep existing ones if present
+        persistLocationCredentials(context, treeUri, location)
 
-    // Check if the folder exists
-    val docFile = DocumentFile.fromTreeUri(context, treeUri)
-    if (null == docFile || !docFile.exists()) {
-        Timber.e("Could not find the selected file %s", treeUri.toString())
-        return Pair(ProcessFolderResult.KO_INVALID_FOLDER, treeUri.toString())
-    }
-
-    // Check if the folder is not the device's Download folder
-    val pathSegments = treeUri.pathSegments
-    if (pathSegments.size > 1) {
-        var firstSegment = pathSegments[1].lowercase(Locale.getDefault())
-        firstSegment =
-            firstSegment.split(File.separator.toRegex()).dropLastWhile { it.isEmpty() }
-                .toTypedArray()[0]
-        if (firstSegment.startsWith("download") || firstSegment.startsWith("primary:download")) {
-            Timber.e("Device's download folder detected : %s", treeUri.toString())
-            return Pair(ProcessFolderResult.KO_DOWNLOAD_FOLDER, treeUri.toString())
+        // Check if the folder exists
+        val docFile = DocumentFile.fromTreeUri(context, treeUri)
+        if (null == docFile || !docFile.exists()) {
+            Timber.e("Could not find the selected file $treeUri")
+            return Failure.InvalidFolder
         }
-    }
 
-    // Check if selected folder is separate from Hentoid's other primary location
-    val otherLocationUriStr: String =
-        if (location == StorageLocation.PRIMARY_1) Settings.getStorageUri(StorageLocation.PRIMARY_2)
-        else Settings.getStorageUri(StorageLocation.PRIMARY_1)
-
-    if (otherLocationUriStr.isNotEmpty()) {
-        val treeFullPath = getFullPathFromUri(context, treeUri)
-        val otherLocationFullPath =
-            getFullPathFromUri(context, otherLocationUriStr.toUri())
-        if (treeFullPath.startsWith(otherLocationFullPath)) {
-            Timber.e(
-                "Selected folder is inside the other primary location : %s",
-                treeUri.toString()
-            )
-            return Pair(ProcessFolderResult.KO_OTHER_PRIMARY, treeUri.toString())
-        }
-        if (otherLocationFullPath.startsWith(treeFullPath)) {
-            Timber.e(
-                "Selected folder contains the other primary location : %s",
-                treeUri.toString()
-            )
-            return Pair(ProcessFolderResult.KO_OTHER_PRIMARY, treeUri.toString())
-        }
-    }
-
-    // Check if selected folder is separate from Hentoid's external location
-    val extLocationStr = Settings.getStorageUri(StorageLocation.EXTERNAL)
-    if (extLocationStr.isNotEmpty()) {
-        val treeFullPath = getFullPathFromUri(context, treeUri)
-        val extFullPath = getFullPathFromUri(context, extLocationStr.toUri())
-        if (treeFullPath.startsWith(extFullPath)) {
-            Timber.e("Selected folder is inside the external location : %s", treeUri.toString())
-            return Pair(ProcessFolderResult.KO_PRIMARY_EXTERNAL, treeUri.toString())
-        }
-        if (extFullPath.startsWith(treeFullPath)) {
-            Timber.e("Selected folder contains the external location : %s", treeUri.toString())
-            return Pair(ProcessFolderResult.KO_PRIMARY_EXTERNAL, treeUri.toString())
-        }
-    }
-
-    // Retrieve or create the Hentoid folder
-    val hentoidFolder = getOrCreateHentoidFolder(context, docFile)
-    if (null == hentoidFolder) {
-        Timber.e("Could not create Primary folder in folder %s", docFile.uri.toString())
-        return Pair(ProcessFolderResult.KO_CREATE_FAIL, treeUri.toString())
-    }
-
-    // Set the folder as the app's downloads folder
-    val result = createNoMedia(context, hentoidFolder)
-    if (result < 0) {
-        Timber.e(
-            "Could not set the selected root folder (error = %d) %s",
-            result,
-            hentoidFolder.uri.toString()
-        )
-        return Pair(
-            ProcessFolderResult.KO_INVALID_FOLDER,
-            hentoidFolder.uri.toString()
-        )
-    }
-
-    // Scan the folder for an existing library; start the import
-    return if (hasBooks(context, hentoidFolder)) {
-        if (!askScanExisting) {
-            if (runPrimaryImport(context, location, hentoidFolder.uri.toString(), options))
-                Pair(ProcessFolderResult.OK_LIBRARY_DETECTED, hentoidFolder.uri.toString())
-            else Pair(ProcessFolderResult.KO_ALREADY_RUNNING, hentoidFolder.uri.toString())
-        } else Pair(ProcessFolderResult.OK_LIBRARY_DETECTED_ASK, hentoidFolder.uri.toString())
-    } else {
-        // Create a new library or import an Hentoid folder without books
-        // => Don't run the import worker and settle things here
-
-        // In case that Location was previously populated, drop all books
-        if (Settings.getStorageUri(location).isNotEmpty()) {
-            val dao: CollectionDAO = ObjectBoxDAO()
-            try {
-                detachAllPrimaryContent(dao, location)
-            } finally {
-                dao.cleanup()
+        // Check if the folder is not the device's Download folder
+        val pathSegments = treeUri.pathSegments
+        if (pathSegments.size > 1) {
+            var firstSegment = pathSegments[1].lowercase(Locale.getDefault())
+            firstSegment =
+                firstSegment.split(File.separator.toRegex()).dropLastWhile { it.isEmpty() }
+                    .toTypedArray()[0]
+            if (firstSegment.startsWith("download") || firstSegment.startsWith("primary:download")) {
+                Timber.e("Device's download folder detected : $treeUri")
+                return Failure.DownloadFolder
             }
         }
-        Settings.setStorageUri(location, hentoidFolder.uri.toString())
-        Pair(ProcessFolderResult.OK_EMPTY_FOLDER, hentoidFolder.uri.toString())
+
+        // Check if selected folder is separate from Hentoid's other primary location
+        val otherLocationUriStr: String =
+            if (location == StorageLocation.PRIMARY_1) Settings.getStorageUri(StorageLocation.PRIMARY_2)
+            else Settings.getStorageUri(StorageLocation.PRIMARY_1)
+
+        if (otherLocationUriStr.isNotEmpty()) {
+            val treeFullPath = getFullPathFromUri(context, treeUri)
+            val otherLocationFullPath =
+                getFullPathFromUri(context, otherLocationUriStr.toUri())
+            if (treeFullPath.startsWith(otherLocationFullPath)) {
+                Timber.e("Selected folder is inside the other primary location : $treeUri")
+                return Failure.OtherPrimary
+            }
+            if (otherLocationFullPath.startsWith(treeFullPath)) {
+                Timber.e("Selected folder contains the other primary location : $treeUri")
+                return Failure.OtherPrimary
+            }
+        }
+
+        // Check if selected folder is separate from Hentoid's external location
+        val extLocationStr = Settings.getStorageUri(StorageLocation.EXTERNAL)
+        if (extLocationStr.isNotEmpty()) {
+            val treeFullPath = getFullPathFromUri(context, treeUri)
+            val extFullPath = getFullPathFromUri(context, extLocationStr.toUri())
+            if (treeFullPath.startsWith(extFullPath)) {
+                Timber.e("Selected folder is inside the external location : $treeUri")
+                return Failure.PrimaryExternal
+            }
+            if (extFullPath.startsWith(treeFullPath)) {
+                Timber.e("Selected folder contains the external location : $treeUri")
+                return Failure.PrimaryExternal
+            }
+        }
+
+        // Retrieve or create the Hentoid folder
+        val hentoidFolder = getOrCreateHentoidFolder(context, docFile)
+        if (null == hentoidFolder) {
+            Timber.e("Could not create Primary folder in folder ${docFile.uri}")
+            return Failure.CreateFail
+        }
+
+        // Set the folder as the app's downloads folder
+        val result = createNoMedia(context, hentoidFolder)
+        if (result < 0) {
+            Timber.e("Could not set the selected root folder (error = $result) ${hentoidFolder.uri}")
+            return Failure.InvalidFolder
+        }
+
+        // Scan the folder for an existing library; start the import
+        if (hasBooks(context, hentoidFolder)) {
+            if (!askScanExisting) {
+                if (runPrimaryImport(context, location, hentoidFolder.uri.toString(), options))
+                    Success.LibraryDetected
+                else
+                    Failure.AlreadyRunning
+            } else {
+                Success.LibraryDetectedAsk(hentoidFolder.uri)
+            }
+        } else {
+            // Create a new library or import a Hentoid folder without books
+            // => Don't run the import worker and settle things here
+
+            // In case that Location was previously populated, drop all books
+            if (Settings.getStorageUri(location).isNotEmpty()) {
+                val dao: CollectionDAO = ObjectBoxDAO()
+                try {
+                    detachAllPrimaryContent(dao, location)
+                } finally {
+                    dao.cleanup()
+                }
+            }
+            Settings.setStorageUri(location, hentoidFolder.uri.toString())
+            Success.EmptyFolder
+        }
+    } catch (e: Exception) {
+        Timber.w(e)
+        Failure.Unknown
     }
 }
 
@@ -361,54 +379,52 @@ fun setAndScanExternalFolder(
     context: Context,
     treeUri: Uri,
     quickScan: Boolean = false
-): Pair<ProcessFolderResult, String> {
-    // Persist I/O permissions; keep existing ones if present
-    persistLocationCredentials(context, treeUri, StorageLocation.EXTERNAL)
+): FolderScanResult {
+    return try {
+        // Persist I/O permissions; keep existing ones if present
+        persistLocationCredentials(context, treeUri, StorageLocation.EXTERNAL)
 
-    // Check if the folder exists
-    val docFile = DocumentFile.fromTreeUri(context, treeUri)
-    if (null == docFile || !docFile.exists()) {
-        Timber.e("Could not find the selected file %s", treeUri.toString())
-        return Pair(ProcessFolderResult.KO_INVALID_FOLDER, treeUri.toString())
+        // Check if the folder exists
+        val docFile = DocumentFile.fromTreeUri(context, treeUri)
+        if (null == docFile || !docFile.exists()) {
+            Timber.e("Could not find the selected file $treeUri")
+            return Failure.InvalidFolder
+        }
+
+        // Check if selected folder is separate from one of Hentoid's primary locations
+        var primaryUri1 = Settings.getStorageUri(StorageLocation.PRIMARY_1)
+        var primaryUri2 = Settings.getStorageUri(StorageLocation.PRIMARY_2)
+        if (primaryUri1.isNotEmpty()) primaryUri1 =
+            getFullPathFromUri(context, primaryUri1.toUri())
+        if (primaryUri2.isNotEmpty()) primaryUri2 =
+            getFullPathFromUri(context, primaryUri2.toUri())
+        val selectedFullPath = getFullPathFromUri(context, treeUri)
+        if (primaryUri1.isNotEmpty() && selectedFullPath.startsWith(primaryUri1)
+            || primaryUri2.isNotEmpty() && selectedFullPath.startsWith(primaryUri2)
+        ) {
+            Timber.w("Trying to set the external library inside a primary library location $treeUri")
+            return Failure.PrimaryExternal
+        }
+        if (primaryUri1.isNotEmpty() && primaryUri1.startsWith(selectedFullPath)
+            || primaryUri2.isNotEmpty() && primaryUri2.startsWith(selectedFullPath)
+        ) {
+            Timber.w("Trying to set the external library over a primary library location $treeUri")
+            return Failure.PrimaryExternal
+        }
+
+        // Set the folder as the app's external library folder
+        val folderUri = docFile.uri.toString()
+        Settings.externalLibraryUri = folderUri
+
+        // Start the import
+        if (runExternalImport(context, quickScan))
+            Success.LibraryDetected
+        else
+            Failure.AlreadyRunning
+    } catch (e: Exception) {
+        Timber.w(e)
+        Failure.Unknown
     }
-
-    // Check if selected folder is separate from one of Hentoid's primary locations
-    var primaryUri1 = Settings.getStorageUri(StorageLocation.PRIMARY_1)
-    var primaryUri2 = Settings.getStorageUri(StorageLocation.PRIMARY_2)
-    if (primaryUri1.isNotEmpty()) primaryUri1 =
-        getFullPathFromUri(context, primaryUri1.toUri())
-    if (primaryUri2.isNotEmpty()) primaryUri2 =
-        getFullPathFromUri(context, primaryUri2.toUri())
-    val selectedFullPath = getFullPathFromUri(context, treeUri)
-    if (primaryUri1.isNotEmpty() && selectedFullPath.startsWith(primaryUri1)
-        || primaryUri2.isNotEmpty() && selectedFullPath.startsWith(primaryUri2)
-    ) {
-        Timber.w(
-            "Trying to set the external library inside a primary library location %s",
-            treeUri.toString()
-        )
-        return Pair(ProcessFolderResult.KO_PRIMARY_EXTERNAL, treeUri.toString())
-    }
-    if (primaryUri1.isNotEmpty() && primaryUri1.startsWith(selectedFullPath)
-        || primaryUri2.isNotEmpty() && primaryUri2.startsWith(selectedFullPath)
-    ) {
-        Timber.w(
-            "Trying to set the external library over a primary library location %s",
-            treeUri.toString()
-        )
-        return Pair(ProcessFolderResult.KO_PRIMARY_EXTERNAL, treeUri.toString())
-    }
-
-    // Set the folder as the app's external library folder
-    val folderUri = docFile.uri.toString()
-    Settings.externalLibraryUri = folderUri
-
-    // Start the import
-    return if (runExternalImport(context, quickScan)) Pair(
-        ProcessFolderResult.OK_LIBRARY_DETECTED,
-        folderUri
-    )
-    else Pair(ProcessFolderResult.KO_ALREADY_RUNNING, folderUri)
 }
 
 /**
@@ -423,7 +439,7 @@ fun persistLocationCredentials(
     treeUri: Uri,
     override: StorageLocation? = null
 ) {
-    // Keep library roots to the exception of the one we're overrriding
+    // Keep library roots to the exception of the one we're overriding
     val locations = mutableListOf(
         StorageLocation.PRIMARY_1,
         StorageLocation.PRIMARY_2,
@@ -496,7 +512,7 @@ fun showExistingLibraryDialog(
 private fun hasBooks(context: Context, folder: DocumentFile): Boolean {
     try {
         FileExplorer(context, folder.uri).use { explorer ->
-            val folders = explorer.listFolders(context, folder)
+            val folders = explorer.listFolders(context, folder.uri)
 
             // Filter out download subfolders among listed subfolders
             for (subfolder in folders) {
@@ -548,7 +564,7 @@ fun getExistingHentoidDirFrom(context: Context, root: DocumentFile): DocumentFil
     if (isHentoidFolderName(root.name!!)) return root
 
     // If not, look for it in its children
-    val hentoidDirs = listFoldersFilter(context, root, hentoidFolderNames)
+    val hentoidDirs = listFoldersFilter(context, root.uri, hentoidFolderNames)
     return if (hentoidDirs.isNotEmpty()) hentoidDirs[0] else null
 }
 
@@ -627,7 +643,7 @@ fun runExternalImport(
  * @param onFolderFound Callback when a folder has been found
  * @param onContentFound Callback when a Content has been found
  */
-fun scanFolderRecursive(
+suspend fun scanFolderRecursive(
     context: Context,
     dao: CollectionDAO,
     parent: Uri?,
@@ -637,8 +653,8 @@ fun scanFolderRecursive(
     parentNames: List<String>,
     log: MutableList<LogEntry>? = null,
     isCanceled: (() -> Boolean)? = null,
-    onFolderFound: (DocumentFile) -> Unit,
-    onContentFound: (Content) -> Unit,
+    onFolderFound: SuspendConsumer<DocumentFile>,
+    onContentFound: SuspendConsumer<Content>,
 ) {
     assertNonUiThread()
     if (isCanceled?.invoke() == true) return
@@ -647,7 +663,7 @@ fun scanFolderRecursive(
 
     Timber.d(">>>> scan root ${toScan.formatDisplayUri()}")
     // Ignore syncthing subfolders
-    val files = explorer.listDocumentFiles(context, toScan)
+    val files = explorer.listDocumentFiles(context, toScan.uri)
         .filterNot { it.isDirectory && (it.name ?: "").startsWith(".st") }
 
     val subFolders: MutableList<DocumentFile> = ArrayList()
@@ -813,7 +829,7 @@ fun scanBookFolder(
     files: List<DocumentFile>? = null,
     jsonFile: DocumentFile? = null
 ): Content {
-    Timber.d(">>>> scan book folder %s", bookFolder.uri)
+    Timber.d(">>>> scan book folder ${bookFolder.uri}")
     val now = Instant.now().toEpochMilli()
     val isExternal = (targetStatus == StatusContent.EXTERNAL)
 
@@ -913,7 +929,7 @@ fun scanChapterFolders(
     dao: CollectionDAO,
     jsonFile: DocumentFile?
 ): Content {
-    Timber.d(">>>> scan chapter folder %s", parent.uri)
+    Timber.d(">>>> scan chapter folder ${parent.uri}")
     val now = Instant.now().toEpochMilli()
 
     var result: Content? = null
@@ -997,7 +1013,7 @@ private fun scanFolderImages(
     startingOrder: Int,
     imgs: List<DocumentFile>? = null
 ): List<ImageFile> {
-    val imageFiles = imgs ?: explorer.listFiles(context, bookFolder, imageNamesFilter)
+    val imageFiles = imgs ?: explorer.listFiles(context, bookFolder.uri, imageNamesFilter)
     val folderName = bookFolder.name ?: ""
     val namePrefix = if (addFolderNametoImgName) "$folderName-" else ""
     val results = createImageListFromFiles(imageFiles, targetStatus, startingOrder, namePrefix)
@@ -1107,7 +1123,7 @@ private fun parentNamesAsTags(parentNames: List<String>): AttributeMap {
  * @param requiresJson  True to skip any archive that doesn't have a matching JSON file; false to read all archives
  * @return List of Content created from every archive inside the given subfolders
  */
-fun scanForArchivesPdf(
+suspend fun scanForArchivesPdf(
     context: Context,
     parent: DocumentFile,
     subFolders: List<DocumentFile>,
@@ -1118,12 +1134,12 @@ fun scanForArchivesPdf(
     log: MutableList<LogEntry>? = null,
     chaptered: Boolean = false,
     requiresJson: Boolean = false,
-    onProgress: Consumer<Content?>
+    onProgress: SuspendConsumer<Content?>
 ): List<Content> {
     val result: MutableList<Content> = ArrayList()
     for (subfolder in subFolders) {
         try {
-            val files = explorer.listFiles(context, subfolder, null)
+            val files = explorer.listFiles(context, subfolder.uri)
             val archives: MutableList<DocumentFile> = ArrayList()
             val jsons: MutableList<DocumentFile> = ArrayList()
 
@@ -1276,7 +1292,7 @@ private fun loadAsChapters(
  * @param doc           Archive file to scan
  * @param parentNames   Names of parent folders, for formatting purposes; last of the list is the immediate parent of parentFolder
  * @param targetStatus  Target status of the Content to create
- * @param content       Content metadata to use; null if has to be created from scratch
+ * @param content       Content metadata to use; null if it has to be created from scratch
  * @return Pair containing
  *  Key : Return code
  *      0 = success
@@ -1308,7 +1324,7 @@ fun scanArchivePdf(
 
     val appJsonEntries = entries.filter { it.path.endsWith(JSON_FILE_NAME_V2) }
     val archiveEntries = entries.filter { isSupportedArchive(it.path) }
-    val imageEntries = entries.filter { isSupportedImage(it.path) }.filter { it.size > 0 }
+    val imageEntries = entries.filter { isSupportedMedia(it.path) }.filter { it.size > 0 }
 
     if (imageEntries.isEmpty()) {
         // If it just contains other archives, raise an error
@@ -1553,7 +1569,7 @@ private fun createJsonFileFor(
         JSON_FILE_NAME_V2
     }
 
-    val jsonFile = explorer.findFile(context, contentFolder, jsonName)
+    val jsonFile = explorer.findFile(context, contentFolder.uri, jsonName)
     return if (jsonFile != null && jsonFile.exists()) jsonFile.uri
     else jsonToFile(
         context,
@@ -1653,9 +1669,9 @@ fun jsonToContent(
 }
 
 /**
- * Build a [NameFilter] only accepting Content json files
+ * Build a [NameFilter] only accepting Content JSON files
  *
- * @return [NameFilter] only accepting Content json files
+ * @return [NameFilter] only accepting Content JSON files
  */
 fun getContentJsonNamesFilter(): NameFilter {
     return hentoidContentJson

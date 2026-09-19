@@ -129,6 +129,18 @@
         <item>@string/pref_queue_new_position_entries_2</item>
         <item>@string/pref_queue_new_position_entries_3</item>
     </string-array>
+    <string-array name="pref_dl_animation_format_entries" translatable="false">
+        <item>GIF</item>
+        <item>WEBP (lossy)</item>
+        <item>WEBP (lossless)</item>
+        <item>AVC (MP4)</item>
+    </string-array>
+    <string-array name="pref_dl_animation_format_values" translatable="false">
+        <item>8</item>
+        <item>1</item>
+        <item>0</item>
+        <item>9</item>
+    </string-array>
     <string-array name="pref_dl_skip_large_size_threshold_entries" translatable="false">
         <item>@string/pref_dl_skip_large_size_threshold_entries_1</item>
         <item>@string/pref_dl_skip_large_size_threshold_entries_2</item>
@@ -187,6 +199,11 @@
         <item>2</item>
         <item>3</item>
     </string-array>
+    <string-array name="download_404_entries" translatable="false">
+        <item>@string/download_404_entries_1</item>
+        <item>@string/download_404_entries_2</item>
+        <item>@string/download_404_entries_3</item>
+    </string-array>
     <string-array name="pref_folder_naming_content_entries" translatable="false">
         <item>@string/pref_folder_naming_content_entries_1</item>
         <item>@string/pref_folder_naming_content_entries_2</item>
@@ -234,6 +251,30 @@
     <string-array name="pref_attribute_list_order_entries" translatable="false">
         <item>@string/pref_attribute_list_order_entries_1</item>
         <item>@string/pref_attribute_list_order_entries_2</item>
+    </string-array>
+    <string-array name="pref_library_search_delay_threshold_entries" translatable="false">
+        <item>@string/pref_library_search_delay_threshold_entries_1</item>
+        <item>@string/pref_library_search_delay_threshold_entries_2</item>
+        <item>@string/pref_library_search_delay_threshold_entries_3</item>
+        <item>@string/pref_library_search_delay_threshold_entries_4</item>
+    </string-array>
+    <string-array name="pref_library_search_delay_threshold_values" translatable="false">
+        <item>250</item>
+        <item>500</item>
+        <item>1000</item>
+        <item>999999</item>
+    </string-array>
+    <string-array name="pref_library_search_long_delay_threshold_entries" translatable="false">
+        <item>@string/pref_library_search_long_delay_threshold_entries_1</item>
+        <item>@string/pref_library_search_long_delay_threshold_entries_2</item>
+        <item>@string/pref_library_search_long_delay_threshold_entries_3</item>
+        <item>@string/pref_library_search_long_delay_threshold_entries_4</item>
+    </string-array>
+    <string-array name="pref_library_search_long_delay_threshold_values" translatable="false">
+        <item>1000</item>
+        <item>1500</item>
+        <item>3000</item>
+        <item>999999</item>
     </string-array>
     <string-array name="pref_color_theme_entries" translatable="false">
         <item>@string/theme_light</item>
@@ -290,6 +331,18 @@
         <item>2</item>
         <item>3</item>
     </string-array>
+    <string-array name="pref_viewer_action_binding_entries" translatable="false">
+        <item>@string/pref_viewer_action_binding_entries_1</item>
+        <item>@string/pref_viewer_action_binding_entries_2</item>
+        <item>@string/pref_viewer_action_binding_entries_3</item>
+        <item>@string/pref_viewer_action_binding_entries_4</item>
+    </string-array>
+    <string-array name="pref_viewer_action_binding_values" translatable="false">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+    </string-array>
     <string-array name="pref_viewer_ratio_completed_threshold_entries" translatable="false">
         <item>@string/disabled_generic</item>
         <item>10%</item>
@@ -319,8 +372,10 @@
         <item>@string/pref_viewer_slideshow_delay_entries_4</item>
         <item>@string/pref_viewer_slideshow_delay_entries_5</item>
         <item>@string/pref_viewer_slideshow_delay_entries_6</item>
+        <item>@string/pref_viewer_slideshow_delay_entries_7</item>
     </string-array>
     <string-array name="pref_viewer_slideshow_delay_entries_vertical" translatable="false">
+        <item>@string/pref_viewer_slideshow_delay_entries_vertical_0</item>
         <item>@string/pref_viewer_slideshow_delay_entries_vertical_1</item>
         <item>@string/pref_viewer_slideshow_delay_entries_vertical_2</item>
         <item>@string/pref_viewer_slideshow_delay_entries_vertical_3</item>
@@ -335,6 +390,7 @@
         <item>1</item>
         <item>2</item>
         <item>3</item>
+        <item>6</item>
     </string-array>
     <string-array name="pref_viewer_slideshow_loop_entries" translatable="false">
         <item>@string/pref_viewer_slideshow_loop_entries_1</item>
@@ -431,51 +487,6 @@
         <item>@string/transcode_method_1</item>
         <item>@string/transcode_method_2</item>
     </string-array>
-    <string-array name="transcode_encoders_all" translatable="false">
-        <item>@string/transcode_encoder_webp_lossless</item>
-        <item>@string/transcode_encoder_png</item>
-        <item>@string/transcode_encoder_webp_lossy</item>
-        <item>@string/transcode_encoder_jpeg</item>
-        <item>@string/transcode_encoder_jxl_lossy</item>
-        <item>@string/transcode_encoder_jxl_lossless</item>
-        <item>@string/transcode_encoder_jpegli</item>
-        <item>@string/transcode_encoder_avif</item>
-    </string-array>
-    <string-array name="transcode_encoders_lossless" translatable="false">
-        <item>@string/transcode_encoder_webp_lossless</item>
-        <item>@string/transcode_encoder_png</item>
-        <item>@string/transcode_encoder_jxl_lossless</item>
-    </string-array>
-    <string-array name="transcode_encoders_lossy" translatable="false">
-        <item>@string/transcode_encoder_webp_lossy</item>
-        <item>@string/transcode_encoder_jpeg</item>
-        <item>@string/transcode_encoder_jxl_lossy</item>
-        <item>@string/transcode_encoder_jpegli</item>
-        <item>@string/transcode_encoder_avif</item>
-    </string-array>
-    <!-- Values from PictureEncoder -->
-    <string-array name="transcode_encoders_all_vals" translatable="false">
-        <item>0</item>
-        <item>2</item>
-        <item>1</item>
-        <item>3</item>
-        <item>4</item>
-        <item>5</item>
-        <item>6</item>
-        <item>7</item>
-    </string-array>
-    <string-array name="transcode_encoders_lossless_vals" translatable="false">
-        <item>0</item>
-        <item>2</item>
-        <item>5</item>
-    </string-array>
-    <string-array name="transcode_encoders_lossy_vals" translatable="false">
-        <item>1</item>
-        <item>3</item>
-        <item>4</item>
-        <item>6</item>
-        <item>7</item>
-    </string-array>
 
     <!-- Archive dialog -->
     <string-array name="target_folder_entries" translatable="false">
@@ -486,7 +497,8 @@
         <item>ZIP</item>
         <item>CBZ</item>
         <item>PDF</item>
-    </string-array>*
+    </string-array>
+    *
     <string-array name="background_color_entries" translatable="false">
         <item>@string/white</item>
         <item>@string/light_grey</item>
@@ -521,6 +533,14 @@
     <string name="percent_no_digits" translatable="false">%.0f%%</string>
     <string name="what" translatable="false">\???</string>
     <string name="empty_string" translatable="false" />
+    <string name="transcode_encoder_png" tools:ignore="MissingTranslation">PNG</string>
+    <string name="transcode_encoder_webp" tools:ignore="MissingTranslation">WEBP (%s)</string>
+    <string name="transcode_encoder_jpeg" tools:ignore="MissingTranslation">JPEG</string>
+    <string name="transcode_encoder_jxl" tools:ignore="MissingTranslation">JXL (%s)</string>
+    <string name="transcode_encoder_jpegli" tools:ignore="MissingTranslation">JPEGLI</string>
+    <string name="transcode_encoder_avif" tools:ignore="MissingTranslation">AVIF</string>
+    <string name="transcode_encoder_gif" tools:ignore="MissingTranslation">GIF</string>
+    <string name="transcode_encoder_avc" tools:ignore="MissingTranslation">AVC/MP4</string>
 
     <!-- Strings: Main: Import Activity -->
     <!-- for logging only -->
@@ -542,6 +562,7 @@
     <string name="about_discord" translatable="false"><u>Discord</u></string>
     <string name="about_berg" translatable="false"><u>Codeberg</u></string>
     <string name="about_api" translatable="false"> / API %d</string>
+    <string name="lrr" translatable="false">LANraragi</string>
 
     <!-- Strings: Settings -->
     <string name="pref_generic_summary" translatable="false">%s</string>
@@ -564,6 +585,8 @@
     <string name="pref_attributes_list_order_default" translatable="false">1</string>
     <string name="pref_attributes_list_order_summary" translatable="false">%s</string>
     <string name="pref_attributes_list_count_default" translatable="false">true</string>
+    <string name="pref_library_search_delay_threshold_default" translatable="false">250</string>
+    <string name="pref_library_search_long_delay_threshold_default" translatable="false">1500</string>
     <string name="pref_plug_reactions_on_default" translatable="false">true</string>
     <string name="pref_color_theme_default" translatable="false">0</string>
     <string name="pref_force_english_default" translatable="false">false</string>
@@ -577,7 +600,8 @@
     <!-- Strings: Settings: Browser -->
     <string name="pref_browser_resume_last_default" translatable="false">false</string>
     <string name="pref_browser_dl_action_default" translatable="false">0</string>
-    <string name="pref_browser_quick_dl_default" translatable="false">true</string>
+    <string name="pref_browser_quick_dl_default" translatable="false">false</string>
+    <string name="pref_browser_grab_pics_default" translatable="false">false</string>
     <string name="pref_browser_nhentai_invisible_blacklist_default" translatable="false">false</string>
     <string name="pref_browser_quick_dl_threshold_default" translatable="false">1500</string>
     <string name="pref_browser_augmented_default" translatable="false">true</string>
@@ -599,6 +623,7 @@
     <string name="pref_browser_language_button_default" translatable="false">false</string>
     <string name="pref_browser_lock_favs_panel_default" translatable="false">false</string>
     <string name="pref_browser_range_download_default" translatable="false">false</string>
+    <string name="pref_browser_check_extra_pages_default" translatable="false">true</string>
     <!-- Strings: Settings: Downloader -->
     <string name="pref_queue_autostart_default" translatable="false">true</string>
     <string name="pref_queue_wifi_only_default" translatable="false">false</string>
@@ -615,10 +640,16 @@
     <string name="pref_dl_blocked_tags_behaviour_default" translatable="false">0</string>
     <string name="pref_dl_eh_hires_default" translatable="false">false</string>
     <string name="pref_dl_hitomi_avif_default" translatable="false">false</string>
+    <string name="pref_dl_kemono_hires" translatable="false">false</string>
+    <string name="pref_dl_paw_hires" translatable="false">true</string>
+    <string name="pref_dl_pixiv_hires" translatable="false">true</string>
     <string name="pref_dl_threads_quantity_default" translatable="false">0</string>
     <string name="pref_dl_speed_cap_default" translatable="false">-1</string>
     <string name="pref_dl_http_429_default_delay_default" translatable="false">120</string>
     <string name="pref_dl_separate_thumb" translatable="false">true</string>
+    <string name="pref_dl_404_default" translatable="false">0</string>
+    <string name="pref_dl_animation_format_default" translatable="false">1</string>
+    <string name="pref_dl_animation_quality_default" translatable="false">80</string>
     <!-- Strings: Settings: Privacy -->
     <string name="pref_app_preview_default" translatable="false">false</string>
     <string name="pref_analytics_preference_default" translatable="false">true</string>

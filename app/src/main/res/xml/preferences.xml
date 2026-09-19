@@ -6,16 +6,39 @@
         android:icon="@drawable/ic_attribute_source"
         android:key="sources"
         android:title="@string/pref_screen_sources">
-        <Preference
-            android:key="pref_drawer_sources"
-            android:summary="@string/pref_drawer_sources_summary"
-            android:title="@string/pref_drawer_sources_title"
-            app:iconSpaceReserved="false" />
-        <Preference
-            android:key="pref_source_specifics"
-            android:summary="@string/title_activity_source_specifics"
-            android:title="@string/title_activity_source_specifics"
-            app:iconSpaceReserved="false" />
+        <PreferenceCategory
+            android:title="@string/pref_cat_sources_web"
+            app:iconSpaceReserved="false">
+            <Preference
+                android:key="pref_drawer_sources"
+                android:summary="@string/pref_drawer_sources_summary"
+                android:title="@string/pref_drawer_sources_title"
+                app:iconSpaceReserved="false" />
+            <Preference
+                android:key="pref_source_specifics"
+                android:summary="@string/title_activity_source_specifics"
+                android:title="@string/title_activity_source_specifics"
+                app:iconSpaceReserved="false" />
+        </PreferenceCategory>
+        <PreferenceCategory
+            android:title="@string/pref_cat_sources_lrr"
+            app:iconSpaceReserved="false">
+            <Preference
+                android:key="lrr_endpoint"
+                android:summary="@string/pref_attributes_list_order_summary"
+                android:title="@string/pref_lrr_url_title"
+                app:iconSpaceReserved="false" />
+            <EditTextPreference
+                android:key="lrr_api_key"
+                android:summary="@string/pref_attributes_list_order_summary"
+                android:title="@string/pref_lrr_api_title"
+                app:iconSpaceReserved="false" />
+            <EditTextPreference
+                android:key="lrr_fav_cat"
+                android:summary="@string/pref_attributes_list_order_summary"
+                android:title="@string/pref_lrr_fav_cat"
+                app:iconSpaceReserved="false" />
+        </PreferenceCategory>
     </PreferenceScreen>
     <PreferenceScreen
         android:icon="@drawable/ic_ui"
@@ -120,7 +143,26 @@
                 android:title="@string/pref_grid_card_width_title"
                 app:iconSpaceReserved="false" />
         </PreferenceCategory>
-
+        <PreferenceCategory
+            android:title="@string/pref_library_search"
+            app:iconSpaceReserved="false">
+            <ListPreference
+                android:defaultValue="@string/pref_library_search_delay_threshold_default"
+                android:entries="@array/pref_library_search_delay_threshold_entries"
+                android:entryValues="@array/pref_library_search_delay_threshold_values"
+                android:key="pref_library_search_delay_threshold"
+                android:summary="@string/pref_library_search_delay_threshold_summary"
+                android:title="@string/pref_library_search_delay_threshold_title"
+                app:iconSpaceReserved="false" />
+            <ListPreference
+                android:defaultValue="@string/pref_library_search_long_delay_threshold_default"
+                android:entries="@array/pref_library_search_long_delay_threshold_entries"
+                android:entryValues="@array/pref_library_search_long_delay_threshold_values"
+                android:key="pref_library_search_long_delay_threshold"
+                android:summary="@string/pref_library_search_long_delay_threshold_summary"
+                android:title="@string/pref_library_search_long_delay_threshold_title"
+                app:iconSpaceReserved="false" />
+        </PreferenceCategory>
         <PreferenceCategory
             android:title="@string/pref_cat_search"
             app:iconSpaceReserved="false">
@@ -266,9 +308,14 @@
                 android:summary="@string/pref_browser_quick_dl_summary"
                 android:title="@string/pref_browser_quick_dl_title"
                 app:iconSpaceReserved="false" />
+            <CheckBoxPreference
+                android:defaultValue="@string/pref_browser_grab_pics_default"
+                android:key="pref_browser_grab_pics"
+                android:summary="@string/pref_browser_grab_pics_summary"
+                android:title="@string/pref_browser_grab_pics_title"
+                app:iconSpaceReserved="false" />
             <ListPreference
                 android:defaultValue="@string/pref_browser_quick_dl_threshold_default"
-                android:dependency="pref_browser_quick_dl"
                 android:entries="@array/pref_browser_quick_dl_threshold_entries"
                 android:entryValues="@array/pref_browser_quick_dl_threshold_values"
                 android:key="pref_browser_quick_dl_threshold"
@@ -280,6 +327,13 @@
                 android:key="browser_range_download"
                 android:summary="@string/pref_browser_range_download_summary"
                 android:title="@string/pref_range_download_title"
+                app:iconSpaceReserved="false"
+                app:sites="ANY" />
+            <CheckBoxPreference
+                android:defaultValue="@string/pref_browser_check_extra_pages_default"
+                android:key="browser_check_extra_pages"
+                android:summary="@string/pref_browser_check_extra_pages_summary"
+                android:title="@string/pref_check_extra_pages_title"
                 app:iconSpaceReserved="false"
                 app:sites="ANY" />
             <CheckBoxPreference
@@ -584,6 +638,59 @@
                 app:sites="HITOMI" />
         </PreferenceCategory>
         <PreferenceCategory
+            android:title="@string/pref_cat_kemono"
+            app:iconSpaceReserved="false">
+            <CheckBoxPreference
+                android:defaultValue="@string/pref_dl_kemono_hires"
+                android:key="pref_dl_kemono_hires"
+                android:summaryOff="@string/pref_dl_kemono_hires_off"
+                android:summaryOn="@string/pref_dl_kemono_hires_on"
+                android:title="@string/download_kemono_hires_title"
+                app:iconSpaceReserved="false"
+                app:isGlobal="true"
+                app:sites="KEMONO" />
+        </PreferenceCategory>
+        <PreferenceCategory
+            android:title="@string/pref_cat_paw"
+            app:iconSpaceReserved="false">
+            <CheckBoxPreference
+                android:defaultValue="@string/pref_dl_paw_hires"
+                android:key="pref_dl_paw_hires"
+                android:summaryOff="@string/pref_dl_paw_hires_off"
+                android:summaryOn="@string/pref_dl_paw_hires_on"
+                android:title="@string/download_kemono_hires_title"
+                app:iconSpaceReserved="false"
+                app:isGlobal="true"
+                app:sites="PAWCHIVE" />
+        </PreferenceCategory>
+        <PreferenceCategory
+            android:title="@string/pref_cat_pixiv"
+            app:iconSpaceReserved="false">
+            <ListPreference
+                android:defaultValue="@string/pref_dl_animation_format_default"
+                android:entries="@array/pref_dl_animation_format_entries"
+                android:entryValues="@array/pref_dl_animation_format_values"
+                android:key="pref_dl_animation_format"
+                android:summary="@string/pref_generic_summary"
+                android:title="@string/pref_dl_animation_format_title"
+                app:iconSpaceReserved="false" />
+            <EditTextPreference
+                android:defaultValue="@string/pref_dl_animation_quality_default"
+                android:key="pref_dl_animation_quality"
+                android:title="@string/pref_dl_animation_quality_title"
+                app:iconSpaceReserved="false" />
+            <CheckBoxPreference
+                android:defaultValue="@string/pref_dl_pixiv_hires"
+                android:key="pref_dl_pixiv_hires"
+                android:summaryOff="@string/pref_dl_paw_hires_off"
+                android:summaryOn="@string/pref_dl_paw_hires_on"
+                android:title="@string/download_kemono_hires_title"
+                app:iconSpaceReserved="false"
+                app:isGlobal="true"
+                app:sites="PIXIV" />
+
+        </PreferenceCategory>
+        <PreferenceCategory
             android:title="@string/pref_cat_advanced"
             app:iconSpaceReserved="false">
             <ListPreference
@@ -616,11 +723,20 @@
                 android:title="@string/download_separate_thumb_title"
                 app:iconSpaceReserved="false"
                 app:sites="ANY" />
+            <ListPreference
+                android:defaultValue="@string/pref_dl_404_default"
+                android:entries="@array/download_404_entries"
+                android:entryValues="@array/int_three"
+                android:key="pref_dl_404"
+                android:summary="@string/pref_generic_summary"
+                android:title="@string/download_404_title"
+                app:iconSpaceReserved="false"
+                app:sites="ANY" />
         </PreferenceCategory>
     </PreferenceScreen>
 
     <PreferenceScreen
-        android:icon="@drawable/ic_lock"
+        android:icon="@drawable/ic_lock_closed"
         android:key="privacy"
         android:title="@string/pref_screen_privacy">
         <PreferenceCategory
@@ -741,6 +857,15 @@
                     android:title="@string/pref_viewer_cap_tap_zoom"
                     app:iconSpaceReserved="false" />
             </PreferenceCategory>
+            <PreferenceCategory
+                android:title="@string/pref_cat_advanced"
+                app:iconSpaceReserved="false">
+                <Preference
+                    android:key="viewer_custom_key_binding"
+                    android:summary="@string/empty_string"
+                    android:title="@string/pref_viewer_key_bindings_title"
+                    app:iconSpaceReserved="false" />
+            </PreferenceCategory>
         </PreferenceScreen>
 
         <PreferenceScreen
@@ -782,6 +907,21 @@
                 android:key="pref_viewer_auto_rotate_mode"
                 android:summary="@string/pref_generic_summary"
                 android:title="@string/pref_viewer_auto_rotate"
+                app:iconSpaceReserved="false" />
+            <com.skydoves.colorpickerpreference.ColorPickerPreference
+                android:key="viewer_color_filter"
+                android:title="@string/pref_viewer_color_filter"
+                app:iconSpaceReserved="false"
+                app:preference_attachAlphaSlideBar="true"
+                app:preference_attachBrightnessSlideBar="true"
+                app:preference_colorBox_radius="26dp"
+                app:preference_dialog_negative="@string/cancel"
+                app:preference_dialog_positive="@string/ok"
+                app:preference_palette="@drawable/palette"
+                app:preference_selector="@drawable/wheel" />
+            <Preference
+                android:key="viewer_color_filter_reset"
+                android:title="@string/pref_viewer_color_filter_reset"
                 app:iconSpaceReserved="false" />
             <PreferenceCategory
                 android:title="@string/pref_viewer_rendering"
@@ -873,7 +1013,8 @@
                 android:defaultValue="@bool/pref_viewer_open_gallery_default"
                 android:key="pref_viewer_open_gallery"
                 android:title="@string/pref_viewer_open_gallery"
-                app:iconSpaceReserved="false" />
+                app:iconSpaceReserved="false"
+                app:sites="ANY" />
             <CheckBoxPreference
                 android:defaultValue="@bool/pref_viewer_chaptered_navigation_default"
                 android:key="viewer_chaptered_navigation"

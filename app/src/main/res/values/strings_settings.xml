@@ -8,9 +8,15 @@
     <string name="searchpreference_no_results">No results</string>
 
     <!-- Sources -->
+    <string name="pref_cat_sources_web">Websites</string>
     <string name="pref_screen_sources">Sources</string>
     <string name="pref_drawer_sources_title">Manage sources</string>
     <string name="title_activity_source_specifics">Source-specific settings</string>
+    <string name="pref_cat_sources_lrr">LANraragi</string>
+    <string name="pref_lrr_url_title">Server URL</string>
+    <string name="pref_lrr_url_prompt">Type your LRR server\'s IP and port (IP:port)</string>
+    <string name="pref_lrr_api_title">API key</string>
+    <string name="pref_lrr_fav_cat">Favourite category name</string>
 
     <!-- Interface -->
     <string name="pref_screen_interface">Interface &amp; Navigation</string>
@@ -55,6 +61,11 @@
     <string name="pref_force_english_summary_on">Use English</string>
     <string name="use_app_prefs">App settings (<x:g example="Left to right" id="app_default">%s</x:g>)</string>
     <string name="use_source_prefs">Source settings (<x:g example="Left to right" id="source_default">%s</x:g>)</string>
+    <string name="pref_library_search">Library Search</string>
+    <string name="pref_library_search_delay_threshold_title">Input delay threshold(general)</string>
+    <string name="pref_library_search_delay_threshold_summary"><x:g example="1.5s" id="delay">%s</x:g></string>
+    <string name="pref_library_search_long_delay_threshold_title">Input delay threshold(number, URL)</string>
+    <string name="pref_library_search_long_delay_threshold_summary"><x:g example="1.5s" id="delay">%s</x:g></string>
 
     <!-- Storage -->
     <string name="pref_screen_storage">Storage</string>
@@ -87,6 +98,9 @@
     <string name="pref_external_library_detach_summary">Don\'t include the external library into GalleryCherry anymore</string>
     <string name="pref_cat_eh">E-hentai / ExHentai</string>
     <string name="pref_cat_hitomi">Hitomi</string>
+    <string name="pref_cat_kemono">Kemono</string>
+    <string name="pref_cat_paw">Pawchive</string>
+    <string name="pref_cat_pixiv">Pixiv</string>
     <string name="pref_cat_advanced">Advanced</string>
     <string name="pref_refresh_library_title">Refresh library</string>
     <string name="pref_refresh_library_summary">Manually refresh library contents</string>
@@ -101,12 +115,14 @@
     <string name="pref_browser_resume_last_on">Any site opens on its last viewed page</string>
     <string name="pref_browser_dl_action_title">Download action</string>
     <string name="pref_browser_quick_dl_title">Quick download</string>
-    <string name="pref_browser_quick_dl_summary">On the books list page, hold tap to download any book</string>
+    <string name="pref_browser_quick_dl_summary">On the books list page, long tap to download any book</string>
+    <string name="pref_browser_grab_pics_title">Grab picture</string>
+    <string name="pref_browser_grab_pics_summary">Long tap on a picture to share or download it</string>
     <string name="pref_browser_nhentai_invisible_blacklist_title">Hide nhentai-blacklisted books</string>
     <string name="pref_browser_nhentai_invisible_blacklist_off">Nhentai-blacklisted books are blurred</string>
     <string name="pref_browser_nhentai_invisible_blacklist_on">Nhentai-blacklisted books are invisible</string>
-    <string name="pref_browser_quick_dl_threshold_title">Quick download long press threshold</string>
-    <string name="pref_browser_quick_dl_threshold_summary">Hold down for this duration to start quick downloading\nCurrent: <x:g example="1 s" id="time">%s</x:g></string>
+    <string name="pref_browser_quick_dl_threshold_title">Long tap threshold</string>
+    <string name="pref_browser_quick_dl_threshold_summary">Hold down for this duration to trigger quick download or picture grab\nCurrent: <x:g example="1 s" id="time">%s</x:g></string>
     <string name="pref_browser_duplicate_detector">Duplicate detector</string>
     <string name="pref_browser_duplicate_ask_title">Duplicates checking</string>
     <string name="pref_browser_duplicate_ask_off">No: always download</string>
@@ -158,6 +174,10 @@
     <string name="pref_downloader_set_time">Set time</string>
     <string name="pref_range_download_title">Range download</string>
     <string name="pref_browser_range_download_summary">Additional button to set which gallery pages to download</string>
+    <string name="pref_dl_animation_format_title">Encoder for animations</string>
+    <string name="pref_dl_animation_quality_title">Quality for animations (%)</string>
+    <string name="pref_check_extra_pages_title">Check for extra pages</string>
+    <string name="pref_browser_check_extra_pages_summary">Check for extra pages when opening a gallery from a book you already downloaded</string>
 
     <!-- Downloader -->
     <string name="pref_screen_downloader">Downloader</string>
@@ -194,13 +214,19 @@
     <string name="download_hitomi_avif_title">Download in AVIF format</string>
     <string name="download_hitomi_avif_on">Download pictures in AVIF format when available</string>
     <string name="download_hitomi_avif_off">Download pictures in WEBP format</string>
+    <string name="download_kemono_hires_title">Download hi-res pictures</string>
+    <string name="pref_dl_kemono_hires_on">Download hi-res pictures\nNB : Currently broken on the site</string>
+    <string name="pref_dl_kemono_hires_off">Download pictures that are displayed on the website</string>
+    <string name="pref_dl_paw_hires_on">Download hi-res pictures</string>
+    <string name="pref_dl_paw_hires_off">Download pictures that are displayed on the website</string>
     <string name="pref_dl_threads_quantity_title">Parallel downloads</string>
     <string name="pref_dl_threads_quantity_summary">Number of images downloaded simultaneously\nCurrently: <x:g example="5" id="number">%s</x:g></string>
     <string name="pref_dl_speed_cap_title">Download speed limit</string>
     <string name="pref_dl_http_429_default_delay_title">HTTP 429 default delay (seconds)</string>
     <string name="download_separate_thumb_title">Thumbnails</string>
     <string name="download_separate_thumb_on">Create a separate thumbnail file</string>
-    <string name="download_separate_thumb_off">Flag page 1 as a sthumbnail</string>
+    <string name="download_separate_thumb_off">Flag page 1 as a thumbnail</string>
+    <string name="download_404_title">HTTP 404 management</string>
 
     <!-- Privacy -->
     <string name="pref_screen_privacy">Privacy</string>
@@ -226,7 +252,7 @@
     <string name="pref_check_updates_summary_off">Enable automatic update checks over mobile data</string>
     <string name="pref_check_updates_summary_on">Note: Does not override manual update checks</string>
 
-    <!-- Viewer -->
+    <!-- Reader -->
     <string name="pref_screen_viewer">Reader</string>
     <string name="pref_viewer_controls">Controls</string>
     <string name="pref_viewer_browse_mode">Browse mode</string>
@@ -244,6 +270,11 @@
     <string name="pref_viewer_zoom_double_tap">Double tap to zoom</string>
     <string name="pref_viewer_zoom_holding">Temp zoom while holding</string>
     <string name="pref_viewer_cap_tap_zoom">Cap double &amp; long tap zoom</string>
+    <string name="pref_viewer_key_bindings_title">Additional keybindings</string>
+    <string name="pref_viewer_key_bindings_action">Action</string>
+    <string name="pref_viewer_key_bindings_record_key_off">Record key</string>
+    <string name="pref_viewer_key_bindings_record_key_on">Recording key…</string>
+    <string name="pref_viewer_key_bindings_no_binding">No keybinding</string>
     <string name="pref_viewer_visuals">Visuals</string>
     <string name="pref_viewer_horizontal_reader">Horizontal reader</string>
     <string name="pref_viewer_vertical_reader">Vertical reader</string>
@@ -286,6 +317,9 @@
     <string name="doh_warning">Some websites won\'t work well with DNS over HTTPS. Use an external DNS app if you experience issues during navigation (e.g. blank pages, unresponsive login forms)</string>
     <string name="proxy_warning">Some websites won\'t work well with a proxy. Use an external DNS app if you experience issues during navigation (e.g. blank pages, unresponsive login forms)</string>
     <string name="material_you_warning">Your device doesn\'t support Material You; switching back to Light theme</string>
+    <string name="lrr_localnetwork_warning">Reaching your LRR server might require local network access</string>
+    <string name="pref_viewer_color_filter">Color filter</string>
+    <string name="pref_viewer_color_filter_reset">Reset color filter</string>
 
     <!-- Misc -->
     <string name="pref_next_schedule">Next run scheduled in %.0f mins</string>

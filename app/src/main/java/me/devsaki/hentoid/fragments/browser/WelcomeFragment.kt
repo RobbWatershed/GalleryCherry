@@ -1,6 +1,5 @@
 package me.devsaki.hentoid.fragments.browser
 
-import android.content.Intent
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -11,11 +10,11 @@ import androidx.lifecycle.ViewModelProvider
 import com.mikepenz.fastadapter.FastAdapter
 import com.mikepenz.fastadapter.adapters.ItemAdapter
 import me.devsaki.hentoid.R
-import me.devsaki.hentoid.activities.settings.SettingsSourceSelectActivity
 import me.devsaki.hentoid.activities.sources.CustomWebViewClient
 import me.devsaki.hentoid.database.domains.SiteHistory
-import me.devsaki.hentoid.databinding.FragmentWebWelcomeBinding
+import me.devsaki.hentoid.databinding.FragmentBrowserWelcomeBinding
 import me.devsaki.hentoid.enums.Site
+import me.devsaki.hentoid.fragments.settings.SelectSitesDialogFragment
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.launchBrowserFor
 import me.devsaki.hentoid.util.network.UriParts
@@ -25,7 +24,8 @@ import me.devsaki.hentoid.viewmodels.BrowserViewModel
 import me.devsaki.hentoid.viewmodels.ViewModelFactory
 import java.net.URLDecoder
 
-class WelcomeFragment : Fragment(R.layout.fragment_web_welcome) {
+class WelcomeFragment : Fragment(R.layout.fragment_browser_welcome),
+    SelectSitesDialogFragment.Parent {
 
     // == COMMUNICATION
     // Viewmodel
@@ -36,7 +36,7 @@ class WelcomeFragment : Fragment(R.layout.fragment_web_welcome) {
 
 
     // === UI
-    private var binding: FragmentWebWelcomeBinding? = null
+    private var binding: FragmentBrowserWelcomeBinding? = null
 
     private val sitesItemAdapter = ItemAdapter<IconItem<Site>>()
     private val sitesFastAdapter = FastAdapter.with(sitesItemAdapter)
@@ -65,7 +65,7 @@ class WelcomeFragment : Fragment(R.layout.fragment_web_welcome) {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        binding = FragmentWebWelcomeBinding.inflate(inflater, container, false)
+        binding = FragmentBrowserWelcomeBinding.inflate(inflater, container, false)
 
         viewModel = ViewModelProvider(
             requireActivity(),
@@ -87,7 +87,7 @@ class WelcomeFragment : Fragment(R.layout.fragment_web_welcome) {
             sitesFastAdapter.onClickListener = { _, _, i, _ -> onSiteClick(i) }
 
             editSites.setOnClickListener {
-                startActivity(Intent(requireActivity(), SettingsSourceSelectActivity::class.java))
+                SelectSitesDialogFragment.invoke(this@WelcomeFragment, Settings.activeSites)
             }
 
             recentHistory.adapter = historyFastAdapter
@@ -166,5 +166,9 @@ class WelcomeFragment : Fragment(R.layout.fragment_web_welcome) {
     private fun onSharedPreferenceChanged(key: String?) {
         if (null == key) return
         if (Settings.Key.ACTIVE_SITES == key) loadActiveSites()
+    }
+
+    override fun onSitesSelected(sites: List<Site>) {
+        Settings.activeSites = sites
     }
 }

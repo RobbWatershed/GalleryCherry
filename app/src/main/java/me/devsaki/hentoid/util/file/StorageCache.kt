@@ -13,6 +13,7 @@ import timber.log.Timber
 import java.io.File
 import java.io.IOException
 import java.time.Instant
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * The app's fixed-size storage-based cache
@@ -22,31 +23,32 @@ object StorageCache {
 
     // Key = Cache ID
     // Value = Location of the cache folder
-    private val folder = HashMap<String, File>()
+    private val folder = ConcurrentHashMap<String, File>()
 
     // Key = Cache ID
     // Value = Is the cache permanent ?
     // NB : Non-permanent cache gets cleared during init; permanent is not
-    private val isPermanent = HashMap<String, Boolean>()
+    private val isPermanent = ConcurrentHashMap<String, Boolean>()
 
     // Key = Cache ID
     // Value = Maximum cache size (bytes))
-    private val sizeLimit = HashMap<String, Int>()
+    private val sizeLimit = ConcurrentHashMap<String, Int>()
 
     // Key = Cache ID
     // Value = Cache
     //   Key = Identifier of the file to access (formatted by the caller)
     //   Value.first = Timestamp of last access
     //   Value.second = Uri of cached file
-    private val entries = HashMap<String, HashMap<String, Pair<Long, Uri>>>()
+    private val entries = ConcurrentHashMap<String, ConcurrentHashMap<String, Pair<Long, Uri>>>()
 
     // Key = Cache ID
     // Value = Timestamp for the last purge
-    private val lastPurge = HashMap<String, Long>()
+    private val lastPurge = ConcurrentHashMap<String, Long>()
 
     // Key = Cache ID
     // Value = Delegate to broadcast cleanup events
-    private var cleanupObservers = HashMap<String, HashMap<String, () -> Unit>>()
+    private var cleanupObservers =
+        ConcurrentHashMap<String, ConcurrentHashMap<String, () -> Unit>>()
 
 
     fun init(
@@ -73,7 +75,7 @@ object StorageCache {
         val now = Instant.now().toEpochMilli()
         lastPurge[cacheId] = now
 
-        val theEntries = HashMap<String, Pair<Long, Uri>>()
+        val theEntries = ConcurrentHashMap<String, Pair<Long, Uri>>()
         entries[cacheId] = theEntries
         if (permanent && !forceClear) {
             theFolder.listFiles()?.filterNotNull()?.forEach {
@@ -81,9 +83,10 @@ object StorageCache {
             }
         }
 
+        // Initialize observer if unset
+        if (!cleanupObservers.containsKey(cacheId)) cleanupObservers[cacheId] = ConcurrentHashMap()
+
         // Call existing observers as initializing an existing cache cleans it up
-        if (cleanupObservers.containsKey(cacheId))
-            cleanupObservers[cacheId] = HashMap<String, () -> Unit>()
         cleanupObservers[cacheId]?.forEach { it.value.invoke() }
     }
 
@@ -103,10 +106,8 @@ object StorageCache {
                 while (storageTaken > limit) {
                     if (sortedEntries.isEmpty()) break
                     val oldestEntry = sortedEntries[0]
-                    synchronized(entries[cacheId]!!) {
-                        Timber.d("Storage cache : removing %s", oldestEntry.key)
-                        entries[cacheId]!!.remove(oldestEntry.key)
-                    }
+                    Timber.d("Storage cache : removing %s", oldestEntry.key)
+                    entries[cacheId]!!.remove(oldestEntry.key)
                     legacyFileFromUri(oldestEntry.value.second)?.let {
                         storageTaken -= it.length()
                         it.delete()
@@ -143,21 +144,17 @@ object StorageCache {
         val targetFile = File(folder[cacheId], key)
         if (!targetFile.exists() && !targetFile.createNewFile()) throw IOException("Couldn't create file for key $key in cache folder $cacheId")
         val result = Uri.fromFile(targetFile)
-        synchronized(entries[cacheId]!!) {
-            entries[cacheId]!![key] = Pair(Instant.now().toEpochMilli(), result)
-        }
+        entries[cacheId]!![key] = Pair(Instant.now().toEpochMilli(), result)
         purgeIfNeeded(cacheId)
         return result
     }
 
     fun getFile(cacheId: String, key: String): Uri? {
         entries[cacheId]?.let {
-            synchronized(it) {
-                val entry = it[key] ?: return null
-                // Change timestamp of existing entry as it has just been asked for
-                it[key] = Pair(Instant.now().toEpochMilli(), entry.second)
-                return entry.second
-            }
+            val entry = it[key] ?: return null
+            // Change timestamp of existing entry as it has just been asked for
+            it[key] = Pair(Instant.now().toEpochMilli(), entry.second)
+            return entry.second
         }
         return null
     }
@@ -180,14 +177,14 @@ object StorageCache {
     fun addCleanupObserver(cacheId: String, key: String, observer: () -> Unit) {
         cleanupObservers[cacheId]?.let {
             it[key] = observer
-            Timber.d("Observer added; %d registered", it.size)
+            Timber.d("Observer added for $cacheId : $key; %d total registered", it.size)
         }
     }
 
     fun removeCleanupObserver(cacheId: String, key: String) {
         cleanupObservers[cacheId]?.let {
             it.remove(key)
-            Timber.d("Observer removed; %d registered", it.size)
+            Timber.d("Observer removed for $cacheId : $key; %d total registered", it.size)
         }
     }
 }

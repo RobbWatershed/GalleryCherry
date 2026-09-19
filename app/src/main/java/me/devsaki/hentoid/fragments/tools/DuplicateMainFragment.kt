@@ -9,11 +9,13 @@ import android.view.ViewGroup
 import androidx.activity.OnBackPressedCallback
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.mikepenz.fastadapter.FastAdapter
 import com.mikepenz.fastadapter.IAdapter
 import com.mikepenz.fastadapter.adapters.ItemAdapter
 import com.mikepenz.fastadapter.diff.FastAdapterDiffUtil.set
+import kotlinx.coroutines.launch
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.activities.DuplicateDetectorActivity
 import me.devsaki.hentoid.database.domains.DuplicateEntry
@@ -114,6 +116,10 @@ class DuplicateMainFragment : Fragment(R.layout.fragment_duplicate_main) {
             }
         }
         activity.get()?.onBackPressedDispatcher?.addCallback(activity.get()!!, callback!!)
+
+        lifecycleScope.launch {
+            activity.get()?.duplicateDetectorEvents?.collect(this@DuplicateMainFragment::onActivityEvent)
+        }
     }
 
     private fun onCustomBackPress() {
@@ -123,7 +129,11 @@ class DuplicateMainFragment : Fragment(R.layout.fragment_duplicate_main) {
 
     private fun onToolbarItemClicked(menuItem: MenuItem): Boolean {
         when (menuItem.itemId) {
-            R.id.action_settings -> topPanel.showAsDropDown(activity.get()!!.getToolbarView())
+            R.id.action_settings -> {
+                activity.get()?.getToolbarView()?.let {
+                    topPanel.showAsDropDown(it)
+                }
+            }
         }
         return true
     }
@@ -216,12 +226,12 @@ class DuplicateMainFragment : Fragment(R.layout.fragment_duplicate_main) {
         return true
     }
 
-    @Subscribe(threadMode = ThreadMode.MAIN)
     fun onActivityEvent(event: CommunicationEvent) {
         if (event.recipient != CommunicationEvent.Recipient.DUPLICATE_MAIN) return
         when (event.type) {
             CommunicationEvent.Type.ENABLE -> onEnable()
             CommunicationEvent.Type.DISABLE -> onDisable()
+            CommunicationEvent.Type.UPDATE_TOOLBAR -> topPanel.updateUI(requireActivity())
             else -> {}
         }
     }
@@ -239,7 +249,6 @@ class DuplicateMainFragment : Fragment(R.layout.fragment_duplicate_main) {
 
     private fun onEnable() {
         enabled = true
-        activity.get()?.initFragmentToolbars(this::onToolbarItemClicked)
         callback?.isEnabled = true
     }
 

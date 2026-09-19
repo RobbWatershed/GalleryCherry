@@ -58,7 +58,7 @@ class LusciousActivity : BaseBrowserActivity() {
         CustomWebViewClient(site, filter, activity) {
         fun onFetchCall(url: String, body: String) {
             if (isResultsPage(url)) this@LusciousActivity.onNoResult()
-            if (!isGalleryPage(url)) return
+            if (!isDownloadable(url)) return
             try {
                 jsonToObject(body, LusciousQuery::class.java)?.let { query ->
                     val id = query.getIdVariable()

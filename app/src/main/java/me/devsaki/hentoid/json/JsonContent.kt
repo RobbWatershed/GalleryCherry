@@ -40,7 +40,8 @@ data class JsonContent(
     val groups: List<JsonGroupItem>?,
     // Specific data for queued items
     val isFrozen: Boolean?,
-    val downloadRange: String?
+    val downloadRange: String?,
+    val archiveId: String?
 ) {
     constructor(c: Content, keepImages: Boolean = true) : this(
         c.url,
@@ -72,7 +73,8 @@ data class JsonContent(
             it.linkedGroup?.run { grouping == Grouping.CUSTOM || hasCustomBookOrder } == true
         }.map { JsonGroupItem(it) },
         c.isFrozen,
-        c.downloadRange
+        c.downloadRange,
+        c.archiveId
     )
 
     fun toEntity(dao: CollectionDAO): Content {
@@ -97,7 +99,8 @@ data class JsonContent(
                 downloadMode ?: Settings.Value.DL_ACTION_DL_PAGES
             ),
             manuallyMerged = manuallyMerged == true,
-            downloadRange = downloadRange ?: ""
+            downloadRange = downloadRange ?: "",
+            archiveId = archiveId ?: ""
         )
         result.isFrozen = isFrozen == true
 

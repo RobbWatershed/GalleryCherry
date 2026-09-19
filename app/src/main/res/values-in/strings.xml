@@ -72,7 +72,7 @@
   <string name="biometric_dialog_title">Kunci biometrik</string>
   <string name="black">Hitam</string>
   <string name="blocked_tag">Buku memiliki tag yang diblokir (%s)\nUnduhan dibatalkan</string>
-  <string name="blocked_tag_double">Buku ini terdapat tag yang di blokir (%s)\ klik dua kali untuk mengunduh</string>
+  <string name="blocked_tag_double">Buku ini terdapat tag yang di blokir (%s)\nklik dua kali untuk mengunduh</string>
   <string name="blocked_tag_queued">Buku memiliki tag yang diblokir (%s)\nDimasukkan ke antrean sebagai kesalahan</string>
   <plurals name="book">
     <item quantity="one">Buku</item>
@@ -1016,14 +1016,8 @@
   <string name="title_submenu_library">Perpustakaan saya</string>
   <string name="title_submenu_settings">Fitur lanjutan</string>
   <string name="torrent_dl_fail">Gagal mengunduh torrent: %s</string>
-  <string name="transcode_encoder_avif">AVIF</string>
-  <string name="transcode_encoder_jpeg">JPEG</string>
-  <string name="transcode_encoder_jpegli">JPEGLI</string>
-  <string name="transcode_encoder_jxl_lossless">JXL (lossless)</string>
-  <string name="transcode_encoder_jxl_lossy">JXL (lossy)</string>
-  <string name="transcode_encoder_png">PNG</string>
-  <string name="transcode_encoder_webp_lossless">WEBP (lossless)</string>
-  <string name="transcode_encoder_webp_lossy">WEBP (lossy)</string>
+  <string name="lossless_generic">lossless</string>
+  <string name="lossy_generic">lossy</string>
   <string name="transcode_method_1">Encoder yang sama untuk semua gambar</string>
   <string name="transcode_method_2">Bedakan gambar lossy dan lossless</string>
   <string name="transform">Transformasi</string>
@@ -1035,10 +1029,7 @@
   <string name="transform_limit">Tidak dapat mentransformasi lebih dari 1000 buku sekaligus</string>
   <string name="transform_pics">Transformasi gambar</string>
   <string name="transform_progress">Mentransformasi gambar</string>
-  <string name="transform_resize_pics">Ubah ukuran gambar</string>
-  <string name="transform_resizing">Ubah ukuran</string>
   <string name="transform_start">Mentransformasi gambar</string>
-  <string name="transform_transcoding">Transkode</string>
   <string name="transform_unsupported">Transformasi tidak didukung</string>
   <string name="u_byte">bytes</string>
   <string name="u_gigabyte">GB</string>
@@ -1090,7 +1081,6 @@
   <string name="web_gallery">Kembali ke halaman galeri terakhir</string>
   <string name="web_home">Kembali ke perpustakaan</string>
   <string name="web_open_ext_browser">Peramban eksternal</string>
-  <string name="web_range_download_prompt">Rentang halaman galeri untuk di unduh  (e.g. 1-5 / 1;3;8 / 1-2;5-7)</string>
   <string name="web_refresh_stop">Segarkan/hentikan</string>
   <string name="web_storage_permission_denied">Izin penyimpanan ditolak, tidak dapat menggunakan pengunduh</string>
   <string name="web_target_page_outside_restricted_domains">Host %s di luar domain yang dibatasi</string>

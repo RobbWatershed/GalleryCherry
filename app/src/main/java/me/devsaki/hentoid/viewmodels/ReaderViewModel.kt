@@ -44,7 +44,6 @@ import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.Settings.Value.VIEWER_DELETE_ASK_AGAIN
 import me.devsaki.hentoid.util.Settings.Value.VIEWER_DELETE_ASK_BOOK
 import me.devsaki.hentoid.util.addContent
-import me.devsaki.hentoid.util.assertNonUiThread
 import me.devsaki.hentoid.util.chapterStr
 import me.devsaki.hentoid.util.clearFileNameMatchCache
 import me.devsaki.hentoid.util.coerceIn
@@ -61,18 +60,16 @@ import me.devsaki.hentoid.util.file.getDocumentFromTreeUri
 import me.devsaki.hentoid.util.file.getDocumentFromTreeUriString
 import me.devsaki.hentoid.util.file.getExtension
 import me.devsaki.hentoid.util.file.getFileFromSingleUriString
-import me.devsaki.hentoid.util.file.getInputStream
 import me.devsaki.hentoid.util.file.isSupportedArchive
 import me.devsaki.hentoid.util.formatCacheKey
 import me.devsaki.hentoid.util.getPictureFilesFromContent
+import me.devsaki.hentoid.util.image.MIME_IMAGE_APNG
 import me.devsaki.hentoid.util.image.MIME_IMAGE_AVIF
 import me.devsaki.hentoid.util.image.MIME_IMAGE_GIF
 import me.devsaki.hentoid.util.image.MIME_IMAGE_JXL
 import me.devsaki.hentoid.util.image.MIME_IMAGE_PNG
 import me.devsaki.hentoid.util.image.MIME_IMAGE_WEBP
-import me.devsaki.hentoid.util.image.MIME_VIDEO_MP4
-import me.devsaki.hentoid.util.image.getMimeTypeFromPictureBinary
-import me.devsaki.hentoid.util.image.isImageAnimated
+import me.devsaki.hentoid.util.image.getImageProperties
 import me.devsaki.hentoid.util.matchFilesToImageList
 import me.devsaki.hentoid.util.network.WebkitPackageHelper
 import me.devsaki.hentoid.util.pause
@@ -85,6 +82,7 @@ import me.devsaki.hentoid.util.scanArchivePdf
 import me.devsaki.hentoid.util.scanBookFolder
 import me.devsaki.hentoid.util.setAndSaveContentCover
 import me.devsaki.hentoid.util.updateContentReadStats
+import me.devsaki.hentoid.util.video.MIME_VIDEO_MP4
 import me.devsaki.hentoid.widget.ContentSearchManager
 import me.devsaki.hentoid.widget.FolderSearchManager
 import me.devsaki.hentoid.workers.BaseDeleteWorker
@@ -224,6 +222,7 @@ class ReaderViewModel(
      */
     fun loadContentFromId(contentId: Long, pageNumber: Int) {
         if (contentId > 0) {
+            Timber.d("Loading content from ID : $contentId / page $pageNumber")
             viewModelScope.launch {
                 val loadedContent =
                     withContext(Dispatchers.IO) {
@@ -523,19 +522,18 @@ class ReaderViewModel(
     }
 
     private fun adjustPageIndex(index: Int, imageFiles: List<ImageFile>): Int {
-        var result = index
-
-        // Correct offset with the thumb index
+        // Correct offset according to the thumb index
+        var delta = 0
         thumbIndex = -1
         for (i in imageFiles.indices) if (!imageFiles[i].isReadable) {
             thumbIndex = i
             break
         }
-        // Ignore if it doesn't intervene
-        if (thumbIndex == result) result += 1
-        else if (thumbIndex > result) thumbIndex = 0
 
-        return 0.coerceAtLeast(result - thumbIndex - 1)
+        // Fix index
+        if (thumbIndex > -1 && thumbIndex < index) delta = -1
+
+        return coerceIn(index + delta, 0, imageFiles.size - 1)
     }
 
     private fun computeStartingIndex(
@@ -625,8 +623,8 @@ class ReaderViewModel(
             // Sort images according to their Order; don't keep the cover thumb
             imgs.sortedBy { it.order * if (reverse) -1 else 1 }
         }
-        // Don't keep the cover thumb
-        imgs = imgs.filter { it.isReadable }
+        // Don't keep the cover thumb nor the unreadable images
+        imgs = imgs.filter { it.isReadable && it.isUsable }
         if (true == getShowFavouritesOnly().value) {
             imgs = imgs.filter { it.favourite }
         }
@@ -664,13 +662,27 @@ class ReaderViewModel(
                 }
             }
             if (hasDiff) {
+                // Save all URLs if there are pageURLs set, as they could have been set at runtime,
+                // after parsing pageURL
+                val urls = viewerImagesInternal
+                    .filter { it.pageUrl.isNotBlank() && it.url.isNotBlank() }
+                    .associateBy({ it.id }, { it.url })
+
                 viewerImagesInternal.clear()
                 viewerImagesInternal.addAll(imgs)
 
+                // Remap URLs
+                if (urls.isNotEmpty()) {
+                    viewerImagesInternal.forEach {
+                        urls[it.id]?.let { url -> it.url = url }
+                    }
+                }
+
                 if (startIndex > -1) onPageChange(startIndex - 1, 1, true)
                 else {
-                    currentImageViewerIndex =
+                    currentImageViewerIndex = if (viewerImagesInternal.isNotEmpty())
                         currentImageViewerIndex.coerceIn(0, viewerImagesInternal.size - 1)
+                    else 0
                     onPageChange(currentImageViewerIndex, 1, false)
                 }
             }
@@ -978,9 +990,8 @@ class ReaderViewModel(
             } else {
                 if (currentContentIndex > 1) currentContentIndex--
             }
-            if (contentIds.size > currentContentIndex) loadContentFromId(
-                contentIds[currentContentIndex], -1
-            )
+            if (contentIds.size > currentContentIndex)
+                loadContentFromId(contentIds[currentContentIndex], -1)
         } else { // Close the viewer if the list is empty (single book)
             content.postValue(null)
         }
@@ -1186,14 +1197,14 @@ class ReaderViewModel(
             if (content.jsonUri.isNotEmpty() || content.isArchive) return@withContext
             val folder =
                 getDocumentFromTreeUriString(context, content.storageUri) ?: return@withContext
-            val foundFile = findFile(getApplication(), folder, JSON_FILE_NAME_V2)
-            if (null == foundFile) {
+            val foundFileUri = findFile(getApplication(), folder.uri, JSON_FILE_NAME_V2)
+            if (null == foundFileUri) {
                 Timber.e("JSON file not detected in %s", content.storageUri)
                 return@withContext
             }
 
             // Cache the URI of the JSON to the database
-            content.jsonUri = foundFile.uri.toString()
+            content.jsonUri = foundFileUri.toString()
             try {
                 dao.insertContent(content)
             } finally {
@@ -1320,7 +1331,7 @@ class ReaderViewModel(
                     viewerImagesInternal[idx].let { img ->
                         val key = formatCacheKey(img)
                         if (StorageCache.peekFile(READER_CACHE, key)) {
-                            updateImgWithExtractedUri(
+                            updateImgWithDisplayUri(
                                 img,
                                 idx,
                                 StorageCache.getFile(READER_CACHE, key)!!,
@@ -1489,7 +1500,7 @@ class ReaderViewModel(
 
                 val existingUri = StorageCache.getFile(READER_CACHE, formatCacheKey(img))
                 if (existingUri != null) {
-                    updateImgWithExtractedUri(img, index, existingUri, false)
+                    updateImgWithDisplayUri(img, index, existingUri, false)
                     hasExistingUris = true
                 } else {
                     extractInstructions.add(
@@ -1604,27 +1615,29 @@ class ReaderViewModel(
         if (img != null && idx != null) {
             indexExtractInProgress.remove(idx)
             // Instanciate a new list to trigger an actual Adapter UI refresh every 4 iterations
-            updateImgWithExtractedUri(
+            updateImgWithDisplayUri(
                 img, idx, uri, 0 == nbProcessed.get() % 4 || nbProcessed.get() == maxElements
             )
         }
         dao.cleanup()
     }
 
-    private fun updateImgWithExtractedUri(
+    private fun updateImgWithDisplayUri(
         img: ImageFile,
         idx: Int,
         uri: Uri,
         refresh: Boolean
     ) {
-        // Instanciate a new ImageFile not to modify the one used by the UI
-        val extractedPic = ImageFile(img)
-        extractedPic.displayUri = uri.toString()
         synchronized(viewerImagesInternal) {
+            if (viewerImagesInternal[idx].displayUri == uri.toString()) return
             viewerImagesInternal.removeAt(idx)
+
+            // Instanciate a new ImageFile not to modify the one used by the UI
+            val extractedPic = ImageFile(img)
+            extractedPic.displayUri = uri.toString()
             viewerImagesInternal.add(idx, extractedPic)
             Timber.v(
-                "Extracting : replacing index $idx - order ${extractedPic.order} -> ${extractedPic.displayUri}"
+                "Replacing index $idx - order ${extractedPic.order} -> ${extractedPic.displayUri}"
             )
             preloadImageTypes(listOf(idx)) {
                 if (refresh) viewerImages.postValue(ArrayList(viewerImagesInternal))
@@ -1705,8 +1718,6 @@ class ReaderViewModel(
                         null,
                         StatusContent.SAVED,
                         QueuePosition.TOP,
-                        -1,
-                        null, null,
                         isQueueActive(getApplication())
                     )
                     if (Settings.isQueueAutostart) resumeQueue(getApplication())
@@ -1736,7 +1747,7 @@ class ReaderViewModel(
         val theContent = content.value ?: return
         val contentList = listOf(theContent)
 
-        // Flag the content as "being deleted" (triggers blink animation)
+        // Flag the content as "being processed" (triggers blink animation)
         dao.updateContentsProcessedFlag(contentList, true)
         dao.cleanup()
         val targetImageStatus = StatusContent.ERROR
@@ -1755,8 +1766,6 @@ class ReaderViewModel(
                             null,
                             targetImageStatus,
                             QueuePosition.TOP,
-                            -1,
-                            null, null,
                             isQueueActive(getApplication())
                         )
                     }
@@ -2091,6 +2100,7 @@ class ReaderViewModel(
 
     private fun preloadImageTypes(indexes: List<Int>, onDone: KRunnable? = null) {
         if (indexes.isEmpty()) return
+
         var canProcessOne = false
         indexes.forEach {
             while (preloadKillSwitches.size >= PRELOAD_RANGE) {
@@ -2133,35 +2143,22 @@ class ReaderViewModel(
 }
 
 private fun readImageType(context: Context, uri: Uri): ImageType {
-    assertNonUiThread()
-    if (uri == Uri.EMPTY) return ImageType.IMG_TYPE_ERROR
-
-    try {
-        getInputStream(context, uri).use { input ->
-            val header = ByteArray(400)
-            if (input.read(header) > 0) {
-                val mime = getMimeTypeFromPictureBinary(header)
-                val isAnimated = isImageAnimated(header)
-                if (isAnimated) {
-                    when (mime) {
-                        MIME_IMAGE_PNG -> return ImageType.IMG_TYPE_APNG
-                        MIME_IMAGE_WEBP -> return ImageType.IMG_TYPE_AWEBP
-                        MIME_IMAGE_GIF -> return ImageType.IMG_TYPE_GIF
-                        MIME_IMAGE_AVIF -> return ImageType.IMG_TYPE_AAVIF
-                        MIME_VIDEO_MP4 -> return ImageType.IMG_TYPE_VIDEO
-                    }
-                } else {
-                    when (mime) {
-                        MIME_IMAGE_GIF -> return ImageType.IMG_TYPE_GIF
-                        MIME_IMAGE_JXL -> return ImageType.IMG_TYPE_JXL
-                        MIME_IMAGE_AVIF -> return ImageType.IMG_TYPE_AVIF
-                    }
-                }
-                return ImageType.IMG_TYPE_OTHER
-            }
+    val props = getImageProperties(context, uri) ?: return ImageType.IMG_TYPE_ERROR
+    if (props.isAnimated) {
+        when (props.mime) {
+            MIME_IMAGE_APNG -> return ImageType.IMG_TYPE_APNG
+            MIME_IMAGE_PNG -> return ImageType.IMG_TYPE_APNG
+            MIME_IMAGE_WEBP -> return ImageType.IMG_TYPE_AWEBP
+            MIME_IMAGE_GIF -> return ImageType.IMG_TYPE_GIF
+            MIME_IMAGE_AVIF -> return ImageType.IMG_TYPE_AAVIF
+            MIME_VIDEO_MP4 -> return ImageType.IMG_TYPE_VIDEO
         }
-    } catch (e: Exception) {
-        Timber.w(e, "Unable to open image file $uri")
+    } else {
+        when (props.mime) {
+            MIME_IMAGE_GIF -> return ImageType.IMG_TYPE_GIF
+            MIME_IMAGE_JXL -> return ImageType.IMG_TYPE_JXL
+            MIME_IMAGE_AVIF -> return ImageType.IMG_TYPE_AVIF
+        }
     }
-    return ImageType.IMG_TYPE_ERROR
+    return ImageType.IMG_TYPE_OTHER
 }

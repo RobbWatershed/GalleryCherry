@@ -1,5 +1,7 @@
 package me.devsaki.hentoid.activities.sources
 
+import android.Manifest.permission.READ_EXTERNAL_STORAGE
+import android.Manifest.permission.WRITE_EXTERNAL_STORAGE
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener
@@ -9,6 +11,7 @@ import android.graphics.drawable.Animatable
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
+import android.os.Message
 import android.text.TextUtils
 import android.view.MenuItem
 import android.view.View
@@ -24,6 +27,7 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebView.HitTestResult
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.coordinatorlayout.widget.CoordinatorLayout
@@ -41,6 +45,7 @@ import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.skydoves.balloon.ArrowOrientation
+import com.skydoves.powermenu.PowerMenuItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -58,6 +63,7 @@ import me.devsaki.hentoid.core.BiConsumer
 import me.devsaki.hentoid.core.Consumer
 import me.devsaki.hentoid.core.URL_WIKI_DOWNLOAD
 import me.devsaki.hentoid.core.initDrawerLayout
+import me.devsaki.hentoid.core.launchActivity
 import me.devsaki.hentoid.core.startBrowserActivity
 import me.devsaki.hentoid.database.CollectionDAO
 import me.devsaki.hentoid.database.ObjectBoxDAO
@@ -78,12 +84,14 @@ import me.devsaki.hentoid.events.CommunicationEvent
 import me.devsaki.hentoid.events.DownloadCommandEvent
 import me.devsaki.hentoid.events.DownloadEvent
 import me.devsaki.hentoid.events.DownloadPreparationEvent
+import me.devsaki.hentoid.fragments.RangeDialogFragment
 import me.devsaki.hentoid.fragments.browser.BookmarksDrawerFragment
 import me.devsaki.hentoid.fragments.browser.DuplicateDialogFragment
+import me.devsaki.hentoid.fragments.browser.LongTapActionsDialogFragment
 import me.devsaki.hentoid.fragments.browser.UrlDialogFragment
 import me.devsaki.hentoid.json.core.UpdateInfo
 import me.devsaki.hentoid.parsers.ContentParserFactory
-import me.devsaki.hentoid.ui.invokeInputDialog
+import me.devsaki.hentoid.parsers.images.BaseChapteredImageListParser
 import me.devsaki.hentoid.ui.invokeNumberInputDialog
 import me.devsaki.hentoid.util.QueuePosition
 import me.devsaki.hentoid.util.Settings
@@ -92,15 +100,21 @@ import me.devsaki.hentoid.util.calcPhash
 import me.devsaki.hentoid.util.copyPlainTextToClipboard
 import me.devsaki.hentoid.util.download.ContentQueueManager.isQueueActive
 import me.devsaki.hentoid.util.download.ContentQueueManager.resumeQueue
-import me.devsaki.hentoid.util.file.RQST_STORAGE_PERMISSION
+import me.devsaki.hentoid.util.download.downloadToFile
+import me.devsaki.hentoid.util.exportToDownloadsFolder
+import me.devsaki.hentoid.util.file.checkPermissions
 import me.devsaki.hentoid.util.file.getAssetAsString
-import me.devsaki.hentoid.util.file.requestExternalStorageReadWritePermission
+import me.devsaki.hentoid.util.file.getExtensionFromMimeType
+import me.devsaki.hentoid.util.file.getInputStream
+import me.devsaki.hentoid.util.file.removeFile
+import me.devsaki.hentoid.util.file.shareFile
 import me.devsaki.hentoid.util.findDuplicate
 import me.devsaki.hentoid.util.getBlockedTags
 import me.devsaki.hentoid.util.getCenter
 import me.devsaki.hentoid.util.getCoverBitmapFromStream
 import me.devsaki.hentoid.util.getFixedContext
 import me.devsaki.hentoid.util.getHashEngine
+import me.devsaki.hentoid.util.image.getMimeTypeFromPictureBinary
 import me.devsaki.hentoid.util.isInLibrary
 import me.devsaki.hentoid.util.isInQueue
 import me.devsaki.hentoid.util.network.HEADER_COOKIE_KEY
@@ -110,6 +124,7 @@ import me.devsaki.hentoid.util.network.fixUrl
 import me.devsaki.hentoid.util.network.getCookies
 import me.devsaki.hentoid.util.network.getOnlineResourceFast
 import me.devsaki.hentoid.util.network.simplifyUrl
+import me.devsaki.hentoid.util.network.webkitRequestHeadersToOkHttpHeaders
 import me.devsaki.hentoid.util.openReader
 import me.devsaki.hentoid.util.parseDownloadParams
 import me.devsaki.hentoid.util.setMargins
@@ -123,6 +138,7 @@ import me.devsaki.hentoid.viewmodels.ViewModelFactory
 import me.devsaki.hentoid.views.NestedScrollWebView
 import me.devsaki.hentoid.widget.showAddQueueMenu
 import me.devsaki.hentoid.widget.showDownloadModeMenu
+import me.devsaki.hentoid.widget.showImageMenu
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
@@ -139,10 +155,13 @@ import kotlin.math.round
  */
 private val GALLERY_REGEX by lazy { "\\b|/galleries|/gallery|/g|/entry\\b".toRegex() }
 
+// List of sources that support chapters but whose parser doesn't implement BaseChapteredImageListParser
+private val CHAPTERED_SITES = listOf(Site.PIXIV, Site.KEMONO, Site.PAWCHIVE)
+
 private const val SIMILARITY_MIN_THRESHOLD = 0.85f
 
 abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.BrowserActivity,
-    DuplicateDialogFragment.Parent, BookmarksDrawerFragment.Parent {
+    DuplicateDialogFragment.Parent, BookmarksDrawerFragment.Parent, RangeDialogFragment.Parent {
 
     protected enum class ActionMode {
         // Download book
@@ -170,7 +189,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
     // === COMMUNICATION
     private lateinit var webClient: CustomWebViewClient
 
-    private var callback: OnBackPressedCallback? = null
+    private var backCallback: OnBackPressedCallback? = null
 
     private val settingsListener =
         OnSharedPreferenceChangeListener { _, key: String? ->
@@ -244,7 +263,6 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
     private var alert: UpdateInfo.SourceAlert? = null
 
     // Handler for fetch interceptor
-    protected var isManagedFetch = false
     protected var fetchHandler: BiConsumer<String, String>? = null
     protected var fetchResponseHandler: BiConsumer<String, String>? = null
     protected var xhrHandler: BiConsumer<String, String>? = null
@@ -259,6 +277,16 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
     abstract fun getStartSite(): Site
 
     abstract fun allowMixedContent(): Boolean
+
+    private val storageRequestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { isGranted: Map<String, Boolean> ->
+        if (2 == isGranted.size && isGranted.all { it.value }) {
+            Timber.i("Storage permissions granted")
+        } else {
+            toast(R.string.web_storage_permission_denied)
+        }
+    }
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -347,6 +375,9 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
                     Settings.isBrowserAugmented(getStartSite())
         )
 
+        // Prevent physical mouse clicks from passing through
+        binding?.bottomNavigation?.setOnGenericMotionListener { _, _ -> true }
+
         viewModel =
             ViewModelProvider(
                 this@BaseBrowserActivity,
@@ -364,8 +395,8 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
     }
 
     private fun addCustomBackControl() {
-        callback?.remove()
-        callback = object : OnBackPressedCallback(true) {
+        backCallback?.remove()
+        backCallback = object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 // Close drawers
                 binding?.apply {
@@ -383,11 +414,11 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
                 }
 
                 // Other cases
-                callback?.remove()
+                backCallback?.remove()
                 onBackPressedDispatcher.onBackPressed()
             }
         }
-        onBackPressedDispatcher.addCallback(this, callback!!)
+        onBackPressedDispatcher.addCallback(this, backCallback!!)
     }
 
     override fun onDestroy() {
@@ -405,10 +436,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
 
         // Cancel any previous extra page load
         EventBus.getDefault().post(
-            DownloadCommandEvent(
-                DownloadCommandEvent.Type.EV_INTERRUPT_CONTENT,
-                currentContent
-            )
+            DownloadCommandEvent(DownloadCommandEvent.Type.EV_INTERRUPT_CONTENT, currentContent)
         )
         if (EventBus.getDefault().isRegistered(this)) EventBus.getDefault().unregister(this)
         binding = null
@@ -488,7 +516,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
 
         webView.url?.let { url ->
             Timber.i(">> WebActivity resume : $url ${currentContent != null} ${currentContent?.title ?: ""}")
-            if (!webClient.isGalleryPage(url)) return
+            if (!webClient.isDownloadable(url)) return
 
             // TODO Cancel whichever process was happening before
             currentContent?.let { cc ->
@@ -644,8 +672,15 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
     // Make sure permissions are set at resume time; if not, warn the user
     private fun checkPermissions() {
         if (Settings.isBrowserMode) return
-        if (!this.requestExternalStorageReadWritePermission(RQST_STORAGE_PERMISSION))
-            toast(R.string.web_storage_permission_denied)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
+            && !checkPermissions(READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE)
+        )
+            storageRequestPermissionLauncher.launch(
+                arrayOf(
+                    READ_EXTERNAL_STORAGE,
+                    WRITE_EXTERNAL_STORAGE
+                )
+            )
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -678,18 +713,14 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         if (BuildConfig.DEBUG) WebView.setWebContentsDebuggingEnabled(true)
         webClient = createWebClient()
         webView.webViewClient = webClient
-        if (getStartSite().useManagedRequests || Settings.proxy.isNotEmpty() || Settings.dnsOverHttps > -1) {
+        if (webClient.hasManagedUrls() || Settings.proxy.isNotEmpty() || Settings.dnsOverHttps > -1) {
             xhrHandler = { url, body -> webClient.recordDynamicPostRequests(url, body) }
             enableStandardFetchHandler()
         }
 
         // Download immediately on long click on a link / image link
-        if (Settings.isBrowserQuickDl) {
-            webView.setOnLongTapListener { x: Int, y: Int ->
-                onLongTap(x, y)
-            }
-            webView.setLongClickThreshold(Settings.browserQuickDlThreshold)
-        }
+        webView.setOnLongTapListener { x, y -> onLongTap(x, y) }
+        webView.setLongClickThreshold(Settings.browserLongTapThreshold)
         val cookieManager = CookieManager.getInstance()
         cookieManager.setAcceptThirdPartyCookies(webView, true)
         val webSettings = webView.settings
@@ -709,17 +740,6 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         fetchHandler?.let { webView.addJavascriptInterface(FetchHandler(it), "fetchHandler") }
         fetchResponseHandler?.let {
             webView.addJavascriptInterface(FetchResponseHandler(it), "fetchResponseHandler")
-        }
-        // TODO remove is still unused on v1.23.x
-        if (isManagedFetch) {
-            /*
-            val responseHandler =
-                { responseBody: String -> fetchResponseCallback?.invoke(responseBody) ?: Unit }
-            webView.addJavascriptInterface(
-                FetchResponseHandler(responseHandler),
-                "fetchResponseHandler"
-            )
-             */
         }
         xhrHandler?.let { webView.addJavascriptInterface(XhrHandler(it), "xhrHandler") }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -772,27 +792,38 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
     }
 
     private fun onLongTap(x: Int, y: Int) {
-        if (Settings.isBrowserMode) return
+        if (!Settings.isBrowserQuickDl && !Settings.isBrowserGrabPics) {
+            if (!Settings.areLongTapActionsChosen) LongTapActionsDialogFragment.invoke(this)
+            return
+        }
+
         val result = webView.hitTestResult
-        // Plain link
-        val url: String? =
-            when (result.type) {
-                HitTestResult.SRC_ANCHOR_TYPE if result.extra != null -> {
-                    result.extra
-                }
+        var linkUrl: String? = null
+        var imgUrl: String? = null
 
-                HitTestResult.SRC_IMAGE_ANCHOR_TYPE -> {
-                    val handler = Handler(mainLooper)
-                    val message = handler.obtainMessage()
-                    webView.requestFocusNodeHref(message)
-                    message.data.getString("url")
-                }
-
-                else -> {
-                    null
-                }
+        when (result.type) {
+            HitTestResult.SRC_ANCHOR_TYPE -> {
+                linkUrl = result.extra
             }
-        if (!url.isNullOrEmpty() && webClient.isGalleryPage(url)) {
+
+            HitTestResult.SRC_IMAGE_ANCHOR_TYPE -> {
+                val handler = Handler(mainLooper)
+                val linkMsg = handler.obtainMessage()
+                val imgMsg = Message.obtain(linkMsg)
+                webView.requestFocusNodeHref(linkMsg)
+                linkUrl = linkMsg.data.getString("url")
+                webView.requestImageRef(imgMsg)
+                imgUrl = imgMsg.data.getString("url")
+            }
+
+            else -> { /* Nothing */
+            }
+        }
+
+        // Priority to quick download if activated and possible
+        if (Settings.isBrowserQuickDl && !Settings.isBrowserMode
+            && !linkUrl.isNullOrEmpty() && webClient.isDownloadable(linkUrl)
+        ) {
             binding?.apply {
                 quickDlFeedback.setMargins(
                     x - quickDlFeedback.width / 2,
@@ -801,16 +832,69 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
                     0
                 )
                 quickDlFeedback.setIndicatorColor(
-                    ContextCompat.getColor(
-                        baseContext,
-                        R.color.medium_gray
-                    )
+                    ContextCompat.getColor(baseContext, R.color.medium_gray)
                 )
                 quickDlFeedback.visibility = View.VISIBLE
             }
 
-            webClient.flagAsQuickDownload(url)
-            browserFetch(url)
+            webClient.flagAsQuickDownload(linkUrl)
+            browserFetch(linkUrl)
+        } else if (Settings.isBrowserGrabPics && !imgUrl.isNullOrEmpty()) { // Else process image
+            showImageMenu(this, webView, x, y, this) { position: Int, _: PowerMenuItem? ->
+                lifecycleScope.launch { grabImage(imgUrl, position) }
+            }
+        }
+    }
+
+    private suspend fun grabImage(url: String, position: Int) = withContext(Dispatchers.IO) {
+        val ctx = this@BaseBrowserActivity
+        val site = getStartSite()
+        // Download img to temp folder
+        val tempFolder = cacheDir.toUri()
+        val name = "img-${site.name}"
+
+        val requestHeadersList: MutableList<Pair<String, String>> = ArrayList()
+        val cookieStr = getCookies(
+            url,
+            null,
+            site.useMobileAgent,
+            site.useHentoidAgent,
+            site.useWebviewAgent
+        )
+        if (cookieStr.isNotEmpty()) requestHeadersList.add(Pair(HEADER_COOKIE_KEY, cookieStr))
+
+        val tmpUri = downloadToFile(
+            ctx,
+            site,
+            url,
+            requestHeadersList,
+            tempFolder,
+            name,
+            isCanceled = { false },
+            resourceId = 0
+        )
+            ?: throw IOException("Couldn't download single image from $url")
+
+        try {
+            val mime =
+                getInputStream(ctx, tmpUri).use { input ->
+                    val data = ByteArray(16)
+                    input.read(data, 0, 16)
+                    getMimeTypeFromPictureBinary(data)
+                }
+            val ext = getExtensionFromMimeType(mime)
+
+            // Process it
+            when (position) {
+                0 -> shareFile(ctx, tmpUri, "$name.$ext", mime)
+                else -> {
+                    getInputStream(ctx, tmpUri).use {
+                        exportToDownloadsFolder(ctx, it, "$name.$ext", webView)
+                    }
+                }
+            }
+        } finally {
+            if (position > 0) removeFile(ctx, tmpUri)
         }
     }
 
@@ -828,7 +912,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         }
 
         // Activate fetch handler
-        if (fetchHandler != null || fetchResponseHandler != null || isManagedFetch) {
+        if (fetchHandler != null || fetchResponseHandler != null) {
             if (null == fetchInterceptorScript) fetchInterceptorScript =
                 webClient.getAssetJsScript(this, "fetch_override.js", null)
             webView.loadUrl(fetchInterceptorScript!!)
@@ -947,20 +1031,8 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
     /**
      * Handler for the "Home" navigation button
      */
-    @Suppress("DEPRECATION")
     private fun onLibraryClick() {
-        val intent = Intent(this, LibraryActivity::class.java)
-        // If FLAG_ACTIVITY_CLEAR_TOP is not set,
-        // it can interfere with Double-Back (press back twice) to exit
-        intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TASK
-        startActivity(intent)
-        if (Build.VERSION.SDK_INT >= 34) {
-            overrideActivityTransition(OVERRIDE_TRANSITION_OPEN, 0, 0)
-        } else {
-            overridePendingTransition(0, 0)
-        }
-        Timber.d("BaseBrowserActivity finishing")
-        finish()
+        this.launchActivity(this, LibraryActivity::class.java, clearTop = true)
     }
 
     /**
@@ -1110,20 +1182,33 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
     }
 
     private fun onRangeDownload() {
-        invokeInputDialog(
+        val url = currentContent?.galleryUrl ?: return
+        if (!webClient.isDownloadable(url)) return // Double check; shouldn't happen
+
+        val parser = ContentParserFactory.getImageListParser(getStartSite())
+        val supportsChapters = (parser is BaseChapteredImageListParser)
+        val hasChapters =
+            if (supportsChapters) !parser.isChapterUrl(url)
+            else CHAPTERED_SITES.contains(getStartSite()) // TODO that's a dirty trick :(
+
+        RangeDialogFragment.invoke(
             this,
-            R.string.web_range_download_prompt,
+            resources.getString(R.string.range_download_prompt),
             currentContent?.downloadRange ?: "",
-            {
-                currentContent?.apply {
-                    downloadRange = it
-                    setImageFiles(emptyList())
-                    qtyPages = 0
-                }
-                onActionClick()
-            }
+            hasChapters
         )
     }
+
+    override fun onRangeSelected(isChapters: Boolean, value: String) {
+        currentContent?.apply {
+            val prefix = if (isChapters) "c" else ""
+            downloadRange = prefix + value
+            setImageFiles(emptyList())
+            qtyPages = 0
+        }
+        onActionClick()
+    }
+
 
     /**
      * Switch the action button to either of the available modes
@@ -1404,10 +1489,10 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
                 null,
                 null,
                 position,
+                isQueueActive(this),
                 if (isReplaceDuplicate) duplicateId else -1,
                 replacementTitle,
-                archiveUrl,
-                isQueueActive(this)
+                archiveUrl
             )
         } finally {
             dao.cleanup()
@@ -1467,23 +1552,29 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
                     // Index the content's cover picture
                     var pHash = Long.MIN_VALUE
                     try {
-                        val requestHeadersList: List<Pair<String, String>> = ArrayList()
                         val downloadParams =
                             parseDownloadParams(onlineContent.downloadParams).toMutableMap()
-                        downloadParams[HEADER_COOKIE_KEY] =
-                            getCookies(onlineContent.coverImageUrl)
-                        downloadParams[HEADER_REFERER_KEY] = onlineContent.site.url
+                        val coverUrl = fixUrl(onlineContent.coverImageUrl, onlineContent.site.url)
+                        var cookies = getCookies(coverUrl)
+                        if (cookies.isEmpty()) cookies = getCookies(onlineContent.galleryUrl)
+                        downloadParams[HEADER_COOKIE_KEY] = cookies
+                        downloadParams[HEADER_REFERER_KEY] = onlineContent.galleryUrl
                         getOnlineResourceFast(
-                            fixUrl(onlineContent.coverImageUrl, onlineContent.site.url),
-                            requestHeadersList,
+                            coverUrl,
+                            webkitRequestHeadersToOkHttpHeaders(downloadParams, coverUrl),
                             getStartSite().useMobileAgent,
                             getStartSite().useHentoidAgent,
                             getStartSite().useWebviewAgent
                         ).use { onlineCover ->
                             val coverBody = onlineCover.body
                             val bodyStream = coverBody.byteStream()
-                            val b = getCoverBitmapFromStream(baseContext, bodyStream)
-                            pHash = calcPhash(getHashEngine(), b)
+                            getCoverBitmapFromStream(baseContext, bodyStream)?.let { b ->
+                                try {
+                                    pHash = calcPhash(getHashEngine(), b)
+                                } finally {
+                                    b.recycle()
+                                }
+                            }
                         }
                     } catch (e: IOException) {
                         Timber.w(e)
@@ -1529,7 +1620,8 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
             }
             if (null == currentContent) currentContent = onlineContent
             if (isInCollection) {
-                if (!quickDownload) searchForExtraImages(contentDB, onlineContent)
+                if (!quickDownload && Settings.isCheckExtraPages(getStartSite()))
+                    searchForExtraImages(contentDB, onlineContent)
                 return@withContext ContentStatus.IN_COLLECTION
             }
             return@withContext if (isInQueue) ContentStatus.IN_QUEUE else ContentStatus.UNKNOWN
@@ -1871,7 +1963,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
     private fun backListContainsGallery(backForwardList: WebBackForwardList): Int {
         for (i in backForwardList.currentIndex - 1 downTo 0) {
             val item = backForwardList.getItemAtIndex(i)
-            if (webClient.isGalleryPage(item.url)) return i
+            if (webClient.isDownloadable(item.url)) return i
         }
         return -1
     }
@@ -1987,12 +2079,8 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         } else if (Settings.Key.BROWSER_PROXY == key) {
             webClient.setProxyEnabled(Settings.proxy.isNotEmpty())
             reload = true
-        } else if (Settings.Key.BROWSER_QUICK_DL == key) {
-            if (Settings.isBrowserQuickDl)
-                webView.setOnLongTapListener { x, y -> onLongTap(x, y) }
-            else webView.setOnLongTapListener(null)
-        } else if (Settings.Key.BROWSER_QUICK_DL_THRESHOLD == key) {
-            webView.setLongClickThreshold(Settings.browserQuickDlThreshold)
+        } else if (Settings.Key.BROWSER_LONG_TAP_THRESHOLD == key) {
+            webView.setLongClickThreshold(Settings.browserLongTapThreshold)
         } else if (key.startsWith(Settings.Key.WEB_ADBLOCKER)) {
             val newVal = Settings.isAdBlockerOn(getStartSite())
             if (newVal && !Settings.isBrowserAugmented(getStartSite()))

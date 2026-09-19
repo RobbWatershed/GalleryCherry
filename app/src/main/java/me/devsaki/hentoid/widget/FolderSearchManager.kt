@@ -15,7 +15,6 @@ import me.devsaki.hentoid.R
 import me.devsaki.hentoid.core.THUMBS_CACHE
 import me.devsaki.hentoid.util.InnerNameNumberDisplayFileComparator
 import me.devsaki.hentoid.util.Settings
-import me.devsaki.hentoid.util.Settings.libraryGridCardWidthDP
 import me.devsaki.hentoid.util.boolean
 import me.devsaki.hentoid.util.file.DisplayFile
 import me.devsaki.hentoid.util.file.FileExplorer
@@ -27,6 +26,7 @@ import me.devsaki.hentoid.util.int
 import me.devsaki.hentoid.util.isSupportedArchivePdf
 import me.devsaki.hentoid.util.string
 import timber.log.Timber
+import kotlin.math.roundToInt
 
 class FolderSearchManager() {
 
@@ -91,7 +91,7 @@ class FolderSearchManager() {
             val rootDoc =
                 theExplorer.getDocumentFromTreeUri(context, root) ?: return@withContext emptyList()
             val docs = theExplorer.listDocumentFiles(
-                context, rootDoc, nameFilter
+                context, rootDoc.uri, nameFilter
             )
 
             // Count contents to see if we have a folder book
@@ -143,11 +143,11 @@ class FolderSearchManager() {
                 )
             )
             val flowFiles =
-                theExplorer.listDocumentFilesFw(context, rootDoc, nameFilter)
+                theExplorer.listDocumentFilesFw(context, rootDoc.uri, nameFilter)
                     .map {
                         // Count contents to see if we have a folder book
                         val imgChildren = if (it.isDirectory) {
-                            theExplorer.listFiles(context, it, imageNamesFilter)
+                            theExplorer.listFiles(context, it.uri, imageNamesFilter)
                         } else emptyList()
                         // TODO get number of images inside archives and PDFs
                         // Extract archive and PDF covers using private storage (same as bona library books)
@@ -155,7 +155,10 @@ class FolderSearchManager() {
                         val archiveCover =
                             if (isSupportedArchivePdf(fileName)) {
                                 getPictureThumbCached(
-                                    context, it.uri, libraryGridCardWidthDP, null,
+                                    context, it.uri,
+                                    context.resources.getDimension(R.dimen.thumb_max_dim)
+                                        .roundToInt(),
+                                    null,
                                     StorageCache.createFinder(THUMBS_CACHE),
                                     StorageCache.createCreator(THUMBS_CACHE)
                                 ) ?: Uri.EMPTY
@@ -177,9 +180,9 @@ class FolderSearchManager() {
 
         var query by bundle.string(default = "")
 
-        var sortField by bundle.int(default = Settings.groupSortField)
+        var sortField by bundle.int(default = Settings.folderSortField)
 
-        var sortDesc by bundle.boolean(default = Settings.isGroupSortDesc)
+        var sortDesc by bundle.boolean(default = Settings.isFolderSortDesc)
 
         fun isFilterActive(): Boolean {
             return query.isNotEmpty()

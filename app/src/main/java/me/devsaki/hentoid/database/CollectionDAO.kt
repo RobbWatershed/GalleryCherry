@@ -92,6 +92,8 @@ interface CollectionDAO {
 
     fun streamAllInternalBooks(rootPath: String, favsOnly: Boolean, consumer: Consumer<Content>)
 
+    fun streamAllExternalBooks(consumer: Consumer<Content>)
+
     fun flagAllInternalBooks(rootPath: String, includePlaceholders: Boolean)
 
     fun deleteAllInternalContents(rootPath: String, resetRemainingImagesStatus: Boolean)
@@ -174,8 +176,9 @@ interface CollectionDAO {
 
     fun streamStoredContent(
         includeQueued: Boolean,
-        orderField: Int,
-        orderDesc: Boolean,
+        sitesFilter : Set<Site> = emptySet(),
+        orderField: Int = -1,
+        orderDesc: Boolean = false,
         consumer: Consumer<Content>
     )
 
@@ -248,6 +251,8 @@ interface CollectionDAO {
 
     fun selectExternalMemoryUsagePerSource(): Map<Site, Pair<Int, Long>>
 
+    fun countTransformedPages(contentIds : LongArray): Long
+
 
     // QUEUE
     fun selectQueue(): List<QueueRecord>
@@ -263,10 +268,10 @@ interface CollectionDAO {
         sourceImageStatus: StatusContent?,
         targetImageStatus: StatusContent?,
         position: QueuePosition,
-        replacedContentId: Long,
-        replacementTitle: String?,
-        archiveUrl: String?,
-        isQueueActive: Boolean
+        isQueueActive: Boolean,
+        replacedContentId: Long = -1,
+        replacementTitle: String? = null,
+        archiveUrl: String? = null
     )
 
     fun insertQueue(contentId: Long, order: Int)

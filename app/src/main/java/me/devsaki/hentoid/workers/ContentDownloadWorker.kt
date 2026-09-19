@@ -3,6 +3,7 @@ package me.devsaki.hentoid.workers
 import android.annotation.SuppressLint
 import android.content.Context
 import android.net.Uri
+import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import androidx.work.Data
@@ -10,6 +11,7 @@ import androidx.work.WorkerParameters
 import kotlinx.coroutines.*
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.core.CLOUDFLARE_COOKIE
+import me.devsaki.hentoid.core.HentoidApp
 import me.devsaki.hentoid.core.HentoidApp.Companion.isInForeground
 import me.devsaki.hentoid.core.THUMB_FILE_NAME
 import me.devsaki.hentoid.database.CollectionDAO
@@ -23,6 +25,7 @@ import me.devsaki.hentoid.database.domains.RenamingRule
 import me.devsaki.hentoid.enums.AttributeType
 import me.devsaki.hentoid.enums.ErrorType
 import me.devsaki.hentoid.enums.Grouping
+import me.devsaki.hentoid.enums.PictureEncoder
 import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.events.DownloadCommandEvent
@@ -41,6 +44,7 @@ import me.devsaki.hentoid.util.MAP_STRINGS
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.addContent
 import me.devsaki.hentoid.util.computeAndSaveCoverHash
+import me.devsaki.hentoid.util.copy
 import me.devsaki.hentoid.util.download.ContentQueueManager
 import me.devsaki.hentoid.util.download.ContentQueueManager.pauseQueue
 import me.devsaki.hentoid.util.download.DownloadDataLimiter
@@ -84,6 +88,9 @@ import me.devsaki.hentoid.util.persistJson
 import me.devsaki.hentoid.util.removeContent
 import me.devsaki.hentoid.util.serializeToJson
 import me.devsaki.hentoid.util.updateQueueJson
+import me.devsaki.hentoid.util.video.GifEncoder
+import me.devsaki.hentoid.util.video.VideoEncoder
+import me.devsaki.hentoid.util.video.WebpEncoder
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import timber.log.Timber
@@ -157,7 +164,7 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
 
 
     init {
-        EventBus.getDefault().register(this)
+        if (!EventBus.getDefault().isRegistered(this)) EventBus.getDefault().register(this)
         userActionNotificationManager = NotificationManager(context, R.id.user_action_notification)
         setSpeedLimitKbps(prefsSpeedCapToKbps(Settings.dlSpeedCap))
 
@@ -181,7 +188,7 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
     }
 
     override suspend fun onClear(logFile: DocumentFile?) {
-        EventBus.getDefault().unregister(this)
+        if (EventBus.getDefault().isRegistered(this)) EventBus.getDefault().unregister(this)
         dao.cleanup()
     }
 
@@ -261,7 +268,7 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
             return Pair(QueuingResult.QUEUE_END, null)
         }
 
-        // Check for wifi if wifi-only mode is on
+        // Check for Wi-Fi if wifi-only mode is on
         if (Settings.isQueueWifiOnly && Connectivity.WIFI != connectivity) {
             Timber.i("No wi-fi connection available. Queue paused.")
             EventBus.getDefault()
@@ -324,9 +331,9 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
         // == PREPARATION PHASE ==
         // Parse images from the site (using image list parser)
         //   - Case 1 : If no image is present => parse all images
-        //   - Case 2 : If all images are in ERROR state => re-parse all images
+        //   - Case 2 : If all images are in ERROR state => reparse all images
         //   - Case 3 : If some images are in ERROR state and the site has backup URLs
-        //     => re-parse images with ERROR state using their order as reference
+        //     => reparse images with ERROR state using their order as reference
         //   - Case 4 : If the book is merged and some chapters have zero images
         //     (equivalent to case 1 for chapters) => parse all images from these chapters
         EventBus.getDefault()
@@ -459,7 +466,7 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
         }
 
         // In case the download has been canceled while in preparation phase
-        // NB : No log of any sort because this is normal behaviour
+        // NB : No log of any sort because this is normal behavior
         if (downloadProcessStopped) return Pair(QueuingResult.CONTENT_SKIPPED, null)
         EventBus.getDefault()
             .post(DownloadEvent.fromPreparationStep(DownloadEvent.Step.PREPARE_FOLDER, content))
@@ -523,7 +530,7 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
         requestQueueManager.start()
 
         // In case the download has been canceled while in preparation phase
-        // NB : No log of any sort because this is normal behaviour
+        // NB : No log of any sort because this is normal behavior
         if (downloadProcessStopped) return Pair(QueuingResult.CONTENT_SKIPPED, null)
         val pagesToParse: MutableList<ImageFile> = ArrayList()
         val ugoirasToDownload: MutableList<ImageFile> = ArrayList()
@@ -1280,8 +1287,40 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
             return
         }
 
-        // If no backup, then process the error
+        // Handle 404 if setting is on
         val statusCode = error.statusCode
+        if (404 == statusCode && Settings.download404Mode > 0) {
+            if (Settings.Value.DL_404_PLACEHOLDER == Settings.download404Mode) {
+                // Generate a temp file with the site's icon to use as a placeholder
+                val siteIcon = bitmapToWebp(
+                    tintBitmap(
+                        getBitmapFromVectorDrawable(
+                            HentoidApp.getInstance(), request.site.ico
+                        ),
+                        ContextCompat.getColor(
+                            HentoidApp.getInstance(),
+                            R.color.secondary_light
+                        )
+                    )
+                )
+                val fileUri = createFile(
+                    applicationContext,
+                    applicationContext.cacheDir.toUri(),
+                    "${request.site.name}.webp",
+                    MIME_IMAGE_WEBP
+                )
+                getOutputStream(applicationContext, fileUri)?.use { fos ->
+                    ByteArrayInputStream(siteIcon)
+                        .use { input -> copy(input, fos) }
+                }
+                onRequestSuccess(request, fileUri)
+            } else if (Settings.Value.DL_404_IGNORE == Settings.download404Mode) {
+                updateImageProperties(img, true)
+            }
+            return
+        }
+
+        // If we're here, flag as error
         val message = error.message + if (img.isBackup) " (from backup URL)" else ""
         var cause = "Network error"
         if (error.type === RequestOrder.NetworkErrorType.FILE_IO) cause = "File I/O"
@@ -1292,6 +1331,7 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
             contentId, ErrorType.NETWORKING, img.url, img.name,
             "$cause; HTTP statusCode=$statusCode; message=$message"
         )
+
         // Handle cloudflare blocks
         if (request.site.useCloudflare && 503 == statusCode && !isCloudFlareBlocked) {
             // prevent associated events & notifs to be fired more than once
@@ -1365,6 +1405,173 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
             )
         } else {
             throw ParseException("Failed to parse backup URL")
+        }
+    }
+
+    /**
+     * Download and unzip the given Ugoira to the given folder as an animated GIF file
+     * NB : Ugoiras are Pixiv's own animated pictures
+     *
+     * @param img             Link to the Ugoira file
+     * @param site            Correponding site
+     */
+    @OptIn(DelicateCoroutinesApi::class)
+    private suspend fun downloadAndUnzipUgoira(
+        content: Content,
+        img: ImageFile,
+        downloadFolder: Uri,
+        site: Site
+    ) {
+        if (this.isStopped || downloadProcessStopped || ContentQueueManager.isQueuePaused) return
+
+        var isError = false
+        var errorMsg = ""
+        val ugoiraCacheFolder = getOrCreateCacheFolder(
+            applicationContext, UGOIRA_CACHE_FOLDER + File.separator + img.id
+        )
+        if (null == ugoiraCacheFolder) return
+
+        val targetFileName = img.name
+        try {
+            // == Download archive
+            val result = downloadToFile(
+                applicationContext,
+                site,
+                img.url,
+                webkitRequestHeadersToOkHttpHeaders(
+                    getRequestHeaders(
+                        img.url,
+                        img.downloadParams
+                    ), img.url
+                ),
+                Uri.fromFile(ugoiraCacheFolder),
+                targetFileName,
+                isCanceled = { this.isStopped || downloadProcessStopped || ContentQueueManager.isQueuePaused },
+                img.order,
+                MIME_TYPE_ZIP,
+                notifyProgress = { f ->
+                    EventBus.getDefault().post(
+                        DownloadEvent(
+                            content = content,
+                            eventType = DownloadEvent.Type.EV_PROGRESS,
+                            fileDownloadProgress = f
+                        )
+                    )
+                }
+            )
+
+            val targetFileUri = result
+                ?: throw IOException("Couldn't download ugoira file : resource not available")
+
+            // == Extract all frames
+            applicationContext.extractArchiveEntries(
+                targetFileUri,
+                ugoiraCacheFolder,
+                null,  // Extract everything; keep original names
+                { this.isStopped || downloadProcessStopped || ContentQueueManager.isQueuePaused }
+            )
+
+            // == Build the GIF using download params and extracted pics
+            val frames: MutableList<Pair<Uri, Int>> = ArrayList()
+
+            // Get frame information
+            val downloadParams = parseDownloadParams(img.downloadParams)
+            val ugoiraFramesStr = downloadParams[KEY_DL_PARAMS_UGOIRA_FRAMES]
+                ?: throw IOException("Couldn't read ugoira frames string")
+
+            val ugoiraFrames = jsonToObject<List<Pair<String, Int>>>(
+                ugoiraFramesStr,
+                UGOIRA_FRAMES_TYPE
+            ) ?: throw IOException("Couldn't read ugoira frames")
+
+            // Map frame name to the downloaded file
+            for (frame in ugoiraFrames) {
+                val files = ugoiraCacheFolder.listFiles { pathname ->
+                    pathname.name.endsWith(frame.first)
+                }
+                if (files != null && files.isNotEmpty()) {
+                    frames.add(Pair(Uri.fromFile(files[0]), frame.second))
+                }
+            }
+
+            EventBus.getDefault().post(
+                DownloadEvent.fromPreparationStep(DownloadEvent.Step.ENCODE_ANIMATION, content)
+            )
+
+            val targetMime = PictureEncoder.fromValue(Settings.downloadAnimationFormat)?.mimeType
+                ?: return
+            val targetExt = getExtensionFromMimeType(targetMime)
+            val quality =
+                (if (Settings.downloadAnimationFormat == PictureEncoder.WEBP_LOSSLESS.value) 100f
+                else Settings.downloadAnimationQuality.coerceIn(0, 100).toFloat()) / 100f
+            val avgFrameDuration = frames.sumOf { it.second } / frames.count()
+            val dims = getMediaDimensions(applicationContext, frames[0].first)
+
+            val tempFile = createFile(
+                applicationContext, downloadFolder, "${img.name}.$targetExt",
+                targetMime
+            )
+
+            val animEncoder = when (Settings.downloadAnimationFormat) {
+                PictureEncoder.WEBP_LOSSLESS.value, PictureEncoder.WEBP_LOSSY.value -> WebpEncoder(
+                    dims,
+                    quality,
+                    avgFrameDuration
+                )
+
+                PictureEncoder.AVC.value -> VideoEncoder(
+                    dims,
+                    quality,
+                    frames.filterNot { 0 == it.second }.maxOf { 1000f / it.second.toFloat() },
+                    frames.size
+                )
+
+                else -> GifEncoder(dims)
+            }
+
+            animEncoder.use { encoder ->
+                encoder.init(applicationContext, tempFile)
+                encoder.encode(
+                    applicationContext,
+                    frames,
+                    isCanceled = {
+                        this.isStopped || downloadProcessStopped || ContentQueueManager.isQueuePaused
+                    }
+                ) { f ->
+                    GlobalScope.launch(Dispatchers.Default) {
+                        EventBus.getDefault().post(
+                            DownloadEvent(
+                                eventType = DownloadEvent.Type.EV_PROGRESS,
+                                step = DownloadEvent.Step.ENCODE_ANIMATION,
+                                fileDownloadProgress = f * 100
+                            )
+                        )
+                    }
+                }
+            }
+
+            if (this.isStopped || downloadProcessStopped || ContentQueueManager.isQueuePaused) {
+                removeFile(applicationContext, tempFile)
+                throw RuntimeException("Animation assembly has been interrupted")
+            }
+
+            updateImageProperties(img, true, tempFile)
+
+            dlManager.appendFile(applicationContext, false, tempFile)
+        } catch (e: Exception) {
+            Timber.w(e)
+            isError = true
+            errorMsg = e.message ?: ""
+        }
+        if (isError) {
+            updateImageProperties(img, false)
+            logErrorRecord(
+                img.content.targetId,
+                ErrorType.IMG_PROCESSING,
+                img.url,
+                img.name,
+                errorMsg
+            )
         }
     }
 

@@ -78,7 +78,7 @@
     <string name="biometric_dialog_title">Bloqueo biométrico</string>
     <string name="black">Negro</string>
     <string name="blocked_tag">El libro tiene una etiqueta bloqueada (%s)\nDescarga cancelada</string>
-    <string name="blocked_tag_double">El libro tiene etiquetas bloqueadas (%s)\Doble toque para agregar a la cola</string>
+    <string name="blocked_tag_double">El libro tiene etiquetas bloqueadas (%s)\nDoble toque para agregar a la cola</string>
     <string name="blocked_tag_queued">El libro tiene una etiqueta bloqueada (%s)\nPuesto en la cola de descargas como error</string>
     <plurals name="book">
         <item quantity="many">Libros</item>
@@ -1073,14 +1073,8 @@
     <string name="title_submenu_library">Mi biblioteca</string>
     <string name="title_submenu_settings">Avanzado</string>
     <string name="torrent_dl_fail">No se pudo realizar la descarga del torrent: %s</string>
-    <string name="transcode_encoder_avif">AVIF</string>
-    <string name="transcode_encoder_jpeg">JPEG</string>
-    <string name="transcode_encoder_jpegli">JPEGLI</string>
-    <string name="transcode_encoder_jxl_lossless">JXL (sin pérdida)</string>
-    <string name="transcode_encoder_jxl_lossy">JXL (con pérdida)</string>
-    <string name="transcode_encoder_png">PNG</string>
-    <string name="transcode_encoder_webp_lossless">WEBP (sin pérdida)</string>
-    <string name="transcode_encoder_webp_lossy">WEBP (con pérdida)</string>
+    <string name="lossless_generic">sin pérdida</string>
+    <string name="lossy_generic">con pérdida</string>
     <string name="transcode_method_1">Mismo codificador para todas las imágenes</string>
     <string name="transcode_method_2">Diferenciar imágenes con y sin pérdida</string>
     <string name="transform">Transformar</string>
@@ -1093,10 +1087,7 @@
     <string name="transform_limit">No se pueden transformar más de 1000 libros a la vez</string>
     <string name="transform_pics">Transformar imágenes</string>
     <string name="transform_progress">Transformando imágenes</string>
-    <string name="transform_resize_pics">Redimensionar imágenes</string>
-    <string name="transform_resizing">Redimensionando</string>
     <string name="transform_start">Transformando imágenes</string>
-    <string name="transform_transcoding">Transcodificación</string>
     <string name="transform_unsupported">Transformación no soportada</string>
     <string name="u_byte">bytes</string>
     <string name="u_gigabyte">GB</string>
@@ -1148,7 +1139,6 @@
     <string name="web_gallery">Regresar a la última página de la galería</string>
     <string name="web_home">Volver a la biblioteca</string>
     <string name="web_open_ext_browser">Navegador externo</string>
-    <string name="web_range_download_prompt">Rango de páginas de la galería para descargar (por ejemplo, 1-5 / 1;3;8 / 1-2;5-7)</string>
     <string name="web_refresh_stop">Actualizar/detener</string>
     <string name="web_storage_permission_denied">Permisos de almacenamiento denegados - no se puede usar el sistema de descargas</string>
     <string name="web_target_page_outside_restricted_domains">Host %s fuera de dominios restringidos</string>

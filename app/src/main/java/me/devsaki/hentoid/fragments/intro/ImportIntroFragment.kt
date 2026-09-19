@@ -1,7 +1,6 @@
 package me.devsaki.hentoid.fragments.intro
 
 import android.content.DialogInterface
-import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -24,9 +23,11 @@ import me.devsaki.hentoid.databinding.IntroSlide04Binding
 import me.devsaki.hentoid.enums.StorageLocation
 import me.devsaki.hentoid.events.ProcessEvent
 import me.devsaki.hentoid.ui.BlinkAnimation
+import me.devsaki.hentoid.util.FolderScanResult
+import me.devsaki.hentoid.util.FolderScanResult.Failure
+import me.devsaki.hentoid.util.FolderScanResult.Success
 import me.devsaki.hentoid.util.PickFolderContract
-import me.devsaki.hentoid.util.PickerResult
-import me.devsaki.hentoid.util.ProcessFolderResult
+import me.devsaki.hentoid.util.PickUriResult
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.file.getFullPathFromUri
 import me.devsaki.hentoid.util.setAndScanPrimaryFolder
@@ -46,9 +47,7 @@ class ImportIntroFragment : Fragment(R.layout.intro_slide_04) {
     // True when that screen has been validated once
     private var isDone = false
 
-    private val pickFolder = registerForActivityResult(PickFolderContract()) { res ->
-        onFolderPickerResult(res.first, res.second)
-    }
+    private val pickFolder = registerForActivityResult(PickFolderContract(), ::onFolderPickerResult)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -116,10 +115,9 @@ class ImportIntroFragment : Fragment(R.layout.intro_slide_04) {
             if (Settings.isBrowserMode) View.INVISIBLE else View.VISIBLE
     }
 
-    private fun onFolderPickerResult(resultCode: PickerResult, treeUri: Uri?) {
-        when (resultCode) {
-            PickerResult.OK -> {
-                if (null == treeUri) return
+    private fun onFolderPickerResult(result: PickUriResult) {
+        when (result) {
+            is PickUriResult.Success -> {
                 binding?.apply {
                     waitTxt.visibility = View.VISIBLE
                     val animation = BlinkAnimation(750, 20)
@@ -129,7 +127,7 @@ class ImportIntroFragment : Fragment(R.layout.intro_slide_04) {
                         val result = withContext(Dispatchers.IO) {
                             setAndScanPrimaryFolder(
                                 requireContext(),
-                                treeUri,
+                                result.uri,
                                 StorageLocation.PRIMARY_1,
                                 true,
                                 null
@@ -137,12 +135,12 @@ class ImportIntroFragment : Fragment(R.layout.intro_slide_04) {
                         }
                         waitTxt.clearAnimation()
                         waitTxt.visibility = View.GONE
-                        onScanHentoidFolderResult(result.first, result.second)
+                        onScanHentoidFolderResult(result)
                     }
                 }
             }
 
-            PickerResult.KO_CANCELED -> {
+            PickUriResult.Cancelled -> {
                 binding?.apply {
                     Snackbar.make(
                         root,
@@ -153,7 +151,7 @@ class ImportIntroFragment : Fragment(R.layout.intro_slide_04) {
                 }
             }
 
-            PickerResult.KO_OTHER, PickerResult.KO_NO_URI -> {
+            PickUriResult.NoUri, PickUriResult.Unknown -> {
                 binding?.apply {
                     Snackbar.make(
                         root,
@@ -166,63 +164,31 @@ class ImportIntroFragment : Fragment(R.layout.intro_slide_04) {
         }
     }
 
-    private fun onScanHentoidFolderResult(resultCode: ProcessFolderResult, rootUri: String) {
+    private fun onScanHentoidFolderResult(result: FolderScanResult) {
         binding?.apply {
-            when (resultCode) {
-                ProcessFolderResult.OK_EMPTY_FOLDER -> nextStep()
-                ProcessFolderResult.OK_LIBRARY_DETECTED -> { // Import service is already launched by the Helper; nothing else to do
+            when (result) {
+                Success.EmptyFolder -> nextStep()
+                Success.LibraryDetected -> {
+                    // Import service is already launched by the Helper; nothing else to do
                     updateOnSelectFolder()
                     return
                 }
 
-                ProcessFolderResult.OK_LIBRARY_DETECTED_ASK -> {
+                is Success.LibraryDetectedAsk -> {
                     updateOnSelectFolder()
                     showExistingLibraryDialog(
                         requireContext(),
                         StorageLocation.PRIMARY_1,
-                        rootUri
+                        result.rootUri.toString()
                     ) { onCancelExistingLibraryDialog() }
                     return
                 }
 
-                ProcessFolderResult.KO_INVALID_FOLDER -> Snackbar.make(
+                is Failure -> Snackbar.make(
                     root,
-                    R.string.import_invalid,
+                    result.errorMessageRes,
                     BaseTransientBottomBar.LENGTH_LONG
                 ).show()
-
-                ProcessFolderResult.KO_APP_FOLDER -> Snackbar.make(
-                    root,
-                    R.string.import_invalid,
-                    BaseTransientBottomBar.LENGTH_LONG
-                ).show()
-
-                ProcessFolderResult.KO_DOWNLOAD_FOLDER -> Snackbar.make(
-                    root,
-                    R.string.import_download_folder,
-                    BaseTransientBottomBar.LENGTH_LONG
-                ).show()
-
-                ProcessFolderResult.KO_CREATE_FAIL -> Snackbar.make(
-                    root,
-                    R.string.import_create_fail,
-                    BaseTransientBottomBar.LENGTH_LONG
-                ).show()
-
-                ProcessFolderResult.KO_ALREADY_RUNNING -> Snackbar.make(
-                    root,
-                    R.string.service_running,
-                    BaseTransientBottomBar.LENGTH_LONG
-                ).show()
-
-                ProcessFolderResult.KO_OTHER -> Snackbar.make(
-                    root,
-                    R.string.import_other,
-                    BaseTransientBottomBar.LENGTH_LONG
-                ).show()
-
-                else -> { /* Nothing*/
-                }
             }
             skipBtn.visibility = View.VISIBLE
         }

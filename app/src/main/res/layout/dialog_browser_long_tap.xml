@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="@dimen/dialog_width"
+    android:layout_height="wrap_content"
+    android:layout_gravity="center"
+    android:clipToPadding="false"
+    android:padding="16dp">
+
+    <TextView
+        android:id="@+id/title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp"
+        android:text="@string/web_long_tap_actions_title"
+        android:textSize="@dimen/text_header_6"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <com.google.android.material.materialswitch.MaterialSwitch
+        android:id="@+id/ch_quick_dl"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/pref_browser_quick_dl_title"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/title" />
+
+    <TextView
+        android:id="@+id/ch_quick_dl_desc"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:maxLines="2"
+        android:text="@string/pref_browser_quick_dl_summary"
+        android:textColor="@color/card_tags_light"
+        android:textSize="@dimen/text_body_2"
+        app:layout_constraintEnd_toEndOf="@id/ch_quick_dl"
+        app:layout_constraintStart_toStartOf="@id/ch_quick_dl"
+        app:layout_constraintTop_toBottomOf="@id/ch_quick_dl" />
+
+    <com.google.android.material.materialswitch.MaterialSwitch
+        android:id="@+id/ch_grab_img"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/pref_browser_grab_pics_title"
+        android:layout_marginTop="8dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/ch_quick_dl_desc" />
+
+    <TextView
+        android:id="@+id/ch_grab_img_desc"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:maxLines="2"
+        android:text="@string/pref_browser_grab_pics_summary"
+        android:textColor="@color/card_tags_light"
+        android:textSize="@dimen/text_body_2"
+        app:layout_constraintEnd_toEndOf="@id/ch_grab_img"
+        app:layout_constraintStart_toStartOf="@id/ch_grab_img"
+        app:layout_constraintTop_toBottomOf="@id/ch_grab_img" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/action_btn"
+        style="@style/Widget.Material3.Button.TonalButton"
+        android:layout_width="0dp"
+        android:layout_height="?android:attr/actionBarSize"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="4dp"
+        android:text="@string/apply_final"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/disable_btn"
+        app:layout_constraintTop_toBottomOf="@id/ch_grab_img_desc"
+        tools:visibility="visible" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/disable_btn"
+        style="@style/Widget.Material3.Button.TonalButton"
+        android:layout_width="0dp"
+        android:layout_height="?android:attr/actionBarSize"
+        android:layout_marginTop="16dp"
+        android:layout_marginStart="4dp"
+        android:text="@string/disable_long_tap"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/action_btn"
+        app:layout_constraintTop_toBottomOf="@id/ch_grab_img_desc"
+        tools:visibility="visible" />
+
+    <TextView
+        android:id="@+id/settings_caption"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="8dp"
+        android:maxLines="2"
+        android:textSize="@dimen/text_body_2"
+        app:layout_constraintTop_toBottomOf="@id/disable_btn"
+        tools:text="@string/web_long_tap_actions_notice" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

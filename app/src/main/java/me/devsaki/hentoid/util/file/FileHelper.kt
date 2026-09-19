@@ -166,7 +166,7 @@ private fun getFullPathFromTreeUri(context: Context, uri: Uri): String {
 
     // Chunk file Uri
     val usedUri =
-        if (uri.authority.equals(FILECHUNK_AUTHORITY)) FileChunkInfo.fromUri(uri).mainFileUri
+        if (uri.authority.equals(BuildConfig.FILECHUNK_AUTHORITY)) FileChunkInfo.fromUri(uri).mainFileUri
         else uri
 
     var volumePath = getVolumePath(context, getVolumeIdFromUri(usedUri)) ?: "UnknownVolume"
@@ -174,9 +174,9 @@ private fun getFullPathFromTreeUri(context: Context, uri: Uri): String {
 
     var documentPath = getDocumentPathFromUri(usedUri) ?: ""
     if (documentPath.endsWith(File.separator)) documentPath = documentPath.dropLast(1)
-    if (!documentPath.startsWith(File.separator)) documentPath = File.separator + documentPath
+    if (documentPath.startsWith(File.separator)) documentPath = documentPath.drop(1)
 
-    val chunkName = if (uri.authority.equals(FILECHUNK_AUTHORITY))
+    val chunkName = if (uri.authority.equals(BuildConfig.FILECHUNK_AUTHORITY))
         File.separator + FileChunkInfo.fromUri(uri).displayName
     else ""
 
@@ -196,13 +196,11 @@ private fun getVolumePath(context: Context, volumeId: String): String? {
     try {
         // StorageVolume exists since API19, has an uiid since API21 but is only visible since API24
         val mStorageManager = context.getSystemService(Context.STORAGE_SERVICE) as StorageManager
-        var volumes = mStorageManager.storageVolumes
+        val volumes: MutableSet<StorageVolume> = HashSet()
+        volumes.addAll(mStorageManager.storageVolumes)
 
         // getRecentStorageVolumes (API30+) can detect USB storage on certain devices where getVolumeList can't
-        if (Build.VERSION.SDK_INT >= 30) {
-            val recentVolumes = mStorageManager.recentStorageVolumes
-            volumes = if ((volumes.size > recentVolumes.size)) volumes else recentVolumes
-        }
+        if (Build.VERSION.SDK_INT >= 30) volumes.addAll(mStorageManager.recentStorageVolumes)
 
         volumes.firstOrNull { volumeIdMatch(it.uuid ?: "", it.isPrimary, volumeId) }?.let {
             return getVolumePath(it)
@@ -246,6 +244,22 @@ private fun getVolumePath(storageVolume: Any): String {
     if (path.isEmpty() && absolutePath.isEmpty()) return canonicalPath
     if (path.isEmpty()) return absolutePath
     return path
+}
+
+private fun getVolumeFile(storageVolume: Any): File? {
+    try {
+        val storageVolumeClazz = Class.forName("android.os.storage.StorageVolume")
+        if (Build.VERSION.SDK_INT < 30) {
+            val getPathFile = storageVolumeClazz.getMethod("getPathFile") // Removed in API30
+            return getPathFile.invoke(storageVolume) as File
+        } else {
+            val getDirectory = storageVolumeClazz.getMethod("getDirectory")
+            return getDirectory.invoke(storageVolume) as File?
+        }
+    } catch (e: Exception) {
+        Timber.w(e)
+    }
+    return null
 }
 
 /**
@@ -482,7 +496,7 @@ fun findOrCreateDocumentFile(
     displayName: String
 ): DocumentFile? {
     // Look for it first
-    val file = findFile(context, folder, displayName)
+    val file = findDocumentFile(context, folder.uri, displayName)
     if (null == file) { // Create it
         val localMime = if (mimeType.isNullOrEmpty()) DEFAULT_MIME_TYPE else mimeType
         return folder.createFile(localMime, displayName)
@@ -501,7 +515,7 @@ fun createNoMedia(context: Context, folder: DocumentFile): Int {
     if (!folder.exists() && !folder.isDirectory) return -1
 
     // Make sure the nomedia file is created
-    var nomedia = findFile(context, folder, NOMEDIA_FILE_NAME)
+    var nomedia = findDocumentFile(context, folder.uri, NOMEDIA_FILE_NAME)
     if (null == nomedia) {
         nomedia = folder.createFile(DEFAULT_MIME_TYPE, NOMEDIA_FILE_NAME)
         if (null == nomedia || !nomedia.exists()) return -3
@@ -524,7 +538,7 @@ fun createNoMedia(context: Context, folder: DocumentFile): Int {
  * @param subfolderName Name of the folder to find
  * @return Folder inside the given parent folder (non recursive) that has the given name; null if not found
  */
-fun findFolder(context: Context, parent: DocumentFile, subfolderName: String): DocumentFile? {
+fun findFolder(context: Context, parent: Uri, subfolderName: String): DocumentFile? {
     return findDocumentFile(context, parent, subfolderName, listFolders = true, listFiles = false)
 }
 
@@ -536,7 +550,7 @@ fun findFolder(context: Context, parent: DocumentFile, subfolderName: String): D
  * @param fileName Name of the file to find
  * @return File inside the given parent folder (non recursive) that has the given name; null if not found
  */
-fun findFile(context: Context, parent: DocumentFile, fileName: String): DocumentFile? {
+fun findDocumentFile(context: Context, parent: Uri, fileName: String): DocumentFile? {
     return findDocumentFile(context, parent, fileName, listFolders = false, listFiles = true)
 }
 
@@ -548,7 +562,7 @@ fun findFile(context: Context, parent: DocumentFile, fileName: String): Document
  * @return Subfolders of the given parent folder
  */
 // see https://stackoverflow.com/questions/5084896/using-contentproviderclient-vs-contentresolver-to-access-content-provider
-fun listFolders(context: Context, parent: DocumentFile): List<DocumentFile> {
+fun listFolders(context: Context, parent: Uri): List<DocumentFile> {
     return listFoldersFilter(context, parent, null)
 }
 
@@ -562,7 +576,7 @@ fun listFolders(context: Context, parent: DocumentFile): List<DocumentFile> {
  */
 fun listFoldersFilter(
     context: Context,
-    parent: DocumentFile,
+    parent: Uri,
     filter: NameFilter?
 ): List<DocumentFile> {
     var result = emptyList<DocumentFile>()
@@ -589,9 +603,9 @@ fun listFoldersFilter(
  * @param filter  Name filter to use to filter the files to list
  * @return Files of the given parent folder matching the given name filter
  */
-fun listFiles(
+fun listDocumentFiles(
     context: Context,
-    parent: DocumentFile,
+    parent: Uri,
     filter: NameFilter? = null
 ): List<DocumentFile> {
     var result = emptyList<DocumentFile>()
@@ -622,7 +636,7 @@ fun listFiles(
  */
 private fun findDocumentFile(
     context: Context,
-    parent: DocumentFile,
+    parent: Uri,
     nameFilter: String,
     listFolders: Boolean,
     listFiles: Boolean
@@ -670,9 +684,7 @@ fun findFile(
             return findFile(it, fileName)?.toUri()
         }
     } else {
-        getDocumentFromTreeUri(context, parent)?.let {
-            return findFile(context, it, fileName)?.uri
-        }
+        return findDocumentFile(context, parent, fileName)?.uri
     }
     return null
 }
@@ -686,11 +698,7 @@ fun listFiles(
             return p.listFiles()?.map { it.toUri() } ?: emptyList()
         }
     } else {
-        getDocumentFromTreeUri(context, parent)?.let {
-            getDocumentFromTreeUri(context, parent)?.let { p ->
-                return listFiles(context, p).map { it.uri }
-            }
-        }
+        return listDocumentFiles(context, parent).map { it.uri }
     }
     return emptyList()
 }
@@ -1039,7 +1047,7 @@ fun copyFiles(
         val targetFolder = DocumentFile.fromTreeUri(context, targetFolderUri)
         if (null == targetFolder || !targetFolder.exists()) return emptyList()
 
-        val existingFiles = listFiles(context, targetFolder)
+        val existingFiles = listDocumentFiles(context, targetFolder.uri)
             .groupBy { it.name ?: "" }
             .mapValues { it.value.first() }
 
@@ -1264,17 +1272,7 @@ class MemoryUsageFigures(context: Context, fUri: Uri) {
     // Init for API 21 to 25
     private fun init21(context: Context, fUri: Uri) {
         val fullPath = getFullPathFromUri(context, fUri) // Oh so dirty !!
-        try {
-            if (fullPath.isNotEmpty()) {
-                val stat = StatFs(fullPath)
-
-                val blockSize = stat.blockSizeLong
-                totalSpaceBytes = stat.blockCountLong * blockSize
-                freeMemBytes = stat.availableBlocksLong * blockSize
-            }
-        } catch (e: Exception) {
-            Timber.w(e)
-        }
+        if (fullPath.isNotEmpty()) doStatFs(fullPath)
     }
 
     // Init for API 26+
@@ -1289,31 +1287,19 @@ class MemoryUsageFigures(context: Context, fUri: Uri) {
         // No need to test anything, there's just one single volume
         if (1 == volumes.size) targetVolume = volumes[0]
         else { // Look for a match among listed volumes
-            for (v in volumes) {
-                if (v.isPrimary) primaryVolume = v
-
-                if (volumeIdMatch(v, volumeId)) {
-                    targetVolume = v
-                    break
-                }
-            }
+            primaryVolume = volumes.firstOrNull { it.isPrimary }
+            targetVolume = volumes.firstOrNull { volumeIdMatch(it, volumeId) }
         }
 
         // If no volume matches, default to Primary
         // NB : necessary to avoid defaulting to the root on rooted phones
         // (rooted phone's root is a separate volume with specific memory usage figures)
-        if (null == targetVolume) {
-            targetVolume = primaryVolume
-        }
+        if (null == targetVolume) targetVolume = primaryVolume
+        if (null == targetVolume) return
 
         // Process target volume
-        if (targetVolume != null) {
-            if (targetVolume.isPrimary) {
-                processPrimary(context)
-            } else {
-                processSecondary(targetVolume)
-            }
-        }
+        if (targetVolume.isPrimary) processPrimary(context)
+        else processSecondary(context, targetVolume)
     }
 
     // Use StorageStatsManager on primary volume
@@ -1332,32 +1318,51 @@ class MemoryUsageFigures(context: Context, fUri: Uri) {
     // StorageStatsManager doesn't work for volumes other than the primary volume since
     // the "UUID" available for non-primary volumes is not acceptable to
     // StorageStatsManager. We must revert to statvfs(path) for non-primary volumes.
-    private fun processSecondary(volume: StorageVolume) {
+    private fun processSecondary(context: Context, volume: StorageVolume) {
+        val volumePath = getVolumePath(volume)
+        if (volumePath.isNotEmpty()) doStatvFs(volumePath)
+    }
+
+    private fun doStatFs(path: String) {
         try {
-            val volumePath = getVolumePath(volume)
-            if (volumePath.isNotEmpty()) {
-                val stats = Os.statvfs(volumePath)
-                val blockSize = stats.f_bsize
-                totalSpaceBytes = stats.f_blocks * blockSize
-                freeMemBytes = stats.f_bavail * blockSize
-            }
-        } catch (e: Exception) { // On some devices, Os.statvfs can throw other exceptions than ErrnoException
+            Timber.v("Calling statFs $path")
+            val stat = StatFs(path)
+            val blockSize = stat.blockSizeLong
+            totalSpaceBytes = stat.blockCountLong * blockSize
+            freeMemBytes = stat.availableBlocksLong * blockSize
+            Timber.v("SUCCESS")
+        } catch (e: Exception) {
             Timber.w(e)
         }
     }
 
-    val freeUsageRatio100: Double
-        /**
-         * Get free usage ratio (0 = all memory full; 100 = all memory free)
-         */
-        get() = freeMemBytes * 100.0 / totalSpaceBytes
+    private fun doStatvFs(path: String) {
+        try {
+            Timber.v("Calling statvFs $path")
+            val stats = Os.statvfs(path)
+            val blockSize = stats.f_bsize
+            totalSpaceBytes = stats.f_blocks * blockSize
+            freeMemBytes = stats.f_bavail * blockSize
+            Timber.v("SUCCESS")
+        } catch (e: Exception) {
+            Timber.w(e)
+        }
+    }
+
+    val hasStats: Boolean
+        get() = totalSpaceBytes > 0
 
     /**
-     * Get free storage capacity in bytes
+     * Free usage ratio (0 = all memory full; 100 = all memory free)
      */
-    fun getfreeUsageBytes(): Long {
-        return freeMemBytes
-    }
+    val freeUsageRatio100: Double
+        get() = if (totalSpaceBytes > 0) freeMemBytes * 100.0 / totalSpaceBytes else 0.0
+
+    /**
+     * Free storage capacity in bytes
+     */
+    val freeUsageBytes: Long
+        get() = freeMemBytes
 }
 
 /**
@@ -1407,7 +1412,11 @@ fun persistNewUriPermission(context: Context, newUri: Uri, keepUris: List<Uri>?)
         // Release previous access permissions, if different than the new one
         val keepList = keepUris?.toMutableList() ?: mutableListOf()
         keepList.add(newUri)
-        revokePreviousPermissions(contentResolver, keepList)
+        try {
+            revokePreviousPermissions(contentResolver, keepList)
+        } catch (e: Exception) {
+            Timber.w(e)
+        }
         // Persist new access permission
         contentResolver.takePersistableUriPermission(
             newUri,

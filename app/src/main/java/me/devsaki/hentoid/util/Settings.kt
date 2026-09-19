@@ -154,6 +154,7 @@ object Settings {
     )
     var isAutoImportExternal: Boolean by BoolSetting("import_external_library_auto", true)
 
+
     // LIBRARY
     var libraryDisplay: Int by IntSettingStr(Key.LIBRARY_DISPLAY, Default.LIBRARY_DISPLAY)
     var libraryDisplayGridFav: Boolean by BoolSetting(Key.LIBRARY_DISPLAY_GRID_FAV, true)
@@ -196,6 +197,20 @@ object Settings {
     var isFolderSortDesc: Boolean by BoolSetting("pref_order_folder_desc", false)
     var libraryFoldersRoots: List<String> by ListStringSetting("library_folders_roots")
     var libraryFoldersRoot: String by StringSetting("library_folders_current_root", "")
+    var lrrEndpoint: String by StringSetting(Key.LRR_ENDPOINT, "")
+    val lrrApiKey: String by StringSetting(Key.LRR_API_KEY, "")
+
+    // Yes, the LRR favorites category does have unicode emoji in its name in Atomica
+    val lrrFavCat: String by StringSetting(Key.LRR_FAV_CAT, "\uD83D\uDD16 Favorites")
+    var lrrSortField: Int by IntSetting("pref_order_lrr_field", Default.ORDER_LRR_FIELD)
+    var isLrrSortDesc: Boolean by BoolSetting("pref_order_lrr_desc", false)
+
+    // Library Search
+    val librarySearchDelayThreshold: Long by LongSetting(Key.LIBRARY_SEARCH_DELAY_THRESHOLD, 250)
+    val librarySearchLongDelayThreshold: Long by LongSetting(
+        Key.LIBRARY_SEARCH_LONG_DELAY_THRESHOLD,
+        1500
+    )
 
     // ADV SEARCH
     val searchAttributesSortOrder: Int by IntSettingStr(
@@ -208,15 +223,18 @@ object Settings {
         Value.SEARCH_COMBINATION_AND
     )
 
+
     // LOCK
     var lockType: Int by IntSettingStr(Key.LOCK_TYPE, 0)
     var appLockPin: String by StringSetting(Key.APP_LOCK, "")
     var lockOnAppRestore: Boolean by BoolSetting("pref_lock_on_app_restore", false)
     var lockTimer: Int by IntSettingStr("pref_lock_timer", Value.LOCK_TIMER_30S)
 
+
     // MASS OPERATIONS
     var massOperation: Int by IntSettingStr("MASS_OPERATION", 0)
     var massOperationScope: Int by IntSettingStr("MASS_SCOPE", 0)
+
 
     // TRANSFORM
     var isResizeEnabled: Boolean by BoolSetting("TRANSFORM_RESIZE_ENABLED", false)
@@ -239,9 +257,18 @@ object Settings {
         "TRANSFORM_TRANSCODE_ENC_LOSSY",
         PictureEncoder.JPEG.value
     )
+    var transcodeEncoderAnim: Int by IntSettingStr(
+        "TRANSFORM_TRANSCODE_ENC_ANIM",
+        PictureEncoder.WEBP_LOSSY.value
+    )
     var transcodeQuality: Int by IntSettingStr("TRANSFORM_TRANSCODE_QUALITY", 90)
+    var transcodeAnimQuality: Int by IntSettingStr("TRANSFORM_TRANSCODE_ANIM_QUALITY", 90)
+    var skipTransformedPics: Boolean by BoolSetting("TRANSFORM_SKIP_TRANSFORMED_PICS", false)
+    var unlockTransformCaps: Boolean by BoolSetting("TRANSFORM_UNLOCK_CAPS", false)
+
 
     // ARCHIVES
+    var archiveDestination: Int by IntSettingStr("ARCHIVE_DESTINATION", Value.DESTINATION_DEVICE)
     var archiveTargetFolder: String by StringSetting(
         "ARCHIVE_TARGET_FOLDER",
         Value.TARGET_FOLDER_DOWNLOADS
@@ -251,6 +278,7 @@ object Settings {
     var pdfBackgroundColor: Int by IntSettingStr("ARCHIVE_PDF_BGCOLOR", 0)
     var isArchiveOverwrite: Boolean by BoolSetting("ARCHIVE_OVERWRITE", true)
     var isArchiveDeleteOnSuccess: Boolean by BoolSetting("ARCHIVE_DELETE_ON_SUCCESS", false)
+
 
     // BROWSER
     fun isBrowserAugmented(site: Site): Boolean {
@@ -290,9 +318,11 @@ object Settings {
         return DownloadMode.fromValue(browserDlActionInt)
     }
 
-    val isBrowserQuickDl: Boolean by BoolSetting(Key.BROWSER_QUICK_DL, true)
-    val browserQuickDlThreshold: Int by IntSettingStr(
-        Key.BROWSER_QUICK_DL_THRESHOLD,
+    var areLongTapActionsChosen: Boolean by BoolSetting("web_long_tap_actions", false)
+    var isBrowserQuickDl: Boolean by BoolSetting(Key.BROWSER_QUICK_DL, false)
+    var isBrowserGrabPics: Boolean by BoolSetting(Key.BROWSER_GRAB_PICS, false)
+    val browserLongTapThreshold: Int by IntSettingStr(
+        Key.BROWSER_LONG_TAP_THRESHOLD,
         1500 // 1.5s
     )
     val isBrowserNhentaiInvisibleBlacklist: Boolean by BoolSetting(
@@ -324,6 +354,25 @@ object Settings {
     }
 
     private var topAlertClosed: List<Site> by ListSiteSetting("browser_topalert_closed", "")
+
+    fun isRangeDownloadOn(site: Site): Boolean {
+        return sharedPreferences.getBoolean(
+            makeSiteKey(Key.BROWSER_RANGE_DOWNLOAD, site),
+            isAppRangeDownloadOn
+        )
+    }
+
+    var isAppRangeDownloadOn: Boolean by BoolSetting(Key.BROWSER_RANGE_DOWNLOAD, false)
+
+    fun isCheckExtraPages(site: Site): Boolean {
+        return sharedPreferences.getBoolean(
+            makeSiteKey(Key.BROWSER_CHECK_EXTRA, site),
+            isAppCheckExtraPages
+        )
+    }
+
+    var isAppCheckExtraPages: Boolean by BoolSetting(Key.BROWSER_CHECK_EXTRA, true)
+
 
     // QUEUE / DOWNLOADER
     val isDownloadEhHires: Boolean by BoolSetting("pref_dl_eh_hires", false)
@@ -365,20 +414,24 @@ object Settings {
     var downloadScheduleSummary: String by StringSetting("download_schedule", disabledStr)
     var downloadScheduleStart: Int by IntSetting("download_schedule_start", 0)
     var downloadScheduleEnd: Int by IntSetting("download_schedule_end", 0)
-    fun isRangeDownloadOn(site: Site): Boolean {
-        return sharedPreferences.getBoolean(
-            makeSiteKey(Key.BROWSER_RANGE_DOWNLOAD, site),
-            isAppRangeDownloadOn
-        )
-    }
-    var isAppRangeDownloadOn: Boolean by BoolSetting(Key.BROWSER_RANGE_DOWNLOAD, false)
+
     fun isThumbSeparateFile(site: Site): Boolean {
         return sharedPreferences.getBoolean(
             makeSiteKey("pref_dl_separate_thumb", site),
             isAppThumbSeparateFile
         )
     }
+
     var isAppThumbSeparateFile: Boolean by BoolSetting("pref_dl_separate_thumb", true)
+    val download404Mode: Int by IntSettingStr("pref_dl_404", 0)
+    val isKemonoHiRes: Boolean by BoolSetting("pref_dl_kemono_hires", false)
+    val isPawHiRes: Boolean by BoolSetting("pref_dl_paw_hires", true)
+    val isPixivHiRes: Boolean by BoolSetting("pref_dl_pixiv_hires", true)
+    val downloadAnimationFormat: Int by IntSettingStr(
+        "pref_dl_animation_format",
+        PictureEncoder.WEBP_LOSSY.value
+    )
+    val downloadAnimationQuality: Int by IntSettingStr("pref_dl_animation_quality", 80)
 
 
     // READER
@@ -477,7 +530,24 @@ object Settings {
     val isReaderSwipeToTurn: Boolean by BoolSetting(Key.VIEWER_PAGE_TURN_SWIPE, true)
     val isReaderKeyboardToTurn: Boolean by BoolSetting("pref_viewer_page_turn_keyboard", true)
     val isReaderVolumeToSwitchBooks: Boolean by BoolSetting("pref_viewer_book_switch_volume", false)
-    val isReaderOpenBookInGalleryMode: Boolean by BoolSetting("pref_viewer_open_gallery", false)
+    var readerCustomKeys: Map<String, String> by StringMapSetting("viewer_custom_key_binding")
+
+    fun isReaderOpenInGalleryMode(site: Site): Boolean {
+        return sharedPreferences.getBoolean(
+            makeSiteKey(Key.VIEWER_OPEN_GALLERY, site),
+            isAppReaderOpenInGalleryMode
+        )
+    }
+
+    var isAppReaderOpenInGalleryMode: Boolean by BoolSetting(Key.VIEWER_OPEN_GALLERY, false)
+    fun isContentOpenInGalleryMode(site: Site, bookPrefs: Map<String, String>): Boolean {
+        if (bookPrefs.containsKey(Key.VIEWER_OPEN_GALLERY)) {
+            val value = bookPrefs[Key.VIEWER_OPEN_GALLERY]
+            if (value != null) return value.toBoolean()
+        }
+        return isReaderOpenInGalleryMode(site)
+    }
+
     val isReaderChapteredNavigation: Boolean by BoolSetting("viewer_chaptered_navigation", false)
     val isReaderContinuous: Boolean by BoolSetting(Key.VIEWER_CONTINUOUS, false)
     val readerPageReadThreshold: Int by IntSettingStr(
@@ -538,6 +608,15 @@ object Settings {
     )
     var latestReaderTargetFolderUri: String by StringSetting("READER_TARGET_FOLDER_LATEST", "")
     val isReaderSmartCrop: Boolean by BoolSetting(Key.READER_SMART_CROP, false)
+    var readerColorFilter: Int by IntSetting(Key.VIEWER_COLOR_FILTER, 0)
+    fun getContentReaderColorFilter(bookPrefs: Map<String, String>): Int {
+        if (bookPrefs.containsKey(Key.VIEWER_COLOR_FILTER)) {
+            val value = bookPrefs[Key.VIEWER_COLOR_FILTER]
+            if (value != null) return value.toInt()
+        }
+        return readerColorFilter
+    }
+
 
     // METADATA & RULES EDITOR
     var ruleSortField: Int by IntSetting("pref_order_rule_field", Value.ORDER_FIELD_SOURCE_NAME)
@@ -591,6 +670,7 @@ object Settings {
     var duplicateUseSameLanguage: Boolean by BoolSetting("duplicate_use_same_language", false)
     var duplicateIgnoreChapters: Boolean by BoolSetting("duplicate_ignore_chapters", true)
     var duplicateLastIndex: Int by IntSettingStr("last_index", -1)
+    var duplicateSites: List<Site> by ListSiteSetting("duplicate_sites", "")
 
     val duplicateBrowserSensitivity: Int by IntSettingStr("duplicate_browser_sensitivity", 2)
     val duplicateBrowserUseTitle: Boolean by BoolSetting("duplicate_browser_use_title", true)
@@ -711,6 +791,20 @@ object Settings {
         }
     }
 
+    private class StringMapSetting(val key: String) {
+        operator fun getValue(thisRef: Any?, property: KProperty<*>): Map<String, String> {
+            val str = sharedPreferences.getString(key, "") ?: ""
+            return if (str.isBlank()) emptyMap()
+            else jsonToObject(str, MAP_STRINGS) ?: emptyMap()
+        }
+
+        operator fun setValue(thisRef: Any?, property: KProperty<*>, value: Map<String, String>) {
+            val str = if (value.isEmpty()) ""
+            else serializeToJson(value, MAP_STRINGS)
+            sharedPreferences.edit { putString(key, str) }
+        }
+    }
+
     private class ListSiteSetting(val key: String, val default: String) {
         operator fun getValue(thisRef: Any?, property: KProperty<*>): List<Site> {
             return sharedPreferences.getString(key, default)
@@ -754,6 +848,11 @@ object Settings {
         const val LIBRARY_DISPLAY_GRID_LANG = "LIBRARY_DISPLAY_GRID_LANG"
         const val LIBRARY_GRID_CARD_WIDTH = "grid_card_width"
         const val LIBRARY_DISPLAY_GROUP_FIGURE = "library_display_group_figure"
+
+        const val LRR_ENDPOINT = "lrr_endpoint"
+        const val LRR_API_KEY = "lrr_api_key"
+        const val LRR_FAV_CAT = "lrr_fav_cat"
+
         const val ACHIEVEMENTS = "achievements"
         const val ACHIEVEMENTS_NB_AI_RESCALE = "ach_nb_ai_rescale"
 
@@ -768,13 +867,15 @@ object Settings {
         const val BROWSER_MARK_BLOCKED = "browser_mark_blocked"
         const val BROWSER_DL_ACTION = "pref_browser_dl_action"
         const val BROWSER_QUICK_DL = "pref_browser_quick_dl"
-        const val BROWSER_QUICK_DL_THRESHOLD = "pref_browser_quick_dl_threshold"
+        const val BROWSER_GRAB_PICS = "pref_browser_grab_pics"
+        const val BROWSER_LONG_TAP_THRESHOLD = "pref_browser_quick_dl_threshold"
         const val BROWSER_DNS_OVER_HTTPS = "pref_browser_dns_over_https"
         const val BROWSER_PROXY = "pref_browser_proxy"
         const val BROWSER_CLEAR_COOKIES = "pref_browser_clear_cookies"
         const val BROWSER_NHENTAI_INVISIBLE_BLACKLIST = "pref_nhentai_invisible_blacklist"
         const val DL_HTTP_429_DEFAULT_DELAY = "pref_dl_http_429_default_delay"
         const val BROWSER_RANGE_DOWNLOAD = "browser_range_download"
+        const val BROWSER_CHECK_EXTRA = "browser_check_extra_pages"
 
         const val TEXT_SELECT_MENU = "TEXT_SELECT_MENU"
         const val APP_LOCK = "pref_app_lock"
@@ -790,6 +891,8 @@ object Settings {
         const val PRIMARY_STORAGE_SWITCH_THRESHOLD_PC = "pref_storage_switch_threshold_pc"
         const val EXTERNAL_LIBRARY_DELETE = "pref_external_library_delete"
         const val MEMORY_ALERT_THRESHOLD = "pref_memory_alert"
+        const val LIBRARY_SEARCH_DELAY_THRESHOLD = "pref_library_search_delay_threshold"
+        const val LIBRARY_SEARCH_LONG_DELAY_THRESHOLD = "pref_library_search_long_delay_threshold"
 
         const val DL_THREADS_QUANTITY_LISTS = "pref_dl_threads_quantity_lists"
         const val DL_SPEED_CAP = "dl_speed_cap"
@@ -799,7 +902,9 @@ object Settings {
         const val VIEWER_KEEP_SCREEN_ON = "pref_viewer_keep_screen_on"
         const val VIEWER_DISPLAY_AROUND_NOTCH = "pref_viewer_display_notch"
         const val VIEWER_IMAGE_DISPLAY = "pref_viewer_image_display"
+        const val VIEWER_COLOR_FILTER = "viewer_color_filter"
         const val VIEWER_BROWSE_MODE = "pref_viewer_browse_mode"
+        const val VIEWER_OPEN_GALLERY = "pref_viewer_open_gallery"
         const val VIEWER_RENDERING = "pref_viewer_rendering"
         const val VIEWER_DISPLAY_PAGENUM = "pref_viewer_display_pagenum2"
         const val VIEWER_TURN_TRANSITIONS = "pref_viewer_tap_transitions"
@@ -827,6 +932,7 @@ object Settings {
         const val ORDER_CONTENT_FIELD = Value.ORDER_FIELD_TITLE
         const val ORDER_GROUP_FIELD = Value.ORDER_FIELD_TITLE
         const val ORDER_FOLDER_FIELD = Value.ORDER_FIELD_TITLE
+        const val ORDER_LRR_FIELD = Value.ORDER_FIELD_TITLE
         const val LIBRARY_DISPLAY = Value.LIBRARY_DISPLAY_LIST
         const val QUEUE_NEW_DOWNLOADS_POSITION = Value.QUEUE_NEW_DOWNLOADS_POSITION_BOTTOM
         const val IMPORT_NAME_PATTERN = "%t"
@@ -888,6 +994,9 @@ object Settings {
         const val STORAGE_FILL_BALANCE_FREE = 0
         const val STORAGE_FILL_FALLOVER = 1
 
+        const val DESTINATION_DEVICE = 0
+        const val DESTINATION_LRR = 1
+
         const val FOLDER_NAMING_CONTENT_ID = 0
         const val FOLDER_NAMING_CONTENT_TITLE_ID = 1
         const val FOLDER_NAMING_CONTENT_AUTH_TITLE_ID = 2
@@ -913,6 +1022,9 @@ object Settings {
         const val DL_SPEED_CAP_400 = 2
         const val DL_SPEED_CAP_800 = 3
 
+        const val DL_404_ERROR = 0
+        const val DL_404_PLACEHOLDER = 1
+        const val DL_404_IGNORE = 2
 
         const val VIEWER_DISPLAY_FIT = 0
         const val VIEWER_DISPLAY_FILL = 1
@@ -959,6 +1071,7 @@ object Settings {
         const val VIEWER_SLIDESHOW_DELAY_16 = 3
         const val VIEWER_SLIDESHOW_DELAY_1 = 4
         const val VIEWER_SLIDESHOW_DELAY_05 = 5
+        const val VIEWER_SLIDESHOW_DELAY_30 = 6
 
         const val VIEWER_SLIDESHOW_LOOP_NONE = 0
         const val VIEWER_SLIDESHOW_LOOP_CHAPTER = 1

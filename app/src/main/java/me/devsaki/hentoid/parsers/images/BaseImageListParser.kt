@@ -91,11 +91,12 @@ abstract class BaseImageListParser : ImageListParser, Progressor {
     override fun progressStart(
         onlineContent: Content,
         storedContent: Content?,
-        maxSteps: Int
+        maxSteps: Int,
+        isIndeterminate : Boolean
     ) {
         if (progress.hasStarted()) return
         val storedId = storedContent?.id ?: -1
-        progress.start(onlineContent.id, storedId, maxSteps)
+        progress.start(onlineContent.id, storedId, maxSteps, isIndeterminate)
     }
 
     override fun progressPlus(progress: Float) {
@@ -130,19 +131,5 @@ abstract class BaseImageListParser : ImageListParser, Progressor {
 
             DownloadCommandEvent.Type.EV_UNPAUSE, DownloadCommandEvent.Type.EV_RESET_REQUEST_QUEUE -> {}
         }
-    }
-
-    protected open fun fetchHeaders(content: Content): List<Pair<String, String>> {
-        return fetchHeaders(content.galleryUrl, content.downloadParams)
-    }
-
-    protected open fun fetchHeaders(
-        url: String,
-        downloadParams: String? = null
-    ): List<Pair<String, String>> {
-        val headers: MutableList<Pair<String, String>> = ArrayList()
-        if (downloadParams != null) addSavedCookiesToHeader(downloadParams, headers)
-        headers.add(Pair(HEADER_REFERER_KEY, url))
-        return headers
     }
 }

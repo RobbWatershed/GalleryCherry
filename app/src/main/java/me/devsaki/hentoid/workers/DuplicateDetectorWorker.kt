@@ -13,6 +13,7 @@ import me.devsaki.hentoid.database.DuplicatesDAO
 import me.devsaki.hentoid.database.ObjectBoxDAO
 import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.database.domains.DuplicateEntry
+import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.events.ProcessEvent
 import me.devsaki.hentoid.notification.duplicates.DuplicateCompleteNotification
 import me.devsaki.hentoid.notification.duplicates.DuplicateProgressNotification
@@ -94,7 +95,8 @@ class DuplicateDetectorWorker(context: Context, parameters: WorkerParameters) :
             inputData.useArtist,
             inputData.useSameLanguage,
             inputData.ignoreChapters,
-            inputData.sensitivity
+            inputData.sensitivity,
+            inputData.sites.toSet()
         )
     }
 
@@ -104,7 +106,8 @@ class DuplicateDetectorWorker(context: Context, parameters: WorkerParameters) :
         useArtist: Boolean,
         useSameLanguage: Boolean,
         ignoreChapters: Boolean,
-        sensitivity: Int
+        sensitivity: Int,
+        sites: Set<Site>
     ) {
         // Mark process as incomplete until all combinations are searched
         // to support abort and retry
@@ -126,7 +129,10 @@ class DuplicateDetectorWorker(context: Context, parameters: WorkerParameters) :
         // Pre-compute all book entries as DuplicateCandidates
         val candidates: MutableList<DuplicateCandidate> = ArrayList()
         dao.streamStoredContent(
-            false, Settings.Value.ORDER_FIELD_SIZE, true
+            false,
+            sites,
+            Settings.Value.ORDER_FIELD_SIZE,
+            true
         ) {
             candidates.add(
                 DuplicateCandidate(

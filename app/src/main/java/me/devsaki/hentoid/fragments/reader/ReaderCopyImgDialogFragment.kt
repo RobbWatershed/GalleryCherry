@@ -1,13 +1,16 @@
 package me.devsaki.hentoid.fragments.reader
 
-import android.net.Uri
+import android.Manifest.permission.READ_EXTERNAL_STORAGE
+import android.Manifest.permission.WRITE_EXTERNAL_STORAGE
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import androidx.fragment.app.Fragment
+import me.devsaki.hentoid.BuildConfig
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.database.CollectionDAO
 import me.devsaki.hentoid.database.ObjectBoxDAO
@@ -16,13 +19,12 @@ import me.devsaki.hentoid.databinding.DialogReaderSaveImgBinding
 import me.devsaki.hentoid.enums.StorageLocation
 import me.devsaki.hentoid.fragments.BaseDialogFragment
 import me.devsaki.hentoid.util.PickFolderContract
-import me.devsaki.hentoid.util.PickerResult
+import me.devsaki.hentoid.util.PickUriResult
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.copy
-import me.devsaki.hentoid.util.file.FILECHUNK_AUTHORITY
-import me.devsaki.hentoid.util.file.FileChunkInfo
 import me.devsaki.hentoid.util.file.DEFAULT_MIME_TYPE
-import me.devsaki.hentoid.util.file.RQST_STORAGE_PERMISSION
+import me.devsaki.hentoid.util.file.FileChunkInfo
+import me.devsaki.hentoid.util.file.checkExternalStorageReadWritePermission
 import me.devsaki.hentoid.util.file.createNewDownloadFile
 import me.devsaki.hentoid.util.file.fileExists
 import me.devsaki.hentoid.util.file.findOrCreateDocumentFile
@@ -33,8 +35,8 @@ import me.devsaki.hentoid.util.file.getFullPathFromUri
 import me.devsaki.hentoid.util.file.getInputStream
 import me.devsaki.hentoid.util.file.getMimeTypeFromExtension
 import me.devsaki.hentoid.util.file.getOutputStream
-import me.devsaki.hentoid.util.file.requestExternalStorageReadWritePermission
 import me.devsaki.hentoid.util.persistLocationCredentials
+import timber.log.Timber
 import java.io.File
 import java.io.IOException
 import java.io.OutputStream
@@ -62,10 +64,18 @@ class ReaderCopyImgDialogFragment : BaseDialogFragment<ReaderCopyImgDialogFragme
     // === VARIABLES
     private var imageId = 0L
 
-    private val pickFolder =
-        registerForActivityResult(PickFolderContract()) {
-            onFolderPickerResult(it.first, it.second)
+    private val pickFolder = registerForActivityResult(PickFolderContract(), ::onFolderPickerResult)
+
+    private val storageRequestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { isGranted: Map<String, Boolean> ->
+        if (2 == isGranted.size && isGranted.all { it.value }) {
+            // Run folder picker
+            pickFolder.launch(StorageLocation.NONE)
+        } else {
+            Timber.i("Storage permissions not granted")
         }
+    }
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -102,13 +112,12 @@ class ReaderCopyImgDialogFragment : BaseDialogFragment<ReaderCopyImgDialogFragme
 
                     targetFolder.entries.size - 1 -> { // Last item => Pick a folder
                         // Make sure permissions are set
-                        if (requireActivity().requestExternalStorageReadWritePermission(
-                                RQST_STORAGE_PERMISSION
-                            )
-                        ) {
-                            // Run folder picker
+                        if (requireActivity().checkExternalStorageReadWritePermission())
                             pickFolder.launch(StorageLocation.NONE)
-                        }
+                        else
+                            storageRequestPermissionLauncher.launch(
+                                arrayOf(READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE)
+                            )
                     }
 
                     else -> Settings.readerTargetFolder = Settings.latestReaderTargetFolderUri
@@ -149,17 +158,13 @@ class ReaderCopyImgDialogFragment : BaseDialogFragment<ReaderCopyImgDialogFragme
         }
     }
 
-    private fun onFolderPickerResult(resultCode: PickerResult, uri: Uri) {
-        when (resultCode) {
-            PickerResult.OK -> {
-                // Persist I/O permissions; keep existing ones if present
-                persistLocationCredentials(requireContext(), uri)
-                Settings.latestReaderTargetFolderUri = uri.toString()
-                Settings.readerTargetFolder = uri.toString()
-                refreshControls(true)
-            }
-
-            else -> {}
+    private fun onFolderPickerResult(result: PickUriResult) {
+        if (result is PickUriResult.Success) {
+            // Persist I/O permissions; keep existing ones if present
+            persistLocationCredentials(requireContext(), result.uri)
+            Settings.latestReaderTargetFolderUri = result.uri.toString()
+            Settings.readerTargetFolder = result.uri.toString()
+            refreshControls(true)
         }
     }
 
@@ -176,7 +181,7 @@ class ReaderCopyImgDialogFragment : BaseDialogFragment<ReaderCopyImgDialogFragme
             var prefix = it.linkedContent?.title ?: it.contentId.toString()
             prefix = prefix.substring(0, min(16, prefix.length))
             val fileUri = it.fileUri.toUri()
-            val extension = if (fileUri.authority == FILECHUNK_AUTHORITY)
+            val extension = if (fileUri.authority == BuildConfig.FILECHUNK_AUTHORITY)
                 getExtension(FileChunkInfo.fromUri(fileUri).displayName)
             else getExtension(it.fileUri)
 
@@ -234,11 +239,7 @@ class ReaderCopyImgDialogFragment : BaseDialogFragment<ReaderCopyImgDialogFragme
         if (null == outputStream) {
             outputStream = getOutputStream(
                 requireContext(),
-                createNewDownloadFile(
-                    requireContext(),
-                    targetFileName,
-                    mimeType
-                )
+                createNewDownloadFile(requireContext(), targetFileName, mimeType)
             )
             docFile = null
             file = getDownloadsFolder()

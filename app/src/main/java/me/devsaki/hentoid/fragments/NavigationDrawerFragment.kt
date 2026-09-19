@@ -1,10 +1,8 @@
 package me.devsaki.hentoid.fragments
 
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener
-import android.os.Build
 import android.os.Bundle
 import android.text.SpannableString
 import android.text.SpannableStringBuilder
@@ -33,6 +31,7 @@ import me.devsaki.hentoid.activities.settings.SettingsActivity
 import me.devsaki.hentoid.activities.settings.SettingsSourceSelectActivity
 import me.devsaki.hentoid.activities.sources.RedditLaunchActivity
 import me.devsaki.hentoid.activities.sources.WelcomeActivity
+import me.devsaki.hentoid.core.launchActivity
 import me.devsaki.hentoid.core.requireById
 import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.databinding.FragmentNavigationDrawerBinding
@@ -40,6 +39,7 @@ import me.devsaki.hentoid.enums.Grouping
 import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.events.AppRepoInfoEvent
 import me.devsaki.hentoid.events.CommunicationEvent
+import me.devsaki.hentoid.fragments.settings.SelectSitesDialogFragment
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.getRandomInt
 import me.devsaki.hentoid.util.getTextColorForBackground
@@ -56,7 +56,7 @@ import kotlin.math.floor
 private const val MENU_FACTOR = 1000
 
 class NavigationDrawerFragment : Fragment(R.layout.fragment_navigation_drawer),
-    SelectSiteDialogFragment.Parent {
+    SelectSiteDialogFragment.Parent, SelectSitesDialogFragment.Parent {
 
     enum class NavItem {
         LIBRARY, FAV_BOOK, BROWSER, EDIT_SOURCES, QUEUE, ABOUT
@@ -138,7 +138,11 @@ class NavigationDrawerFragment : Fragment(R.layout.fragment_navigation_drawer),
                         }
                     }
 
-                    NavItem.EDIT_SOURCES.ordinal -> launchActivity(SettingsSourceSelectActivity::class.java)
+                    NavItem.EDIT_SOURCES.ordinal -> SelectSitesDialogFragment.invoke(
+                        this@NavigationDrawerFragment,
+                        Settings.activeSites
+                    )
+
                     NavItem.QUEUE.ordinal -> launchActivity(QueueActivity::class.java)
                 }
 
@@ -301,6 +305,14 @@ class NavigationDrawerFragment : Fragment(R.layout.fragment_navigation_drawer),
                 )
                 addMenu(
                     submenu1,
+                    R.string.groups_lrr,
+                    R.drawable.ic_lrr,
+                    NavItem.LIBRARY,
+                    Grouping.LRR.id,
+                    Settings.groupingDisplay == Grouping.LRR.id
+                ).isVisible = Settings.lrrEndpoint.startsWith("http")
+                addMenu(
+                    submenu1,
                     R.string.fav_pages,
                     R.drawable.ic_page_fav,
                     NavItem.FAV_BOOK
@@ -328,8 +340,10 @@ class NavigationDrawerFragment : Fragment(R.layout.fragment_navigation_drawer),
                 isSelected = origin == NavItem.BROWSER && this@NavigationDrawerFragment.site == Site.NONE
             )
 
-            val txt = SpannableStringBuilder.valueOf(resources.getText(R.string.title_activity_queue))
-            if (totalQueue > 0) txt.append("  ").append(formatCountBadge(requireContext(), totalQueue))
+            val txt =
+                SpannableStringBuilder.valueOf(resources.getText(R.string.title_activity_queue))
+            if (totalQueue > 0) txt.append("  ")
+                .append(formatCountBadge(requireContext(), totalQueue))
             addMenu(
                 submenu2,
                 txt,
@@ -405,29 +419,19 @@ class NavigationDrawerFragment : Fragment(R.layout.fragment_navigation_drawer),
         return badgeDrawable.toSpannable()
     }
 
-    @Suppress("DEPRECATION")
-    private fun launchActivity(
+    fun launchActivity(
         activityClass: Class<*>,
         bundle: Bundle? = null,
         clearTop: Boolean = false,
         reorderToFront: Boolean = false
     ) {
-        val intent = Intent(requireActivity(), activityClass)
-        // If FLAG_ACTIVITY_CLEAR_TOP is not set,
-        // it can interfere with Double-Back (press back twice) to exit
-        if (clearTop) intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
-        //if (reorderToFront) intent.flags = intent.flags or Intent.FLAG_ACTIVITY_PREVIOUS_IS_TOP
-        if (bundle != null) intent.putExtras(bundle)
-        requireContext().startActivity(intent)
-        activity?.apply {
-            if (Build.VERSION.SDK_INT >= 34) {
-                overrideActivityTransition(Activity.OVERRIDE_TRANSITION_OPEN, 0, 0)
-            } else {
-                overridePendingTransition(0, 0)
-            }
-            EventBus.getDefault().post(CommunicationEvent(CommunicationEvent.Type.CLOSE_DRAWER))
-        }
-        if (reorderToFront) activity?.finish()
+        requireContext().launchActivity(
+            requireActivity(),
+            activityClass,
+            bundle,
+            clearTop,
+            reorderToFront
+        )
     }
 
     private fun launchFavBook() {
@@ -482,5 +486,9 @@ class NavigationDrawerFragment : Fragment(R.layout.fragment_navigation_drawer),
 
     override fun onSiteSelected(site: Site, altCode: Int) {
         launchBrowserFor(requireContext(), site)
+    }
+
+    override fun onSitesSelected(sites: List<Site>) {
+        Settings.activeSites = sites
     }
 }

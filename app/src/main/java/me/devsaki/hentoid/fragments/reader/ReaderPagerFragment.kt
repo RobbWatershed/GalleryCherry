@@ -24,6 +24,7 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.PARENT_ID
 import androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.UNSET
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.toDrawable
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -88,6 +89,7 @@ import me.devsaki.hentoid.util.exception.ContentNotProcessedException
 import me.devsaki.hentoid.util.getThemedColor
 import me.devsaki.hentoid.util.openReader
 import me.devsaki.hentoid.util.toast
+import me.devsaki.hentoid.util.toastShort
 import me.devsaki.hentoid.util.tryShowMenuIcons
 import me.devsaki.hentoid.viewmodels.ReaderViewModel
 import me.devsaki.hentoid.viewmodels.ViewModelFactory
@@ -145,6 +147,9 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
     // True if current content is dynamic
     private var isContentDynamic = false
 
+    // True if current content is temporary
+    private var isContentTemporary = false
+
     // True if current page is favourited
     private var isPageFavourite = false
 
@@ -155,6 +160,7 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
     private var isFoldersMode = false
 
     private lateinit var indexRefreshDebouncer: Debouncer<Int>
+    private lateinit var imagesRefreshDebouncer: Debouncer<List<ImageFile>>
     private lateinit var processPositionDebouncer: Debouncer<Pair<Int, Int>>
     private lateinit var rescaleDebouncer: Debouncer<Float>
     private lateinit var adapterRescaleDebouncer: Debouncer<Float>
@@ -165,7 +171,7 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
     private var isComputingImageList = false
     private var targetStartingIndex = -1
     private var startingIndexLoaded = false
-    private var contentId: Long = -1
+    private var contentId = -1L
 
     // == UI ==
     private var binding: FragmentReaderPagerBinding? = null
@@ -201,6 +207,9 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
         super.onCreate(savedInstanceState)
         indexRefreshDebouncer = Debouncer(lifecycleScope, 75) { startingIndex ->
             applyStartingIndexInternal(startingIndex)
+        }
+        imagesRefreshDebouncer = Debouncer(lifecycleScope, 150) { imgs ->
+            onImagesChangedInternal(imgs)
         }
         processPositionDebouncer = Debouncer(lifecycleScope, 75) { pair ->
             onPageChanged(pair.first, pair.second)
@@ -241,6 +250,13 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
         onUpdateSwipeToFling()
         onUpdatePageNumDisplay()
         onUpdateSwipeToTurn()
+
+        // Overlay
+        binding?.viewerColourFilter?.apply {
+            isVisible = Settings.readerColorFilter != 0
+            if (isVisible)
+                foreground = Settings.readerColorFilter.toDrawable()
+        }
 
         // Top bar controls
         binding?.let {
@@ -317,6 +333,7 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
 
     override fun onDestroyView() {
         indexRefreshDebouncer.clear()
+        imagesRefreshDebouncer.clear()
         processPositionDebouncer.clear()
         rescaleDebouncer.clear()
         adapterRescaleDebouncer.clear()
@@ -347,8 +364,9 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
         outState.putBoolean(KEY_GALLERY_SHOWN, hasGalleryBeenShown)
         // Memorize current page
         outState.putInt(KEY_IMG_INDEX, absImageIndex)
-        slideshowMgr.onSaveInstanceState(outState)
-        viewModel.setViewerStartingIndex(absImageIndex)
+        // Might crash in certain circumstances (rotating screen), hence the extra checks
+        if (this::slideshowMgr.isInitialized) slideshowMgr.onSaveInstanceState(outState)
+        if (this::viewModel.isInitialized) viewModel.setViewerStartingIndex(absImageIndex)
     }
 
     override fun onViewStateRestored(savedInstanceState: Bundle?) {
@@ -374,7 +392,12 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
                     .setOnVolumeDownListener { b -> if (b && Settings.isReaderVolumeToSwitchBooks) navigator.previousContainer() else previousPage() }
                     .setOnVolumeUpListener { b -> if (b && Settings.isReaderVolumeToSwitchBooks) navigator.nextContainer() else nextPage() }
                     .setOnKeyLeftListener { onLeftTap() }.setOnKeyRightListener { onRightTap() }
-                    .setOnBackListener { onBackClick() })
+                    .setOnBackListener { onBackClick() }
+                    .setOnPreviousChapterBook { navigator.previousContainer() }
+                    .setOnNextChapterBook { navigator.nextContainer() }
+                    .setOnPreviousPage { previousPage() }
+                    .setOnNextPage { nextPage() }
+            )
     }
 
     override fun onResume() {
@@ -688,14 +711,16 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
                     )
                 )
             )
-            favMenu.addSubmarineItem(
-                SubmarineItem(
-                    ContextCompat.getDrawable(
-                        requireContext(),
-                        if (isPageFavourite) R.drawable.ic_page_fav else R.drawable.ic_page
+            if (!isContentTemporary) {
+                favMenu.addSubmarineItem(
+                    SubmarineItem(
+                        ContextCompat.getDrawable(
+                            requireContext(),
+                            if (isPageFavourite) R.drawable.ic_page_fav else R.drawable.ic_page
+                        )
                     )
                 )
-            )
+            }
             favMenu.floats()
         }
     }
@@ -750,12 +775,19 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
      */
     private fun onImagesChanged(images: List<ImageFile>) {
         if (BuildConfig.DEBUG) {
-            Timber.v("IMAGES CHANGED (total : ${images.size})")
+            Timber.v("IMAGES CHANGED (total : ${images.size}, ordered using 1-based page number)")
+        }
+        imagesRefreshDebouncer.submit(images)
+    }
+
+    private fun onImagesChangedInternal(images: List<ImageFile>) {
+        if (BuildConfig.DEBUG) {
             images.forEach {
-                if (it.displayUri.isNotEmpty()) Timber.v("[%d] %s", it.order, it.displayUri)
+                if (it.displayUri.isNotEmpty()) Timber.v(
+                    "[${it.order}] ${it.displayUri} (${it.imageType}) ${System.identityHashCode(it)}"
+                )
             }
         }
-
         isComputingImageList = true
         binding?.apply {
             adapter.reset()
@@ -791,7 +823,7 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
      * @param startingIndex Book's starting image index
      */
     private fun onStartingIndexChanged(startingIndex: Int) {
-        if (!isComputingImageList) applyStartingIndex(startingIndex) // Returning from gallery screen
+        if (!isComputingImageList && adapter.itemCount > 0) applyStartingIndex(startingIndex) // Returning from gallery screen
         else targetStartingIndex = startingIndex // Loading a new book
     }
 
@@ -832,25 +864,33 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
         isContentDynamic = content.isDynamic
         isContentFavourite = content.favourite
         isFoldersMode = content.status == StatusContent.STORAGE_RESOURCE
+        isContentTemporary = content.status == StatusContent.SAVED
         // Wait for starting index only if content actually changes
         if (content.id != contentId) {
             adjustDisplay(content.site, content.bookPreferences)
             startingIndexLoaded = false
         }
+
+        // Signal loading of a new book after the initial load
+        if (contentId > 0 && contentId != content.id) toastShort(
+            R.string.book_loaded,
+            content.title
+        )
         contentId = content.id
+
         absImageIndex = -1 // Will be updated by onStartingIndexChanged
         reachedPosition = -1
         navigator.onContentChanged(content)
         updateFavouriteButtonIcon()
         updateInformationMicroMenu()
 
-        showFavoritePagesMenu.isVisible = !isContentDynamic && !isFoldersMode
-        deleteMenu.isVisible = !isContentDynamic
+        showFavoritePagesMenu.isVisible = !isContentDynamic && !isFoldersMode && !isContentTemporary
+        deleteMenu.isVisible = !isContentDynamic && !isContentTemporary
 
         // Display "redownload images" button if folder no longer exists and is not external nor dynamic
         binding?.apply {
             viewerRedownloadBtn.isVisible =
-                (!content.folderExists && !content.isDynamic && content.status != StatusContent.EXTERNAL)
+                (!content.folderExists && !content.isDynamic && content.status != StatusContent.EXTERNAL && !isContentTemporary)
         }
     }
 
@@ -1000,6 +1040,13 @@ class ReaderPagerFragment : Fragment(R.layout.fragment_reader_pager),
     override fun onContentSettingsChanged(newPrefs: Map<String, String>) {
         viewModel.updateContentPreferences(newPrefs, absImageIndex)
         bookPreferences = newPrefs
+    }
+
+    override fun onFilterColorChanged(color: Int) {
+        binding?.viewerColourFilter?.apply {
+            isVisible = color != 0
+            if (isVisible) foreground = color.toDrawable()
+        }
     }
 
     private fun onUpdatePrefsScreenOn() {

@@ -22,6 +22,7 @@ import me.devsaki.hentoid.util.Settings.Value.VIEWER_ORIENTATION_VERTICAL
 import me.devsaki.hentoid.util.Settings.Value.VIEWER_SLIDESHOW_DELAY_05
 import me.devsaki.hentoid.util.Settings.Value.VIEWER_SLIDESHOW_DELAY_1
 import me.devsaki.hentoid.util.Settings.Value.VIEWER_SLIDESHOW_DELAY_16
+import me.devsaki.hentoid.util.Settings.Value.VIEWER_SLIDESHOW_DELAY_30
 import me.devsaki.hentoid.util.Settings.Value.VIEWER_SLIDESHOW_DELAY_4
 import me.devsaki.hentoid.util.Settings.Value.VIEWER_SLIDESHOW_DELAY_8
 import me.devsaki.hentoid.util.Settings.Value.VIEWER_SLIDESHOW_FOLLOW_CONTINUOUS
@@ -93,10 +94,9 @@ class ReaderSlideshow(private val pager: Pager, lifecycleScope: LifecycleCorouti
                 }
             entries[value.toInt()]
         }
-        slider.onFocusChangeListener =
-            OnFocusChangeListener { _: View?, hasFocus: Boolean ->
-                if (!hasFocus) slider.visibility = View.GONE
-            }
+        slider.onFocusChangeListener = OnFocusChangeListener { _, hasFocus: Boolean ->
+            if (!hasFocus) slider.visibility = View.GONE
+        }
         slider.addOnSliderTouchListener(object : Slider.OnSliderTouchListener {
             override fun onStartTrackingTouch(slider: Slider) {
                 slideshowSliderDebouncer.clear()
@@ -223,6 +223,7 @@ class ReaderSlideshow(private val pager: Pager, lifecycleScope: LifecycleCorouti
             VIEWER_SLIDESHOW_DELAY_4 -> 4f
             VIEWER_SLIDESHOW_DELAY_8 -> 8f
             VIEWER_SLIDESHOW_DELAY_16 -> 16f
+            VIEWER_SLIDESHOW_DELAY_30 -> 30f
             else -> 2f
         }
         return Pair(delayPref, factor)

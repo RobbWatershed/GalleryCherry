@@ -63,12 +63,9 @@
     <string name="pref_browser_resume_last_on">Bármely webhely az utoljára megtekintett oldalon nyílik meg</string>
     <string name="pref_browser_dl_action_title">Letöltési akció</string>
     <string name="pref_browser_quick_dl_title">Gyors letöltés</string>
-    <string name="pref_browser_quick_dl_summary">A könyvek listájának oldalán, koppintson hosszan a letölteni kívánt könyvre</string>
     <string name="pref_browser_nhentai_invisible_blacklist_title">A nhentai feketelistán szereplő könyvek elrejtése</string>
     <string name="pref_browser_nhentai_invisible_blacklist_off">Nhentai-feketelistára került könyvek elmosódnak</string>
     <string name="pref_browser_nhentai_invisible_blacklist_on">A Nhentai-feketelistán szereplő könyvek láthatatlanok</string>
-    <string name="pref_browser_quick_dl_threshold_title">Gyors letöltés, hosszú küszöbű lenyomás esetén*</string>
-    <string name="pref_browser_quick_dl_threshold_summary">Tartsa nyomva ennyi ideig a gyors letöltés elindításához\Jelenleg:<x:g example="1 s" id="time">%s</x:g></string>
     <string name="pref_browser_duplicate_detector">Duplikátum detektor</string>
     <string name="pref_browser_duplicate_ask_title">Duplikátumok ellenőrzése</string>
     <string name="pref_browser_duplicate_ask_off">Nem: mindig töltse le</string>

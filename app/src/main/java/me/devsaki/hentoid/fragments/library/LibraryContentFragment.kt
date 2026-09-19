@@ -53,11 +53,13 @@ import me.devsaki.hentoid.activities.LibraryActivity
 import me.devsaki.hentoid.activities.MetadataEditActivity
 import me.devsaki.hentoid.activities.QueueActivity
 import me.devsaki.hentoid.activities.SearchActivity
+import me.devsaki.hentoid.activities.TransformActivity
 import me.devsaki.hentoid.activities.bundles.ContentItemBundle
 import me.devsaki.hentoid.activities.bundles.MetaEditActivityBundle
 import me.devsaki.hentoid.activities.bundles.SearchActivityBundle
 import me.devsaki.hentoid.activities.bundles.SearchActivityBundle.Companion.buildSearchUri
 import me.devsaki.hentoid.activities.bundles.SearchActivityBundle.Companion.parseSearchUri
+import me.devsaki.hentoid.activities.bundles.TransformActivityBundle
 import me.devsaki.hentoid.core.Consumer
 import me.devsaki.hentoid.database.domains.Chapter
 import me.devsaki.hentoid.database.domains.Content
@@ -70,7 +72,6 @@ import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.events.CommunicationEvent
 import me.devsaki.hentoid.events.ProcessEvent
 import me.devsaki.hentoid.fragments.SelectSiteDialogFragment
-import me.devsaki.hentoid.fragments.library.LibraryTransformDialogFragment.Companion.invoke
 import me.devsaki.hentoid.fragments.library.MergeDialogFragment.Companion.invoke
 import me.devsaki.hentoid.fragments.library.RatingDialogFragment.Companion.invoke
 import me.devsaki.hentoid.fragments.library.SplitDialogFragment.Companion.invoke
@@ -131,7 +132,6 @@ class LibraryContentFragment : Fragment(), ChangeGroupDialogFragment.Parent,
     MergeDialogFragment.Parent,
     SplitDialogFragment.Parent,
     RatingDialogFragment.Parent,
-    LibraryTransformDialogFragment.Parent,
     SelectSiteDialogFragment.Parent,
     ChangeStorageDialogFragment.Parent,
     PopupTextProvider,
@@ -286,7 +286,7 @@ class LibraryContentFragment : Fragment(), ChangeGroupDialogFragment.Parent,
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         register(SelectExtensionFactory())
-        EventBus.getDefault().register(this)
+        if (!EventBus.getDefault().isRegistered(this)) EventBus.getDefault().register(this)
     }
 
     override fun onCreateView(
@@ -510,7 +510,7 @@ class LibraryContentFragment : Fragment(), ChangeGroupDialogFragment.Parent,
             R.id.action_merge -> {
                 invoke(
                     this,
-                    selectExtension!!.selectedItems.mapNotNull { ci -> ci.content },
+                    selectExtension!!.selectedItems.mapNotNull { it.content },
                     false
                 )
                 keepToolbar = true
@@ -523,7 +523,7 @@ class LibraryContentFragment : Fragment(), ChangeGroupDialogFragment.Parent,
             }
 
             R.id.action_transform -> {
-                val contents = selectExtension!!.selectedItems.mapNotNull { ci -> ci.content }
+                val contents = selectExtension!!.selectedItems.mapNotNull { it.content }
                 if (contents.size > 1000) {
                     snack(R.string.transform_limit)
                     return false
@@ -532,7 +532,11 @@ class LibraryContentFragment : Fragment(), ChangeGroupDialogFragment.Parent,
                     snack(R.string.invalid_selection_generic)
                     return false
                 }
-                invoke(this, contents)
+                val transformIntent = Intent(this.context, TransformActivity::class.java)
+                val builder = TransformActivityBundle()
+                builder.contentIds = contents.map { it.id }.toLongArray()
+                transformIntent.putExtras(builder.bundle)
+                requireContext().startActivity(transformIntent)
                 keepToolbar = true
             }
 
@@ -730,13 +734,14 @@ class LibraryContentFragment : Fragment(), ChangeGroupDialogFragment.Parent,
         binding?.recyclerView?.let {
             showRedownloadMenu(
                 requireContext(),
+                false,
                 contentsToRedownload.isNotEmpty(),
                 contentsToUpdate.isNotEmpty(),
                 it,
                 this
             ) { _, i: PowerMenuItem ->
-                if (0 == i.tag) redownloadFromScratch(contentsToRedownload) // Redownload images
-                else viewModel.downloadContent( // Update metadata only
+                if (1 == i.tag) redownloadFromScratch(contentsToRedownload) // Redownload images
+                else if (2 == i.tag) viewModel.downloadContent( // Update metadata only
                     contentsToUpdate,
                     reparseContent = true,
                     reparseImages = false,
@@ -834,7 +839,7 @@ class LibraryContentFragment : Fragment(), ChangeGroupDialogFragment.Parent,
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     fun onCommunicationEvent(event: CommunicationEvent) {
-        if (event.recipient != CommunicationEvent.Recipient.CONTENTS && event.recipient != CommunicationEvent.Recipient.ALL) return
+        if (event.recipient != CommunicationEvent.Recipient.LIBRARY_CONTENTS && event.recipient != CommunicationEvent.Recipient.ALL) return
         when (event.type) {
             CommunicationEvent.Type.UPDATE_TOOLBAR -> {
                 addCustomBackControl()
@@ -844,8 +849,8 @@ class LibraryContentFragment : Fragment(), ChangeGroupDialogFragment.Parent,
                 }
             }
 
-            CommunicationEvent.Type.SEARCH -> onSubmitSearch(event.message)
-            CommunicationEvent.Type.SEARCH_NO_HISTORY -> onSubmitSearch(event.message, false)
+            CommunicationEvent.Type.SEARCH -> onSubmitSearch()
+            CommunicationEvent.Type.SEARCH_NO_HISTORY -> onSubmitSearch(false)
             CommunicationEvent.Type.ADVANCED_SEARCH -> onAdvancedSearchButtonClick()
             CommunicationEvent.Type.UNSELECT -> leaveSelectionMode()
             CommunicationEvent.Type.UPDATE_EDIT_MODE -> setPagingMethod(
@@ -863,7 +868,7 @@ class LibraryContentFragment : Fragment(), ChangeGroupDialogFragment.Parent,
 
     override fun onDestroy() {
         Settings.unregisterPrefsChangedListener(prefsListener)
-        EventBus.getDefault().unregister(this)
+        if (EventBus.getDefault().isRegistered(this)) EventBus.getDefault().unregister(this)
         binding = null
         callback?.remove()
         super.onDestroy()
@@ -928,7 +933,10 @@ class LibraryContentFragment : Fragment(), ChangeGroupDialogFragment.Parent,
         }
     }
 
-    private fun onSubmitSearch(query: String, recordHistory : Boolean = true) {
+    private fun onSubmitSearch(recordHistory: Boolean = true) {
+        val act = activity.get() ?: return
+        val query = act.getQuery()
+        val criteria = act.getSearchCriteria()
         if (query.startsWith("http")) { // Quick-open a page
             when (Site.searchByUrl(query)) {
                 null -> snack(R.string.malformed_url)
@@ -936,7 +944,7 @@ class LibraryContentFragment : Fragment(), ChangeGroupDialogFragment.Parent,
                 else -> launchBrowserFor(requireContext(), query)
             }
         } else {
-            viewModel.searchContentFullText(query, recordHistory)
+            viewModel.searchContent(query, criteria, recordHistory)
         }
     }
 
@@ -950,11 +958,11 @@ class LibraryContentFragment : Fragment(), ChangeGroupDialogFragment.Parent,
         if (!advancedSearchCriteria.isEmpty()) {
             builder.uri = buildSearchUri(advancedSearchCriteria, "").toString()
         }
-        if (group != null) builder.groupId = group!!.id
+        group?.let { builder.groupId = it.id }
         builder.excludeMode = excludeClicked
         search.putExtras(builder.bundle)
         advancedSearchReturnLauncher.launch(search)
-        activity.get()!!.collapseSearchMenu()
+        activity.get()?.collapseSearchMenu()
     }
 
     /**
@@ -967,7 +975,7 @@ class LibraryContentFragment : Fragment(), ChangeGroupDialogFragment.Parent,
             excludeClicked = parser.excludeMode
             val criteria = parseSearchUri(searchUri)
             setMetadata(criteria)
-            viewModel.searchContent(getQuery(), criteria, searchUri)
+            viewModel.searchContent(getQuery(), criteria)
         }
     }
 

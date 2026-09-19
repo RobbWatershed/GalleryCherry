@@ -3,16 +3,17 @@ package me.devsaki.hentoid.parsers
 import me.devsaki.hentoid.database.domains.Attribute
 import me.devsaki.hentoid.database.domains.AttributeMap
 import me.devsaki.hentoid.database.domains.Chapter
+import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.database.domains.ImageFile
 import me.devsaki.hentoid.enums.AttributeType
 import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.enums.StatusContent
-import me.devsaki.hentoid.events.DownloadPreparationEvent
 import me.devsaki.hentoid.parsers.content.NO_TITLE
 import me.devsaki.hentoid.util.MAP_STRINGS
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.completedStr
 import me.devsaki.hentoid.util.isNumeric
+import me.devsaki.hentoid.util.isRangeChapters
 import me.devsaki.hentoid.util.network.HEADER_COOKIE_KEY
 import me.devsaki.hentoid.util.network.HEADER_REFERER_KEY
 import me.devsaki.hentoid.util.network.fixUrl
@@ -25,7 +26,6 @@ import me.devsaki.hentoid.util.rangeToNumbers
 import me.devsaki.hentoid.util.removeNonPrintableChars
 import me.devsaki.hentoid.util.serializeToJson
 import org.apache.commons.text.StringEscapeUtils
-import org.greenrobot.eventbus.EventBus
 import org.jsoup.nodes.Element
 import java.util.regex.Pattern
 
@@ -213,7 +213,7 @@ fun urlsToImageFiles(
     // Remove duplicates and MACOSX indexes (yes, it does happen!) before creating the ImageFiles
     val imgUrlsUnique = imgUrls.distinct().filterNot { it.contains("__MACOSX") || it.isEmpty() }
     val rangeIndexes =
-        if (range.isBlank()) imgUrlsUnique.indices
+        if (range.isBlank() || isRangeChapters(range)) imgUrlsUnique.indices
         else rangeToNumbers(range)
             .filter { it >= initialOrder && it < initialOrder + imgUrlsUnique.count() }
             .map { it - initialOrder }
@@ -252,18 +252,6 @@ fun urlToImageFile(
     result.computeName(totalBookPages)
     if (chapter != null) result.setChapter(chapter)
     return result
-}
-
-/**
- * Signal download preparation event for the given processed elements
- *
- * @param contentId Online content ID being processed
- * @param storedId  Stored content ID being processed
- * @param progress  Progress (0.0 -> 1.0)
- */
-fun signalProgress(contentId: Long, storedId: Long, progress: Float) {
-    EventBus.getDefault()
-        .post(DownloadPreparationEvent(contentId, storedId, progress))
 }
 
 /**
@@ -352,6 +340,9 @@ fun getChaptersFromLinks(
     val urls: MutableSet<String> = HashSet()
 
     // First extract data and filter URL duplicates
+    //  first : url
+    //  second : name
+    //  third : upload date
     val chapterData: MutableList<Triple<String, String, Long>> = ArrayList()
     for (e in chapterLinks) {
         val url = fixUrl(e.attr("href").trim(), site.url)
@@ -538,4 +529,18 @@ fun normalizeStatus(attrs: AttributeMap) {
     attrs[AttributeType.TAG]
         ?.filter { it.name.equals("completed", true) }
         ?.forEach { it.name = completedStr }
+}
+
+fun fetchHeaders(content: Content): List<Pair<String, String>> {
+    return fetchHeaders(content.galleryUrl, content.downloadParams)
+}
+
+fun fetchHeaders(
+    url: String,
+    downloadParams: String? = null
+): List<Pair<String, String>> {
+    val headers: MutableList<Pair<String, String>> = ArrayList()
+    if (downloadParams != null) addSavedCookiesToHeader(downloadParams, headers)
+    headers.add(Pair(HEADER_REFERER_KEY, url))
+    return headers
 }

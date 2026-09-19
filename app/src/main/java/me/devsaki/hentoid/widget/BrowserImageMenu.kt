@@ -1,0 +1,54 @@
+package me.devsaki.hentoid.widget
+
+import android.content.Context
+import android.graphics.Typeface
+import android.view.View
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.LifecycleOwner
+import com.skydoves.powermenu.MenuAnimation
+import com.skydoves.powermenu.OnMenuItemClickListener
+import com.skydoves.powermenu.PowerMenu
+import com.skydoves.powermenu.PowerMenuItem
+import me.devsaki.hentoid.R
+import me.devsaki.hentoid.util.dimensAsDp
+import me.devsaki.hentoid.util.getThemedColor
+
+
+fun showImageMenu(
+    context: Context,
+    anchor: View,
+    x : Int,
+    y : Int,
+    lifecycle: LifecycleOwner,
+    listener: OnMenuItemClickListener<PowerMenuItem?>
+) {
+    val res = context.resources
+    val powerMenu = PowerMenu.Builder(context)
+        .addItem(
+            PowerMenuItem(
+                res.getString(R.string.menu_share),
+                false,
+                R.drawable.ic_action_share
+            )
+        )
+        .addItem(
+            PowerMenuItem(
+                res.getString(R.string.web_download_image),
+                false,
+                R.drawable.ic_action_download
+            )
+        )
+        .setAnimation(MenuAnimation.SHOWUP_TOP_LEFT)
+        .setMenuRadius(10f)
+        .setLifecycleOwner(lifecycle)
+        .setTextColor(ContextCompat.getColor(context, R.color.white_opacity_87))
+        .setTextTypeface(Typeface.DEFAULT)
+        .setMenuColor(context.getThemedColor(R.color.subbar_1_light))
+        .setTextSize(dimensAsDp(context, R.dimen.text_subtitle_1))
+        .setWidth(res.getDimension(R.dimen.popup_menu_width).toInt())
+        .setAutoDismiss(true)
+        .build()
+    powerMenu.onMenuItemClickListener = listener
+    powerMenu.setIconColor(ContextCompat.getColor(context, R.color.white_opacity_87))
+    powerMenu.showAtLocation(anchor, x, y)
+}

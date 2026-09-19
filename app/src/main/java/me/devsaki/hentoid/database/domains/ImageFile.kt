@@ -297,8 +297,14 @@ data class ImageFile(
 
     val isReadable: Boolean
         get() {
-            if (null == name) return true
+            if (null == name) return true // Defensive; that may happen "thanks to" https://github.com/objectbox/objectbox-java/issues/157
             return !name.startsWith(THUMB_FILE_NAME) && !name.startsWith(EXT_THUMB_FILE_PREFIX)
+        }
+
+    val isUsable: Boolean
+        get() {
+            // NB : pageUrl can be more complex than a plain URL (e.g. ExH / E-H MPV data)
+            return dbFileUri.isNotBlank() || url.startsWith("http") || pageUrl.isNotBlank()
         }
 
     val usableUri: String

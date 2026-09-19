@@ -89,9 +89,7 @@
         android:clickable="true"
         android:focusable="true"
         android:paddingStart="64dp"
-        android:paddingTop="8dp"
         android:paddingEnd="8dp"
-        android:paddingBottom="8dp"
         android:text="@string/export_answer_yes"
         android:textColor="@color/white_opacity_87"
         android:textStyle="italic"
@@ -184,12 +182,22 @@
         tools:visibility="visible" />
 
     <CheckBox
-        android:id="@+id/export_file_queue_chk"
+        android:id="@+id/export_external_library_chk"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:visibility="gone"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/export_groups"
+        tools:text="Export external library (5468 books)"
+        tools:visibility="visible" />
+
+    <CheckBox
+        android:id="@+id/export_file_queue_chk"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/export_external_library_chk"
         tools:text="Export queue (235 books)"
         tools:visibility="visible" />
 
@@ -210,9 +218,7 @@
         android:layout_marginTop="8dp"
         android:background="@color/white_opacity_25"
         android:paddingStart="64dp"
-        android:paddingTop="8dp"
         android:paddingEnd="8dp"
-        android:paddingBottom="8dp"
         android:text="@string/export_warning2"
         android:textColor="@color/white_opacity_87"
         android:textStyle="italic"

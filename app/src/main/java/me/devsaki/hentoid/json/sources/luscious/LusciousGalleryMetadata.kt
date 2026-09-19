@@ -4,6 +4,7 @@ import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import me.devsaki.hentoid.database.domains.ImageFile
 import me.devsaki.hentoid.enums.StatusContent
+import me.devsaki.hentoid.util.isRangeChapters
 import me.devsaki.hentoid.util.rangeToNumbers
 
 
@@ -83,7 +84,7 @@ data class LusciousGalleryMetadata(
         val imageList: List<PictureMetadata> = data.picture.list.items
 
         val rangeIndexes =
-            if (range.isBlank()) imageList.indices
+            if (range.isBlank() || isRangeChapters(range)) imageList.indices
             else rangeToNumbers(range)
                 .filter { it >= offset && it < offset + imageList.count() }
                 .map { it - offset }

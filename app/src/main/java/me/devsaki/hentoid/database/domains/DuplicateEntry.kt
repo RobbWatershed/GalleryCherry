@@ -58,6 +58,7 @@ data class DuplicateEntry(
         val scoreDelta = abs(calcTotalScore() - other.calcTotalScore())
         if (scoreDelta >= 0.01) return calcTotalScore().compareTo(other.calcTotalScore())
 
+        // Sort books with equivalent scores according to their size
         return duplicateSize.compareTo(other.duplicateSize)
     }
 }

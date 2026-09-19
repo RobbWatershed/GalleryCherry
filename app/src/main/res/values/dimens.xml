@@ -88,4 +88,7 @@
     <!-- navigator badges -->
     <dimen name="nav_badge_padding_vertical">5dp</dimen>
     <dimen name="nav_badge_padding_horizontal">5dp</dimen>
+
+    <!-- thumbs -->
+    <dimen name="thumb_max_dim">200dp</dimen>
 </resources>

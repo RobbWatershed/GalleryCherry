@@ -329,8 +329,8 @@ class QueueActivity : BaseActivity(), SelectSiteDialogFragment.Parent {
         }
     }
 
-    private class ScreenSlidePagerAdapter(fa: FragmentActivity?) :
-        FragmentStateAdapter(fa!!) {
+    private class ScreenSlidePagerAdapter(fa: FragmentActivity) :
+        FragmentStateAdapter(fa) {
         override fun createFragment(position: Int): Fragment {
             return if (0 == position) QueueFragment() else ErrorsFragment()
         }
@@ -519,13 +519,13 @@ class QueueActivity : BaseActivity(), SelectSiteDialogFragment.Parent {
         EventBus.getDefault().post(
             CommunicationEvent(
                 CommunicationEvent.Type.ENABLE,
-                if (0 == fragmentIndex) CommunicationEvent.Recipient.QUEUE else CommunicationEvent.Recipient.ERRORS
+                if (0 == fragmentIndex) CommunicationEvent.Recipient.QUEUE_QUEUE else CommunicationEvent.Recipient.QUEUE_ERRORS
             )
         )
         EventBus.getDefault().post(
             CommunicationEvent(
                 CommunicationEvent.Type.DISABLE,
-                if (0 == fragmentIndex) CommunicationEvent.Recipient.ERRORS else CommunicationEvent.Recipient.QUEUE
+                if (0 == fragmentIndex) CommunicationEvent.Recipient.QUEUE_ERRORS else CommunicationEvent.Recipient.QUEUE_QUEUE
             )
         )
     }
@@ -544,7 +544,7 @@ class QueueActivity : BaseActivity(), SelectSiteDialogFragment.Parent {
         EventBus.getDefault().post(
             CommunicationEvent(
                 eventType,
-                if (0 == fragmentIndex) CommunicationEvent.Recipient.QUEUE else CommunicationEvent.Recipient.ERRORS,
+                if (0 == fragmentIndex) CommunicationEvent.Recipient.QUEUE_QUEUE else CommunicationEvent.Recipient.QUEUE_ERRORS,
                 message
             )
         )

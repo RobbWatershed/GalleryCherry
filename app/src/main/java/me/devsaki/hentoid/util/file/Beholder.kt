@@ -5,7 +5,10 @@ import android.net.Uri
 import android.provider.DocumentsContract
 import androidx.documentfile.provider.DocumentFile
 import me.devsaki.hentoid.BuildConfig
+import me.devsaki.hentoid.core.BiConsumer
 import me.devsaki.hentoid.core.CHARSET_LATIN_1
+import me.devsaki.hentoid.core.SuspendBiConsumer
+import me.devsaki.hentoid.core.SuspendConsumer
 import me.devsaki.hentoid.util.file.FileExplorer.DocumentProperties
 import me.devsaki.hentoid.util.isSupportedArchivePdf
 import me.devsaki.hentoid.util.startsWith
@@ -63,14 +66,14 @@ object Beholder {
      * @param onChanged  Folder whose number of files has changed
      * @param onDeleted  Removed Content IDs whose Document was referenced in initial, but not found when scanning
      */
-    fun scanAll(
+    suspend fun scanAll(
         ctx: Context,
         explorer: FileExplorer,
         isCanceled: () -> Boolean,
-        onProgress: ((Int, Int) -> Unit)? = null,
-        onNew: ((DocumentFile, Collection<DocumentProperties>) -> Unit)? = null,
-        onChanged: ((DocumentFile) -> Unit)? = null,
-        onDeleted: ((Long) -> Unit)? = null,
+        onProgress: BiConsumer<Int, Int>? = null,
+        onNew: SuspendBiConsumer<DocumentFile, Collection<DocumentProperties>>? = null,
+        onChanged: SuspendConsumer<DocumentFile>? = null,
+        onDeleted: SuspendConsumer<Long>? = null
     ) {
         var index = 0
 
@@ -112,15 +115,15 @@ object Beholder {
         saveSnapshot(ctx)
     }
 
-    fun scanFolders(
+    suspend fun scanFolders(
         ctx: Context,
         explorer: FileExplorer,
         folders: Set<String>,
         isCanceled: () -> Boolean,
-        onProgress: ((Int, Int) -> Unit)? = null,
-        onNew: ((DocumentFile, Collection<DocumentProperties>) -> Unit)? = null,
-        onChanged: ((DocumentFile) -> Unit)? = null,
-        onDeleted: ((Long) -> Unit)? = null,
+        onProgress: BiConsumer<Int, Int>? = null,
+        onNew: SuspendBiConsumer<DocumentFile, Collection<DocumentProperties>>? = null,
+        onChanged: SuspendConsumer<DocumentFile>? = null,
+        onDeleted: SuspendConsumer<Long>? = null
     ) {
         val existingFolders = snapshot.filter { folders.contains(it.key) }
         val newFolders = folders.filter { !existingFolders.containsKey(it) }
@@ -149,15 +152,15 @@ object Beholder {
         saveSnapshot(ctx)
     }
 
-    private fun scanEntryForDelta(
+    private suspend fun scanEntryForDelta(
         ctx: Context,
         rootUriStr: String,
         entry: FolderEntry,
         explorer: FileExplorer,
         isCanceled: () -> Boolean,
-        onNew: ((DocumentFile, Collection<DocumentProperties>) -> Unit)? = null,
-        onChanged: ((DocumentFile) -> Unit)? = null,
-        onDeleted: ((Long) -> Unit)? = null,
+        onNew: SuspendBiConsumer<DocumentFile, Collection<DocumentProperties>>? = null,
+        onChanged: SuspendConsumer<DocumentFile>? = null,
+        onDeleted: SuspendConsumer<Long>? = null
     ) {
         if (BuildConfig.DEBUG) Timber.d("Root : $rootUriStr ${if (entry.isLeaf) "LEAF" else "NODE"} (${entry.nbFiles} files, ${entry.documents} useful docs)")
         if (isCanceled.invoke()) return
@@ -166,7 +169,7 @@ object Beholder {
             try {
                 if (BuildConfig.DEBUG) Timber.d("  Folder found in storage")
                 val files = explorer.listDocumentProperties(
-                    root, null,
+                    root.uri, null,
                     listFolders = true,
                     listFiles = true,
                     stopFirst = false
@@ -233,19 +236,19 @@ object Beholder {
         ignoreList.add(DocumentsContract.getTreeDocumentId(folder))
     }
 
-    fun registerRoot(
+    suspend fun registerRoot(
         ctx: Context,
         rootUri: Uri,
-        onNew: ((DocumentFile, Collection<DocumentProperties>) -> Unit)? = null,
+        onNew: SuspendBiConsumer<DocumentFile, Collection<DocumentProperties>>? = null,
         explorer: FileExplorer? = null
     ) {
         registerRoot(ctx, rootUri.toString(), onNew, explorer)
     }
 
-    fun registerRoot(
+    suspend fun registerRoot(
         ctx: Context,
         rootUriStr: String,
-        onNew: ((DocumentFile, Collection<DocumentProperties>) -> Unit)? = null,
+        onNew: SuspendBiConsumer<DocumentFile, Collection<DocumentProperties>>? = null,
         explorer: FileExplorer? = null
     ) {
         val map = HashMap<String, List<Pair<DocumentFile, Long>>>()
@@ -253,12 +256,12 @@ object Beholder {
         registerContent(ctx, map, onNew, explorer)
     }
 
-    fun registerContent(
+    suspend fun registerContent(
         ctx: Context,
         parentUri: String,
         contentDoc: DocumentFile,
         contentId: Long,
-        onNew: ((DocumentFile, Collection<DocumentProperties>) -> Unit)? = null,
+        onNew: SuspendBiConsumer<DocumentFile, Collection<DocumentProperties>>? = null,
         explorer: FileExplorer? = null
     ) {
         val map = HashMap<String, List<Pair<DocumentFile, Long>>>()
@@ -273,10 +276,10 @@ object Beholder {
      *      First = DocumentFile
      *      Second = Associated Content ID; -1 if no Content
      */
-    fun registerContent(
+    suspend fun registerContent(
         ctx: Context,
         contentDocs: Map<String, List<Pair<DocumentFile, Long>>>,
-        onNew: ((DocumentFile, Collection<DocumentProperties>) -> Unit)? = null,
+        onNew: SuspendBiConsumer<DocumentFile, Collection<DocumentProperties>>? = null,
         inExplorer: FileExplorer? = null
     ) {
         val result: MutableList<FolderEntry> = ArrayList()
@@ -292,7 +295,7 @@ object Beholder {
                 val explorer = inExplorer ?: FileExplorer(ctx, doc)
                 try {
                     val files = explorer.listDocumentProperties(
-                        doc, null,
+                        doc.uri, null,
                         listFolders = true,
                         listFiles = true,
                         stopFirst = false
@@ -301,7 +304,7 @@ object Beholder {
                     onNew?.invoke(doc, usefulEntries)
 
                     val usefulDocs = usefulEntries
-                        .mapNotNull { explorer.convertFromProperties(ctx, doc, it) }
+                        .mapNotNull { explorer.convertFromProperties(ctx, doc.uri, it) }
 
                     result.add(
                         FolderEntry(

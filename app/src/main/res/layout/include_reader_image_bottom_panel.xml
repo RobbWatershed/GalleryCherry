@@ -12,37 +12,55 @@
         android:layout_height="wrap_content">
 
         <ImageView
-            android:id="@+id/ivThumb"
+            android:id="@+id/img_thumb"
             android:layout_width="75dp"
             android:layout_height="100dp"
             android:adjustViewBounds="true"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/image_path"
             tools:ignore="ContentDescription"
             tools:src="@drawable/ic_app"
             tools:tint="@color/dark_gray" />
+
+        <androidx.media3.ui.AspectRatioFrameLayout
+            android:id="@+id/video_frame"
+            android:layout_width="75dp"
+            android:layout_height="100dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="@id/img_thumb"
+            app:layout_constraintEnd_toStartOf="@id/image_path"
+            app:resize_mode="fit">
+
+            <SurfaceView
+                android:id="@+id/video_thumb"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@null"
+                tools:ignore="ContentDescription" />
+        </androidx.media3.ui.AspectRatioFrameLayout>
 
         <TextView
             android:id="@+id/image_path"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
+            android:layout_marginStart="83dp"
             android:textSize="@dimen/caption"
             app:layout_constraintBottom_toTopOf="@id/image_stats"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toEndOf="@id/ivThumb"
-            app:layout_constraintTop_toTopOf="@id/ivThumb"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@id/img_thumb"
             tools:text="root/path1/path2/image_name.jpg" />
 
         <TextView
             android:id="@+id/image_stats"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
             android:textSize="@dimen/caption"
-            app:layout_constraintBottom_toBottomOf="@id/ivThumb"
+            app:layout_constraintBottom_toBottomOf="@id/img_thumb"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toEndOf="@id/ivThumb"
+            app:layout_constraintStart_toStartOf="@id/image_path"
             app:layout_constraintTop_toBottomOf="@id/image_path"
             tools:text="1600 x 2300 (scale 86%) - 8.86 MB" />
 
@@ -52,7 +70,7 @@
             android:layout_height="1dp"
             android:layout_marginTop="12dp"
             android:background="?colorOnPrimary"
-            app:layout_constraintTop_toBottomOf="@id/ivThumb" />
+            app:layout_constraintTop_toBottomOf="@id/img_thumb" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/img_action_favourite"

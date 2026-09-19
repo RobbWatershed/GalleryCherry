@@ -17,3 +17,4 @@ pluginManagement {
 include(":app")
 include(":app:customssiv")
 include(":app:gles-renderer")
+include(":app:webp-encoder")

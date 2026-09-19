@@ -1,14 +1,18 @@
 package me.devsaki.hentoid.fragments.library
 
-import android.net.Uri
+import android.Manifest.permission.READ_EXTERNAL_STORAGE
+import android.Manifest.permission.WRITE_EXTERNAL_STORAGE
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.core.view.children
 import androidx.core.view.isVisible
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequest
@@ -17,21 +21,25 @@ import androidx.work.workDataOf
 import com.google.android.material.textfield.TextInputLayout
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.core.WORK_CLOSEABLE
 import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.databinding.DialogLibraryExportBinding
 import me.devsaki.hentoid.enums.StorageLocation
 import me.devsaki.hentoid.fragments.BaseDialogFragment
+import me.devsaki.hentoid.retrofit.sources.LrrServer
 import me.devsaki.hentoid.util.PickFolderContract
-import me.devsaki.hentoid.util.PickerResult
+import me.devsaki.hentoid.util.PickUriResult
 import me.devsaki.hentoid.util.Settings
-import me.devsaki.hentoid.util.file.RQST_STORAGE_PERMISSION
+import me.devsaki.hentoid.util.file.checkExternalStorageReadWritePermission
 import me.devsaki.hentoid.util.file.getDocumentFromTreeUriString
 import me.devsaki.hentoid.util.file.getFullPathFromUri
-import me.devsaki.hentoid.util.file.requestExternalStorageReadWritePermission
 import me.devsaki.hentoid.util.persistLocationCredentials
 import me.devsaki.hentoid.workers.ArchiveWorker
+import timber.log.Timber
 
 class LibraryExportDialogFragment : BaseDialogFragment<LibraryExportDialogFragment.Parent>() {
     companion object {
@@ -56,11 +64,21 @@ class LibraryExportDialogFragment : BaseDialogFragment<LibraryExportDialogFragme
 
     // === VARIABLES
     private lateinit var contentIds: LongArray
+    private var isLrrOnline = false
 
-    private val pickFolder =
-        registerForActivityResult(PickFolderContract()) {
-            onFolderPickerResult(it.first, it.second)
+    private val pickFolder = registerForActivityResult(PickFolderContract(), ::onFolderPickerResult)
+
+
+    private val storageRequestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { isGranted: Map<String, Boolean> ->
+        if (2 == isGranted.size && isGranted.all { it.value }) {
+            // Run folder picker
+            pickFolder.launch(StorageLocation.NONE)
+        } else {
+            Timber.i("Storage permissions not granted")
         }
+    }
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -90,6 +108,25 @@ class LibraryExportDialogFragment : BaseDialogFragment<LibraryExportDialogFragme
         refreshControls(true)
 
         binding?.apply {
+            val lrrOn = Settings.lrrEndpoint.startsWith("http") && Settings.lrrApiKey.isNotBlank()
+            destinationChoice.addOnButtonCheckedListener { _, checkedId, isChecked ->
+                if (isChecked) {
+                    deviceGrp.isVisible = (checkedId == R.id.dest_device)
+                    lrrStatus.isVisible = !deviceGrp.isVisible
+                    Settings.archiveDestination =
+                        if (checkedId == R.id.dest_device) Settings.Value.DESTINATION_DEVICE
+                        else Settings.Value.DESTINATION_LRR
+
+                    if (checkedId == R.id.dest_lrr) action.isEnabled = isLrrOnline
+                    else action.isEnabled = true
+                }
+            }
+            destinationChoice.check(
+                if (Settings.archiveDestination == Settings.Value.DESTINATION_LRR && lrrOn) R.id.dest_lrr
+                else R.id.dest_device
+            )
+            destinationChoice.isVisible = lrrOn
+
             targetFolder.setOnIndexChangeListener { index ->
                 when (index) {
                     0 -> Settings.archiveTargetFolder =
@@ -97,13 +134,12 @@ class LibraryExportDialogFragment : BaseDialogFragment<LibraryExportDialogFragme
 
                     targetFolder.entries.size - 1 -> { // Last item => Pick a folder
                         // Make sure permissions are set
-                        if (requireActivity().requestExternalStorageReadWritePermission(
-                                RQST_STORAGE_PERMISSION
-                            )
-                        ) {
-                            // Run folder picker
+                        if (requireActivity().checkExternalStorageReadWritePermission())
                             pickFolder.launch(StorageLocation.NONE)
-                        }
+                        else
+                            storageRequestPermissionLauncher.launch(
+                                arrayOf(READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE)
+                            )
                     }
 
                     else -> Settings.archiveTargetFolder = Settings.latestArchiveTargetFolderUri
@@ -127,6 +163,29 @@ class LibraryExportDialogFragment : BaseDialogFragment<LibraryExportDialogFragme
                 refreshControls()
             }
             action.setOnClickListener { onActionClick(buildWorkerParams()) }
+
+            if (lrrOn) {
+                lifecycleScope.launch {
+                    isLrrOnline = withContext(Dispatchers.IO) {
+                        try {
+                            LrrServer.api.info().execute().isSuccessful
+                        } catch (e: Exception) {
+                            Timber.v(e)
+                            false
+                        }
+                    }
+                    if (destinationChoice.checkedButtonId == R.id.dest_lrr)
+                        action.isEnabled = isLrrOnline
+                    lrrStatus.text =
+                        resources.getString(if (isLrrOnline) R.string.lrr_online else R.string.lrr_offline)
+                    lrrStatus.setTextColor(
+                        ContextCompat.getColor(
+                            requireContext(),
+                            if (isLrrOnline) R.color.green else R.color.red
+                        )
+                    )
+                }
+            }
         }
     }
 
@@ -170,23 +229,20 @@ class LibraryExportDialogFragment : BaseDialogFragment<LibraryExportDialogFragme
         }
     }
 
-    private fun onFolderPickerResult(resultCode: PickerResult, uri: Uri) {
-        when (resultCode) {
-            PickerResult.OK -> {
-                // Persist I/O permissions; keep existing ones if present
-                persistLocationCredentials(requireContext(), uri)
-                Settings.latestArchiveTargetFolderUri = uri.toString()
-                Settings.archiveTargetFolder = uri.toString()
-                refreshControls(true)
-            }
-
-            else -> {}
+    private fun onFolderPickerResult(result: PickUriResult) {
+        if (result is PickUriResult.Success) {
+            // Persist I/O permissions; keep existing ones if present
+            persistLocationCredentials(requireContext(), result.uri)
+            Settings.latestArchiveTargetFolderUri = result.uri.toString()
+            Settings.archiveTargetFolder = result.uri.toString()
+            refreshControls(true)
         }
     }
 
     private fun buildWorkerParams(): ArchiveWorker.Params {
         binding!!.apply {
             return ArchiveWorker.Params(
+                Settings.archiveDestination,
                 Settings.archiveTargetFolder,
                 targetFormat.index,
                 backgroundColor.index,

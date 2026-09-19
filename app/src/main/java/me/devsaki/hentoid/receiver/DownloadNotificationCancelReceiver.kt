@@ -14,6 +14,7 @@ import timber.log.Timber
 
 /**
  * Broadcast receiver for the cancel button on download notifications
+ * IMPORTANT : Every Received must be registered on the manifest!
  */
 class DownloadNotificationCancelReceiver : BroadcastReceiver() {
     @OptIn(DelicateCoroutinesApi::class)

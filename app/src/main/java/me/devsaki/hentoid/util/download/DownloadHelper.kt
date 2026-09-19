@@ -13,6 +13,7 @@ import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.enums.StorageLocation
 import me.devsaki.hentoid.events.DownloadEvent
 import me.devsaki.hentoid.parsers.ContentParserFactory
+import me.devsaki.hentoid.retrofit.sources.LrrServer
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.download.DownloadSpeedLimiter.take
 import me.devsaki.hentoid.util.exception.DownloadInterruptedException
@@ -77,9 +78,12 @@ suspend fun downloadPic(
 
         // Prepare request headers
         val headers: MutableList<Pair<String, String>> = ArrayList()
-        headers.add(
-            Pair(HEADER_REFERER_KEY, content.readerUrl)
-        ) // Useful for Hitomi and Toonily
+        // Useful for Hitomi and Toonily
+        headers.add(Pair(HEADER_REFERER_KEY, content.readerUrl))
+        // To work with no-fun mode
+        if (content.site == Site.LRR)
+            headers.add(Pair("Authorization", LrrServer.formatApiKey()))
+
         val result: Uri?
         if (img.needsPageParsing) {
             val pageUrl = fixUrl(img.pageUrl, content.site.url)
@@ -138,7 +142,7 @@ suspend fun downloadPic(
 
         return@withContext Pair(resourceId, Uri.fromFile(targetFile).toString())
     } catch (_: DownloadInterruptedException) {
-        Timber.d("Download interrupted for pic $resourceId" )
+        Timber.d("Download interrupted for pic $resourceId")
     } catch (e: Exception) {
         Timber.w(e)
     }
@@ -153,9 +157,7 @@ suspend fun downloadPic(
  * @param resourceId        Internal ID for the page to download, for remapping purposes (usually, the page index)
  * @param requestHeaders    HTTP request headers to use
  * @param isCanceled        Used to interrupt the download whenever the value switches to true. If that happens, the file will be deleted.
- * @return Pair containing
- * - Left : Downloaded file
- * - Right : Detected mime-type of the downloaded resource
+ * @return Uri of downloaded file
  * @throws UnsupportedContentException, IOException, LimitReachedException, EmptyResultException, DownloadInterruptedException in case something horrible happens
  */
 @Throws(
@@ -296,9 +298,7 @@ suspend fun downloadToFile(
  * @param failFast          True for a shorter read timeout; false for a regular, patient download
  * @param resourceId        ID of the corresponding resource (for logging purposes only)
  * @param notifyProgress    Consumer called with the download progress %
- * @return Pair containing
- * - Left : Uri of downloaded file
- * - Right : Detected mime-type of the downloaded resource
+ * @return Uri of downloaded file
  */
 @Throws(
     IOException::class,
@@ -322,7 +322,7 @@ private suspend fun downloadToFile(
     val headers =
         if (site.noReferer) requestHeaders.filterNot { it.first == HEADER_REFERER_KEY } else requestHeaders
     if (isCanceled?.invoke() == true) throw DownloadInterruptedException("Download interrupted 1")
-    Timber.d("DOWNLOADING %d %s", resourceId, url)
+    Timber.d("DOWNLOADING $resourceId $url")
     val response = if (failFast) getOnlineResourceFast(
         url,
         headers,
@@ -336,21 +336,16 @@ private suspend fun downloadToFile(
         site.useHentoidAgent,
         site.useWebviewAgent
     )
-    Timber.d("DOWNLOADING %d - RESPONSE %s", resourceId, response.code)
+    Timber.d("DOWNLOADING $resourceId - RESPONSE ${response.code}")
     if (response.code >= 300) throw NetworkingException(
         response.code,
-        "Network error " + response.code,
-        null
+        "Network error ${response.code}"
     )
     val body = response.body
     val size = body.contentLength()
     val sizeStr =
         if (size < 1) "unknown" else formatHumanReadableSize(size, context.resources)
-    Timber.d(
-        "STARTING DOWNLOAD FOR %d (size %s)",
-        resourceId,
-        sizeStr
-    )
+    Timber.d("STARTING DOWNLOAD FOR $resourceId (size $sizeStr)")
     var mimeType = forceMimeType ?: ""
     val buffer = ByteArray(DL_IO_BUFFER_SIZE_B)
     val notificationResolution = 250 * 1024 / DL_IO_BUFFER_SIZE_B // Notify every 250 KB
@@ -394,8 +389,7 @@ private suspend fun downloadToFile(
                 notifyProgress?.invoke(100f)
                 out?.flush()
                 if (targetFileUri != null) {
-                    val targetFileSize =
-                        fileSizeFromUri(context, targetFileUri)
+                    val targetFileSize = fileSizeFromUri(context, targetFileUri)
                     Timber.d(
                         "DOWNLOAD %d [%s] WRITTEN TO %s (%s)",
                         resourceId,
@@ -470,7 +464,7 @@ fun selectDownloadLocation(context: Context): StorageLocation {
     return if (Settings.Value.STORAGE_FILL_FALLOVER == strategy) {
         if (100 - memUsage1.freeUsageRatio100 > Settings.storageSwitchThresholdPc) StorageLocation.PRIMARY_2 else StorageLocation.PRIMARY_1
     } else {
-        if (memUsage1.getfreeUsageBytes() > memUsage2.getfreeUsageBytes()) StorageLocation.PRIMARY_1 else StorageLocation.PRIMARY_2
+        if (memUsage1.freeUsageBytes > memUsage2.freeUsageBytes) StorageLocation.PRIMARY_1 else StorageLocation.PRIMARY_2
     }
 }
 
@@ -531,14 +525,11 @@ private fun testDownloadFolder(
             .post(DownloadEvent.fromPauseMotive(DownloadEvent.Motive.DOWNLOAD_FOLDER_NO_CREDENTIALS))
         return false
     }
-    val spaceLeftBytes = MemoryUsageFigures(context, rootFolder).getfreeUsageBytes()
-    if (spaceLeftBytes < 2L * 1024 * 1024) {
+    val memStats = MemoryUsageFigures(context, rootFolder)
+    if (memStats.hasStats && memStats.freeUsageBytes < 2L * 1024 * 1024) {
         Timber.i("Device very low on storage space (<2 MB). Queue paused.")
         EventBus.getDefault().post(
-            DownloadEvent.fromPauseMotive(
-                DownloadEvent.Motive.NO_STORAGE,
-                spaceLeftBytes
-            )
+            DownloadEvent.fromPauseMotive(DownloadEvent.Motive.NO_STORAGE, memStats.freeUsageBytes)
         )
         return false
     }

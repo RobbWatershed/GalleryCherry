@@ -5,8 +5,9 @@ import me.devsaki.hentoid.activities.sources.COOMER_DOMAIN_FILTER
 import me.devsaki.hentoid.database.domains.Chapter
 import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.parsers.urlsToImageFiles
+import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.getRandomInt
-import me.devsaki.hentoid.util.image.isSupportedImage
+import me.devsaki.hentoid.util.image.isSupportedMedia
 import java.net.URLEncoder
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -27,37 +28,43 @@ data class KemonoPost(
     fun getImageUrls(
         serverMapping: Map<String?, String?>? = null
     ): List<String> {
-        // Try using attachments
-        var result = attachments
-            .filter { isSupportedImage(it.path ?: "") }
-            .distinct()
-            .map {
-                val server = serverMapping?.get(it.path)
-                    ?: "https://n${(getRandomInt(4) + 1)}.$COOMER_DOMAIN_FILTER"
-                val origin = URLEncoder.encode(it.name ?: "Attachment", "UTF-8")
-                "$server/data/${it.path}?f=$origin"
+        if (Settings.isKemonoHiRes) {
+            // Try using attachments
+            var result = attachments
+                .filter { isSupportedMedia(it.path ?: "") }
+                .distinct()
+                .map {
+                    val server = serverMapping?.get(it.path)
+                        ?: "https://n${(getRandomInt(4) + 1)}.$COOMER_DOMAIN_FILTER"
+                    val origin = URLEncoder.encode(it.name ?: "Attachment", "UTF-8")
+                    "$server/data/${it.path}?f=$origin"
+                }
+            // Add file as the sole attached image
+            if (result.isEmpty()) {
+                file?.path?.let {
+                    if (isSupportedMedia(it))
+                        result = listOf(
+                            "https://"+"img.$COOMER_DOMAIN_FILTER/thumbnail/data/${it}"
+                                .replace("//", "/")
+                        )
+                }
             }
-        // Add file as the sole attached image
-        if (result.isEmpty()) {
-            file?.path?.let {
-                if (isSupportedImage(it))
-                    result = listOf(
-                        "https://img.$COOMER_DOMAIN_FILTER/thumbnail/data/${it}"
-                            .replace("//", "/")
-                    )
-            }
+            return result
+        } else {
+            return attachments.filter { isSupportedMedia(it.path ?: "") }
+                .distinct()
+                .map { "https://img.$KEMONO_DOMAIN_FILTER/thumbnail/data${it.path}" }
         }
-        return result
     }
 
     fun toChapter(
         userId: String,
-        chapterOrder: AtomicInteger,
+        chapterOrder: Int,
         pageOrder: AtomicInteger
     ): Chapter {
         // One result = one chapter, if it contains at least an usable picture (i.e. not exclusively MEGA links)
         val chapter = Chapter(
-            chapterOrder.andIncrement,
+            chapterOrder,
             "https://$COOMER_DOMAIN_FILTER/${service}/user/${userId}/post/${id}",
             title,
             id

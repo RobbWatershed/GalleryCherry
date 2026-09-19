@@ -133,10 +133,9 @@ class RequestQueue(
      * @param pageIndex    Index of the picture to download
      * @param targetFolder Folder to download to
      * @param killSwitch   Switch to interrupt the download
-     * @return Optional triple with
+     * @return Pair with
      * - The page index
      * - The Uri of the downloaded file
-     * - The Mime-type of the downloaded file
      *
      * The return value is empty if the download fails
      */

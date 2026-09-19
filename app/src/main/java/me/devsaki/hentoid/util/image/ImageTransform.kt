@@ -2,10 +2,13 @@ package me.devsaki.hentoid.util.image
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Bitmap.Config
 import android.graphics.BitmapFactory
 import android.graphics.Point
 import android.net.Uri
 import android.os.Build
+import android.os.Build.VERSION.SDK_INT
+import android.os.ParcelFileDescriptor
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.scale
 import androidx.core.net.toUri
@@ -33,6 +36,12 @@ import me.devsaki.hentoid.util.file.saveBinary
 import me.devsaki.hentoid.util.formatIntAsStr
 import me.devsaki.hentoid.util.getScreenDimensionsPx
 import me.devsaki.hentoid.util.network.UriParts
+import me.devsaki.hentoid.util.rangeToNumbers
+import me.devsaki.hentoid.util.video.GifEncoder
+import me.devsaki.hentoid.util.video.MediaFrameStreamer
+import me.devsaki.hentoid.util.video.VideoEncoder
+import me.devsaki.hentoid.util.video.WebpEncoder
+import me.devsaki.hentoid.util.video.getPenfeiFrameStreamer
 import timber.log.Timber
 import java.io.ByteArrayOutputStream
 import kotlin.math.abs
@@ -45,18 +54,26 @@ import kotlin.math.roundToInt
 data class TransformParams(
     val resizeEnabled: Boolean,
     val resizeMethod: Int,
-    val resize1Ratio: Int,
+    val resize1Ratio: Float,
     val resize2Height: Int,
     val resize2Width: Int,
-    val resize3Ratio: Int,
+    val resize3Ratio: Float,
     val resize5Pages: Int,
     val transcodeMethod: Int,
     val transcoderAll: PictureEncoder,
     val transcoderLossy: PictureEncoder,
     val transcoderLossless: PictureEncoder,
     val transcodeQuality: Int,
+    val transcodeAnim: PictureEncoder,
+    val transcodeAnimQuality: Int,
+    val allowUpscale: Boolean = false,
+    val skipTransformedPics: Boolean = false,
+    val isRangeChapters: Boolean = false,
+    val range: String = "",
     @Transient var forceManhwa: Boolean = false
-)
+) {
+    val rangeList by lazy { rangeToNumbers(range) }
+}
 
 private const val MAX_WEBP_DIMENSION = 16383 // As per WEBP specifications
 private const val MANHWA_MIN_HEIGHT = 4 // Multiple of screen height
@@ -80,45 +97,118 @@ internal data class ManhwaProcessingItem(
     val toConsumeHeight: Int
 )
 
+suspend fun transformAnimated(
+    context: Context,
+    sourceFile: Uri,
+    sourceMime: String,
+    targetFile: Uri,
+    params: TransformParams,
+    isCanceled: () -> Boolean,
+    onProgress: ((Float) -> Unit)? = null
+): Boolean {
+    var pfd: ParcelFileDescriptor? = null
+    val quality =
+        (if (params.transcodeAnim == PictureEncoder.WEBP_LOSSLESS) 100f
+        else params.transcodeAnimQuality.coerceIn(0, 100).toFloat()) / 100f
+
+    var isError = false
+    try {
+        val fs = if (sourceMime.startsWith("video/")) {
+            if (SDK_INT >= 28) {
+                context.contentResolver.openFileDescriptor(sourceFile, "r")?.let {
+                    pfd = it
+                    MediaFrameStreamer(it.fileDescriptor)
+                }
+            } else null
+        } else {
+            getPenfeiFrameStreamer(sourceFile, sourceMime)
+        }
+        if (null == fs) throw RuntimeException("Couldn't find a valid frame streamer for $sourceFile (${sourceMime})")
+
+        val totalFrames = fs.totalFrames
+
+        // Pre-resize the first frame to determine target dimensions
+        val targetDims = if (params.resizeEnabled) {
+            val bogusFrame = createBitmap(fs.dims.x, fs.dims.y, Config.RGB_565)
+            try {
+                val resizedBmp = resize(context, ImageData(bogusFrame), params).first
+                try {
+                    Point(resizedBmp.width, resizedBmp.height)
+                } finally {
+                    resizedBmp.recycle()
+                }
+            } finally {
+                bogusFrame.recycle()
+            }
+        } else fs.dims
+
+        Timber.d("Found frame streamer for $totalFrames frames / ${fs.durationMs}ms")
+        val animEncoder = when (params.transcodeAnim) {
+            PictureEncoder.WEBP_LOSSLESS, PictureEncoder.WEBP_LOSSY -> WebpEncoder(
+                targetDims,
+                quality,
+                (fs.durationMs.toFloat() / fs.totalFrames).roundToInt()
+            )
+
+            PictureEncoder.AVC -> VideoEncoder(
+                targetDims,
+                quality,
+                totalFrames * 1000f / fs.durationMs.toFloat(),
+                totalFrames
+            )
+
+            PictureEncoder.GIF -> GifEncoder(targetDims)
+
+            else -> throw RuntimeException("Couldn't find a valid encoder for ${params.transcodeAnim}")
+        }
+        animEncoder.use {
+            animEncoder.init(context, targetFile)
+            var nbFrames = 1f
+            fs.use {
+                // Launch streaming; call should be blocking
+                fs.streamFrames(isCanceled) { f ->
+                    try {
+                        val outBitmap = if (params.resizeEnabled) {
+                            resize(context, ImageData(f.first), params).first
+                        } else f.first
+                        try {
+                            animEncoder.addFrame(outBitmap, f.second)
+                        } finally {
+                            outBitmap.recycle()
+                        }
+                    } finally {
+                        f.first.recycle()
+                    }
+                    onProgress?.invoke(nbFrames++ / totalFrames)
+                }
+            }
+        }
+    } catch (e: Exception) {
+        Timber.w(e, "An error occured while encoding $targetFile")
+        isError = true
+    } finally {
+        pfd?.close()
+    }
+    return !isError
+}
 
 /**
  * Transform the given raw picture data using the given params
  */
-suspend fun transform(
+suspend fun transformStill(
     context: Context,
     rawData: ByteArray,
     params: TransformParams,
     allowBogusAiRescale: Boolean = false
 ): ByteArray {
-    if (isImageAnimated(rawData)) return rawData
-
-    val dims = getImageDimensions(context, data = rawData)
-    val bitmapOut: Bitmap = if (params.resizeEnabled) {
-        when (params.resizeMethod) {
-            0 -> resizeScreenRatio(rawData, dims, params.resize1Ratio / 100f)
-            1 -> resizeDims(
-                rawData, dims, params.resize2Height, params.resize2Width, params.forceManhwa
-            )
-
-            2 -> resizePlainRatio(rawData, dims, params.resize3Ratio / 100f)
-            3 -> { // AI rescale; handled at Worker level
-                val scale = if (allowBogusAiRescale) 2f else 1f
-                resizePlainRatio(rawData, dims, scale, allowBogusAiRescale)
-            }
-
-            // 4 : Manhwa split/merge; handled at Worker level and requires multiple images
-
-            else -> resizePlainRatio(rawData, dims, 1f)
-        }
-    } else {
-        decodeBitmap(rawData)
-    }
+    val res = resize(context, ImageData(rawData), params, allowBogusAiRescale)
+    val bitmapOut = res.first
+    val noResize = !res.second
 
     val isLossless = isImageLossless(rawData)
     val targetDims = Point(bitmapOut.width, bitmapOut.height)
     try {
-        val encoder = determineEncoder(isLossless, targetDims, params)
-        val noResize = (targetDims.x == dims.x && targetDims.y == dims.y)
+        val encoder = determineEncoder(isLossless, false, targetDims, params)
         return if (noResize && PictureEncoder.JXL_LOSSLESS == encoder
             && getMimeTypeFromPictureBinary(rawData) == MIME_IMAGE_JPEG
         ) {
@@ -126,7 +216,7 @@ suspend fun transform(
         } else {
             transcodeTo(
                 bitmapOut,
-                determineEncoder(isLossless, targetDims, params),
+                determineEncoder(isLossless, false, targetDims, params),
                 params.transcodeQuality
             )
         }
@@ -135,7 +225,43 @@ suspend fun transform(
     }
 }
 
-private fun resizeScreenRatio(source: ByteArray, dims: Point, ratio: Float): Bitmap {
+/**
+ * @return Left : Resized bitmap; Right : True if it has been resized; false if rawData has been untouched
+ */
+suspend fun resize(
+    context: Context,
+    source: ImageData,
+    params: TransformParams,
+    allowBogusAiRescale: Boolean = false
+): Pair<Bitmap, Boolean> {
+    val dims = source.getDimensions(context)
+    val outBmp = if (params.resizeEnabled) {
+        when (params.resizeMethod) {
+            // Max % of screen dimensions
+            0 -> resizeScreenRatio(source, dims, params.resize1Ratio)
+            // Absolute max dimensions
+            1 -> resizeDims(
+                source, dims, params.resize2Height, params.resize2Width, params.forceManhwa
+            )
+            // % of original image dimensions
+            2 -> resizePlainRatio(source, dims, params.resize3Ratio, params.allowUpscale)
+            // AI rescale; handled at Worker level
+            3 -> {
+                val scale = if (allowBogusAiRescale) 2f else 1f
+                resizePlainRatio(source, dims, scale, allowBogusAiRescale)
+            }
+
+            // 4 : Manhwa split/merge; handled at Worker level and requires multiple images
+
+            else -> source.decodeBitmap()
+        }
+    } else {
+        source.decodeBitmap()
+    }
+    return Pair(outBmp, !(outBmp.width == dims.x && outBmp.height == dims.y))
+}
+
+private fun resizeScreenRatio(source: ImageData, dims: Point, ratio: Float): Bitmap {
     val targetWidth = screenWidth * ratio
     val targetHeight = screenHeight * ratio
     val widthRatio = targetWidth / dims.x
@@ -146,7 +272,7 @@ private fun resizeScreenRatio(source: ByteArray, dims: Point, ratio: Float): Bit
 }
 
 private fun resizeDims(
-    source: ByteArray, dims: Point, maxHeight: Int, maxWidth: Int, forceManhwa: Boolean
+    source: ImageData, dims: Point, maxHeight: Int, maxWidth: Int, forceManhwa: Boolean
 ): Bitmap {
     val isManhwa = forceManhwa || (dims.y * 1.0 / dims.x > 3)
     val ratio = if (isManhwa) {
@@ -159,12 +285,12 @@ private fun resizeDims(
 }
 
 private fun resizePlainRatio(
-    source: ByteArray,
+    source: ImageData,
     dims: Point,
     ratio: Float,
     allowUpscale: Boolean = false
 ): Bitmap {
-    val sourceBmp = decodeBitmap(source)
+    val sourceBmp = source.decodeBitmap()
     return if (ratio > 0.99 && ratio < 1.01) sourceBmp // Don't do anything
     else if (ratio > 1.01 && !allowUpscale) sourceBmp // Prevent upscaling
     else {
@@ -180,33 +306,49 @@ private fun resizePlainRatio(
 
 fun determineEncoder(
     isLossless: Boolean,
+    isAnimated: Boolean,
     dims: Point,
     params: TransformParams
 ): PictureEncoder {
-    // AI rescale always produces PNGs
-    if (params.resizeEnabled && 3 == params.resizeMethod) return PictureEncoder.PNG
+    if (!isAnimated) {
+        // AI rescale always produces PNGs
+        if (params.resizeEnabled && 3 == params.resizeMethod) return PictureEncoder.PNG
 
-    // Other cases
-    val result = when (params.transcodeMethod) {
-        0 -> params.transcoderAll
-        else -> if (isLossless) params.transcoderLossless else params.transcoderLossy
+        // Other cases
+        val result = when (params.transcodeMethod) {
+            0 -> params.transcoderAll
+            else -> if (isLossless) params.transcoderLossless else params.transcoderLossy
+        }
+        return if (PictureEncoder.WEBP_LOSSY == result && max(
+                dims.x,
+                dims.y
+            ) > MAX_WEBP_DIMENSION
+        )
+            PictureEncoder.JPEG
+        else if (PictureEncoder.WEBP_LOSSLESS == result && max(
+                dims.x,
+                dims.y
+            ) > MAX_WEBP_DIMENSION
+        )
+            PictureEncoder.PNG
+        else result
+    } else {
+        return params.transcodeAnim
     }
-    return if (PictureEncoder.WEBP_LOSSY == result && max(dims.x, dims.y) > MAX_WEBP_DIMENSION)
-        PictureEncoder.JPEG
-    else if (PictureEncoder.WEBP_LOSSLESS == result && max(dims.x, dims.y) > MAX_WEBP_DIMENSION)
-        PictureEncoder.PNG
-    else result
 }
 
+/**
+ * @param quality 0 to 100
+ */
 @Suppress("DEPRECATION")
 fun transcodeTo(bitmap: Bitmap, encoder: PictureEncoder, quality: Int): ByteArray {
     val output = ByteArrayOutputStream()
     when (encoder) {
-        PictureEncoder.WEBP_LOSSY -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
+        PictureEncoder.WEBP_LOSSY -> if (SDK_INT >= Build.VERSION_CODES.R)
             bitmap.compress(Bitmap.CompressFormat.WEBP_LOSSY, quality, output)
         else bitmap.compress(Bitmap.CompressFormat.WEBP, quality, output)
 
-        PictureEncoder.WEBP_LOSSLESS -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
+        PictureEncoder.WEBP_LOSSLESS -> if (SDK_INT >= Build.VERSION_CODES.R)
             bitmap.compress(Bitmap.CompressFormat.WEBP_LOSSLESS, 100, output)
         else bitmap.compress(Bitmap.CompressFormat.WEBP, 100, output)
 
@@ -230,6 +372,7 @@ fun transcodeTo(bitmap: Bitmap, encoder: PictureEncoder, quality: Int): ByteArra
         )
 
         PictureEncoder.AVIF -> return HeifCoder().encodeAvif(bitmap)
+        else -> return output.toByteArray()
     }
     return output.toByteArray()
 }
@@ -279,7 +422,7 @@ suspend fun transformManhwaChapter(
     // Compute target dims
     val totalHeight = allDims.sumOf { it.y }
 
-    var bitmapBuffer = createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+    var bitmapBuffer = createBitmap(1, 1, Config.ARGB_8888)
     var pixelBuffer = IntArray(PIXEL_BUFFER_HEIGHT)
     var targetDims = Point(1, 1)
 
@@ -348,7 +491,7 @@ suspend fun transformManhwaChapter(
                 bitmapBuffer = createBitmap(
                     dims.x,
                     targetDims.y,
-                    Bitmap.Config.ARGB_8888
+                    Config.ARGB_8888
                 )
                 pixelBuffer = IntArray(dims.x * PIXEL_BUFFER_HEIGHT)
             }
@@ -489,7 +632,7 @@ private suspend fun processManhwaImageQueue(
         createBitmap(
             bitmapBuffer.width,
             totalHeight,
-            Bitmap.Config.ARGB_8888
+            Config.ARGB_8888
         )
     } else bitmapBuffer
 
@@ -547,6 +690,7 @@ private suspend fun processManhwaImageQueue(
         val encoder =
             determineEncoder(
                 containsLossless,
+                false,
                 Point(bmpBuffer.width, bmpBuffer.height),
                 params
             )
@@ -623,9 +767,11 @@ fun clampDims(dims: Point) {
     val targetHeightInScreenDims =
         dims.y.toFloat() * screenWidth.toFloat() / dims.x.toFloat()
     if (targetHeightInScreenDims > maxPicHeight)
-        dims.y = (maxPicHeight.toFloat() * dims.x.toFloat() / screenWidth.toFloat()).roundToInt()
+        dims.y =
+            (maxPicHeight.toFloat() * dims.x.toFloat() / screenWidth.toFloat()).roundToInt()
     else if (targetHeightInScreenDims < minPicHeight)
-        dims.y = (minPicHeight.toFloat() * dims.x.toFloat() / screenWidth.toFloat()).roundToInt()
+        dims.y =
+            (minPicHeight.toFloat() * dims.x.toFloat() / screenWidth.toFloat()).roundToInt()
 }
 
 fun isSingleOutlier(dims: List<Point>, idx: Int): Boolean {
@@ -641,4 +787,28 @@ fun isSingleOutlier(dims: List<Point>, idx: Int): Boolean {
     val nextKO = currentX > nextX || abs(currentX - nextX) / currentX > OUTLIER_WIDTH_THRESHOLD
 
     return if (isFirst) nextKO else if (isLast) previousKO else nextKO && previousKO
+}
+
+@Suppress("ArrayInDataClass")
+data class ImageData(
+    val rawData: ByteArray? = null,
+    val bitmap: Bitmap? = null
+) {
+    constructor(bitmap: Bitmap) : this(null, bitmap)
+    constructor(rawData: ByteArray) : this(rawData, null)
+
+    suspend fun getDimensions(context: Context): Point {
+        return if (bitmap != null) Point(bitmap.width, bitmap.height)
+        else if (rawData != null && !rawData.isEmpty()) getMediaDimensions(
+            context,
+            data = rawData
+        )
+        else Point(0, 0)
+    }
+
+    fun decodeBitmap(): Bitmap {
+        return bitmap
+            ?: if (rawData != null && !rawData.isEmpty()) decodeBitmap(rawData)
+            else createBitmap(0, 0, Config.RGB_565)
+    }
 }

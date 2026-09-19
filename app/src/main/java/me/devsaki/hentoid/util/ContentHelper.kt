@@ -3,7 +3,6 @@ package me.devsaki.hentoid.util
 import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
-import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -52,7 +51,6 @@ import me.devsaki.hentoid.json.JsonContentCollection
 import me.devsaki.hentoid.parsers.ContentParserFactory.getContentParserClass
 import me.devsaki.hentoid.util.AchievementsManager.trigger
 import me.devsaki.hentoid.util.LanguageHelper.getFlagFromLanguage
-import me.devsaki.hentoid.util.Settings.libraryGridCardWidthDP
 import me.devsaki.hentoid.util.download.StorageDownloadManager
 import me.devsaki.hentoid.util.download.downloadPic
 import me.devsaki.hentoid.util.exception.ContentNotProcessedException
@@ -91,13 +89,15 @@ import me.devsaki.hentoid.util.file.getOutputStream
 import me.devsaki.hentoid.util.file.getParent
 import me.devsaki.hentoid.util.file.isSupportedArchive
 import me.devsaki.hentoid.util.file.legacyFileFromUri
-import me.devsaki.hentoid.util.file.listFiles
+import me.devsaki.hentoid.util.file.listDocumentFiles
 import me.devsaki.hentoid.util.file.listFoldersFilter
 import me.devsaki.hentoid.util.file.removeDocument
 import me.devsaki.hentoid.util.file.removeFile
+import me.devsaki.hentoid.util.image.MIME_IMAGE_JPEG
 import me.devsaki.hentoid.util.image.clearCoilKey
+import me.devsaki.hentoid.util.image.decodeBitmap
 import me.devsaki.hentoid.util.image.getScaledDownBitmap
-import me.devsaki.hentoid.util.image.isSupportedImage
+import me.devsaki.hentoid.util.image.isSupportedMedia
 import me.devsaki.hentoid.util.network.CloudflareHelper.CloudflareProtectedException
 import me.devsaki.hentoid.util.network.HEADER_COOKIE_KEY
 import me.devsaki.hentoid.util.network.HEADER_REFERER_KEY
@@ -125,8 +125,8 @@ import java.io.IOException
 import java.net.URL
 import java.time.Instant
 import java.util.Locale
-import java.util.regex.Pattern
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 
 // == Used for queue management
@@ -257,27 +257,6 @@ private val libraryStatus = intArrayOf(
 private val queueStatus =
     intArrayOf(StatusContent.DOWNLOADING.code, StatusContent.PAUSED.code, StatusContent.ERROR.code)
 private val queueTabStatus = intArrayOf(StatusContent.DOWNLOADING.code, StatusContent.PAUSED.code)
-
-var chapterStr: String = "Chapter" // Default english value; will be overriden at init
-    internal set
-
-var ongoingStr: String = "Ongoing" // Default english value; will be overriden at init
-    internal set
-
-var completedStr: String = "Completed" // Default english value; will be overriden at init
-    internal set
-
-var disabledStr: String = "Disabled" // Default english value; will be overriden at init
-    internal set
-
-val VANILLA_CHAPTERNAME_PATTERN: Pattern by lazy { Pattern.compile("$chapterStr [0-9]+") }
-
-fun initResources(res: Resources) {
-    chapterStr = res.getString(R.string.gallery_chapter_prefix)
-    ongoingStr = res.getString(R.string.tag_ongoing)
-    completedStr = res.getString(R.string.tag_completed)
-    disabledStr = res.getString(R.string.disabled_generic)
-}
 
 fun getLibraryStatuses(): IntArray {
     return libraryStatus
@@ -558,16 +537,16 @@ suspend fun getPictureFilesFromContent(context: Context, content: Content): List
     withContext(Dispatchers.IO) {
         val storageUri = content.storageUri
 
-        Timber.d("Opening: %s from: %s", content.title, storageUri)
+        Timber.d("Opening: ${content.title} from: $storageUri")
         val folder = getDocumentFromTreeUriString(context, storageUri)
         if (null == folder) {
             Timber.d("File not found!! Exiting method.")
             return@withContext emptyList()
         }
 
-        return@withContext listFoldersFilter(context, folder) {
+        return@withContext listFoldersFilter(context, folder.uri) {
             it.lowercase(Locale.getDefault()).startsWith(THUMB_FILE_NAME)
-                    && isSupportedImage(it)
+                    && isSupportedMedia(it)
         }
     }
 
@@ -582,6 +561,10 @@ suspend fun getPictureFilesFromContent(context: Context, content: Content): List
 @Throws(ContentNotProcessedException::class)
 suspend fun removeContent(context: Context, dao: CollectionDAO, content: Content) =
     withContext(Dispatchers.IO) {
+        // Small hack to delete the archive and not the parent folder when removing an archive file before download is finalized
+        if (content.downloadMode == DownloadMode.DOWNLOAD_ARCHIVE_FILE) content.storageUri =
+            content.imageList.first().fileUri
+
         // Remove from DB
         // NB : start with DB to have a LiveData feedback, because file removal can take much time
         dao.deleteContent(content)
@@ -656,7 +639,7 @@ fun detachAllExternalContent(context: Context, dao: CollectionDAO) {
 
     // Remove all images stored in the app's persistent folder (archive covers)
     val appFolder = context.filesDir
-    appFolder.listFiles { _, s: String? -> isSupportedImage(s ?: "") }?.forEach { removeFile(it) }
+    appFolder.listFiles { _, s: String? -> isSupportedMedia(s ?: "") }?.forEach { removeFile(it) }
 }
 
 /**
@@ -713,6 +696,7 @@ suspend fun addContent(context: Context, dao: CollectionDAO, content: Content): 
 
         content.optimizeImageFileUris()
         val newContentId = dao.insertContent(content)
+        dao.replaceImageList(newContentId, content.imageList)
         content.id = newContentId
 
         if (isArchivePdf) createArchivePdfCover(context, content, dao)
@@ -747,30 +731,34 @@ suspend fun createFolderStreamedCover(context: Context, content: Content): List<
         val parentFolder = content.getContainingFolder(context)
             ?: throw IOException("Can't locate containing folder for ${content.title} @ ${content.storageUri}")
 
-        getInputStream(context, coverUri.toUri()).use { `is` ->
-            BitmapFactory.decodeStream(`is`)?.let { b ->
+        context.contentResolver.openFileDescriptor(coverUri.toUri(), "r")?.use { pfd ->
+            decodeBitmap(pfd.fileDescriptor, getMimeTypeFromFileUri(coverUri))?.let { b ->
                 val target = createFile(
                     context,
                     parentFolder,
                     THUMB_FILE_NAME,
-                    getMimeTypeFromFileUri(coverUri)
+                    MIME_IMAGE_JPEG
                 )
                 getOutputStream(context, target)?.use { os ->
                     val resizedBitmap =
                         getScaledDownBitmap(
                             b,
-                            dpToPx(context, libraryGridCardWidthDP),
+                            context.resources.getDimension(R.dimen.thumb_max_dim).roundToInt(),
                             false
                         )
-                    resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 85, os)
-                    resizedBitmap.recycle()
+                    try {
+                        resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 85, os)
+                    } finally {
+                        resizedBitmap.recycle()
+                    }
                 }
                 thumb.fileUri = target.toString()
             }
         }
 
-        // Reset flag of the previous cover now that an actual thumb exists
+        // Reset flags of the previous cover now that an actual thumb exists
         cover.isCover = false
+        cover.read = false
     } finally {
         // Cleanup downloaded cover
         if (cover.isOnline) removeFile(context, coverUri.toUri())
@@ -793,7 +781,7 @@ fun createArchivePdfCover(
     getPictureThumbCached(
         context,
         content.storageUri.toUri(),
-        libraryGridCardWidthDP,
+        context.resources.getDimension(R.dimen.thumb_max_dim).roundToInt(),
         null,
         { fileName -> findFile(targetFolder, fileName)?.toUri() },
         { fileName ->
@@ -824,7 +812,7 @@ fun getArchivePdfThumbFileName(archivePdfUri: Uri): String {
 fun getPictureThumbCached(
     context: Context,
     archivePdfUri: Uri,
-    maxDimDp: Int,
+    maxDimPx: Int,
     resource: String? = null,
     cacheFinder: (String) -> Uri?,
     cacheCreator: (String) -> Uri?
@@ -845,7 +833,7 @@ fun getPictureThumbCached(
                 val entries = if (resource.isNullOrBlank()) {
                     // No targeted resource => take the first one
                     context.getArchiveEntries(archive.uri)
-                        .filter { isSupportedImage(it.path) }.filter { it.size > 0 }
+                        .filter { isSupportedMedia(it.path) }.filter { it.size > 0 }
                         .sortedWith(InnerNameNumberArchiveComparator())
                 } else {
                     // Get targeted resource
@@ -898,7 +886,7 @@ fun getPictureThumbCached(
                             ?: throw IOException("Can't create file $targetFileName")
                         getOutputStream(context, target)?.use { os ->
                             val resizedBitmap =
-                                getScaledDownBitmap(b, dpToPx(context, maxDimDp), false)
+                                getScaledDownBitmap(b, maxDimPx, false)
                             resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 85, os)
                             resizedBitmap.recycle()
                         }
@@ -992,7 +980,7 @@ suspend fun setContentCover(
         getPictureThumbCached(
             context,
             archivePdfUri,
-            libraryGridCardWidthDP,
+            context.resources.getDimension(R.dimen.thumb_max_dim).roundToInt(),
             newCover.url,
             { _ -> null }, // Force creation of new file
             { fileName ->
@@ -1070,9 +1058,9 @@ fun getOrCreateContentDownloadDir(
 
     // First try finding the folder with new naming...
     if (!createOnly || createFromScratch) {
-        var bookFolder = findFolder(context, parentFolder, bookFolderName.first)
+        var bookFolder = findFolder(context, parentFolder.uri, bookFolderName.first)
         if (null == bookFolder) { // ...then with old (sanitized) naming
-            bookFolder = findFolder(context, parentFolder, bookFolderName.second)
+            bookFolder = findFolder(context, parentFolder.uri, bookFolderName.second)
         }
         if (bookFolder != null) {
             if (createFromScratch) removeDocument(context, bookFolder)
@@ -1112,7 +1100,8 @@ fun formatFolderName(
 
 private fun formatFolderName(
     content: Content,
-    title: String, author: String
+    title: String,
+    author: String
 ): String {
     var result = ""
     when (Settings.folderNameFormat) {
@@ -1217,10 +1206,9 @@ fun getOrCreateSiteDownloadDir(
             val siteFolderName = site.folder
             var siteFolders =
                 explorer.listDocumentFiles(
-                    context, appFolder,
-                    { displayName ->
-                        displayName.startsWith(siteFolderName)
-                    }, listFolders = true, listFiles = false, stopFirst = false
+                    context, appFolder.uri,
+                    { displayName -> displayName.startsWith(siteFolderName) },
+                    listFolders = true, listFiles = false, stopFirst = false
                 )
             // Order by name (nhentai, nhentai1, ..., nhentai10)
             siteFolders = siteFolders.sortedWith(InnerNameNumberFileComparator())
@@ -1518,19 +1506,10 @@ private fun purgeArchivePdfFiles(
         Timber.i("Archive removed : ${content.storageUri}")
         content.storageUri = ""
     } else {
-        // Trying to delete an archive file before download is finalized
-        if (DownloadMode.DOWNLOAD_ARCHIVE_FILE == content.downloadMode) {
-            content.imageList.forEach {
-                val fileUri = it.fileUri.toUri()
-                if (it.fileUri.isNotBlank() && fileExists(context, fileUri))
-                    removeDocument(context, fileUri)
-            }
-        } else {
-            throw FileNotProcessedException(
-                content,
-                "Failed to delete document ${content.storageUri}"
-            )
-        }
+        throw FileNotProcessedException(
+            content,
+            "Failed to delete document ${content.storageUri}"
+        )
     }
 
     // Remove the cover stored in the app's persistent folder
@@ -1563,7 +1542,7 @@ private fun purgeFolderFiles(
             (!removeJson && name.endsWith("json"))
                     || (!removeCover && name.startsWith(THUMB_FILE_NAME))
         }
-        val filesToKeep = listFiles(context, bookFolder, namesToKeep)
+        val filesToKeep = listDocumentFiles(context, bookFolder.uri, namesToKeep)
 
         // If any, copy them to temp storage
         val tempFiles: MutableList<File> = ArrayList()
@@ -2019,6 +1998,8 @@ suspend fun mergeContents(
         // Destination is an archive when all source contents are archives
         if (contentList.all { it.isArchive })
             mergedContent.downloadMode = DownloadMode.DOWNLOAD_ARCHIVE
+        else
+            mergedContent.downloadMode = DownloadMode.DOWNLOAD
 
         // TODO destination is a PDF when all source contents are PDFs (requires working on a better layout - see #1322)
 
@@ -2137,7 +2118,7 @@ suspend fun mergeContents(
                         }
                     } // Archives and PDFs
 
-                    if (!img.isReadable && coverFound) continue // Skip thumbs from 2+ rank merged books
+                    if ((!img.isReadable && coverFound) || !img.isUsable) continue // Skip thumbs from 2+ rank merged books
                     val newImg = ImageFile(img, populateContent = false, populateChapter = false)
                     newImg.id = 0 // Force creating a new DB object
                     newImg.fileUri = img.fileUri // Retrieve initial, full (unoptimized) Uri
@@ -2172,7 +2153,7 @@ suspend fun mergeContents(
                     newImg.id = dao.insertImageFile(newImg)
 
                     // If exists, move the picture file to the merged books' folder
-                    if (isInLibrary(newImg.status)) {
+                    if (isInLibrary(newImg.status) && img.fileUri.isNotBlank()) {
                         val referenceExt =
                             getExtensionFromUri(img.fileUri).ifBlank { getExtensionFromUri(img.url) }
                         dlManager.appendFile(

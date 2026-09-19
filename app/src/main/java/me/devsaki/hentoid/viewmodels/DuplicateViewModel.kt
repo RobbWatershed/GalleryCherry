@@ -19,6 +19,7 @@ import me.devsaki.hentoid.database.CollectionDAO
 import me.devsaki.hentoid.database.DuplicatesDAO
 import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.database.domains.DuplicateEntry
+import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.events.ProcessEvent
 import me.devsaki.hentoid.util.exception.ContentNotProcessedException
 import me.devsaki.hentoid.workers.BaseDeleteWorker
@@ -58,7 +59,8 @@ class DuplicateViewModel(
         useArtist: Boolean,
         sameLanguageOnly: Boolean,
         ignoreChapters: Boolean,
-        sensitivity: Int
+        sensitivity: Int,
+        duplicateSites: List<Site>
     ) {
         val builder = DuplicateData.Builder()
         builder.setUseTitle(useTitle)
@@ -67,6 +69,7 @@ class DuplicateViewModel(
         builder.setUseSameLanguage(sameLanguageOnly)
         builder.setIgnoreChapters(ignoreChapters)
         builder.setSensitivity(sensitivity)
+        builder.setSites(duplicateSites)
 
         me.devsaki.hentoid.notification.duplicates.init(getApplication())
         val workManager = WorkManager.getInstance(getApplication())
@@ -113,7 +116,7 @@ class DuplicateViewModel(
     fun applyChoices(onComplete: Runnable) {
         val selectedDupes = selectedDuplicates.value ?: return
 
-        // Mark as "is being deleted" to trigger blink animation
+        // Mark as "is being processed" to trigger blink animation
         val deleteList = ArrayList<Long>()
         val updateDisplayList = selectedDupes.toMutableList()
         for (entry in updateDisplayList) {
@@ -182,14 +185,14 @@ class DuplicateViewModel(
                         this@DuplicateViewModel::onMergeComplete
                     )
 
-                    // Mark as "is being deleted" to trigger blink animation
+                    // Mark as "is being processed" to trigger blink animation
                     if (deleteAfterMerging) {
                         val toRemove = selectedDupes.toMutableList()
                         for (entry in toRemove) entry.isBeingDeleted = true
                         selectedDuplicates.postValue(toRemove)
 
                         // Remove old contents
-                        remove(contentList.map { c -> c.id })
+                        remove(contentList.map { it.id })
 
                         // Remove duplicate entries (update UI)
                         for (dupeEntry in selectedDupes) {
@@ -226,7 +229,7 @@ class DuplicateViewModel(
         )
     }
 
-    private fun onMergeComplete(isError: Boolean, errorMsg : String) {
+    private fun onMergeComplete(isError: Boolean, errorMsg: String) {
         EventBus.getDefault().postSticky(
             ProcessEvent(
                 if (isError) ProcessEvent.Type.COMPLETE else ProcessEvent.Type.FAILURE,

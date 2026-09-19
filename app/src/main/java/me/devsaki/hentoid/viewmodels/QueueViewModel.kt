@@ -301,8 +301,7 @@ class QueueViewModel(
                         okCount.incrementAndGet()
                         dao.addContentToQueue(
                             res, sourceImageStatus, targetImageStatus, position,
-                            -1, res.replacementTitle, null,
-                            ContentQueueManager.isQueueActive(getApplication())
+                            ContentQueueManager.isQueueActive(getApplication()), replacementTitle = res.replacementTitle
                         )
                     } else {
                         // As we're in the download queue, an item whose content is unreachable should directly get to the error queue

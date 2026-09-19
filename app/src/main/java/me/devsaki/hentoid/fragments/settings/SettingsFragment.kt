@@ -1,5 +1,6 @@
 package me.devsaki.hentoid.fragments.settings
 
+import android.Manifest
 import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Build
@@ -7,6 +8,7 @@ import android.os.Bundle
 import android.text.InputType
 import android.view.View
 import android.widget.TextView
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.net.toUri
 import androidx.core.view.allViews
@@ -27,13 +29,14 @@ import androidx.work.WorkManager
 import com.bytehamster.lib.preferencesearch.SearchPreference
 import com.google.android.material.snackbar.BaseTransientBottomBar
 import com.google.android.material.snackbar.Snackbar
+import com.skydoves.colorpickerpreference.ColorPickerPreference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.activities.bundles.SettingsSourceSpecificsBundle
+import me.devsaki.hentoid.activities.settings.SettingsKeybindActivity
 import me.devsaki.hentoid.activities.settings.SettingsPinActivity
-import me.devsaki.hentoid.activities.settings.SettingsSourceSelectActivity
 import me.devsaki.hentoid.activities.settings.SettingsSourceSpecificsActivity
 import me.devsaki.hentoid.activities.settings.SettingsStorageActivity
 import me.devsaki.hentoid.core.startLocalActivity
@@ -47,10 +50,12 @@ import me.devsaki.hentoid.retrofit.JikanServer
 import me.devsaki.hentoid.retrofit.RedditOAuthApiServer
 import me.devsaki.hentoid.retrofit.RedditPublicApiServer
 import me.devsaki.hentoid.retrofit.sources.KemonoServer
+import me.devsaki.hentoid.retrofit.sources.LrrServer
 import me.devsaki.hentoid.retrofit.sources.LusciousServer
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.applyTheme
 import me.devsaki.hentoid.util.download.DownloadSpeedLimiter
+import me.devsaki.hentoid.util.file.checkLocalNetworkPermission
 import me.devsaki.hentoid.util.file.getFullPathFromUri
 import me.devsaki.hentoid.util.network.OkHttpClientManager
 import me.devsaki.hentoid.viewmodels.SettingsViewModel
@@ -58,6 +63,7 @@ import me.devsaki.hentoid.viewmodels.ViewModelFactory
 import me.devsaki.hentoid.workers.UpdateCheckWorker
 import me.devsaki.hentoid.workers.UpdateDownloadWorker
 import org.greenrobot.eventbus.EventBus
+import timber.log.Timber
 
 
 // Value of key elements on the preferences tree
@@ -69,7 +75,7 @@ private const val EXTERNAL_LIBRARY_DETACH = "pref_detach_external_library"
 private const val STORAGE_MANAGEMENT = "storage_mgt"
 
 class SettingsFragment : PreferenceFragmentCompat(),
-    SharedPreferences.OnSharedPreferenceChangeListener {
+    SharedPreferences.OnSharedPreferenceChangeListener, SelectSitesDialogFragment.Parent {
 
     lateinit var viewModel: SettingsViewModel
     lateinit var root: View
@@ -90,6 +96,19 @@ class SettingsFragment : PreferenceFragmentCompat(),
             return fragment
         }
     }
+
+
+    // Ask for permissions
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            Timber.i("Local network permission granted")
+        } else {
+            Timber.i("Local network permission not granted")
+        }
+    }
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -179,6 +198,7 @@ class SettingsFragment : PreferenceFragmentCompat(),
             Settings.Key.BROWSER_DNS_OVER_HTTPS -> onDoHChanged()
             Settings.Key.BROWSER_PROXY -> onProxyChanged()
             Settings.Key.WEB_AUGMENTED_BROWSER -> onAugmentedBrowserChanged()
+            Settings.Key.LRR_API_KEY, Settings.Key.LRR_ENDPOINT -> onLrrChanged()
         }
     }
 
@@ -187,13 +207,14 @@ class SettingsFragment : PreferenceFragmentCompat(),
         if (Settings.Key.APP_LOCK == key) return // Don't display that ^^"
         if (preference is CheckBoxPreference) return
         if (preference is ListPreference) return
+        if (preference is ColorPickerPreference) return
         preference.setSummary(preference.sharedPreferences?.getString(key, "") ?: "")
     }
 
     override fun onPreferenceTreeClick(preference: Preference): Boolean =
         when (preference.key) {
             DRAWER_SOURCES -> {
-                requireContext().startLocalActivity<SettingsSourceSelectActivity>()
+                SelectSitesDialogFragment.invoke(this, Settings.activeSites)
                 true
             }
 
@@ -238,6 +259,36 @@ class SettingsFragment : PreferenceFragmentCompat(),
 
             "download_schedule" -> {
                 TimeRangeDialogFragment.invoke(this)
+                true
+            }
+
+            "viewer_color_filter_reset" -> {
+                Settings.readerColorFilter = 0
+                true
+            }
+
+            "viewer_custom_key_binding" -> {
+                requireContext().startLocalActivity<SettingsKeybindActivity>()
+                true
+            }
+
+            Settings.Key.LRR_ENDPOINT -> {
+                invokeInputDialog(
+                    requireActivity(),
+                    R.string.pref_lrr_url_prompt,
+                    Settings.lrrEndpoint,
+                    onResult = {
+                        var res = it.lowercase().replace(" ", "")
+                        if (!res.startsWith("http")) res = "http://$res"
+                        if (res.endsWith('/')) res = res.substringBeforeLast('/')
+                        if (res.lastIndexOf(':') < 7) res += ":3000" // Default port for LRR
+                        Settings.lrrEndpoint = res
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN && !requireContext().checkLocalNetworkPermission()) {
+                            showSnackbar(R.string.lrr_localnetwork_warning)
+                            requestPermissionLauncher.launch(Manifest.permission.ACCESS_LOCAL_NETWORK)
+                        }
+                    }
+                )
                 true
             }
 
@@ -297,30 +348,15 @@ class SettingsFragment : PreferenceFragmentCompat(),
 
     private fun onDoHChanged() {
         if (Settings.dnsOverHttps > -1) showSnackbar(R.string.doh_warning)
-        lifecycleScope.launch {
-            withContext(Dispatchers.IO) {
-                // Reset OkHttp instance
-                OkHttpClientManager.reset()
-                // Reset connection pool used by the downloader
-                EventBus.getDefault().post(
-                    DownloadCommandEvent(DownloadCommandEvent.Type.EV_RESET_REQUEST_QUEUE)
-                )
-                // Reset all retrofit clients
-                BergServer.init()
-                LusciousServer.init()
-                RedditOAuthApiServer.init()
-                RedditPublicApiServer.init()
-                KemonoServer.init()
-                JikanServer.init()
-                BergUpdateServer.init()
-            }
-        }
+        lifecycleScope.launch { resetHttp() }
     }
 
     private fun onProxyChanged() {
         if (Settings.proxy.isNotEmpty()) showSnackbar(R.string.proxy_warning)
-        lifecycleScope.launch {
-            withContext(Dispatchers.IO) {
+        lifecycleScope.launch { resetHttp() }
+    }
+
+    private suspend fun resetHttp() = withContext(Dispatchers.IO) {
                 // Reset OkHttp instance
                 OkHttpClientManager.reset()
                 // Reset connection pool used by the downloader
@@ -331,12 +367,17 @@ class SettingsFragment : PreferenceFragmentCompat(),
                 BergServer.init()
                 LusciousServer.init()
                 RedditOAuthApiServer.init()
-                RedditPublicApiServer.init()
-                KemonoServer.init()
-                JikanServer.init()
-                BergUpdateServer.init()
-            }
-        }
+        RedditPublicApiServer.init()
+        KemonoServer.init()
+        JikanServer.init()
+        BergUpdateServer.init()
+        PawServer.init()
+        HiperdexServer.init()
+        LrrServer.init()
+    }
+
+    private fun onLrrChanged() {
+        LrrServer.init()
     }
 
     private fun showSnackbar(strRes: Int) {
@@ -358,5 +399,9 @@ class SettingsFragment : PreferenceFragmentCompat(),
 
     private fun onAugmentedBrowserChanged() {
         Settings.isAppAdBlockerOn = Settings.isAppBrowserAugmented
+    }
+
+    override fun onSitesSelected(sites: List<Site>) {
+        Settings.activeSites = sites
     }
 }

@@ -72,7 +72,7 @@
     <string name="biometric_dialog_title">Biometriskt lås</string>
     <string name="black">Svart</string>
     <string name="blocked_tag">Boken har en blockerad etikett (%s)\nNerladdning avbruten</string>
-    <string name="blocked_tag_double">Boken har en blockerad etikett (%s)\Dubbeltryck för att ändå köa</string>
+    <string name="blocked_tag_double">Boken har en blockerad etikett (%s)\nDubbeltryck för att ändå köa</string>
     <string name="blocked_tag_queued">Boken har en blockerad etikett (%s)\nKöad som ett fel</string>
     <plurals name="book">
         <item quantity="one">bok</item>
@@ -1017,14 +1017,8 @@
     <string name="title_submenu_library">Mitt bibliotek</string>
     <string name="title_submenu_settings">Avancerat</string>
     <string name="torrent_dl_fail">Nerladdning av torrent misslyckades: %s</string>
-    <string name="transcode_encoder_avif">AVIF</string>
-    <string name="transcode_encoder_jpeg">JPEG</string>
-    <string name="transcode_encoder_jpegli">JPEGLI</string>
-    <string name="transcode_encoder_jxl_lossless">JXL (förlustfri)</string>
-    <string name="transcode_encoder_jxl_lossy">JXL (förlustbenägen)</string>
-    <string name="transcode_encoder_png">PNG</string>
-    <string name="transcode_encoder_webp_lossless">WEBP (förlustfri)</string>
-    <string name="transcode_encoder_webp_lossy">WEBP (förlustbenägen)</string>
+    <string name="lossless_generic">förlustfri</string>
+    <string name="lossy_generic">förlustbenägen</string>
     <string name="transcode_method_1">Samma kodare för alla bilder</string>
     <string name="transcode_method_2">Särskilj förlustbenägna kontra förlustfria bilder</string>
     <string name="transform">Transformera</string>
@@ -1036,10 +1030,7 @@
     <string name="transform_limit">Kan inte transformera fler än 1000 böcker samtidigt</string>
     <string name="transform_pics">Transformera bilder</string>
     <string name="transform_progress">Transformerar bilder</string>
-    <string name="transform_resize_pics">Storleksändra bilder</string>
-    <string name="transform_resizing">Storleksändring</string>
     <string name="transform_start">Transformera bilder</string>
-    <string name="transform_transcoding">Omkodning</string>
     <string name="transform_unsupported">Transformation stöds ej</string>
     <string name="u_byte">bitar</string>
     <string name="u_gigabyte">GB</string>
@@ -1091,7 +1082,6 @@
     <string name="web_gallery">Tillbaka till senaste gallerisida</string>
     <string name="web_home">Tillbaka till biblioteket</string>
     <string name="web_open_ext_browser">Extern webbläsare</string>
-    <string name="web_range_download_prompt" tools:ignore="TypographyDashes">Omfång av sidor att ladda ner (ex 1-5 / 1;3;8 / 1-2;5-7)</string>
     <string name="web_refresh_stop">Fräscha upp/stoppa</string>
     <string name="web_storage_permission_denied">Lagringstillstånd nekat - får inte använda nerladdaren</string>
     <string name="web_target_page_outside_restricted_domains">Värd %s utanför begränsade domäner</string>

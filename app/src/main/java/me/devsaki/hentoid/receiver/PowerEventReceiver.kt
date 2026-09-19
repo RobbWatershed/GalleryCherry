@@ -9,6 +9,9 @@ import me.devsaki.hentoid.util.Settings
 import timber.log.Timber
 import java.time.Instant
 
+/**
+ * IMPORTANT : Every Received must be registered on the manifest!
+ */
 class PowerEventReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
         if (null == intent) return

@@ -116,10 +116,13 @@ open class CustomWebViewClient : WebViewClient {
     private val galleryUrlPattern: MutableList<Pattern> = ArrayList()
 
     // List of the URL patterns identifying a parsable book gallery page
-    private val resultsUrlPattern: MutableList<Pattern> = ArrayList()
+    private val resultsUrlPatterns: MutableList<Pattern> = ArrayList()
 
     // Results URL rewriter to insert page to seek to
     private var resultsUrlRewriter: ((Uri, Int) -> String)? = null
+
+    // List of the URL patterns identifying a managed URL
+    private val managedUrlPatterns: MutableList<Pattern> = ArrayList()
 
     // Adapter used to parse the HTML code of book gallery pages
     private val htmlAdapter: HtmlAdapter<out ContentParser>
@@ -322,7 +325,7 @@ open class CustomWebViewClient : WebViewClient {
      * @param patterns Patterns to detect URLs where result paging can be applied
      */
     fun setResultsUrlPatterns(vararg patterns: String) {
-        for (s in patterns) resultsUrlPattern.add(Pattern.compile(s))
+        for (s in patterns) resultsUrlPatterns.add(Pattern.compile(s))
     }
 
     /**
@@ -362,6 +365,10 @@ open class CustomWebViewClient : WebViewClient {
         return ignoredUrls.any { url.contains(it, true) }
     }
 
+    fun addManagedUrls(vararg patterns: String) {
+        for (s in patterns) managedUrlPatterns.add(Pattern.compile(s))
+    }
+
     /**
      * Restrict link navigation to a given domain name
      *
@@ -386,20 +393,33 @@ open class CustomWebViewClient : WebViewClient {
     }
 
     /**
-     * Indicates if the given URL is a book gallery page
+     * Indicates if the given URL is page with downloadable content
      *
      * @param url URL to test
-     * @return True if the given URL represents a book gallery page
+     * @return True if the given URL represents a page with downloadable content
      */
-    open fun isGalleryPage(url: String): Boolean {
+    open fun isDownloadable(url: String): Boolean {
         // Specific case when there's no gallery filter
         if (galleryUrlPattern.isEmpty()) return (url == mainPageUrl)
-
         for (p in galleryUrlPattern) {
             val matcher = p.matcher(url)
             if (matcher.find()) return true
         }
         return false
+    }
+
+    fun isManagedUrl(url: String): Boolean {
+        if (site.useManagedRequests) return true
+        if (managedUrlPatterns.isEmpty()) return false
+        for (p in managedUrlPatterns) {
+            val matcher = p.matcher(url)
+            if (matcher.find()) return true
+        }
+        return false
+    }
+
+    fun hasManagedUrls(): Boolean {
+        return site.useManagedRequests || managedUrlPatterns.isNotEmpty()
     }
 
     /**
@@ -409,8 +429,8 @@ open class CustomWebViewClient : WebViewClient {
      * @return True if the given URL represents a results page
      */
     fun isResultsPage(url: String): Boolean {
-        if (resultsUrlPattern.isEmpty()) return false
-        for (p in resultsUrlPattern) {
+        if (resultsUrlPatterns.isEmpty()) return false
+        for (p in resultsUrlPatterns) {
             val matcher = p.matcher(url)
             if (matcher.find()) return true
         }
@@ -425,7 +445,7 @@ open class CustomWebViewClient : WebViewClient {
      * @return Given URL to be rewritten
      */
     fun seekResultsUrl(url: String, pageNum: Int): String {
-        return if (null == resultsUrlRewriter || !isResultsPage(url) || isGalleryPage(url)) url
+        return if (null == resultsUrlRewriter || !isResultsPage(url) || isDownloadable(url)) url
         else resultsUrlRewriter!!.invoke(url.toUri(), pageNum)
     }
 
@@ -543,14 +563,14 @@ open class CustomWebViewClient : WebViewClient {
 
         // Activate startup JS
         for (s in jsStartupScripts) view.loadUrl(getAssetJsScript(view.context, s, jsReplacements))
-        activity?.onPageStarted(url, isGalleryPage(url), isHtmlLoaded.get(), true)
+        activity?.onPageStarted(url, isDownloadable(url), isHtmlLoaded.get(), true)
     }
 
     override fun onPageFinished(view: WebView?, url: String) {
         if (BuildConfig.DEBUG) Timber.v("WebView : page finished $url")
         isPageLoading.set(false)
         isHtmlLoaded.set(false) // Reset for the next page
-        activity?.onPageFinished(url, isResultsPage(url), isGalleryPage(url))
+        activity?.onPageFinished(url, isResultsPage(url), isDownloadable(url))
     }
 
     override fun doUpdateVisitedHistory(
@@ -563,10 +583,9 @@ open class CustomWebViewClient : WebViewClient {
             scope.launch(Dispatchers.Default) {
                 pause(150)
                 withContext(Dispatchers.Main) {
-                    activity?.onPageFinished(url, isResultsPage(url), isGalleryPage(url))
+                    activity?.onPageFinished(url, isResultsPage(url), isDownloadable(url))
                 }
             }
-
         }
     }
 
@@ -631,7 +650,7 @@ open class CustomWebViewClient : WebViewClient {
                 MIME_IMAGE_WEBP, "utf-8", ByteArrayInputStream(BLOCKED_MARK)
             )
         } else {
-            if (isGalleryPage(url)) return parseResponse(
+            if (isDownloadable(url)) return parseResponse(
                 url,
                 headers,
                 analyzeForDownload = true,
@@ -661,9 +680,9 @@ open class CustomWebViewClient : WebViewClient {
     }
 
     fun sendRequest(request: WebResourceRequest, postBody: String = ""): WebResourceResponse? {
-        if (dnsOverHttpsEnabled.get() || proxyEnabled.get() || site.useManagedRequests) {
+        val urlStr = request.url.toString()
+        if (dnsOverHttpsEnabled.get() || proxyEnabled.get() || isManagedUrl(urlStr)) {
             // Query resource using OkHttp
-            val urlStr = request.url.toString()
             val requestHeadersList =
                 webkitRequestHeadersToOkHttpHeaders(request.requestHeaders, urlStr)
             try {

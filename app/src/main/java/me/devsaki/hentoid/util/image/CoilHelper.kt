@@ -1,8 +1,6 @@
 package me.devsaki.hentoid.util.image
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.Point
 import android.view.View
 import android.widget.ImageView
 import coil3.ImageLoader
@@ -21,7 +19,7 @@ import coil3.request.ImageRequest
 import coil3.request.Options
 import coil3.request.target
 import coil3.serviceLoaderEnabled
-import coil3.toBitmap
+import coil3.video.VideoFrameDecoder
 import com.awxkee.jxlcoder.coil.JxlDecoder
 import com.github.awxkee.avifcoil.decoder.HeifDecoder
 import com.github.penfeizhou.animation.apng.APNGDrawable
@@ -31,6 +29,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import me.devsaki.hentoid.core.HentoidApp
 import me.devsaki.hentoid.database.domains.Content
+import me.devsaki.hentoid.enums.Site
+import me.devsaki.hentoid.retrofit.sources.LrrServer
 import me.devsaki.hentoid.util.getContentHeaders
 import okio.BufferedSource
 import okio.Path.Companion.toOkioPath
@@ -73,6 +73,7 @@ private fun initStillImageLoader(): ImageLoader {
             .components {
                 add(JxlDecoder.Factory())
                 add(HeifDecoder.Factory())
+                add(VideoFrameDecoder.Factory())
             }
             .diskCache {
                 DiskCache.Builder()
@@ -107,9 +108,11 @@ fun ImageView.loadCover(content: Content, disableAnimation: Boolean = false) {
     val isOnline = thumbLocation.startsWith("http")
     val networkHeaders = if (isOnline) {
         val headers = NetworkHeaders.Builder()
-        getContentHeaders(content).forEach {
-            headers.add(it.first, it.second)
-        }
+        getContentHeaders(content).forEach { headers.add(it.first, it.second) }
+
+        if (content.site == Site.LRR) // To work with no-fun mode
+            headers.add("Authorization", LrrServer.formatApiKey())
+
         headers.build()
     } else {
         NetworkHeaders.EMPTY
@@ -127,36 +130,6 @@ fun ImageView.loadCover(content: Content, disableAnimation: Boolean = false) {
     else SingletonImageLoader.get(this.context)
     loader.enqueue(request.build())
 }
-
-// get dimensions for formats provided by Coil custom loaders
-suspend fun getDimensions(context: Context, imgLocation: String, data: ByteArray? = null): Point =
-    withContext(Dispatchers.IO) {
-        val request = ImageRequest.Builder(context)
-            .data(data ?: imgLocation)
-            .memoryCacheKey(imgLocation)
-            .diskCacheKey(imgLocation)
-
-        val result = stillImageLoader.execute(request.build())
-        result.image?.let { img ->
-            return@withContext Point(img.width, img.height)
-        }
-        return@withContext Point(0, 0)
-    }
-
-// get dimensions for formats provided by Coil custom loaders
-suspend fun getFirstFrame(context: Context, imgLocation: String, dims: Point): Bitmap? =
-    withContext(Dispatchers.IO) {
-        val request = ImageRequest.Builder(context)
-            .data(imgLocation)
-            .memoryCacheKey(imgLocation)
-            .diskCacheKey(imgLocation)
-
-        val result = stillImageLoader.execute(request.build())
-        result.image?.let { img ->
-            return@withContext img.toBitmap(dims.x, dims.y)
-        }
-        return@withContext null
-    }
 
 class AnimatedPngDecoder(private val source: ImageSource) : Decoder {
 

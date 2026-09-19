@@ -1,6 +1,7 @@
 package me.devsaki.hentoid.workers
 
 import android.content.Context
+import android.net.Uri
 import android.util.Log
 import androidx.annotation.CheckResult
 import androidx.core.net.toUri
@@ -65,7 +66,7 @@ import me.devsaki.hentoid.util.findDuplicateContentByUrl
 import me.devsaki.hentoid.util.formatFolderName
 import me.devsaki.hentoid.util.getPathRoot
 import me.devsaki.hentoid.util.image.clearCoilCache
-import me.devsaki.hentoid.util.image.isSupportedImage
+import me.devsaki.hentoid.util.image.isSupportedMedia
 import me.devsaki.hentoid.util.importBookmarks
 import me.devsaki.hentoid.util.importRenamingRules
 import me.devsaki.hentoid.util.isInQueue
@@ -236,7 +237,7 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
         try {
             FileExplorer(context, rootFolder.uri).use { explorer ->
                 // 1st pass : Import groups JSON
-                if (importGroups) importGroups(context, rootFolder, explorer, log)
+                if (importGroups) importGroups(context, rootFolder.uri, explorer, log)
 
                 // 2nd pass : count subfolders and archives of every site folder
                 eventProgress(
@@ -246,7 +247,7 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
                     0,
                     context.getString(R.string.refresh_step1)
                 )
-                val siteFolders = explorer.listFolders(context, rootFolder)
+                val siteFolders = explorer.listFolders(context, rootFolder.uri)
                 var nbArchives = 0
                 siteFolders.forEachIndexed { foldersProcessed, f ->
                     eventProgress(
@@ -258,7 +259,7 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
                     )
                     // Identify all subfolders of the current site folder
                     bookFolders.addAll(
-                        explorer.listFolders(context, f)
+                        explorer.listFolders(context, f.uri)
                             // Ignore syncthing subfolders
                             .filterNot { (it.name ?: "").startsWith(".st") }
                     )
@@ -412,7 +413,7 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
                 dao.reset()
                 try {
                     val queueFile =
-                        explorer.findFile(context, rootFolder, QUEUE_JSON_FILE_NAME)
+                        explorer.findFile(context, rootFolder.uri, QUEUE_JSON_FILE_NAME)
                     if (queueFile != null) importQueue(
                         context,
                         queueFile,
@@ -425,7 +426,7 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
                         "No queue file found"
                     )
                     val bookmarksFile =
-                        explorer.findFile(context, rootFolder, BOOKMARKS_JSON_FILE_NAME)
+                        explorer.findFile(context, rootFolder.uri, BOOKMARKS_JSON_FILE_NAME)
                     if (bookmarksFile != null) importBookmarks(
                         context,
                         bookmarksFile,
@@ -438,7 +439,7 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
                         "No bookmarks file found"
                     )
                     val rulesFile =
-                        explorer.findFile(context, rootFolder, RENAMING_RULES_JSON_FILE_NAME)
+                        explorer.findFile(context, rootFolder.uri, RENAMING_RULES_JSON_FILE_NAME)
                     if (rulesFile != null) importRenamingRules(
                         context,
                         rulesFile,
@@ -494,13 +495,18 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
             )
             notificationManager.notify(ImportCompleteNotification(booksOK, booksKO))
             EventBus.getDefault()
-                .postSticky(CommunicationEvent(Type.RELOAD, CommunicationEvent.Recipient.LIBRARY))
+                .postSticky(
+                    CommunicationEvent(
+                        Type.RELOAD,
+                        CommunicationEvent.Recipient.LIBRARY_LIST
+                    )
+                )
         }
     }
 
     private fun importGroups(
         context: Context,
-        rootFolder: DocumentFile,
+        rootFolder: Uri,
         explorer: FileExplorer,
         log: MutableList<LogEntry>
     ) {
@@ -519,7 +525,7 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
         }
     }
 
-    private fun importArchives(
+    private suspend fun importArchives(
         context: Context,
         parent: DocumentFile,
         subFolders: List<DocumentFile>,
@@ -565,8 +571,7 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
         }
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
-    private fun onArchiveFound(
+    private suspend fun onArchiveFound(
         context: Context,
         c: Content,
         parent: DocumentFile,
@@ -595,10 +600,14 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
             return
         }
 
-        // If content has an external-library tag or an EXTERNAL status, remove it because we're importing for the primary library now
-        GlobalScope.launch(Dispatchers.IO) {
+        withContext(Dispatchers.IO) {
+            // If content has an external-library tag or an EXTERNAL status, remove it because we're importing for the primary library now
             removeExternalAttributes(c)
             addContent(context, dao, c)
+        }
+
+        // Logging
+        withContext(Dispatchers.Default) {
             val customGroups =
                 c.getGroupItems(Grouping.CUSTOM)
                     .mapNotNull { it.linkedGroup }
@@ -634,9 +643,9 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
 
         // Detect the presence of images if the corresponding cleanup option has been enabled
         if (cleanNoImages) {
-            bookFiles = explorer.listFiles(context, bookFolder, null)
+            bookFiles = explorer.listFiles(context, bookFolder.uri)
             val nbImages = bookFiles.count {
-                isSupportedImage(it.name ?: "")
+                isSupportedMedia(it.name ?: "")
             }
             if (0 == nbImages && !explorer.hasFolders(bookFolder)) { // No supported images nor subfolders
                 var doRemove = true
@@ -675,7 +684,7 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
 
         // Detect JSON and try to parse it
         try {
-            if (null == bookFiles) bookFiles = explorer.listFiles(context, bookFolder, null)
+            if (null == bookFiles) bookFiles = explorer.listFiles(context, bookFolder.uri)
             if (null == content) content = importJson(context, bookFolder, bookFiles, dao)
             if (content != null) {
                 // If the book exists and is flagged for deletion, delete it to make way for a new import (as intended)
@@ -720,7 +729,7 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
                                 canonicalBookFolderName.first
                             )
                             // Rescan files inside the renamed folder
-                            bookFiles = explorer.listFiles(context, bookFolder, null)
+                            bookFiles = explorer.listFiles(context, bookFolder.uri)
                         } else {
                             trace(
                                 Log.WARN,
@@ -735,7 +744,7 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
                 }
 
                 // Attach image file Uri's to the book's images
-                val imageFiles = bookFiles.filter { isSupportedImage(it.name ?: "") }
+                val imageFiles = bookFiles.filter { isSupportedMedia(it.name ?: "") }
                 if (imageFiles.isNotEmpty()) {
                     // No images described in the JSON -> recreate them
                     if (contentImages.isEmpty()) {
@@ -821,7 +830,7 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
                     bookLocation
                 )
             } else { // JSON not found
-                val subfolders = explorer.listFolders(context, bookFolder)
+                val subfolders = explorer.listFolders(context, bookFolder.uri)
                     .filterNot { (it.name ?: "").startsWith(".st") } // Ignore syncthing subfolders
                 if (subfolders.isNotEmpty()) { // Folder doesn't contain books but contains subdirectories
                     result.addAll(subfolders)
@@ -1022,7 +1031,7 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
                 // 1- Update the book folder's URI
                 content.setStorageDoc(folder)
                 // 2- Update the JSON's URI
-                val jsonFile = explorer.findFile(context, folder, JSON_FILE_NAME_V2)
+                val jsonFile = explorer.findFile(context, folder.uri, JSON_FILE_NAME_V2)
                 if (jsonFile != null) content.jsonUri = jsonFile.uri.toString()
                 // 3- Update the image's URIs -> will be done by the next block back in startImport
                 return true
@@ -1326,7 +1335,7 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
     }
 
     @Throws(ParseException::class)
-    private fun importJson(
+    private suspend fun importJson(
         context: Context,
         folder: DocumentFile,
         bookFiles: List<DocumentFile>,
@@ -1338,10 +1347,9 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
         return if (file != null) importJsonV2(context, file, folder, dao) else null
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
     @CheckResult
     @Throws(ParseException::class)
-    private fun importJsonV2(
+    private suspend fun importJsonV2(
         context: Context,
         json: DocumentFile,
         parentFolder: DocumentFile,
@@ -1359,9 +1367,7 @@ class PrimaryImportWorker(context: Context, parameters: WorkerParameters) :
                     val now = Instant.now().toEpochMilli()
                     result.downloadDate = now
                     result.downloadCompletionDate = now
-                    GlobalScope.launch(Dispatchers.Default) {
-                        updateJson(context, result)
-                    }
+                    updateJson(context, result)
                 }
                 return result
             }

@@ -9,8 +9,6 @@ import androidx.work.Data
 import androidx.work.WorkerParameters
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.devsaki.hentoid.BuildConfig
 import me.devsaki.hentoid.R
@@ -49,7 +47,7 @@ import me.devsaki.hentoid.util.file.getParent
 import me.devsaki.hentoid.util.file.removeFile
 import me.devsaki.hentoid.util.image.clearCoilCache
 import me.devsaki.hentoid.util.image.imageNamesFilter
-import me.devsaki.hentoid.util.image.isSupportedImage
+import me.devsaki.hentoid.util.image.isSupportedMedia
 import me.devsaki.hentoid.util.isSupportedArchivePdf
 import me.devsaki.hentoid.util.jsonToContent
 import me.devsaki.hentoid.util.notification.BaseNotification
@@ -150,7 +148,7 @@ class ExternalImportWorker(context: Context, parameters: WorkerParameters) :
 
             // Remove all images stored in the app's persistent folder (archive covers)
             val appFolder = context.filesDir
-            appFolder.listFiles { _, s: String? -> isSupportedImage(s ?: "") }
+            appFolder.listFiles { _, s: String? -> isSupportedMedia(s ?: "") }
                 ?.forEach { removeFile(it) }
 
             val addedContent = HashMap<String, MutableList<Pair<DocumentFile, Long>>>()
@@ -205,12 +203,12 @@ class ExternalImportWorker(context: Context, parameters: WorkerParameters) :
         StorageCache.clear(applicationContext, READER_CACHE)
         clearCoilCache(applicationContext)
         EventBus.getDefault()
-            .postSticky(CommunicationEvent(Type.RELOAD, CommunicationEvent.Recipient.LIBRARY))
+            .postSticky(CommunicationEvent(Type.RELOAD, CommunicationEvent.Recipient.LIBRARY_LIST))
     }
 
     // Write JSON file for every found book and persist it in the DB
     @OptIn(DelicateCoroutinesApi::class)
-    private fun onContentFound(
+    private suspend fun onContentFound(
         context: Context,
         explorer: FileExplorer,
         dao: ObjectBoxDAOContainer,
@@ -222,7 +220,7 @@ class ExternalImportWorker(context: Context, parameters: WorkerParameters) :
             itemsKO++
             return
         }
-        GlobalScope.launch(Dispatchers.IO) {
+        withContext(Dispatchers.IO) {
             createJsonFileFor(context, content, explorer, logs)
             addContent(context, dao.dao, content)
 
@@ -230,7 +228,7 @@ class ExternalImportWorker(context: Context, parameters: WorkerParameters) :
             content.parentStorageUri?.let { parentUri ->
                 val entry = addedContent[parentUri] ?: ArrayList()
                 addedContent[parentUri] = entry
-                content.getStorageDoc()?.let { it -> entry.add(Pair(it, content.id)) }
+                content.getStorageDoc()?.let { entry.add(Pair(it, content.id)) }
             }
             itemsOK++
 
@@ -302,7 +300,7 @@ class ExternalImportWorker(context: Context, parameters: WorkerParameters) :
         clearCoilCache(applicationContext)
     }
 
-    private fun onNewBH(
+    private suspend fun onNewBH(
         context: Context,
         parent: DocumentFile,
         usefulFiles: Collection<DocumentProperties>,
@@ -316,18 +314,14 @@ class ExternalImportWorker(context: Context, parameters: WorkerParameters) :
             explorer,
             parent.uri,
             usefulFiles.mapNotNull {
-                explorer.convertFromProperties(
-                    applicationContext,
-                    parent,
-                    it
-                )
+                explorer.convertFromProperties(applicationContext, parent.uri, it)
             },
             dao,
             libraryPathSize
         )
     }
 
-    private fun onChangedBH(
+    private suspend fun onChangedBH(
         changed: DocumentFile,
         explorer: FileExplorer,
         dao: CollectionDAO,
@@ -362,7 +356,7 @@ class ExternalImportWorker(context: Context, parameters: WorkerParameters) :
     }
 
     @OptIn(DelicateCoroutinesApi::class)
-    private fun onDeletedBH(
+    private suspend fun onDeletedBH(
         context: Context,
         deleted: Long,
         dao: CollectionDAO
@@ -372,16 +366,14 @@ class ExternalImportWorker(context: Context, parameters: WorkerParameters) :
             Content().apply {
                 id = deleted
                 site = Site.NONE
-                GlobalScope.launch(Dispatchers.IO) {
-                    removeContent(context, dao, this@apply)
-                }
+                removeContent(context, dao, this@apply)
             }
         } catch (e: Exception) {
             Timber.w(e)
         }
     }
 
-    private fun scanAddedContentBH(
+    private suspend fun scanAddedContentBH(
         context: Context,
         explorer: FileExplorer,
         parent: Uri,
@@ -441,7 +433,7 @@ class ExternalImportWorker(context: Context, parameters: WorkerParameters) :
         }
     }
 
-    private fun scanChangedNewContentBH(
+    private suspend fun scanChangedNewContentBH(
         context: Context,
         explorer: FileExplorer,
         folder: DocumentFile,
@@ -483,7 +475,7 @@ class ExternalImportWorker(context: Context, parameters: WorkerParameters) :
     ) {
         val targetImgs = ArrayList<ImageFile>()
 
-        val imageFiles = explorer.listFiles(context, folder, imageNamesFilter)
+        val imageFiles = explorer.listFiles(context, folder.uri, imageNamesFilter)
             .associateBy({ it.uri.toString() }, { it })
         val contentImgKeys = content.imageList.associateBy({ it.fileUri }, { it })
 
@@ -530,7 +522,7 @@ class ExternalImportWorker(context: Context, parameters: WorkerParameters) :
 
     // Write JSON file for every found book and persist it in the DB
     @OptIn(DelicateCoroutinesApi::class)
-    private fun onContentFoundBH(
+    private suspend fun onContentFoundBH(
         context: Context,
         explorer: FileExplorer,
         dao: CollectionDAO,
@@ -538,7 +530,7 @@ class ExternalImportWorker(context: Context, parameters: WorkerParameters) :
         content: Content,
     ) {
         if (!existsInCollection(content, dao, true, logs)) {
-            GlobalScope.launch(Dispatchers.IO) {
+            withContext(Dispatchers.IO) {
                 createJsonFileFor(context, content, explorer, logs)
                 addContent(context, dao, content)
             }
@@ -601,9 +593,9 @@ class ExternalImportWorker(context: Context, parameters: WorkerParameters) :
     }
 
     @OptIn(DelicateCoroutinesApi::class)
-    private fun newContentEvent(content: Content, root: Uri, progress: Float) {
+    private suspend fun newContentEvent(content: Content, root: Uri, progress: Float) {
         // Handle notifications on another coroutine not to steal focus for unnecessary stuff
-        GlobalScope.launch(Dispatchers.Default) {
+        withContext(Dispatchers.Default) {
             val progressPc = (100 * progress).roundToInt()
             trace(Log.INFO, "Import book OK : ${content.storageUri.toUri().formatDisplay(root)}")
             notificationManager.notify(

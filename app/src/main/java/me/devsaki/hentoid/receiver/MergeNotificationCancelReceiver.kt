@@ -8,6 +8,7 @@ import me.devsaki.hentoid.R
 
 /**
  * Broadcast receiver for the cancel button on merge notifications
+ * IMPORTANT : Every Received must be registered on the manifest!
  */
 class MergeNotificationCancelReceiver : BroadcastReceiver() {
 

@@ -686,8 +686,6 @@
     <string name="meta_rule_target">ターゲット</string>
     <string name="meta_rule_wildcard">ターゲットにワイルドカードがある場合、ソースにもワイルドカードが必要です</string>
     <string name="transform_pics">写真を変換</string>
-    <string name="transform_resizing">サイズ変更</string>
-    <string name="transform_resize_pics">写真のサイズを変更する</string>
     <string name="method">メソッド</string>
     <string name="resize_method_1">画面サイズの最大 %</string>
     <string name="resize_method_2">絶対最大寸法</string>
@@ -697,16 +695,13 @@
     <string name="resize_method_2_prompt_max_height">最大の高さ（マンガ）</string>
     <string name="resize_method_2_prompt_max_width">横幅の最大（漫画、ウェブトゥーン）</string>
     <string name="resize_method_3_prompt">元のサイズ %</string>
-    <string name="transform_transcoding">トランスコーディング</string>
     <string name="transcode_method_1">全ての画像に同じエンコーダー</string>
     <string name="transcode_method_2">可逆画像とロスレス画像を区別する</string>
     <string name="encoder">エンコーダー</string>
     <string name="encoder_lossless">ロスレスエンコーダー</string>
     <string name="encoder_lossy">非可逆エンコーダー</string>
-    <string name="transcode_encoder_webp_lossless">WEBP（ロスレス）</string>
-    <string name="transcode_encoder_png">PNG</string>
-    <string name="transcode_encoder_webp_lossy">WEBP（非可逆）</string>
-    <string name="transcode_encoder_jpeg">JPEG</string>
+    <string name="lossless_generic">ロスレス</string>
+    <string name="lossy_generic">非可逆</string>
     <string name="encoder_quality">品質</string>
     <string name="encoder_warning">WEBP 形式は、横幅と高さが16383ピクセルに制限されています。 大きな画像は自動的にPNGまたはJPGにエンコードされます。</string>
     <string name="retransform_warning">%dページは既に変換されています。 複数回変換すると、品質が低下する可能性があります。\n元の画像を再ダウンロードし、一度変換することをお勧めします。</string>

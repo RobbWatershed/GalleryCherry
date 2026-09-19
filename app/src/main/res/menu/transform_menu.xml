@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context=".activities.RenamingRulesActivity"
+    tools:ignore="AlwaysShowAction">
+    <item
+        android:id="@+id/action_unlock"
+        android:icon="@drawable/ic_lock_closed"
+        android:title="@string/transform_unlock_values"
+        android:tooltipText="@string/transform_unlock_values"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/action_download_settings"
+        android:icon="@drawable/ic_action_download"
+        android:title="@string/transform_download_settings"
+        android:tooltipText="@string/transform_download_settings"
+        app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/help"
+        android:icon="@drawable/ic_help_outline"
+        android:title="@string/help_generic"
+        android:tooltipText="@string/help_generic"
+        app:showAsAction="ifRoom" />
+</menu>

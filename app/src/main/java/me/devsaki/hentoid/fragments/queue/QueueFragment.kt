@@ -1,5 +1,7 @@
 package me.devsaki.hentoid.fragments.queue
 
+import android.Manifest.permission.READ_EXTERNAL_STORAGE
+import android.Manifest.permission.WRITE_EXTERNAL_STORAGE
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
@@ -11,6 +13,7 @@ import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.core.net.toUri
 import androidx.fragment.app.Fragment
@@ -65,9 +68,7 @@ import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.contentItemDiffCallback
 import me.devsaki.hentoid.util.dimensAsDp
 import me.devsaki.hentoid.util.download.ContentQueueManager
-import me.devsaki.hentoid.util.file.RQST_STORAGE_PERMISSION
 import me.devsaki.hentoid.util.file.formatHumanReadableSize
-import me.devsaki.hentoid.util.file.requestExternalStorageReadWritePermission
 import me.devsaki.hentoid.util.formatIntAsStr
 import me.devsaki.hentoid.util.getIdForCurrentTheme
 import me.devsaki.hentoid.util.network.DownloadSpeedCalculator.getAvgSpeedKbps
@@ -159,6 +160,16 @@ class QueueFragment : Fragment(R.layout.fragment_queue), ItemTouchCallback,
 
     // Set of sources of all unfiltered queue items
     private val unfilteredSources = HashSet<Site>()
+
+    private val storageRequestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { isGranted: Map<String, Boolean> ->
+        if (2 == isGranted.size && isGranted.all { it.value }) {
+            Timber.i("Storage permissions granted")
+        } else {
+            Timber.i("Storage permissions not granted")
+        }
+    }
 
 
     override fun onAttach(context: Context) {
@@ -554,7 +565,9 @@ class QueueFragment : Fragment(R.layout.fragment_queue), ItemTouchCallback,
 
             DownloadEvent.Motive.DOWNLOAD_FOLDER_NO_CREDENTIALS -> {
                 motiveMsg = R.string.paused_dl_folder_credentials
-                requireActivity().requestExternalStorageReadWritePermission(RQST_STORAGE_PERMISSION)
+                storageRequestPermissionLauncher.launch(
+                    arrayOf(READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE)
+                )
             }
 
             DownloadEvent.Motive.STALE_CREDENTIALS -> motiveMsg =
@@ -621,14 +634,18 @@ class QueueFragment : Fragment(R.layout.fragment_queue), ItemTouchCallback,
                 visibility = View.INVISIBLE
             }
 
-            progress = round(event.progress * 100).toInt()
+            if (event.indefinite) isIndeterminate = true
+            else {
+                isIndeterminate = false
+                progress = round(event.progress * 100).toInt()
+            }
         }
     }
 
     @Suppress("unused")
     @Subscribe(threadMode = ThreadMode.MAIN)
     fun onActivityEvent(event: CommunicationEvent) {
-        if (event.recipient != CommunicationEvent.Recipient.QUEUE && event.recipient != CommunicationEvent.Recipient.ALL) return
+        if (event.recipient != CommunicationEvent.Recipient.QUEUE_QUEUE && event.recipient != CommunicationEvent.Recipient.ALL) return
         when (event.type) {
             CommunicationEvent.Type.SEARCH -> searchQueue(event.message)
             CommunicationEvent.Type.ADVANCED_SEARCH -> onFilterSourcesClick()

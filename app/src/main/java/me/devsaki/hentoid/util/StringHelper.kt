@@ -1,6 +1,8 @@
 package me.devsaki.hentoid.util
 
+import android.content.res.Resources
 import android.util.Base64
+import me.devsaki.hentoid.R
 import org.apache.commons.text.StringEscapeUtils
 import java.nio.charset.Charset
 import java.util.Locale
@@ -12,6 +14,36 @@ private val STRING_CLEANUP_INVALID_CHARS_PATTERN by lazy { Pattern.compile("[(\\
 private val SEPARATOR_PATTERN by lazy { "\\W".toRegex() }
 val LATIN_1: Charset by lazy { Charset.forName("ISO-8859-1") }
 const val SEPARATOR_CHAR = "\u09BA"
+
+
+var chapterStr: String = "Chapter" // Default english value; will be overriden at init
+    internal set
+
+var ongoingStr: String = "Ongoing" // Default english value; will be overriden at init
+    internal set
+
+var completedStr: String = "Completed" // Default english value; will be overriden at init
+    internal set
+
+var disabledStr: String = "Disabled" // Default english value; will be overriden at init
+    internal set
+
+var lossyStr: String = "Lossy" // Default english value; will be overriden at init
+    internal set
+
+var losslessStr: String = "Lossless" // Default english value; will be overriden at init
+    internal set
+
+val VANILLA_CHAPTERNAME_PATTERN: Pattern by lazy { Pattern.compile("$chapterStr [0-9]+") }
+
+fun initResources(res: Resources) {
+    chapterStr = res.getString(R.string.gallery_chapter_prefix)
+    ongoingStr = res.getString(R.string.tag_ongoing)
+    completedStr = res.getString(R.string.tag_completed)
+    disabledStr = res.getString(R.string.disabled_generic)
+    lossyStr = res.getString(R.string.lossy_generic)
+    losslessStr = res.getString(R.string.lossless_generic)
+}
 
 /**
  * Return the given string formatted with a capital letter as its first letter
@@ -254,8 +286,8 @@ fun decode64(encodedString: String?): ByteArray {
  * @param rawString Raw string to encode
  * @return Encoded string
  */
-fun encode64(rawString: String): String {
-    return Base64.encodeToString(rawString.toByteArray(), Base64.DEFAULT)
+fun encode64(rawString: String, flags : Int = Base64.DEFAULT): String {
+    return Base64.encodeToString(rawString.toByteArray(), flags)
 }
 
 /**
@@ -281,12 +313,17 @@ fun isTransposition(referenceCleanup: String, comparisonCleanup: String): Boolea
     return true
 }
 
+fun isRangeChapters(range : String) : Boolean {
+    return range.startsWith('c')
+}
+
 /**
  * Convert the given number range to the corresponding list of numbers
  * Syntax : "1-5", "1;3;8", "1-2;3-4" (also works with a comma as a separator)
  */
 fun rangeToNumbers(range: String): List<Int> {
-    val parts = range
+    val value = if (isRangeChapters(range)) range.substring(1) else range
+    val parts = value
         .replace(",", ";")
         .split(';')
         .map { it.trim() }

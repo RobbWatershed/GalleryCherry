@@ -10,6 +10,8 @@ import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.parsers.cleanup
 import me.devsaki.hentoid.parsers.urlsToImageFiles
+import me.devsaki.hentoid.util.Settings
+import me.devsaki.hentoid.util.image.isSupportedMedia
 import me.devsaki.hentoid.util.parseDatetimeToEpoch
 
 @JsonClass(generateAdapter = true)
@@ -44,8 +46,15 @@ data class KemonoGallery(
         content.putAttributes(attributes)
 
         // Map thumb server to picture URL
-        val serverMapping = previews.associateBy({ it.path }, { it.server })
-        val imageUrls = post.getImageUrls(serverMapping)
+        val imageUrls = if (Settings.isKemonoHiRes) {
+            val serverMapping = previews.associateBy({ it.path }, { it.server })
+            post.getImageUrls(serverMapping)
+        } else {
+            previews.filter { isSupportedMedia(it.path ?: "") }
+                .distinct()
+                .map { "https://img.$KEMONO_DOMAIN_FILTER/thumbnail/data${it.path}" }
+        }
+
         // Use file as cover
         post.file?.let {
             content.coverImageUrl = "https://img.$COOMER_DOMAIN_FILTER/thumbnail/data/${it.path}"

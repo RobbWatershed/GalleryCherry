@@ -19,7 +19,7 @@ import me.devsaki.hentoid.util.file.ArchiveEntry
 import me.devsaki.hentoid.util.file.InnerNameNumberArchiveComparator
 import me.devsaki.hentoid.util.file.InnerNameNumberFileComparator
 import me.devsaki.hentoid.util.file.getFileNameWithoutExtension
-import me.devsaki.hentoid.util.file.listFiles
+import me.devsaki.hentoid.util.file.listDocumentFiles
 import me.devsaki.hentoid.util.file.removeFile
 import me.devsaki.hentoid.util.image.MIME_IMAGE_GENERIC
 import me.devsaki.hentoid.util.image.getMimeTypeFromPictureBinary
@@ -53,9 +53,9 @@ fun formatCacheKey(img: ImageFile): String {
  */
 fun createImageListFromFolder(
     context: Context,
-    folder: DocumentFile
+    folder: Uri
 ): List<ImageFile> {
-    val imageFiles = listFiles(context, folder, imageNamesFilter)
+    val imageFiles = listDocumentFiles(context, folder, imageNamesFilter)
     return if (imageFiles.isNotEmpty()) createImageListFromFiles(imageFiles, false)
     else emptyList()
 }

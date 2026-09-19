@@ -24,6 +24,7 @@ import me.devsaki.hentoid.util.file.findFolder
 import me.devsaki.hentoid.util.file.getArchiveEntries
 import me.devsaki.hentoid.util.file.getDocumentFromTreeUri
 import me.devsaki.hentoid.util.file.getOrCreateCacheFolder
+import me.devsaki.hentoid.util.file.isArchiveEncrypted
 import me.devsaki.hentoid.util.file.removeDocument
 import me.devsaki.hentoid.util.file.removeFile
 import me.devsaki.hentoid.util.file.tryCleanDirectory
@@ -32,7 +33,7 @@ import me.devsaki.hentoid.util.getArchivePdfThumbFileName
 import me.devsaki.hentoid.util.getContainingFolder
 import me.devsaki.hentoid.util.getOrCreateContentDownloadDir
 import me.devsaki.hentoid.util.getOrCreateSiteDownloadDir
-import me.devsaki.hentoid.util.image.isSupportedImage
+import me.devsaki.hentoid.util.image.isSupportedMedia
 import me.devsaki.hentoid.util.network.UriParts
 import me.devsaki.hentoid.util.pause
 import me.devsaki.hentoid.util.persistJson
@@ -148,9 +149,9 @@ class StorageDownloadManager {
             if (targetContent.status == StatusContent.EXTERNAL) {
                 val bookFolderName = formatFolderName(targetContent)
                 // First try finding the folder with new naming...
-                var targetFolder = findFolder(context, parentFolder, bookFolderName.first)
+                var targetFolder = findFolder(context, parentFolder.uri, bookFolderName.first)
                 if (null == targetFolder) { // ...then with old (sanitized) naming...
-                    targetFolder = findFolder(context, parentFolder, bookFolderName.second)
+                    targetFolder = findFolder(context, parentFolder.uri, bookFolderName.second)
                     if (null == targetFolder) { // ...if not, create a new folder with the new naming...
                         targetFolder = parentFolder.createDirectory(bookFolderName.first)
                         if (null == targetFolder) { // ...if it fails, create a new folder with the old naming
@@ -178,7 +179,7 @@ class StorageDownloadManager {
                 archiveStreamer = ArchiveStreamer(
                     context, uri,
                     append = false,
-                    removeArchivedFiles = true
+                    removeArchivedFiles = false
                 )
             }
         } else {
@@ -295,6 +296,16 @@ class StorageDownloadManager {
             if (downloadMode == DownloadMode.DOWNLOAD_ARCHIVE_FILE) {
                 content.imageList.firstOrNull()?.let { archive ->
                     var uri = archive.fileUri.toUri()
+
+                    // Stop there if the archive is encrypted
+                    if (context.isArchiveEncrypted(uri)) {
+                        // Clear cache
+                        getOrCreateCacheFolder(context, DOWNLOAD_CACHE_FOLDER)?.let {
+                            if (!tryCleanDirectory(it)) Timber.d("Failed to clean download cache")
+                        }
+                        throw ArchiveException("Archive is protected by a password")
+                    }
+
                     val uriParts = UriParts(uri)
                     getDocumentFromTreeUri(context, uri)?.let { doc ->
                         if (doc.renameTo(formatFolderName(content).first + "." + uriParts.extension)) {
@@ -311,12 +322,16 @@ class StorageDownloadManager {
                         context.getArchiveEntries(uri)
 
                     val imgs = entries
-                        .filter { !it.isFolder && isSupportedImage(it.path) }
+                        .filter { !it.isFolder && isSupportedMedia(it.path) }
                         .sortedWith(InnerNameNumberArchiveComparator())
                         .mapIndexed { i, e ->
+                            // Make sure fileUri follows the proper convention
+                            var filePath = e.path
+                            if (!filePath.startsWith('/'))
+                                filePath = "/$filePath"
                             ImageFile(
                                 dbOrder = i,
-                                dbFileUri = e.path,
+                                dbFileUri = filePath,
                                 dbUrl = uri.toString() + File.separator + e.path,
                                 size = e.size,
                                 status = StatusContent.DOWNLOADED

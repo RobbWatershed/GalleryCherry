@@ -433,7 +433,7 @@ class ContentItem : AbstractItem<ContentItem.ViewHolder>,
                 val imgs = content.imageList
                 if (!content.completed) {
                     visibility = View.VISIBLE
-                    max = imgs.count { imf -> imf.isReadable }
+                    max = imgs.count { it.isReadable }
                     progress = content.readPagesCount
                 } else {
                     visibility = View.INVISIBLE
@@ -501,7 +501,9 @@ class ContentItem : AbstractItem<ContentItem.ViewHolder>,
                     )
                     ivPages?.visibility = phVisibility
                     tv.visibility = phVisibility
-                    tv.text = String.format(Locale.ENGLISH, "%d", content.getNbDownloadedPages())
+                    var nbPages = content.getNbDownloadedPages()
+                    if (0 == nbPages) nbPages = content.qtyPages
+                    tv.text = String.format(Locale.ENGLISH, "%d", nbPages)
                 }
                 tvChapters?.let { tv ->
                     val chapters = content.chaptersList
@@ -609,12 +611,16 @@ class ContentItem : AbstractItem<ContentItem.ViewHolder>,
 
                 ivFavourite?.apply {
                     isVisible = (!isGrid || Settings.libraryDisplayGridFav)
+
+                    isEnabled = !(Site.LRR == content.site && Settings.lrrApiKey.isBlank())
+
                     if (content.favourite) setIconResource(R.drawable.ic_fav_full)
                     else setIconResource(R.drawable.ic_fav_empty)
                 }
 
                 ivRating?.apply {
                     isVisible = (!isGrid || Settings.libraryDisplayGridRating)
+                    if (Site.LRR == content.site) isVisible = false
                     setIconResource(getRatingResourceId(content.rating))
                 }
             }

@@ -56,7 +56,7 @@ class FileExplorer : Closeable {
      * @param parent  Parent folder to list subfolders from
      * @return Subfolders of the given parent folder
      */
-    fun listFolders(context: Context, parent: DocumentFile): List<DocumentFile> {
+    fun listFolders(context: Context, parent: Uri): List<DocumentFile> {
         return listDocumentFiles(
             context, parent, null,
             listFolders = true,
@@ -105,8 +105,8 @@ class FileExplorer : Closeable {
      */
     fun listFiles(
         context: Context,
-        parent: DocumentFile,
-        filter: NameFilter?
+        parent: Uri,
+        filter: NameFilter? = null
     ): List<DocumentFile> {
         return listDocumentFiles(
             context, parent, filter,
@@ -146,7 +146,7 @@ class FileExplorer : Closeable {
      * @param subfolderName Name of the folder to find
      * @return Folder inside the given parent folder (non recursive) that has the given name; null if not found
      */
-    fun findFolder(context: Context, parent: DocumentFile, subfolderName: String): DocumentFile? {
+    fun findFolder(context: Context, parent: Uri, subfolderName: String): DocumentFile? {
         val result = listDocumentFiles(
             context,
             parent,
@@ -167,7 +167,7 @@ class FileExplorer : Closeable {
      * @param fileName Name of the file to find
      * @return File inside the given parent folder (non recursive) that has the given name; null if not found
      */
-    fun findFile(context: Context, parent: DocumentFile, fileName: String): DocumentFile? {
+    fun findFile(context: Context, parent: Uri, fileName: String): DocumentFile? {
         val result =
             listDocumentFiles(
                 context, parent, createNameFilterEquals(fileName),
@@ -192,7 +192,7 @@ class FileExplorer : Closeable {
      */
     fun listDocumentFiles(
         context: Context,
-        parent: DocumentFile,
+        parent: Uri,
         nameFilter: NameFilter? = null,
         listFolders: Boolean = true,
         listFiles: Boolean = true,
@@ -203,7 +203,7 @@ class FileExplorer : Closeable {
     }
 
     fun listDocumentProperties(
-        parent: DocumentFile,
+        parent: Uri,
         nameFilter: NameFilter? = null,
         listFolders: Boolean = true,
         listFiles: Boolean = true,
@@ -214,13 +214,13 @@ class FileExplorer : Closeable {
 
     fun listDocumentFilesFw(
         context: Context,
-        parent: DocumentFile,
+        parent: Uri,
         nameFilter: NameFilter? = null,
         listFolders: Boolean = true,
         listFiles: Boolean = true
     ): Flow<DocumentFile> {
         try {
-            val cursor = getCursorFor(parent.uri)
+            val cursor = getCursorFor(parent)
             return queryDocumentFilesFw(
                 cursor,
                 nameFilter,
@@ -262,7 +262,7 @@ class FileExplorer : Closeable {
      * @return List of properties of the children of the given folder, matching the given criteria
      */
     private fun queryDocumentFiles(
-        parent: DocumentFile,
+        parent: Uri,
         nameFilter: NameFilter?,
         listFolders: Boolean,
         listFiles: Boolean,
@@ -271,7 +271,7 @@ class FileExplorer : Closeable {
         val results: MutableList<DocumentProperties> = ArrayList()
 
         try {
-            getCursorFor(parent.uri).use { c ->
+            getCursorFor(parent).use { c ->
                 while (c.moveToNext()) {
                     val documentId = c.getString(0)
                     val documentName = c.getString(1)
@@ -379,7 +379,7 @@ class FileExplorer : Closeable {
      */
     fun convertFromProperties(
         context: Context,
-        parent: DocumentFile,
+        parent: Uri,
         properties: List<DocumentProperties>
     ): List<DocumentFile> {
         return properties.mapNotNull { convertFromProperties(context, parent, it) }
@@ -387,12 +387,12 @@ class FileExplorer : Closeable {
 
     fun convertFromProperties(
         context: Context,
-        parent: DocumentFile,
+        parent: Uri,
         properties: DocumentProperties
     ): DocumentFile? {
         // Following line should be the proper way to go but it's inefficient as it calls queryIntentContentProviders from scratch repeatedly
         //DocumentFile docFile = DocumentFile.fromTreeUri(context, uri.left);
-        val uri = contract.buildDocumentUriUsingTree(parent.uri, properties.documentId)
+        val uri = contract.buildDocumentUriUsingTree(parent, properties.documentId)
         return contract.fromTreeUri(context, uri)?.let { doc ->
             CachedDocumentFile(
                 doc,

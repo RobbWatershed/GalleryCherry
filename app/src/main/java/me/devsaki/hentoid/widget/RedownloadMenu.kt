@@ -15,6 +15,7 @@ import me.devsaki.hentoid.util.getThemedColor
 
 fun showRedownloadMenu(
     context: Context,
+    showTransferFromLrr: Boolean,
     showRedlScratch: Boolean,
     showUpdateMetadata: Boolean,
     anchor: View,
@@ -24,13 +25,23 @@ fun showRedownloadMenu(
     val res = context.resources
     val builder = PowerMenu.Builder(context)
 
+    if (showTransferFromLrr)
+        builder.addItem(
+            PowerMenuItem(
+                res.getString(R.string.dl_lrr),
+                false,
+                R.drawable.ic_action_download,
+                tag = 0
+            )
+        )
+
     if (showRedlScratch)
         builder.addItem(
             PowerMenuItem(
                 res.getString(R.string.redl_scratch),
                 false,
                 R.drawable.ic_action_download_scratch,
-                tag = 0
+                tag = 1
             )
         )
 
@@ -40,7 +51,7 @@ fun showRedownloadMenu(
                 res.getString(R.string.redl_refresh),
                 false,
                 R.drawable.ic_action_refresh,
-                tag = 1
+                tag = 2
             )
         )
 

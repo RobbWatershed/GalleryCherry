@@ -32,13 +32,14 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.core.BiConsumer
+import me.devsaki.hentoid.core.lifecycleScope
+import me.devsaki.hentoid.core.load
 import me.devsaki.hentoid.core.requireById
 import me.devsaki.hentoid.customssiv.CustomSubsamplingScaleImageView
 import me.devsaki.hentoid.customssiv.CustomSubsamplingScaleImageView.AutoRotateMethod
 import me.devsaki.hentoid.customssiv.CustomSubsamplingScaleImageView.OnImageEventListener
 import me.devsaki.hentoid.customssiv.CustomSubsamplingScaleImageView.ScaleType
 import me.devsaki.hentoid.customssiv.uri
-import me.devsaki.hentoid.customssiv.util.lifecycleScope
 import me.devsaki.hentoid.database.domains.ImageFile
 import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.fragments.reader.ReaderPagerFragment
@@ -53,7 +54,7 @@ import me.devsaki.hentoid.util.Settings.Value.VIEWER_SEPARATING_BARS_LARGE
 import me.devsaki.hentoid.util.Settings.Value.VIEWER_SEPARATING_BARS_MEDIUM
 import me.devsaki.hentoid.util.Settings.Value.VIEWER_SEPARATING_BARS_SMALL
 import me.devsaki.hentoid.util.getScreenDimensionsPx
-import me.devsaki.hentoid.util.image.getImageDimensions
+import me.devsaki.hentoid.util.image.getMediaDimensions
 import me.devsaki.hentoid.util.image.needsRotating
 import me.devsaki.hentoid.views.ZoomableRecyclerView
 import me.devsaki.hentoid.widget.OnZoneTapListener
@@ -74,7 +75,10 @@ private val IMAGE_DIFF_CALLBACK: DiffUtil.ItemCallback<ImageFile> =
         override fun areContentsTheSame(
             oldItem: ImageFile, newItem: ImageFile
         ): Boolean {
-            return (oldItem == newItem)
+            return (oldItem.imageType == newItem.imageType)
+                    && (oldItem.displayUri == newItem.displayUri)
+                    && (oldItem.favourite == newItem.favourite)
+                    && !newItem.isForceRefresh
         }
     }
 
@@ -404,6 +408,11 @@ class ImagePagerAdapter(context: Context) :
                 imgView?.layoutParams = it
             }
 
+            // Visibility
+            ssiv.isVisible = activeView == ActiveView.SSIV
+            imageView.isVisible = activeView == ActiveView.IMAGEVIEW
+            videoView.isVisible = activeView == ActiveView.VIDEOVIEW
+
             var imageAvailable = true
             var preloadingFailed = false
             if (img != null && img.displayUri.isNotEmpty()) setImage(img, imgType)
@@ -494,7 +503,7 @@ class ImagePagerAdapter(context: Context) :
                     loadVideoView(uri)
                 }
             }
-            Timber.d("Picture $absoluteAdapterPosition : binding viewholder END $imgType $uri")
+            Timber.d("Picture $absoluteAdapterPosition : binding viewholder END")
         }
 
         suspend fun loadImageView(view: View, uri: Uri, imgType: ImageType) {
@@ -503,7 +512,7 @@ class ImagePagerAdapter(context: Context) :
                 else -> {
                     withContext(Dispatchers.IO) {
                         // Preload the pic to get its dimensions
-                        val dims = getImageDimensions(view.context, uri.toString())
+                        val dims = getMediaDimensions(view.context, uri)
                         needsRotating(screenWidth, screenHeight, dims.x, dims.y)
                     }
                 }
@@ -543,12 +552,7 @@ class ImagePagerAdapter(context: Context) :
         fun loadVideoView(uri: Uri) {
             // No auto-rotate
             Timber.d("Picture $absoluteAdapterPosition : Using VideoView")
-            videoView.setVideoURI(uri)
-            videoView.setOnPreparedListener { mp ->
-                mp.setVolume(0f, 0f)
-                mp.isLooping = true
-                videoView.start()
-            }
+            videoView.load(uri)
         }
 
         fun setTapListener() {
@@ -669,11 +673,6 @@ class ImagePagerAdapter(context: Context) :
 
         private fun setActiveView(view: ActiveView, isClickThrough: Boolean = false) {
             Timber.d("Picture $absoluteAdapterPosition : using $view ($isClickThrough)")
-
-            // Visibility
-            ssiv.isVisible = view == ActiveView.SSIV
-            imageView.isVisible = view == ActiveView.IMAGEVIEW
-            videoView.isVisible = view == ActiveView.VIDEOVIEW
 
             imgView = when (view) {
                 ActiveView.SSIV -> ssiv

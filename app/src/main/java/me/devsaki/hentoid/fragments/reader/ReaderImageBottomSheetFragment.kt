@@ -7,31 +7,41 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.net.toUri
+import androidx.core.view.isVisible
 import androidx.documentfile.provider.DocumentFile
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player.REPEAT_MODE_ONE
+import androidx.media3.exoplayer.ExoPlayer
 import coil3.load
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.BaseTransientBottomBar
 import com.google.android.material.snackbar.Snackbar
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.activities.bundles.ReaderActivityBundle
 import me.devsaki.hentoid.core.fixBottomSheetLanscape
+import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.database.domains.ImageFile
 import me.devsaki.hentoid.databinding.IncludeReaderImageBottomPanelBinding
+import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.util.exception.ContentNotProcessedException
 import me.devsaki.hentoid.util.file.fileExists
 import me.devsaki.hentoid.util.file.fileSizeFromUri
 import me.devsaki.hentoid.util.file.formatHumanReadableSize
+import me.devsaki.hentoid.util.file.getExtension
 import me.devsaki.hentoid.util.file.getFullPathFromUri
 import me.devsaki.hentoid.util.file.openFile
 import me.devsaki.hentoid.util.file.shareFile
 import me.devsaki.hentoid.util.getIdForCurrentTheme
-import me.devsaki.hentoid.util.image.getImageDimensions
+import me.devsaki.hentoid.util.image.getMediaDimensions
 import me.devsaki.hentoid.util.setStyle
+import me.devsaki.hentoid.util.video.videoOnlyRenderersFactory
 import me.devsaki.hentoid.viewmodels.ReaderViewModel
 import me.devsaki.hentoid.viewmodels.ViewModelFactory
 import timber.log.Timber
@@ -48,9 +58,12 @@ class ReaderImageBottomSheetFragment : BottomSheetDialogFragment(),
 
     // VARS
     private var imageIndex: Int = -1
+    private var image: ImageFile? = null
+
     private var scale = -1f
     private var croppedDims = Point(-1, -1)
-    private var image: ImageFile? = null
+
+    private var player: ExoPlayer? = null
 
 
     override fun onAttach(context: Context) {
@@ -87,6 +100,7 @@ class ReaderImageBottomSheetFragment : BottomSheetDialogFragment(),
     }
 
     override fun onDestroyView() {
+        player?.release()
         binding = null
         super.onDestroyView()
     }
@@ -95,9 +109,8 @@ class ReaderImageBottomSheetFragment : BottomSheetDialogFragment(),
         super.onViewCreated(view, savedInstanceState)
         view.fixBottomSheetLanscape(this)
 
-        viewModel.getViewerImages().observe(viewLifecycleOwner) { images ->
-            this.onImagesChanged(images)
-        }
+        viewModel.getViewerImages().observe(viewLifecycleOwner) { onImagesChanged(it) }
+        viewModel.getContent().observe(viewLifecycleOwner) { onContentChanged(it) }
     }
 
 
@@ -107,6 +120,8 @@ class ReaderImageBottomSheetFragment : BottomSheetDialogFragment(),
      * @param images Book's list of images
      */
     private fun onImagesChanged(images: List<ImageFile>) {
+        val context = requireContext()
+
         // Might happen when deleting the last page
         if (imageIndex >= images.size) imageIndex = images.size - 1
 
@@ -120,41 +135,63 @@ class ReaderImageBottomSheetFragment : BottomSheetDialogFragment(),
                 val fileName = filePath.substring(lastSeparator)
                 filePath =
                     getFullPathFromUri(
-                        requireContext(),
+                        context,
                         archiveUri.toUri()
                     ) + fileName
             } else {
                 filePath =
-                    getFullPathFromUri(requireContext(), it.fileUri.toUri())
+                    getFullPathFromUri(context, it.fileUri.toUri())
             }
 
+            @androidx.media3.common.util.UnstableApi
             binding?.apply {
                 imagePath.text = filePath
-                val imageExists = fileExists(requireContext(), it.displayUri.toUri())
-                if (imageExists) {
-                    lifecycleScope.launch {
-                        imageStats.text = formatImageStats(it)
+                lifecycleScope.launch(Dispatchers.IO) {
+                    if (fileExists(context, it.displayUri.toUri())) {
+                        val mediaDims = getMediaDimensions(context, it.displayUri.toUri())
+                        withContext(Dispatchers.Main) {
+                            imageStats.text = formatImageStats(it, mediaDims)
+                            videoFrame.isVisible = getExtension(filePath).equals("mp4", true)
+                            imgThumb.visibility =
+                                if (videoFrame.isVisible) View.INVISIBLE else View.VISIBLE
+                            if (imgThumb.isVisible) {
+                                imgThumb.load(it.displayUri)
+                            } else { // Video
+                                videoFrame.setAspectRatio(mediaDims.x.toFloat() / mediaDims.y)
+                                ExoPlayer.Builder(context, videoOnlyRenderersFactory)
+                                    .build().apply {
+                                        player = this
+                                        setVideoSurfaceView(videoThumb)
+                                        val mediaItem = MediaItem.fromUri(it.displayUri.toUri())
+                                        setMediaItem(mediaItem)
+                                        repeatMode = REPEAT_MODE_ONE
+                                        prepare()
+                                        play()
+                                    }
+                            }
+                        }
+                    } else {
+                        withContext(Dispatchers.Main) {
+                            imageStats.setText(R.string.image_not_found)
+                            imgActionFavourite.isEnabled = false
+                            imgActionCopy.isEnabled = false
+                            imgActionShare.isEnabled = false
+                        }
                     }
-                    ivThumb.load(it.displayUri)
-                } else {
-                    imageStats.setText(R.string.image_not_found)
-                    imgActionFavourite.isEnabled = false
-                    imgActionCopy.isEnabled = false
-                    imgActionShare.isEnabled = false
-                }
+                } // Dispatcher.IO
+
                 // Don't allow deleting the image if it is archived
                 if (it.isArchived) {
                     imgActionDelete.isEnabled = false
                 } else {
                     imgActionDelete.isEnabled = true
                 }
-            }
-            updateFavouriteDisplay(it.favourite)
+                updateFavouriteDisplay(it.favourite)
+            } // binding
         }
     }
 
-    private suspend fun formatImageStats(img: ImageFile): String {
-        val dimensions = getImageDimensions(requireContext(), img.displayUri)
+    private fun formatImageStats(img: ImageFile, dimensions: Point): String {
         val sizeStr = formatHumanReadableSize(
             if (img.size > 0) {
                 img.size
@@ -181,6 +218,16 @@ class ReaderImageBottomSheetFragment : BottomSheetDialogFragment(),
                 scale * 100,
                 sizeStr
             )
+        }
+    }
+
+    private fun onContentChanged(content: Content?) {
+        content ?: return
+        val isTemporary = content.status == StatusContent.SAVED
+        val isFoldersMode = content.status == StatusContent.STORAGE_RESOURCE
+        binding?.apply {
+            imgActionDelete.isEnabled = !isTemporary && !isFoldersMode
+            imgActionFavourite.isEnabled = !isTemporary && !isFoldersMode
         }
     }
 

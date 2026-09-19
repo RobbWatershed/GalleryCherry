@@ -15,7 +15,9 @@ import me.devsaki.hentoid.util.download.DownloadRateLimiter
 import me.devsaki.hentoid.util.download.DownloadRateLimiter.setRateLimit
 import me.devsaki.hentoid.util.exception.EmptyResultException
 import me.devsaki.hentoid.util.exception.ParseException
+import me.devsaki.hentoid.util.isRangeChapters
 import me.devsaki.hentoid.util.network.getCookies
+import me.devsaki.hentoid.util.rangeToNumbers
 import org.greenrobot.eventbus.EventBus
 import timber.log.Timber
 import java.io.IOException
@@ -175,12 +177,17 @@ class KemonoParser : BaseImageListParser() {
                 }
 
                 // One result = one chapter, if it contains at least an usable picture (i.e. not exclusively MEGA links or PSD files)
-                val chapters = ArrayList<Chapter>()
-                val chapterOrder = AtomicInteger(1)
+                val apiChapters = ArrayList<Chapter>()
+                var chapterOrder = 1
                 val pageOrder = AtomicInteger(1)
                 var collectedGalleries = 0
                 var nbResultsPerCall = 0
                 var iteration = 0
+
+                val range = content.downloadRange
+                val chpRangeIndexes =
+                    if (range.isBlank() || !isRangeChapters(range)) IntRange(1, 50000)
+                    else rangeToNumbers(range)
 
                 while (collectedGalleries < artist.postCount) {
                     KemonoServer.api.getArtistGalleries(
@@ -193,19 +200,36 @@ class KemonoParser : BaseImageListParser() {
                     ).execute().body()?.let { post ->
                         if (0 == nbResultsPerCall) nbResultsPerCall = post.count()
                         collectedGalleries += post.count()
+                        // We're obliged to get all chapters first, then reverse them
+                        // because the API only works that way
                         post.forEachIndexed { _, result ->
-                            chapters.add(
-                                result.toChapter(
-                                    artist.id,
-                                    chapterOrder,
-                                    pageOrder
-                                )
+                            chapterOrder++
+                            apiChapters.add(
+                                result.toChapter(artist.id, chapterOrder, pageOrder)
                             )
                         }
                         progressor?.progressPlus(collectedGalleries * 1f / artist.postCount)
                         DownloadRateLimiter.take()
                     }
                 }
+
+                // Reverse order : older to newer
+                val chapters = ArrayList<Chapter>()
+                val nbPages = apiChapters.sumOf { it.imageFiles.count() }
+                apiChapters.reverse()
+                var imgIdx = 1
+                apiChapters.forEachIndexed { index, chapter ->
+                    chapter.order = index + 1
+                    if (!chpRangeIndexes.contains(chapter.order)) return@forEachIndexed
+                    chapter.imageFiles.forEach {
+                        if (it.isReadable) {
+                            it.order = imgIdx++
+                            it.computeName(nbPages)
+                        } else it.order = 0
+                    }
+                    chapters.add(chapter)
+                }
+
                 content.setChapters(chapters)
                 val images = chapters.flatMap { it.imageList }.toMutableList()
                 if (Settings.isThumbSeparateFile(Site.COOMER))

@@ -1,6 +1,7 @@
 package me.devsaki.hentoid.workers.data
 
 import androidx.work.Data
+import me.devsaki.hentoid.enums.Site
 
 /**
  * Helper class to transfer data from any Activity to {@link me.devsaki.hentoid.workers.DuplicateDetectorWorker}
@@ -14,6 +15,7 @@ private const val USE_ARTIST = "artist"
 private const val USE_SAME_LANGUAGE = "sameLanguage"
 private const val IGNORE_CHAPTERS = "ignoreChapters"
 private const val USE_SENSITIVITY = "sensitivity"
+private const val SITES = "sites"
 
 class DuplicateData {
 
@@ -43,6 +45,10 @@ class DuplicateData {
             builder.putInt(USE_SENSITIVITY, value)
         }
 
+        fun setSites(sites: List<Site>) {
+            builder.putIntArray(SITES, sites.map { it.code }.toIntArray())
+        }
+
         val data: Data
             get() = builder.build()
     }
@@ -62,6 +68,8 @@ class DuplicateData {
             get() = data.getBoolean(IGNORE_CHAPTERS, false)
         val sensitivity: Int
             get() = data.getInt(USE_SENSITIVITY, 1)
+        val sites: List<Site>
+            get() = data.getIntArray(SITES)?.map { Site.searchByCode(it) } ?: emptyList()
     }
 
 }

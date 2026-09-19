@@ -8,8 +8,11 @@ import androidx.annotation.IdRes
 import androidx.core.view.ViewCompat
 import androidx.core.view.children
 import androidx.fragment.app.DialogFragment
+import androidx.lifecycle.findViewTreeLifecycleOwner
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import kotlinx.coroutines.CoroutineScope
 
 fun <T : View, U : View> T.requireById(@IdRes resId: Int): U {
     return ViewCompat.requireViewById(this, resId)
@@ -39,3 +42,6 @@ val View.isFocusedRecursive: Boolean
         this is ViewGroup -> children.any { it.isFocusedRecursive }
         else -> false
     }
+
+val View.lifecycleScope: CoroutineScope?
+    get() = this.findViewTreeLifecycleOwner()?.lifecycleScope

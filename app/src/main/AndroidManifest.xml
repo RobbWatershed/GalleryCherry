@@ -21,6 +21,8 @@
     <!-- Still required when targeting API34 for pre-API34 phones  -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <!-- Required to reach a local LRR server when targeting API 37 or higher -->
+    <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
 
     <application
         android:name=".core.HentoidApp"
@@ -145,6 +147,9 @@
             android:name=".activities.sources.GalleryEpicActivity"
             android:configChanges="orientation|screenSize" />
         <activity
+            android:name=".activities.sources.PawActivity"
+            android:configChanges="orientation|screenSize" />
+        <activity
             android:name=".activities.LibraryActivity"
             android:configChanges="orientation|screenSize"
             android:label="@string/title_activity_downloads"
@@ -195,10 +200,6 @@
                 android:value=".activities.LibraryActivity" />
         </activity>
         <activity
-            android:name=".activities.settings.SettingsSourceSelectActivity"
-            android:label="@string/pref_drawer_sources_title"
-            tools:ignore="UnusedAttribute" />
-        <activity
             android:name=".activities.settings.SettingsSourceSpecificsActivity"
             android:label="@string/title_activity_source_specifics"
             tools:ignore="UnusedAttribute" />
@@ -212,13 +213,8 @@
             tools:ignore="UnusedAttribute" />
         <activity
             android:name=".activities.UnlockActivity"
-            android:noHistory="true"
-            android:resizeableActivity="false"
-            android:screenOrientation="portrait" />
-        <activity
-            android:name=".activities.settings.SettingsPinActivity"
-            android:resizeableActivity="false"
-            android:screenOrientation="portrait" />
+            android:noHistory="true" />
+        <activity android:name=".activities.settings.SettingsPinActivity" />
         <activity
             android:name=".activities.MetadataEditActivity"
             android:label="@string/title_activity_meta_edit"
@@ -230,6 +226,14 @@
         <activity
             android:name=".activities.settings.SettingsStorageActivity"
             android:label="@string/title_activity_storage"
+            tools:ignore="UnusedAttribute" />
+        <activity
+            android:name=".activities.TransformActivity"
+            android:label="@string/transform"
+            tools:ignore="UnusedAttribute" />
+        <activity
+            android:name=".activities.settings.SettingsKeybindActivity"
+            android:label="@string/pref_viewer_key_bindings_title"
             tools:ignore="UnusedAttribute" />
         <activity
             android:name=".activities.TextIntentActivity"
@@ -554,6 +558,8 @@
 
         <receiver android:name=".receiver.AppUpdateDownloadReceiver" />
 
+        <receiver android:name=".receiver.UpdateNotificationStopReceiver" />
+
         <!-- Providers -->
 
         <provider
@@ -573,7 +579,7 @@
 
         <provider
             android:name=".util.file.FileChunkProvider"
-            android:authorities="me.violet.cherry.chunk"
+            android:authorities="${fileChunkAuthority}"
             android:exported="false"
             android:multiprocess="true">
             <meta-data

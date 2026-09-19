@@ -60,7 +60,7 @@ class ProgressDialogFragment : BaseDialogFragment<Nothing>() {
         requireNotNull(bundle) { "No arguments found" }
         dialogTitle = bundle.getString(TITLE, "")
         progressUnit = bundle.getInt(PROGRESS_UNIT, -1)
-        EventBus.getDefault().register(this)
+        if (!EventBus.getDefault().isRegistered(this)) EventBus.getDefault().register(this)
     }
 
     override fun onCreateView(
@@ -81,7 +81,7 @@ class ProgressDialogFragment : BaseDialogFragment<Nothing>() {
     }
 
     override fun onDestroyView() {
-        EventBus.getDefault().unregister(this)
+        if (EventBus.getDefault().isRegistered(this)) EventBus.getDefault().unregister(this)
         super.onDestroyView()
         binding = null
     }

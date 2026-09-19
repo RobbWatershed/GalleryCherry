@@ -25,66 +25,66 @@ class MaintenanceDAO {
     }
 
     fun selectChaptersEmptyName(): List<Chapter> {
-        return ObjectBoxDB.store.boxFor(Chapter::class.java).query()
+        return store.boxFor(Chapter::class.java).query()
             .equal(Chapter_.name, "", QueryBuilder.StringOrder.CASE_INSENSITIVE).safeFind()
     }
 
     fun selectDownloadedContentWithNoSize(): List<Content> {
-        return ObjectBoxDB.store.boxFor(Content::class.java).query()
+        return store.boxFor(Content::class.java).query()
             .`in`(Content_.status, ObjectBoxDB.libraryStatus)
             .isNull(Content_.size).safeFind()
     }
 
     fun selectDownloadedContentWithNoReadProgress(): List<Content> {
-        return ObjectBoxDB.store.boxFor(Content::class.java).query()
+        return store.boxFor(Content::class.java).query()
             .`in`(Content_.status, ObjectBoxDB.libraryStatus)
             .isNull(Content_.readProgress).safeFind()
     }
 
     fun selectGroupsWithNoCoverContent(): List<Group> {
-        return ObjectBoxDB.store.boxFor(Group::class.java).query()
+        return store.boxFor(Group::class.java).query()
             .isNull(Group_.coverContentId)
             .or()
             .equal(Group_.coverContentId, 0).safeFind()
     }
 
     fun selectContentWithNullCompleteField(): List<Content> {
-        return ObjectBoxDB.store.boxFor(Content::class.java).query()
+        return store.boxFor(Content::class.java).query()
             .isNull(Content_.completed).safeFind()
     }
 
     fun selectContentWithNullDlModeField(): List<Content> {
-        return ObjectBoxDB.store.boxFor(Content::class.java).query()
+        return store.boxFor(Content::class.java).query()
             .isNull(Content_.downloadMode).safeFind()
     }
 
     fun selectContentWithNullMergeField(): List<Content> {
-        return ObjectBoxDB.store.boxFor(Content::class.java).query()
+        return store.boxFor(Content::class.java).query()
             .isNull(Content_.manuallyMerged).safeFind()
     }
 
     fun selectContentWithNullDlCompletionDateField(): List<Content> {
-        return ObjectBoxDB.store.boxFor(Content::class.java).query()
+        return store.boxFor(Content::class.java).query()
             .isNull(Content_.downloadCompletionDate).safeFind()
     }
 
     fun selectContentWithInvalidUploadDate(): List<Content> {
-        return ObjectBoxDB.store.boxFor(Content::class.java).query().greater(Content_.uploadDate, 0)
+        return store.boxFor(Content::class.java).query().greater(Content_.uploadDate, 0)
             .less(Content_.uploadDate, 10000000000L).safeFind()
     }
 
     fun selectChapterWithNullUploadDate(): List<Chapter> {
-        return ObjectBoxDB.store.boxFor(Chapter::class.java).query()
+        return store.boxFor(Chapter::class.java).query()
             .isNull(Chapter_.uploadDate).safeFind()
     }
 
     fun selectSearchRecordWithNullEntity(): List<SearchRecord> {
-        return ObjectBoxDB.store.boxFor(SearchRecord::class.java).query()
+        return store.boxFor(SearchRecord::class.java).query()
             .isNull(SearchRecord_.entityType).safeFind()
     }
 
     fun selectImageFileIdsWithNullPageUrl(): Set<Long> {
-        return ObjectBoxDB.store.boxFor(ImageFile::class.java).query()
+        return store.boxFor(ImageFile::class.java).query()
             .isNull(ImageFile_.dbPageUrl)
             .or()
             .equal(ImageFile_.dbPageUrl, "", QueryBuilder.StringOrder.CASE_INSENSITIVE)
@@ -92,29 +92,37 @@ class MaintenanceDAO {
     }
 
     fun resetPageUrlForImageId(ids: Collection<Long>) {
-        val store = ObjectBoxDB.store.boxFor(ImageFile::class.java)
+        val store = store.boxFor(ImageFile::class.java)
         val imgFiles = store.get(ids)
         imgFiles.forEach { it.pageUrl = "" }
         store.put(imgFiles)
     }
 
     fun selectContentIdsWithNullDownloadRanges(): Set<Long> {
-        return ObjectBoxDB.store.boxFor(Content::class.java).query()
+        return store.boxFor(Content::class.java).query()
             .isNull(Content_.downloadRange)
             .or()
             .equal(Content_.downloadRange, "", QueryBuilder.StringOrder.CASE_INSENSITIVE)
             .safeFindIds().toSet()
     }
 
+    fun selectContentIdsWithNullArchiveIds(): Set<Long> {
+        return store.boxFor(Content::class.java).query()
+            .isNull(Content_.archiveId)
+            .or()
+            .equal(Content_.archiveId, "", QueryBuilder.StringOrder.CASE_INSENSITIVE)
+            .safeFindIds().toSet()
+    }
+
     fun resetDownloadRangeForContentId(ids: Collection<Long>) {
-        val store = ObjectBoxDB.store.boxFor(Content::class.java)
+        val store = store.boxFor(Content::class.java)
         val contents = store.get(ids)
         contents.forEach { it.downloadRange = "" }
         store.put(contents)
     }
 
     fun selectChapterIdsWithNullDownloadRanges(): Set<Long> {
-        return ObjectBoxDB.store.boxFor(Chapter::class.java).query()
+        return store.boxFor(Chapter::class.java).query()
             .isNull(Chapter_.downloadRange)
             .or()
             .equal(Chapter_.downloadRange, "", QueryBuilder.StringOrder.CASE_INSENSITIVE)
@@ -122,22 +130,29 @@ class MaintenanceDAO {
     }
 
     fun resetDownloadRangeForChapterId(ids: Collection<Long>) {
-        val store = ObjectBoxDB.store.boxFor(Chapter::class.java)
+        val store = store.boxFor(Chapter::class.java)
         val chapters = store.get(ids)
         chapters.forEach { it.downloadRange = "" }
         store.put(chapters)
     }
 
+    fun resetArchiveIdForContentId(ids: Collection<Long>) {
+        val store = store.boxFor(Content::class.java)
+        val contents = store.get(ids)
+        contents.forEach { it.archiveId = "" }
+        store.put(contents)
+    }
+
     fun selectOrphanQueueRecordIds(): LongArray {
         val qrCondition = QueueRecord_.contentId.lessOrEqual(0).or(QueueRecord_.contentId.isNull)
-        return ObjectBoxDB.store.boxFor(QueueRecord::class.java).query(qrCondition).safeFindIds()
+        return store.boxFor(QueueRecord::class.java).query(qrCondition).safeFindIds()
     }
 
     // Select content that have a queue status but no corresponding QueueRecord
     fun selectOrphanQueueContent(): List<Content> {
         val qrCondition =
             Content_.status.oneOf(getQueueTabStatuses()).and(Content_.queueRecords.relationCount(0))
-        return ObjectBoxDB.store.boxFor(Content::class.java).query(qrCondition).safeFind()
+        return store.boxFor(Content::class.java).query(qrCondition).safeFind()
     }
 
     // Proxies to the update functions of the regular DB

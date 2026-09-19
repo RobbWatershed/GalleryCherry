@@ -8,6 +8,7 @@ import me.devsaki.hentoid.util.file.openFile
 
 /**
  * Broadcast receiver for when an archival notification is clicked
+ * IMPORTANT : Every Received must be registered on the manifest!
  */
 class ArchiveNotificationSuccessReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {

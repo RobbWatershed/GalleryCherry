@@ -90,6 +90,12 @@ abstract class BaseWorker(
         logs?.add(LogEntry(s, isError))
     }
 
+    protected fun trace(priority: Int, t: Throwable) {
+        Timber.log(priority, t)
+        val isError = priority > Log.INFO
+        logs?.add(LogEntry(getStackTraceString(t), isError))
+    }
+
     private suspend fun clear() {
         logs?.apply {
             add(LogEntry("Worker destroyed / stopped=%s / complete=%s", isStopped, isComplete))

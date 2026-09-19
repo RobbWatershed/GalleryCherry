@@ -1,5 +1,7 @@
 package me.devsaki.hentoid.fragments.library
 
+import android.Manifest.permission.READ_EXTERNAL_STORAGE
+import android.Manifest.permission.WRITE_EXTERNAL_STORAGE
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -10,6 +12,7 @@ import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.core.view.isVisible
@@ -35,7 +38,6 @@ import com.mikepenz.fastadapter.utils.DragDropUtil.onMove
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import me.devsaki.hentoid.BuildConfig
 import me.devsaki.hentoid.R
 import me.devsaki.hentoid.activities.LibraryActivity
 import me.devsaki.hentoid.activities.ReaderActivity
@@ -43,23 +45,20 @@ import me.devsaki.hentoid.activities.bundles.FileItemBundle
 import me.devsaki.hentoid.activities.bundles.ReaderActivityBundle
 import me.devsaki.hentoid.databinding.FragmentLibraryFoldersBinding
 import me.devsaki.hentoid.enums.StorageLocation
-import me.devsaki.hentoid.events.AppUpdatedEvent
 import me.devsaki.hentoid.events.CommunicationEvent
 import me.devsaki.hentoid.events.ProcessEvent
-import me.devsaki.hentoid.fragments.library.UpdateSuccessDialogFragment.Companion.invoke
 import me.devsaki.hentoid.util.Debouncer
 import me.devsaki.hentoid.util.PickFolderContract
-import me.devsaki.hentoid.util.PickerResult
+import me.devsaki.hentoid.util.PickUriResult
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.dpToPx
 import me.devsaki.hentoid.util.file.DisplayFile
 import me.devsaki.hentoid.util.file.DisplayFile.SubType
 import me.devsaki.hentoid.util.file.DisplayFile.Type
-import me.devsaki.hentoid.util.file.RQST_STORAGE_PERMISSION
+import me.devsaki.hentoid.util.file.checkExternalStorageReadWritePermission
 import me.devsaki.hentoid.util.file.fileExists
 import me.devsaki.hentoid.util.file.getDocumentFromTreeUri
 import me.devsaki.hentoid.util.file.openUri
-import me.devsaki.hentoid.util.file.requestExternalStorageReadWritePermission
 import me.devsaki.hentoid.util.runExternalImport
 import me.devsaki.hentoid.util.toast
 import me.devsaki.hentoid.viewholders.FileItem
@@ -108,9 +107,7 @@ class LibraryFoldersFragment : Fragment(),
     private var mDragSelectTouchListener: DragSelectTouchListener? = null
 
     private val pickRootFolder =
-        registerForActivityResult(PickFolderContract()) {
-            onRootFolderPickerResult(it.first, it.second)
-        }
+        registerForActivityResult(PickFolderContract(), ::onRootFolderPickerResult)
 
 
     // ======== VARIABLES
@@ -121,6 +118,18 @@ class LibraryFoldersFragment : Fragment(),
 
     // Search and filtering criteria in the form of a Bundle (see FolderSearchManager.FolderSearchBundle)
     private var folderSearchBundle: Bundle? = null
+
+    private val storageRequestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { isGranted: Map<String, Boolean> ->
+        if (2 == isGranted.size && isGranted.all { it.value }) {
+            // Run folder picker
+            pickRootFolder.launch(StorageLocation.NONE)
+        } else {
+            Timber.i("Storage permissions not granted")
+        }
+    }
+
 
     companion object {
 
@@ -185,7 +194,7 @@ class LibraryFoldersFragment : Fragment(),
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         register(SelectExtensionFactory())
-        EventBus.getDefault().register(this)
+        if (!EventBus.getDefault().isRegistered(this)) EventBus.getDefault().register(this)
     }
 
     override fun onCreateView(
@@ -218,6 +227,7 @@ class LibraryFoldersFragment : Fragment(),
         viewModel.folderSearchBundle.observe(viewLifecycleOwner) { folderSearchBundle = it }
 
         // Trigger a blank search
+        // TODO only do that when the view is activated?
         val currentRoot = Settings.libraryFoldersRoot.toUri()
         if (fileExists(requireContext(), currentRoot)) {
             viewModel.setFolderRoot(currentRoot)
@@ -397,7 +407,7 @@ class LibraryFoldersFragment : Fragment(),
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     fun onCommunicationEvent(event: CommunicationEvent) {
-        if (event.recipient != CommunicationEvent.Recipient.FOLDERS && event.recipient != CommunicationEvent.Recipient.ALL) return
+        if (event.recipient != CommunicationEvent.Recipient.LIBRARY_FOLDERS && event.recipient != CommunicationEvent.Recipient.ALL) return
         when (event.type) {
             CommunicationEvent.Type.UPDATE_TOOLBAR -> {
                 addCustomBackControl()
@@ -407,7 +417,9 @@ class LibraryFoldersFragment : Fragment(),
                 }
             }
 
-            CommunicationEvent.Type.SEARCH -> onSubmitSearch(event.message)
+            CommunicationEvent.Type.SEARCH, CommunicationEvent.Type.SEARCH_NO_HISTORY ->
+                onSubmitSearch(event.message)
+
             CommunicationEvent.Type.ENABLE -> onEnable()
             CommunicationEvent.Type.DISABLE -> onDisable()
             CommunicationEvent.Type.SCROLL_TOP -> llm?.scrollToPositionWithOffset(0, 0)
@@ -416,7 +428,7 @@ class LibraryFoldersFragment : Fragment(),
     }
 
     override fun onDestroy() {
-        EventBus.getDefault().unregister(this)
+        if (EventBus.getDefault().isRegistered(this)) EventBus.getDefault().unregister(this)
         callback?.remove()
         super.onDestroy()
     }
@@ -540,7 +552,7 @@ class LibraryFoldersFragment : Fragment(),
     }
 
     /**
-     * LiveData callback when the folders changes
+     * LiveData callback when the folders change
      * Happens when navigating
      */
     private fun onFoldersChanged(result: List<DisplayFile>) {
@@ -603,14 +615,15 @@ class LibraryFoldersFragment : Fragment(),
      */
     private fun onItemClick(item: FileItem): Boolean {
         if (selectExtension!!.selections.isEmpty()) {
-            val ctx = requireActivity()
             when (item.doc.type) {
                 Type.ADD_BUTTON -> {
                     // Make sure permissions are set
-                    if (ctx.requestExternalStorageReadWritePermission(RQST_STORAGE_PERMISSION)) {
-                        // Run folder picker
+                    if (requireActivity().checkExternalStorageReadWritePermission())
                         pickRootFolder.launch(StorageLocation.NONE)
-                    }
+                    else
+                        storageRequestPermissionLauncher.launch(
+                            arrayOf(READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE)
+                        )
                 }
 
                 Type.UP_BUTTON -> {
@@ -655,15 +668,12 @@ class LibraryFoldersFragment : Fragment(),
         return true
     }
 
-    private fun onRootFolderPickerResult(resultCode: PickerResult, uri: Uri) {
-        when (resultCode) {
-            PickerResult.OK -> {
-                if (!viewModel.attachFolderRoot(uri)) activity.get()?.toast(R.string.add_root_fail)
-            }
-
-            else -> {
+    private fun onRootFolderPickerResult(result: PickUriResult) {
+        if (result is PickUriResult.Success) {
+            if (!viewModel.attachFolderRoot(result.uri))
                 activity.get()?.toast(R.string.add_root_fail)
-            }
+        } else {
+            activity.get()?.toast(R.string.add_root_fail)
         }
     }
 

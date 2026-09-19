@@ -14,45 +14,44 @@ import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.VectorDrawable
 import android.net.Uri
 import android.os.Build
+import android.os.Build.VERSION.SDK_INT
 import androidx.annotation.ColorInt
 import androidx.annotation.DrawableRes
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.scale
-import androidx.core.net.toUri
-import androidx.documentfile.provider.DocumentFile
 import com.awxkee.jxlcoder.JxlCoder
 import com.radzivon.bartoshyk.avif.coder.HeifCoder
 import com.radzivon.bartoshyk.avif.coder.PreferredColorConfig
-import com.shakster.gifkt.GifEncoder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import me.devsaki.hentoid.BuildConfig
 import me.devsaki.hentoid.core.CHARSET_LATIN_1
 import me.devsaki.hentoid.enums.PictureEncoder
+import me.devsaki.hentoid.util.assertNonUiThread
 import me.devsaki.hentoid.util.byteArrayOfInts
-import me.devsaki.hentoid.util.duplicateInputStream
-import me.devsaki.hentoid.util.file.FILECHUNK_AUTHORITY
 import me.devsaki.hentoid.util.file.FileChunkInfo
 import me.devsaki.hentoid.util.file.NameFilter
-import me.devsaki.hentoid.util.file.createFile
 import me.devsaki.hentoid.util.file.fileExists
 import me.devsaki.hentoid.util.file.findSequencePosition
 import me.devsaki.hentoid.util.file.getExtension
 import me.devsaki.hentoid.util.file.getExtensionFromMimeType
 import me.devsaki.hentoid.util.file.getInputStream
-import me.devsaki.hentoid.util.file.getOutputStream
-import me.devsaki.hentoid.util.file.removeFile
+import me.devsaki.hentoid.util.file.getMimeTypeFromFileUri
 import me.devsaki.hentoid.util.network.getExtensionFromUri
 import me.devsaki.hentoid.util.startsWith
+import me.devsaki.hentoid.util.video.MIME_VIDEO_MP4
+import me.devsaki.hentoid.util.video.MP4_SIGNATURE
+import me.devsaki.hentoid.util.video.MediaFrameStreamer
 import timber.log.Timber
+import java.io.FileDescriptor
+import java.io.FileInputStream
 import java.io.IOException
 import java.io.InputStream
 import kotlin.math.abs
 import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.roundToInt
-import kotlin.time.DurationUnit
-import kotlin.time.toDuration
 
 
 const val PIXEL_BUFFER_HEIGHT = 1024
@@ -66,7 +65,6 @@ const val MIME_IMAGE_PNG = "image/png"
 const val MIME_IMAGE_APNG = "image/apng"
 const val MIME_IMAGE_JXL = "image/jxl"
 const val MIME_IMAGE_AVIF = "image/avif"
-const val MIME_VIDEO_MP4 = "video/mp4"
 
 // In Java and Kotlin, byte type is signed !
 // => Converting all raw values to byte to be sure they are evaluated as expected
@@ -91,10 +89,14 @@ private val JXL_ISO =
 private val AVIF_SIGNATURE = "ftypavif".toByteArray(CHARSET_LATIN_1)
 private val AVIF_ANIMATED_SIGNATURE = "ftypavis".toByteArray(CHARSET_LATIN_1)
 
-private val MP4_SIGNATURE = "ftyp".toByteArray(CHARSET_LATIN_1)
+val imageNamesFilter = NameFilter { isMediaExtensionSupported(getExtension(it)) }
 
-val imageNamesFilter = NameFilter { isImageExtensionSupported(getExtension(it)) }
 
+data class ImageProperties(
+    val mime: String,
+    val isLossless: Boolean,
+    val isAnimated: Boolean
+)
 
 /**
  * Determine if the given image MIME type is supported by the app
@@ -116,13 +118,13 @@ fun isMimeTypeSupported(mimeType: String): Boolean {
 }
 
 /**
- * Determine if the given image file extension is supported by the app
+ * Determine if the given media file extension is supported by the app
  *
  * @param extension File extension to test
- * @return True if the app supports the reading of images with the given file extension; false if not
+ * @return True if the app supports the reading of medias with the given file extension; false if not
  */
 
-private fun isImageExtensionSupported(extension: String): Boolean {
+private fun isMediaExtensionSupported(extension: String): Boolean {
     return (extension.equals("jpg", ignoreCase = true)
             || extension.equals("jpeg", ignoreCase = true)
             || extension.equals("webp", ignoreCase = true)
@@ -135,8 +137,35 @@ private fun isImageExtensionSupported(extension: String): Boolean {
             )
 }
 
-fun isSupportedImage(fileName: String): Boolean {
-    return isImageExtensionSupported(getExtension(fileName))
+fun isSupportedMedia(fileName: String): Boolean {
+    return isMediaExtensionSupported(getExtension(fileName))
+}
+
+fun getImageProperties(context: Context, uri: Uri): ImageProperties? {
+    assertNonUiThread()
+    try {
+        getInputStream(context, uri).use { input ->
+            return getImageProperties(input)
+        }
+    } catch (e: Exception) {
+        Timber.w(e, "Unable to open image file $uri")
+    }
+    return null
+}
+
+fun getImageProperties(input: InputStream): ImageProperties? {
+    val header = ByteArray(1000)
+    if (input.read(header) > 0) return getImageProperties(header)
+    return null
+}
+
+fun getImageProperties(header: ByteArray): ImageProperties {
+    val mime = getMimeTypeFromPictureBinary(header)
+    return ImageProperties(
+        mime = mime,
+        isAnimated = isImageAnimated(header, mime),
+        isLossless = isImageLossless(header, mime)
+    )
 }
 
 /**
@@ -183,10 +212,11 @@ fun getMimeTypeFromPictureBinary(data: ByteArray, limit: Int = -1): String {
  * @param data Binary picture file header (400 bytes minimum)
  * @return True if the format is animated and supported by the app
  */
-fun isImageAnimated(data: ByteArray): Boolean {
+fun isImageAnimated(data: ByteArray, mime: String = ""): Boolean {
     // TODO JXL (specs aren't public :/)
     val limit = min(data.size, 1000)
-    return when (getMimeTypeFromPictureBinary(data, limit)) {
+    val mimeFinal = mime.ifEmpty { getMimeTypeFromPictureBinary(data, limit) }
+    return when (mimeFinal) {
         MIME_IMAGE_APNG -> true
         MIME_VIDEO_MP4 -> true
         MIME_IMAGE_GIF ->
@@ -229,8 +259,9 @@ fun isImageAnimated(data: ByteArray): Boolean {
  * @param data Binary picture file header (16 bytes minimum)
  * @return True if the format is lossless and supported by the app
  */
-fun isImageLossless(data: ByteArray): Boolean {
-    return if (data.size < 16) false else when (getMimeTypeFromPictureBinary(data)) {
+fun isImageLossless(data: ByteArray, mime: String = ""): Boolean {
+    val mimeFinal = mime.ifEmpty { getMimeTypeFromPictureBinary(data) }
+    return if (data.size < 16) false else when (mimeFinal) {
         MIME_IMAGE_PNG -> true
         MIME_IMAGE_APNG -> true
         MIME_IMAGE_GIF -> true
@@ -345,7 +376,7 @@ private fun calculateInSampleSize(
 /**
  * Create a Bitmap from the given InputStream, optimizing resources according to the given required width and height
  *
- * @param stream       Stream to load the bitmap from
+ * @param input        Stream to load the bitmap from
  * @param targetWidth  Target picture width, in pixels
  * @param targetHeight Target picture height, in pixels
  * @return Bitmap created from the given InputStream
@@ -354,107 +385,28 @@ private fun calculateInSampleSize(
 @Throws(IOException::class)
 suspend fun decodeSampledBitmapFromStream(
     context: Context,
-    stream: InputStream,
+    input: InputStream,
     targetWidth: Int,
     targetHeight: Int
 ): Bitmap? {
-    val streams = duplicateInputStream(stream, 2)
-    val workStream1 = streams[0]
-    val workStream2 = streams[1]
+    val rawData = input.readBytes()
 
     // First decode with inJustDecodeBounds=true to check dimensions
-    val dimsAndMime = workStream1.use {
-        val rawData = it.readBytes()
-        val dims = getImageDimensions(context, data = rawData)
-        val mime = getMimeTypeFromPictureBinary(rawData)
-        Pair(dims, mime)
-    }
-
-    val mime = dimsAndMime.second
+    val dims = getMediaDimensions(context, data = rawData)
+    val mime = getMimeTypeFromPictureBinary(rawData)
     if (mime == MIME_IMAGE_JXL || mime == MIME_IMAGE_AVIF) {
         // Can't optimize here; using basic load
-        return decodeBitmap(workStream2, mime)
+        return decodeBitmap(rawData)
     } else {
         // Calculate inSampleSize
-        val dims = dimsAndMime.first
         val options = BitmapFactory.Options()
         options.inSampleSize =
             calculateInSampleSize(dims.x, dims.y, targetWidth, targetHeight)
 
         // Decode final bitmap with inSampleSize set
         options.inJustDecodeBounds = false
-        return workStream2.use { workStream2 ->
-            BitmapFactory.decodeStream(workStream2, null, options)
-        }
+        return BitmapFactory.decodeByteArray(rawData, 0, rawData.size, options)
     }
-}
-
-/**
- * Create GIF file by assembling the given files into frames
- *
- * @param folder Temp folder where the GIF file is assembled
- * @param frames Frames : first = Frame file Uri; second = Frame duration (ms)
- *
- * @return Uri of generated GIF file
- */
-@Throws(IOException::class, IllegalArgumentException::class)
-fun assembleGif(
-    context: Context,
-    folder: Uri,
-    name: String,
-    frames: List<Pair<Uri, Int>>,
-    isCanceled: () -> Boolean,
-    onProgress: ((Float) -> Unit)? = null
-): Uri? {
-    require(frames.isNotEmpty()) { "No frames given" }
-    require(!isCanceled.invoke())
-
-    val dims = getInputStream(context, frames[0].first).let { input ->
-        BitmapFactory.decodeStream(input).let {
-            Point(it.width, it.height)
-        }
-    }
-    val buffer = IntArray(dims.x * dims.y)
-    val options = BitmapFactory.Options()
-    options.inPreferredConfig = Bitmap.Config.ARGB_8888
-
-    val tempFile = createFile(context, folder, "$name.gif", MIME_IMAGE_GIF)
-    getOutputStream(context, tempFile)?.use { out ->
-        val gifEncoderBuilder = GifEncoder.builder(out)
-        gifEncoderBuilder.minimumFrameDurationCentiseconds = 1
-
-        val gifEncoder = gifEncoderBuilder.build { framesWritten, writtenDuration ->
-            Timber.d("framesWritten=$framesWritten writtenDuration=$writtenDuration")
-        }
-        gifEncoder.use {
-            frames.forEachIndexed { idx, frame ->
-                if (isCanceled.invoke()) return@forEachIndexed
-                Timber.d("encoding frame $idx [duration ${frame.second} ms]")
-                getInputStream(context, frame.first).use { input ->
-                    BitmapFactory.decodeStream(input, null, options)?.let { bmp ->
-                        bmp.getPixels(buffer, 0, dims.x, 0, 0, dims.x, dims.y)
-                        try {
-                            gifEncoder.writeFrame(
-                                buffer,
-                                dims.x,
-                                dims.y,
-                                // Warning : if frame.second is <= 1ms, GIFs will be read slower on most readers
-                                // (see https://android.googlesource.com/platform/frameworks/base/+/2be87bb707e2c6d75f668c4aff6697b85fbf5b15)
-                                frame.second.toDuration(DurationUnit.MILLISECONDS)
-                            )
-                        } finally {
-                            bmp.recycle()
-                        }
-                    }
-                }
-                onProgress?.invoke(idx / frames.size.toFloat())
-            }
-        }
-    }
-    if (isCanceled.invoke()) {
-        removeFile(context, tempFile)
-        return null
-    } else return tempFile
 }
 
 /**
@@ -514,7 +466,7 @@ private fun sharpRescale(
 
 fun sharpRescale(src: Bitmap, targetScale: Float): Bitmap {
     val resizeParams = computeRescaleParams(targetScale)
-    Timber.d(">> resizing successively to scale %s", resizeParams.second)
+    Timber.d(">> resizing successively to scale ${resizeParams.second}")
     return successiveRescale(src, resizeParams.first)
 }
 
@@ -573,71 +525,67 @@ fun needsRotating(screenWidth: Int, screenHeight: Int, width: Int, height: Int):
 }
 
 /**
- * Return the given image's dimensions
+ * Return the given media's dimensions
+ * NB : Won't work for videos if they are provided using the 'data' parameter
  *
  * @param context Context to be used
- * @param uri     Uri of the image to be read
- * @param data    Raw data of the image to be read; overrides Uri if set
- * @return Dimensions (x,y) of the given image
+ * @param uri     Uri of the media file to be read
+ * @param data    Raw data of the media to be read; overrides Uri if set
+ * @return Dimensions (x,y) of the given media
  */
-suspend fun getImageDimensions(
+suspend fun getMediaDimensions(
     context: Context,
-    uri: String = Uri.EMPTY.toString(),
+    uri: Uri = Uri.EMPTY,
     data: ByteArray? = null
-): Point =
-    withContext(Dispatchers.IO) {
-        val fileUri = uri.toUri()
-        if (null == data && !fileExists(context, fileUri)) return@withContext Point(0, 0)
+): Point = withContext(Dispatchers.IO) {
+    val isDataUsable = !(null == data || data.isEmpty())
+    if (!isDataUsable && !fileExists(context, uri)) return@withContext Point(0, 0)
 
-        val fileName = if (uri.startsWith(FILECHUNK_AUTHORITY)) {
-            FileChunkInfo.fromUri(uri.toUri()).displayName
-        } else uri
+    val fileName = if (uri.authority == BuildConfig.FILECHUNK_AUTHORITY) FileChunkInfo.fromUri(uri).displayName
+    else uri.lastPathSegment ?: ""
 
-        val ext = if (fileUri != Uri.EMPTY || null == data) getExtensionFromUri(fileName)
-        else getExtensionFromMimeType(getMimeTypeFromPictureBinary(data))
+    val ext = if (uri != Uri.EMPTY || !isDataUsable) getExtensionFromUri(fileName)
+    else getExtensionFromMimeType(getMimeTypeFromPictureBinary(data))
 
-        if (ext == "jxl" || ext == "avif") {
-            return@withContext if (null == data) {
-                getDimsFromThirdParty(context, ext, fileUri)
-            } else {
-                getDimsFromThirdParty(ext, data)
-            }
-        } else { // Natively supported by Android
-            return@withContext try {
-                if (null == data) {
-                    var dims = Point(0, 0)
-                    try {
-                        dims = getDimsFromBitmapFactory(context, fileUri)
-                    } catch (e: Exception) {
-                        Timber.d(e)
-                    }
-                    if (dims.x < 1 || dims.y < 1) {
-                        // Fallback for formats unsupported by BitmapFactory but supported by Android Media (e.g. MP4)
-                        try {
-                            dims = getDimsFromMediaRetriever(context, fileUri)
-                        } catch (e: Exception) {
-                            Timber.w(e)
-                        }
-                    }
-                    dims
-                } else {
-                    val options = BitmapFactory.Options()
-                    options.inJustDecodeBounds = true
-                    BitmapFactory.decodeByteArray(data, 0, data.size, options)
-                    Point(options.outWidth, options.outHeight)
+    if (ext == "jxl" || ext == "avif") {
+        return@withContext if (null == data) {
+            getDimsFromThirdParty(context, ext, uri)
+        } else {
+            getDimsFromThirdParty(ext, data)
+        }
+    } else { // Natively supported by Android
+        return@withContext try {
+            if (uri != Uri.EMPTY || !isDataUsable) {
+                var dims = Point(0, 0)
+                try {
+                    dims = getDimsFromBitmapFactory(context, uri)
+                } catch (e: Exception) {
+                    Timber.d(e)
                 }
-            } catch (e: IOException) {
-                Timber.w(e)
-                Point(0, 0)
-            } catch (e: IllegalArgumentException) {
-                Timber.w(e)
-                Point(0, 0)
+                if (dims.x < 1 || dims.y < 1) {
+                    // Fallback for formats unsupported by BitmapFactory but supported by Android Media (e.g. MP4)
+                    try {
+                        dims = getDimsFromMediaRetriever(context, uri)
+                    } catch (e: Exception) {
+                        Timber.w(e)
+                    }
+                }
+                dims
+            } else {
+                val options = BitmapFactory.Options()
+                options.inJustDecodeBounds = true
+                BitmapFactory.decodeByteArray(data, 0, data.size, options)
+                Point(options.outWidth, options.outHeight)
             }
+        } catch (e: Exception) {
+            Timber.w(e)
+            Point(0, 0)
         }
     }
+}
 
 @Throws(Exception::class)
-fun getDimsFromBitmapFactory(context: Context, uri: Uri): Point {
+private fun getDimsFromBitmapFactory(context: Context, uri: Uri): Point {
     val options = BitmapFactory.Options()
     options.inJustDecodeBounds = true
     getInputStream(context, uri).use {
@@ -647,7 +595,7 @@ fun getDimsFromBitmapFactory(context: Context, uri: Uri): Point {
 }
 
 @Throws(Exception::class)
-fun getDimsFromMediaRetriever(context: Context, uri: Uri): Point {
+private fun getDimsFromMediaRetriever(context: Context, uri: Uri): Point {
     val retriever = MediaMetadataRetriever()
     try {
         retriever.setDataSource(context, uri)
@@ -663,11 +611,11 @@ fun getDimsFromMediaRetriever(context: Context, uri: Uri): Point {
     }
 }
 
-fun getDimsFromThirdParty(context: Context, ext: String, uri: Uri): Point {
+private fun getDimsFromThirdParty(context: Context, ext: String, uri: Uri): Point {
     return getInputStream(context, uri).use { getDimsFromThirdParty(ext, it.readBytes()) }
 }
 
-fun getDimsFromThirdParty(ext: String, rawData: ByteArray): Point {
+private fun getDimsFromThirdParty(ext: String, rawData: ByteArray): Point {
     return when (ext) {
         "jxl" -> {
             JxlCoder.getSize(rawData)?.let {
@@ -685,28 +633,47 @@ fun getDimsFromThirdParty(ext: String, rawData: ByteArray): Point {
     }
 }
 
-fun loadBitmap(context: Context, file: DocumentFile): Bitmap? {
-    if (!file.exists()) return null
-    val options = BitmapFactory.Options()
-    options.inPreferredConfig = Bitmap.Config.ARGB_8888
-    return try {
-        BitmapFactory.decodeStream(getInputStream(context, file), null, options)
+suspend fun loadBitmap(context: Context, uri: Uri): Bitmap? = withContext(Dispatchers.IO) {
+    if (!fileExists(context, uri)) return@withContext null
+    return@withContext try {
+        context.contentResolver.openFileDescriptor(uri, "r")?.use { pfs ->
+            decodeBitmap(
+                pfs.fileDescriptor,
+                getMimeTypeFromFileUri(uri.toString()),
+                Bitmap.Config.ARGB_8888
+            )
+        }
     } catch (e: Exception) {
         Timber.w(e)
         null
     }
 }
 
-fun decodeBitmap(inputStream: InputStream, mime: String, config: Bitmap.Config? = null): Bitmap? {
+fun decodeBitmap(fd: FileDescriptor, mime: String, config: Bitmap.Config? = null): Bitmap? {
     return when (mime) {
-        MIME_IMAGE_JXL, MIME_IMAGE_AVIF -> inputStream.use { decodeBitmap(it.readBytes(), config) }
+        MIME_IMAGE_JXL, MIME_IMAGE_AVIF -> {
+            FileInputStream(fd).use {
+                decodeBitmap(it.readBytes(), config)
+            }
+        }
+
+        MIME_VIDEO_MP4 -> {
+            if (SDK_INT >= 28) {
+                MediaFrameStreamer(fd).use { it.getFirstFrame() }
+            } else {
+                null
+            }
+        }
+
         else -> {
             val options = BitmapFactory.Options()
             if (config != null) options.inPreferredConfig = config
             // If that is not set, some PNGs are read with a ColorSpace of code "Unknown" (-1),
             // which makes resizing buggy (generates a black picture)
             options.inPreferredColorSpace = ColorSpace.get(ColorSpace.Named.SRGB)
-            BitmapFactory.decodeStream(inputStream, null, options)
+            FileInputStream(fd).use {
+                BitmapFactory.decodeStream(it, null, options)
+            }
         }
     }
 }
@@ -732,7 +699,7 @@ private fun toAvifCfg(config: Bitmap.Config?): PreferredColorConfig {
         Bitmap.Config.ARGB_8888 -> PreferredColorConfig.RGBA_8888
         Bitmap.Config.RGB_565 -> PreferredColorConfig.RGB_565
         Bitmap.Config.RGBA_F16 -> PreferredColorConfig.RGBA_F16
-        Bitmap.Config.HARDWARE -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        Bitmap.Config.HARDWARE -> if (SDK_INT >= Build.VERSION_CODES.Q) {
             PreferredColorConfig.HARDWARE
         } else {
             PreferredColorConfig.DEFAULT
@@ -747,7 +714,7 @@ private fun toJxlCfg(config: Bitmap.Config?): com.awxkee.jxlcoder.PreferredColor
         Bitmap.Config.ARGB_8888 -> com.awxkee.jxlcoder.PreferredColorConfig.RGBA_8888
         Bitmap.Config.RGB_565 -> com.awxkee.jxlcoder.PreferredColorConfig.RGB_565
         Bitmap.Config.RGBA_F16 -> com.awxkee.jxlcoder.PreferredColorConfig.RGBA_F16
-        Bitmap.Config.HARDWARE -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        Bitmap.Config.HARDWARE -> if (SDK_INT >= Build.VERSION_CODES.Q) {
             com.awxkee.jxlcoder.PreferredColorConfig.HARDWARE
         } else {
             com.awxkee.jxlcoder.PreferredColorConfig.DEFAULT

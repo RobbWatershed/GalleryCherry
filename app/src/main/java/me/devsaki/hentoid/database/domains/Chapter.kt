@@ -3,6 +3,7 @@ package me.devsaki.hentoid.database.domains
 import io.objectbox.annotation.Backlink
 import io.objectbox.annotation.Entity
 import io.objectbox.annotation.Id
+import io.objectbox.annotation.Transient
 import io.objectbox.relation.ToMany
 import io.objectbox.relation.ToOne
 import me.devsaki.hentoid.database.safeReach
@@ -22,6 +23,10 @@ data class Chapter(
     var downloadRange: String = ""
 ) {
     lateinit var content: ToOne<Content>
+
+    // Number of pages (download-time only)
+    @Transient
+    var nbPages = 0
 
     @Backlink(to = "chapter")
     lateinit var imageFiles: ToMany<ImageFile>

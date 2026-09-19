@@ -1,9 +1,12 @@
 package me.devsaki.hentoid.activities
 
+import android.Manifest.permission.POST_NOTIFICATIONS
+import android.Manifest.permission.READ_EXTERNAL_STORAGE
+import android.Manifest.permission.WRITE_EXTERNAL_STORAGE
 import android.content.Intent
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener
-import android.content.pm.PackageManager
 import android.graphics.Typeface
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -11,6 +14,7 @@ import android.text.InputType
 import android.view.MenuItem
 import android.view.View
 import android.view.WindowManager
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
@@ -58,6 +62,7 @@ import me.devsaki.hentoid.fragments.library.LibraryContentFragment
 import me.devsaki.hentoid.fragments.library.LibraryExportDialogFragment
 import me.devsaki.hentoid.fragments.library.LibraryFoldersFragment
 import me.devsaki.hentoid.fragments.library.LibraryGroupsFragment
+import me.devsaki.hentoid.fragments.library.LibraryLrrFragment
 import me.devsaki.hentoid.fragments.library.UpdateSuccessDialogFragment.Companion.invoke
 import me.devsaki.hentoid.ui.invokeInputDialog
 import me.devsaki.hentoid.util.AchievementsManager
@@ -65,13 +70,11 @@ import me.devsaki.hentoid.util.Debouncer
 import me.devsaki.hentoid.util.SearchCriteria
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.dimensAsDp
-import me.devsaki.hentoid.util.file.RQST_NOTIFICATION_PERMISSION
-import me.devsaki.hentoid.util.file.RQST_STORAGE_PERMISSION
 import me.devsaki.hentoid.util.file.checkExternalStorageReadWritePermission
 import me.devsaki.hentoid.util.file.checkNotificationPermission
+import me.devsaki.hentoid.util.file.checkPermission
+import me.devsaki.hentoid.util.file.checkPermissions
 import me.devsaki.hentoid.util.file.isLowDeviceStorage
-import me.devsaki.hentoid.util.file.requestExternalStorageReadWritePermission
-import me.devsaki.hentoid.util.file.requestNotificationPermission
 import me.devsaki.hentoid.util.getThemedColor
 import me.devsaki.hentoid.util.isNumeric
 import me.devsaki.hentoid.util.openReader
@@ -86,6 +89,7 @@ import me.devsaki.hentoid.viewmodels.ViewModelFactory
 import me.devsaki.hentoid.widget.ContentSearchManager.ContentSearchBundle
 import me.devsaki.hentoid.widget.FolderSearchManager
 import me.devsaki.hentoid.widget.GroupSearchManager.GroupSearchBundle
+import me.devsaki.hentoid.widget.LrrSearchManager
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
@@ -179,6 +183,7 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
     private val searchCriteria = mutableListOf(
         SearchCriteria(),
         SearchCriteria(),
+        SearchCriteria(),
         SearchCriteria()
     )
 
@@ -200,14 +205,39 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
     // Current Group search query
     private var groupSearchBundle: Bundle? = null
 
-    // Current Folder  search query
+    // Current Folder search query
     private var folderSearchBundle: Bundle? = null
+
+    // Current LRR search query
+    private var lrrSearchBundle: Bundle? = null
 
     private lateinit var searchSubmitDebouncer: Debouncer<String>
     private lateinit var searchLongSubmitDebouncer: Debouncer<String>
 
     // Used to avoid closing search panel immediately when user uses backspace to correct what he typed
     private lateinit var searchClearDebouncer: Debouncer<Int>
+
+
+    // Ask for permissions
+    private val notifRequestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            updateTopAlert()
+        } else {
+            Timber.i("Notification permission not granted")
+        }
+    }
+
+    private val storageRequestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { isGranted: Map<String, Boolean> ->
+        if (2 == isGranted.size && isGranted.all { it.value }) {
+            updateTopAlert()
+        } else {
+            Timber.i("Storage permissions not granted")
+        }
+    }
 
 
     // === PUBLIC ACCESSORS (to be used by fragments)
@@ -253,14 +283,16 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
         setContentView(activityBinding?.root)
 
         searchClearDebouncer = Debouncer(this.lifecycleScope, 1500) { clearSearch() }
-        searchLongSubmitDebouncer = Debouncer(this.lifecycleScope, 1500) {
-            setQuery(it)
-            signalCurrentFragment(CommunicationEvent.Type.SEARCH_NO_HISTORY, it)
-        }
-        searchSubmitDebouncer = Debouncer(this.lifecycleScope, 250) {
-            setQuery(it)
-            signalCurrentFragment(CommunicationEvent.Type.SEARCH_NO_HISTORY, it)
-        }
+        searchLongSubmitDebouncer =
+            Debouncer(this.lifecycleScope, Settings.librarySearchLongDelayThreshold) {
+                setQuery(it)
+                signalCurrentFragment(CommunicationEvent.Type.SEARCH_NO_HISTORY, it)
+            }
+        searchSubmitDebouncer =
+            Debouncer(this.lifecycleScope, Settings.librarySearchDelayThreshold) {
+                setQuery(it)
+                signalCurrentFragment(CommunicationEvent.Type.SEARCH_NO_HISTORY, it)
+            }
 
         initDrawerLayout(activityBinding!!.drawerLayout, binding!!.toolbar)
 
@@ -278,6 +310,7 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
         viewModel.contentSearchBundle.observe(this) { contentSearchBundle = it }
         viewModel.groupSearchBundle.observe(this) { groupSearchBundle = it }
         viewModel.folderSearchBundle.observe(this) { folderSearchBundle = it }
+        viewModel.lrrSearchBundle.observe(this) { lrrSearchBundle = it }
 
         viewModel.group.observe(this) { g: Group? ->
             group = g
@@ -411,13 +444,13 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
                     )
                 snackbar.setAction(R.string.resume) {
                     Timber.i(
-                        "Reopening book %d",
-                        previouslyViewedContent
+                        "Reopening book $previouslyViewedContent"
                     )
                     val dao: CollectionDAO = ObjectBoxDAO()
                     try {
-                        val c = dao.selectContent(previouslyViewedContent)
-                        if (c != null) openReader(this, c, searchParams = contentSearchBundle)
+                        dao.selectContent(previouslyViewedContent)?.let {
+                            openReader(this, it, searchParams = contentSearchBundle)
+                        }
                     } finally {
                         dao.cleanup()
                     }
@@ -560,10 +593,18 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
 
     private fun updateDisplay(targetGroupingId: Int) {
         pagerAdapter?.notifyDataSetChanged()
-        if (targetGroupingId == Grouping.FLAT.id) { // Display books right away
-            binding?.libraryPager?.currentItem = 1
-        } else if (targetGroupingId == Grouping.FOLDERS.id) { // Display folders
-            binding?.libraryPager?.currentItem = 2
+        when (targetGroupingId) {
+            Grouping.FLAT.id -> { // Display books right away
+                binding?.libraryPager?.currentItem = 1
+            }
+
+            Grouping.FOLDERS.id -> { // Display folders
+                binding?.libraryPager?.currentItem = 2
+            }
+
+            Grouping.LRR.id -> { // Display Lanraragi panel
+                binding?.libraryPager?.currentItem = 3
+            }
         }
     }
 
@@ -573,7 +614,7 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
             searchMenu?.setOnActionExpandListener(object : MenuItem.OnActionExpandListener {
                 override fun onMenuItemActionExpand(item: MenuItem): Boolean {
                     showSearchSubBar(
-                        !isGroupDisplayed() && !isFoldersDisplayed(),
+                        !isGroupDisplayed() && !isFoldersDisplayed() && !isLrrDisplayed(),
                         null,
                         null,
                         !preventShowSearchHistoryNextExpand
@@ -623,8 +664,9 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
                 // Change display when text query is typed
                 setOnQueryTextListener(object : SearchView.OnQueryTextListener {
                     override fun onQueryTextSubmit(s: String): Boolean {
-                        setQuery(s.trim())
-                        signalCurrentFragment(CommunicationEvent.Type.SEARCH, query.toString())
+                        val q = s.trim()
+                        setQuery(q)
+                        signalCurrentFragment(CommunicationEvent.Type.SEARCH, q)
                         clearFocus()
                         return true
                     }
@@ -685,7 +727,7 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
                     collapseSearchMenu()
                 }
                 showSearchSubBar(
-                    !isGroupDisplayed() && !isFoldersDisplayed(),
+                    !isGroupDisplayed() && !isFoldersDisplayed() && !isLrrDisplayed(),
                     showClear = true,
                     showSaveSearch = !isFoldersDisplayed(),
                     showSearchHistory = false
@@ -720,7 +762,7 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
             R.id.action_sort_filter -> LibraryBottomSortFilterFragment.invoke(
                 this, this.supportFragmentManager, isGroupDisplayed(),
                 group != null && group!!.isUngroupedGroup,
-                isFoldersDisplayed()
+                isFoldersDisplayed(), isLrrDisplayed()
             )
 
             else -> return false
@@ -778,20 +820,9 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
                             val searchUri = it.searchString.toUri()
                             setAdvancedSearchCriteria(SearchActivityBundle.parseSearchUri(searchUri))
                             val query = getQuery()
-                            if (getSearchCriteria().isEmpty() || query.isNotEmpty()) { // Universal search
-                                if (query.isNotEmpty()) {
-                                    if (SearchRecord.EntityType.CONTENT == it.entityType)
-                                        viewModel.searchContentFullText(query)
-                                    else
-                                        viewModel.setGroupQuery(query)
-                                }
-                            } else { // Advanced search; content only
-                                viewModel.searchContent(
-                                    getQuery(),
-                                    getSearchCriteria(),
-                                    searchUri
-                                )
-                            }
+                            if (SearchRecord.EntityType.CONTENT == it.entityType)
+                                viewModel.searchContent(query, getSearchCriteria())
+                            else if (query.isNotEmpty()) viewModel.setGroupQuery(query, false)
                         }
                     } else { // Clear history
                         val builder = MaterialAlertDialogBuilder(this@LibraryActivity)
@@ -900,7 +931,9 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
             Settings.Key.LIBRARY_DISPLAY_GRID_SOURCE,
             Settings.Key.LIBRARY_DISPLAY_GRID_TITLE,
             Settings.Key.LIBRARY_GRID_CARD_WIDTH,
-            Settings.Key.LIBRARY_DISPLAY_GROUP_FIGURE
+            Settings.Key.LIBRARY_DISPLAY_GROUP_FIGURE,
+            Settings.Key.LIBRARY_SEARCH_DELAY_THRESHOLD,
+            Settings.Key.LIBRARY_SEARCH_LONG_DELAY_THRESHOLD
                 -> {
                 hasChangedDisplaySettings = true
             }
@@ -940,7 +973,7 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
             }
 
             when (targetGrouping) {
-                Grouping.FLAT, Grouping.FOLDERS -> updateDisplay(targetGroupingId)
+                Grouping.FLAT, Grouping.FOLDERS, Grouping.LRR -> updateDisplay(targetGroupingId)
                 else -> goBackToGroups()
             }
 
@@ -982,11 +1015,19 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
     }
 
     private fun fixPermissions() {
-        if (this.requestExternalStorageReadWritePermission(RQST_STORAGE_PERMISSION)) updateTopAlert()
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
+            && !checkPermissions(READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE)
+        )
+            storageRequestPermissionLauncher.launch(
+                arrayOf(READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE)
+            )
     }
 
     private fun fixNotifications() {
-        if (this.requestNotificationPermission(RQST_NOTIFICATION_PERMISSION)) updateTopAlert()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+            && !checkPermission(POST_NOTIFICATIONS)
+        )
+            notifRequestPermissionLauncher.launch(POST_NOTIFICATIONS)
     }
 
     private fun isLowDatabaseStorage(): Boolean {
@@ -996,25 +1037,6 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
         } finally {
             dao.cleanup()
         }
-    }
-
-    override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<String?>,
-        grantResults: IntArray
-    ) {
-        if (grantResults.isEmpty()) return
-
-        if (RQST_STORAGE_PERMISSION == requestCode) {
-            if (permissions.size < 2) return
-            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) closeTopAlert()
-            // Don't show rationales here; the alert still displayed on screen should be enough
-        } else if (RQST_NOTIFICATION_PERMISSION == requestCode) {
-            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) closeTopAlert()
-            // Don't show rationales here; the alert still displayed on screen should be enough
-        }
-
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
     }
 
     fun closeNavigationDrawer() {
@@ -1035,6 +1057,10 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
 
     fun isFoldersDisplayed(): Boolean {
         return 2 == binding?.libraryPager?.currentItem
+    }
+
+    fun isLrrDisplayed(): Boolean {
+        return 3 == binding?.libraryPager?.currentItem
     }
 
     fun goBackToGroups() {
@@ -1072,6 +1098,9 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
             return bundle.isFilterActive()
         } else if (isFoldersDisplayed() && folderSearchBundle != null) {
             val bundle = FolderSearchManager.FolderSearchBundle(folderSearchBundle!!)
+            return bundle.isFilterActive()
+        } else if (isLrrDisplayed() && lrrSearchBundle != null) {
+            val bundle = LrrSearchManager.LrrSearchBundle(lrrSearchBundle!!)
             return bundle.isFilterActive()
         }
         return false
@@ -1150,6 +1179,25 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
             changeGroupMenu?.isVisible = false
             folderMenu?.isVisible = 1 == selectedTotalCount
             redownloadMenu?.isVisible = false
+            storageMethodMenu?.isVisible = false
+            groupCoverMenu?.isVisible = false
+            mergeMenu?.isVisible = false
+            splitMenu?.isVisible = false
+            transformMenu?.isVisible = false
+            exportMetaMenu?.isVisible = false
+        } else if (isLrrDisplayed()) {
+            editMenu?.isVisible = false // Could be an option to consider
+            deleteMenu?.isVisible = false // Could be an option to consider
+            detachMenu?.isVisible = false
+            refreshMenu?.isVisible = false
+            shareMenu?.isVisible = false
+            completedMenu?.isVisible = false // Could be an option to consider
+            resetReadStatsMenu?.isVisible = false // Could be an option to consider
+            rateMenu?.isVisible = false
+            exportMenu?.isVisible = false
+            changeGroupMenu?.isVisible = false
+            folderMenu?.isVisible = false
+            redownloadMenu?.isVisible = true
             storageMethodMenu?.isVisible = false
             groupCoverMenu?.isVisible = false
             mergeMenu?.isVisible = false
@@ -1271,7 +1319,7 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
     }
 
     private fun processCommunicationEvent(event: CommunicationEvent) {
-        if (event.recipient != CommunicationEvent.Recipient.ALL && event.recipient != CommunicationEvent.Recipient.LIBRARY) return
+        if (event.recipient != CommunicationEvent.Recipient.ALL && event.recipient != CommunicationEvent.Recipient.LIBRARY_LIST) return
         if (CommunicationEvent.Type.CLOSE_DRAWER == event.type) closeNavigationDrawer()
         if (CommunicationEvent.Type.RELOAD == event.type) {
             viewModel.searchContent()
@@ -1314,9 +1362,10 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
             CommunicationEvent(
                 eventType,
                 when (fragmentIndex) {
-                    1 -> CommunicationEvent.Recipient.CONTENTS
-                    2 -> CommunicationEvent.Recipient.FOLDERS
-                    else -> CommunicationEvent.Recipient.GROUPS
+                    1 -> CommunicationEvent.Recipient.LIBRARY_CONTENTS
+                    2 -> CommunicationEvent.Recipient.LIBRARY_FOLDERS
+                    3 -> CommunicationEvent.Recipient.LIBRARY_LRR
+                    else -> CommunicationEvent.Recipient.LIBRARY_GROUPS
                 },
                 message
             )
@@ -1324,7 +1373,7 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
     }
 
     private fun getCurrentFragmentIndex(): Int {
-        return if (isGroupDisplayed()) 0 else if (isFoldersDisplayed()) 2 else 1
+        return if (isGroupDisplayed()) 0 else if (isFoldersDisplayed()) 2 else if (isLrrDisplayed()) 3 else 1
     }
 
     private fun saveSearchAsGroup() {
@@ -1382,12 +1431,13 @@ class LibraryActivity : BaseActivity(), LibraryExportDialogFragment.Parent {
             return when (position) {
                 1 -> LibraryContentFragment()
                 2 -> LibraryFoldersFragment()
+                3 -> LibraryLrrFragment()
                 else -> LibraryGroupsFragment()
             }
         }
 
         override fun getItemCount(): Int {
-            return 3
+            return 4
         }
     }
 }

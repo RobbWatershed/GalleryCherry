@@ -6,9 +6,11 @@ import android.net.Uri
 import android.os.ParcelFileDescriptor
 import android.util.Log
 import androidx.core.net.toUri
+import me.devsaki.hentoid.BuildConfig
 import me.devsaki.hentoid.core.READER_CACHE
 import me.devsaki.hentoid.util.assertNonUiThread
 import me.devsaki.hentoid.util.byteArrayOfInts
+import me.devsaki.hentoid.util.isNumeric
 import me.devsaki.hentoid.util.network.UriParts
 import me.devsaki.hentoid.util.pause
 import me.devsaki.hentoid.util.startsWith
@@ -24,6 +26,7 @@ import net.sf.sevenzipjbinding.ISequentialOutStream
 import net.sf.sevenzipjbinding.PropID
 import net.sf.sevenzipjbinding.SevenZip
 import net.sf.sevenzipjbinding.SevenZipException
+import net.sf.sevenzipjbinding.SevenZipNativeInitializationException
 import timber.log.Timber
 import java.io.EOFException
 import java.io.File
@@ -31,6 +34,8 @@ import java.io.FileInputStream
 import java.io.IOException
 import java.io.OutputStream
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
+
 
 /**
  * Archive / unarchive helper for formats supported by 7Z
@@ -55,6 +60,23 @@ private val RAR5_SIGNATURE = byteArrayOfInts(0x52, 0x61, 0x72, 0x21, 0x1A, 0x07,
 private val RAR_SIGNATURE = byteArrayOfInts(0x52, 0x61, 0x72, 0x21)
 
 private const val BUFFER = 32 * 1024
+
+val isSevenZipInitialized: AtomicBoolean = AtomicBoolean(false)
+
+// https://sourceforge.net/p/sevenzipjbind/discussion/757965/thread/f582f1d2/#fd34
+private fun initSevenZip() {
+    synchronized(isSevenZipInitialized)
+    {
+        if (isSevenZipInitialized.get()) return
+        try {
+            SevenZip.initSevenZipFromPlatformJAR()
+            Timber.v("7zip initialized successfully!")
+            isSevenZipInitialized.set(true)
+        } catch (e: SevenZipNativeInitializationException) {
+            Timber.e(e, "Unable to initialize 7zip!")
+        }
+    }
+}
 
 
 fun getSupportedExtensions(): Set<String> {
@@ -157,6 +179,66 @@ fun Context.getArchiveEntries(uri: Uri): List<ArchiveEntry> {
 }
 
 /**
+ * Returns if a given archive is encrypted
+ *
+ * @param uri    Archive file to read
+ * @return True if the given archive is encrypted; false if not
+ * @throws IOException If something horrible happens during I/O
+ */
+@Throws(IOException::class)
+fun Context.isArchiveEncrypted(uri: Uri): Boolean {
+    assertNonUiThread()
+    var format: ArchiveFormat?
+    getInputStream(this, uri).use { fi ->
+        val header = ByteArray(8)
+        if (fi.read(header) < header.size) return false
+        format = getTypeFromArchiveHeader(header)
+    }
+    return when (format) {
+        null -> false
+        else -> isArchiveEncrypted(format, uri)
+    }
+}
+
+/**
+ * Returns if a given archive is encrypted
+ */
+@Throws(IOException::class)
+private fun Context.isArchiveEncrypted(format: ArchiveFormat, uri: Uri): Boolean {
+    assertNonUiThread()
+    var result = false
+    try {
+        DocumentFileRandomInStream(this, uri).use { stream ->
+            initSevenZip()
+            SevenZip.openInArchive(format, stream).use { inArchive ->
+                val encrypted = inArchive.getArchiveProperty(PropID.ENCRYPTED)
+                if (null == encrypted) {
+                    // Look on individual entries
+                    val itemCount = inArchive.numberOfItems
+                    for (i in 0 until itemCount) {
+                        if (strToBool(inArchive.getStringProperty(i, PropID.ENCRYPTED))) {
+                            result = true
+                            break
+                        }
+                    }
+                } else {
+                    result = strToBool(encrypted.toString())
+                }
+            }
+        }
+    } catch (e: SevenZipException) {
+        Timber.w(e)
+    }
+    return result
+}
+
+private fun strToBool(value: String): Boolean {
+    if ("+" == value) return true
+    if (isNumeric(value)) return (((value.toLongOrNull() ?: 0L) > 0))
+    return false
+}
+
+/**
  * Get the entries of the given archive file
  */
 @Throws(IOException::class)
@@ -166,20 +248,22 @@ private fun Context.getArchiveEntries(format: ArchiveFormat, uri: Uri): List<Arc
     val result = ArrayList<ArchiveEntry>()
     try {
         DocumentFileRandomInStream(this, uri).use { stream ->
+            initSevenZip()
             SevenZip.openInArchive(format, stream, callback).use { inArchive ->
                 val itemCount = inArchive.numberOfItems
                 for (i in 0 until itemCount) {
                     val isFolder = inArchive.getStringProperty(i, PropID.IS_FOLDER)
-                    val size = inArchive.getStringProperty(i, PropID.SIZE)?.toLong() ?: 0L
+                    val size = inArchive.getStringProperty(i, PropID.SIZE)?.toLongOrNull() ?: 0L
                     val compressedSize =
-                        inArchive.getStringProperty(i, PropID.PACKED_SIZE)?.toLong() ?: 0L
+                        inArchive.getStringProperty(i, PropID.PACKED_SIZE)?.toLongOrNull() ?: 0L
                     result.add(
                         ArchiveEntry(
                             isFolder.equals("+") || isFolder.toBoolean(),
                             inArchive.getStringProperty(i, PropID.PATH),
                             size,
                             if (compressedSize > 0) compressedSize else size,
-                            time = inArchive.getStringProperty(i, PropID.CREATION_TIME).toLong()
+                            time = inArchive.getStringProperty(i, PropID.CREATION_TIME)
+                                ?.toLongOrNull() ?: 0L
                         )
                     )
                 }
@@ -353,6 +437,7 @@ private fun Context.extractArchiveEntries(
     // TODO handle the case where the extracted elements would saturate storage space
     try {
         DocumentFileRandomInStream(this, uri).use { stream ->
+            initSevenZip()
             SevenZip.openInArchive(format, stream).use { inArchive ->
                 val itemCount = inArchive.numberOfItems
                 for (archiveIndex in 0 until itemCount) {
@@ -663,7 +748,7 @@ private class SequentialOutStream(private val out: OutputStream) : ISequentialOu
 
 fun getArchivedFileName(archiveUri: String, fileUri: String): String {
     val uri = fileUri.toUri()
-    return if (uri.authority == FILECHUNK_AUTHORITY) {
+    return if (uri.authority == BuildConfig.FILECHUNK_AUTHORITY) {
         FileChunkInfo.fromUri(uri).displayName
     } else {
         fileUri.replace(archiveUri + File.separator, "")

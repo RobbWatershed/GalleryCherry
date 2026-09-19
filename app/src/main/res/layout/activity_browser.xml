@@ -57,7 +57,7 @@
                 android:name="me.devsaki.hentoid.fragments.browser.WelcomeFragment"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                tools:layout="@layout/fragment_web_welcome" />
+                tools:layout="@layout/fragment_browser_welcome" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -337,6 +337,6 @@
         android:layout_width="@dimen/drawer_layout_width_right"
         android:layout_height="match_parent"
         android:layout_gravity="end"
-        tools:layout="@layout/fragment_web_bookmarks" />
+        tools:layout="@layout/fragment_browser_bookmarks" />
 
 </androidx.drawerlayout.widget.DrawerLayout>

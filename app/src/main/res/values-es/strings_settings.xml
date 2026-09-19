@@ -77,9 +77,6 @@
     <string name="pref_browser_nhentai_invisible_blacklist_on">Los libros bloqueados en nhentai no se muestran</string>
     <string name="pref_browser_nhentai_invisible_blacklist_title">Ocultar libros bloqueados en nhentai</string>
     <string name="pref_browser_proxy_title">Apoderado</string>
-    <string name="pref_browser_quick_dl_summary">En la página de la lista de libros, manten pulsado para descargar cualquier libro</string>
-    <string name="pref_browser_quick_dl_threshold_summary">Tiempo de pulsación para iniciar la descarga rápida\nActual: %s</string>
-    <string name="pref_browser_quick_dl_threshold_title">Umbral de pulsación para descarga rápida</string>
     <string name="pref_browser_quick_dl_title">Descarga rápida</string>
     <string name="pref_browser_range_download_summary">Botón adicional para configurar qué páginas de la galería descargar</string>
     <string name="pref_browser_resume_last_off">Los sitios se abren en la página de inicio</string>
@@ -127,6 +124,7 @@
     <string name="pref_dl_retries_on">Las descargas fallidas se reintentarán automáticamente</string>
     <string name="pref_dl_skip_large_allow_wifi_off">Omitir descargas grandes en todas las redes</string>
     <string name="pref_dl_skip_large_allow_wifi_on">Permitir descargas grandes solo a través de Wi-Fi</string>
+    <string name="pref_dl_skip_large_allow_wifi_title">Permitir descargas grandes en Wi-Fi</string>
     <string name="pref_dl_skip_large_off">Omitir descargas grandes está desactivado.</string>
     <string name="pref_dl_skip_large_on">Omitir descargas grandes habilitada</string>
     <string name="pref_dl_skip_large_pages_threshold_title">Umbral de páginas para descargas grandes</string>

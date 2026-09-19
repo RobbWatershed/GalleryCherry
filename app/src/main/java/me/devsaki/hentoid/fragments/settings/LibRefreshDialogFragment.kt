@@ -1,6 +1,7 @@
 package me.devsaki.hentoid.fragments.settings
 
-import android.net.Uri
+import android.Manifest.permission.READ_EXTERNAL_STORAGE
+import android.Manifest.permission.WRITE_EXTERNAL_STORAGE
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -8,7 +9,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ProgressBar
-import androidx.annotation.StringRes
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.net.toUri
 import androidx.core.view.isVisible
 import androidx.fragment.app.FragmentManager
@@ -27,14 +28,15 @@ import me.devsaki.hentoid.events.CommunicationEvent
 import me.devsaki.hentoid.events.ProcessEvent
 import me.devsaki.hentoid.events.ServiceDestroyedEvent
 import me.devsaki.hentoid.fragments.BaseDialogFragment
+import me.devsaki.hentoid.util.FolderScanResult
+import me.devsaki.hentoid.util.FolderScanResult.Failure
+import me.devsaki.hentoid.util.FolderScanResult.Success
 import me.devsaki.hentoid.util.ImportOptions
 import me.devsaki.hentoid.util.PickFolderContract
-import me.devsaki.hentoid.util.PickerResult
-import me.devsaki.hentoid.util.ProcessFolderResult
+import me.devsaki.hentoid.util.PickUriResult
 import me.devsaki.hentoid.util.Settings
-import me.devsaki.hentoid.util.file.RQST_STORAGE_PERMISSION
+import me.devsaki.hentoid.util.file.checkExternalStorageReadWritePermission
 import me.devsaki.hentoid.util.file.getFullPathFromUri
-import me.devsaki.hentoid.util.file.requestExternalStorageReadWritePermission
 import me.devsaki.hentoid.util.setAndScanExternalFolder
 import me.devsaki.hentoid.util.setAndScanPrimaryFolder
 import me.devsaki.hentoid.util.showExistingLibraryDialog
@@ -48,6 +50,7 @@ import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
 import timber.log.Timber
 import kotlin.math.roundToInt
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Launcher dialog for the following features :
@@ -91,10 +94,18 @@ class LibRefreshDialogFragment : BaseDialogFragment<LibRefreshDialogFragment.Par
     }
 
 
-    private val pickFolder =
-        registerForActivityResult(PickFolderContract()) { result: Pair<PickerResult, Uri> ->
-            onFolderPickerResult(result.first, result.second)
+    private val pickFolder = registerForActivityResult(PickFolderContract(), ::onFolderPickerResult)
+
+    private val storageRequestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { isGranted: Map<String, Boolean> ->
+        if (2 == isGranted.size && isGranted.all { it.value }) {
+            Settings.isBrowserMode = false
+            pickFolder.launch(location) // Run folder picker
+        } else {
+            Timber.i("Storage permissions not granted")
         }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedState: Bundle?
@@ -110,12 +121,12 @@ class LibRefreshDialogFragment : BaseDialogFragment<LibRefreshDialogFragment.Par
             )]
         }
 
-        EventBus.getDefault().register(this)
+        if (!EventBus.getDefault().isRegistered(this)) EventBus.getDefault().register(this)
         return binding1?.root
     }
 
     override fun onDestroyView() {
-        EventBus.getDefault().unregister(this)
+        if (EventBus.getDefault().isRegistered(this)) EventBus.getDefault().unregister(this)
         binding1 = null
         binding2 = null
         super.onDestroyView()
@@ -191,28 +202,18 @@ class LibRefreshDialogFragment : BaseDialogFragment<LibRefreshDialogFragment.Par
 
             lifecycleScope.launch {
                 val res = withContext(Dispatchers.IO) {
-                    try {
-                        val res = setAndScanExternalFolder(requireContext(), externalUri, quickScan)
-                        return@withContext res.first
-                    } catch (e: Exception) {
-                        Timber.w(e)
-                        return@withContext ProcessFolderResult.KO_OTHER
-                    }
+                    setAndScanExternalFolder(requireContext(), externalUri, quickScan)
                 }
-                if (ProcessFolderResult.KO_INVALID_FOLDER == res
-                    || ProcessFolderResult.KO_CREATE_FAIL == res
-                    || ProcessFolderResult.KO_APP_FOLDER == res
-                    || ProcessFolderResult.KO_DOWNLOAD_FOLDER == res
-                    || ProcessFolderResult.KO_ALREADY_RUNNING == res
-                    || ProcessFolderResult.KO_OTHER == res
+                if (Failure.InvalidFolder == res
+                    || Failure.CreateFail == res
+                    || Failure.DownloadFolder == res
+                    || Failure.AlreadyRunning == res
+                    || Failure.Unknown == res
                 ) {
                     binding1?.apply {
-                        Snackbar.make(
-                            root,
-                            getMessage(res),
-                            BaseTransientBottomBar.LENGTH_LONG
-                        ).show()
-                        delay(3000)
+                        Snackbar.make(root, res.errorMessageRes, BaseTransientBottomBar.LENGTH_LONG)
+                            .show()
+                        delay(3000.milliseconds)
                     }
                     dismissAllowingStateLoss()
                 }
@@ -236,33 +237,27 @@ class LibRefreshDialogFragment : BaseDialogFragment<LibRefreshDialogFragment.Par
 
             lifecycleScope.launch {
                 val res = withContext(Dispatchers.IO) {
-                    try {
-                        val res = setAndScanPrimaryFolder(
-                            requireContext(), rootUri, location, false, options
-                        )
-                        return@withContext res.first
-                    } catch (e: Exception) {
-                        Timber.w(e)
-                        return@withContext ProcessFolderResult.KO_OTHER
-                    }
+                    setAndScanPrimaryFolder(requireContext(), rootUri, location, false, options)
                 }
 
-                if (ProcessFolderResult.KO_INVALID_FOLDER == res
-                    || ProcessFolderResult.KO_CREATE_FAIL == res
-                    || ProcessFolderResult.KO_APP_FOLDER == res
-                    || ProcessFolderResult.KO_DOWNLOAD_FOLDER == res
-                    || ProcessFolderResult.KO_ALREADY_RUNNING == res
-                    || ProcessFolderResult.KO_OTHER_PRIMARY == res
-                    || ProcessFolderResult.KO_PRIMARY_EXTERNAL == res
-                    || ProcessFolderResult.OK_EMPTY_FOLDER == res
-                    || ProcessFolderResult.KO_OTHER == res
-                ) {
+                if (res is Failure) {
                     binding1?.apply {
-                        Snackbar.make(root, getMessage(res), BaseTransientBottomBar.LENGTH_LONG)
+                        Snackbar.make(root, res.errorMessageRes, BaseTransientBottomBar.LENGTH_LONG)
                             .show()
-                        delay(3000)
                     }
-                    if (ProcessFolderResult.OK_EMPTY_FOLDER == res) parent?.onFolderSuccess()
+                    delay(3000.milliseconds)
+                    dismissAllowingStateLoss()
+                } else if (res == Success.EmptyFolder) {
+                    binding1?.apply {
+                        Snackbar.make(
+                            root,
+                            R.string.import_empty,
+                            BaseTransientBottomBar.LENGTH_LONG
+                        )
+                            .show()
+                    }
+                    delay(3000.milliseconds)
+                    parent?.onFolderSuccess()
                     dismissAllowingStateLoss()
                 }
             }
@@ -317,26 +312,35 @@ class LibRefreshDialogFragment : BaseDialogFragment<LibRefreshDialogFragment.Par
 
     private fun pickFolder() {
         // Make sure permissions are set
-        if (requireActivity().requestExternalStorageReadWritePermission(RQST_STORAGE_PERMISSION)) {
+        if (requireActivity().checkExternalStorageReadWritePermission()) {
             Settings.isBrowserMode = false
             pickFolder.launch(location) // Run folder picker
-        }
+        } else
+            storageRequestPermissionLauncher.launch(
+                arrayOf(READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE)
+            )
     }
 
-    private fun onFolderPickerResult(resultCode: PickerResult, uri: Uri) {
-        when (resultCode) {
-            PickerResult.OK -> {
+    private fun onFolderPickerResult(result: PickUriResult) {
+        when (result) {
+            is PickUriResult.Success -> {
                 lifecycleScope.launch {
                     val res = withContext(Dispatchers.IO) {
                         return@withContext if (location == StorageLocation.EXTERNAL)
-                            setAndScanExternalFolder(requireContext(), uri)
-                        else setAndScanPrimaryFolder(requireContext(), uri, location, true, null)
+                            setAndScanExternalFolder(requireContext(), result.uri)
+                        else setAndScanPrimaryFolder(
+                            requireContext(),
+                            result.uri,
+                            location,
+                            true,
+                            null
+                        )
                     }
-                    onScanHentoidFolderResult(res.first, res.second)
+                    onScanHentoidFolderResult(res)
                 }
             }
 
-            PickerResult.KO_CANCELED -> {
+            PickUriResult.Cancelled -> {
                 binding2?.apply {
                     Snackbar.make(
                         root,
@@ -346,7 +350,7 @@ class LibRefreshDialogFragment : BaseDialogFragment<LibRefreshDialogFragment.Par
                 }
             }
 
-            PickerResult.KO_OTHER, PickerResult.KO_NO_URI -> {
+            PickUriResult.NoUri, PickUriResult.Unknown -> {
                 binding2?.apply {
                     Snackbar.make(root, R.string.import_other, BaseTransientBottomBar.LENGTH_LONG)
                         .show()
@@ -356,57 +360,34 @@ class LibRefreshDialogFragment : BaseDialogFragment<LibRefreshDialogFragment.Par
         }
     }
 
-    private fun onScanHentoidFolderResult(resultCode: ProcessFolderResult, rootUri: String) {
-        when (resultCode) {
-            ProcessFolderResult.OK_EMPTY_FOLDER -> {
+    private fun onScanHentoidFolderResult(result: FolderScanResult) {
+        when (result) {
+            Success.EmptyFolder -> {
                 parent?.onFolderSuccess()
                 dismissAllowingStateLoss()
             }
 
-            ProcessFolderResult.OK_LIBRARY_DETECTED ->                 // Hentoid folder is finally selected at this point -> Update UI
+            Success.LibraryDetected -> {
+                // Hentoid folder is finally selected at this point -> Update UI
                 updateOnSelectFolder()
+            }
 
-            ProcessFolderResult.OK_LIBRARY_DETECTED_ASK -> {
+            is Success.LibraryDetectedAsk -> {
                 updateOnSelectFolder()
                 showExistingLibraryDialog(
                     requireContext(),
                     location,
-                    rootUri
+                    result.rootUri.toString()
                 ) { onCancelExistingLibraryDialog() }
             }
 
-            ProcessFolderResult.KO_INVALID_FOLDER,
-            ProcessFolderResult.KO_APP_FOLDER,
-            ProcessFolderResult.KO_DOWNLOAD_FOLDER,
-            ProcessFolderResult.KO_CREATE_FAIL,
-            ProcessFolderResult.KO_ALREADY_RUNNING,
-            ProcessFolderResult.KO_OTHER_PRIMARY,
-            ProcessFolderResult.KO_PRIMARY_EXTERNAL,
-            ProcessFolderResult.KO_OTHER -> {
+            is Failure -> {
                 binding2?.apply {
-                    Snackbar.make(root, getMessage(resultCode), BaseTransientBottomBar.LENGTH_LONG)
+                    Snackbar.make(root, result.errorMessageRes, BaseTransientBottomBar.LENGTH_LONG)
                         .show()
                 }
                 isCancelable = true
             }
-        }
-    }
-
-    @StringRes
-    private fun getMessage(resultCode: ProcessFolderResult): Int {
-        return when (resultCode) {
-            ProcessFolderResult.KO_INVALID_FOLDER -> R.string.import_invalid
-            ProcessFolderResult.KO_APP_FOLDER -> R.string.import_app_folder
-            ProcessFolderResult.KO_DOWNLOAD_FOLDER -> R.string.import_download_folder
-            ProcessFolderResult.KO_CREATE_FAIL -> R.string.import_create_fail
-            ProcessFolderResult.KO_ALREADY_RUNNING -> R.string.service_running
-            ProcessFolderResult.KO_OTHER_PRIMARY -> R.string.import_other_primary
-            ProcessFolderResult.KO_PRIMARY_EXTERNAL -> R.string.import_other_external_inside_primary
-            ProcessFolderResult.OK_EMPTY_FOLDER -> R.string.import_empty
-            ProcessFolderResult.KO_OTHER -> R.string.import_other
-            ProcessFolderResult.OK_LIBRARY_DETECTED,
-            ProcessFolderResult.OK_LIBRARY_DETECTED_ASK -> R.string.none
-            // Nothing should happen here
         }
     }
 

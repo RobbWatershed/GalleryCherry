@@ -9,6 +9,7 @@ import android.content.pm.PackageManager
 import android.hardware.usb.UsbManager
 import android.os.Build
 import android.os.Build.VERSION.SDK_INT
+import androidx.core.net.toUri
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
@@ -16,6 +17,7 @@ import coil3.ImageLoader
 import coil3.SingletonImageLoader
 import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
+import coil3.video.VideoFrameDecoder
 import com.awxkee.jxlcoder.coil.AnimatedJxlDecoder
 import com.github.awxkee.avifcoil.decoder.HeifDecoder
 import com.google.firebase.analytics.FirebaseAnalytics
@@ -260,11 +262,9 @@ object AppStartup {
     private suspend fun createBookmarksJson(context: Context, emitter: (Float) -> Unit) =
         withContext(Dispatchers.IO) {
             Timber.i("Create bookmarks JSON : start")
-            val appRoot = getDocumentFromTreeUriString(
-                context, Settings.getStorageUri(StorageLocation.PRIMARY_1)
-            )
-            if (appRoot != null) {
-                val bookmarksJson = findFile(context, appRoot, BOOKMARKS_JSON_FILE_NAME)
+            val rootUri = Settings.getStorageUri(StorageLocation.PRIMARY_1)
+            if (rootUri.isNotBlank()) {
+                val bookmarksJson = findFile(context, rootUri.toUri(), BOOKMARKS_JSON_FILE_NAME)
                 if (null == bookmarksJson) {
                     Timber.i("Create bookmarks JSON : creating JSON")
                     val dao: CollectionDAO = ObjectBoxDAO()
@@ -308,7 +308,7 @@ object AppStartup {
 
             StorageCache.init(context, READER_CACHE, sizeLimit)
             Timber.i(
-                "Reacer cache : initialized with ${
+                "Reader cache : initialized with ${
                     formatHumanReadableSize(
                         sizeLimit.toLong(),
                         context.resources

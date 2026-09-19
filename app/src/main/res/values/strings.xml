@@ -18,6 +18,10 @@
         <item quantity="one">book</item>
         <item quantity="other">books</item>
     </plurals>
+    <plurals name="chapter" tools:ignore="ImpliedQuantity">
+        <item quantity="one">chapter</item>
+        <item quantity="other">chapters</item>
+    </plurals>
     <plurals name="page" tools:ignore="ImpliedQuantity">
         <item quantity="one">page</item>
         <item quantity="other">pages</item>
@@ -56,6 +60,7 @@
     <string name="invalid_selection_generic">Invalid selection</string>
     <string name="user_generic">User</string>
     <string name="copy_generic">Copy</string>
+    <string name="picture_generic">Picture</string>
 
     <!-- Colours -->
     <string name="white">White</string>
@@ -216,6 +221,7 @@
     <string name="menu_change_dl_mode">Change download mode</string>
     <string name="mode_dl">Picture download</string>
     <string name="mode_stream">Streaming</string>
+    <string name="dl_lrr">Download from LRR</string>
     <string name="redl_scratch">Redownload from scratch</string>
     <string name="redl_refresh">Update metadata only</string>
     <string name="filter_by_source">Filter by source</string>
@@ -436,6 +442,10 @@
     <plurals name="export_file_library">
         <item quantity="one">Export primary library (<x:g example="1" id="number">%d</x:g> book)</item>
         <item quantity="other">Export primary library (<x:g example="2" id="number">%d</x:g> books)</item>
+    </plurals>
+    <plurals name="export_external_library">
+        <item quantity="one">Export external library (<x:g example="1" id="number">%d</x:g> book)</item>
+        <item quantity="other">Export external library (<x:g example="2" id="number">%d</x:g> books)</item>
     </plurals>
     <string name="export_location">Location : %s</string>
     <string name="export_favs_only">Only export favourites</string>
@@ -679,6 +689,7 @@
     <string name="add_root">Add root folder</string>
     <string name="add_root_fail">Couldn\'t add root folder</string>
     <string name="up_level">Up one level</string>
+    <string name="lrr_server_extracting">LRR server is extracting…</string>
 
     <!-- Merge & split -->
     <string name="notif_split_merge">Split / merge</string>
@@ -708,6 +719,7 @@
     <string name="groups_dynamic">Saved searches</string>
     <string name="groups_custom">Custom groups</string>
     <string name="groups_folders">Folders</string>
+    <string name="groups_lrr">LANraragi</string>
     <string name="no_artist_group_name">[no artist]</string>
     <string name="no_circle_group_name">[no circle]</string>
     <string name="no_artist_circle_group_name">[no artist, no circle]</string>
@@ -827,7 +839,7 @@
     <string name="help_web_download">You\'ve reached a book page.\nTime to download with the bottom bar!</string>
     <string name="blocked_tag">Book has a blocked tag (<x:g example="bad" id="tag">%s</x:g>)\nDownload canceled</string>
     <string name="blocked_tag_queued">Book has a blocked tag (<x:g example="bad" id="tag">%s</x:g>)\nQueued as an error</string>
-    <string name="blocked_tag_double">Book has a blocked tag (<x:g example="bad" id="tag">%s</x:g>)\Double tap to queue</string>
+    <string name="blocked_tag_double">Book has a blocked tag (<x:g example="bad" id="tag">%s</x:g>)\nDouble tap to queue</string>
     <string name="bookmark_current">Bookmark current page</string>
     <string name="unbookmark_current">Remove bookmark on current page</string>
     <string name="bookmark_copy_url">Copy bookmark URL to clipboard</string>
@@ -842,7 +854,13 @@
     <string name="web_all_sites">All sites</string>
     <string name="web_target_page_unavailable">Webpage not available%s; loading welcome page instead</string>
     <string name="web_target_page_outside_restricted_domains">Host %s outside restricted domains</string>
-    <string name="web_range_download_prompt" tools:ignore="TypographyDashes">Range of gallery pages to download (e.g. 1-5 / 1;3;8 / 1-2;5-7)</string>
+    <string name="web_download_image">Download single image</string>
+    <string name="web_long_tap_actions_title">Choose long tap actions</string>
+    <string name="web_long_tap_actions_notice">NB : These settings can be changed later using the settings screen</string>
+    <string name="disable_long_tap">Disable long tap</string>
+    <string name="range_download_prompt">Range to download</string>
+    <string name="range_process_prompt">Range to process</string>
+    <string name="range_caption" tools:ignore="TypographyDashes">Available syntax : 1-5 / 1;3;8 / 1-2;5-7</string>
 
     <!-- Web browser (site specifics) -->
     <string name="help_web_exh_account">Please use or create an exHentai account</string>
@@ -988,6 +1006,7 @@
         <item quantity="one">Delete selected chapter\?\nNB : This will not delete image files</item>
         <item quantity="other">Delete <x:g example="2" id="count">%d</x:g> selected chapters\?\nNB : This will not delete image files</item>
     </plurals>
+    <string name="book_loaded">Book loaded : %s</string>
 
     <!-- Changelog -->
     <string name="view_changelog">Changelog</string>
@@ -1004,6 +1023,9 @@
     <string name="duplicate_use_artist">Artist</string>
     <string name="duplicate_use_same_language">Same language only</string>
     <string name="duplicate_ignore_chapters">Ignore chapters and sequels</string>
+    <string name="duplicate_sources">Sources : %s</string>
+    <string name="duplicate_sources_all">All</string>
+    <string name="duplicate_sources_many"><x:g example="10" id="number">%d</x:g> sources</string>
     <string name="duplicate_use_sensitivity">Sensitivity</string>
     <string-array name="duplicate_use_sensitivities">
         <item>Loosely similar</item>
@@ -1023,6 +1045,10 @@
     <string name="duplicate_cover_score_nodata">Cover: no data</string>
     <string name="duplicate_artist_score">Artist: <x:g example="50%" id="similarity_percentage">%.0f%%</x:g></string>
     <string name="duplicate_artist_score_nodata">Artist: no data</string>
+    <string name="duplicate_metadata">Metadata: </string>
+    <string name="duplicate_metadata_popup_minus">Missing entries: %s</string>
+    <string name="duplicate_metadata_popup_same">Identical entries: %s</string>
+    <string name="duplicate_metadata_popup_plus">Additional entries: %s</string>
     <string name="apply_final">Apply choices</string>
     <string name="duplicate_notif_start">Starting duplicate detection</string>
     <string name="duplicate_notif_complete_title">Duplicate detection complete</string>
@@ -1043,6 +1069,7 @@
     <string name="duplicate_empty_no_result">No duplicates found</string>
     <string name="duplicate_keep">Keep</string>
     <string name="duplicate_delete">Delete</string>
+    <string name="duplicate_ignore">Ignore</string>
 
     <!-- Duplicate dialog -->
     <string name="duplicate_alert">Duplicate alert!</string>
@@ -1077,9 +1104,17 @@
     <string name="meta_rule_wildcard">If target has a wildcard, source must have a wildcard too</string>
 
     <!-- Image transform -->
-    <string name="transform_pics">Transform pictures</string>
-    <string name="transform_resizing">Resizing</string>
-    <string name="transform_resize_pics">Resize pictures</string>
+    <string name="transform_media">Transform media</string>
+
+    <string name="transform_resize">Resize</string>
+    <string name="transform_encoder">Encoder (%s)</string>
+    <string name="transform_images">images</string>
+    <string name="transform_animations">animations</string>
+    <string name="transform_unlock_values">Unlock value caps</string>
+    <string name="transform_lock_values">Lock value caps</string>
+    <string name="transform_download_settings">Download settings</string>
+
+    <string name="transform_resize_enable">Resize media</string>
     <string name="method">Method</string>
     <string name="resize_method_1">Max % of screen dimensions</string>
     <string name="resize_method_2">Absolute max dimensions</string>
@@ -1091,25 +1126,22 @@
     <string name="resize_method_2_prompt_max_width">Max width (manhwas, webtoons)</string>
     <string name="resize_method_3_prompt">% of original size</string>
     <string name="resize_method_5_prompt">Number of images per chapter</string>
-    <string name="transform_transcoding">Transcoding</string>
     <string name="transcode_method_1">Same encoder for all pictures</string>
     <string name="transcode_method_2">Differentiate lossy and lossless pictures</string>
     <string name="encoder">Encoder</string>
     <string name="encoder_lossless">Lossless encoder</string>
     <string name="encoder_lossy">Lossy encoder</string>
-    <string name="transcode_encoder_webp_lossless">WEBP (lossless)</string>
-    <string name="transcode_encoder_png">PNG</string>
-    <string name="transcode_encoder_webp_lossy">WEBP (lossy)</string>
-    <string name="transcode_encoder_jpeg">JPEG</string>
-    <string name="transcode_encoder_jxl_lossy">JXL (lossy)</string>
-    <string name="transcode_encoder_jxl_lossless">JXL (lossless)</string>
-    <string name="transcode_encoder_jpegli">JPEGLI</string>
-    <string name="transcode_encoder_avif">AVIF</string>
+    <string name="lossless_generic">lossless</string>
+    <string name="lossy_generic">lossy</string>
     <string name="encoder_quality">Quality</string>
     <string name="encoder_warning">WEBP format is limited to 16383 pixels in width and height. Larger pictures will automatically be encoded to PNG or JPG.</string>
     <string name="retransform_warning">%d pages have already been transformed. Transforming them multiple times may result in noticeable quality loss.\nWe advise redownloading original images and transforming them one single time.</string>
     <string name="ai_rescale_warning">Upscaling pictures with AI will use your GPU intensively. The whole operation may take a few minutes.</string>
     <string name="dimensions_warning">The settings you\'ve chosen will create images with very large dimensions. Are you certain that\'s what you want?</string>
+    <string name="transform_skip_transformed_pics">Skip transformed images</string>
+    <string name="transform_range">Range</string>
+    <string name="transform_all_pages">All pages</string>
+    <string name="transform_range_change">Change</string>
     <string name="preview">Preview</string>
     <string name="transform">Transform</string>
     <string name="transform_unsupported">Transformation unsupported</string>
@@ -1123,11 +1155,18 @@
     <string name="range_check">Value must be between %1$d and %2$d</string>
     <string name="previous_page">Previous page</string>
     <string name="next_page">Next page</string>
+    <string name="original">Original</string>
+    <string name="transformed">Transformed</string>
+    <string name="transform_error">Error - Can\'t transform with the current settings and files</string>
 
     <!-- Archive dialog -->
+    <string name="lrr_pending">LRR Server : Status pending</string>
+    <string name="lrr_online">LRR Server ONLINE</string>
+    <string name="lrr_offline">LRR Server OFFLINE</string>
     <string name="target_folder">Target folder</string>
     <string name="archive_format">Archive format</string>
     <string name="background_color">Background color</string>
+    <string name="device">Device</string>
     <string name="folder_device_downloads">Device\'s Downloads folder</string>
     <string name="folder_other">Choose folder…</string>
     <string name="archive_overwrite">Overwrite existing archives</string>

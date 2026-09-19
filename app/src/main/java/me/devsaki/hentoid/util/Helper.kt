@@ -14,7 +14,9 @@ import android.os.Build
 import android.os.Debug
 import android.os.Looper
 import android.util.TypedValue
+import android.view.InputDevice
 import android.view.Menu
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup.MarginLayoutParams
 import android.view.WindowManager
@@ -68,6 +70,7 @@ import java.time.format.DateTimeFormatterBuilder
 import java.time.format.DateTimeParseException
 import java.time.format.ResolverStyle
 import java.time.temporal.ChronoField
+import java.util.Arrays.sort
 import java.util.Locale
 import java.util.Random
 import java.util.zip.Checksum
@@ -117,6 +120,11 @@ fun dpToPx(context: Context, dpValue: Int): Int {
  * @return Given value inclusively coerced between the given min and max
  */
 fun coerceIn(value: Float, min: Float, max: Float): Float {
+    return if (value < min) min
+    else min(value, max)
+}
+
+fun coerceIn(value: Int, min: Int, max: Int): Int {
     return if (value < min) min
     else min(value, max)
 }
@@ -379,11 +387,11 @@ fun parseDateToEpoch(date: String, pattern: String): Long {
     return 0
 }
 
-fun formatEpochToDate(epoch: Long, pattern: String?): String {
+fun formatEpochToDate(epoch: Long, pattern: String): String {
     return formatEpochToDate(epoch, DateTimeFormatter.ofPattern(pattern, Locale.ENGLISH))
 }
 
-fun formatEpochToDate(epoch: Long, formatter: DateTimeFormatter?): String {
+fun formatEpochToDate(epoch: Long, formatter: DateTimeFormatter): String {
     if (0L == epoch) return ""
     val i = Instant.ofEpochMilli(epoch)
     return i.atZone(ZoneId.systemDefault()).format(formatter)
@@ -604,14 +612,23 @@ fun isSupportedArchivePdf(fileName: String): Boolean {
     return isSupportedArchive(fileName) || getExtension(fileName).equals("pdf", true)
 }
 
+suspend fun exportToDownloadsFolder(
+    context: Context,
+    data: ByteArray,
+    fileName: String,
+    view: View?
+) {
+    exportToDownloadsFolder(context, ByteArrayInputStream(data), fileName, view)
+}
+
 /**
  * Export the given data to the device's Downloads folder, using the given file name
  * @param fileName  Name of the file to create, extension included
  * @param view      View to display feedback using a snackbar; optional
  */
-fun exportToDownloadsFolder(
+suspend fun exportToDownloadsFolder(
     context: Context,
-    data: ByteArray,
+    input: InputStream,
     fileName: String,
     view: View?
 ) {
@@ -623,46 +640,50 @@ fun exportToDownloadsFolder(
         ) + ".$ext"
 
     try {
-        getOutputStream(
-            context,
-            createNewDownloadFile(
+        withContext(Dispatchers.IO) {
+            getOutputStream(
                 context,
-                targetFileName,
-                getMimeTypeFromFileName(fileName)
-            )
-        )?.use { newFile ->
-            ByteArrayInputStream(data)
-                .use { input -> copy(input, newFile) }
+                createNewDownloadFile(
+                    context,
+                    targetFileName,
+                    getMimeTypeFromFileName(fileName)
+                )
+            )?.use { newFile ->
+                copy(input, newFile)
+            }
         }
-        view?.let {
-            Snackbar.make(
-                it,
-                R.string.copy_download_folder_success,
-                BaseTransientBottomBar.LENGTH_LONG
-            )
-                .setAction(R.string.open_folder) {
-                    openFile(
-                        context,
-                        getDownloadsFolder()
-                    )
-                }
-                .show()
+        withContext(Dispatchers.Main) {
+            view?.let {
+                Snackbar.make(
+                    it,
+                    R.string.copy_download_folder_success,
+                    BaseTransientBottomBar.LENGTH_LONG
+                )
+                    .setAction(R.string.open_folder) {
+                        openFile(context, getDownloadsFolder())
+                    }
+                    .show()
+            }
         }
     } catch (_: IOException) {
         view?.let {
-            Snackbar.make(
-                it,
-                R.string.copy_download_folder_fail,
-                BaseTransientBottomBar.LENGTH_LONG
-            ).show()
+            withContext(Dispatchers.Main) {
+                Snackbar.make(
+                    it,
+                    R.string.copy_download_folder_fail,
+                    BaseTransientBottomBar.LENGTH_LONG
+                ).show()
+            }
         }
     } catch (_: IllegalArgumentException) {
         view?.let {
-            Snackbar.make(
-                it,
-                R.string.copy_download_folder_fail,
-                BaseTransientBottomBar.LENGTH_LONG
-            ).show()
+            withContext(Dispatchers.Main) {
+                Snackbar.make(
+                    it,
+                    R.string.copy_download_folder_fail,
+                    BaseTransientBottomBar.LENGTH_LONG
+                ).show()
+            }
         }
     }
 }
@@ -682,6 +703,95 @@ fun getChecksumValue(checksum: Checksum, fis: InputStream): Long {
     }
     return checksum.value
 }
+
+/**
+ * Calculates the median of an array of Int
+ *
+ * @param values is an array of Int
+ * @return the middle number of the array
+ */
+fun median(values: IntArray): Double {
+    sort(values)
+    return when {
+        values.size % 2 == 0 -> getHalfwayBetweenMiddleValues(values)
+        else -> getMiddleValue(values)
+    }
+}
+
+/**
+ * Calculates the middle number of an array when the size is an even number
+ *
+ * @param values is an array of Int
+ * @return the middle number of the array
+ */
+private fun getHalfwayBetweenMiddleValues(values: IntArray): Double {
+    val arraySize = values.size
+    val sumOfMiddleValues = (values[arraySize / 2] + values[(arraySize / 2) - 1])
+    return sumOfMiddleValues / 2.0
+}
+
+/**
+ * Calculates the middle number of an array when the size is an odd number
+ *
+ * @param values is an array of Int
+ * @return the middle number of the array
+ */
+private fun getMiddleValue(values: IntArray): Double {
+    return values[values.size / 2].toDouble()
+}
+
+fun decodeMotionEvent(event: MotionEvent): Pair<String, String>? {
+    when (event.actionMasked) {
+        MotionEvent.ACTION_BUTTON_PRESS -> {
+            Timber.v("Motion press ${event.actionButton}")
+            return Pair("button", event.actionButton.toString())
+        }
+
+        MotionEvent.ACTION_MOVE -> {
+            if (event.source and InputDevice.SOURCE_GAMEPAD == InputDevice.SOURCE_GAMEPAD
+                || event.source and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK
+            ) {
+                val leftTrigger = event.getAxisValue(MotionEvent.AXIS_LTRIGGER)
+                val rightTrigger = event.getAxisValue(MotionEvent.AXIS_RTRIGGER)
+                val leftTriggerLegacy = event.getAxisValue(MotionEvent.AXIS_BRAKE)
+                val rightTriggerLegacy = event.getAxisValue(MotionEvent.AXIS_THROTTLE)
+
+                val left = if (leftTrigger > 0.0) leftTrigger else leftTriggerLegacy
+                val right = if (rightTrigger > 0.0) rightTrigger else rightTriggerLegacy
+
+                Timber.v("Trigger $left $right")
+
+                if (left > 0.0) return Pair("trigger", "left")
+                if (right > 0.0) return Pair("trigger", "right")
+
+                val dpadX = event.getAxisValue(MotionEvent.AXIS_HAT_X)
+                val dpadY = event.getAxisValue(MotionEvent.AXIS_HAT_Y)
+
+                Timber.v("D-pad $dpadX $dpadY")
+                if (dpadX > 0.0) return Pair("dpad", "right")
+                if (dpadX < 0.0) return Pair("dpad", "left")
+                if (dpadY < 0.0) return Pair("dpad", "up")
+                if (dpadY > 0.0) return Pair("dpad", "down")
+            }
+        }
+
+        MotionEvent.ACTION_SCROLL -> {
+            // Mouse only
+            if (!event.isFromSource(InputDevice.SOURCE_CLASS_POINTER)) return null
+
+            val vScroll = event.getAxisValue(MotionEvent.AXIS_VSCROLL)
+            Timber.v("Mouse vertical scroll $vScroll")
+            if (vScroll > 0.0) return Pair("mouse", "scrollDown")
+            if (vScroll < 0.0) return Pair("mouse", "scrollUp")
+        }
+
+        else -> { /* Nothing */
+            Timber.v("unhandled motion action ${event.actionMasked}")
+        }
+    }
+    return null
+}
+
 
 fun byteArrayOfInts(vararg ints: Int) = ByteArray(ints.size) { pos -> ints[pos].toByte() }
 

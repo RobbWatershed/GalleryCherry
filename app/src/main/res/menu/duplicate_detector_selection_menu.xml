@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context=".activities.LibraryActivity"
+    tools:ignore="AlwaysShowAction">
+    <item
+        android:id="@+id/action_merge"
+        android:icon="@drawable/ic_action_merge"
+        android:title="@string/merge_merge"
+        android:tooltipText="@string/merge_merge"
+        android:visible="false"
+        app:showAsAction="always" />
+</menu>

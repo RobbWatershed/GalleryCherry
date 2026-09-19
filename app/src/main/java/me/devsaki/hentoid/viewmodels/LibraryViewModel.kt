@@ -44,7 +44,10 @@ import me.devsaki.hentoid.database.domains.DownloadMode
 import me.devsaki.hentoid.database.domains.Group
 import me.devsaki.hentoid.database.domains.SearchRecord
 import me.devsaki.hentoid.enums.Grouping
+import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.enums.StatusContent
+import me.devsaki.hentoid.enums.StorageLocation
+import me.devsaki.hentoid.retrofit.sources.LrrServer
 import me.devsaki.hentoid.util.JSON_MIME_TYPE
 import me.devsaki.hentoid.util.Location
 import me.devsaki.hentoid.util.MergerLiveData
@@ -74,11 +77,13 @@ import me.devsaki.hentoid.util.persistLocationCredentials
 import me.devsaki.hentoid.util.purgeContent
 import me.devsaki.hentoid.util.reparseFromScratch
 import me.devsaki.hentoid.util.splitUniqueStr
+import me.devsaki.hentoid.util.toastLong
 import me.devsaki.hentoid.util.updateGroupsJson
 import me.devsaki.hentoid.util.updateJson
 import me.devsaki.hentoid.widget.ContentSearchManager
 import me.devsaki.hentoid.widget.FolderSearchManager
 import me.devsaki.hentoid.widget.GroupSearchManager
+import me.devsaki.hentoid.widget.LrrSearchManager
 import me.devsaki.hentoid.workers.ArchiveWorker
 import me.devsaki.hentoid.workers.BaseDeleteWorker
 import me.devsaki.hentoid.workers.DeleteWorker
@@ -91,6 +96,7 @@ import me.devsaki.hentoid.workers.data.SplitMergeData
 import me.devsaki.hentoid.workers.data.UpdateJsonData
 import timber.log.Timber
 import java.io.IOException
+import java.net.SocketTimeoutException
 import java.security.InvalidParameterException
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
@@ -103,6 +109,7 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
     private val contentSearchManager = ContentSearchManager()
     private val groupSearchManager = GroupSearchManager()
     private val folderSearchManager = FolderSearchManager()
+    private val lrrSearchManager = LrrSearchManager()
 
     // Cleanup for all work observers
     private val workObservers: MutableList<Pair<UUID, Observer<WorkInfo?>>> = ArrayList()
@@ -128,14 +135,18 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
     val parentsCache = HashMap<Uri, Uri>() // Key = child folder, Value = parent folder
     val detailsFlowKillSwitch = AtomicBoolean(true)
 
+    // LRR data
+    val lrrArchives = MediatorLiveData<Pair<List<Content>, Int>>()
+    val lrrSearchBundle = MutableLiveData<Bundle>()
+    val lrrFavCatId: String by lazy { LrrServer.getLrrCategoryId(Settings.lrrFavCat) }
+    var lrrMaxResult: Int = 0 // Max index of results; 0 if max has been reached
+
+    // Other data
     // True if there's at least one existing custom group; false instead
     val isCustomGroupingAvailable = MutableLiveData<Boolean>()
 
     // True if there's at least one existing dynamic group; false instead
     val isDynamicGroupingAvailable = MutableLiveData<Boolean>()
-
-
-    // Other data
     val searchRecords: LiveData<List<SearchRecord>> = dao.selectSearchRecordsLive()
     val totalQueue: LiveData<Int> = dao.countAllQueueBooksLive()
     val favPages: LiveData<Int> = dao.countAllFavouritePagesLive()
@@ -206,34 +217,12 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
     }
 
     /**
-     * Perform a new content full text search using the given query
-     * NB1 : Full text search is performed among content title _and_ attributes
-     * NB2 : Multiple fulltext search terms can be specified using a comma
-     *
-     * @param query Query to use for the full text search
-     */
-    fun searchContentFullText(query: String, recordHistory: Boolean = true) {
-        // If user searches in main toolbar, full text search takes over advanced search
-        contentSearchManager.clearTags()
-        contentSearchManager.setLocation(Location.ANY.value)
-        contentSearchManager.setContentType(Type.ANY.value)
-        contentSearchManager.setQuery(query)
-        newContentSearch.value = true
-        if (recordHistory && query.isNotEmpty()) {
-            val searchUri = buildSearchUri(null, query = query)
-            dao.insertSearchRecord(SearchRecord.contentSearch(searchUri), 10)
-            dao.cleanup()
-        }
-        viewModelScope.launch { doSearchContent() }
-    }
-
-    /**
      * Perform a new content search using the given query and metadata
      *
      * @param query    Query to use for the search
      * @param criteria Metadata to use for the search
      */
-    fun searchContent(query: String, criteria: SearchCriteria, searchUri: Uri) {
+    fun searchContent(query: String, criteria: SearchCriteria, recordHistory: Boolean = true) {
         contentSearchManager.setQuery(query)
         contentSearchManager.setExcludedAttrs(criteria.excludedAttributeTypes)
         contentSearchManager.setTags(criteria.attributes)
@@ -241,10 +230,10 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
         contentSearchManager.setContentType(criteria.contentType.value)
         contentSearchManager.setCombinationMode(criteria.combinationMode)
         newContentSearch.value = true
-        if (!criteria.isEmpty()) {
+        if (recordHistory && (query.isNotEmpty() || !criteria.isEmpty())) {
             dao.insertSearchRecord(
                 SearchRecord.contentSearch(
-                    searchUri,
+                    buildSearchUri(criteria, query),
                     criteria.toString(getApplication())
                 ), 10
             )
@@ -362,7 +351,7 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
                 folderSearchManager.getFoldersDetails(ctx, root)
                     .takeWhile { !detailsFlowKillSwitch.get() }
                     .filterNot { it.type == DisplayFile.Type.OTHER }
-                    .map { enrichWithMetadata(it, dao) }
+                    .map { enrichFolderWithMetadata(it, dao) }
                     .transform {
                         // Fill parents cache
                         if (it.type == DisplayFile.Type.FOLDER) parentsCache[it.uri] = it.parent
@@ -378,7 +367,7 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
         }
     }
 
-    private fun enrichWithMetadata(f: DisplayFile, dao: CollectionDAO): DisplayFile {
+    private fun enrichFolderWithMetadata(f: DisplayFile, dao: CollectionDAO): DisplayFile {
         dao.selectContentByStorageUri(f.uri.toString(), false)?.let {
             Timber.d("Mapped metadata for ${it.title}")
             f.coverUri = it.cover.usableUri.ifBlank { it.coverImageUrl }.toUri()
@@ -403,6 +392,12 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
         contentSearchManager.setFilterBookNotCompleted(value)
         newContentSearch.value = true
         viewModelScope.launch { doSearchContent() }
+    }
+
+    fun setLrrNotCompletedFilter(value: Boolean) {
+        lrrSearchManager.setFilterBooksNonCompleted(value)
+        newContentSearch.value = true
+        viewModelScope.launch { doSearchLrr() }
     }
 
     /**
@@ -456,8 +451,8 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
         viewModelScope.launch { doSearchGroup() }
     }
 
-    fun setGroupQuery(value: String) {
-        if (value.isNotEmpty()) {
+    fun setGroupQuery(value: String, recordHistory: Boolean) {
+        if (value.isNotEmpty() && recordHistory) {
             val searchUri = buildSearchUri(null, query = value)
             dao.insertSearchRecord(SearchRecord.groupSearch(searchUri), 10)
             dao.cleanup()
@@ -503,6 +498,7 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
             when (groupingId) {
                 Grouping.FLAT.id -> viewModelScope.launch { doSearchContent(true) }
                 Grouping.FOLDERS.id -> viewModelScope.launch { doSearchFolders() }
+                Grouping.LRR.id -> viewModelScope.launch { doSearchLrr() }
                 else -> viewModelScope.launch { doSearchGroup() }
             }
         }
@@ -521,6 +517,11 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
     fun clearFolderFilters() {
         folderSearchManager.clearFilters()
         viewModelScope.launch { doSearchFolders() }
+    }
+
+    fun clearLrrFilters() {
+        lrrSearchManager.clearFilters()
+        viewModelScope.launch { doSearchLrr() }
     }
 
     /**
@@ -571,6 +572,140 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
         // Don't search now as the UI will inevitably search as well upon switching to books view
         // TODO only useful when browsing custom groups ?
         viewModelScope.launch { doSearchContent(Settings.getGroupingDisplayG() == Grouping.FLAT) }
+    }
+
+    // Update a single element inside the loaded list (useful when editing any of its properties)
+    private suspend fun updateLrr(archiveId: String) {
+        if (!Settings.lrrEndpoint.startsWith("http")) return
+
+        try {
+            withContext(Dispatchers.IO) {
+                val favArchives = getLrrCategoryArchiveIds(Settings.lrrFavCat)
+                val isArchiveFav = favArchives.contains(archiveId)
+
+                val archivesCall = LrrServer.api.getArchive(archiveId)
+                archivesCall.execute().let { response ->
+                    if (response.isSuccessful) {
+                        response.body()?.let { rb ->
+                            val newArchive = rb.toContent()
+                            newArchive.favourite = isArchiveFav
+
+                            // Post result
+                            lrrArchives.value?.let { arcPair ->
+                                // Create a new instance of the collection for the UI update to work
+                                val arcs = arcPair.first.toMutableList()
+                                // Insert the updated archive
+                                val replaceIdx = arcs.indexOfFirst { it.uniqueSiteId == archiveId }
+                                if (replaceIdx > -1) arcs[replaceIdx] = newArchive
+                                lrrArchives.postValue(Pair(arcs, arcPair.second))
+                            }
+                        }
+                    } else {
+                        Timber.w("LRR server failed when querying archive @ ${Settings.lrrEndpoint}")
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Timber.w(e)
+            if (e is SocketTimeoutException) {
+                application.toastLong(
+                    e.message ?: "Couldn't connect to LRR server ${Settings.lrrEndpoint}"
+                )
+            }
+        }
+    }
+
+    private suspend fun doSearchLrr(resumeLoad: Boolean = false) {
+        if (!Settings.lrrEndpoint.startsWith("http")) return
+
+        lrrSearchManager.setSortField(Settings.lrrSortField)
+        lrrSearchManager.setSortDesc(Settings.isLrrSortDesc)
+
+        try {
+            withContext(Dispatchers.IO) {
+                val favs = try {
+                    getLrrCategoryArchiveIds(Settings.lrrFavCat).toSet()
+                } catch (e: Throwable) {
+                    Timber.w(e)
+                    emptyList()
+                }
+
+                val queryMap = HashMap<String, String>()
+                if (resumeLoad) lrrSearchManager.setResumeFrom(lrrMaxResult)
+                else lrrSearchManager.setResumeFrom(0)
+                lrrSearchManager.populateSearchQuery(queryMap)
+                val archivesCall =
+                    LrrServer.api.search(queryMap)
+                Timber.d("Searching LRR from $lrrMaxResult")
+                archivesCall.execute().let { response ->
+                    if (response.isSuccessful) {
+                        response.body()?.let { rb ->
+                            val serverArchives = rb.contentList
+                            serverArchives.forEach {
+                                if (favs.contains(it.uniqueSiteId)) it.favourite = true
+                            }
+
+                            // Post result
+                            val targetArchives = if (resumeLoad && lrrMaxResult > 0) {
+                                val targetArchives = ArrayList<Content>()
+                                targetArchives.addAll(lrrArchives.value?.first ?: emptyList())
+                                targetArchives.addAll(serverArchives)
+                                targetArchives
+                            } else serverArchives
+
+                            lrrMaxResult = if (serverArchives.size == rb.recordsFiltered) 0
+                            else lrrMaxResult + serverArchives.size
+
+                            lrrArchives.postValue(Pair(targetArchives, rb.recordsTotal))
+                        }
+                    } else {
+                        Timber.w("LRR server failed when querying archives @ ${Settings.lrrEndpoint}")
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Timber.w(e)
+            if (e is SocketTimeoutException) {
+                application.toastLong(
+                    e.message ?: "Couldn't connect to LRR server ${Settings.lrrEndpoint}"
+                )
+            }
+        }
+        lrrSearchBundle.postValue(lrrSearchManager.toBundle())
+    }
+
+    private fun getLrrCategoryArchiveIds(name: String): List<String> {
+        val catId = LrrServer.getLrrCategoryId(name)
+        val catCall = LrrServer.api.getCategory(catId)
+        catCall.execute().let { response ->
+            if (response.isSuccessful) {
+                response.body()?.let { return it.archives }
+            } else {
+                Timber.w("LRR server failed when querying CategoryArchiveIds @ ${Settings.lrrEndpoint}")
+            }
+        }
+
+        return emptyList()
+    }
+
+    fun searchLrr() {
+        viewModelScope.launch { doSearchLrr() }
+    }
+
+    fun setLrrQuery(value: String) {
+        lrrSearchManager.setQuery(value)
+        viewModelScope.launch { doSearchLrr() }
+    }
+
+    fun setLrrFavouriteFilter(value: Boolean) {
+        lrrSearchManager.setFilterBooksFavourite(value)
+        if (value) lrrSearchManager.setCategory(lrrFavCatId)
+        else lrrSearchManager.setCategory("")
+        viewModelScope.launch { doSearchLrr() }
+    }
+
+    fun loadMoreLrr() {
+        viewModelScope.launch { doSearchLrr(true) }
     }
 
     // =========================
@@ -649,16 +784,18 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
      *
      * @param content Content whose favourite state to toggle
      */
-    fun toggleContentFavourite(content: Content, onSuccess: Runnable) {
+    fun toggleContentFavourite(content: Content, onSuccess: Runnable? = null) {
         viewModelScope.launch {
             try {
-                doToggleContentFavourite(content.id)
+                if (content.site == Site.LRR) {
+                    doToggleContentFavouriteLrr(content)
+                } else {
+                    doToggleContentFavourite(content.id)
+                }
             } catch (t: Throwable) {
                 Timber.e(t)
-            } finally {
-                dao.cleanup()
             }
-            onSuccess.run()
+            onSuccess?.run()
         }
     }
 
@@ -666,18 +803,37 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
      * Toggle the "favourite" state of the given content
      *
      * @param contentId ID of the content whose favourite state to toggle
-     * @return Resulting content
      */
-    private suspend fun doToggleContentFavourite(contentId: Long) =
-        withContext(Dispatchers.IO) {
-            // Check if given content still exists in DB
-            val theContent = dao.selectContent(contentId)
-                ?: throw InvalidParameterException("Invalid ContentId : $contentId")
+    private suspend fun doToggleContentFavourite(contentId: Long) = withContext(Dispatchers.IO) {
+        // Check if given content still exists in DB
+        val theContent = dao.selectContent(contentId)
+            ?: throw InvalidParameterException("Invalid ContentId : $contentId")
 
-            theContent.favourite = !theContent.favourite
-            persistJson(getApplication(), theContent)
-            dao.insertContent(theContent)
-            dao.cleanup()
+        theContent.favourite = !theContent.favourite
+        persistJson(getApplication(), theContent)
+        dao.insertContent(theContent)
+        dao.cleanup()
+    }
+
+    /**
+     * Toggle the "favourite" state of the given online content
+     *
+     * @param content Content whose favourite state to toggle
+     */
+    private suspend fun doToggleContentFavouriteLrr(content: Content) =
+        withContext(Dispatchers.IO) {
+            if (content.favourite) {
+                LrrServer.api.removeFromCategory(
+                    lrrFavCatId,
+                    content.uniqueSiteId
+                ).execute()
+            } else {
+                LrrServer.api.addToCategory(
+                    lrrFavCatId,
+                    content.uniqueSiteId
+                ).execute()
+            }
+            updateLrr(content.uniqueSiteId)
         }
 
     /**
@@ -717,6 +873,29 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
             }
             dao.cleanup()
         }
+
+    fun downloadFromLrr(
+        contentList: List<Content>,
+        onSuccess: Consumer<Int>,
+        onError: Consumer<Throwable>
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                contentList.forEach {
+                    dao.addContentToQueue(
+                        it, null, null,
+                        QueuePosition.BOTTOM, isQueueActive(application),
+                        archiveUrl = LrrServer.getDlLink(it.archiveId)
+                    )
+                }
+                dao.cleanup()
+            } catch (t: Throwable) {
+                Timber.e(t)
+                onError.invoke(t)
+            }
+            onSuccess.invoke(contentList.size)
+        }
+    }
 
     /**
      * General purpose download/redownload
@@ -824,10 +1003,16 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
                             }
 
                             dao.addContentToQueue(
-                                it, sourceImageStatus, targetImageStatus, position, -1, null, null,
+                                it,
+                                sourceImageStatus,
+                                targetImageStatus,
+                                position,
                                 isQueueActive(getApplication())
                             )
 
+                            // TODO purge can't happen as the content is saved with an empty storageUri after calling reparseFromScratch with keepUris = false
+                            // + why are we doing that _and_ purging ?
+                            // the fact that we're just purging instead of wiping the folder means we should keep its Uri intact
                             if (reparseImages) purgeContent(
                                 // Non-blocking performance bottleneck; run in a dedicated worker
                                 getApplication(),
@@ -1193,7 +1378,8 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
         viewModelScope.launch(Dispatchers.IO) {
             groupIds.forEach {
                 try {
-                    doRateGroup(it, targetRating)
+                    val parts = splitUniqueStr(it)
+                    doRateGroup(parts.first, parts.second, parts.third, targetRating)
                 } catch (t: Throwable) {
                     Timber.w(t)
                 } finally {
@@ -1203,23 +1389,29 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
         }
     }
 
-    /**
-     * Set the rating to the given value for the given group ID
-     *
-     * @param uniqueStr    Group unique String to set the rating for
-     * @param targetRating Rating to set
-     */
-    private suspend fun doRateGroup(uniqueStr: String, targetRating: Int): Group {
+    private suspend fun doRateGroup(
+        groupingName: String,
+        groupName: String,
+        subType: Int,
+        targetRating: Int
+    ): Group {
         // Check if given group still exists in DB
-        val parts = splitUniqueStr(uniqueStr)
-        val grouping = Grouping.searchByName(parts.first)
-        var theGroup = dao.selectGroupByName(grouping.id, parts.second)
-        if (null == theGroup && Settings.groupingDisplay == Grouping.ARTIST.id) {
-            // Create flagged group
-            theGroup = Group(Grouping.ARTIST, parts.second, -1)
-            theGroup.subtype = parts.third
+        val grouping = when (Settings.groupingDisplay) {
+            Grouping.ARTIST.id -> Grouping.ARTIST
+            Grouping.SERIES.id -> Grouping.SERIES
+            else -> Grouping.searchByName(groupingName)
         }
-        theGroup ?: throw InvalidParameterException("Invalid uniqueStr : $uniqueStr")
+        var theGroup = dao.selectGroupByName(grouping.id, groupName)
+        if (null == theGroup) {
+            val targetGrouping = Grouping.searchById(Settings.groupingDisplay)
+            if (targetGrouping != Grouping.NONE) {
+                // Create flagged group
+                theGroup = Group(targetGrouping, groupName, -1)
+                theGroup.subtype = subType
+            }
+        }
+        theGroup
+            ?: throw InvalidParameterException("Invalid params : $groupingName $groupingName $subType")
 
         if (!theGroup.isBeingProcessed) {
             theGroup.rating = targetRating
@@ -1232,33 +1424,36 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
         return theGroup
     }
 
-    fun moveContentsToNewCustomGroup(
-        contentIds: LongArray,
-        newGroupName: String,
-        onProcessed: Consumer<Int>
-    ) {
-        val newGroup = Group(Grouping.CUSTOM, newGroupName.trim(), -1)
-        newGroup.id = dao.insertGroup(newGroup)
-        moveContentsToCustomGroup(contentIds, newGroup, onProcessed)
-        dao.cleanup()
-    }
-
     fun moveContentsToCustomGroup(
         contentIds: LongArray,
-        group: Group?,
+        groupName: String?,
+        onProgress: Consumer<Float>,
         onProcessed: Consumer<Int>
     ) {
+        var targetGroup: Group? = null
+        if (groupName != null) {
+            val name = groupName.trim()
+            targetGroup = dao.selectGroupByName(Grouping.CUSTOM.id, name)
+            if (null == targetGroup) {
+                targetGroup = Group(Grouping.CUSTOM, name, -1)
+                targetGroup.id = dao.insertGroup(targetGroup)
+                dao.cleanup()
+            }
+        }
         var nbProcessed = 0
         viewModelScope.launch {
             try {
                 withContext(Dispatchers.IO) {
-                    contentIds.forEach {
-                        dao.selectContent(it)?.let { c ->
-                            moveContentToCustomGroup(c, group, dao)
+                    contentIds.forEachIndexed { index, id ->
+                        dao.selectContent(id)?.let { c ->
+                            moveContentToCustomGroup(c, targetGroup, dao)
                             updateJson(getApplication(), c)
                             nbProcessed++
                         } ?: run {
-                            Timber.w("Book couldn't be added to group")
+                            Timber.w("Book couldn't be added to group $groupName")
+                        }
+                        withContext(Dispatchers.Main) {
+                            onProgress.invoke(index * 1f / contentIds.size)
                         }
                     }
                     refreshAvailableGroupings()
@@ -1269,7 +1464,7 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
                     onProcessed.invoke(nbProcessed)
                 }
             } catch (t: Throwable) {
-                Timber.e(t, "Book couldn't be added to group")
+                Timber.e(t, "Book couldn't be added to group $groupName")
             }
         }
     }
@@ -1337,6 +1532,7 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
         val contentIds = content.map { it.id }.toLongArray()
 
         val params = ArchiveWorker.Params(
+            0, // Device
             "",
             1, // CBZ
             0,
@@ -1401,58 +1597,60 @@ class LibraryViewModel(application: Application, val dao: CollectionDAO) :
             val initialJsonUri = content.jsonUri.toUri()
             val initialArchiveUri = content.storageUri.toUri()
 
-            // Create target folder for streaming from scratch
-            val location = selectDownloadLocation(context)
-            getOrCreateContentDownloadDir(
+            val location = if (content.status == StatusContent.EXTERNAL) StorageLocation.EXTERNAL
+            else selectDownloadLocation(context)
+
+            val extractDir = getOrCreateContentDownloadDir(
                 context,
                 content,
                 location,
-                createFromScratch = true
-            )?.let { f ->
-                // Copy the JSON file inside target folder
-                copyFile(
-                    context,
-                    content.jsonUri.toUri(),
-                    f,
-                    JSON_FILE_NAME_V2,
-                    JSON_MIME_TYPE
-                )?.let { content.jsonUri = it.toString() }
-                    ?: throw IOException("Couldn't copy JSON file")
+                createFromScratch = true,
+                siblingLocation = initialArchiveUri
+            ) ?: throw IOException("Couldn't create book folder")
 
-                // Unarchive the whole book inside target folder
-                val imgs = content.imageList
-                val toExtract: List<Triple<String, Long, String>> = imgs
-                    .filter { it.isReadable }
-                    .mapIndexed { i, e ->
-                        val filePath = getArchivedFileName(content.storageUri, e.fileUri)
-                        Triple(filePath, i.toLong(), filePath)
-                    }
-                val imgUris = context.extractArchiveEntriesBlocking(
-                    content.storageUri.toUri(),
-                    f.uri,
-                    toExtract
-                )
-                content.storageUri = f.uri.toString()
-                content.downloadMode = DownloadMode.DOWNLOAD
+            // Copy the JSON file inside target folder
+            copyFile(
+                context,
+                content.jsonUri.toUri(),
+                extractDir,
+                JSON_FILE_NAME_V2,
+                JSON_MIME_TYPE
+            )?.let { content.jsonUri = it.toString() }
+                ?: throw IOException("Couldn't copy JSON file")
 
-                // Save core
-                dao.insertContentCore(content)
+            // Unarchive the whole book inside target folder
+            val imgs = content.imageList
+            val toExtract: List<Triple<String, Long, String>> = imgs
+                .filter { it.isReadable }
+                .mapIndexed { i, e ->
+                    val filePath = getArchivedFileName(content.storageUri, e.fileUri)
+                    Triple(filePath, i.toLong(), filePath)
+                }
+            val imgUris = context.extractArchiveEntriesBlocking(
+                content.storageUri.toUri(),
+                extractDir.uri,
+                toExtract
+            )
+            content.storageUri = extractDir.uri.toString()
+            content.downloadMode = DownloadMode.DOWNLOAD
 
-                // Remap pictures
-                imgs.filter { it.isReadable }
-                    .forEachIndexed { i, e ->
-                        if (imgUris.size <= i) return@forEachIndexed
-                        imgUris[i].toString().let { e.fileUri = it }
-                    }
+            // Save core
+            dao.insertContentCore(content)
 
-                // Don't move thumb as it can keep being read from the archive cache folder
+            // Remap pictures
+            imgs.filter { it.isReadable }
+                .forEachIndexed { i, e ->
+                    if (imgUris.size <= i) return@forEachIndexed
+                    imgUris[i].toString().let { e.fileUri = it }
+                }
 
-                // Save pictures
-                dao.insertImageFiles(imgs)
+            // Don't move thumb as it can keep being read from the archive cache folder
 
-                // Remove the initial archive and its JSON
-                removeDocument(context, initialJsonUri)
-                removeDocument(context, initialArchiveUri)
-            } ?: throw IOException("Couldn't create book folder")
+            // Save pictures
+            dao.insertImageFiles(imgs)
+
+            // Remove the initial archive and its JSON
+            removeDocument(context, initialJsonUri)
+            removeDocument(context, initialArchiveUri)
         }
 }

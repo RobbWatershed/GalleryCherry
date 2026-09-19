@@ -8,9 +8,11 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import me.devsaki.hentoid.BuildConfig
 import me.devsaki.hentoid.enums.Site
+import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.file.DEFAULT_MIME_TYPE
 import me.devsaki.hentoid.util.isNumeric
 import me.devsaki.hentoid.util.pause
+import okhttp3.Call
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -172,8 +174,28 @@ fun getOnlineResourceDownloader(
     val requestBuilder: Request.Builder =
         buildRequest(url, headers, useMobileAgent, useHentoidAgent, useWebviewAgent)
     val request: Request = requestBuilder.get().build()
-    return OkHttpClientManager.getInstance(4000, 15000, followRedirects).newCall(request)
-        .execute()
+    return call429(
+        OkHttpClientManager.getInstance(4000, 15000, followRedirects).newCall(request),
+        url
+    )
+}
+
+private fun call429(call: Call, id: String = ""): Response {
+    var waited = 0
+    var resp = call.execute()
+    while (
+        waitBlocking429(resp, Settings.http429DefaultDelaySecs * 1000)
+        && waited < 2
+    ) {
+        waited++
+        resp = call.execute()
+    }
+    require(resp.code < 400) {
+        String.format(
+            "Unreachable resource : code=${resp.code} (${resp.message}) [$id - $waited]",
+        )
+    }
+    return resp
 }
 
 /**
@@ -776,13 +798,34 @@ fun simplifyUrl(url: String): String {
  * @return True if the response is an HTTP 429 _and_ a delay has been supplied and waited out
  */
 fun waitBlocking429(response: retrofit2.Response<*>, defaultDelayMs: Int): Boolean {
-    if (429 == response.code()) {
+    return waitBlocking429(response.code(), response.headers().toMap(), defaultDelayMs)
+}
+
+fun waitBlocking429(response: Response, defaultDelayMs: Int): Boolean {
+    return waitBlocking429(response.code, response.headers.toMap(), defaultDelayMs)
+}
+
+private fun waitBlocking429(
+    httpCode: Int,
+    headers: Map<String, String>,
+    defaultDelayMs: Int
+): Boolean {
+    if (429 == httpCode) {
         var delay = defaultDelayMs
-        var retryDelay = response.headers()["Retry-After"]
-        if (null == retryDelay) retryDelay = response.headers()["retry-after"]
-        if (retryDelay != null && isNumeric(retryDelay)) {
-            delay = retryDelay.toInt() + 1000 // 1s extra margin
+        headers.forEach { (string, string1) -> Timber.v("429 headers $string $string1") }
+        var retryDelay = headers["Retry-After"]
+        if (retryDelay.isNullOrBlank()) retryDelay = headers["retry-after"]
+        if (retryDelay.isNullOrBlank()) retryDelay = headers["RateLimit-Reset"]
+        if (retryDelay.isNullOrBlank()) retryDelay = headers["X-RateLimit-Reset"]
+        if (retryDelay.isNullOrBlank()) retryDelay = headers["ratelimit-reset"]
+        if (retryDelay.isNullOrBlank()) retryDelay = headers["x-ratelimit-reset"]
+
+        if (!retryDelay.isNullOrBlank() && isNumeric(retryDelay)) {
+            delay = retryDelay.toInt()
+            if (delay < 1000) delay *= 1000 // In case the value is expressed in seconds (may happen; those aren't standard headers)
+            delay += 1000 // 1 second extra margin
         }
+        Timber.d("HTTP 429 caught; waiting for $delay ms")
         pause(delay)
         return true
     }

@@ -5,6 +5,7 @@ import me.devsaki.hentoid.database.domains.Chapter
 import me.devsaki.hentoid.database.domains.Content
 import me.devsaki.hentoid.database.domains.ImageFile
 import me.devsaki.hentoid.enums.StatusContent
+import me.devsaki.hentoid.parsers.fetchHeaders
 import me.devsaki.hentoid.parsers.getChaptersFromLinks
 import me.devsaki.hentoid.parsers.getExtraChaptersbyUrl
 import me.devsaki.hentoid.parsers.getMaxChapterOrder
@@ -13,7 +14,9 @@ import me.devsaki.hentoid.parsers.setDownloadParams
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.exception.EmptyResultException
 import me.devsaki.hentoid.util.exception.PreparationInterruptedException
+import me.devsaki.hentoid.util.isRangeChapters
 import me.devsaki.hentoid.util.network.getOnlineDocument
+import me.devsaki.hentoid.util.rangeToNumbers
 import org.greenrobot.eventbus.EventBus
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
@@ -23,7 +26,7 @@ const val GALLERY_URL_PLACEHOLDER = $$"$galleryUrl"
 
 abstract class BaseChapteredImageListParser : BaseImageListParser() {
 
-    protected abstract fun isChapterUrl(url: String): Boolean
+    abstract fun isChapterUrl(url: String): Boolean
 
     protected abstract fun getChapterSelector(): ChapterSelector
 
@@ -57,13 +60,13 @@ abstract class BaseChapteredImageListParser : BaseImageListParser() {
         processedUrl = onlineContent.galleryUrl
         require(URLUtil.isValidUrl(readerUrl)) { "Invalid gallery URL : $readerUrl" }
         Timber.d("Gallery URL: %s", readerUrl)
-        EventBus.getDefault().register(this)
+        if (!EventBus.getDefault().isRegistered(this)) EventBus.getDefault().register(this)
         val result: List<ImageFile>
         try {
             result = parseImageFiles(onlineContent, storedContent)
             setDownloadParams(result, onlineContent.site.url)
         } finally {
-            EventBus.getDefault().unregister(this)
+            if (EventBus.getDefault().isRegistered(this)) EventBus.getDefault().unregister(this)
         }
         return result
     }
@@ -89,7 +92,7 @@ abstract class BaseChapteredImageListParser : BaseImageListParser() {
 
         // Use chapter folder as a differentiator (as the whole URL may evolve)
         val extraChapters = getExtraChaptersbyUrl(storedChapters, chapters, this::getLastPartIndex)
-        progressStart(onlineContent, storedContent, extraChapters.size)
+        progressStart(onlineContent, storedContent)
 
         // Start numbering extra images right after the last position of stored and chaptered images
         val imgOffset = getMaxImageOrder(storedChapters)
@@ -97,21 +100,29 @@ abstract class BaseChapteredImageListParser : BaseImageListParser() {
         // 2. Open each chapter URL and get the image data until all images are found
         var minEpoch = Long.MAX_VALUE
         var storedOrderOffset = getMaxChapterOrder(storedChapters)
-        extraChapters.forEach { chp ->
-            if (processHalted.get()) return@forEach
-            chp.order = ++storedOrderOffset
-            if (chp.uploadDate > 0) minEpoch = minEpoch.coerceAtMost(chp.uploadDate)
-            result.addAll(
-                parseChapterImageFiles(
-                    onlineContent,
-                    chp,
-                    imgOffset + result.size + 1,
-                    headers,
-                    false
+        val isRangeChapters = isRangeChapters(onlineContent.downloadRange)
+        val range =
+            if (isRangeChapters) rangeToNumbers(onlineContent.downloadRange) else emptyList()
+        extraChapters
+            .map {
+                it.order = ++storedOrderOffset
+                it
+            }
+            .filter { range.isEmpty() || range.contains(it.order) }
+            .forEachIndexed { index, chp ->
+                if (processHalted.get()) return@forEachIndexed
+                if (chp.uploadDate > 0) minEpoch = minEpoch.coerceAtMost(chp.uploadDate)
+                result.addAll(
+                    parseChapterImageFiles(
+                        onlineContent,
+                        chp,
+                        imgOffset + result.size + 1,
+                        headers,
+                        false
+                    )
                 )
-            )
-            progressNext()
-        }
+                progressPlus((index + 1) * 1f / extraChapters.size)
+            }
         // If the process has been halted manually, the result is incomplete and should not be returned as is
         if (processHalted.get()) throw PreparationInterruptedException()
         progressComplete()
@@ -133,7 +144,7 @@ abstract class BaseChapteredImageListParser : BaseImageListParser() {
         require(URLUtil.isValidUrl(url)) { "Invalid gallery URL : $url" }
         if (processedUrl.isEmpty()) processedUrl = url
         Timber.d("Chapter URL: $url")
-        EventBus.getDefault().register(this)
+        if (!EventBus.getDefault().isRegistered(this)) EventBus.getDefault().register(this)
         val result: List<ImageFile>
         try {
             val ch = Chapter(name = content.title, url = url, order = 1)
@@ -142,7 +153,7 @@ abstract class BaseChapteredImageListParser : BaseImageListParser() {
                 content.coverImageUrl = result[0].url
             setDownloadParams(result, content.site.url)
         } finally {
-            EventBus.getDefault().unregister(this)
+            if (EventBus.getDefault().isRegistered(this)) EventBus.getDefault().unregister(this)
         }
         return result
     }

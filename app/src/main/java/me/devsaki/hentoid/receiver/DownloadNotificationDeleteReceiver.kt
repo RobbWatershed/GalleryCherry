@@ -8,6 +8,7 @@ import timber.log.Timber
 
 /**
  * Broadcast receiver for when a download notification is dismissed.
+ * IMPORTANT : Every Received must be registered on the manifest!
  */
 class DownloadNotificationDeleteReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context?, intent: Intent?) {

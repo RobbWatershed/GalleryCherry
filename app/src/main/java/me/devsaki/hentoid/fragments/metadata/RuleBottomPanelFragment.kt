@@ -5,7 +5,6 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
@@ -27,8 +26,7 @@ import me.devsaki.hentoid.viewmodels.ViewModelFactory
 class RuleBottomPanelFragment : BottomSheetDialogFragment() {
 
     // UI
-    private var _binding: IncludeRulesControlsBinding? = null
-    private val binding get() = _binding!!
+    private var binding: IncludeRulesControlsBinding? = null
 
     // Field filter
     private val fieldItemAdapter = ItemAdapter<TextItem<Int>>()
@@ -64,14 +62,9 @@ class RuleBottomPanelFragment : BottomSheetDialogFragment() {
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View {
-        _binding = IncludeRulesControlsBinding.inflate(inflater, container, false)
-        return binding.root
-    }
-
-    override fun onDestroyView() {
-        _binding = null
-        super.onDestroyView()
+    ): View? {
+        binding = IncludeRulesControlsBinding.inflate(inflater, container, false)
+        return binding?.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -93,12 +86,12 @@ class RuleBottomPanelFragment : BottomSheetDialogFragment() {
                 }
             }
         }
-        binding.let {
-            it.fieldList.adapter = fieldFastAdapter
+        binding?.apply {
+            fieldList.adapter = fieldFastAdapter
             fieldItemAdapter.set(getSortFields(context, Settings.ruleSortField))
 
-            it.tagFilter.adapter = typeFastAdapter
-            it.sortAscDesc.addOnButtonCheckedListener { _, i, b ->
+            tagFilter.adapter = typeFastAdapter
+            sortAscDesc.addOnButtonCheckedListener { _, i, b ->
                 if (!b) return@addOnButtonCheckedListener
                 Settings.isRuleSortDesc = (i == R.id.sort_descending)
                 viewModel.loadRules()
@@ -120,9 +113,9 @@ class RuleBottomPanelFragment : BottomSheetDialogFragment() {
     }
 
     private fun updateSortDirection() {
-        binding.let {
+        binding?.apply {
             val currentPrefSortDesc = Settings.isRuleSortDesc
-            it.sortAscDesc.check(if (currentPrefSortDesc) R.id.sort_descending else R.id.sort_ascending)
+            sortAscDesc.check(if (currentPrefSortDesc) R.id.sort_descending else R.id.sort_ascending)
         }
     }
 
@@ -162,12 +155,16 @@ class RuleBottomPanelFragment : BottomSheetDialogFragment() {
             TextItem(
                 context.resources.getString(R.string.meta_rule_source),
                 Settings.Value.ORDER_FIELD_SOURCE_NAME,
-                false, (Settings.Value.ORDER_FIELD_SOURCE_NAME == currentSortField)
+                reformatCase = false,
+                selectable = true,
+                selected = (Settings.Value.ORDER_FIELD_SOURCE_NAME == currentSortField)
             ),
             TextItem(
                 context.resources.getString(R.string.meta_rule_target),
                 Settings.Value.ORDER_FIELD_TARGET_NAME,
-                false, (Settings.Value.ORDER_FIELD_TARGET_NAME == currentSortField)
+                reformatCase = false,
+                selectable = true,
+                selected = (Settings.Value.ORDER_FIELD_TARGET_NAME == currentSortField)
             )
         )
     }
@@ -180,7 +177,7 @@ class RuleBottomPanelFragment : BottomSheetDialogFragment() {
             val bottomFragment = RuleBottomPanelFragment()
             context.setStyle(
                 bottomFragment,
-                DialogFragment.STYLE_NORMAL,
+                STYLE_NORMAL,
                 R.style.Theme_Light_BottomSheetDialog
             )
             bottomFragment.show(fragmentManager, "RuleBottomPanelFragment")
