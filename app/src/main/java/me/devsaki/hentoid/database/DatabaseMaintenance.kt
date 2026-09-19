@@ -15,9 +15,7 @@ import me.devsaki.hentoid.database.domains.Group
 import me.devsaki.hentoid.database.domains.GroupItem
 import me.devsaki.hentoid.database.domains.ImageFile
 import me.devsaki.hentoid.database.domains.SearchRecord
-import me.devsaki.hentoid.database.domains.SiteBookmark
 import me.devsaki.hentoid.enums.Grouping
-import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.isInLibrary
@@ -55,8 +53,6 @@ object DatabaseMaintenance {
             this::cleanOrphanChapters,
             this::cleanOrphanImageFiles,
             this::refreshJsonForSecondDownloadDate,
-            this::migrateKemonoBookmarks,
-            this::migrateYifferBookmarks,
             this::setDbUpdateVersion // Should ALWAYS stay in last position
         )
     }
@@ -601,71 +597,6 @@ object DatabaseMaintenance {
                 Timber.i("Refresh Json for second download date : done")
                 Settings.isRefreshJson1Complete = true
             }
-        } finally {
-            ObjectBoxDB.cleanup()
-        }
-    }
-
-    private suspend fun migrateKemonoBookmarks(
-        context: Context,
-        emitter: (Float) -> Unit
-    ) = withContext(Dispatchers.IO) {
-        try {
-            val pBookmarks = ObjectBoxDB.selectBookmarksQ(Site.PAWCHIVE)
-            if (pBookmarks.count() > 0) return@withContext
-            val kBookmarks = ObjectBoxDB.selectBookmarksQ(Site.KEMONO)
-            if (0L == kBookmarks.count()) return@withContext
-
-            Timber.i("Migrating Kemono -> Pawchive bookmarks : start")
-            kBookmarks.use { entries ->
-                Timber.i(
-                    "Migrating Kemono -> Pawchive bookmarks : %d bookmarks detected",
-                    entries.count()
-                )
-                val pawCopies = entries.safeFind().map {
-                    SiteBookmark(
-                        site = Site.PAWCHIVE,
-                        title = it.title,
-                        url = it.url.replace(Site.KEMONO.url, Site.PAWCHIVE.url),
-                        order = it.order,
-                        isHomepage = it.isHomepage
-                    )
-                }
-                ObjectBoxDB.insertBookmarks(pawCopies)
-            }
-            Timber.i("Migrating Kemono -> Pawchive bookmarks : done")
-        } finally {
-            ObjectBoxDB.cleanup()
-        }
-    }
-
-    private suspend fun migrateYifferBookmarks(
-        context: Context,
-        emitter: (Float) -> Unit
-    ) = withContext(Dispatchers.IO) {
-        try {
-            val yBookmarks = ObjectBoxDB.selectBookmarksContainsQ("yiffer.xyz", Site.YIFFER)
-            if (0L == yBookmarks.count()) return@withContext
-
-            Timber.i("Migrating Yiffer -> Tailspace bookmarks : start")
-            yBookmarks.use { entries ->
-                Timber.i(
-                    "Migrating Yiffer -> Tailspace bookmarks : %d bookmarks detected",
-                    entries.count()
-                )
-                val updatedEntries = entries.safeFind().map {
-                    SiteBookmark(
-                        id = it.id,
-                        site = it.site,
-                        title = it.title,
-                        url = it.url.replace("yiffer.xyz", "tailspace.com"),
-                        order = it.order,
-                        isHomepage = it.isHomepage
-                    )
-                }
-                ObjectBoxDB.insertBookmarks(updatedEntries)
-            }
-            Timber.i("Migrating Yiffer -> Tailspace bookmarks : done")
         } finally {
             ObjectBoxDB.cleanup()
         }

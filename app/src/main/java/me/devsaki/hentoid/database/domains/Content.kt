@@ -37,7 +37,6 @@ import me.devsaki.hentoid.activities.sources.V2PhActivity
 import me.devsaki.hentoid.activities.sources.XhamsterActivity
 import me.devsaki.hentoid.activities.sources.XinmeiActivity
 import me.devsaki.hentoid.activities.sources.XiutakuActivity
-import me.devsaki.hentoid.activities.sources.PawActivity
 import me.devsaki.hentoid.activities.sources.XnxxActivity
 import me.devsaki.hentoid.database.domains.ImageFile.Companion.fromImageUrl
 import me.devsaki.hentoid.database.safeReach
@@ -52,7 +51,6 @@ import me.devsaki.hentoid.util.file.isSupportedArchive
 import me.devsaki.hentoid.util.formatAuthor
 import me.devsaki.hentoid.util.hash64
 import me.devsaki.hentoid.util.image.isSupportedMedia
-import me.devsaki.hentoid.util.isNumeric
 import me.devsaki.hentoid.util.jsonToObject
 import me.devsaki.hentoid.util.network.UriParts
 import me.devsaki.hentoid.util.serializeToJson
@@ -219,7 +217,6 @@ data class Content(
                 Site.EVERIA -> EveriaActivity::class.java
                 Site.FAPELLO -> FapelloActivity::class.java
                 Site.GALLERYEPIC -> GalleryEpicActivity::class.java
-                Site.PAWCHIVE -> PawActivity::class.java
                 else -> BaseBrowserActivity::class.java
             }
         }

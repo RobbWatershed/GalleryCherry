@@ -24,7 +24,7 @@ import me.devsaki.hentoid.parsers.urlsToImageFiles
 import me.devsaki.hentoid.retrofit.RedditOAuthApiServer
 import me.devsaki.hentoid.util.OAuthSessionManager
 import me.devsaki.hentoid.util.download.ContentQueueManager.resumeQueue
-import me.devsaki.hentoid.util.image.isSupportedImage
+import me.devsaki.hentoid.util.image.isSupportedMedia
 import timber.log.Timber
 import java.util.Collections
 
@@ -65,10 +65,10 @@ class RedditAuthDownloadFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        imgCount = ViewCompat.requireViewById<TextView?>(view, R.id.reddit_auth_img_count)
+        imgCount = ViewCompat.requireViewById(view, R.id.reddit_auth_img_count)
 
         val button: View = ViewCompat.requireViewById(view, R.id.reddit_auth_action)
-        button.setOnClickListener { v -> onDownloadClick() }
+        button.setOnClickListener { _ -> onDownloadClick() }
 
         // Load saved items
         val session = OAuthSessionManager.getSessionBySite(Site.REDDIT)
@@ -91,7 +91,7 @@ class RedditAuthDownloadFragment : Fragment() {
     }
 
     private fun isImageSupported(imgUrl: String): Boolean {
-        return isSupportedImage(imgUrl)
+        return isSupportedMedia(imgUrl)
     }
 
     private fun onSavedItemsSuccess(savedUrls: MutableList<String>) { // TODO don't display placeholder when load is not complete - use a "loading..." image
@@ -118,7 +118,12 @@ class RedditAuthDownloadFragment : Fragment() {
 
             val coverUrl = if (savedUrls.isEmpty()) "" else savedUrls[0]
             val newImages =
-                urlsToImageFiles(savedUrls, coverUrl, StatusContent.SAVED, Site.REDDIT).toMutableList()
+                urlsToImageFiles(
+                    savedUrls,
+                    coverUrl,
+                    StatusContent.SAVED,
+                    Site.REDDIT
+                ).toMutableList()
 
             Timber.d("Reddit : new content created (%s pages)", newImages.size)
             currentContent = Content(site = Site.REDDIT, dbUrl = "", title = "Reddit")
@@ -128,7 +133,8 @@ class RedditAuthDownloadFragment : Fragment() {
             newImageNumber = newImages.size - 1 // Don't count the cover
         } else { // TODO duplicated code with BaseWebActivity
             // Create a new image set based on saved Urls, ignoring the cover that should already be there
-            val newImages = urlsToImageFiles(savedUrls, "", StatusContent.SAVED, Site.REDDIT).toMutableList()
+            val newImages =
+                urlsToImageFiles(savedUrls, "", StatusContent.SAVED, Site.REDDIT).toMutableList()
 
             // Ignore the images that are already contained in the central booru book
             val existingImages: MutableList<ImageFile> = contentDB.imageFiles
@@ -141,7 +147,7 @@ class RedditAuthDownloadFragment : Fragment() {
                 )
 
                 // Recompute the name of existing images to align them with the formatting of the new ones
-                Collections.sort<ImageFile?>(existingImages, ImageFile.ORDER_COMPARATOR)
+                Collections.sort(existingImages, ImageFile.ORDER_COMPARATOR)
                 var order = 0
                 for (img in existingImages) {
                     img.order = order++
@@ -154,7 +160,7 @@ class RedditAuthDownloadFragment : Fragment() {
                 }
             }
 
-            imageSet = ArrayList<ImageFile>(existingImages)
+            imageSet = ArrayList(existingImages)
             imageSet!!.addAll(newImages)
 
             newImageNumber = newImages.size

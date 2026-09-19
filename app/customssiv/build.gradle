@@ -29,13 +29,13 @@ android {
 
     buildTypes {
         debug {
-            def fileChunkAuthority = "me.violet.chunk-DEBUG"
+            def fileChunkAuthority = "me.violet.cherry.chunk-DEBUG"
             buildConfigField "String", "FILECHUNK_AUTHORITY", '"'+fileChunkAuthority+'"'
         }
         release {
             minifyEnabled false
 
-            def fileChunkAuthority = "me.violet.chunk"
+            def fileChunkAuthority = "me.violet.cherry.chunk"
             buildConfigField "String", "FILECHUNK_AUTHORITY", '"'+fileChunkAuthority+'"'
 
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'

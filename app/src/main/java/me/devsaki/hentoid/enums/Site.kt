@@ -69,6 +69,8 @@ enum class Site(val code: Int, val description: String, val url: String, val ico
     FAPELLO(29, "Fapello", "https://fapello.com/", R.drawable.ic_site_fapello),
     GALLERYEPIC(30, "GalleryEpic", "https://galleryepic.com/", R.drawable.ic_site_galleryepic),
 
+    LRR(41, "LANraragi", "LOCAL", R.drawable.ic_lrr),
+
     MAL(96, "MyAnimeList", "", R.drawable.ic_app),
 
     // Used for associating attributes to sites in Preferences

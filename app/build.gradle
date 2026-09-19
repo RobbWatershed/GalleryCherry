@@ -57,7 +57,7 @@ android {
             applicationIdSuffix ".debug"
             versionNameSuffix "-DEBUG"
 
-            def fileChunkAuthority = "me.violet.chunk-DEBUG"
+            def fileChunkAuthority = "me.violet.cherry.chunk-DEBUG"
 
             buildConfigField 'String', 'UPDATE_URL', '"https://raw.githubusercontent.com/RobbWatershed/GalleryCherry/dev/app/"'
             buildConfigField "String", "FILECHUNK_AUTHORITY", '"'+fileChunkAuthority+'"'
@@ -75,7 +75,7 @@ android {
             debuggable false
             minifyEnabled true
 
-            def fileChunkAuthority = "me.cherry.chunk"
+            def fileChunkAuthority = "me.violet.cherry.chunk"
 
             buildConfigField 'String', 'UPDATE_URL', '"https://raw.githubusercontent.com/RobbWatershed/GalleryCherry/master/app/"'
             buildConfigField "String", "FILECHUNK_AUTHORITY", '"'+fileChunkAuthority+'"'

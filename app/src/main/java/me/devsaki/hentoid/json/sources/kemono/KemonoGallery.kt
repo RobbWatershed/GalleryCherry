@@ -52,7 +52,7 @@ data class KemonoGallery(
         } else {
             previews.filter { isSupportedMedia(it.path ?: "") }
                 .distinct()
-                .map { "https://img.$KEMONO_DOMAIN_FILTER/thumbnail/data${it.path}" }
+                .map { "https://img.$COOMER_DOMAIN_FILTER/thumbnail/data${it.path}" }
         }
 
         // Use file as cover

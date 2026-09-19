@@ -15,7 +15,7 @@
         android:minWidth="32dp"
         android:minHeight="32dp"
         android:scaleType="fitCenter"
-        android:src="@drawable/ic_lock"
+        android:src="@drawable/ic_lock_closed"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         tools:ignore="ContentDescription" />

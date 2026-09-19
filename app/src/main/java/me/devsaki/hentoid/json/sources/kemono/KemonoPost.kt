@@ -44,7 +44,7 @@ data class KemonoPost(
                 file?.path?.let {
                     if (isSupportedMedia(it))
                         result = listOf(
-                            "https://"+"img.$COOMER_DOMAIN_FILTER/thumbnail/data/${it}"
+                            "https://" + "img.$COOMER_DOMAIN_FILTER/thumbnail/data/${it}"
                                 .replace("//", "/")
                         )
                 }
@@ -53,7 +53,7 @@ data class KemonoPost(
         } else {
             return attachments.filter { isSupportedMedia(it.path ?: "") }
                 .distinct()
-                .map { "https://img.$KEMONO_DOMAIN_FILTER/thumbnail/data${it.path}" }
+                .map { "https://img.$COOMER_DOMAIN_FILTER/thumbnail/data${it.path}" }
         }
     }
 

@@ -28,7 +28,6 @@ import me.devsaki.hentoid.activities.ToolsActivity
 import me.devsaki.hentoid.activities.bundles.ReaderActivityBundle
 import me.devsaki.hentoid.activities.bundles.ToolsBundle
 import me.devsaki.hentoid.activities.settings.SettingsActivity
-import me.devsaki.hentoid.activities.settings.SettingsSourceSelectActivity
 import me.devsaki.hentoid.activities.sources.RedditLaunchActivity
 import me.devsaki.hentoid.activities.sources.WelcomeActivity
 import me.devsaki.hentoid.core.launchActivity

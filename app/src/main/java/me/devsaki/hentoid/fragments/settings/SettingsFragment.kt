@@ -52,6 +52,7 @@ import me.devsaki.hentoid.retrofit.RedditPublicApiServer
 import me.devsaki.hentoid.retrofit.sources.KemonoServer
 import me.devsaki.hentoid.retrofit.sources.LrrServer
 import me.devsaki.hentoid.retrofit.sources.LusciousServer
+import me.devsaki.hentoid.ui.invokeInputDialog
 import me.devsaki.hentoid.util.Settings
 import me.devsaki.hentoid.util.applyTheme
 import me.devsaki.hentoid.util.download.DownloadSpeedLimiter
@@ -357,22 +358,20 @@ class SettingsFragment : PreferenceFragmentCompat(),
     }
 
     private suspend fun resetHttp() = withContext(Dispatchers.IO) {
-                // Reset OkHttp instance
-                OkHttpClientManager.reset()
-                // Reset connection pool used by the downloader
-                EventBus.getDefault().post(
-                    DownloadCommandEvent(DownloadCommandEvent.Type.EV_RESET_REQUEST_QUEUE)
-                )
-                // Reset all retrofit clients
-                BergServer.init()
-                LusciousServer.init()
-                RedditOAuthApiServer.init()
+        // Reset OkHttp instance
+        OkHttpClientManager.reset()
+        // Reset connection pool used by the downloader
+        EventBus.getDefault().post(
+            DownloadCommandEvent(DownloadCommandEvent.Type.EV_RESET_REQUEST_QUEUE)
+        )
+        // Reset all retrofit clients
+        BergServer.init()
+        LusciousServer.init()
+        RedditOAuthApiServer.init()
         RedditPublicApiServer.init()
         KemonoServer.init()
         JikanServer.init()
         BergUpdateServer.init()
-        PawServer.init()
-        HiperdexServer.init()
         LrrServer.init()
     }
 

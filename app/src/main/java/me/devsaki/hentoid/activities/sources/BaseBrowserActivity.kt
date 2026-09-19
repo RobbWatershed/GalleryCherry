@@ -156,7 +156,7 @@ import kotlin.math.round
 private val GALLERY_REGEX by lazy { "\\b|/galleries|/gallery|/g|/entry\\b".toRegex() }
 
 // List of sources that support chapters but whose parser doesn't implement BaseChapteredImageListParser
-private val CHAPTERED_SITES = listOf(Site.PIXIV, Site.KEMONO, Site.PAWCHIVE)
+private val CHAPTERED_SITES = emptyList<Site>()
 
 private const val SIMILARITY_MIN_THRESHOLD = 0.85f
 
@@ -733,7 +733,7 @@ abstract class BaseBrowserActivity : BaseActivity(), CustomWebViewClient.Browser
         webSettings.javaScriptEnabled = true
         webSettings.loadWithOverviewMode = true
 
-        if (allowMixedContent() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+        if (allowMixedContent()) {
             webSettings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
         }
 

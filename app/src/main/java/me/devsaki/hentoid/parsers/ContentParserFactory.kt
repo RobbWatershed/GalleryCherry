@@ -23,7 +23,6 @@ import me.devsaki.hentoid.parsers.content.SxypixContent
 import me.devsaki.hentoid.parsers.content.V2PhContent
 import me.devsaki.hentoid.parsers.content.XhamsterContent
 import me.devsaki.hentoid.parsers.content.XinmeiContent
-import me.devsaki.hentoid.parsers.content.PawContent
 import me.devsaki.hentoid.parsers.content.XiutakuContent
 import me.devsaki.hentoid.parsers.content.XnxxContent
 import me.devsaki.hentoid.parsers.images.DummyParser
@@ -70,7 +69,6 @@ object ContentParserFactory {
             Site.EVERIA -> EveriaContent::class.java
             Site.FAPELLO -> FapelloContent::class.java
             Site.GALLERYEPIC -> GalleryEpicContent::class.java
-            Site.PAWCHIVE -> PawContent::class.java
             else -> SmartContent::class.java
         }
     }
@@ -95,7 +93,6 @@ object ContentParserFactory {
             Site.EVERIA -> EveriaParser()
             Site.FAPELLO -> FapelloParser()
             Site.GALLERYEPIC -> GalleryEpicParser()
-            Site.PAWCHIVE -> PawParser()
             else -> DummyParser()
         }
     }

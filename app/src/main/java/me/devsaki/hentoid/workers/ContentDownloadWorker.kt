@@ -25,7 +25,6 @@ import me.devsaki.hentoid.database.domains.RenamingRule
 import me.devsaki.hentoid.enums.AttributeType
 import me.devsaki.hentoid.enums.ErrorType
 import me.devsaki.hentoid.enums.Grouping
-import me.devsaki.hentoid.enums.PictureEncoder
 import me.devsaki.hentoid.enums.Site
 import me.devsaki.hentoid.enums.StatusContent
 import me.devsaki.hentoid.events.DownloadCommandEvent
@@ -65,9 +64,15 @@ import me.devsaki.hentoid.util.exception.ParseException
 import me.devsaki.hentoid.util.exception.PreparationInterruptedException
 import me.devsaki.hentoid.util.fetchImageURLs
 import me.devsaki.hentoid.util.file.MemoryUsageFigures
+import me.devsaki.hentoid.util.file.createFile
 import me.devsaki.hentoid.util.file.fileSizeFromUri
 import me.devsaki.hentoid.util.file.formatHumanReadableSize
+import me.devsaki.hentoid.util.file.getOutputStream
 import me.devsaki.hentoid.util.getContainingFolder
+import me.devsaki.hentoid.util.image.MIME_IMAGE_WEBP
+import me.devsaki.hentoid.util.image.bitmapToWebp
+import me.devsaki.hentoid.util.image.getBitmapFromVectorDrawable
+import me.devsaki.hentoid.util.image.tintBitmap
 import me.devsaki.hentoid.util.moveContentToCustomGroup
 import me.devsaki.hentoid.util.network.Connectivity
 import me.devsaki.hentoid.util.network.DownloadSpeedCalculator.addSampleNow
@@ -88,12 +93,10 @@ import me.devsaki.hentoid.util.persistJson
 import me.devsaki.hentoid.util.removeContent
 import me.devsaki.hentoid.util.serializeToJson
 import me.devsaki.hentoid.util.updateQueueJson
-import me.devsaki.hentoid.util.video.GifEncoder
-import me.devsaki.hentoid.util.video.VideoEncoder
-import me.devsaki.hentoid.util.video.WebpEncoder
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import timber.log.Timber
+import java.io.ByteArrayInputStream
 import java.io.IOException
 import java.security.InvalidParameterException
 import java.time.Instant
@@ -1405,173 +1408,6 @@ class ContentDownloadWorker(context: Context, parameters: WorkerParameters) :
             )
         } else {
             throw ParseException("Failed to parse backup URL")
-        }
-    }
-
-    /**
-     * Download and unzip the given Ugoira to the given folder as an animated GIF file
-     * NB : Ugoiras are Pixiv's own animated pictures
-     *
-     * @param img             Link to the Ugoira file
-     * @param site            Correponding site
-     */
-    @OptIn(DelicateCoroutinesApi::class)
-    private suspend fun downloadAndUnzipUgoira(
-        content: Content,
-        img: ImageFile,
-        downloadFolder: Uri,
-        site: Site
-    ) {
-        if (this.isStopped || downloadProcessStopped || ContentQueueManager.isQueuePaused) return
-
-        var isError = false
-        var errorMsg = ""
-        val ugoiraCacheFolder = getOrCreateCacheFolder(
-            applicationContext, UGOIRA_CACHE_FOLDER + File.separator + img.id
-        )
-        if (null == ugoiraCacheFolder) return
-
-        val targetFileName = img.name
-        try {
-            // == Download archive
-            val result = downloadToFile(
-                applicationContext,
-                site,
-                img.url,
-                webkitRequestHeadersToOkHttpHeaders(
-                    getRequestHeaders(
-                        img.url,
-                        img.downloadParams
-                    ), img.url
-                ),
-                Uri.fromFile(ugoiraCacheFolder),
-                targetFileName,
-                isCanceled = { this.isStopped || downloadProcessStopped || ContentQueueManager.isQueuePaused },
-                img.order,
-                MIME_TYPE_ZIP,
-                notifyProgress = { f ->
-                    EventBus.getDefault().post(
-                        DownloadEvent(
-                            content = content,
-                            eventType = DownloadEvent.Type.EV_PROGRESS,
-                            fileDownloadProgress = f
-                        )
-                    )
-                }
-            )
-
-            val targetFileUri = result
-                ?: throw IOException("Couldn't download ugoira file : resource not available")
-
-            // == Extract all frames
-            applicationContext.extractArchiveEntries(
-                targetFileUri,
-                ugoiraCacheFolder,
-                null,  // Extract everything; keep original names
-                { this.isStopped || downloadProcessStopped || ContentQueueManager.isQueuePaused }
-            )
-
-            // == Build the GIF using download params and extracted pics
-            val frames: MutableList<Pair<Uri, Int>> = ArrayList()
-
-            // Get frame information
-            val downloadParams = parseDownloadParams(img.downloadParams)
-            val ugoiraFramesStr = downloadParams[KEY_DL_PARAMS_UGOIRA_FRAMES]
-                ?: throw IOException("Couldn't read ugoira frames string")
-
-            val ugoiraFrames = jsonToObject<List<Pair<String, Int>>>(
-                ugoiraFramesStr,
-                UGOIRA_FRAMES_TYPE
-            ) ?: throw IOException("Couldn't read ugoira frames")
-
-            // Map frame name to the downloaded file
-            for (frame in ugoiraFrames) {
-                val files = ugoiraCacheFolder.listFiles { pathname ->
-                    pathname.name.endsWith(frame.first)
-                }
-                if (files != null && files.isNotEmpty()) {
-                    frames.add(Pair(Uri.fromFile(files[0]), frame.second))
-                }
-            }
-
-            EventBus.getDefault().post(
-                DownloadEvent.fromPreparationStep(DownloadEvent.Step.ENCODE_ANIMATION, content)
-            )
-
-            val targetMime = PictureEncoder.fromValue(Settings.downloadAnimationFormat)?.mimeType
-                ?: return
-            val targetExt = getExtensionFromMimeType(targetMime)
-            val quality =
-                (if (Settings.downloadAnimationFormat == PictureEncoder.WEBP_LOSSLESS.value) 100f
-                else Settings.downloadAnimationQuality.coerceIn(0, 100).toFloat()) / 100f
-            val avgFrameDuration = frames.sumOf { it.second } / frames.count()
-            val dims = getMediaDimensions(applicationContext, frames[0].first)
-
-            val tempFile = createFile(
-                applicationContext, downloadFolder, "${img.name}.$targetExt",
-                targetMime
-            )
-
-            val animEncoder = when (Settings.downloadAnimationFormat) {
-                PictureEncoder.WEBP_LOSSLESS.value, PictureEncoder.WEBP_LOSSY.value -> WebpEncoder(
-                    dims,
-                    quality,
-                    avgFrameDuration
-                )
-
-                PictureEncoder.AVC.value -> VideoEncoder(
-                    dims,
-                    quality,
-                    frames.filterNot { 0 == it.second }.maxOf { 1000f / it.second.toFloat() },
-                    frames.size
-                )
-
-                else -> GifEncoder(dims)
-            }
-
-            animEncoder.use { encoder ->
-                encoder.init(applicationContext, tempFile)
-                encoder.encode(
-                    applicationContext,
-                    frames,
-                    isCanceled = {
-                        this.isStopped || downloadProcessStopped || ContentQueueManager.isQueuePaused
-                    }
-                ) { f ->
-                    GlobalScope.launch(Dispatchers.Default) {
-                        EventBus.getDefault().post(
-                            DownloadEvent(
-                                eventType = DownloadEvent.Type.EV_PROGRESS,
-                                step = DownloadEvent.Step.ENCODE_ANIMATION,
-                                fileDownloadProgress = f * 100
-                            )
-                        )
-                    }
-                }
-            }
-
-            if (this.isStopped || downloadProcessStopped || ContentQueueManager.isQueuePaused) {
-                removeFile(applicationContext, tempFile)
-                throw RuntimeException("Animation assembly has been interrupted")
-            }
-
-            updateImageProperties(img, true, tempFile)
-
-            dlManager.appendFile(applicationContext, false, tempFile)
-        } catch (e: Exception) {
-            Timber.w(e)
-            isError = true
-            errorMsg = e.message ?: ""
-        }
-        if (isError) {
-            updateImageProperties(img, false)
-            logErrorRecord(
-                img.content.targetId,
-                ErrorType.IMG_PROCESSING,
-                img.url,
-                img.name,
-                errorMsg
-            )
         }
     }
 
